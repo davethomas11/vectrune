@@ -1,0 +1,17 @@
+# Rust/Cargo
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Byebug history
+.byebug_history
+
+# Example data files
+users.csv

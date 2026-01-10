@@ -1,0 +1,17 @@
+#!RUNE
+
+@App
+name = Example API
+type = REST
+version = 1.0
+
+@Route/GET /health
+run:
+    log "Health check"
+    respond 200 "OK"
+
+@Route/POST /echo
+run:
+    parse-json
+    respond 200 "Echoed"
+

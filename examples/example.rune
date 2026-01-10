@@ -1,0 +1,16 @@
+#!RUNE
+
+@Person
+name = John Doe
+age = 30
+email = johndoe@email.com
+skills:
+    Programming
+    Writing
+    Public Speaking
+
+@Person/Address
+street = 123 Main St
+city = Anytown
+state = CA
+zip = 12345

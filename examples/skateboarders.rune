@@ -1,0 +1,13 @@
+#!RUNE
+@Skateboarder
++ name = Tony Hawk
+  age = 53
+  style = Vert
+
++ name = Nyjah Huston
+  age = 26
+  style = Street
+
++ name = Leticia Bufoni
+  age = 28
+  style = Street
