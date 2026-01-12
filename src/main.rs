@@ -16,10 +16,10 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let matches = Command::new("rune")
+    let matches = Command::new("vectrune")
         .version("0.1.0")
-        .author("Your Name")
-        .about("RUNE script executor")
+        .author("David Thomas")
+        .about("VectRune script executor")
         .arg(
             Arg::new("SCRIPT")
                 .help("Path to the .rune script")

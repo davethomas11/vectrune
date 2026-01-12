@@ -1,7 +1,8 @@
 [package]
-name = "rune-runtime"
+name = "vectrune"
 version = "0.1.0"
 edition = "2021"
+authors = ["David Thomas"]
 
 [dependencies]
 axum = "0.7"
@@ -11,7 +12,7 @@ serde_json = "1"
 serde_yaml = "0.9.33"
 thiserror = "1"
 anyhow = "1"
-clap = "4.5.54"
+clap = { version = "4.5.54", features = ["derive"] }
 csv = "1.4.0"
 
 [dev-dependencies]

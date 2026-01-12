@@ -1,12 +1,12 @@
-# 📘 RUNE Runtime — RFC Overview
+# 📘 Vectrune Runtime — RFC Overview
 
-This repository contains the reference implementation of **RUNE**, a human‑readable declarative configuration and functional execution format. RUNE is designed to describe structured data, workflows, and lightweight API behavior in a single unified language. This document provides an RFC‑style overview of the format, runtime, and design goals.
+This repository contains the reference implementation of **Vectrune**, a human‑readable declarative configuration and functional execution format. Vectrune is designed to describe structured data, workflows, and lightweight API behavior in a single unified language. This document provides an RFC‑style overview of the format, runtime, and design goals.
 
 ---
 
 ## 🧭 1. Purpose
 
-RUNE is a **declarative + functional** configuration language intended for:
+Vectrune is a **declarative + functional** configuration language intended for:
 
 - describing structured data
 - defining executable workflows
@@ -14,13 +14,13 @@ RUNE is a **declarative + functional** configuration language intended for:
 - binding to built‑in or plugin‑provided functions
 - powering lightweight APIs and automation systems
 
-The official RUNE runtime (implemented in Rust) interprets `.rune` files and exposes their declared behavior through an extensible execution engine.
+The official Vectrune runtime (implemented in Rust) interprets `.rune` files and exposes their declared behavior through an extensible execution engine.
 
 ---
 
 ## 📄 2. File Format Summary
 
-RUNE files are UTF‑8 text documents composed of **sections**, **key/value pairs**, **lists**, and **executable steps**.
+Vectrune files are UTF‑8 text documents composed of **sections**, **key/value pairs**, **lists**, and **executable steps**.
 
 ### 2.1 File Signature
 
@@ -99,7 +99,7 @@ description >
 
 ## ⚙️ 4. Functional Extensions
 
-RUNE supports executable behavior through **workflows**, **actions**, and **routes**.
+Vectrune supports executable behavior through **workflows**, **actions**, and **routes**.
 
 ### 4.1 Workflows
 

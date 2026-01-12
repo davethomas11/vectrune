@@ -1,12 +1,14 @@
-Rune
-====
+Vectrune
+========
 
-RUNE is a **declarative + functional** configuration language intended for:
+Vectrune is a **declarative + functional** configuration language intended for:
 - describing structured data
 
-What does Rune look like?
+Tagline: Vectrune: Structured data in motion.
+
+What does Vectrune look like?
 ----------------------------
-Here is a simple example of a Rune showing some basic data about some skateboarders:
+Here is a simple example of a Vectrune script showing some basic data about some skateboarders:
 
 ```rune
 #!RUNE
@@ -24,7 +26,7 @@ Here is a simple example of a Rune showing some basic data about some skateboard
   style = Street
 ```
 
-Rune can also be used for:
+Vectrune can also be used for:
 - declaring HTTP routes
 
 Example:
@@ -42,9 +44,9 @@ run:
 - powering lightweight APIs and automation systems
 - DSL integrations into popular frameworks SaaS platforms
 
-Things you can do with Rune
+Things you can do with Vectrune
 -----------------------
-Rune is a small DSL and runtime for building HTTP APIs (backed by Axum). This repository contains the runtime, built-ins, examples, and integration tests.
+Vectrune is a small DSL and runtime for building HTTP APIs (backed by Axum). This repository contains the runtime, built-ins, examples, and integration tests.
 
 Prerequisites
 -------------
@@ -67,12 +69,12 @@ From the project root:
 Run examples
 ------------
 
-There are sample Rune scripts in "examples/":
+There are sample Vectrune scripts in "examples/":
 
 - examples/app.rune
 - examples/user_api.rune
 
-How to run the binary depends on your local workflow; if you’d like a dedicated CLI entrypoint for executing Rune scripts, open an issue or ask for a helper command and we’ll add it. For now, this repository focuses on the runtime and tests.
+How to run the binary depends on your local workflow; if you’d like a dedicated CLI entrypoint for executing Vectrune scripts, open an issue or ask for a helper command and we’ll add it. For now, this repository focuses on the runtime and tests.
 
 Tests
 -----
