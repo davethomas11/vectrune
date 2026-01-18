@@ -138,3 +138,22 @@ License
 -------
 
 TBD. Add your license of choice (e.g., MIT/Apache-2.0) here.
+
+## Environment Variable Substitution
+
+Vectrune supports substituting environment variables into string values using the `$VAR_NAME$` syntax. When a string value is wrapped in dollar signs, the runtime will look up the environment variable with the given name and substitute its value.
+
+**Example:**
+
+```rune
+@Database
+connection_string = $DATABASE_URL$
+```
+
+If the environment variable `DATABASE_URL` is set, its value will be used for `connection_string`. If the variable is not set, an empty string will be used.
+
+This substitution works for:
+- Single string values: `key = $VAR$`
+- List items: `key = ($VAR1$ $VAR2$)`
+
+If you want to use a literal string with dollar signs, do not wrap the entire value in `$...$`.

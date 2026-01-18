@@ -95,6 +95,24 @@ description >
     It ends at the next blank line.
 ```
 
+### 3.7 Environment Variable Substitution
+
+String values wrapped in dollar signs (e.g., `$VAR$`) will be replaced at runtime with the value of the corresponding environment variable. If the variable is not set, an empty string is used.
+
+**Examples:**
+
+```
+@Database
+connection_string = $DATABASE_URL$
+```
+
+```
+@Service
+endpoints = ($API_URL$ $BACKUP_URL$)
+```
+
+This applies to single string values and list items. For literal dollar signs, do not wrap the value in `$...$`.
+
 ---
 
 ## ⚙️ 4. Functional Extensions

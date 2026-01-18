@@ -1,7 +1,7 @@
-// src/builtins/datasource_postgres.rs
+// src/builtins/datasource_mysql.rs
 use crate::builtins::{BuiltinResult, Context};
 use serde_json::{Map, Value as JsonValue};
-use sqlx::{postgres::PgRow, Column, Pool, Postgres, Row};
+use sqlx::{mysql::MySqlRow, Column, Pool, MySql, Row};
 
 use tokio::sync::OnceCell;
 
@@ -9,29 +9,29 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-static POSTGRES_POOLS: OnceCell<Arc<Mutex<HashMap<String, Pool<Postgres>>>>> =
+static MYSQL_POOLS: OnceCell<Arc<Mutex<HashMap<String, Pool<MySql>>>>> =
     OnceCell::const_new();
 
 async fn init_pool(connection_string: &str) {
-    let pool = Pool::<Postgres>::connect(connection_string).await.unwrap();
-    let pools = POSTGRES_POOLS
+    let pool = Pool::<MySql>::connect(connection_string).await.unwrap();
+    let pools = MYSQL_POOLS
         .get_or_init(|| async { Arc::new(Mutex::new(HashMap::new())) })
         .await;
     let mut pools_guard = pools.lock().await;
     pools_guard.insert(connection_string.to_string(), pool);
 }
 
-/// Create or reuse a PostgreSQL connection pool
-pub async fn create_or_reuse_postgres_pool(
+/// Create or reuse a MySQL connection pool
+pub async fn create_or_reuse_mysql_pool(
     connection_string: &str,
-) -> Result<Pool<Postgres>, sqlx::Error> {
-    let pools = POSTGRES_POOLS
+) -> Result<Pool<MySql>, sqlx::Error> {
+    let pools = MYSQL_POOLS
         .get_or_init(|| async { Arc::new(Mutex::new(HashMap::new())) })
         .await;
-    let mut pools_guard: tokio::sync::MutexGuard<HashMap<String, Pool<Postgres>>> =
+    let mut pools_guard: tokio::sync::MutexGuard<HashMap<String, Pool<MySql>>> =
         pools.lock().await;
     if !pools_guard.contains_key(connection_string) {
-        let pool = Pool::<Postgres>::connect(connection_string).await?;
+        let pool = Pool::<MySql>::connect(connection_string).await?;
         pools_guard.insert(connection_string.to_string(), pool);
     }
     Ok(pools_guard.get(connection_string).unwrap().clone())
@@ -45,32 +45,32 @@ pub fn create_table_columns_string(columns: &[(String, String)]) -> String {
         .join(", ")
 }
 
-pub async fn create_table_postgres(
+pub async fn create_table_mysql(
     name: &str,
     args: &[String],
-    pool: &Pool<Postgres>,
+    pool: &Pool<MySql>,
 ) -> BuiltinResult {
     if args.is_empty() {
-        return BuiltinResult::Error("postgres.create_table: missing table schema".to_string());
+        return BuiltinResult::Error("mysql.create_table: missing table schema".to_string());
     }
     let schema = &args[0];
     let create_table_query = format!("CREATE TABLE IF NOT EXISTS {} ({})", name, schema);
     match sqlx::query(&create_table_query).execute(pool).await {
         Ok(_) => BuiltinResult::Ok,
-        Err(e) => BuiltinResult::Error(format!("postgres.create_table error: {}", e)),
+        Err(e) => BuiltinResult::Error(format!("mysql.create_table error: {}", e)),
     }
 }
 
-/// Built-in to execute a PostgreSQL query and store results in context.
+/// Built-in to execute a MySQL query and store results in context.
 /// Expected args: ["query_string", "param1", "param2", ...]
-pub async fn builtin_postgres_query(
+pub async fn builtin_mysql_query(
     args: &[String],
     ctx: &mut Context,
-    pool: &Pool<Postgres>,
+    pool: &Pool<MySql>,
     assign_to: Option<&str>,
 ) -> BuiltinResult {
     if args.is_empty() {
-        return BuiltinResult::Error("postgres: missing query argument".to_string());
+        return BuiltinResult::Error("mysql: missing query argument".to_string());
     }
 
     let query_str = &args[0];
@@ -102,12 +102,12 @@ pub async fn builtin_postgres_query(
             }
             BuiltinResult::Ok
         }
-        Err(e) => BuiltinResult::Error(format!("Postgres error: {}", e)),
+        Err(e) => BuiltinResult::Error(format!("MySQL error: {}", e)),
     }
 }
 
-/// Helper to convert a PgRow into a JSON Object
-fn row_to_json(row: &PgRow) -> JsonValue {
+/// Helper to convert a MySqlRow into a JSON Object
+fn row_to_json(row: &MySqlRow) -> JsonValue {
     let mut map = Map::new();
     for column in row.columns() {
         let name = column.name();

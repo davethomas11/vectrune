@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
                 .long("output")
                 .help("Enable verbose output")
                 .value_name("output_format")
-                .value_parser(["text", "json", "rune", "xml", "yaml"]),
+                .value_parser(["text", "json", "rune", "xml", "yaml", "curl"]),
         )
         .arg(
             Arg::new("verbose")
@@ -154,6 +154,78 @@ async fn main() -> anyhow::Result<()> {
         println!("Detected App type: {:?}", app_type);
     }
 
+    if app_type == Some("REST".to_string()) && output_format == Some("curl") {
+        // Get port from App section, default to 3000
+        let port = doc
+            .get_section("App")
+            .and_then(|sec| sec.kv.get("port"))
+            .and_then(|val| val.as_u64())
+            .unwrap_or(3000);
+        let host_port = format!("localhost:{}", port);
+        // Generate curl commands for REST routes
+        let routes = doc.get_sections("Route");
+        for route in routes {
+            if let Some(path) = route.path.join("/").strip_prefix("Route/").and_then(|p| {
+                p.strip_prefix(&format!(
+                    "{}/",
+                    route.path.get(1).map(|s| s.as_str()).unwrap_or("GET")
+                ))
+            }) {
+                let method = route.path.get(1).map(|s| s.as_str()).unwrap_or("GET");
+                if method == "CRUD" {
+                    // For CRUD, print for both collection and item paths
+                    let collection_path = path;
+                    // Dynamically build example JSON body from schema
+                    let mut obj_body = String::from("{");
+                    if let Some(Value::String(schema_name)) = route.kv.get("schema") {
+                        // Find the schema section by path ["Schema", schema_name]
+                        let schema_section = doc.sections.iter().find(|sec| {
+                            sec.path.len() == 2 && sec.path[0] == "Schema" && sec.path[1] == *schema_name
+                        });
+                        if let Some(schema_section) = schema_section {
+                            let mut first = true;
+                            for (field, typ) in &schema_section.kv {
+                                if !first { obj_body.push_str(",\n"); } else { first = false; }
+                                let example = match typ.as_str().unwrap_or("") {
+                                    "string" => format!("  \"{}\": \"example\"", field),
+                                    "number" => format!("  \"{}\": 123", field),
+                                    "bool" => format!("  \"{}\": true", field),
+                                    _ => format!("  \"{}\": null", field),
+                                };
+                                obj_body.push_str(&example);
+                            }
+                        }
+                    }
+                    obj_body.push_str("\n}");
+
+                    // GET collection
+                    println!("curl -X GET    http://{}/{}", host_port, collection_path);
+                    // POST collection (create)
+                    println!("curl -X POST   http://{}/{} \\", host_port, collection_path);
+                    println!("     -H 'Content-Type: application/json' \\");
+                    println!("     -d '{}'", obj_body.replace("'", "\\'"));
+                    // GET item
+                    println!("curl -X GET    http://{}/{}/123", host_port, collection_path);
+                    // PUT item (update)
+                    println!("curl -X PUT    http://{}/{}/123 \\", host_port, collection_path);
+                    println!("     -H 'Content-Type: application/json' \\");
+                    println!("     -d '{}'", obj_body.replace("'", "\\'"));
+                    // DELETE item
+                    println!("curl -X DELETE http://{}/{}/123", host_port, collection_path);
+                    continue;
+                }
+
+                let mut curl_cmd = format!("curl -X {} http://{}/{}", method, host_port, path);
+                if let Some(description) = route.kv.get("description") {
+                    if let Value::String(desc) = description {
+                        curl_cmd.push_str(&format!("  # {}", desc));
+                    }
+                }
+                println!("{}", curl_cmd);
+            }
+        }
+        process::exit(0);
+    }
     if app_type == Some("REST".to_string()) && output_format == None {
         println!("Starting Vectrune REST application...");
         println!("Press Ctrl+C to stop the server.");

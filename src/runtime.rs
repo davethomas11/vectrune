@@ -6,10 +6,8 @@ use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-use serde_json::{json, Value as JsonValue};
+use serde_json::{Value as JsonValue};
 use std::collections::HashMap;
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -80,8 +78,7 @@ pub fn build_router(doc: RuneDocument, verbose: bool) -> Router {
                 .map(|s| s.as_str())
                 .collect::<Vec<_>>()
                 .join("/");
-            let path_template = format!("/{}", path_template);
-            let axum_path = path_template.replace("{", ":").replace("}", "");
+            let axum_path = format!("/{}", path_template);
             let default_step = vec![Value::String("respond 200 OK".to_string())];
 
             let state_clone = state.clone();
@@ -92,7 +89,7 @@ pub fn build_router(doc: RuneDocument, verbose: bool) -> Router {
                 for m in &["GET", "POST", "PUT", "DELETE"] {
                     for &with_id in &[false, true] {
                         let path = if with_id {
-                            format!("{}/:id", axum_path)
+                            format!("{}/{}", axum_path, "{id}")
                         } else {
                             axum_path.clone()
                         };

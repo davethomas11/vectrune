@@ -239,7 +239,17 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                     let inner = &value_raw[1..value_raw.len() - 1];
                     let items: Vec<Value> = inner
                         .split_whitespace()
-                        .map(|s| Value::String(s.to_string()))
+                        .map(|s| {
+                            if s.starts_with('$') && s.ends_with('$') && s.len() > 2 {
+                                let var_name = &s[1..s.len()-1];
+                                match std::env::var(var_name) {
+                                    Ok(val) => Value::String(val),
+                                    Err(_) => Value::String(String::new()),
+                                }
+                            } else {
+                                Value::String(s.to_string())
+                            }
+                        })
                         .collect();
                     Value::List(items)
                 } else if value_raw == "true" {
@@ -249,7 +259,16 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 } else if let Ok(n) = value_raw.parse::<f64>() {
                     Value::Number(n)
                 } else {
-                    Value::String(value_raw.trim_matches('"').to_string())
+                    // Check for $VAR$ syntax for env var substitution
+                    if value_raw.starts_with('$') && value_raw.ends_with('$') && value_raw.len() > 2 {
+                        let var_name = &value_raw[1..value_raw.len()-1];
+                        match std::env::var(var_name) {
+                            Ok(val) => Value::String(val),
+                            Err(_) => Value::String(String::new()),
+                        }
+                    } else {
+                        Value::String(value_raw.trim_matches('"').to_string())
+                    }
                 };
 
                 if let Some(last) = current_records.last_mut() {

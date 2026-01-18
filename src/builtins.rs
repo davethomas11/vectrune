@@ -11,6 +11,7 @@ pub mod builtin {
     pub mod csv;
     pub mod data_source;
     pub mod postgres;
+    pub mod mysql;
 }
 
 use builtin::log::builtin_log;
