@@ -12,15 +12,6 @@ use tokio::sync::Mutex;
 static POSTGRES_POOLS: OnceCell<Arc<Mutex<HashMap<String, Pool<Postgres>>>>> =
     OnceCell::const_new();
 
-async fn init_pool(connection_string: &str) {
-    let pool = Pool::<Postgres>::connect(connection_string).await.unwrap();
-    let pools = POSTGRES_POOLS
-        .get_or_init(|| async { Arc::new(Mutex::new(HashMap::new())) })
-        .await;
-    let mut pools_guard = pools.lock().await;
-    pools_guard.insert(connection_string.to_string(), pool);
-}
-
 /// Create or reuse a PostgreSQL connection pool
 pub async fn create_or_reuse_postgres_pool(
     connection_string: &str,

@@ -12,15 +12,6 @@ use tokio::sync::Mutex;
 static MYSQL_POOLS: OnceCell<Arc<Mutex<HashMap<String, Pool<MySql>>>>> =
     OnceCell::const_new();
 
-async fn init_pool(connection_string: &str) {
-    let pool = Pool::<MySql>::connect(connection_string).await.unwrap();
-    let pools = MYSQL_POOLS
-        .get_or_init(|| async { Arc::new(Mutex::new(HashMap::new())) })
-        .await;
-    let mut pools_guard = pools.lock().await;
-    pools_guard.insert(connection_string.to_string(), pool);
-}
-
 /// Create or reuse a MySQL connection pool
 pub async fn create_or_reuse_mysql_pool(
     connection_string: &str,
@@ -35,14 +26,6 @@ pub async fn create_or_reuse_mysql_pool(
         pools_guard.insert(connection_string.to_string(), pool);
     }
     Ok(pools_guard.get(connection_string).unwrap().clone())
-}
-
-pub fn create_table_columns_string(columns: &[(String, String)]) -> String {
-    columns
-        .iter()
-        .map(|(name, typ)| format!("{} {}", name, typ))
-        .collect::<Vec<String>>()
-        .join(", ")
 }
 
 pub async fn create_table_mysql(

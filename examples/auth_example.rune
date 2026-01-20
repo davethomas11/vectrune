@@ -1,7 +1,7 @@
 #!RUNE
 
 @App
-name = User API
+name = Auth Example API
 version = 1.0
 type = REST
 

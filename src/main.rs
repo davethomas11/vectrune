@@ -102,20 +102,22 @@ async fn main() -> anyhow::Result<()> {
             RuneDocument::from_json(&json_value)
         }
         Some("xml") => {
-            // Convert XML input to Rune format
-            // Here you would implement conversion from XML to Rune script format
-            eprintln!("XML input format is not yet implemented.");
-            process::exit(1);
+            match RuneDocument::from_xml(&script_content) {
+                Ok(doc) => doc,
+                Err(err) => {
+                    eprintln!("Error parsing XML input: {}", err);
+                    process::exit(1);
+                }
+            }
         }
         Some("yaml") => {
-            // Convert YAML input to Rune format
-            let yaml_value: serde_yaml::Value = serde_yaml::from_str(&script_content).unwrap_or_else(|err| {
-                eprintln!("Error parsing YAML input: {}", err);
-                process::exit(1);
-            });
-            // Here you would implement conversion from YAML to Rune script format
-            eprintln!("YAML input format is not yet implemented.");
-            process::exit(1);
+            match RuneDocument::from_yaml(&script_content) {
+                Ok(doc) => doc,
+                Err(err) => {
+                    eprintln!("Error parsing YAML input: {}", err);
+                    process::exit(1);
+                }
+            }
         }
         _ => {
             match parse_rune(&script_content) {
@@ -241,7 +243,7 @@ async fn main() -> anyhow::Result<()> {
                 .map(|p| p.to_path_buf())
                 .unwrap_or_else(|| std::env::current_dir().unwrap())
         };
-        let app = build_router(doc.clone(), rune_dir, is_verbose);
+        let app = build_router(doc.clone(), rune_dir, is_verbose).await;
         let port = doc
             .get_section("App")
             .and_then(|sec| sec.kv.get("port"))

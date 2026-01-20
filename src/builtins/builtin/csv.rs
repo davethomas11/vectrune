@@ -56,8 +56,8 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context) -> BuiltinResult {
             return BuiltinResult::Error(e.to_string());
         }
     };
+    let mut index = 0;
     for item in arr {
-        let mut index = 0;
         if let Some(obj) = item.as_object() {
             // Write headers if this is the first record
             if index == 0 {

@@ -1,0 +1,29 @@
+#!RUNE
+
+@App
+name = Memory Example API
+version = 1.0
+type = REST
+run:
+    skaters = load-rune skateboarders.rune
+    set-memory skaters
+
+@Schema/Skater
+fields:
+    name: String
+    age: Integer
+    style: String
+
+@Route/GET /Skaters
+run:
+    skaters = get-memory skaters
+    return skaters
+
+@Route/PUT /Skaters
+run:
+    skaters = get-memory skaters
+    new-skater = parse-json body
+    validate new-skater #Skater
+    append skaters.Skateboarder.record new-skater
+    set-memory skaters
+    return skaters

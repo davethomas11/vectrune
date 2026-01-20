@@ -13,6 +13,8 @@ pub mod builtin {
     pub mod data_source;
     pub mod postgres;
     pub mod mysql;
+    pub mod memory;
+    pub mod commands;
 }
 
 use builtin::log::builtin_log;
@@ -21,6 +23,8 @@ use builtin::parse_json::builtin_parse_json;
 use builtin::validate::builtin_validate;
 use builtin::csv::{builtin_csv_read, builtin_csv_write, builtin_csv_append};
 use builtin::data_source::builtin_data_source;
+use crate::builtins::builtin::commands::builtin_append;
+use crate::builtins::builtin::memory::{builtin_get_memory, builtin_set_memory};
 use crate::runtime::AppState;
 use crate::util::json_to_xml;
 
@@ -314,13 +318,16 @@ pub async fn call_builtin(
     match name {
         "log" => builtin_log(args),
         "respond" => builtin_respond(args, ctx),
-        "parse-json" => builtin_parse_json(ctx),
+        "parse-json" => builtin_parse_json(args, ctx, assign_to),
         "validate" => builtin_validate(args, ctx, &app_state.schemas),
         "csv.read" => builtin_csv_read(args, ctx, assign_to),
         "csv.write" => builtin_csv_write(args, ctx),
         "csv.append" => builtin_csv_append(args, ctx),
         "datasource" => builtin_data_source(args, ctx, &app_state, assign_to).await,
         "load-rune" => builtin_load_rune(args, ctx, assign_to, app_state),
+        "set-memory" => builtin_set_memory(args, ctx),
+        "get-memory" => builtin_get_memory(args, assign_to, ctx),
+        "append" => builtin_append(args, assign_to, ctx),
         "return" => {
             if args.is_empty() {
                 eprintln!("[ERROR] return: missing value");

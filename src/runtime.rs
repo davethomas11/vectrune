@@ -27,7 +27,6 @@ pub struct AppState {
     pub doc: Arc<RuneDocument>,
     pub schemas: Arc<HashMap<String, Section>>, // For @Schema
     pub data_sources: Arc<HashMap<String, Section>>, // For @Datasource
-    pub shared_context: Arc<Context>,           // Shared context across requests
     pub path: PathBuf,               // Path to the rune document
 }
 
@@ -78,7 +77,7 @@ fn extract_auth_configs(doc: &RuneDocument) -> HashMap<String, Section> {
     auths
 }
 
-pub fn build_router(doc: RuneDocument, rune_dir: PathBuf, verbose: bool) -> Router {
+pub async fn build_router(doc: RuneDocument, rune_dir: PathBuf, verbose: bool) -> Router {
     let schemas = Arc::new(extract_schemas(&doc));
     let data_sources = Arc::new(extract_data_sources(&doc));
     let auth_configs = Arc::new(extract_auth_configs(&doc));
@@ -86,10 +85,16 @@ pub fn build_router(doc: RuneDocument, rune_dir: PathBuf, verbose: bool) -> Rout
         doc: Arc::new(doc),
         schemas,
         data_sources,
-        shared_context: Arc::new(Context::new()),
         path: rune_dir.clone()
     };
     let mut router = Router::with_state(Router::new(), state.clone());
+
+    // If @App section has a "run" kv, execute its steps once
+    if let Some(app_section) = state.doc.sections.iter().find(|s| s.path.first().map(|p| p.as_str()) == Some("App")) {
+        if let Some(run_steps) = app_section.series.get("run") {
+            let _ = execute_steps(state.clone(), run_steps.clone(), None, None, verbose).await;
+        }
+    }
 
     // Serve static files from the directory containing the rune document, mounted at /assets
 
@@ -618,7 +623,7 @@ async fn execute_steps(
 }
 
 async fn jwt_auth(
-    mut req: Request<axum::body::Body>,
+    req: Request<axum::body::Body>,
     next: Next,
     secret: String,
 ) -> Result<Response, StatusCode> {
