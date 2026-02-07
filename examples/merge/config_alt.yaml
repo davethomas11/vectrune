@@ -1,0 +1,6 @@
+environment:
+ preview:
+  - id: url
+    data: preview.com
+  - id: allowedIps
+    data: []

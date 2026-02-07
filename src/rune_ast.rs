@@ -13,7 +13,7 @@ pub struct RuneDocument {
 
 impl RuneDocument {
     /// Corrected from_json to handle the nested path structure created by to_json
-    pub(crate) fn from_json(p0: &serde_json::Value) -> RuneDocument {
+    pub fn from_json(p0: &serde_json::Value) -> RuneDocument {
         let mut sections = Vec::new();
 
         fn json_to_ast_value(v: &serde_json::Value) -> Value {
@@ -112,7 +112,7 @@ impl RuneDocument {
         Ok(Self::from_json(&processed))
     }
 
-    pub(crate) fn from_yaml(s: &str) -> Result<RuneDocument, String> {
+    pub fn from_yaml(s: &str) -> Result<RuneDocument, String> {
         let yaml_val: serde_yaml::Value = serde_yaml::from_str(s)
             .map_err(|e| format!("YAML parse error: {}", e))?;
 

@@ -66,6 +66,13 @@ async fn main() -> anyhow::Result<()> {
                 .value_name("SPEC")
                 .help("Transform data into a new document, e.g. '@Target key:[@Section.field]'"),
         )
+        .arg(
+            Arg::new("merge-with")
+                .long("merge-with")
+                .num_args(1)
+                .value_name("MERGE_SPEC")
+                .help("Merge with another document: base_file@selector"),
+        )
         .get_matches();
 
     let script_path = matches.get_one::<String>("SCRIPT").unwrap();
@@ -74,6 +81,7 @@ async fn main() -> anyhow::Result<()> {
     let is_verbose = matches.get_flag("verbose");
     let calc_expr = matches.get_one::<String>("calculate").map(|s| s.as_str());
     let transform_spec = matches.get_one::<String>("transform").map(|s| s.as_str());
+    let merge_spec = matches.get_one::<String>("merge-with").map(|s| s.as_str());
 
     let script_content = if script_path == "-" {
         use std::io::Read;
@@ -147,6 +155,19 @@ async fn main() -> anyhow::Result<()> {
             }
             Err(e) => {
                 eprintln!("Transform error: {}", e);
+                process::exit(1);
+            }
+        }
+    }
+
+    // Merge mode
+    if let Some(spec) = merge_spec {
+        match crate::cli::handle_merge(&doc, spec) {
+            Ok(merged_doc) => {
+                doc = merged_doc;
+            }
+            Err(e) => {
+                eprintln!("Merge error: {}", e);
                 process::exit(1);
             }
         }

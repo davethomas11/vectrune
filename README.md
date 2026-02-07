@@ -127,6 +127,57 @@ Useful flags:
     # Run tests single-threaded (if needed for shared resources)
     cargo test -- --test-threads=1
 
+Installation
+------------
+
+### From Source
+
+1. Clone the repository.
+2. Build with Cargo:
+   ```bash
+   cargo build --release
+   ```
+3. The binary will be at `target/release/vectrune`.
+
+### From GitHub Releases
+
+You can download pre-compiled binaries for Linux and macOS from the GitHub Releases page.
+
+1. Go to the [Releases](https://github.com/your-username/rune/releases) page.
+2. Download the appropriate `.tar.gz` for your platform:
+   - `vectrune-linux-x86_64.tar.gz`
+   - `vectrune-macos-x86_64.tar.gz`
+   - `vectrune-macos-arm64.tar.gz`
+3. Extract the binary:
+   ```bash
+   tar -xzf vectrune-linux-x86_64.tar.gz
+   chmod +x vectrune
+   mv vectrune /usr/local/bin/ # Optional: move to PATH
+   ```
+
+### GitLab CI/CD Integration
+
+To use `vectrune` in your GitLab pipeline, you can add a step to download and install it:
+
+```yaml
+stages:
+  - test
+
+run_vectrune:
+  stage: test
+  image: ubuntu:latest
+  before_script:
+    - apt-get update && apt-get install -y curl tar
+    - |
+      VECTRUNE_VERSION="v0.1.0" # Use the desired version
+      curl -L "https://github.com/your-username/rune/releases/download/${VECTRUNE_VERSION}/vectrune-linux-x86_64.tar.gz" | tar -xz
+      chmod +x vectrune
+      mv vectrune /usr/local/bin/
+  script:
+    - vectrune --version
+    - vectrune input.yaml --merge-with 'config.yaml@env.(prod).[].(name=allowedIps on value from Ips)' -o yaml
+```
+
 Repository layout
 -----------------
 

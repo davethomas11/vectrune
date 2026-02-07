@@ -1,0 +1,8 @@
+environment:
+ dev:
+  url: dev.com
+ preview:
+  - name: url
+    value: preview.com
+  - name: allowedIps
+    value: []

@@ -1,8 +1,11 @@
 [package]
 name = "rune-runtime"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["David Thomas"]
+description = "Vectrune: Structured data in motion."
+repository = "https://github.com/davethomas11/rune"
+license = "MIT"
 
 [[bin]]
 name = "vectrune"

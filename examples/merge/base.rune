@@ -1,0 +1,12 @@
+#!RUNE
+@Base
+appName: "MyAwesomeApp"
+version: "1.0.0"
+
+@Roles
+- name: "admin"
+  permissions: []
+- name: "user"
+  permissions: ["read"]
+- name: "guest"
+  permissions: []

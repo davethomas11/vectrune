@@ -1,0 +1,10 @@
+#!RUNE
+@AdminPerms
+perms:
+ - "read"
+ - "write"
+ - "delete"
+
+@GuestPerms
+perms:
+ - "read"
