@@ -4,13 +4,15 @@ mod cli;
 mod crud_web_fe;
 mod rune_ast;
 mod rune_parser;
-mod runtime;
+mod core;
+mod apps;
 mod util;
 
 use crate::rune_ast::{RuneDocument, Value};
 use crate::rune_parser::parse_rune;
-use crate::runtime::{build_router, get_app_type};
-use crate::util::{api_doc, json_to_xml};
+use crate::core::{AppState, get_app_type, extract_schemas, extract_data_sources};
+use crate::apps::build_app_router;
+use crate::util::{api_doc, json_to_xml, set_log_level, LogLevel, log};
 use axum::serve;
 use clap::{Arg, Command};
 use std::fs;
@@ -20,7 +22,7 @@ use tokio::net::TcpListener;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let matches = Command::new("vectrune")
-        .version("0.1.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .author("David Thomas")
         .about("Vectrune: Structured data in motion.")
         .arg(
@@ -73,6 +75,14 @@ async fn main() -> anyhow::Result<()> {
                 .value_name("MERGE_SPEC")
                 .help("Merge with another document: base_file@selector"),
         )
+        .arg(
+            Arg::new("log-level")
+                .short('l')
+                .long("log-level")
+                .help("Set log level (debug, info, warn, error)")
+                .value_name("LEVEL")
+                .value_parser(["debug", "info", "warn", "error"]),
+        )
         .get_matches();
 
     let script_path = matches.get_one::<String>("SCRIPT").unwrap();
@@ -83,19 +93,28 @@ async fn main() -> anyhow::Result<()> {
     let transform_spec = matches.get_one::<String>("transform").map(|s| s.as_str());
     let merge_spec = matches.get_one::<String>("merge-with").map(|s| s.as_str());
 
+    let log_level = matches.get_one::<String>("log-level").map(|s| s.as_str());
+    match log_level {
+        Some("debug") => set_log_level(LogLevel::Debug),
+        Some("info") => set_log_level(LogLevel::Info),
+        Some("warn") => set_log_level(LogLevel::Warn),
+        Some("error") => set_log_level(LogLevel::Error),
+        _ => set_log_level(LogLevel::Info),
+    }
+
     let script_content = if script_path == "-" {
         use std::io::Read;
         let mut buf = String::new();
         std::io::stdin()
             .read_to_string(&mut buf)
             .unwrap_or_else(|err| {
-                eprintln!("Error reading script from STDIN: {}", err);
+                log(LogLevel::Error, &format!("Error reading script from STDIN: {}", err));
                 process::exit(1);
             });
         buf
     } else {
         fs::read_to_string(script_path).unwrap_or_else(|err| {
-            eprintln!("Error reading script: {}", err);
+            log(LogLevel::Error, &format!("Error reading script: {}", err));
             process::exit(1);
         })
     };
@@ -104,7 +123,7 @@ async fn main() -> anyhow::Result<()> {
         Some("json") => {
             // Convert JSON input to Rune format
             let json_value: serde_json::Value = serde_json::from_str(&script_content).unwrap_or_else(|err| {
-                eprintln!("Error parsing JSON input: {}", err);
+                log(LogLevel::Error, &format!("Error parsing JSON input: {}", err));
                 process::exit(1);
             });
             RuneDocument::from_json(&json_value)
@@ -113,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
             match RuneDocument::from_xml(&script_content) {
                 Ok(doc) => doc,
                 Err(err) => {
-                    eprintln!("Error parsing XML input: {}", err);
+                    log(LogLevel::Error, &format!("Error parsing XML input: {}", err));
                     process::exit(1);
                 }
             }
@@ -122,7 +141,7 @@ async fn main() -> anyhow::Result<()> {
             match RuneDocument::from_yaml(&script_content) {
                 Ok(doc) => doc,
                 Err(err) => {
-                    eprintln!("Error parsing YAML input: {}", err);
+                    log(LogLevel::Error, &format!("Error parsing YAML input: {}", err));
                     process::exit(1);
                 }
             }
@@ -131,7 +150,7 @@ async fn main() -> anyhow::Result<()> {
             match parse_rune(&script_content) {
                 Ok(doc) => doc,
                 Err(err) => {
-                    eprintln!("Error parsing Vectrune script: {}", err);
+                    log(LogLevel::Error, &format!("Error parsing Vectrune script: {}", err));
                     process::exit(1);
                 }
             }
@@ -141,7 +160,7 @@ async fn main() -> anyhow::Result<()> {
     // Calculation mode
     if let Some(expr) = calc_expr {
         if let Err(e) = crate::cli::handle_calculate(&doc, expr) {
-            eprintln!("{}", e);
+            log(LogLevel::Error, &format!("{}", e));
             process::exit(1);
         }
         process::exit(0);
@@ -154,7 +173,7 @@ async fn main() -> anyhow::Result<()> {
                 doc.update_from(&new_doc);
             }
             Err(e) => {
-                eprintln!("Transform error: {}", e);
+                log(LogLevel::Error, &format!("Transform error: {}", e));
                 process::exit(1);
             }
         }
@@ -167,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
                 doc = merged_doc;
             }
             Err(e) => {
-                eprintln!("Merge error: {}", e);
+                log(LogLevel::Error, &format!("Merge error: {}", e));
                 process::exit(1);
             }
         }
@@ -175,7 +194,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app_type = get_app_type(&doc);
     if is_verbose {
-        println!("Detected App type: {:?}", app_type);
+        log(LogLevel::Info, &format!("Detected App type: {:?}", app_type));
     }
 
     if app_type == Some("REST".to_string()) && output_format == Some("curl") {
@@ -245,16 +264,16 @@ async fn main() -> anyhow::Result<()> {
                         curl_cmd.push_str(&format!("  # {}", desc));
                     }
                 }
-                println!("{}", curl_cmd);
+                log(LogLevel::Info, &curl_cmd);
             }
         }
         process::exit(0);
     }
-    if app_type == Some("REST".to_string()) && output_format == None {
-        println!("Starting Vectrune REST application...");
-        println!("Press Ctrl+C to stop the server.");
+    if (app_type == Some("REST".to_string()) || app_type == Some("Graphql".to_string())) && output_format == None {
+        log(LogLevel::Info, &format!("Starting Vectrune {} application...", app_type.as_deref().unwrap_or("REST")));
+        log(LogLevel::Info, "Press Ctrl+C to stop the server.");
         if is_verbose {
-            println!("Config: \n{}", api_doc(&doc));
+            log(LogLevel::Debug, &format!("Config: \n{}", api_doc(&doc)));
         }
         let rune_dir = if script_path == "-" {
             std::env::current_dir().unwrap()
@@ -264,7 +283,17 @@ async fn main() -> anyhow::Result<()> {
                 .map(|p| p.to_path_buf())
                 .unwrap_or_else(|| std::env::current_dir().unwrap())
         };
-        let app = build_router(doc.clone(), rune_dir, is_verbose).await;
+
+        let schemas = std::sync::Arc::new(extract_schemas(&doc));
+        let data_sources = std::sync::Arc::new(extract_data_sources(&doc));
+        let state = AppState {
+            doc: std::sync::Arc::new(doc.clone()),
+            schemas,
+            data_sources,
+            path: rune_dir.clone()
+        };
+
+        let app = build_app_router(state.clone(), is_verbose).await;
         let port = doc
             .get_section("App")
             .and_then(|sec| sec.kv.get("port"))
@@ -272,18 +301,18 @@ async fn main() -> anyhow::Result<()> {
             .unwrap_or(3000);
         let host_address = format!("127.0.0.1:{}", port);
         let listener = TcpListener::bind(host_address.clone()).await?;
-        println!("Vectrune runtime listening on http://{}", host_address);
+        log(LogLevel::Info, &format!("Vectrune runtime listening on http://{}", host_address));
         serve(listener, app).await?;
         Ok(())
     } else {
         if is_verbose {
-            println!("Parsed Vectrune script:");
+            log(LogLevel::Debug, "Parsed Vectrune script:");
         }
         match output_format {
             Some("json") => {
                 let json_output =
                     serde_json::to_string_pretty(&doc.to_json()).unwrap_or_else(|err| {
-                        eprintln!("Error converting to JSON: {}", err);
+                        log(LogLevel::Error, &format!("Error converting to JSON: {}", err));
                         process::exit(1);
                     });
                 println!("{}", json_output);

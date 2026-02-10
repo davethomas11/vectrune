@@ -1,0 +1,54 @@
+   Compiling rune-runtime v0.1.1 (/Users/davidthomas/dev/rune)
+warning: variable does not need to be mutable
+   --> src/rune_parser.rs:199:25
+    |
+199 |                     let mut maybe_list: Option<&mut Vec<Value>> = None;
+    |                         ----^^^^^^^^^^
+    |                         |
+    |                         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+error[E0505]: cannot move out of `next_line` because it is borrowed
+   --> src/rune_parser.rs:270:47
+    |
+268 |                         Some(next_line) => {
+    |                              --------- binding `next_line` declared here
+269 |                             let trimmed = next_line.trim();
+    |                                           --------- borrow of `next_line` occurs here
+270 |                             record_lines.push(next_line);
+    |                                               ^^^^^^^^^ move out of `next_line` occurs here
+...
+273 |                             if trimmed.ends_with('{') {
+    |                                ------- borrow later used here
+
+error[E0505]: cannot move out of `nested_line` because it is borrowed
+   --> src/rune_parser.rs:277:55
+    |
+275 | ...                   while let Some(nested_line) = lines.next() {
+    |                                      ----------- binding `nested_line` declared here
+276 | ...                       let nested_trimmed = nested_line.trim();
+    |                                                ----------- borrow of `nested_line` occurs here
+277 | ...                       nested_lines.push(nested_line);
+    |                                             ^^^^^^^^^^^ move out of `nested_line` occurs here
+...
+280 | ...                       if nested_trimmed == "}" {
+    |                              -------------- borrow later used here
+
+warning: unused variable: `var`
+   --> src/core/mod.rs:365:22
+    |
+365 |                 let (var, rest) = trimmed.split_at(eq_pos);
+    |                      ^^^ help: if this is intentional, prefix it with an underscore: `_var`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `verbose`
+  --> src/apps/graphql/mod.rs:11:52
+   |
+11 | pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
+   |                                                    ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_verbose`
+
+For more information about this error, try `rustc --explain E0505`.
+warning: `rune-runtime` (lib) generated 3 warnings
+error: could not compile `rune-runtime` (lib) due to 2 previous errors; 3 warnings emitted

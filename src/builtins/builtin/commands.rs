@@ -16,6 +16,8 @@ pub fn builtin_append(
         Some(v) => v.clone(),
         None => JsonValue::String(value_str.into()),
     };
+    // Save a copy of the value to be appended, to avoid accidental overwrite
+    let appended_value = value.clone();
     let mut target = ctx.get(var_name);
     if var_name.contains('.') {
         let parts: Vec<&str> = var_name.split('.').collect();
@@ -49,7 +51,7 @@ pub fn builtin_append(
                     }
                     let last_key = parts.last().unwrap();
                     if let Some(JsonValue::Array(arr)) = current_map.get_mut(*last_key) {
-                        arr.push(value);
+                        arr.push(value.clone());
                     } else {
                         eprintln!("[ERROR] append: variable '{}' is not an array at key '{}'", var_name, last_key);
                         return BuiltinResult::Error(format!("variable '{}' is not an array at key '{}'", var_name, last_key));
@@ -57,10 +59,13 @@ pub fn builtin_append(
                     ctx.insert(parts[0].to_string(), JsonValue::Object(map));
                 }
             } else {
-                new_arr.push(value);
+                new_arr.push(appended_value);
                 ctx.insert(var_name.into(), JsonValue::Array(new_arr));
             }
-
+            // If this is a memory-backed variable, update global memory as well
+            if let Some(mem_mod) = var_name.strip_prefix("memory.") {
+                crate::builtins::builtin::memory::set_memory(mem_mod, ctx.get(var_name).unwrap().clone());
+            }
         }
         Some(_) => {
             eprintln!("[ERROR] append: variable '{}' is not an array", var_name);

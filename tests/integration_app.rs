@@ -4,12 +4,20 @@ use axum::Router;
 use tower::ServiceExt; // for `oneshot`
 
 use rune_runtime::rune_parser::parse_rune;
-use rune_runtime::runtime::build_router;
+use rune_runtime::core::{AppState, extract_schemas, extract_data_sources};
+use rune_runtime::apps::build_app_router;
+use std::sync::Arc;
 
 async fn build_router_from_str(contents: &str) -> Router {
     let doc = parse_rune(contents).expect("parse_rune should succeed");
-    let path = std::path::Path::new("test_app.rune");
-    build_router(doc, PathBuf::from(path), false).await
+    let path = PathBuf::from("test_app.rune");
+    let state = AppState {
+        doc: Arc::new(doc),
+        schemas: Arc::new(extract_schemas(&parse_rune("").unwrap())),
+        data_sources: Arc::new(extract_data_sources(&parse_rune("").unwrap())),
+        path,
+    };
+    build_app_router(state, false).await
 }
 
 #[tokio::test]

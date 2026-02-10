@@ -1,12 +1,14 @@
+use serde::{Deserialize, Serialize};
+use serde_json;
+use serde_yaml;
 use std::collections::HashMap;
 use std::fmt;
 use std::process;
-use serde_json;
-use serde_yaml;
-use quick_xml::de::from_str as xml_from_str;
-use crate::rune_parser::parse_rune;
 
-#[derive(Debug, Clone)]
+use crate::rune_parser::parse_rune;
+use quick_xml::de::from_str as xml_from_str;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuneDocument {
     pub sections: Vec<Section>,
 }
@@ -199,7 +201,7 @@ impl RuneDocument {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Section {
     pub path: Vec<String>,
     pub kv: HashMap<String, Value>,
@@ -207,12 +209,13 @@ pub struct Section {
     pub records: Vec<Record>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Record {
     pub kv: HashMap<String, Value>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Value {
     String(String),
     Number(f64),

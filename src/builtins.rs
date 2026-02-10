@@ -25,8 +25,8 @@ use builtin::csv::{builtin_csv_read, builtin_csv_write, builtin_csv_append};
 use builtin::data_source::builtin_data_source;
 use crate::builtins::builtin::commands::builtin_append;
 use crate::builtins::builtin::memory::{builtin_get_memory, builtin_set_memory};
-use crate::runtime::AppState;
-use crate::util::json_to_xml;
+use crate::core::AppState;
+use crate::util::{json_to_xml, log, LogLevel};
 
 pub type Context = HashMap<String, JsonValue>;
 
@@ -294,6 +294,41 @@ pub async fn call_builtin(
                 }
                 return BuiltinResult::Ok;
             }
+            "max" => {
+                let arr = match ctx.get(target) {
+                    Some(JsonValue::Array(a)) => a.clone(),
+                    _ => Vec::new(),
+                };
+                let mut max_val: f64 = f64::NEG_INFINITY;
+                // Support both ["it", "id"] and ["it.id"]
+                let field = if !args.is_empty() {
+                    if args[0] == "it" {
+                        args.get(1).map(|s| s.trim_start_matches('.'))
+                    } else if args[0].starts_with("it.") {
+                        Some(args[0].trim_start_matches("it."))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                for item in arr {
+                    let val = if let Some(f) = field {
+                        item.get(f).and_then(|v| v.as_f64()).unwrap_or(0.0)
+                    } else {
+                        item.as_f64().unwrap_or(0.0)
+                    };
+                    if val > max_val {
+                        max_val = val;
+                    }
+                }
+                let result = if max_val == f64::NEG_INFINITY { 0.0 } else { max_val };
+                if let Some(var) = assign_to {
+                    ctx.insert(var.to_string(), JsonValue::from(result));
+                }
+                return BuiltinResult::Ok;
+            }
             "remove" => {
                 if args.is_empty() { return BuiltinResult::Error("remove: missing index".to_string()); }
                 let index_val = args[0].as_str();
@@ -325,9 +360,9 @@ pub async fn call_builtin(
         "csv.append" => builtin_csv_append(args, ctx),
         "datasource" => builtin_data_source(args, ctx, &app_state, assign_to).await,
         "load-rune" => builtin_load_rune(args, ctx, assign_to, app_state),
-        "set-memory" => builtin_set_memory(args, ctx),
-        "get-memory" => builtin_get_memory(args, assign_to, ctx),
-        "append" => builtin_append(args, assign_to, ctx),
+        "set-memory" | "memory.set" => builtin_set_memory(args, ctx),
+        "get-memory" | "memory.get" => builtin_get_memory(args, assign_to, ctx),
+        "append" | "memory.append" => builtin_append(args, assign_to, ctx),
         "return" => {
             if args.is_empty() {
                 eprintln!("[ERROR] return: missing value");
@@ -344,12 +379,26 @@ pub async fn call_builtin(
                     }
                 }
 
-                BuiltinResult::Respond(200, ctx.get(args[0].as_str())
-                    .map_or("".to_string(), |v| v.to_string()))
+                let val = ctx.get(args[0].as_str());
+                match val {
+                    Some(v) => {
+                        if v.is_object() || v.is_array() {
+                            BuiltinResult::Respond(200, serde_json::to_string(v).unwrap_or_default())
+                        } else {
+                            BuiltinResult::Respond(200, v.to_string())
+                        }
+                    }
+                    None => BuiltinResult::Respond(200, "".to_string()),
+                }
             }
         }
+        "#" => {
+            // Comment, do nothing
+            log(LogLevel::Debug, &format!("[COMMENT] {}", args.join(" ")));
+            BuiltinResult::Ok
+        }
         _ => {
-            eprintln!("[WARN] unknown builtin: {}", name);
+            log(LogLevel::Error, &format!("unknown builtin: {}", name));
             BuiltinResult::Ok
         }
     }

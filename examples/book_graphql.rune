@@ -1,0 +1,85 @@
+#!RUNE
+
+@App
+name = Book GraphQL API
+type = Graphql
+version = 1.0
+
+@Schema/Book
+id = number
+title = string
+author_id = number
+published_year = number
+
+@Schema/Author
+id = number
+name = string
+bio = string
+
+@GraphQL/Query
+books:
+    # Returns all books
+    books = memory.get "books"
+    return books
+book(id: number):
+    # Returns a single book by ID
+    books = memory.get "books"
+    book = books.find it.id == id
+    return book
+    
+@GraphQL/Query
+authors:
+    # Returns all authors
+    authors = memory.get "authors"
+    return authors
+author(id: number):
+    # Returns a single author by ID
+    authors = memory.get "authors"
+    author = authors.find it.id == id
+    return author
+
+@GraphQL/Mutation/Book
+addBook(title: string, author_id: number, published_year: number):
+    # Adds a new book
+    books = memory.get "books"
+    new_id = books.max it.id + 1
+    new_book = {
+        id: new_id,
+        title: title,
+        author_id: author_id,
+        published_year: published_year
+    }
+    memory.append "books" new_book
+    return new_book
+    
+@GraphQL/Mutation/Author
+addAuthor(name: string, bio: string):
+    # Adds a new author
+    authors = memory.get "authors"
+    new_id = authors.max it.id + 1
+    new_author = {
+        id: new_id,
+        name: name,
+        bio: bio
+    }
+    memory.append "authors" new_author
+    return new_author
+
+# Example in-memory data
+@Memory/books
++ id = 1
+  title = "The Rust Programming Language"
+  author_id = 1
+  published_year = 2019
++ id = 2
+  title = "Programming WebAssembly with Rust"
+  author_id = 2
+  published_year = 2020
+
+@Memory/authors
++ id = 1
+  name = "Steve Klabnik"
+  bio = "Rust core team member."
++ id = 2
+  name = "Kevin Hoffman"
+  bio = "Author and software architect."

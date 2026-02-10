@@ -1,26 +1,16 @@
-use super::crud_web_fe::create_web_fe_handler;
 use crate::builtins::{call_builtin, BuiltinResult, Context};
 use crate::rune_ast::{RuneDocument, Section, Value};
 use async_recursion::async_recursion;
 use axum::{
     http::StatusCode,
-    routing::{delete, get, post, put},
-    Router,
-    response::IntoResponse
 };
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tower_http::services::ServeDir;
 use axum::{middleware::Next, response::Response, http::Request};
 use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
-use serde_json::json;
-use chrono::Utc;
-use jsonwebtoken::{EncodingKey, Header};
-use base64::engine::general_purpose::STANDARD as BASE64;
-use base64::Engine;
-
+use crate::util::{log, LogLevel};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -38,10 +28,10 @@ pub fn get_app_type(doc: &RuneDocument) -> Option<String> {
             }
         }
     }
-    return None;
+    None
 }
 
-fn extract_schemas(doc: &RuneDocument) -> HashMap<String, Section> {
+pub fn extract_schemas(doc: &RuneDocument) -> HashMap<String, Section> {
     let mut schemas = HashMap::new();
     for section in &doc.sections {
         if section.path.first().map(|s| s.as_str()) == Some("Schema") {
@@ -53,7 +43,7 @@ fn extract_schemas(doc: &RuneDocument) -> HashMap<String, Section> {
     schemas
 }
 
-fn extract_data_sources(doc: &RuneDocument) -> HashMap<String, Section> {
+pub fn extract_data_sources(doc: &RuneDocument) -> HashMap<String, Section> {
     let mut data_sources = HashMap::new();
     for section in &doc.sections {
         if section.path.first().map(|s| s.as_str()) == Some("DataSource") {
@@ -65,7 +55,7 @@ fn extract_data_sources(doc: &RuneDocument) -> HashMap<String, Section> {
     data_sources
 }
 
-fn extract_auth_configs(doc: &RuneDocument) -> HashMap<String, Section> {
+pub fn extract_auth_configs(doc: &RuneDocument) -> HashMap<String, Section> {
     let mut auths = HashMap::new();
     for section in &doc.sections {
         if section.path.first().map(|s| s.as_str()) == Some("Authentication") {
@@ -77,270 +67,8 @@ fn extract_auth_configs(doc: &RuneDocument) -> HashMap<String, Section> {
     auths
 }
 
-pub async fn build_router(doc: RuneDocument, rune_dir: PathBuf, verbose: bool) -> Router {
-    let schemas = Arc::new(extract_schemas(&doc));
-    let data_sources = Arc::new(extract_data_sources(&doc));
-    let auth_configs = Arc::new(extract_auth_configs(&doc));
-    let state = AppState {
-        doc: Arc::new(doc),
-        schemas,
-        data_sources,
-        path: rune_dir.clone()
-    };
-    let mut router = Router::with_state(Router::new(), state.clone());
-
-    // If @App section has a "run" kv, execute its steps once
-    if let Some(app_section) = state.doc.sections.iter().find(|s| s.path.first().map(|p| p.as_str()) == Some("App")) {
-        if let Some(run_steps) = app_section.series.get("run") {
-            let _ = execute_steps(state.clone(), run_steps.clone(), None, None, verbose).await;
-        }
-    }
-
-    // Serve static files from the directory containing the rune document, mounted at /assets
-
-    router = router.nest_service("/assets", ServeDir::new(rune_dir.clone()));
-
-    for section in &state.doc.sections {
-        if section.path.first().map(|s| s.as_str()) == Some("Frontend") {
-            if let Some(Value::String(frontend_type)) = section.kv.get("type") {
-                if frontend_type == "web" {
-                    println!("[INFO] Mounting web frontend: {:?} {:?}", section.path, section.kv);
-                    // Create a route for web frontend
-                    let fe_path = section
-                        .kv
-                        .get("path")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("/");
-                    let layout = section
-                        .kv
-                        .get("layout")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
-                    if layout == "crud_powered" {
-                        let wpath = if fe_path == "%ROOT%" { "/" } else { fe_path };
-                        // Handler from crud_web_fe
-                        let state_clone = state.clone();
-                        let name = section.kv.get("name").unwrap().to_string();
-                        router = router.route(
-                            wpath,
-                            get(move || create_web_fe_handler(state_clone.clone(), name)),
-                        );
-
-                        println!("[INFO] Web Frontend (CRUD Powered) mounted at {}\n", wpath);
-                    }
-                }
-            }
-        }
-
-        if section.path.first().map(|s| s.as_str()) == Some("Route") {
-            if section.path.len() < 3 {
-                continue;
-            }
-            let method = section.path.get(1).map(|s| s.as_str()).unwrap_or("GET");
-            let method = method.to_uppercase();
-            let path_template = section
-                .path
-                .iter()
-                .skip(2)
-                .map(|s| s.as_str())
-                .collect::<Vec<_>>()
-                .join("/");
-            let axum_path = format!("/{}", path_template);
-            let default_step = vec![Value::String("respond 200 OK".to_string())];
-
-            let state_clone = state.clone();
-            let run_steps = section.series.get("run").cloned().unwrap_or(default_step);
-            let handler = create_handler(state_clone.clone(), run_steps.clone(), verbose);
-
-            if method == "CRUD" {
-                for m in &["GET", "POST", "PUT", "DELETE"] {
-                    for &with_id in &[false, true] {
-                        let path = if with_id {
-                            format!("{}/{}", axum_path, "{id}")
-                        } else {
-                            axum_path.clone()
-                        };
-                        let run_steps =
-                            crate::builtins::builtin::data_source::get_data_source_commands(
-                                m,
-                                section.clone(),
-                                &state.schemas,
-                                &state.data_sources,
-                                with_id,
-                            );
-                        let handler =
-                            create_handler(state_clone.clone(), run_steps.clone(), verbose);
-                        let route_fn = match *m {
-                            "GET" => get(move |params| handler(params, None)),
-                            "POST" => post(move |params, body| handler(params, Some(body))),
-                            "PUT" => put(move |params, body| handler(params, Some(body))),
-                            "DELETE" => delete(move |params| handler(params, None)),
-                            _ => unreachable!(),
-                        };
-                        let new_router = Router::new();
-                        let mut route = new_router.route(&path, route_fn);
-                        if let Some(auth_name) = section.kv.get("auth").and_then(|v| v.as_str()) {
-                            if let Some(auth_section) = auth_configs.get(auth_name) {
-                                if let Some(Value::String(secret)) = auth_section.kv.get("secret") {
-                                    let secret = secret.clone(); // clone here
-                                    route = route.layer(axum::middleware::from_fn(move |req, next| {
-                                        jwt_auth(req, next, secret.clone())
-                                    }));
-                                }
-                            }
-                        }
-                        router = router.merge(route);
-                    }
-                }
-                continue;
-            }
-
-            let route_fn = match method.as_str() {
-                "GET" | "DELETE" => {
-                    let handler = handler.clone();
-                    match method.as_str() {
-                        "GET" => get(move |params| handler(params, None)),
-                        "DELETE" => delete(move |params| handler(params, None)),
-                        _ => unreachable!(),
-                    }
-                }
-                "POST" | "PUT" => {
-                    let handler = handler.clone();
-                    match method.as_str() {
-                        "POST" => post(move |params, body| handler(params, Some(body))),
-                        "PUT" => put(move |params, body| handler(params, Some(body))),
-                        _ => unreachable!(),
-                    }
-                }
-                _ => {
-                    if verbose {
-                        eprintln!("[WARN] Unsupported HTTP method: {}", method);
-                    }
-                    // Fallback for unsupported methods
-                    continue;
-                }
-            };
-
-            let new_router = Router::new();
-            let mut route = new_router.route(&axum_path, route_fn);
-            if let Some(auth_name) = section.kv.get("auth").and_then(|v| v.as_str()) {
-                if let Some(auth_section) = auth_configs.get(auth_name) {
-                    if let Some(Value::String(secret)) = auth_section.kv.get("secret") {
-                        let secret = secret.clone(); // clone here
-                        route = route.layer(axum::middleware::from_fn(move |req, next| {
-                            jwt_auth(req, next, secret.clone())
-                        }));
-                    }
-                }
-            }
-            router = router.merge(route);
-        }
-    }
-
-
-    add_token_endpoints(router, &auth_configs)
-}
-
-async fn token_handler(
-    req: Request<axum::body::Body>,
-    secret: String,
-    creds: Option<Value>,
-    token_expiry: i64,
-) -> impl IntoResponse {
-    // Parse Basic Auth if credentials are set
-    if let Some(Value::Map(ref map)) = creds {
-        let expected_user = map.get("username").and_then(|v| v.as_str()).unwrap_or("");
-        let expected_pass = map.get("password").and_then(|v| v.as_str()).unwrap_or("");
-        let auth_header = req.headers().get("Authorization").and_then(|v| v.to_str().ok());
-        if let Some(auth_header) = auth_header {
-            if let Some(basic) = auth_header.strip_prefix("Basic ") {
-                if let Ok(decoded) = BASE64.decode(basic) {
-                    if let Ok(decoded_str) = std::str::from_utf8(&decoded) {
-                        let mut parts = decoded_str.splitn(2, ':');
-                        let user = parts.next().unwrap_or("");
-                        let pass = parts.next().unwrap_or("");
-                        if user != expected_user || pass != expected_pass {
-                            return (StatusCode::UNAUTHORIZED, "Invalid credentials".to_string()).into_response();
-                        }
-                    } else {
-                        return (StatusCode::UNAUTHORIZED, "Invalid credentials".to_string()).into_response();
-                    }
-                } else {
-                    return (StatusCode::UNAUTHORIZED, "Invalid credentials".to_string()).into_response();
-                }
-            } else {
-                return (StatusCode::UNAUTHORIZED, "Missing Basic Auth".to_string()).into_response();
-            }
-        } else {
-            return (StatusCode::UNAUTHORIZED, "Missing Basic Auth".to_string()).into_response();
-        }
-    }
-    // Create JWT
-    let claims = json!({
-        "exp": Utc::now().timestamp() + token_expiry,
-        "iat": Utc::now().timestamp(),
-    });
-    let token = jsonwebtoken::encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    ).unwrap();
-    (StatusCode::OK, token).into_response()
-}
-
-fn add_token_endpoints(
-    mut router: Router,
-    auth_configs: &HashMap<String, Section>,
-) -> Router {
-    for (_auth_name, auth_section) in auth_configs.iter() {
-        if let Some(Value::String(token_endpoint)) = auth_section.kv.get("token_endpoint") {
-            let secret = auth_section.kv.get("secret").and_then(|v| v.as_str()).unwrap_or("");
-            let credentials = auth_section.kv.get("token_credentials");
-            let token_expiry = auth_section.kv.get("token_expiry").and_then(|v| v.as_i64()).unwrap_or(3600);
-
-            let endpoint = token_endpoint.clone();
-            let secret = secret.to_string();
-            let creds = credentials.cloned();
-
-            router = router.route(
-                &endpoint,
-                post({
-                    let secret = secret.clone();
-                    let creds = creds.clone();
-                    move |req: axum::http::Request<axum::body::Body>| {
-                        let secret = secret.clone();
-                        let creds = creds.clone();
-                        async move {
-                            token_handler(req, secret, creds, token_expiry).await
-                        }
-                    }
-                }),
-            );
-        }
-    }
-    router
-}
-
-
-fn create_handler(
-    state: AppState,
-    steps: Vec<Value>,
-    verbose: bool,
-) -> impl Fn(
-    axum::extract::Path<HashMap<String, String>>,
-    Option<String>,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = (StatusCode, String)> + Send>>
-       + Clone {
-    move |axum::extract::Path(params): axum::extract::Path<HashMap<String, String>>,
-          body: Option<String>| {
-        let state = state.clone();
-        let steps = steps.clone();
-        Box::pin(async move { execute_steps(state, steps, body, Some(params), verbose).await })
-    }
-}
-
 // Helper to resolve simple literals and dotted paths in context
-fn resolve_path(
+pub fn resolve_path(
     ctx: &Context,
     ident: &str,
     it: Option<&serde_json::Value>,
@@ -385,7 +113,7 @@ fn resolve_path(
     current
 }
 
-fn eval_condition(ctx: &Context, expr: &str, it: Option<&serde_json::Value>) -> bool {
+pub fn eval_condition(ctx: &Context, expr: &str, it: Option<&serde_json::Value>) -> bool {
     // very simple: support == and != with loose numeric equality
     fn loose_eq(a: &serde_json::Value, b: &serde_json::Value) -> bool {
         use serde_json::Value::*;
@@ -425,7 +153,7 @@ fn eval_condition(ctx: &Context, expr: &str, it: Option<&serde_json::Value>) -> 
 }
 
 #[async_recursion]
-async fn execute_steps_inner(
+pub async fn execute_steps_inner(
     state: AppState,
     steps: &[Value],
     ctx: &mut Context,
@@ -464,14 +192,135 @@ async fn execute_steps_inner(
                     None
                 }
                 if let Some(eq_pos) = find_assignment_equals(step) {
+                    log(LogLevel::Debug, &format!("Assignment step: '{}', eq_pos: {}", step, eq_pos));
                     let (var, cmd) = step.split_at(eq_pos);
                     let var = var.trim();
                     let cmd = cmd[1..].trim();
-                    let parts: Vec<String> =
-                        cmd.split_whitespace().map(|s| s.to_string()).collect();
-                    if parts.is_empty() {
+                    // Handle object construction assignment: new_book = { ... }
+                    if cmd.starts_with('{') {
+                        // Remove surrounding braces and normalize whitespace
+                        let mut obj_str = cmd.trim();
+                        if obj_str.starts_with('{') && obj_str.ends_with('}') {
+                            obj_str = &obj_str[1..obj_str.len()-1];
+                        }
+                        // Split by comma, parse key-value pairs
+                        let mut map = serde_json::Map::new();
+                        for pair in obj_str.split(',') {
+                            let pair = pair.trim();
+                            if pair.is_empty() { continue; }
+                            // Find the first colon not inside quotes
+                            let mut colon_pos = None;
+                            let mut in_quotes = false;
+                            for (i, c) in pair.chars().enumerate() {
+                                if c == '"' {
+                                    in_quotes = !in_quotes;
+                                }
+                                if c == ':' && !in_quotes {
+                                    colon_pos = Some(i);
+                                    break;
+                                }
+                            }
+                            if let Some(colon_pos) = colon_pos {
+                                let (key, value_expr) = pair.split_at(colon_pos);
+                                let key = key.trim();
+                                let value_expr = value_expr[1..].trim();
+                                // Remove leading '{' from key if present
+                                let key = key.trim_start_matches('{').trim();
+                                // Resolve value from context
+                                if let Some(val) = resolve_path(ctx, value_expr, None) {
+                                    // If the value is a string that parses as a number, use number
+                                    if let serde_json::Value::String(ref s) = val {
+                                        if let Ok(n) = s.parse::<i64>() {
+                                            map.insert(key.to_string(), serde_json::Value::Number(n.into()));
+                                            continue;
+                                        }
+                                        if let Ok(n) = s.parse::<f64>() {
+                                            map.insert(key.to_string(), serde_json::Value::Number(serde_json::Number::from_f64(n).unwrap()));
+                                            continue;
+                                        }
+                                    }
+                                    map.insert(key.to_string(), val);
+                                } else {
+                                    map.insert(key.to_string(), serde_json::Value::Null);
+                                }
+                            }
+                        }
+                        ctx.insert(var.to_string(), serde_json::Value::Object(map));
+                        log(LogLevel::Debug, &format!("Assigned object to '{}': {:?}", var, ctx.get(var)));
                         continue;
                     }
+
+                    // --- New: Handle arithmetic expressions on builtins/variables ---
+                    // Try to match pattern: <builtin/var> <args> <op> <number>
+                    let arith_ops = ["+", "-", "*", "/"];
+                    let mut op_found = None;
+                    let mut op_pos = 0;
+                    for op in arith_ops.iter() {
+                        if let Some(pos) = cmd.find(&format!(" {} ", op)) {
+                            op_found = Some(*op);
+                            op_pos = pos;
+                            break;
+                        }
+                    }
+                    if let Some(op) = op_found {
+                        // Split into left and right of operator
+                        let (left, right) = cmd.split_at(op_pos);
+                        let left = left.trim();
+                        let right = right[op.len()+1..].trim(); // skip operator and space
+                        log(LogLevel::Debug, &format!("Arithmetic left: '{}', right: '{}'", left, right));
+                        // Evaluate left (could be builtin, method, or variable)
+                        let left_parts: Vec<String> = left.split_whitespace().map(|s| s.to_string()).collect();
+                        let mut left_val = None;
+
+                        // Try builtin first
+                        let left_name = &left_parts[0];
+                        let left_args = &left_parts[1..];
+                        let res = call_builtin(left_name, left_args, ctx, &state, Some(&var.to_string())).await;
+                        if let BuiltinResult::Ok = res {
+                            if let Some(val) = ctx.get(&var.to_string()) {
+                                left_val = Some(val.clone());
+                            }
+                        } else {
+                            // Try resolve_path for variable
+                            left_val = resolve_path(ctx, left_name, None);
+                        }
+                        log(LogLevel::Debug, &format!("Arithmetic left_val: {:?}", left_val));
+
+                        // Evaluate right (should be a number or variable)
+                        let mut right_val = None;
+                        if let Ok(n) = right.parse::<f64>() {
+                            right_val = Some(JsonValue::from(n));
+                        } else if let Some(val) = resolve_path(ctx, right, None) {
+                            right_val = Some(val);
+                        }
+                        log(LogLevel::Debug, &format!("Arithmetic right_val: {:?}", right_val));
+
+                        // Apply arithmetic
+                            // fallback for integer numbers
+                        if let (Some(JsonValue::Number(l)), Some(JsonValue::Number(r))) = (left_val.clone(), right_val.clone()) {
+                            let l_f64 = l.as_f64().unwrap();
+                            let r_f64 = r.as_f64().unwrap();
+                            let result = match op {
+                                "+" => l_f64 + r_f64,
+                                "-" => l_f64 - r_f64,
+                                "*" => l_f64 * r_f64,
+                                "/" => l_f64 / r_f64,
+                                _ => 0.0,
+                            };
+                            log(LogLevel::Debug, &format!("Arithmetic result: {}", result));
+                            if can_cast_to_i64(result) {
+                                ctx.insert(var.to_string(), JsonValue::from(result as i64));
+                            } else {
+                            ctx.insert(var.to_string(), JsonValue::from(result));
+                            }
+                            continue;
+                        }
+                        // If not numbers, fallback to original logic
+                    }
+
+                    let parts: Vec<String> =
+                        cmd.split_whitespace().map(|s| s.to_string()).collect();
+                    log(LogLevel::Debug, &format!("Assignment var: '{}', cmd: '{}', parts: {:?}", var, cmd, parts));
 
                     // Special handling: array index assignment like users[index] = body
                     if let Some(bracket_pos) = var.find('[') {
@@ -519,11 +368,11 @@ async fn execute_steps_inner(
                     let name = &parts[0];
                     let args = &parts[1..];
                     if verbose {
-                        println!("[DEBUG] Executing: {} = {} {:?}", var, name, args);
+                        log(LogLevel::Debug, &format!("Executing: {} = {} {:?}", var, name, args));
                     }
                     let res = call_builtin(name, args, ctx, &state, Some(var)).await;
                     if verbose {
-                        println!("[DEBUG] Result: {:?}", res);
+                        log(LogLevel::Debug, &format!("Result: {:?}", res));
                     }
                     match res {
                         BuiltinResult::Ok => {}
@@ -537,6 +386,9 @@ async fn execute_steps_inner(
                         }
                     }
                 } else {
+                    if verbose {
+                        log(LogLevel::Debug, &format!("Step content: {}", step));
+                    }
                     let parts: Vec<String> =
                         step.split_whitespace().map(|s| s.to_string()).collect();
                     if parts.is_empty() {
@@ -545,9 +397,12 @@ async fn execute_steps_inner(
                     let name = &parts[0];
                     let args = &parts[1..];
                     if verbose {
-                        println!("[DEBUG] Executing: {} {:?}", name, args);
+                        log(LogLevel::Debug, &format!("Executing: {} {:?}", name, args));
                     }
                     let res = call_builtin(name, args, ctx, &state, None).await;
+                    if verbose {
+                        log(LogLevel::Debug, &format!("Builtin Result: {:?}", res));
+                    }
                     match res {
                         BuiltinResult::Ok => {}
                         BuiltinResult::Respond(code, msg) => {
@@ -587,7 +442,11 @@ async fn execute_steps_inner(
     last_response
 }
 
-async fn execute_steps(
+fn can_cast_to_i64(n: f64) -> bool {
+    n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64
+}
+
+pub async fn execute_steps(
     state: AppState,
     steps: Vec<Value>,
     body: Option<String>,
@@ -598,6 +457,10 @@ async fn execute_steps(
 
     // Store path params in context
     if let Some(params) = path_params {
+        // FLAT version for direct access e.g. "id" instead of "path.params.id"
+        for (k, v) in &params {
+            ctx.insert(k.clone(), JsonValue::String(v.clone()));
+        }
         ctx.insert(
             "path.params".to_string(),
             JsonValue::Object(
@@ -613,7 +476,14 @@ async fn execute_steps(
         ctx.insert("body".to_string(), body_str.clone().into());
     }
 
+    if verbose {
+        log(LogLevel::Debug, &format!("Executing steps: {:?}", steps));
+    }
+
     let last_response = execute_steps_inner(state.clone(), &steps, &mut ctx, verbose).await;
+    if verbose {
+        log(LogLevel::Debug, &format!("Last response: {:?}", last_response));
+    }
 
     if let Some((code, msg)) = last_response {
         (StatusCode::from_u16(code).unwrap_or(StatusCode::OK), msg)
@@ -622,7 +492,7 @@ async fn execute_steps(
     }
 }
 
-async fn jwt_auth(
+pub async fn jwt_auth(
     req: Request<axum::body::Body>,
     next: Next,
     secret: String,
@@ -643,4 +513,24 @@ async fn jwt_auth(
         }
     }
     Err(StatusCode::UNAUTHORIZED)
+}
+
+pub fn initialize_memory_from_doc(doc: &RuneDocument) {
+    for section in &doc.sections {
+        if section.path.len() >= 2 && section.path[0] == "Memory" {
+            let key = &section.path[1];
+            let memory_data = if !section.records.is_empty() {
+                serde_json::to_value(&section.records.iter().map(|r| &r.kv).collect::<Vec<_>>())
+                    .unwrap_or(serde_json::Value::Null)
+            } else if !section.kv.is_empty() {
+                serde_json::to_value(&section.kv).unwrap_or(serde_json::Value::Null)
+            } else if let Some(first_series) = section.series.values().next() {
+                serde_json::to_value(first_series).unwrap_or(serde_json::Value::Null)
+            } else {
+                serde_json::Value::Null
+            };
+            log(LogLevel::Debug, &format!("Setting Memory for {}: {:?}", key, memory_data));
+            crate::builtins::builtin::memory::set_memory(key, memory_data);
+        }
+    }
 }

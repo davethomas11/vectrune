@@ -7,7 +7,7 @@ use crate::builtins::builtin::mysql::{
 };
 use crate::builtins::{BuiltinResult, Context};
 use crate::rune_ast::{Section, Value};
-use crate::runtime::AppState;
+use crate::core::AppState;
 use sqlx::{Pool, Postgres, MySql};
 use std::collections::HashMap;
 use std::sync::Arc;

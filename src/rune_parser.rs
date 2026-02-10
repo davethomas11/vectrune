@@ -104,22 +104,74 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
         }
 
         if let Some(sec) = current_section.as_mut() {
-
-            if let Some(idx) = line.find('{') {
-                let key = line[..idx].trim().to_string();
-                // Collect map block lines
-                let mut map_lines = Vec::new();
-                while let Some(map_line) = lines.next() {
-                    let trimmed = map_line.trim();
-                    if trimmed == "}" {
-                        break;
+            // Map block parsing: allowed anywhere, but only if '=' is NOT before '{'
+            if line.contains('{') {
+                let eq_idx = line.find('=');
+                let brace_idx = line.find('{');
+                if brace_idx.is_some() && (eq_idx.is_none() || eq_idx.unwrap() > brace_idx.unwrap()) {
+                    let key = line[..brace_idx.unwrap()].trim().to_string();
+                    // Collect map block lines
+                    let mut map_lines = Vec::new();
+                    while let Some(map_line) = lines.next() {
+                        let trimmed = map_line.trim();
+                        if trimmed == "}" {
+                            break;
+                        }
+                        map_lines.push(map_line);
                     }
-                    map_lines.push(map_line);
+                    let mut map_iter = map_lines.into_iter();
+                    let map = parse_map_block(&mut map_iter);
+                    sec.kv.insert(key, Value::Map(map));
+                    continue;
+                } else if brace_idx.is_some() && eq_idx.is_some() && eq_idx.unwrap() < brace_idx.unwrap() {
+                    // Handle object assignment (e.g., foo = { ... })
+                    let mut assignment = line.to_string();
+                    while !assignment.trim_end().ends_with('}') {
+                        if let Some(next_line) = lines.next() {
+                            assignment.push_str(next_line.trim_end());
+                        } else {
+                            break;
+                        }
+                    }
+                    // Clean up whitespace and newlines
+                    let cleaned = assignment
+                        .lines()
+                        .map(|l| l.trim())
+                        .filter(|l| !l.is_empty())
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    // Add as a string to the current series if inside a series
+                    if !series_stack.is_empty() {
+                        if let Some((_, path)) = series_stack.last().cloned() {
+                            let mut maybe_list: Option<&mut Vec<Value>> = None;
+                            {
+                                let top_key = &path[0];
+                                if let Some(list) = sec.series.get_mut(top_key) {
+                                    let mut current_list: *mut Vec<Value> = list as *mut _;
+                                    for nested_key in path.iter().skip(1) {
+                                        unsafe {
+                                            if let Some(Value::Map(m)) = (*current_list).last_mut() {
+                                                if let Some(Value::List(inner)) = m.get_mut(nested_key) {
+                                                    current_list = inner as *mut _;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    unsafe {
+                                        maybe_list = Some(&mut *current_list);
+                                    }
+                                }
+                            }
+                            if let Some(list) = maybe_list {
+                                list.push(Value::String(cleaned));
+                            }
+                        }
+                    } else {
+                        // Otherwise, add as a string to section kv
+                        sec.kv.insert("statement".to_string(), Value::String(cleaned));
+                    }
+                    continue;
                 }
-                let mut map_iter = map_lines.into_iter();
-                let map = parse_map_block(&mut map_iter);
-                sec.kv.insert(key, Value::Map(map));
-                continue;
             }
 
             if let Some(idx) = line.find('>') {
@@ -211,6 +263,42 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                         series_stack.push((indent, vec![key]));
                     }
                 }
+                // Handle object assignment in series right after series start
+                if line.contains('=') && line.contains('{') {
+                    if let Some((_, path)) = series_stack.last().cloned() {
+                        let mut maybe_list: Option<&mut Vec<Value>> = None;
+                        {
+                            let top_key = &path[0];
+                            if let Some(list) = sec.series.get_mut(top_key) {
+                                let mut current_list: *mut Vec<Value> = list as *mut _;
+                                for nested_key in path.iter().skip(1) {
+                                    unsafe {
+                                        if let Some(Value::Map(m)) = (*current_list).last_mut() {
+                                            if let Some(Value::List(inner)) = m.get_mut(nested_key) {
+                                                current_list = inner as *mut _;
+                                            }
+                                        }
+                                    }
+                                }
+                                unsafe {
+                                    maybe_list = Some(&mut *current_list);
+                                }
+                            }
+                        }
+                        if let Some(list) = maybe_list {
+                            let mut assignment = line.to_string();
+                            while !assignment.trim_end().ends_with('}') {
+                                if let Some(next_line) = lines.next() {
+                                    assignment.push_str("\n");
+                                    assignment.push_str(next_line.trim_end());
+                                } else {
+                                    break;
+                                }
+                            }
+                            list.push(Value::String(assignment));
+                        }
+                    }
+                }
                 continue;
             }
 
@@ -251,6 +339,20 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                     }
 
                     if let Some(list) = maybe_list {
+                        // Robust handling: object assignment at any point in series
+                        if line.contains('=') && line.contains('{') {
+                            let mut assignment = line.to_string();
+                            while !assignment.trim_end().ends_with('}') {
+                                if let Some(next_line) = lines.next() {
+                                    assignment.push_str("\n");
+                                    assignment.push_str(next_line.trim_end());
+                                } else {
+                                    break;
+                                }
+                            }
+                            list.push(Value::String(assignment));
+                            continue;
+                        }
                         let item_text = if line.starts_with('-') {
                             line[1..].trim().to_string()
                         } else {
@@ -325,6 +427,26 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 continue;
             }
 
+            if line.contains('=') && line.contains('{') {
+                // Handle object assignment as a single statement
+                let mut assignment = line.to_string();
+                while !assignment.trim_end().ends_with('}') {
+                    if let Some(next_line) = lines.next() {
+                        assignment.push_str("\n");
+                        assignment.push_str(next_line.trim_end());
+                    } else {
+                        break;
+                    }
+                }
+                // Add the full assignment as a string
+                if let Some(last) = current_records.last_mut() {
+                    last.kv.insert("statement".to_string(), Value::String(assignment));
+                } else {
+                    sec.kv.insert("statement".to_string(), Value::String(assignment));
+                }
+                continue;
+            }
+
             return Err(ParseError::General(format!("Unrecognized line: {}", line)));
         } else {
             return Err(ParseError::NoSection(line.to_string()));
@@ -340,4 +462,3 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
 
     Ok(RuneDocument { sections })
 }
-

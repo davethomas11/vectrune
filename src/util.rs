@@ -1,6 +1,8 @@
 use crate::rune_ast;
 use crate::rune_ast::RuneDocument;
 use serde_json::Value;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Once;
 
 pub fn json_to_xml(value: &Value, root: &str) -> String {
     fn escape_xml(s: &str) -> String {
@@ -62,4 +64,60 @@ pub fn api_doc(doc: &RuneDocument) -> String {
         }
     }
     return api_description;
+}
+
+pub enum LogLevel {
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+static mut LOG_LEVEL: Option<AtomicUsize> = None;
+static INIT: Once = Once::new();
+
+fn log_level_to_usize(level: &LogLevel) -> usize {
+    match level {
+        LogLevel::Debug => 0,
+        LogLevel::Info => 1,
+        LogLevel::Warn => 2,
+        LogLevel::Error => 3,
+    }
+}
+
+fn get_log_level() -> LogLevel {
+    unsafe {
+        INIT.call_once(|| {
+            LOG_LEVEL = Some(AtomicUsize::new(log_level_to_usize(&LogLevel::Info)));
+        });
+        match LOG_LEVEL.as_ref().unwrap().load(Ordering::Relaxed) {
+            0 => LogLevel::Debug,
+            1 => LogLevel::Info,
+            2 => LogLevel::Warn,
+            3 => LogLevel::Error,
+            _ => LogLevel::Info,
+        }
+    }
+}
+
+pub fn set_log_level(level: LogLevel) {
+    unsafe {
+        INIT.call_once(|| {
+            LOG_LEVEL = Some(AtomicUsize::new(log_level_to_usize(&level)));
+        });
+        LOG_LEVEL.as_ref().unwrap().store(log_level_to_usize(&level), Ordering::Relaxed);
+    }
+}
+
+pub fn log(level: LogLevel, msg: &str) {
+    if log_level_to_usize(&level) < log_level_to_usize(&get_log_level()) {
+        return;
+    }
+    let prefix = match level {
+        LogLevel::Debug => "[DEBUG]",
+        LogLevel::Info => "[INFO]",
+        LogLevel::Warn => "[WARN]",
+        LogLevel::Error => "[ERROR]",
+    };
+    println!("{} {}", prefix, msg);
 }

@@ -5,7 +5,9 @@ use std::fs;
 use std::path::PathBuf;
 
 use rune_runtime::rune_parser::parse_rune;
-use rune_runtime::runtime::build_router;
+use rune_runtime::core::{AppState, extract_schemas, extract_data_sources};
+use rune_runtime::apps::build_app_router;
+use std::sync::Arc;
 
 fn write_temp_users_csv(rows: &[(&str, &str, &str)]) -> PathBuf {
     let mut path = std::env::temp_dir();
@@ -20,8 +22,14 @@ fn write_temp_users_csv(rows: &[(&str, &str, &str)]) -> PathBuf {
 
 async fn build_router_from_str(contents: &str) -> Router {
     let doc = parse_rune(contents).expect("parse_rune should succeed");
-    let path_buff = std::path::Path::new("test_user_api.rune").to_path_buf();
-    build_router(doc, path_buff, false).await
+    let path = PathBuf::from("test_user_api.rune");
+    let state = AppState {
+        doc: Arc::new(doc.clone()),
+        schemas: Arc::new(extract_schemas(&doc)),
+        data_sources: Arc::new(extract_data_sources(&doc)),
+        path,
+    };
+    build_app_router(state, false).await
 }
 
 #[tokio::test]

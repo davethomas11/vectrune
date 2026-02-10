@@ -130,6 +130,15 @@ Useful flags:
 Installation
 ------------
 
+### Homebrew (macOS/Linux)
+
+You can install Vectrune using Homebrew:
+
+```sh
+brew tap davethomas11/homebrew-vectrune
+brew install vectrune
+```
+
 ### From Source
 
 1. Clone the repository.
