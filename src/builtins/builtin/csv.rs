@@ -1,8 +1,12 @@
-use std::collections::HashMap;
 use crate::builtins::{BuiltinResult, Context};
 use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 
-pub fn builtin_csv_read(args: &[String], context: &mut Context, assign_to: Option<&str>) -> BuiltinResult {
+pub fn builtin_csv_read(
+    args: &[String],
+    context: &mut Context,
+    assign_to: Option<&str>,
+) -> BuiltinResult {
     use csv::ReaderBuilder;
     if args.is_empty() {
         eprintln!("[ERROR] csv.read: missing filename");
@@ -16,14 +20,16 @@ pub fn builtin_csv_read(args: &[String], context: &mut Context, assign_to: Optio
             if let Some(var_name) = assign_to {
                 context.insert(var_name.to_string(), JsonValue::Array(Vec::new()));
             }
-            return BuiltinResult::Ok
+            return BuiltinResult::Ok;
         }
     };
     let mut records = Vec::new();
     for result in rdr.deserialize::<HashMap<String, String>>() {
         match result {
             Ok(rec) => records.push(JsonValue::Object(
-                rec.into_iter().map(|(k, v)| (k, JsonValue::String(v))).collect()
+                rec.into_iter()
+                    .map(|(k, v)| (k, JsonValue::String(v)))
+                    .collect(),
             )),
             Err(e) => eprintln!("[ERROR] csv.read: {}", e),
         }
@@ -68,7 +74,10 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context) -> BuiltinResult {
                 }
             }
             let headers: Vec<&str> = obj.keys().map(|k| k.as_str()).collect();
-            let values: Vec<&str> = headers.iter().map(|&k| obj[k].as_str().unwrap_or("")).collect();
+            let values: Vec<&str> = headers
+                .iter()
+                .map(|&k| obj[k].as_str().unwrap_or(""))
+                .collect();
             if let Err(e) = wtr.write_record(&values) {
                 eprintln!("[ERROR] csv.write: {}", e);
                 return BuiltinResult::Error(e.to_string());
@@ -78,7 +87,7 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context) -> BuiltinResult {
     }
     if let Err(e) = wtr.flush() {
         eprintln!("[ERROR] csv.write: {}", e);
-        return BuiltinResult::Error(e.to_string())
+        return BuiltinResult::Error(e.to_string());
     }
     BuiltinResult::Ok
 }
@@ -100,9 +109,13 @@ pub fn builtin_csv_append(args: &[String], ctx: &Context) -> BuiltinResult {
         }
     };
     let file_exists = std::path::Path::new(filename).exists();
-    let mut wtr = WriterBuilder::new()
-        .has_headers(false)
-        .from_writer(OpenOptions::new().append(true).create(true).open(filename).unwrap());
+    let mut wtr = WriterBuilder::new().has_headers(false).from_writer(
+        OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(filename)
+            .unwrap(),
+    );
 
     if !file_exists {
         // Write headers if file did not exist
@@ -113,17 +126,20 @@ pub fn builtin_csv_append(args: &[String], ctx: &Context) -> BuiltinResult {
         }
     }
 
-    let values: Vec<String> = obj.values().map(|v| {
-        if let Some(s) = v.as_str() {
-            s.to_string()
-        } else if let Some(n) = v.as_f64() {
-            n.to_string()
-        } else if let Some(b) = v.as_bool() {
-            b.to_string()
-        } else {
-            "null".to_string()
-        }
-    }).collect();
+    let values: Vec<String> = obj
+        .values()
+        .map(|v| {
+            if let Some(s) = v.as_str() {
+                s.to_string()
+            } else if let Some(n) = v.as_f64() {
+                n.to_string()
+            } else if let Some(b) = v.as_bool() {
+                b.to_string()
+            } else {
+                "null".to_string()
+            }
+        })
+        .collect();
     if let Err(e) = wtr.write_record(&values) {
         eprintln!("[ERROR] csv.append: {}", e);
         return BuiltinResult::Error(e.to_string());

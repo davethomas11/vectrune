@@ -83,11 +83,65 @@ You can run scripts with the `vectrune` CLI. Pass a file path, or use `-` to rea
     # From STDIN
     cat examples/user_api.rune | vectrune -
 
-    # Calculate over data
+
+CLI Commands
+------------
+
+Vectrune provides several CLI commands for interacting with scripts and data:
+
+Basic usage:
+
+    vectrune <script.rune> [options]
+
+Common commands and options:
+
+    # Run a script
+    vectrune examples/user_api.rune
+
+    # Calculate an aggregate over data
     vectrune examples/skateboarders.rune --calculate "avg Skateboarder.age"
 
     # Transform data into a new document
     vectrune examples/skateboarders.rune --transform "@Skaters name:[@Skateboarder.name]"
+
+    # Merge two documents using a custom expression
+    vectrune -i <input_format> <input_file> --merge-with '<base_file>@<selector>' -o <output_format>
+
+    # Use the AI command (if enabled)
+    vectrune --ai "Give me CLI commands to list Docker containers"
+
+    # Show help
+    vectrune --help
+
+    # Show version
+    vectrune --version
+
+Options:
+    --calculate "<expression>"   Calculate an aggregate or expression over data
+    --transform "<expression>"   Transform data into a new structure
+    --merge-with "<expr>"        Merge input with another file or config
+    --output, -o <format>        Output format (yaml, json, etc.)
+
+AI Command:
+    --ai "<prompt>"              Use to find CLI commands ( requires running Ollama instance )
+    # Example:
+    vectrune --ai "command to list Docker containers"
+    # Outputs:
+    docker ps
+
+### How to install Ollam with Homebrew on macOS/Linux
+
+```bash
+brew install ollama
+brew services start ollama
+ollama pull phi4
+```
+
+### Environment variables used by AI command
+
+- `VECTRUNE_OLLAMA_URL` (optional): URL of the Ollama API (default: `http://localhost:11434/api/generate`)
+- `VECTRUNE_AI_MODEL` (optional): Ollama model to use for generation (default: `phi4`)
+
 
 Tests
 -----
@@ -218,3 +272,4 @@ This substitution works for:
 - List items: `key = ($VAR1$ $VAR2$)`
 
 If you want to use a literal string with dollar signs, do not wrap the entire value in `$...$`.
+

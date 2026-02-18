@@ -20,16 +20,17 @@ pub fn calculate_to_string(doc: &RuneDocument, expr: &str) -> Result<String, Str
     //  - count Section.field
     let parts: Vec<&str> = expr.split_whitespace().collect();
     if parts.len() != 2 {
-        return Err("Unsupported calculate expression. Examples: 'avg Section.field', 'count Section'".to_string());
+        return Err(
+            "Unsupported calculate expression. Examples: 'avg Section.field', 'count Section'"
+                .to_string(),
+        );
     }
     let func = parts[0].to_lowercase();
     let target = parts[1];
 
     match func.as_str() {
         "avg" | "sum" | "min" | "max" => {
-            let (section, field) = target
-                .split_once('.')
-                .ok_or("Expected Section.field")?;
+            let (section, field) = target.split_once('.').ok_or("Expected Section.field")?;
             let mut nums: Vec<f64> = Vec::new();
             for sec in doc.get_sections(section) {
                 for rec in &sec.records {
@@ -70,7 +71,9 @@ pub fn calculate_to_string(doc: &RuneDocument, expr: &str) -> Result<String, Str
                         } else {
                             Ok(min.to_string())
                         }
-                    } else { Err("No values".to_string()) }
+                    } else {
+                        Err("No values".to_string())
+                    }
                 }
                 "max" => {
                     if let Some(max) = nums.iter().cloned().reduce(f64::max) {
@@ -79,7 +82,9 @@ pub fn calculate_to_string(doc: &RuneDocument, expr: &str) -> Result<String, Str
                         } else {
                             Ok(max.to_string())
                         }
-                    } else { Err("No values".to_string()) }
+                    } else {
+                        Err("No values".to_string())
+                    }
                 }
                 _ => unreachable!(),
             }

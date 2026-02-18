@@ -37,7 +37,11 @@ impl RuneDocument {
             }
         }
 
-        fn walk_json(current_val: &serde_json::Value, current_path: Vec<String>, sections: &mut Vec<Section>) {
+        fn walk_json(
+            current_val: &serde_json::Value,
+            current_path: Vec<String>,
+            sections: &mut Vec<Section>,
+        ) {
             if let serde_json::Value::Object(map) = current_val {
                 let mut kv = HashMap::new();
                 let mut series = HashMap::new();
@@ -97,8 +101,8 @@ impl RuneDocument {
     }
 
     pub(crate) fn from_xml(s: &str) -> Result<RuneDocument, String> {
-        let json_val: serde_json::Value = xml_from_str(s)
-            .map_err(|e| format!("XML parse error: {}", e))?;
+        let json_val: serde_json::Value =
+            xml_from_str(s).map_err(|e| format!("XML parse error: {}", e))?;
 
         // Remove the root tag wrapper often created by quick-xml
         let processed = if let Some(obj) = json_val.as_object() {
@@ -115,8 +119,8 @@ impl RuneDocument {
     }
 
     pub fn from_yaml(s: &str) -> Result<RuneDocument, String> {
-        let yaml_val: serde_yaml::Value = serde_yaml::from_str(s)
-            .map_err(|e| format!("YAML parse error: {}", e))?;
+        let yaml_val: serde_yaml::Value =
+            serde_yaml::from_str(s).map_err(|e| format!("YAML parse error: {}", e))?;
 
         let json_val = serde_json::to_value(yaml_val)
             .map_err(|e| format!("YAML to JSON conversion error: {}", e))?;
@@ -261,27 +265,51 @@ impl Value {
     }
 
     pub fn as_u64(&self) -> Option<u64> {
-        if let Value::Number(n) = self { Some(*n as u64) } else { None }
+        if let Value::Number(n) = self {
+            Some(*n as u64)
+        } else {
+            None
+        }
     }
 
     pub fn as_i64(&self) -> Option<i64> {
-        if let Value::Number(n) = self { Some(*n as i64) } else { None }
+        if let Value::Number(n) = self {
+            Some(*n as i64)
+        } else {
+            None
+        }
     }
 
     pub fn as_str(&self) -> Option<&str> {
-        if let Value::String(s) = self { Some(s) } else { None }
+        if let Value::String(s) = self {
+            Some(s)
+        } else {
+            None
+        }
     }
 
     pub fn as_f64(&self) -> Option<f64> {
-        if let Value::Number(n) = self { Some(*n) } else { None }
+        if let Value::Number(n) = self {
+            Some(*n)
+        } else {
+            None
+        }
     }
 
     pub fn as_bool(&self) -> Option<bool> {
-        if let Value::Bool(b) = self { Some(*b) } else { None }
+        if let Value::Bool(b) = self {
+            Some(*b)
+        } else {
+            None
+        }
     }
 
     pub fn as_list(&self) -> Option<&[Value]> {
-        if let Value::List(list) = self { Some(list) } else { None }
+        if let Value::List(list) = self {
+            Some(list)
+        } else {
+            None
+        }
     }
 }
 

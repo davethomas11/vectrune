@@ -105,7 +105,10 @@ pub fn set_log_level(level: LogLevel) {
         INIT.call_once(|| {
             LOG_LEVEL = Some(AtomicUsize::new(log_level_to_usize(&level)));
         });
-        LOG_LEVEL.as_ref().unwrap().store(log_level_to_usize(&level), Ordering::Relaxed);
+        LOG_LEVEL
+            .as_ref()
+            .unwrap()
+            .store(log_level_to_usize(&level), Ordering::Relaxed);
     }
 }
 

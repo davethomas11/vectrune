@@ -1,12 +1,12 @@
 use axum::http::{Request, StatusCode};
-use axum::{Router, body::Body};
-use tower::ServiceExt;
+use axum::{body::Body, Router};
 use std::fs;
 use std::path::PathBuf;
+use tower::ServiceExt;
 
-use rune_runtime::rune_parser::parse_rune;
-use rune_runtime::core::{AppState, extract_schemas, extract_data_sources};
 use rune_runtime::apps::build_app_router;
+use rune_runtime::core::{extract_data_sources, extract_schemas, AppState};
+use rune_runtime::rune_parser::parse_rune;
 use std::sync::Arc;
 
 fn write_temp_users_csv(rows: &[(&str, &str, &str)]) -> PathBuf {
@@ -34,7 +34,10 @@ async fn build_router_from_str(contents: &str) -> Router {
 
 #[tokio::test]
 async fn get_users_returns_array() {
-    let csv_path = write_temp_users_csv(&[("1", "Alice", "a@example.com"), ("2", "Bob", "b@example.com")]);
+    let csv_path = write_temp_users_csv(&[
+        ("1", "Alice", "a@example.com"),
+        ("2", "Bob", "b@example.com"),
+    ]);
     let csv = csv_path.to_string_lossy();
     let script = format!(
         r#"#!RUNE
@@ -54,11 +57,18 @@ run:
     let app = build_router_from_str(&script).await;
 
     let resp = app
-        .oneshot(Request::builder().uri("/users").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/users")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
-    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body_bytes.to_vec()).unwrap();
     let val: serde_json::Value = serde_json::from_str(&text).unwrap();
     assert!(val.is_array());
@@ -89,7 +99,12 @@ run:
 
     let app = build_router_from_str(&script).await;
     let resp = app
-        .oneshot(Request::builder().uri("/users/999").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/users/999")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
@@ -139,7 +154,7 @@ run:
 
 #[tokio::test]
 async fn get_user_by_id_found() {
-    let csv_path = write_temp_users_csv(&[("5", "Alice", "a@example.com"),("6", "Bob", "")]);
+    let csv_path = write_temp_users_csv(&[("5", "Alice", "a@example.com"), ("6", "Bob", "")]);
     let csv = csv_path.to_string_lossy();
     let script = format!(
         r#"#!RUNE
@@ -160,11 +175,18 @@ run:
     );
     let app = build_router_from_str(&script).await;
     let resp = app
-        .oneshot(Request::builder().uri("/users/5").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/users/5")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
-    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body_bytes.to_vec()).unwrap();
     let val: serde_json::Value = serde_json::from_str(&text).unwrap();
     assert_eq!(val["name"], "Alice");
@@ -202,7 +224,8 @@ run:
 "#
     );
     let app = build_router_from_str(&script).await;
-    let body = serde_json::json!({"id": 1, "name": "Alice Updated", "email": "alice@new.com"}).to_string();
+    let body =
+        serde_json::json!({"id": 1, "name": "Alice Updated", "email": "alice@new.com"}).to_string();
     let req = Request::builder()
         .method("PUT")
         .uri("/users/1")
@@ -211,7 +234,9 @@ run:
         .unwrap();
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
-    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body_bytes.to_vec()).unwrap();
     assert_eq!(text, "OK");
 }
@@ -256,7 +281,9 @@ run:
         .unwrap();
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body_bytes.to_vec()).unwrap();
     assert_eq!(text, "User added");
 }
@@ -301,7 +328,9 @@ run:
         .unwrap();
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body_bytes.to_vec()).unwrap();
     assert_eq!(text, "User exists already");
 }

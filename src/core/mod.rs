@@ -1,23 +1,21 @@
 use crate::builtins::{call_builtin, BuiltinResult, Context};
 use crate::rune_ast::{RuneDocument, Section, Value};
+use crate::util::{log, LogLevel};
 use async_recursion::async_recursion;
-use axum::{
-    http::StatusCode,
-};
+use axum::http::StatusCode;
+use axum::{http::Request, middleware::Next, response::Response};
+use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use axum::{middleware::Next, response::Response, http::Request};
-use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
-use crate::util::{log, LogLevel};
 
 #[derive(Clone)]
 pub struct AppState {
     pub doc: Arc<RuneDocument>,
     pub schemas: Arc<HashMap<String, Section>>, // For @Schema
     pub data_sources: Arc<HashMap<String, Section>>, // For @Datasource
-    pub path: PathBuf,               // Path to the rune document
+    pub path: PathBuf,                          // Path to the rune document
 }
 
 pub fn get_app_type(doc: &RuneDocument) -> Option<String> {
@@ -192,7 +190,10 @@ pub async fn execute_steps_inner(
                     None
                 }
                 if let Some(eq_pos) = find_assignment_equals(step) {
-                    log(LogLevel::Debug, &format!("Assignment step: '{}', eq_pos: {}", step, eq_pos));
+                    log(
+                        LogLevel::Debug,
+                        &format!("Assignment step: '{}', eq_pos: {}", step, eq_pos),
+                    );
                     let (var, cmd) = step.split_at(eq_pos);
                     let var = var.trim();
                     let cmd = cmd[1..].trim();
@@ -201,13 +202,15 @@ pub async fn execute_steps_inner(
                         // Remove surrounding braces and normalize whitespace
                         let mut obj_str = cmd.trim();
                         if obj_str.starts_with('{') && obj_str.ends_with('}') {
-                            obj_str = &obj_str[1..obj_str.len()-1];
+                            obj_str = &obj_str[1..obj_str.len() - 1];
                         }
                         // Split by comma, parse key-value pairs
                         let mut map = serde_json::Map::new();
                         for pair in obj_str.split(',') {
                             let pair = pair.trim();
-                            if pair.is_empty() { continue; }
+                            if pair.is_empty() {
+                                continue;
+                            }
                             // Find the first colon not inside quotes
                             let mut colon_pos = None;
                             let mut in_quotes = false;
@@ -231,11 +234,19 @@ pub async fn execute_steps_inner(
                                     // If the value is a string that parses as a number, use number
                                     if let serde_json::Value::String(ref s) = val {
                                         if let Ok(n) = s.parse::<i64>() {
-                                            map.insert(key.to_string(), serde_json::Value::Number(n.into()));
+                                            map.insert(
+                                                key.to_string(),
+                                                serde_json::Value::Number(n.into()),
+                                            );
                                             continue;
                                         }
                                         if let Ok(n) = s.parse::<f64>() {
-                                            map.insert(key.to_string(), serde_json::Value::Number(serde_json::Number::from_f64(n).unwrap()));
+                                            map.insert(
+                                                key.to_string(),
+                                                serde_json::Value::Number(
+                                                    serde_json::Number::from_f64(n).unwrap(),
+                                                ),
+                                            );
                                             continue;
                                         }
                                     }
@@ -246,7 +257,10 @@ pub async fn execute_steps_inner(
                             }
                         }
                         ctx.insert(var.to_string(), serde_json::Value::Object(map));
-                        log(LogLevel::Debug, &format!("Assigned object to '{}': {:?}", var, ctx.get(var)));
+                        log(
+                            LogLevel::Debug,
+                            &format!("Assigned object to '{}': {:?}", var, ctx.get(var)),
+                        );
                         continue;
                     }
 
@@ -266,16 +280,22 @@ pub async fn execute_steps_inner(
                         // Split into left and right of operator
                         let (left, right) = cmd.split_at(op_pos);
                         let left = left.trim();
-                        let right = right[op.len()+1..].trim(); // skip operator and space
-                        log(LogLevel::Debug, &format!("Arithmetic left: '{}', right: '{}'", left, right));
+                        let right = right[op.len() + 1..].trim(); // skip operator and space
+                        log(
+                            LogLevel::Debug,
+                            &format!("Arithmetic left: '{}', right: '{}'", left, right),
+                        );
                         // Evaluate left (could be builtin, method, or variable)
-                        let left_parts: Vec<String> = left.split_whitespace().map(|s| s.to_string()).collect();
+                        let left_parts: Vec<String> =
+                            left.split_whitespace().map(|s| s.to_string()).collect();
                         let mut left_val = None;
 
                         // Try builtin first
                         let left_name = &left_parts[0];
                         let left_args = &left_parts[1..];
-                        let res = call_builtin(left_name, left_args, ctx, &state, Some(&var.to_string())).await;
+                        let res =
+                            call_builtin(left_name, left_args, ctx, &state, Some(&var.to_string()))
+                                .await;
                         if let BuiltinResult::Ok = res {
                             if let Some(val) = ctx.get(&var.to_string()) {
                                 left_val = Some(val.clone());
@@ -284,7 +304,10 @@ pub async fn execute_steps_inner(
                             // Try resolve_path for variable
                             left_val = resolve_path(ctx, left_name, None);
                         }
-                        log(LogLevel::Debug, &format!("Arithmetic left_val: {:?}", left_val));
+                        log(
+                            LogLevel::Debug,
+                            &format!("Arithmetic left_val: {:?}", left_val),
+                        );
 
                         // Evaluate right (should be a number or variable)
                         let mut right_val = None;
@@ -293,11 +316,16 @@ pub async fn execute_steps_inner(
                         } else if let Some(val) = resolve_path(ctx, right, None) {
                             right_val = Some(val);
                         }
-                        log(LogLevel::Debug, &format!("Arithmetic right_val: {:?}", right_val));
+                        log(
+                            LogLevel::Debug,
+                            &format!("Arithmetic right_val: {:?}", right_val),
+                        );
 
                         // Apply arithmetic
-                            // fallback for integer numbers
-                        if let (Some(JsonValue::Number(l)), Some(JsonValue::Number(r))) = (left_val.clone(), right_val.clone()) {
+                        // fallback for integer numbers
+                        if let (Some(JsonValue::Number(l)), Some(JsonValue::Number(r))) =
+                            (left_val.clone(), right_val.clone())
+                        {
                             let l_f64 = l.as_f64().unwrap();
                             let r_f64 = r.as_f64().unwrap();
                             let result = match op {
@@ -311,7 +339,7 @@ pub async fn execute_steps_inner(
                             if can_cast_to_i64(result) {
                                 ctx.insert(var.to_string(), JsonValue::from(result as i64));
                             } else {
-                            ctx.insert(var.to_string(), JsonValue::from(result));
+                                ctx.insert(var.to_string(), JsonValue::from(result));
                             }
                             continue;
                         }
@@ -320,7 +348,13 @@ pub async fn execute_steps_inner(
 
                     let parts: Vec<String> =
                         cmd.split_whitespace().map(|s| s.to_string()).collect();
-                    log(LogLevel::Debug, &format!("Assignment var: '{}', cmd: '{}', parts: {:?}", var, cmd, parts));
+                    log(
+                        LogLevel::Debug,
+                        &format!(
+                            "Assignment var: '{}', cmd: '{}', parts: {:?}",
+                            var, cmd, parts
+                        ),
+                    );
 
                     // Special handling: array index assignment like users[index] = body
                     if let Some(bracket_pos) = var.find('[') {
@@ -368,7 +402,10 @@ pub async fn execute_steps_inner(
                     let name = &parts[0];
                     let args = &parts[1..];
                     if verbose {
-                        log(LogLevel::Debug, &format!("Executing: {} = {} {:?}", var, name, args));
+                        log(
+                            LogLevel::Debug,
+                            &format!("Executing: {} = {} {:?}", var, name, args),
+                        );
                     }
                     let res = call_builtin(name, args, ctx, &state, Some(var)).await;
                     if verbose {
@@ -482,7 +519,10 @@ pub async fn execute_steps(
 
     let last_response = execute_steps_inner(state.clone(), &steps, &mut ctx, verbose).await;
     if verbose {
-        log(LogLevel::Debug, &format!("Last response: {:?}", last_response));
+        log(
+            LogLevel::Debug,
+            &format!("Last response: {:?}", last_response),
+        );
     }
 
     if let Some((code, msg)) = last_response {
@@ -506,7 +546,9 @@ pub async fn jwt_auth(
                     token,
                     &DecodingKey::from_secret(secret.as_bytes()),
                     &validation,
-                ).is_ok() {
+                )
+                .is_ok()
+                {
                     return Ok(next.run(req).await);
                 }
             }
@@ -529,7 +571,10 @@ pub fn initialize_memory_from_doc(doc: &RuneDocument) {
             } else {
                 serde_json::Value::Null
             };
-            log(LogLevel::Debug, &format!("Setting Memory for {}: {:?}", key, memory_data));
+            log(
+                LogLevel::Debug,
+                &format!("Setting Memory for {}: {:?}", key, memory_data),
+            );
             crate::builtins::builtin::memory::set_memory(key, memory_data);
         }
     }

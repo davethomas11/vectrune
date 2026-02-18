@@ -40,12 +40,18 @@ pub fn builtin_append(
                 let parts: Vec<&str> = var_name.split('.').collect();
                 if let Some(JsonValue::Object(mut map)) = ctx.get(parts[0]).cloned() {
                     let mut current_map = &mut map;
-                    for key in &parts[1..parts.len()-1] {
+                    for key in &parts[1..parts.len() - 1] {
                         current_map = match current_map.get_mut(*key) {
                             Some(JsonValue::Object(inner_map)) => inner_map,
                             _ => {
-                                eprintln!("[ERROR] append: variable '{}' is not an object at key '{}'", var_name, key);
-                                return BuiltinResult::Error(format!("variable '{}' is not an object at key '{}'", var_name, key));
+                                eprintln!(
+                                    "[ERROR] append: variable '{}' is not an object at key '{}'",
+                                    var_name, key
+                                );
+                                return BuiltinResult::Error(format!(
+                                    "variable '{}' is not an object at key '{}'",
+                                    var_name, key
+                                ));
                             }
                         };
                     }
@@ -53,8 +59,14 @@ pub fn builtin_append(
                     if let Some(JsonValue::Array(arr)) = current_map.get_mut(*last_key) {
                         arr.push(value.clone());
                     } else {
-                        eprintln!("[ERROR] append: variable '{}' is not an array at key '{}'", var_name, last_key);
-                        return BuiltinResult::Error(format!("variable '{}' is not an array at key '{}'", var_name, last_key));
+                        eprintln!(
+                            "[ERROR] append: variable '{}' is not an array at key '{}'",
+                            var_name, last_key
+                        );
+                        return BuiltinResult::Error(format!(
+                            "variable '{}' is not an array at key '{}'",
+                            var_name, last_key
+                        ));
                     }
                     ctx.insert(parts[0].to_string(), JsonValue::Object(map));
                 }
@@ -64,7 +76,10 @@ pub fn builtin_append(
             }
             // If this is a memory-backed variable, update global memory as well
             if let Some(mem_mod) = var_name.strip_prefix("memory.") {
-                crate::builtins::builtin::memory::set_memory(mem_mod, ctx.get(var_name).unwrap().clone());
+                crate::builtins::builtin::memory::set_memory(
+                    mem_mod,
+                    ctx.get(var_name).unwrap().clone(),
+                );
             }
         }
         Some(_) => {

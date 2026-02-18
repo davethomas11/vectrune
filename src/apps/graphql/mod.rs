@@ -1,5 +1,6 @@
 use crate::core::{execute_steps, AppState};
 use crate::rune_ast::Value as RuneValue;
+use crate::util::{log, LogLevel};
 use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, Object, Scalar, Schema, TypeRef,
 };
@@ -7,7 +8,6 @@ use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{response::IntoResponse, routing::get, Router};
 use std::collections::HashMap;
-use crate::util::{log, LogLevel};
 
 pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
     // Memory initialization moved to core::initialize_memory_from_doc
@@ -31,7 +31,9 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
         }
     }
 
-    mutation_has_fields = state.doc.sections.iter().any(|s| s.path.len() >=2 && &s.path[0..2] == vec!["GraphQL", "Mutation"] && !s.series.is_empty());
+    mutation_has_fields = state.doc.sections.iter().any(|s| {
+        s.path.len() >= 2 && &s.path[0..2] == vec!["GraphQL", "Mutation"] && !s.series.is_empty()
+    });
 
     let mut schema_builder = if mutation_has_fields {
         Schema::build("Query", Some("Mutation"), None)
@@ -49,7 +51,10 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
                     let parent = ctx.parent_value.as_value().unwrap();
                     let field_name = ctx.field().name();
                     let val = match parent {
-                        async_graphql::Value::Object(map) => map.get(field_name).cloned().unwrap_or(async_graphql::Value::Null),
+                        async_graphql::Value::Object(map) => map
+                            .get(field_name)
+                            .cloned()
+                            .unwrap_or(async_graphql::Value::Null),
                         _ => async_graphql::Value::Null,
                     };
                     Ok(Some(FieldValue::from(val)))
@@ -60,7 +65,12 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
     }
 
     // Register Queries
-    for query_section in state.doc.sections.iter().filter(|s| s.path.len() >=2 && &s.path[0..2] == vec!["GraphQL", "Query"]) {
+    for query_section in state
+        .doc
+        .sections
+        .iter()
+        .filter(|s| s.path.len() >= 2 && &s.path[0..2] == vec!["GraphQL", "Query"])
+    {
         for (field_name, field_value) in &query_section.series {
             let mut name = field_name.clone();
             let mut arg_defs = Vec::new();
@@ -74,8 +84,6 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
                     }
                 }
             }
-
-
 
             // Infer return type
             let return_type = if query_section.path.len() > 2 {
@@ -107,16 +115,25 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
                                 async_graphql::Value::String(s) => s.clone(),
                                 _ => v.to_string().trim_matches('"').to_string(),
                             };
-                            log(LogLevel::Debug, &format!("GraphQL Arg (Query): {} = {}", arg_name, s));
+                            log(
+                                LogLevel::Debug,
+                                &format!("GraphQL Arg (Query): {} = {}", arg_name, s),
+                            );
                             path_params.insert(arg_name.clone(), s);
                         }
                     }
 
-                    log(LogLevel::Debug, &format!("Executing GraphQL Query steps: {:?}", steps));
-                    let (_code, resp) = execute_steps(state_clone, steps, None, Some(path_params), true).await;
+                    log(
+                        LogLevel::Debug,
+                        &format!("Executing GraphQL Query steps: {:?}", steps),
+                    );
+                    let (_code, resp) =
+                        execute_steps(state_clone, steps, None, Some(path_params), true).await;
                     log(LogLevel::Debug, &format!("GraphQL Query Resp: {}", resp));
-                    let json_res: serde_json::Value = serde_json::from_str(&resp).unwrap_or(serde_json::Value::String(resp));
-                    let gql_val = async_graphql::Value::from_json(json_res).unwrap_or(async_graphql::Value::Null);
+                    let json_res: serde_json::Value =
+                        serde_json::from_str(&resp).unwrap_or(serde_json::Value::String(resp));
+                    let gql_val = async_graphql::Value::from_json(json_res)
+                        .unwrap_or(async_graphql::Value::Null);
                     Ok(Some(FieldValue::from(gql_val)))
                 })
             });
@@ -130,8 +147,13 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
     }
 
     // Register Mutations
-    for mutation_section in state.doc.sections.iter().filter(|s| s.path.len() >=2 && &s.path[0..2] == vec!["GraphQL", "Mutation"]) {
-         for (field_name, field_value) in &mutation_section.series {
+    for mutation_section in state
+        .doc
+        .sections
+        .iter()
+        .filter(|s| s.path.len() >= 2 && &s.path[0..2] == vec!["GraphQL", "Mutation"])
+    {
+        for (field_name, field_value) in &mutation_section.series {
             let mut name = field_name.clone();
             let mut arg_defs = Vec::new();
             if let Some(pos) = field_name.find('(') {
@@ -169,16 +191,25 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
                                 async_graphql::Value::String(s) => s.clone(),
                                 _ => v.to_string().trim_matches('"').to_string(),
                             };
-                            log(LogLevel::Debug, &format!("GraphQL Arg (Mutation): {} = {}", arg_name, s));
+                            log(
+                                LogLevel::Debug,
+                                &format!("GraphQL Arg (Mutation): {} = {}", arg_name, s),
+                            );
                             path_params.insert(arg_name.clone(), s);
                         }
                     }
 
-                    log(LogLevel::Debug, &format!("Executing GraphQL Mutation steps: {:?}", steps));
-                    let (_code, resp) = execute_steps(state_clone, steps, None, Some(path_params), true).await;
+                    log(
+                        LogLevel::Debug,
+                        &format!("Executing GraphQL Mutation steps: {:?}", steps),
+                    );
+                    let (_code, resp) =
+                        execute_steps(state_clone, steps, None, Some(path_params), true).await;
                     log(LogLevel::Debug, &format!("GraphQL Mutation Resp: {}", resp));
-                    let json_res: serde_json::Value = serde_json::from_str(&resp).unwrap_or(serde_json::Value::String(resp));
-                    let gql_val = async_graphql::Value::from_json(json_res).unwrap_or(async_graphql::Value::Null);
+                    let json_res: serde_json::Value =
+                        serde_json::from_str(&resp).unwrap_or(serde_json::Value::String(resp));
+                    let gql_val = async_graphql::Value::from_json(json_res)
+                        .unwrap_or(async_graphql::Value::Null);
                     Ok(Some(FieldValue::from(gql_val)))
                 })
             });
@@ -192,24 +223,35 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
     }
 
     // Add health and execute to query for backward compatibility
-    query_object = query_object.field(Field::new("health", TypeRef::named_nn(TypeRef::STRING), |_| {
-        FieldFuture::new(async { Ok(Some(FieldValue::value("OK"))) })
-    }));
+    query_object = query_object.field(Field::new(
+        "health",
+        TypeRef::named_nn(TypeRef::STRING),
+        |_| FieldFuture::new(async { Ok(Some(FieldValue::value("OK"))) }),
+    ));
 
     let state_clone = state.clone();
-    query_object = query_object.field(Field::new("execute", TypeRef::named_nn(TypeRef::STRING), move |ctx| {
-        let state = state_clone.clone();
-        FieldFuture::new(async move {
-            let steps: Vec<RuneValue> = if let Some(steps_accessor) = ctx.args.get("steps") {
-                let steps_val = steps_accessor.list()?;
-                steps_val.iter().map(|v| RuneValue::String(v.string().unwrap_or("").to_string())).collect()
-            } else {
-                Vec::new()
-            };
-            let (_code, resp) = execute_steps(state, steps, None, None, true).await;
-            Ok(Some(FieldValue::value(resp)))
+    query_object = query_object.field(
+        Field::new("execute", TypeRef::named_nn(TypeRef::STRING), move |ctx| {
+            let state = state_clone.clone();
+            FieldFuture::new(async move {
+                let steps: Vec<RuneValue> = if let Some(steps_accessor) = ctx.args.get("steps") {
+                    let steps_val = steps_accessor.list()?;
+                    steps_val
+                        .iter()
+                        .map(|v| RuneValue::String(v.string().unwrap_or("").to_string()))
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+                let (_code, resp) = execute_steps(state, steps, None, None, true).await;
+                Ok(Some(FieldValue::value(resp)))
+            })
         })
-    }).argument(InputValue::new("steps", TypeRef::named_nn_list_nn(TypeRef::STRING))));
+        .argument(InputValue::new(
+            "steps",
+            TypeRef::named_nn_list_nn(TypeRef::STRING),
+        )),
+    );
 
     // Build schema only once, after all objects are registered
     let schema = if mutation_has_fields {

@@ -1,4 +1,4 @@
-use crate::rune_ast::{RuneDocument, Section, Record, Value};
+use crate::rune_ast::{Record, RuneDocument, Section, Value};
 use std::collections::HashMap;
 
 #[derive(thiserror::Error, Debug)]
@@ -20,15 +20,16 @@ fn parse_map_block<I: Iterator<Item = String>>(lines: &mut I) -> HashMap<String,
             let mut parts = trimmed.splitn(2, '=');
             let key = parts.next().unwrap().trim().to_string();
             let value_raw = parts.next().unwrap().trim();
-            let value = if value_raw.starts_with('$') && value_raw.ends_with('$') && value_raw.len() > 2 {
-                let var_name = &value_raw[1..value_raw.len()-1];
-                match std::env::var(var_name) {
-                    Ok(val) => Value::String(val),
-                    Err(_) => Value::String(String::new()),
-                }
-            } else {
-                Value::String(value_raw.trim_matches('"').to_string())
-            };
+            let value =
+                if value_raw.starts_with('$') && value_raw.ends_with('$') && value_raw.len() > 2 {
+                    let var_name = &value_raw[1..value_raw.len() - 1];
+                    match std::env::var(var_name) {
+                        Ok(val) => Value::String(val),
+                        Err(_) => Value::String(String::new()),
+                    }
+                } else {
+                    Value::String(value_raw.trim_matches('"').to_string())
+                };
             map.insert(key, value);
         }
     }
@@ -108,7 +109,8 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
             if line.contains('{') {
                 let eq_idx = line.find('=');
                 let brace_idx = line.find('{');
-                if brace_idx.is_some() && (eq_idx.is_none() || eq_idx.unwrap() > brace_idx.unwrap()) {
+                if brace_idx.is_some() && (eq_idx.is_none() || eq_idx.unwrap() > brace_idx.unwrap())
+                {
                     let key = line[..brace_idx.unwrap()].trim().to_string();
                     // Collect map block lines
                     let mut map_lines = Vec::new();
@@ -123,7 +125,10 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                     let map = parse_map_block(&mut map_iter);
                     sec.kv.insert(key, Value::Map(map));
                     continue;
-                } else if brace_idx.is_some() && eq_idx.is_some() && eq_idx.unwrap() < brace_idx.unwrap() {
+                } else if brace_idx.is_some()
+                    && eq_idx.is_some()
+                    && eq_idx.unwrap() < brace_idx.unwrap()
+                {
                     // Handle object assignment (e.g., foo = { ... })
                     let mut assignment = line.to_string();
                     while !assignment.trim_end().ends_with('}') {
@@ -150,8 +155,11 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                                     let mut current_list: *mut Vec<Value> = list as *mut _;
                                     for nested_key in path.iter().skip(1) {
                                         unsafe {
-                                            if let Some(Value::Map(m)) = (*current_list).last_mut() {
-                                                if let Some(Value::List(inner)) = m.get_mut(nested_key) {
+                                            if let Some(Value::Map(m)) = (*current_list).last_mut()
+                                            {
+                                                if let Some(Value::List(inner)) =
+                                                    m.get_mut(nested_key)
+                                                {
                                                     current_list = inner as *mut _;
                                                 }
                                             }
@@ -168,7 +176,8 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                         }
                     } else {
                         // Otherwise, add as a string to section kv
-                        sec.kv.insert("statement".to_string(), Value::String(cleaned));
+                        sec.kv
+                            .insert("statement".to_string(), Value::String(cleaned));
                     }
                     continue;
                 }
@@ -220,10 +229,16 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                                         } else {
                                             // Structure missing; create it
                                             let mut new_map = HashMap::new();
-                                            new_map.insert(nested_key.clone(), Value::List(Vec::new()));
+                                            new_map.insert(
+                                                nested_key.clone(),
+                                                Value::List(Vec::new()),
+                                            );
                                             (*current_list).push(Value::Map(new_map));
-                                            if let Some(Value::Map(m2)) = (*current_list).last_mut() {
-                                                if let Some(Value::List(inner2)) = m2.get_mut(nested_key) {
+                                            if let Some(Value::Map(m2)) = (*current_list).last_mut()
+                                            {
+                                                if let Some(Value::List(inner2)) =
+                                                    m2.get_mut(nested_key)
+                                                {
                                                     current_list = inner2 as *mut _;
                                                 }
                                             }
@@ -234,7 +249,9 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                                         new_map.insert(nested_key.clone(), Value::List(Vec::new()));
                                         (*current_list).push(Value::Map(new_map));
                                         if let Some(Value::Map(m2)) = (*current_list).last_mut() {
-                                            if let Some(Value::List(inner2)) = m2.get_mut(nested_key) {
+                                            if let Some(Value::List(inner2)) =
+                                                m2.get_mut(nested_key)
+                                            {
                                                 current_list = inner2 as *mut _;
                                             }
                                         }
@@ -274,7 +291,8 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                                 for nested_key in path.iter().skip(1) {
                                     unsafe {
                                         if let Some(Value::Map(m)) = (*current_list).last_mut() {
-                                            if let Some(Value::List(inner)) = m.get_mut(nested_key) {
+                                            if let Some(Value::List(inner)) = m.get_mut(nested_key)
+                                            {
                                                 current_list = inner as *mut _;
                                             }
                                         }
@@ -389,7 +407,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                         .split_whitespace()
                         .map(|s| {
                             if s.starts_with('$') && s.ends_with('$') && s.len() > 2 {
-                                let var_name = &s[1..s.len()-1];
+                                let var_name = &s[1..s.len() - 1];
                                 match std::env::var(var_name) {
                                     Ok(val) => Value::String(val),
                                     Err(_) => Value::String(String::new()),
@@ -408,8 +426,9 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                     Value::Number(n)
                 } else {
                     // Check for $VAR$ syntax for env var substitution
-                    if value_raw.starts_with('$') && value_raw.ends_with('$') && value_raw.len() > 2 {
-                        let var_name = &value_raw[1..value_raw.len()-1];
+                    if value_raw.starts_with('$') && value_raw.ends_with('$') && value_raw.len() > 2
+                    {
+                        let var_name = &value_raw[1..value_raw.len() - 1];
                         match std::env::var(var_name) {
                             Ok(val) => Value::String(val),
                             Err(_) => Value::String(String::new()),
@@ -440,9 +459,11 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 }
                 // Add the full assignment as a string
                 if let Some(last) = current_records.last_mut() {
-                    last.kv.insert("statement".to_string(), Value::String(assignment));
+                    last.kv
+                        .insert("statement".to_string(), Value::String(assignment));
                 } else {
-                    sec.kv.insert("statement".to_string(), Value::String(assignment));
+                    sec.kv
+                        .insert("statement".to_string(), Value::String(assignment));
                 }
                 continue;
             }

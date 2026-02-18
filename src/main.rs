@@ -1,18 +1,18 @@
 // src/main.rs
+mod apps;
 mod builtins;
 mod cli;
+mod core;
 mod crud_web_fe;
 mod rune_ast;
 mod rune_parser;
-mod core;
-mod apps;
 mod util;
 
+use crate::apps::build_app_router;
+use crate::core::{extract_data_sources, extract_schemas, get_app_type, AppState};
 use crate::rune_ast::{RuneDocument, Value};
 use crate::rune_parser::parse_rune;
-use crate::core::{AppState, get_app_type, extract_schemas, extract_data_sources};
-use crate::apps::build_app_router;
-use crate::util::{api_doc, json_to_xml, set_log_level, LogLevel, log};
+use crate::util::{api_doc, json_to_xml, log, set_log_level, LogLevel};
 use axum::serve;
 use clap::{Arg, Command};
 use std::fs;
@@ -28,7 +28,8 @@ async fn main() -> anyhow::Result<()> {
         .arg(
             Arg::new("SCRIPT")
                 .help("Path to the .rune script, or '-' to read from STDIN")
-                .required(true)
+                .required_unless_present("ai")
+                .conflicts_with("ai")
                 .index(1),
         )
         .arg(
@@ -83,15 +84,22 @@ async fn main() -> anyhow::Result<()> {
                 .value_name("LEVEL")
                 .value_parser(["debug", "info", "warn", "error"]),
         )
+        .arg(
+            Arg::new("ai")
+                .long("ai")
+                .num_args(1)
+                .value_name("PROMPT")
+                .help("Send a CLI-assistant prompt to the local Ollama instance"),
+        )
         .get_matches();
 
-    let script_path = matches.get_one::<String>("SCRIPT").unwrap();
     let output_format = matches.get_one::<String>("output").map(|s| s.as_str());
     let input_format = matches.get_one::<String>("input").map(|s| s.as_str());
     let is_verbose = matches.get_flag("verbose");
     let calc_expr = matches.get_one::<String>("calculate").map(|s| s.as_str());
     let transform_spec = matches.get_one::<String>("transform").map(|s| s.as_str());
     let merge_spec = matches.get_one::<String>("merge-with").map(|s| s.as_str());
+    let ai_prompt = matches.get_one::<String>("ai").map(|s| s.as_str());
 
     let log_level = matches.get_one::<String>("log-level").map(|s| s.as_str());
     match log_level {
@@ -102,13 +110,25 @@ async fn main() -> anyhow::Result<()> {
         _ => set_log_level(LogLevel::Info),
     }
 
+    if let Some(prompt) = ai_prompt {
+        cli::handle_ai(prompt).await?;
+        return Ok(());
+    }
+
+    let script_path = matches
+        .get_one::<String>("SCRIPT")
+        .expect("SCRIPT is required unless --ai is provided");
+
     let script_content = if script_path == "-" {
         use std::io::Read;
         let mut buf = String::new();
         std::io::stdin()
             .read_to_string(&mut buf)
             .unwrap_or_else(|err| {
-                log(LogLevel::Error, &format!("Error reading script from STDIN: {}", err));
+                log(
+                    LogLevel::Error,
+                    &format!("Error reading script from STDIN: {}", err),
+                );
                 process::exit(1);
             });
         buf
@@ -122,39 +142,46 @@ async fn main() -> anyhow::Result<()> {
     let mut doc: RuneDocument = match input_format {
         Some("json") => {
             // Convert JSON input to Rune format
-            let json_value: serde_json::Value = serde_json::from_str(&script_content).unwrap_or_else(|err| {
-                log(LogLevel::Error, &format!("Error parsing JSON input: {}", err));
-                process::exit(1);
-            });
+            let json_value: serde_json::Value = serde_json::from_str(&script_content)
+                .unwrap_or_else(|err| {
+                    log(
+                        LogLevel::Error,
+                        &format!("Error parsing JSON input: {}", err),
+                    );
+                    process::exit(1);
+                });
             RuneDocument::from_json(&json_value)
         }
-        Some("xml") => {
-            match RuneDocument::from_xml(&script_content) {
-                Ok(doc) => doc,
-                Err(err) => {
-                    log(LogLevel::Error, &format!("Error parsing XML input: {}", err));
-                    process::exit(1);
-                }
+        Some("xml") => match RuneDocument::from_xml(&script_content) {
+            Ok(doc) => doc,
+            Err(err) => {
+                log(
+                    LogLevel::Error,
+                    &format!("Error parsing XML input: {}", err),
+                );
+                process::exit(1);
             }
-        }
-        Some("yaml") => {
-            match RuneDocument::from_yaml(&script_content) {
-                Ok(doc) => doc,
-                Err(err) => {
-                    log(LogLevel::Error, &format!("Error parsing YAML input: {}", err));
-                    process::exit(1);
-                }
+        },
+        Some("yaml") => match RuneDocument::from_yaml(&script_content) {
+            Ok(doc) => doc,
+            Err(err) => {
+                log(
+                    LogLevel::Error,
+                    &format!("Error parsing YAML input: {}", err),
+                );
+                process::exit(1);
             }
-        }
-        _ => {
-            match parse_rune(&script_content) {
-                Ok(doc) => doc,
-                Err(err) => {
-                    log(LogLevel::Error, &format!("Error parsing Vectrune script: {}", err));
-                    process::exit(1);
-                }
+        },
+        _ => match parse_rune(&script_content) {
+            Ok(doc) => doc,
+            Err(err) => {
+                log(
+                    LogLevel::Error,
+                    &format!("Error parsing Vectrune script: {}", err),
+                );
+                process::exit(1);
             }
-        }
+        },
     };
 
     // Calculation mode
@@ -194,7 +221,10 @@ async fn main() -> anyhow::Result<()> {
 
     let app_type = get_app_type(&doc);
     if is_verbose {
-        log(LogLevel::Info, &format!("Detected App type: {:?}", app_type));
+        log(
+            LogLevel::Info,
+            &format!("Detected App type: {:?}", app_type),
+        );
     }
 
     if app_type == Some("REST".to_string()) && output_format == Some("curl") {
@@ -223,12 +253,18 @@ async fn main() -> anyhow::Result<()> {
                     if let Some(Value::String(schema_name)) = route.kv.get("schema") {
                         // Find the schema section by path ["Schema", schema_name]
                         let schema_section = doc.sections.iter().find(|sec| {
-                            sec.path.len() == 2 && sec.path[0] == "Schema" && sec.path[1] == *schema_name
+                            sec.path.len() == 2
+                                && sec.path[0] == "Schema"
+                                && sec.path[1] == *schema_name
                         });
                         if let Some(schema_section) = schema_section {
                             let mut first = true;
                             for (field, typ) in &schema_section.kv {
-                                if !first { obj_body.push_str(",\n"); } else { first = false; }
+                                if !first {
+                                    obj_body.push_str(",\n");
+                                } else {
+                                    first = false;
+                                }
                                 let example = match typ.as_str().unwrap_or("") {
                                     "string" => format!("  \"{}\": \"example\"", field),
                                     "number" => format!("  \"{}\": 123", field),
@@ -248,13 +284,22 @@ async fn main() -> anyhow::Result<()> {
                     println!("     -H 'Content-Type: application/json' \\");
                     println!("     -d '{}'", obj_body.replace("'", "\\'"));
                     // GET item
-                    println!("curl -X GET    http://{}/{}/123", host_port, collection_path);
+                    println!(
+                        "curl -X GET    http://{}/{}/123",
+                        host_port, collection_path
+                    );
                     // PUT item (update)
-                    println!("curl -X PUT    http://{}/{}/123 \\", host_port, collection_path);
+                    println!(
+                        "curl -X PUT    http://{}/{}/123 \\",
+                        host_port, collection_path
+                    );
                     println!("     -H 'Content-Type: application/json' \\");
                     println!("     -d '{}'", obj_body.replace("'", "\\'"));
                     // DELETE item
-                    println!("curl -X DELETE http://{}/{}/123", host_port, collection_path);
+                    println!(
+                        "curl -X DELETE http://{}/{}/123",
+                        host_port, collection_path
+                    );
                     continue;
                 }
 
@@ -269,8 +314,16 @@ async fn main() -> anyhow::Result<()> {
         }
         process::exit(0);
     }
-    if (app_type == Some("REST".to_string()) || app_type == Some("Graphql".to_string())) && output_format == None {
-        log(LogLevel::Info, &format!("Starting Vectrune {} application...", app_type.as_deref().unwrap_or("REST")));
+    if (app_type == Some("REST".to_string()) || app_type == Some("Graphql".to_string()))
+        && output_format == None
+    {
+        log(
+            LogLevel::Info,
+            &format!(
+                "Starting Vectrune {} application...",
+                app_type.as_deref().unwrap_or("REST")
+            ),
+        );
         log(LogLevel::Info, "Press Ctrl+C to stop the server.");
         if is_verbose {
             log(LogLevel::Debug, &format!("Config: \n{}", api_doc(&doc)));
@@ -290,7 +343,7 @@ async fn main() -> anyhow::Result<()> {
             doc: std::sync::Arc::new(doc.clone()),
             schemas,
             data_sources,
-            path: rune_dir.clone()
+            path: rune_dir.clone(),
         };
 
         let app = build_app_router(state.clone(), is_verbose).await;
@@ -301,7 +354,10 @@ async fn main() -> anyhow::Result<()> {
             .unwrap_or(3000);
         let host_address = format!("127.0.0.1:{}", port);
         let listener = TcpListener::bind(host_address.clone()).await?;
-        log(LogLevel::Info, &format!("Vectrune runtime listening on http://{}", host_address));
+        log(
+            LogLevel::Info,
+            &format!("Vectrune runtime listening on http://{}", host_address),
+        );
         serve(listener, app).await?;
         Ok(())
     } else {
@@ -312,7 +368,10 @@ async fn main() -> anyhow::Result<()> {
             Some("json") => {
                 let json_output =
                     serde_json::to_string_pretty(&doc.to_json()).unwrap_or_else(|err| {
-                        log(LogLevel::Error, &format!("Error converting to JSON: {}", err));
+                        log(
+                            LogLevel::Error,
+                            &format!("Error converting to JSON: {}", err),
+                        );
                         process::exit(1);
                     });
                 println!("{}", json_output);

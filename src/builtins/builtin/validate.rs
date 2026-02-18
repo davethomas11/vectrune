@@ -31,7 +31,10 @@ pub fn builtin_validate(
                         _ => false,
                     };
                     if !type_ok {
-                        return BuiltinResult::Respond(400, format!("Field `{}` type mismatch", field));
+                        return BuiltinResult::Respond(
+                            400,
+                            format!("Field `{}` type mismatch", field),
+                        );
                     }
                 } else {
                     return BuiltinResult::Respond(400, format!("Missing field `{}`", field));
@@ -46,17 +49,27 @@ pub fn builtin_validate(
     // Branch 2: Expression validation -> validate <left> <op> <right> "message"
     // Helpers
     fn parse_literal_or_number(s: &str) -> Option<JsonValue> {
-        if s == "null" { return Some(JsonValue::Null); }
-        if s == "true" { return Some(JsonValue::Bool(true)); }
-        if s == "false" { return Some(JsonValue::Bool(false)); }
-        if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
-            return Some(JsonValue::String(s[1..s.len()-1].to_string()));
+        if s == "null" {
+            return Some(JsonValue::Null);
         }
-        if let Ok(n) = s.parse::<f64>() { return Some(JsonValue::from(n)); }
+        if s == "true" {
+            return Some(JsonValue::Bool(true));
+        }
+        if s == "false" {
+            return Some(JsonValue::Bool(false));
+        }
+        if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
+            return Some(JsonValue::String(s[1..s.len() - 1].to_string()));
+        }
+        if let Ok(n) = s.parse::<f64>() {
+            return Some(JsonValue::from(n));
+        }
         None
     }
     fn resolve_path(ctx: &Context, ident: &str) -> Option<JsonValue> {
-        if let Some(lit) = parse_literal_or_number(ident) { return Some(lit); }
+        if let Some(lit) = parse_literal_or_number(ident) {
+            return Some(lit);
+        }
         // Support dotted paths and special handling for path.params.*
         let mut parts = ident.split('.');
         let first = parts.next().unwrap_or("");
@@ -76,7 +89,9 @@ pub fn builtin_validate(
             current = Some(val.clone());
         } else if let Some(JsonValue::Object(map)) = ctx.get("path.params") {
             // allow referencing param directly by name, e.g., `id`
-            if let Some(v) = map.get(first) { current = Some(v.clone()); }
+            if let Some(v) = map.get(first) {
+                current = Some(v.clone());
+            }
         }
 
         for key in parts {
@@ -100,19 +115,25 @@ pub fn builtin_validate(
         }
         let right = args[right_index].as_str();
         // Message may already be a single consolidated arg (quotes removed upstream)
-        let msg = args[(right_index+1)..].join(" ");
+        let msg = args[(right_index + 1)..].join(" ");
         let lv = resolve_path(ctx, left).unwrap_or(JsonValue::Null);
         let rv = resolve_path(ctx, right).unwrap_or(JsonValue::Null);
         // Loose numeric equality for number <-> numeric string
         fn loose_eq(a: &JsonValue, b: &JsonValue) -> bool {
-            if a == b { return true; }
+            if a == b {
+                return true;
+            }
             match (a, b) {
                 (JsonValue::Number(na), JsonValue::String(sb)) => {
-                    if let Some(da) = na.as_f64() { return sb.parse::<f64>().ok().map(|db| db == da).unwrap_or(false); }
+                    if let Some(da) = na.as_f64() {
+                        return sb.parse::<f64>().ok().map(|db| db == da).unwrap_or(false);
+                    }
                     false
                 }
                 (JsonValue::String(sa), JsonValue::Number(nb)) => {
-                    if let Some(db) = nb.as_f64() { return sa.parse::<f64>().ok().map(|da| da == db).unwrap_or(false); }
+                    if let Some(db) = nb.as_f64() {
+                        return sa.parse::<f64>().ok().map(|da| da == db).unwrap_or(false);
+                    }
                     false
                 }
                 _ => false,
@@ -123,7 +144,11 @@ pub fn builtin_validate(
             "!=" => !loose_eq(&lv, &rv),
             _ => false,
         };
-        if ok { BuiltinResult::Ok } else { BuiltinResult::Respond(400, msg) }
+        if ok {
+            BuiltinResult::Ok
+        } else {
+            BuiltinResult::Respond(400, msg)
+        }
     } else {
         eprintln!("[ERROR] validate: invalid expression arguments");
         BuiltinResult::Error("invalid expression arguments".to_string())

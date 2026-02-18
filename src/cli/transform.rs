@@ -50,16 +50,22 @@ pub fn transform_to_string(doc: &RuneDocument, spec: &str) -> Result<String, Str
                     tokens.push(&rest[start..i]);
                 }
                 i += 1;
-                while i < bytes.len() && bytes[i] as char == ' ' { i += 1; }
+                while i < bytes.len() && bytes[i] as char == ' ' {
+                    i += 1;
+                }
                 start = i;
             }
             _ => i += 1,
         }
     }
-    if start < bytes.len() { tokens.push(&rest[start..]); }
+    if start < bytes.len() {
+        tokens.push(&rest[start..]);
+    }
 
     if tokens.is_empty() {
-        return Err("Expected at least one key specification like key:[@Section.field]".to_string());
+        return Err(
+            "Expected at least one key specification like key:[@Section.field]".to_string(),
+        );
     }
 
     // Each token should be key:[...]
@@ -103,20 +109,21 @@ fn evaluate_list_spec(doc: &RuneDocument, inner: &str) -> Result<Vec<String>, St
     let modifiers: Vec<&str> = parts.map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
 
     // Handle optional equality filter inside selector: @Section.field==literal
-    let (section, field, filter): (&str, &str, Option<Literal>) = if let Some((lhs, rhs)) = selector.split_once("==") {
-        let (section, field) = lhs
-            .trim_start_matches('@')
-            .split_once('.')
-            .ok_or("Selector must be @Section.field")?;
-        let lit = parse_literal(rhs.trim())?;
-        (section.trim(), field.trim(), Some(lit))
-    } else {
-        let (section, field) = selector
-            .trim_start_matches('@')
-            .split_once('.')
-            .ok_or("Selector must be @Section.field")?;
-        (section.trim(), field.trim(), None)
-    };
+    let (section, field, filter): (&str, &str, Option<Literal>) =
+        if let Some((lhs, rhs)) = selector.split_once("==") {
+            let (section, field) = lhs
+                .trim_start_matches('@')
+                .split_once('.')
+                .ok_or("Selector must be @Section.field")?;
+            let lit = parse_literal(rhs.trim())?;
+            (section.trim(), field.trim(), Some(lit))
+        } else {
+            let (section, field) = selector
+                .trim_start_matches('@')
+                .split_once('.')
+                .ok_or("Selector must be @Section.field")?;
+            (section.trim(), field.trim(), None)
+        };
 
     // Collect values
     let mut values: Vec<String> = Vec::new();
@@ -125,7 +132,9 @@ fn evaluate_list_spec(doc: &RuneDocument, inner: &str) -> Result<Vec<String>, St
             // Apply filter if any
             if let Some(ref lit) = filter {
                 if let Some(v) = rec.kv.get(field) {
-                    if !literal_matches_value(lit, v) { continue; }
+                    if !literal_matches_value(lit, v) {
+                        continue;
+                    }
                 } else {
                     continue;
                 }
@@ -155,16 +164,28 @@ fn evaluate_list_spec(doc: &RuneDocument, inner: &str) -> Result<Vec<String>, St
 }
 
 #[derive(Debug)]
-enum Literal { S(String), N(f64), B(bool) }
+enum Literal {
+    S(String),
+    N(f64),
+    B(bool),
+}
 
 fn parse_literal(s: &str) -> Result<Literal, String> {
     let s = s.trim();
-    if s.eq_ignore_ascii_case("true") { return Ok(Literal::B(true)); }
-    if s.eq_ignore_ascii_case("false") { return Ok(Literal::B(false)); }
-    if let Ok(n) = s.parse::<f64>() { return Ok(Literal::N(n)); }
+    if s.eq_ignore_ascii_case("true") {
+        return Ok(Literal::B(true));
+    }
+    if s.eq_ignore_ascii_case("false") {
+        return Ok(Literal::B(false));
+    }
+    if let Ok(n) = s.parse::<f64>() {
+        return Ok(Literal::N(n));
+    }
     // quoted string
-    if (s.starts_with('"') && s.ends_with('"') && s.len() >= 2) || (s.starts_with('\'') && s.ends_with('\'') && s.len() >= 2) {
-        let trimmed = &s[1..s.len()-1];
+    if (s.starts_with('"') && s.ends_with('"') && s.len() >= 2)
+        || (s.starts_with('\'') && s.ends_with('\'') && s.len() >= 2)
+    {
+        let trimmed = &s[1..s.len() - 1];
         return Ok(Literal::S(trimmed.to_string()));
     }
     // fallback: raw string
@@ -176,9 +197,18 @@ fn literal_matches_value(lit: &Literal, v: &Value) -> bool {
         (Literal::S(ls), Value::String(rs)) => ls == rs,
         (Literal::N(ln), Value::Number(rn)) => (*ln - rn).abs() < f64::EPSILON,
         (Literal::B(lb), Value::Bool(rb)) => lb == rb,
-        (Literal::S(ls), Value::Number(rn)) => ls.parse::<f64>().map(|n| (n - rn).abs() < f64::EPSILON).unwrap_or(false),
+        (Literal::S(ls), Value::Number(rn)) => ls
+            .parse::<f64>()
+            .map(|n| (n - rn).abs() < f64::EPSILON)
+            .unwrap_or(false),
         (Literal::S(ls), Value::Bool(rb)) => {
-            if ls.eq_ignore_ascii_case("true") { *rb } else if ls.eq_ignore_ascii_case("false") { !*rb } else { false }
+            if ls.eq_ignore_ascii_case("true") {
+                *rb
+            } else if ls.eq_ignore_ascii_case("false") {
+                !*rb
+            } else {
+                false
+            }
         }
         _ => false,
     }
@@ -202,6 +232,8 @@ fn sort_maybe_numeric(mut v: Vec<String>, desc: bool) -> Vec<String> {
     } else {
         v.sort();
     }
-    if desc { v.reverse(); }
+    if desc {
+        v.reverse();
+    }
     v
 }

@@ -1,5 +1,5 @@
-use rune_runtime::rune_parser::parse_rune;
 use rune_runtime::cli::{calculate, transform};
+use rune_runtime::rune_parser::parse_rune;
 use std::fs;
 
 fn load_example(path: &str) -> rune_runtime::rune_ast::RuneDocument {
@@ -41,7 +41,11 @@ fn transform_baseline_names_list() {
 #[test]
 fn transform_unique_and_sort_modifiers() {
     let doc = load_example("examples/skateboarders.rune");
-    let out = transform::transform_to_string(&doc, "@Skaters names:[@Skateboarder.name|unique|sort] ages:[@Skateboarder.age|sort:desc]").unwrap();
+    let out = transform::transform_to_string(
+        &doc,
+        "@Skaters names:[@Skateboarder.name|unique|sort] ages:[@Skateboarder.age|sort:desc]",
+    )
+    .unwrap();
     let expected = "#!RUNE\n@Skaters\nnames:\n  Leticia Bufoni\n  Nyjah Huston\n  Tony Hawk\nages:\n  53\n  28\n  26\n";
     assert_eq!(out.trim_end(), expected.trim_end());
 }

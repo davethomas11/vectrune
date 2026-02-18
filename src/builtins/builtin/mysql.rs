@@ -1,7 +1,7 @@
 // src/builtins/datasource_mysql.rs
 use crate::builtins::{BuiltinResult, Context};
 use serde_json::{Map, Value as JsonValue};
-use sqlx::{mysql::MySqlRow, Column, Pool, MySql, Row};
+use sqlx::{mysql::MySqlRow, Column, MySql, Pool, Row};
 
 use tokio::sync::OnceCell;
 
@@ -9,8 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-static MYSQL_POOLS: OnceCell<Arc<Mutex<HashMap<String, Pool<MySql>>>>> =
-    OnceCell::const_new();
+static MYSQL_POOLS: OnceCell<Arc<Mutex<HashMap<String, Pool<MySql>>>>> = OnceCell::const_new();
 
 /// Create or reuse a MySQL connection pool
 pub async fn create_or_reuse_mysql_pool(
@@ -19,8 +18,7 @@ pub async fn create_or_reuse_mysql_pool(
     let pools = MYSQL_POOLS
         .get_or_init(|| async { Arc::new(Mutex::new(HashMap::new())) })
         .await;
-    let mut pools_guard: tokio::sync::MutexGuard<HashMap<String, Pool<MySql>>> =
-        pools.lock().await;
+    let mut pools_guard: tokio::sync::MutexGuard<HashMap<String, Pool<MySql>>> = pools.lock().await;
     if !pools_guard.contains_key(connection_string) {
         let pool = Pool::<MySql>::connect(connection_string).await?;
         pools_guard.insert(connection_string.to_string(), pool);
@@ -28,11 +26,7 @@ pub async fn create_or_reuse_mysql_pool(
     Ok(pools_guard.get(connection_string).unwrap().clone())
 }
 
-pub async fn create_table_mysql(
-    name: &str,
-    args: &[String],
-    pool: &Pool<MySql>,
-) -> BuiltinResult {
+pub async fn create_table_mysql(name: &str, args: &[String], pool: &Pool<MySql>) -> BuiltinResult {
     if args.is_empty() {
         return BuiltinResult::Error("mysql.create_table: missing table schema".to_string());
     }

@@ -1,11 +1,11 @@
-use std::path::PathBuf;
 use axum::http::{Request, StatusCode};
 use axum::Router;
+use std::path::PathBuf;
 use tower::ServiceExt; // for `oneshot`
 
-use rune_runtime::rune_parser::parse_rune;
-use rune_runtime::core::{AppState, extract_schemas, extract_data_sources};
 use rune_runtime::apps::build_app_router;
+use rune_runtime::core::{extract_data_sources, extract_schemas, AppState};
+use rune_runtime::rune_parser::parse_rune;
 use std::sync::Arc;
 
 async fn build_router_from_str(contents: &str) -> Router {
@@ -38,7 +38,12 @@ run:
     let app = build_router_from_str(app_rune).await;
 
     let response = app
-        .oneshot(Request::builder().uri("/health").body(axum::body::Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 

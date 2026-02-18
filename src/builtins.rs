@@ -1,32 +1,32 @@
 // src/builtins.rs
 
+use crate::rune_parser::parse_rune;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
-use crate::rune_parser::parse_rune;
 
 pub mod builtin {
-    pub mod log;
-    pub mod respond;
-    pub mod parse_json;
-    pub mod validate;
+    pub mod commands;
     pub mod csv;
     pub mod data_source;
-    pub mod postgres;
-    pub mod mysql;
+    pub mod log;
     pub mod memory;
-    pub mod commands;
+    pub mod mysql;
+    pub mod parse_json;
+    pub mod postgres;
+    pub mod respond;
+    pub mod validate;
 }
 
-use builtin::log::builtin_log;
-use builtin::respond::builtin_respond;
-use builtin::parse_json::builtin_parse_json;
-use builtin::validate::builtin_validate;
-use builtin::csv::{builtin_csv_read, builtin_csv_write, builtin_csv_append};
-use builtin::data_source::builtin_data_source;
 use crate::builtins::builtin::commands::builtin_append;
 use crate::builtins::builtin::memory::{builtin_get_memory, builtin_set_memory};
 use crate::core::AppState;
 use crate::util::{json_to_xml, log, LogLevel};
+use builtin::csv::{builtin_csv_append, builtin_csv_read, builtin_csv_write};
+use builtin::data_source::builtin_data_source;
+use builtin::log::builtin_log;
+use builtin::parse_json::builtin_parse_json;
+use builtin::respond::builtin_respond;
+use builtin::validate::builtin_validate;
 
 pub type Context = HashMap<String, JsonValue>;
 
@@ -65,7 +65,10 @@ pub fn builtin_load_rune(
                         let xml_output = json_to_xml(&rune_doc.to_json(), "root");
                         ctx.insert(var_name.to_string(), JsonValue::String(xml_output));
                     } else {
-                        return BuiltinResult::Respond(400, format!("load-rune: unsupported output type {}", output_type))
+                        return BuiltinResult::Respond(
+                            400,
+                            format!("load-rune: unsupported output type {}", output_type),
+                        );
                     }
                 } else {
                     ctx.insert(var_name.to_string(), rune_doc.to_json());
@@ -79,7 +82,6 @@ pub fn builtin_load_rune(
         }
     }
 }
-
 
 // --- Main dispatcher ---
 pub async fn call_builtin(
@@ -103,7 +105,7 @@ pub async fn call_builtin(
                 // Remove surrounding quotes
                 let trimmed = current.trim();
                 if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2 {
-                    processed_args.push(trimmed[1..trimmed.len()-1].to_string());
+                    processed_args.push(trimmed[1..trimmed.len() - 1].to_string());
                 } else {
                     processed_args.push(current.clone());
                 }
@@ -114,7 +116,7 @@ pub async fn call_builtin(
             current = arg.clone();
         } else if arg.starts_with('"') && arg.ends_with('"') && arg.len() >= 2 {
             // Remove surrounding quotes
-            processed_args.push(arg[1..arg.len()-1].to_string());
+            processed_args.push(arg[1..arg.len() - 1].to_string());
         } else {
             processed_args.push(arg.clone());
         }
@@ -135,23 +137,39 @@ pub async fn call_builtin(
             let joined = expr_parts.join(" ");
             if let Some(pos) = joined.find("==") {
                 let (l, r) = joined.split_at(pos);
-                return Some((l.trim().to_string(), "==".to_string(), r[2..].trim().to_string()));
+                return Some((
+                    l.trim().to_string(),
+                    "==".to_string(),
+                    r[2..].trim().to_string(),
+                ));
             }
             if let Some(pos) = joined.find("!=") {
                 let (l, r) = joined.split_at(pos);
-                return Some((l.trim().to_string(), "!=".to_string(), r[2..].trim().to_string()));
+                return Some((
+                    l.trim().to_string(),
+                    "!=".to_string(),
+                    r[2..].trim().to_string(),
+                ));
             }
             None
         }
 
         fn parse_literal_or_number(s: &str) -> Option<JsonValue> {
-            if s == "null" { return Some(JsonValue::Null); }
-            if s == "true" { return Some(JsonValue::Bool(true)); }
-            if s == "false" { return Some(JsonValue::Bool(false)); }
-            if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
-                return Some(JsonValue::String(s[1..s.len()-1].to_string()));
+            if s == "null" {
+                return Some(JsonValue::Null);
             }
-            if let Ok(n) = s.parse::<f64>() { return Some(JsonValue::from(n)); }
+            if s == "true" {
+                return Some(JsonValue::Bool(true));
+            }
+            if s == "false" {
+                return Some(JsonValue::Bool(false));
+            }
+            if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
+                return Some(JsonValue::String(s[1..s.len() - 1].to_string()));
+            }
+            if let Ok(n) = s.parse::<f64>() {
+                return Some(JsonValue::from(n));
+            }
             None
         }
 
@@ -182,14 +200,22 @@ pub async fn call_builtin(
             current
         }
 
-        fn eval_cmp(ctx: &Context, it: Option<&JsonValue>, left: &str, op: &str, right: &str) -> bool {
+        fn eval_cmp(
+            ctx: &Context,
+            it: Option<&JsonValue>,
+            left: &str,
+            op: &str,
+            right: &str,
+        ) -> bool {
             let lv = resolve_path(ctx, it, left).unwrap_or(JsonValue::Null);
             let rv = resolve_path(ctx, it, right).unwrap_or(JsonValue::Null);
 
             // Helper to compare with light coercion between common types (e.g., "1" == 1)
             fn loose_eq(a: &JsonValue, b: &JsonValue) -> bool {
                 // Fast path
-                if a == b { return true; }
+                if a == b {
+                    return true;
+                }
 
                 // Number <-> String numeric
                 match (a, b) {
@@ -211,22 +237,34 @@ pub async fn call_builtin(
                     }
                     // Bool <-> String boolean
                     (JsonValue::Bool(ab), JsonValue::String(bs)) => {
-                        if bs.eq_ignore_ascii_case("true") { return *ab == true; }
-                        if bs.eq_ignore_ascii_case("false") { return *ab == false; }
+                        if bs.eq_ignore_ascii_case("true") {
+                            return *ab == true;
+                        }
+                        if bs.eq_ignore_ascii_case("false") {
+                            return *ab == false;
+                        }
                         false
                     }
                     (JsonValue::String(as_), JsonValue::Bool(bb)) => {
-                        if as_.eq_ignore_ascii_case("true") { return *bb == true; }
-                        if as_.eq_ignore_ascii_case("false") { return *bb == false; }
+                        if as_.eq_ignore_ascii_case("true") {
+                            return *bb == true;
+                        }
+                        if as_.eq_ignore_ascii_case("false") {
+                            return *bb == false;
+                        }
                         false
                     }
                     // Number <-> Bool (treat true=1, false=0)
                     (JsonValue::Number(n), JsonValue::Bool(b)) => {
-                        if let Some(f) = n.as_f64() { return (if *b {1.0} else {0.0}) == f; }
+                        if let Some(f) = n.as_f64() {
+                            return (if *b { 1.0 } else { 0.0 }) == f;
+                        }
                         false
                     }
                     (JsonValue::Bool(b), JsonValue::Number(n)) => {
-                        if let Some(f) = n.as_f64() { return (if *b {1.0} else {0.0}) == f; }
+                        if let Some(f) = n.as_f64() {
+                            return (if *b { 1.0 } else { 0.0 }) == f;
+                        }
                         false
                     }
                     // String numeric <-> String numeric (compare numerically to avoid "01" vs "1")
@@ -249,16 +287,27 @@ pub async fn call_builtin(
 
         match method {
             "find" => {
-                let arr = match ctx.get(target) { Some(JsonValue::Array(a)) => a.clone(), _ => Vec::new() };
+                let arr = match ctx.get(target) {
+                    Some(JsonValue::Array(a)) => a.clone(),
+                    _ => Vec::new(),
+                };
                 let cmp = parse_comparison(args).or_else(|| {
                     // Fallback: if args already consolidated as a single string condition
                     if args.len() == 1 {
                         let s = &args[0];
                         if let Some(p) = s.find("==") {
-                            return Some((s[..p].trim().to_string(), "==".to_string(), s[p+2..].trim().to_string()));
+                            return Some((
+                                s[..p].trim().to_string(),
+                                "==".to_string(),
+                                s[p + 2..].trim().to_string(),
+                            ));
                         }
                         if let Some(p) = s.find("!=") {
-                            return Some((s[..p].trim().to_string(), "!=".to_string(), s[p+2..].trim().to_string()));
+                            return Some((
+                                s[..p].trim().to_string(),
+                                "!=".to_string(),
+                                s[p + 2..].trim().to_string(),
+                            ));
                         }
                     }
                     None
@@ -278,7 +327,10 @@ pub async fn call_builtin(
                 return BuiltinResult::Ok;
             }
             "find-index" => {
-                let arr = match ctx.get(target) { Some(JsonValue::Array(a)) => a.clone(), _ => Vec::new() };
+                let arr = match ctx.get(target) {
+                    Some(JsonValue::Array(a)) => a.clone(),
+                    _ => Vec::new(),
+                };
                 let cmp = parse_comparison(args);
                 let mut idx: i64 = -1;
                 if let Some((l, op, r)) = cmp {
@@ -323,24 +375,36 @@ pub async fn call_builtin(
                         max_val = val;
                     }
                 }
-                let result = if max_val == f64::NEG_INFINITY { 0.0 } else { max_val };
+                let result = if max_val == f64::NEG_INFINITY {
+                    0.0
+                } else {
+                    max_val
+                };
                 if let Some(var) = assign_to {
                     ctx.insert(var.to_string(), JsonValue::from(result));
                 }
                 return BuiltinResult::Ok;
             }
             "remove" => {
-                if args.is_empty() { return BuiltinResult::Error("remove: missing index".to_string()); }
+                if args.is_empty() {
+                    return BuiltinResult::Error("remove: missing index".to_string());
+                }
                 let index_val = args[0].as_str();
                 // Resolve index from context or parse number
                 let idx = if let Some(JsonValue::Number(n)) = ctx.get(index_val) {
                     n.as_i64().unwrap_or(-1)
-                } else if let Ok(n) = index_val.parse::<i64>() { n } else { -1 };
+                } else if let Ok(n) = index_val.parse::<i64>() {
+                    n
+                } else {
+                    -1
+                };
                 if let Some(JsonValue::Array(_)) = ctx.get(target) {
                     if let Some(arr) = ctx.get_mut(target).and_then(|v| v.as_array_mut()) {
                         if idx >= 0 {
                             let i = idx as usize;
-                            if i < arr.len() { arr.remove(i); }
+                            if i < arr.len() {
+                                arr.remove(i);
+                            }
                         }
                     }
                 }
@@ -371,11 +435,15 @@ pub async fn call_builtin(
                 if args.len() >= 3 && &args[1] == "as" {
                     let output_type = &args[2];
                     if output_type == "xml" {
-                        let val = ctx.get(args[0].as_str())
+                        let val = ctx
+                            .get(args[0].as_str())
                             .map_or("".to_string(), |v| json_to_xml(v, "root"));
                         return BuiltinResult::Respond(200, val);
                     } else {
-                        return BuiltinResult::Respond(400, format!("return: unsupported output type {}", output_type))
+                        return BuiltinResult::Respond(
+                            400,
+                            format!("return: unsupported output type {}", output_type),
+                        );
                     }
                 }
 
@@ -383,7 +451,10 @@ pub async fn call_builtin(
                 match val {
                     Some(v) => {
                         if v.is_object() || v.is_array() {
-                            BuiltinResult::Respond(200, serde_json::to_string(v).unwrap_or_default())
+                            BuiltinResult::Respond(
+                                200,
+                                serde_json::to_string(v).unwrap_or_default(),
+                            )
                         } else {
                             BuiltinResult::Respond(200, v.to_string())
                         }

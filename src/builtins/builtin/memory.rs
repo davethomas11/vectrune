@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use std::sync::Mutex;
+use crate::builtins::BuiltinResult;
 use lazy_static::lazy_static;
 use serde_json::Value;
-use crate::builtins::BuiltinResult;
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 lazy_static! {
     static ref MEMORY: Mutex<HashMap<String, Value>> = Mutex::new(HashMap::new());
@@ -10,11 +10,7 @@ lazy_static! {
 
 pub fn builtin_set_memory(args: &[String], ctx: &mut crate::builtins::Context) -> BuiltinResult {
     let key = &args[0];
-    let value_str = if args.len() >= 2 {
-        &args[1]
-    } else {
-        &args[0]
-    };
+    let value_str = if args.len() >= 2 { &args[1] } else { &args[0] };
     let value = match ctx.get(value_str) {
         Some(v) => v,
         None => &Value::String(value_str.into()),
@@ -23,7 +19,11 @@ pub fn builtin_set_memory(args: &[String], ctx: &mut crate::builtins::Context) -
     BuiltinResult::Ok
 }
 
-pub fn builtin_get_memory(args: &[String], assign_to: Option<&str>, ctx: &mut crate::builtins::Context) -> BuiltinResult {
+pub fn builtin_get_memory(
+    args: &[String],
+    assign_to: Option<&str>,
+    ctx: &mut crate::builtins::Context,
+) -> BuiltinResult {
     if args.is_empty() {
         eprintln!("[ERROR] get-memory: missing key argument");
         return BuiltinResult::Error("missing key argument".to_string());
