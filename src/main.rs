@@ -91,8 +91,19 @@ async fn main() -> anyhow::Result<()> {
                 .value_name("PROMPT")
                 .help("Send a CLI-assistant prompt to the local Ollama instance"),
         )
+        .arg(
+            Arg::new("ml")
+                .long("model")
+                .help("Set AI model for --ai prompt (default: phi4)")
+                .num_args(1)
+                .value_name("MODEL")
+                .default_value("phi4"),
+        )
         .get_matches();
 
+    // Use gemini-1.5-flash for free google access, but allow override for users with local models or Ollama Pro
+    // Requires Google AI key set as environment variable GEMINI_API_KEY
+    let model = matches.get_one::<String>("ml").map(|s| s.as_str());
     let output_format = matches.get_one::<String>("output").map(|s| s.as_str());
     let input_format = matches.get_one::<String>("input").map(|s| s.as_str());
     let is_verbose = matches.get_flag("verbose");
@@ -111,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if let Some(prompt) = ai_prompt {
-        cli::handle_ai(prompt).await?;
+        cli::handle_ai(prompt, model).await?;
         return Ok(());
     }
 
