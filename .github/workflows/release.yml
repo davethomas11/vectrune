@@ -4,8 +4,7 @@ on:
   push:
     tags:
       - 'v*'
-  release:
-    types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -55,8 +54,23 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
 
+      # Zig is a great cross-linker that handles ARM/Linux perfectly
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v2
+
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild
+
       - name: Build
-        run: cargo build --release --target ${{ matrix.platform.target }}
+        # We use zigbuild for Linux targets to handle cross-linking
+        # MacOS and Windows can usually stay on standard cargo
+        run: |
+          if [[ "${{ matrix.platform.target }}" == *"linux"* ]]; then
+            cargo zigbuild --release --target ${{ matrix.platform.target }}
+          else
+            cargo build --release --target ${{ matrix.platform.target }}
+          fi
+        shell: bash
 
       - name: Package
         shell: bash
