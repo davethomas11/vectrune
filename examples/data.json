@@ -1,0 +1,10 @@
+{
+  "test": "Data imported successfully",
+  "users": [
+    {
+      "id": 1,
+      "name": "Alice",
+      "email": "cat@gmail.com"
+    }
+  ]
+}

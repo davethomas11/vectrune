@@ -8,6 +8,7 @@ pub mod builtin {
     pub mod commands;
     pub mod csv;
     pub mod data_source;
+    pub mod json;
     pub mod log;
     pub mod memory;
     pub mod mysql;
@@ -16,6 +17,7 @@ pub mod builtin {
     pub mod respond;
     pub mod validate;
 }
+pub mod path_utils;
 
 use crate::builtins::builtin::commands::builtin_append;
 use crate::builtins::builtin::memory::{builtin_get_memory, builtin_set_memory};
@@ -23,6 +25,7 @@ use crate::core::AppState;
 use crate::util::{json_to_xml, log, LogLevel};
 use builtin::csv::{builtin_csv_append, builtin_csv_read, builtin_csv_write};
 use builtin::data_source::builtin_data_source;
+use builtin::json::builtin_json_read;
 use builtin::log::builtin_log;
 use builtin::parse_json::builtin_parse_json;
 use builtin::respond::builtin_respond;
@@ -419,9 +422,10 @@ pub async fn call_builtin(
         "respond" => builtin_respond(args, ctx),
         "parse-json" => builtin_parse_json(args, ctx, assign_to),
         "validate" => builtin_validate(args, ctx, &app_state.schemas),
-        "csv.read" => builtin_csv_read(args, ctx, assign_to),
-        "csv.write" => builtin_csv_write(args, ctx),
-        "csv.append" => builtin_csv_append(args, ctx),
+        "csv.read" => builtin_csv_read(args, ctx, assign_to, app_state),
+        "csv.write" => builtin_csv_write(args, ctx, app_state),
+        "csv.append" => builtin_csv_append(args, ctx, app_state),
+        "json.read" => builtin_json_read(args, ctx, assign_to, app_state),
         "datasource" => builtin_data_source(args, ctx, &app_state, assign_to).await,
         "load-rune" => builtin_load_rune(args, ctx, assign_to, app_state),
         "set-memory" | "memory.set" => builtin_set_memory(args, ctx),

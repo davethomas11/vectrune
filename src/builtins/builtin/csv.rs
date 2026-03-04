@@ -1,28 +1,50 @@
+use crate::builtins::path_utils::{candidate_paths, resolve_write_path};
 use crate::builtins::{BuiltinResult, Context};
+use crate::core::AppState;
+use csv::{ReaderBuilder, WriterBuilder};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
+use std::fs::OpenOptions;
 
 pub fn builtin_csv_read(
     args: &[String],
     context: &mut Context,
     assign_to: Option<&str>,
+    app_state: &AppState,
 ) -> BuiltinResult {
-    use csv::ReaderBuilder;
     if args.is_empty() {
         eprintln!("[ERROR] csv.read: missing filename");
         return BuiltinResult::Error("missing filename".to_string());
     }
     let filename = &args[0];
-    let mut rdr = match ReaderBuilder::new().from_path(filename) {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("[WARN] csv.read: {}", e);
+    let mut errors = Vec::new();
+    let mut reader_opt = None;
+
+    for path in candidate_paths(filename, &app_state.path) {
+        match ReaderBuilder::new().from_path(&path) {
+            Ok(reader) => {
+                reader_opt = Some(reader);
+                break;
+            }
+            Err(e) => errors.push(format!("{} ({})", path.display(), e)),
+        }
+    }
+
+    let mut rdr = match reader_opt {
+        Some(r) => r,
+        None => {
+            eprintln!(
+                "[WARN] csv.read: unable to open {} via any candidate -> {}",
+                filename,
+                errors.join(", ")
+            );
             if let Some(var_name) = assign_to {
                 context.insert(var_name.to_string(), JsonValue::Array(Vec::new()));
             }
             return BuiltinResult::Ok;
         }
     };
+
     let mut records = Vec::new();
     for result in rdr.deserialize::<HashMap<String, String>>() {
         match result {
@@ -40,8 +62,7 @@ pub fn builtin_csv_read(
     BuiltinResult::Ok
 }
 
-pub fn builtin_csv_write(args: &[String], ctx: &Context) -> BuiltinResult {
-    use csv::WriterBuilder;
+pub fn builtin_csv_write(args: &[String], ctx: &Context, app_state: &AppState) -> BuiltinResult {
     if args.len() < 2 {
         eprintln!("[ERROR] csv.write: missing arguments");
         return BuiltinResult::Ok;
@@ -55,17 +76,19 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context) -> BuiltinResult {
             return BuiltinResult::Error("variable not found or not array".to_string());
         }
     };
-    let mut wtr = match WriterBuilder::new().from_path(filename) {
+
+    let target_path = resolve_write_path(filename, &app_state.path);
+    let mut wtr = match WriterBuilder::new().from_path(&target_path) {
         Ok(w) => w,
         Err(e) => {
-            eprintln!("[ERROR] csv.write: {}", e);
+            eprintln!("[ERROR] csv.write ({}): {}", target_path.display(), e);
             return BuiltinResult::Error(e.to_string());
         }
     };
+
     let mut index = 0;
     for item in arr {
         if let Some(obj) = item.as_object() {
-            // Write headers if this is the first record
             if index == 0 {
                 let headers: Vec<&str> = obj.keys().map(|k| k.as_str()).collect();
                 if let Err(e) = wtr.write_record(&headers) {
@@ -92,9 +115,7 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context) -> BuiltinResult {
     BuiltinResult::Ok
 }
 
-pub fn builtin_csv_append(args: &[String], ctx: &Context) -> BuiltinResult {
-    use csv::WriterBuilder;
-    use std::fs::OpenOptions;
+pub fn builtin_csv_append(args: &[String], ctx: &Context, app_state: &AppState) -> BuiltinResult {
     if args.len() < 2 {
         eprintln!("[ERROR] csv.append: missing arguments");
         return BuiltinResult::Error("missing arguments".to_string());
@@ -108,17 +129,23 @@ pub fn builtin_csv_append(args: &[String], ctx: &Context) -> BuiltinResult {
             return BuiltinResult::Error("variable not found or not object".to_string());
         }
     };
-    let file_exists = std::path::Path::new(filename).exists();
-    let mut wtr = WriterBuilder::new().has_headers(false).from_writer(
-        OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(filename)
-            .unwrap(),
-    );
+
+    let target_path = resolve_write_path(filename, &app_state.path);
+    let file_exists = target_path.exists();
+    let file = match OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(&target_path)
+    {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("[ERROR] csv.append ({}): {}", target_path.display(), e);
+            return BuiltinResult::Error(e.to_string());
+        }
+    };
+    let mut wtr = WriterBuilder::new().has_headers(false).from_writer(file);
 
     if !file_exists {
-        // Write headers if file did not exist
         let headers: Vec<&str> = obj.keys().map(|k| k.as_str()).collect();
         if let Err(e) = wtr.write_record(&headers) {
             eprintln!("[ERROR] csv.append: {}", e);

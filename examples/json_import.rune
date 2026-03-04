@@ -1,0 +1,12 @@
+#!RUNE
+
+@App
+name = JSON Import API
+type = REST
+version = 1.0
+
+@Route/GET /data
+run:
+    log "Importing data from JSON file"
+    data = json.read "data.json"
+    respond 200 data
