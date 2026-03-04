@@ -15,6 +15,7 @@ use crate::rune_parser::parse_rune;
 use crate::util::{api_doc, json_to_xml, log, set_log_level, LogLevel};
 use axum::serve;
 use clap::{Arg, Command};
+use std::convert::TryFrom;
 use std::fs;
 use std::process;
 use tokio::net::TcpListener;
@@ -28,9 +29,8 @@ async fn main() -> anyhow::Result<()> {
         .arg(
             Arg::new("SCRIPT")
                 .help("Path to the .rune script, or '-' to read from STDIN")
-                .required_unless_present("ai")
-                .conflicts_with("ai")
-                .index(1),
+                .index(1)
+                .conflicts_with("ai"),
         )
         .arg(
             Arg::new("input")
@@ -99,7 +99,86 @@ async fn main() -> anyhow::Result<()> {
                 .value_name("MODEL")
                 .default_value("phi4"),
         )
+        .arg(
+            Arg::new("port")
+                .short('p')
+                .long("port")
+                .value_name("PORT")
+                .help("Override App.port when running REST/GraphQL servers")
+                .value_parser(clap::value_parser!(u16)),
+        )
+        .subcommand(
+            Command::new("lambda")
+                .about("AWS Lambda tooling for VectRune")
+                .subcommand_required(true)
+                .subcommand(
+                    Command::new("package")
+                        .about(
+                            "Bundle the runtime, Rune sources, and config into a Lambda artifact",
+                        )
+                        .arg(
+                            Arg::new("rune")
+                                .long("rune")
+                                .short('r')
+                                .num_args(1)
+                                .value_name("PATH")
+                                .help("Rune file or directory to include (default: app.rune)"),
+                        )
+                        .arg(
+                            Arg::new("config")
+                                .long("config")
+                                .num_args(1)
+                                .value_name("PATH")
+                                .help("Optional config file or directory to include"),
+                        )
+                        .arg(
+                            Arg::new("binary")
+                                .long("binary")
+                                .num_args(1)
+                                .value_name("PATH")
+                                .help("Path to the Lambda-compatible VectRune binary"),
+                        )
+                        .arg(
+                            Arg::new("mode")
+                                .long("mode")
+                                .num_args(1)
+                                .value_name("MODE")
+                                .value_parser(["zip", "container"])
+                                .default_value("zip")
+                                .help("Select packaging mode"),
+                        )
+                        .arg(
+                            Arg::new("output")
+                                .long("output")
+                                .short('o')
+                                .num_args(1)
+                                .value_name("FILE")
+                                .help("Output artifact path"),
+                        )
+                        .arg(
+                            Arg::new("image-name")
+                                .long("image-name")
+                                .num_args(1)
+                                .value_name("NAME")
+                                .help("Optional container image tag metadata"),
+                        ),
+                ),
+        )
         .get_matches();
+
+    let log_level = matches.get_one::<String>("log-level").map(|s| s.as_str());
+    match log_level {
+        Some("debug") => set_log_level(LogLevel::Debug),
+        Some("info") => set_log_level(LogLevel::Info),
+        Some("warn") => set_log_level(LogLevel::Warn),
+        Some("error") => set_log_level(LogLevel::Error),
+        _ => set_log_level(LogLevel::Info),
+    }
+
+    if let Some(("lambda", lambda_matches)) = matches.subcommand() {
+        cli::handle_lambda(lambda_matches)?;
+        return Ok(());
+    }
 
     // Use gemini-1.5-flash for free google access, but allow override for users with local models or Ollama Pro
     // Requires Google AI key set as environment variable GEMINI_API_KEY
@@ -111,24 +190,23 @@ async fn main() -> anyhow::Result<()> {
     let transform_spec = matches.get_one::<String>("transform").map(|s| s.as_str());
     let merge_spec = matches.get_one::<String>("merge-with").map(|s| s.as_str());
     let ai_prompt = matches.get_one::<String>("ai").map(|s| s.as_str());
-
-    let log_level = matches.get_one::<String>("log-level").map(|s| s.as_str());
-    match log_level {
-        Some("debug") => set_log_level(LogLevel::Debug),
-        Some("info") => set_log_level(LogLevel::Info),
-        Some("warn") => set_log_level(LogLevel::Warn),
-        Some("error") => set_log_level(LogLevel::Error),
-        _ => set_log_level(LogLevel::Info),
-    }
+    let port_override = matches.get_one::<u16>("port").copied();
 
     if let Some(prompt) = ai_prompt {
         cli::handle_ai(prompt, model).await?;
         return Ok(());
     }
 
-    let script_path = matches
-        .get_one::<String>("SCRIPT")
-        .expect("SCRIPT is required unless --ai is provided");
+    let script_path = match matches.get_one::<String>("SCRIPT") {
+        Some(path) => path.as_str(),
+        None => {
+            log(
+                LogLevel::Error,
+                "No Vectrune script provided. Pass a .rune file or '-' for STDIN.",
+            );
+            process::exit(1);
+        }
+    };
 
     let script_content = if script_path == "-" {
         use std::io::Read;
@@ -237,6 +315,13 @@ async fn main() -> anyhow::Result<()> {
             &format!("Detected App type: {:?}", app_type),
         );
     }
+
+    let doc_port = doc
+        .get_section("App")
+        .and_then(|sec| sec.kv.get("port"))
+        .and_then(|val| val.as_u64())
+        .and_then(|v| u16::try_from(v).ok());
+    let effective_port = port_override.unwrap_or(doc_port.unwrap_or(3000));
 
     if app_type == Some("REST".to_string()) && output_format == Some("curl") {
         // Get port from App section, default to 3000

@@ -33,8 +33,14 @@ base64 = "0.22.1"
 async-graphql = "7.0.2"
 async-graphql-axum = "7.0.2"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
+walkdir = "2"
+tempfile = "3"
+tar = "0.4"
+flate2 = "1"
 
 [dev-dependencies]
 tower = { version = "0.5.3", features = ["util"] }
 http = "1"
 uuid = { version = "1", features = ["v4"] }
+assert_cmd = "2"

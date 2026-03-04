@@ -116,20 +116,49 @@ Common commands and options:
     # Show version
     vectrune --version
 
-Options:
-    --calculate "<expression>"   Calculate an aggregate or expression over data
-    --transform "<expression>"   Transform data into a new structure
-    --merge-with "<expr>"        Merge input with another file or config
-    --output, -o <format>        Output format (yaml, json, etc.)
+Lambda Packaging (AWS Lambda)
+----------------------------
+Vectrune ships a `lambda` subcommand that bundles your Rune sources, config, and Lambda-ready binary into either a zip (classic Lambda) or a container context (Lambda container images).
 
-AI Command:
-    --ai "<prompt>"              Use to find CLI commands ( requires running Ollama instance )
-    # Example:
-    vectrune --ai "command to list Docker containers"
-    # Outputs:
-    docker ps
+### 1. Build a Lambda-Compatible Binary (manual)
+The packager requires you to provide a Linux binary that matches the Lambda execution environment. See `documents/feature/lambda_runner/binary_build_guide.md` for full cross-compilation steps.
 
-### How to install Ollam with Homebrew on macOS/Linux
+```bash
+cargo build --release --target x86_64-unknown-linux-musl
+cp target/x86_64-unknown-linux-musl/release/vectrune dist/vectrune-lambda
+```
+
+### 2. Create a Zip Artifact
+Produces `dist/book-api-lambda.zip` containing `bootstrap`, rune files under `rune/`, optional config under `config/`, and a manifest.
+
+```bash
+vectrune lambda package \
+  --rune examples/book_graphql.rune \
+  --binary dist/vectrune-lambda \
+  --config examples/config.yaml \
+  --mode zip \
+  --output dist/book-api-lambda.zip
+```
+
+### 3. Create a Container Context
+Generates a tarball you can build into a Lambda container image (Dockerfile + bundle staged under `bundle/`).
+
+```bash
+vectrune lambda package \
+  --rune examples/book_graphql.rune \
+  --binary dist/vectrune-lambda \
+  --mode container \
+  --image-name "vectrune/lambda:book-api" \
+  --output dist/book-api-lambda-context.tar.gz
+```
+
+The command writes `manifest.json` with metadata (version, files, sources) and enforces the 50 MB Lambda zip limit. Staged contents always include:
+- `bootstrap`: the executable you provided (chmod 755 automatically)
+- `rune/`: Rune sources or directories supplied via `--rune`
+- `config/`: Optional configs from `--config`
+- `manifest.json`: Build metadata for auditing
+
+### How to install Ollama with Homebrew on macOS/Linux
 
 ```bash
 brew install ollama
@@ -272,4 +301,3 @@ This substitution works for:
 - List items: `key = ($VAR1$ $VAR2$)`
 
 If you want to use a literal string with dollar signs, do not wrap the entire value in `$...$`.
-

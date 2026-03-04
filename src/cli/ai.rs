@@ -1,9 +1,9 @@
 use anyhow::{bail, Context, Result};
+use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::time::Duration;
-use indicatif::{ProgressBar, ProgressStyle};
 
 const DEFAULT_MODEL: &str = "phi4";
 const DEFAULT_ENDPOINT: &str = "http://127.0.0.1:11434/api/generate";
@@ -51,12 +51,12 @@ pub async fn handle_ai(prompt: &str, model: Option<&str>) -> Result<()> {
         );
 
         let payload = GeminiRequest {
-            contents: vec![
-                Content {
-                    role: "user".to_string(),
-                    parts: vec![Part { text: format!("{}\n\nRequest: {}", system_instruction, prompt) }],
-                }
-            ],
+            contents: vec![Content {
+                role: "user".to_string(),
+                parts: vec![Part {
+                    text: format!("{}\n\nRequest: {}", system_instruction, prompt),
+                }],
+            }],
             generation_config: Some(GenerationConfig {
                 response_mime_type: "application/json".to_string(),
             }),
@@ -77,7 +77,9 @@ pub async fn handle_ai(prompt: &str, model: Option<&str>) -> Result<()> {
         }
 
         // If successful, parse the body (this also moves 'res')
-        let gemini_res: GeminiResponse = res.json().await
+        let gemini_res: GeminiResponse = res
+            .json()
+            .await
             .context("Failed to parse successful Gemini response")?;
 
         if let Some(candidate) = gemini_res.candidates.first() {
@@ -86,7 +88,8 @@ pub async fn handle_ai(prompt: &str, model: Option<&str>) -> Result<()> {
             }
         }
     } else {
-        let endpoint = std::env::var("VECTRUNE_OLLAMA_URL").unwrap_or_else(|_| DEFAULT_ENDPOINT.to_string());
+        let endpoint =
+            std::env::var("VECTRUNE_OLLAMA_URL").unwrap_or_else(|_| DEFAULT_ENDPOINT.to_string());
         let payload = OllamaRequest {
             model,
             prompt: format!(
@@ -106,10 +109,10 @@ pub async fn handle_ai(prompt: &str, model: Option<&str>) -> Result<()> {
 
         if !response.status().is_success() {
             bail!(
-            "Ollama returned status {}. Body: {}",
-            response.status(),
-            response.text().await.unwrap_or_default()
-        );
+                "Ollama returned status {}. Body: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            );
         }
 
         let ollama: OllamaResponse = response
@@ -152,10 +155,7 @@ fn emit_json_reply(reply: &str) {
     let fallback = if reply.is_empty() {
         "{\"error\":\"AI did not provide a CLI command\"}".to_string()
     } else {
-        format!(
-            "{}",
-            clean_reply
-        )
+        format!("{}", clean_reply)
     };
     println!("{}", fallback);
 }
