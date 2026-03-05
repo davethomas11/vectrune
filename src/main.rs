@@ -107,6 +107,14 @@ async fn main() -> anyhow::Result<()> {
                 .help("Override App.port when running REST/GraphQL servers")
                 .value_parser(clap::value_parser!(u16)),
         )
+        .arg(
+            Arg::new("host")
+                .long("host")
+                .help("Override App.host when running REST/GraphQL servers (default: 127.0.0.1)")
+                .value_name("HOST")
+                .num_args(1)
+                .default_value("127.0.0.1"),
+        )
         .subcommand(
             Command::new("lambda")
                 .about("AWS Lambda tooling for VectRune")
@@ -191,6 +199,7 @@ async fn main() -> anyhow::Result<()> {
     let merge_spec = matches.get_one::<String>("merge-with").map(|s| s.as_str());
     let ai_prompt = matches.get_one::<String>("ai").map(|s| s.as_str());
     let port_override = matches.get_one::<u16>("port").copied();
+    let host_override = matches.get_one::<String>("host").map(|s| s.as_str());
 
     if let Some(prompt) = ai_prompt {
         cli::handle_ai(prompt, model).await?;
@@ -316,6 +325,11 @@ async fn main() -> anyhow::Result<()> {
         );
     }
 
+    let doc_host = doc
+        .get_section("App")
+        .and_then(|sec| sec.kv.get("host"))
+        .and_then(|val| val.as_str());
+    let effective_host = host_override.or(doc_host).unwrap_or("127.0.0.1");
     let doc_port = doc
         .get_section("App")
         .and_then(|sec| sec.kv.get("port"))
@@ -443,12 +457,7 @@ async fn main() -> anyhow::Result<()> {
         };
 
         let app = build_app_router(state.clone(), is_verbose).await;
-        let port = doc
-            .get_section("App")
-            .and_then(|sec| sec.kv.get("port"))
-            .and_then(|val| val.as_u64())
-            .unwrap_or(3000);
-        let host_address = format!("127.0.0.1:{}", port);
+        let host_address = format!("{}:{}", effective_host, effective_port);
         let listener = TcpListener::bind(host_address.clone()).await?;
         log(
             LogLevel::Info,

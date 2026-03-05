@@ -301,3 +301,49 @@ This substitution works for:
 - List items: `key = ($VAR1$ $VAR2$)`
 
 If you want to use a literal string with dollar signs, do not wrap the entire value in `$...$`.
+
+# Vectrune
+
+Vectrune is a runtime for structured data in motion, supporting REST, GraphQL, and more.
+
+## Running Vectrune with Custom Host and Port
+
+Vectrune now supports specifying the bind address and port via CLI flags or in the App section of your .rune file.
+
+### CLI Options
+
+- `--host <HOST>`: Bind to a specific address (default: 127.0.0.1)
+- `--port <PORT>`: Bind to a specific port (default: 3000)
+
+Example:
+
+```sh
+vectrune --host 0.0.0.0 --port 8080 myapi.rune
+```
+
+### App Section in .rune File
+
+You can also specify host and port in your .rune file:
+
+```rune
+[App]
+host = "0.0.0.0"
+port = 8080
+```
+
+CLI flags always override the App section.
+
+### Docker Usage
+
+When running inside Docker, you must bind to `0.0.0.0` to make Vectrune accessible from outside the container:
+
+```sh
+docker run -p 8080:8080 vectrune --host 0.0.0.0 --port 8080 myapi.rune
+```
+
+If you see `Vectrune runtime listening on http://127.0.0.1:3000`, the server is only accessible inside the container. Use `--host 0.0.0.0` to fix this.
+
+### Troubleshooting
+
+- If you cannot access Vectrune from your host, ensure you are binding to `0.0.0.0` and using the correct port mapping in Docker.
+- The bind address and port are logged on startup for verification
