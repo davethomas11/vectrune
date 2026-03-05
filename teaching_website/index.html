@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vectrune Teaching Website</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Vectrune</h1>
+    <nav>
+      <a href="#playground">Playground</a>
+      <a href="#tour">Language Tour</a>
+      <a href="#reference">API Reference</a>
+      <a href="#examples">Examples</a>
+      <a href="#how">How it Works</a>
+      <a href="#getting-started">Getting Started</a>
+    </nav>
+  </header>
+  <main>
+    <section id="hero">
+      <h2>Declarative APIs, Fast Prototyping</h2>
+      <p>Vectrune is a language and runtime for building REST and GraphQL APIs with memory/state, schema validation, and builtins—all in a single readable document.</p>
+      <a href="#playground" class="cta">Try the Playground</a>
+    </section>
+    <section id="playground">
+      <h2>Playground (Coming Soon)</h2>
+      <p>Edit and run .rune code in your browser. See output instantly.</p>
+      <pre><code id="example-code">@App
+name = Memory Example API
+version = 1.0
+type = REST
+run:
+    skaters = load-rune skateboarders.rune
+    set-memory skaters
+
+@Schema/Skater
+fields:
+    name: String
+    age: Integer
+    style: String
+
+@Route/GET /Skaters
+run:
+    skaters = get-memory skaters
+    return skaters
+
+@Route/PUT /Skaters
+run:
+    skaters = get-memory skaters
+    new-skater = parse-json body
+    validate new-skater #Skater
+    append skaters.Skateboarder.record new-skater
+    set-memory skaters
+    return skaters</code></pre>
+      <button disabled>Run (Coming Soon)</button>
+    </section>
+    <section id="tour">
+      <h2>Language Tour</h2>
+      <ul>
+        <li>App declaration</li>
+        <li>Schema definition</li>
+        <li>REST/GraphQL routes</li>
+        <li>Builtins: memory, parse-json, validate, etc.</li>
+        <li>State management</li>
+        <li>Validation and error handling</li>
+      </ul>
+    </section>
+    <section id="reference">
+      <h2>API Reference</h2>
+      <p>See all builtins, schema types, and configuration options.</p>
+    </section>
+    <section id="examples">
+      <h2>Examples Gallery</h2>
+      <p>Browse and run real-world Vectrune examples.</p>
+    </section>
+    <section id="how">
+      <h2>How it Works</h2>
+      <p>Vectrune compiles your .rune document into a fast, testable API server with memory/state and validation built in.</p>
+    </section>
+    <section id="getting-started">
+      <h2>Getting Started</h2>
+      <ol>
+        <li>Install: <code>brew install vectrune</code></li>
+        <li>Run: <code>vectrune myapi.rune</code></li>
+        <li>Deploy: <code>vectrune lambda package</code></li>
+      </ol>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; 2026 Vectrune Project</p>
+  </footer>
+</body>
+</html>

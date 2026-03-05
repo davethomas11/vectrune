@@ -1,25 +1,29 @@
 use crate::builtins::BuiltinResult;
-use lazy_static::lazy_static;
+use crate::memory::{MemoryBackendRef, init_memory_backend};
 use serde_json::Value;
-use std::collections::HashMap;
-use std::sync::Mutex;
+use tokio::sync::OnceCell;
 
-lazy_static! {
-    static ref MEMORY: Mutex<HashMap<String, Value>> = Mutex::new(HashMap::new());
+static MEMORY_BACKEND: OnceCell<MemoryBackendRef> = OnceCell::const_new();
+
+async fn get_backend() -> &'static MemoryBackendRef {
+    MEMORY_BACKEND.get_or_init(|| async {
+        init_memory_backend().await
+    }).await
 }
 
-pub fn builtin_set_memory(args: &[String], ctx: &mut crate::builtins::Context) -> BuiltinResult {
+pub async fn builtin_set_memory(args: &[String], ctx: &mut crate::builtins::Context) -> BuiltinResult {
     let key = &args[0];
     let value_str = if args.len() >= 2 { &args[1] } else { &args[0] };
     let value = match ctx.get(value_str) {
         Some(v) => v,
         None => &Value::String(value_str.into()),
     };
-    set_memory(key, value.clone());
+    let backend = get_backend().await;
+    backend.set(key, value.clone()).await;
     BuiltinResult::Ok
 }
 
-pub fn builtin_get_memory(
+pub async fn builtin_get_memory(
     args: &[String],
     assign_to: Option<&str>,
     ctx: &mut crate::builtins::Context,
@@ -29,7 +33,8 @@ pub fn builtin_get_memory(
         return BuiltinResult::Error("missing key argument".to_string());
     }
     let key = &args[0];
-    match get_memory(key) {
+    let backend = get_backend().await;
+    match backend.get(key).await {
         Some(value) => {
             if let Some(var_name) = assign_to {
                 ctx.insert(var_name.to_string(), value);
@@ -43,12 +48,12 @@ pub fn builtin_get_memory(
     }
 }
 
-pub fn set_memory(key: &str, value: Value) {
-    let mut mem = MEMORY.lock().unwrap();
-    mem.insert(key.to_string(), value);
+pub async fn set_memory(key: &str, value: Value) {
+    let backend = get_backend().await;
+    backend.set(key, value).await;
 }
 
-pub fn get_memory(key: &str) -> Option<Value> {
-    let mem = MEMORY.lock().unwrap();
-    mem.get(key).cloned()
+pub async fn get_memory(key: &str) -> Option<Value> {
+    let backend = get_backend().await;
+    backend.get(key).await
 }

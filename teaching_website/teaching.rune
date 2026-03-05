@@ -1,0 +1,13 @@
+@App
+name = Vectrune Teaching Website
+version = 0.1.0
+type = static
+root = ./teaching_website
+
+@Route/GET /
+run:
+    return file index.html
+
+@Route/GET /{path}
+run:
+    return file {path}

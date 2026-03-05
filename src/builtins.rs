@@ -428,8 +428,8 @@ pub async fn call_builtin(
         "json.read" => builtin_json_read(args, ctx, assign_to, app_state),
         "datasource" => builtin_data_source(args, ctx, &app_state, assign_to).await,
         "load-rune" => builtin_load_rune(args, ctx, assign_to, app_state),
-        "set-memory" | "memory.set" => builtin_set_memory(args, ctx),
-        "get-memory" | "memory.get" => builtin_get_memory(args, assign_to, ctx),
+        "set-memory" | "memory.set" => builtin_set_memory(args, ctx).await,
+        "get-memory" | "memory.get" => builtin_get_memory(args, assign_to, ctx).await,
         "append" | "memory.append" => builtin_append(args, assign_to, ctx),
         "return" => {
             if args.is_empty() {

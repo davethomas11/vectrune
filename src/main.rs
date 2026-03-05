@@ -7,6 +7,7 @@ mod crud_web_fe;
 mod rune_ast;
 mod rune_parser;
 mod util;
+mod memory;
 
 use crate::apps::build_app_router;
 use crate::core::{extract_data_sources, extract_schemas, get_app_type, AppState};
@@ -424,7 +425,7 @@ async fn main() -> anyhow::Result<()> {
         }
         process::exit(0);
     }
-    if (app_type == Some("REST".to_string()) || app_type == Some("Graphql".to_string()))
+    if app_type.as_ref().map(|t| crate::apps::app_type_supported(t)).unwrap_or(false)
         && output_format == None
     {
         log(
@@ -449,14 +450,13 @@ async fn main() -> anyhow::Result<()> {
 
         let schemas = std::sync::Arc::new(extract_schemas(&doc));
         let data_sources = std::sync::Arc::new(extract_data_sources(&doc));
-        let state = AppState {
-            doc: std::sync::Arc::new(doc.clone()),
-            schemas,
-            data_sources,
-            path: rune_dir.clone(),
-        };
-
-        let app = build_app_router(state.clone(), is_verbose).await;
+        let app = crate::apps::build_vectrune_router(
+            std::sync::Arc::new(doc.clone()),
+            schemas.clone(),
+            data_sources.clone(),
+            rune_dir.clone(),
+            is_verbose,
+        ).await;
         let host_address = format!("{}:{}", effective_host, effective_port);
         let listener = TcpListener::bind(host_address.clone()).await?;
         log(
