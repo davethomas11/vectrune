@@ -1,17 +1,19 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::builtins::{BuiltinResult, Context};
+use crate::builtins::{BuiltinResult, Context, LAST_EXEC_RESULT};
 use crate::rune_ast::Section;
 use serde_json::Value as JsonValue;
+use crate::util::log;
+use crate::util::LogLevel;
 
 pub fn builtin_validate(
     args: &[String],
-    ctx: &Context,
+    ctx: &mut Context,
     schemas: &Arc<HashMap<String, Section>>,
 ) -> BuiltinResult {
     if args.is_empty() {
-        eprintln!("[ERROR] validate: missing arguments");
+        log(LogLevel::Error, "validate: missing arguments");
         return BuiltinResult::Error("missing arguments".to_string());
     }
 
@@ -40,6 +42,7 @@ pub fn builtin_validate(
                     return BuiltinResult::Respond(400, format!("Missing field `{}`", field));
                 }
             }
+            ctx.insert(LAST_EXEC_RESULT.to_string(), val.clone());
             return BuiltinResult::Ok;
         } else {
             return BuiltinResult::Respond(400, "Validation failed".to_string());

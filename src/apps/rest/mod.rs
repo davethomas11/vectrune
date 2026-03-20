@@ -17,9 +17,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tower_http::services::ServeDir;
 
-pub async fn build_rest_router(state: AppState, verbose: bool) -> Router {
+pub async fn build_rest_router(state: AppState) -> Router {
     // Initialize Memory from @Memory sections
-    crate::core::initialize_memory_from_doc(&state.doc);
+    crate::core::initialize_memory_from_doc(&state.doc, &state.path).await;
 
     let doc = state.doc.clone();
     let auth_configs = Arc::new(extract_auth_configs(&doc));
@@ -33,7 +33,7 @@ pub async fn build_rest_router(state: AppState, verbose: bool) -> Router {
         .find(|s| s.path.first().map(|p| p.as_str()) == Some("App"))
     {
         if let Some(run_steps) = app_section.series.get("run") {
-            let _ = execute_steps(state.clone(), run_steps.clone(), None, None, verbose).await;
+            let _ = execute_steps(state.clone(), run_steps.clone(), None, None).await;
         }
     }
 
@@ -111,7 +111,7 @@ pub async fn build_rest_router(state: AppState, verbose: bool) -> Router {
                                 with_id,
                             );
                         let handler =
-                            create_handler(state_clone.clone(), run_steps.clone(), verbose);
+                            create_handler(state_clone.clone(), run_steps.clone());
                         let route_fn = match *m {
                             "GET" => get(move |params| handler(params, None)),
                             "POST" => post(move |params, body| handler(params, Some(body))),
@@ -138,7 +138,7 @@ pub async fn build_rest_router(state: AppState, verbose: bool) -> Router {
                 continue;
             }
 
-            let handler = create_handler(state_clone.clone(), run_steps.clone(), verbose);
+            let handler = create_handler(state_clone.clone(), run_steps.clone());
             let route_fn = match method.as_str() {
                 "GET" | "DELETE" => {
                     let handler = handler.clone();
@@ -181,7 +181,6 @@ pub async fn build_rest_router(state: AppState, verbose: bool) -> Router {
 fn create_handler(
     state: AppState,
     steps: Vec<Value>,
-    verbose: bool,
 ) -> impl Fn(
     axum::extract::Path<HashMap<String, String>>,
     Option<String>,
@@ -191,7 +190,7 @@ fn create_handler(
           body: Option<String>| {
         let state = state.clone();
         let steps = steps.clone();
-        Box::pin(async move { execute_steps(state, steps, body, Some(params), verbose).await })
+        Box::pin(async move { execute_steps(state, steps, body, Some(params)).await })
     }
 }
 

@@ -1,0 +1,36 @@
+@App
+name = "Book GraphQL API"
+type = "GraphQL"
+port = 4000
+
+@Memory
+backend = "memory"
+source = "books.json"
+
+@Schema/Book
+id = number
+title = string
+author_id = number
+published_year = number
+
+@GraphQL/Query
+books():
+    # Returns all books
+    books = memory.get books
+    return books
+
+@GraphQL/Mutation/Book
+addBook(title: string, author_id: number, published_year: number):
+    # Adds a new book
+    books = memory.get "books"
+    new_id = books.max it.id + 1
+    new_book = {
+        id: new_id,
+        title: title,
+        author_id: author_id,
+        published_year: published_year
+    }
+    memory.append "books" new_book
+    return new_book
+
+

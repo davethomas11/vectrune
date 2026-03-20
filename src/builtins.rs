@@ -3,33 +3,38 @@
 use crate::rune_parser::parse_rune;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
+use std::string::ToString;
 
 pub mod builtin {
     pub mod commands;
     pub mod csv;
     pub mod data_source;
     pub mod json;
-    pub mod log;
+    pub mod logger;
     pub mod memory;
     pub mod mysql;
     pub mod parse_json;
     pub mod postgres;
     pub mod respond;
     pub mod validate;
+    pub mod function;
 }
 pub mod path_utils;
 
 use crate::builtins::builtin::commands::builtin_append;
-use crate::builtins::builtin::memory::{builtin_get_memory, builtin_set_memory};
+use crate::builtins::builtin::memory::{builtin_clear_memory, builtin_del_memory, builtin_get_memory, builtin_set_memory};
 use crate::core::AppState;
 use crate::util::{json_to_xml, log, LogLevel};
 use builtin::csv::{builtin_csv_append, builtin_csv_read, builtin_csv_write};
 use builtin::data_source::builtin_data_source;
 use builtin::json::builtin_json_read;
-use builtin::log::builtin_log;
+use builtin::logger::builtin_log;
 use builtin::parse_json::builtin_parse_json;
 use builtin::respond::builtin_respond;
 use builtin::validate::builtin_validate;
+use crate::builtins::builtin::function::{builtin_func, invoke_func};
+
+pub const LAST_EXEC_RESULT: &str = "___last_exec_result___";
 
 pub type Context = HashMap<String, JsonValue>;
 
@@ -417,8 +422,15 @@ pub async fn call_builtin(
         }
     }
 
+    // User-defined function invocation
+    if let Some(serde_json::Value::Array(_)) = ctx.get(&format!("func:{}", name)) {
+        invoke_func(app_state, name, ctx, args, assign_to).await;
+        return BuiltinResult::Ok
+    }
+
     match name {
-        "log" => builtin_log(args),
+        "func" => builtin_func(args, ctx).await,
+        "log" => builtin_log(args, ctx),
         "respond" => builtin_respond(args, ctx),
         "parse-json" => builtin_parse_json(args, ctx, assign_to),
         "validate" => builtin_validate(args, ctx, &app_state.schemas),
@@ -430,10 +442,12 @@ pub async fn call_builtin(
         "load-rune" => builtin_load_rune(args, ctx, assign_to, app_state),
         "set-memory" | "memory.set" => builtin_set_memory(args, ctx).await,
         "get-memory" | "memory.get" => builtin_get_memory(args, assign_to, ctx).await,
-        "append" | "memory.append" => builtin_append(args, assign_to, ctx),
+        "clear-memory" | "memory.clear" => builtin_clear_memory(args, ctx).await,
+        "del-memory" | "memory.del" => builtin_del_memory(args, ctx).await,
+        "append" | "memory.append" => builtin_append(args, assign_to, ctx).await,
         "return" => {
             if args.is_empty() {
-                eprintln!("[ERROR] return: missing value");
+                log(LogLevel::Error, "return: missing return value");
                 BuiltinResult::Error("missing value".to_string())
             } else {
                 if args.len() >= 3 && &args[1] == "as" {
@@ -473,7 +487,9 @@ pub async fn call_builtin(
             BuiltinResult::Ok
         }
         _ => {
-            log(LogLevel::Error, &format!("unknown builtin: {}", name));
+            if ctx.get(name).is_none() {
+                log(LogLevel::Error, &format!("unknown builtin: {}", name));
+            }
             BuiltinResult::Ok
         }
     }

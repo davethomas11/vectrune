@@ -9,14 +9,13 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{response::IntoResponse, routing::get, Router};
 use std::collections::HashMap;
 
-pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
+pub async fn build_graphql_router(state: AppState) -> Router {
     // Memory initialization moved to core::initialize_memory_from_doc
-    crate::core::initialize_memory_from_doc(&state.doc);
+    crate::core::initialize_memory_from_doc(&state.doc, &state.path).await;
 
     // 2. Build Schema
     let mut query_object = Object::new("Query");
     let mut mutation_object = Object::new("Mutation");
-    let mut mutation_has_fields = false;
 
     // Pre-calculate schemas for easy access
     let schemas = state.schemas.clone();
@@ -31,7 +30,7 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
         }
     }
 
-    mutation_has_fields = state.doc.sections.iter().any(|s| {
+    let mutation_has_fields = state.doc.sections.iter().any(|s| {
         s.path.len() >= 2 && &s.path[0..2] == vec!["GraphQL", "Mutation"] && !s.series.is_empty()
     });
 
@@ -128,7 +127,7 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
                         &format!("Executing GraphQL Query steps: {:?}", steps),
                     );
                     let (_code, resp) =
-                        execute_steps(state_clone, steps, None, Some(path_params), true).await;
+                        execute_steps(state_clone, steps, None, Some(path_params)).await;
                     log(LogLevel::Debug, &format!("GraphQL Query Resp: {}", resp));
                     let json_res: serde_json::Value =
                         serde_json::from_str(&resp).unwrap_or(serde_json::Value::String(resp));
@@ -204,7 +203,7 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
                         &format!("Executing GraphQL Mutation steps: {:?}", steps),
                     );
                     let (_code, resp) =
-                        execute_steps(state_clone, steps, None, Some(path_params), true).await;
+                        execute_steps(state_clone, steps, None, Some(path_params)).await;
                     log(LogLevel::Debug, &format!("GraphQL Mutation Resp: {}", resp));
                     let json_res: serde_json::Value =
                         serde_json::from_str(&resp).unwrap_or(serde_json::Value::String(resp));
@@ -243,7 +242,7 @@ pub async fn build_graphql_router(state: AppState, verbose: bool) -> Router {
                 } else {
                     Vec::new()
                 };
-                let (_code, resp) = execute_steps(state, steps, None, None, true).await;
+                let (_code, resp) = execute_steps(state, steps, None, None).await;
                 Ok(Some(FieldValue::value(resp)))
             })
         })

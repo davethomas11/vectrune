@@ -2,19 +2,17 @@ use lambda_runtime::{Error, LambdaEvent};
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::sync::OnceCell;
-use axum::{body::Body, http::{Request, Method, HeaderMap, HeaderValue, Uri}, Router};
+use axum::{body::Body, http::{Request, Method, Uri}, Router};
 use tower::ServiceExt;
-use crate::core::{extract_schemas, extract_data_sources};
 use crate::rune_ast::RuneDocument;
-use crate::rune_parser::parse_rune;
 
 pub static RUNE_DOC: OnceCell<Result<Arc<RuneDocument>, String>> = OnceCell::const_new();
 pub static ROUTER: OnceCell<Option<Router>> = OnceCell::const_new();
 
-pub mod lambda_handler {
+pub mod handler {
     use super::*;
 
-    pub async fn lambda_handler(event: LambdaEvent<Value>) -> Result<Value, Error> {
+    pub async fn execution_event(event: LambdaEvent<Value>) -> Result<Value, Error> {
         let (event, _context) = event.into_parts();
         let doc_result = RUNE_DOC.get().expect("Rune doc not loaded");
         let router_opt = ROUTER.get().expect("Router not loaded");
@@ -77,7 +75,7 @@ pub mod lambda_handler {
     }
 }
 
-pub async fn lambda_cold_start(rune_path: &str) {
+pub async fn cold_start(rune_path: &str) {
     use std::fs;
     use std::sync::Arc;
     use crate::core::{extract_schemas, extract_data_sources};
@@ -102,8 +100,7 @@ pub async fn lambda_cold_start(rune_path: &str) {
             doc_arc.clone(),
             schemas,
             data_sources,
-            path,
-            false,
+            path
         ).await)
     } else {
         None

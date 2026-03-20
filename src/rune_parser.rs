@@ -483,3 +483,58 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
 
     Ok(RuneDocument { sections })
 }
+
+#[derive(Debug)]
+pub enum ParsedLine {
+    Assignment { var: String, expr: String },
+    Builtin { name: String, args: Vec<String> },
+    Object { var: String, fields: Vec<(String, String)> },
+    Comment,
+    Raw(String),
+}
+
+pub fn parse_rune_line(line: &str) -> Result<ParsedLine, ParseError> {
+    let line = line.trim();
+    if line.is_empty() {
+        return Err(ParseError::General("Empty line".to_string()));
+    }
+    if line.starts_with('#') {
+        return Ok(ParsedLine::Comment);
+    }
+    // Assignment: var = expr
+    if let Some(eq_pos) = line.find('=') {
+        // Ignore '==' or '!='
+        let is_assignment = !line.contains("==") && !line.contains("!=");
+        if is_assignment {
+            let var = line[..eq_pos].trim().to_string();
+            let expr = line[eq_pos + 1..].trim().to_string();
+            // Object construction: var = { ... }
+            if expr.starts_with('{') && expr.ends_with('}') {
+                // Parse fields
+                let fields_str = &expr[1..expr.len() - 1];
+                let fields: Vec<(String, String)> = fields_str
+                    .split(',')
+                    .filter_map(|f| {
+                        let parts: Vec<_> = f.split(':').collect();
+                        if parts.len() == 2 {
+                            Some((parts[0].trim().to_string(), parts[1].trim().to_string()))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                return Ok(ParsedLine::Object { var, fields });
+            }
+            return Ok(ParsedLine::Assignment { var, expr });
+        }
+    }
+    // Builtin: memory.get ... or similar
+    let parts: Vec<_> = line.split_whitespace().collect();
+    if !parts.is_empty() && parts[0].contains('.') {
+        let name = parts[0].to_string();
+        let args = parts[1..].iter().map(|s| s.to_string()).collect();
+        return Ok(ParsedLine::Builtin { name, args });
+    }
+    // Raw line
+    Ok(ParsedLine::Raw(line.to_string()))
+}

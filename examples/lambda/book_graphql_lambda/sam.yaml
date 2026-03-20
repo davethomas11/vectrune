@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  BookGraphQLLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      Runtime: provided.al2
+      CodeUri: ./dist/
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          RUNE_FILE: book_graphql_lambda.rune
+          VECTRUNE_MEMORY_BACKEND: memory
+          VECTRUNE_LOG_LEVEL: info
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+

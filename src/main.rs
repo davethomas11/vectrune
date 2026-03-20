@@ -1,28 +1,38 @@
 // src/main.rs
 mod apps;
+mod arithmetic;
 mod builtins;
 mod cli;
 mod core;
 mod crud_web_fe;
+mod lambda_main;
+mod memory;
 mod rune_ast;
 mod rune_parser;
 mod util;
-mod memory;
 
-use crate::apps::build_app_router;
-use crate::core::{extract_data_sources, extract_schemas, get_app_type, AppState};
+use crate::core::{extract_data_sources, extract_schemas, get_app_type};
 use crate::rune_ast::{RuneDocument, Value};
 use crate::rune_parser::parse_rune;
 use crate::util::{api_doc, json_to_xml, log, set_log_level, LogLevel};
 use axum::serve;
 use clap::{Arg, Command};
 use std::convert::TryFrom;
-use std::fs;
 use std::process;
+use std::{env, fs};
 use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if is_lambda_env() {
+        log(
+            LogLevel::Info,
+            "Running in AWS Lambda environment, launching Lambda runtime...",
+        );
+        launch_lambda().await?;
+        return Ok(());
+    }
+
     let matches = Command::new("vectrune")
         .version(env!("CARGO_PKG_VERSION"))
         .author("David Thomas")
@@ -48,13 +58,6 @@ async fn main() -> anyhow::Result<()> {
                 .help("Enable verbose output")
                 .value_name("output_format")
                 .value_parser(["text", "json", "rune", "xml", "yaml", "curl"]),
-        )
-        .arg(
-            Arg::new("verbose")
-                .short('v')
-                .long("verbose")
-                .help("Enable verbose output")
-                .action(clap::ArgAction::SetTrue),
         )
         .arg(
             Arg::new("calculate")
@@ -121,6 +124,10 @@ async fn main() -> anyhow::Result<()> {
                 .about("AWS Lambda tooling for VectRune")
                 .subcommand_required(true)
                 .subcommand(
+                    Command::new("launch")
+                        .about("Launch the Lambda runtime for handling AWS lambda Events")
+                )
+                .subcommand(
                     Command::new("package")
                         .about(
                             "Bundle the runtime, Rune sources, and config into a Lambda artifact",
@@ -173,19 +180,132 @@ async fn main() -> anyhow::Result<()> {
                         ),
                 ),
         )
+        .subcommand(
+            Command::new("sam")
+                .about("AWS SAM tooling for VectRune")
+                .subcommand_required(true)
+                .subcommand(
+                    Command::new("generate")
+                        .about("Generate a SAM YAML file for a Lambda ZIP bundle")
+                        .arg(
+                            Arg::new("bundle")
+                                .long("bundle")
+                                .short('b')
+                                .num_args(1)
+                                .value_name("PATH")
+                                .help("Lambda ZIP bundle to deploy (containing bootstrap and rune files)"),
+                        )
+                        .arg(
+                            Arg::new("output")
+                                .long("output")
+                                .short('o')
+                                .num_args(1)
+                                .value_name("FILE")
+                                .help("Output SAM YAML file"),
+                        ),
+                )
+                .subcommand(
+                    Command::new("local")
+                        .about("Run local SAM testing for a Lambda ZIP bundle")
+                        .arg(
+                            Arg::new("bundle")
+                                .long("bundle")
+                                .short('b')
+                                .num_args(1)
+                                .value_name("PATH")
+                                .help("Lambda ZIP bundle to test locally (containing bootstrap and rune files)"),
+                        )
+                        .arg(
+                            Arg::new("sam")
+                                .long("sam")
+                                .short('s')
+                                .num_args(1)
+                                .value_name("FILE")
+                                .help("SAM YAML file to use"),
+                        ),
+                ),
+        )
+        .subcommand(
+            Command::new("repl")
+                .about("Start the Vectrune REPL shell")
+                .arg(
+                    Arg::new("log-level")
+                        .short('l')
+                        .long("log-level")
+                        .help("Set log level (debug, info, warn, error)")
+                        .value_name("LEVEL")
+                        .value_parser(["debug", "info", "warn", "error"]),
+                )
+        )
         .get_matches();
 
-    let log_level = matches.get_one::<String>("log-level").map(|s| s.as_str());
+    let log_level = matches
+        .get_one::<String>("log-level")
+        .map(|s| s.as_str())
+        .or_else(|| {
+            if let Some(("repl", repl_matches)) = matches.subcommand() {
+                repl_matches
+                    .get_one::<String>("log-level")
+                    .map(|s| s.as_str())
+            } else {
+                None
+            }
+        });
+
     match log_level {
-        Some("debug") => set_log_level(LogLevel::Debug),
-        Some("info") => set_log_level(LogLevel::Info),
-        Some("warn") => set_log_level(LogLevel::Warn),
-        Some("error") => set_log_level(LogLevel::Error),
-        _ => set_log_level(LogLevel::Info),
+        Some("debug") => set_log_level(LogLevel::Debug, false),
+        Some("info") => set_log_level(LogLevel::Info, false),
+        Some("warn") => set_log_level(LogLevel::Warn, false),
+        Some("error") => set_log_level(LogLevel::Error, false),
+        _ => set_log_level(LogLevel::Info, true),
     }
 
     if let Some(("lambda", lambda_matches)) = matches.subcommand() {
-        cli::handle_lambda(lambda_matches)?;
+        match lambda_matches.subcommand() {
+            Some(("package", _)) => {
+                cli::handle_lambda(lambda_matches)?;
+                return Ok(());
+            }
+            Some(("launch", _)) => launch_lambda().await?,
+            _ => {
+                cli::handle_lambda(lambda_matches)?;
+                return Ok(());
+            }
+        }
+    }
+
+    if let Some(("sam", sam_matches)) = matches.subcommand() {
+        match sam_matches.subcommand() {
+            Some(("generate", generate_matches)) => {
+                let bundle_path = generate_matches
+                    .get_one::<String>("bundle")
+                    .map(|s| s.as_str())
+                    .unwrap_or("dist/vectrune-lambda.zip");
+                let output_path = generate_matches
+                    .get_one::<String>("output")
+                    .map(|s| s.as_str())
+                    .unwrap_or("sam.yaml");
+                cli::handle_sam_generate(bundle_path, output_path)?;
+                return Ok(());
+            }
+            Some(("local", local_matches)) => {
+                let bundle_path = local_matches
+                    .get_one::<String>("bundle")
+                    .map(|s| s.as_str())
+                    .unwrap_or("dist/vectrune-lambda.zip");
+                let sam_path = local_matches
+                    .get_one::<String>("sam")
+                    .map(|s| s.as_str())
+                    .unwrap_or("sam.yaml");
+                cli::handle_sam_local(bundle_path, sam_path)?;
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
+
+    if let Some(("repl", _)) = matches.subcommand() {
+        crate::cli::handle_repl().await?;
         return Ok(());
     }
 
@@ -194,7 +314,6 @@ async fn main() -> anyhow::Result<()> {
     let model = matches.get_one::<String>("ml").map(|s| s.as_str());
     let output_format = matches.get_one::<String>("output").map(|s| s.as_str());
     let input_format = matches.get_one::<String>("input").map(|s| s.as_str());
-    let is_verbose = matches.get_flag("verbose");
     let calc_expr = matches.get_one::<String>("calculate").map(|s| s.as_str());
     let transform_spec = matches.get_one::<String>("transform").map(|s| s.as_str());
     let merge_spec = matches.get_one::<String>("merge-with").map(|s| s.as_str());
@@ -319,12 +438,10 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let app_type = get_app_type(&doc);
-    if is_verbose {
-        log(
-            LogLevel::Info,
-            &format!("Detected App type: {:?}", app_type),
-        );
-    }
+    log(
+        LogLevel::Info,
+        &format!("Detected App type: {:?}", app_type),
+    );
 
     let doc_host = doc
         .get_section("App")
@@ -425,7 +542,10 @@ async fn main() -> anyhow::Result<()> {
         }
         process::exit(0);
     }
-    if app_type.as_ref().map(|t| crate::apps::app_type_supported(t)).unwrap_or(false)
+    if app_type
+        .as_ref()
+        .map(|t| crate::apps::app_type_supported(t))
+        .unwrap_or(false)
         && output_format == None
     {
         log(
@@ -436,11 +556,10 @@ async fn main() -> anyhow::Result<()> {
             ),
         );
         log(LogLevel::Info, "Press Ctrl+C to stop the server.");
-        if is_verbose {
-            log(LogLevel::Debug, &format!("Config: \n{}", api_doc(&doc)));
-        }
+        log(LogLevel::Debug, &format!("Config: \n{}", api_doc(&doc)));
+
         let rune_dir = if script_path == "-" {
-            std::env::current_dir().unwrap()
+            env::current_dir()?
         } else {
             std::path::Path::new(script_path)
                 .parent()
@@ -450,13 +569,13 @@ async fn main() -> anyhow::Result<()> {
 
         let schemas = std::sync::Arc::new(extract_schemas(&doc));
         let data_sources = std::sync::Arc::new(extract_data_sources(&doc));
-        let app = crate::apps::build_vectrune_router(
+        let app = apps::build_vectrune_router(
             std::sync::Arc::new(doc.clone()),
             schemas.clone(),
             data_sources.clone(),
             rune_dir.clone(),
-            is_verbose,
-        ).await;
+        )
+        .await;
         let host_address = format!("{}:{}", effective_host, effective_port);
         let listener = TcpListener::bind(host_address.clone()).await?;
         log(
@@ -466,9 +585,7 @@ async fn main() -> anyhow::Result<()> {
         serve(listener, app).await?;
         Ok(())
     } else {
-        if is_verbose {
-            log(LogLevel::Debug, "Parsed Vectrune script:");
-        }
+        log(LogLevel::Debug, "Parsed Vectrune script:");
         match output_format {
             Some("json") => {
                 let json_output =
@@ -511,4 +628,28 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", doc);
         process::exit(0);
     }
+}
+
+async fn launch_lambda() -> std::io::Result<()> {
+    match lambda_main::launch().await {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                &format!("Error launching Lambda runtime: {}", e),
+            );
+            Err(std::io::Error::new(std::io::ErrorKind::Other, e))
+        }
+    }
+}
+
+fn is_lambda_env() -> bool {
+    // Check 1: Is there a function name?
+    let has_name = env::var("AWS_LAMBDA_FUNCTION_NAME").is_ok();
+
+    // Check 2: Is the Runtime API endpoint defined?
+    // (Crucial for custom runtimes like Rust)
+    let has_api = env::var("AWS_LAMBDA_RUNTIME_API").is_ok();
+
+    has_name && has_api
 }

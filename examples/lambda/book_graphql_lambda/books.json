@@ -1,0 +1,17 @@
+{
+  "books": [
+    {
+      "id": 1,
+      "title": "The Rust Book",
+      "author_id": 1,
+      "published_year": 2019
+    },
+    {
+      "id": 2,
+      "title": "Programming Lambda",
+      "author_id": 2,
+      "published_year": 2022
+    }
+  ]
+}
+

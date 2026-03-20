@@ -17,7 +17,7 @@ async fn build_router_from_str(contents: &str) -> Router {
         data_sources: Arc::new(extract_data_sources(&doc)),
         path,
     };
-    build_app_router(state, false).await
+    build_app_router(state).await
 }
 
 #[tokio::test]

@@ -3,7 +3,7 @@ pub mod rest;
 
 use self::graphql::build_graphql_router;
 use self::rest::build_rest_router;
-use crate::core::{get_app_type, extract_schemas, extract_data_sources, AppState};
+use crate::core::{get_app_type, AppState};
 use crate::rune_ast::RuneDocument;
 use axum::Router;
 use std::path::PathBuf;
@@ -12,15 +12,15 @@ use std::sync::Arc;
 use axum::routing::get_service;
 use tower_http::services::ServeDir;
 
-pub async fn build_app_router(state: AppState, verbose: bool) -> Router {
+pub async fn build_app_router(state: AppState) -> Router {
     let app_type = get_app_type(&state.doc).unwrap_or_else(|| "REST".to_string());
 
     match app_type.to_uppercase().as_str() {
-        "GRAPHQL" => build_graphql_router(state, verbose).await,
-        "REST" => build_rest_router(state, verbose).await,
+        "GRAPHQL" => build_graphql_router(state).await,
+        "REST" => build_rest_router(state).await,
         "STATIC" => build_static_router(state).await,
         other => {
-            use axum::{routing::any, response::IntoResponse};
+            use axum::{routing::any};
             let other_owned = other.to_string();
             Router::new().route(
                 "/{*path}",
@@ -59,8 +59,7 @@ pub async fn build_vectrune_router(
     doc: Arc<RuneDocument>,
     schemas: Arc<std::collections::HashMap<String, crate::rune_ast::Section>>,
     data_sources: Arc<std::collections::HashMap<String, crate::rune_ast::Section>>,
-    path: PathBuf,
-    verbose: bool,
+    path: PathBuf
 ) -> Router {
     let state = AppState {
         doc,
@@ -68,7 +67,7 @@ pub async fn build_vectrune_router(
         data_sources,
         path,
     };
-    build_app_router(state, verbose).await
+    build_app_router(state).await
 }
 
 /// Returns true if the app type is supported for server launch

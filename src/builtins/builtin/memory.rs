@@ -1,7 +1,8 @@
-use crate::builtins::BuiltinResult;
+use crate::builtins::{BuiltinResult, LAST_EXEC_RESULT};
 use crate::memory::{MemoryBackendRef, init_memory_backend};
 use serde_json::Value;
 use tokio::sync::OnceCell;
+use crate::util::{log, LogLevel};
 
 static MEMORY_BACKEND: OnceCell<MemoryBackendRef> = OnceCell::const_new();
 
@@ -11,7 +12,27 @@ async fn get_backend() -> &'static MemoryBackendRef {
     }).await
 }
 
+pub async fn builtin_clear_memory(_args: &[String], _ctx: &mut crate::builtins::Context) -> BuiltinResult {
+    let backend = get_backend().await;
+    backend.clear().await;
+    BuiltinResult::Ok
+}
+
+pub async fn builtin_del_memory(_args: &[String], _ctx: &mut crate::builtins::Context) -> BuiltinResult {
+    if _args.is_empty() {
+        log(LogLevel::Error, "del-memory: missing key argument");
+        return BuiltinResult::Error("missing key argument".to_string());
+    }
+    let backend = get_backend().await;
+    backend.delete(&_args[0]).await;
+    BuiltinResult::Ok
+}
+
 pub async fn builtin_set_memory(args: &[String], ctx: &mut crate::builtins::Context) -> BuiltinResult {
+    if args.is_empty() {
+        log(LogLevel::Error, "set-memory: missing key argument");
+        return BuiltinResult::Error("missing key argument".to_string());
+    }
     let key = &args[0];
     let value_str = if args.len() >= 2 { &args[1] } else { &args[0] };
     let value = match ctx.get(value_str) {
@@ -20,6 +41,7 @@ pub async fn builtin_set_memory(args: &[String], ctx: &mut crate::builtins::Cont
     };
     let backend = get_backend().await;
     backend.set(key, value.clone()).await;
+    ctx.insert(LAST_EXEC_RESULT.to_string(), value.clone());
     BuiltinResult::Ok
 }
 
@@ -29,7 +51,7 @@ pub async fn builtin_get_memory(
     ctx: &mut crate::builtins::Context,
 ) -> BuiltinResult {
     if args.is_empty() {
-        eprintln!("[ERROR] get-memory: missing key argument");
+        log(LogLevel::Error, "get-memory: missing key argument");
         return BuiltinResult::Error("missing key argument".to_string());
     }
     let key = &args[0];
@@ -37,12 +59,13 @@ pub async fn builtin_get_memory(
     match backend.get(key).await {
         Some(value) => {
             if let Some(var_name) = assign_to {
-                ctx.insert(var_name.to_string(), value);
+                ctx.insert(var_name.to_string(), value.clone());
             }
+            ctx.insert(LAST_EXEC_RESULT.to_string(), value.clone());
             BuiltinResult::Ok
         }
         None => {
-            eprintln!("[WARN] get-memory: key '{}' not found", key);
+            log(LogLevel::Warn, "get-memory: key not found");
             BuiltinResult::Ok
         }
     }
@@ -51,9 +74,4 @@ pub async fn builtin_get_memory(
 pub async fn set_memory(key: &str, value: Value) {
     let backend = get_backend().await;
     backend.set(key, value).await;
-}
-
-pub async fn get_memory(key: &str) -> Option<Value> {
-    let backend = get_backend().await;
-    backend.get(key).await
 }

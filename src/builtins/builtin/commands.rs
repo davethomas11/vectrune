@@ -1,7 +1,7 @@
 use crate::builtins::{BuiltinResult, Context};
 use serde_json::Value as JsonValue;
 
-pub fn builtin_append(
+pub async fn builtin_append(
     args: &[String],
     assign_to: Option<&str>,
     ctx: &mut Context,
@@ -79,7 +79,7 @@ pub fn builtin_append(
                 crate::builtins::builtin::memory::set_memory(
                     mem_mod,
                     ctx.get(var_name).unwrap().clone(),
-                );
+                ).await;
             }
         }
         Some(_) => {

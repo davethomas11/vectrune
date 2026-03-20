@@ -1,5 +1,7 @@
-use crate::builtins::{BuiltinResult, Context};
+use crate::builtins::{BuiltinResult, Context, LAST_EXEC_RESULT};
 use serde_json::Value as JsonValue;
+use crate::util::log;
+use crate::util::LogLevel;
 
 pub fn builtin_parse_json(
     args: &[String],
@@ -17,10 +19,11 @@ pub fn builtin_parse_json(
     if let Some(JsonValue::String(s)) = ctx.get(value) {
         match serde_json::from_str::<JsonValue>(s) {
             Ok(v) => {
-                ctx.insert(target.into(), v);
+                ctx.insert(target.into(), v.clone());
+                ctx.insert(LAST_EXEC_RESULT.to_string(), v.clone());
             }
             Err(e) => {
-                eprintln!("[ERROR] parse-json: {}", e);
+                log(LogLevel::Error, &format!("parse-json error: {}", e));
                 return BuiltinResult::Error(format!("parse-json error: {}", e));
             }
         }

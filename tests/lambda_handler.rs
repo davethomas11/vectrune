@@ -1,7 +1,6 @@
 use lambda_runtime::{LambdaEvent, Error};
 use serde_json::json;
-use rune_runtime::lambda_handler::{lambda_handler::lambda_handler, lambda_cold_start};
-use rune_runtime::rune_ast::RuneDocument;
+use rune_runtime::lambda_main::aws_lambda::{handler::execution_event, cold_start};
 use std::fs;
 
 #[tokio::test]
@@ -10,7 +9,7 @@ async fn test_lambda_handler_all_cases() {
     fs::create_dir_all("testdata").unwrap();
     fs::write("testdata/app.rune", "@App\ntype = REST\n").unwrap();
     std::env::set_var("RUNE_FILE", "testdata/app.rune");
-    lambda_cold_start("testdata/app.rune").await;
+    cold_start("testdata/app.rune").await;
     let event = LambdaEvent::new(json!({
         "httpMethod": "GET",
         "path": "/",
@@ -18,7 +17,7 @@ async fn test_lambda_handler_all_cases() {
         "queryStringParameters": {},
         "body": null
     }), Default::default());
-    let resp = lambda_handler(event).await.unwrap();
+    let resp = execution_event(event).await.unwrap();
     println!("valid_rune resp: {:?}", resp);
     assert_eq!(resp["statusCode"], 404); // No route defined, but router is valid
 

@@ -15,6 +15,7 @@ Cargo.lock
 
 # Example data files
 users.csv
+sam.yaml
 
 intellij_plugin/libs/jflex-full-1.9.1.jar
 

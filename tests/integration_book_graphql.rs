@@ -20,7 +20,7 @@ async fn build_router_from_file(path: &str) -> Router {
         data_sources: Arc::new(extract_data_sources(&doc)),
         path: path_buf,
     };
-    build_app_router(state, true).await
+    build_app_router(state).await
 }
 
 #[tokio::test]
@@ -73,7 +73,7 @@ async fn test_book_graphql_queries() {
 
 #[tokio::test]
 async fn test_book_graphql_mutation() {
-    set_log_level(LogLevel::Debug);
+    set_log_level(LogLevel::Debug, true);
 
     let app = build_router_from_file("examples/book_graphql.rune").await;
 

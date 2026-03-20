@@ -17,9 +17,7 @@ struct OllamaRequest {
 
 #[derive(Deserialize)]
 struct OllamaResponse {
-    response: String,
-    #[serde(default)]
-    done: bool,
+    response: String
 }
 
 pub async fn handle_ai(prompt: &str, model: Option<&str>) -> Result<()> {
@@ -34,8 +32,7 @@ pub async fn handle_ai(prompt: &str, model: Option<&str>) -> Result<()> {
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(Duration::from_millis(120));
     pb.set_style(
-        ProgressStyle::with_template("{spinner:.cyan} {msg}")
-            .unwrap()
+        ProgressStyle::with_template("{spinner:.cyan} {msg}")?
             .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
     );
     pb.set_message("Vectrune is thinking...");

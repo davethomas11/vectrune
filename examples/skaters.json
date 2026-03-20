@@ -1,0 +1,19 @@
+{
+  "skaters": [
+    {
+      "age": 53.0,
+      "name": "Tony Hawk",
+      "style": "Vert"
+    },
+    {
+      "age": 26.0,
+      "name": "Nyjah Huston",
+      "style": "Street"
+    },
+    {
+      "age": 28.0,
+      "name": "Leticia Bufoni",
+      "style": "Street"
+    }
+  ]
+}

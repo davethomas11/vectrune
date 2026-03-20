@@ -100,7 +100,7 @@ impl RuneDocument {
         RuneDocument { sections }
     }
 
-    pub(crate) fn from_xml(s: &str) -> Result<RuneDocument, String> {
+    pub fn from_xml(s: &str) -> Result<RuneDocument, String> {
         let json_val: serde_json::Value =
             xml_from_str(s).map_err(|e| format!("XML parse error: {}", e))?;
 
@@ -130,7 +130,7 @@ impl RuneDocument {
 }
 
 impl RuneDocument {
-    pub(crate) fn update_from(&mut self, p0: &RuneDocument) {
+    pub fn update_from(&mut self, p0: &RuneDocument) {
         self.sections = p0.sections.clone();
     }
 
@@ -250,20 +250,6 @@ impl Value {
         }
     }
 
-    pub fn as_map(&self) -> Option<HashMap<String, Value>> {
-        if let Value::Map(map) = self {
-            Some(map.clone())
-        } else if let Value::List(list) = self {
-            let mut map = HashMap::new();
-            for (i, v) in list.iter().enumerate() {
-                map.insert(i.to_string(), v.clone());
-            }
-            Some(map)
-        } else {
-            None
-        }
-    }
-
     pub fn as_u64(&self) -> Option<u64> {
         if let Value::Number(n) = self {
             Some(*n as u64)
@@ -283,30 +269,6 @@ impl Value {
     pub fn as_str(&self) -> Option<&str> {
         if let Value::String(s) = self {
             Some(s)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_f64(&self) -> Option<f64> {
-        if let Value::Number(n) = self {
-            Some(*n)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_bool(&self) -> Option<bool> {
-        if let Value::Bool(b) = self {
-            Some(*b)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_list(&self) -> Option<&[Value]> {
-        if let Value::List(list) = self {
-            Some(list)
         } else {
             None
         }

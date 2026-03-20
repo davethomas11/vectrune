@@ -12,6 +12,8 @@ use sqlx::types::JsonValue;
 use sqlx::{MySql, Pool, Postgres};
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::util::log;
+use crate::util::LogLevel;
 // --- Shared Helpers ---
 
 async fn get_pool_details(
@@ -263,10 +265,7 @@ pub async fn builtin_data_source(
 
 pub async fn create_table(name: &str, args: &[String], state: &AppState) -> BuiltinResult {
     let schema_section = state.schemas.get(name).unwrap_or_else(|| {
-        eprintln!(
-            "[ERROR] datasource.create_table: schema '{}' not found",
-            name
-        );
+        log(LogLevel::Error, &format!("datasource.create_table: schema '{}' not found", name));
         panic!("schema not found");
     });
     let datasource_name = if args.len() > 1 && args[0] == "in" {

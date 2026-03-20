@@ -2,7 +2,7 @@ use crate::rune_ast;
 use crate::rune_ast::RuneDocument;
 use serde_json::Value;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Once;
+use once_cell::sync::Lazy;
 
 pub fn json_to_xml(value: &Value, root: &str) -> String {
     fn escape_xml(s: &str) -> String {
@@ -73,8 +73,21 @@ pub enum LogLevel {
     Error,
 }
 
-static mut LOG_LEVEL: Option<AtomicUsize> = None;
-static INIT: Once = Once::new();
+use std::fmt;
+
+impl fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            LogLevel::Debug => "Debug",
+            LogLevel::Info => "Info",
+            LogLevel::Warn => "Warn",
+            LogLevel::Error => "Error",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+static LOG_LEVEL: Lazy<AtomicUsize> = Lazy::new(|| AtomicUsize::new(log_level_to_usize(&LogLevel::Info)));
 
 fn log_level_to_usize(level: &LogLevel) -> usize {
     match level {
@@ -86,30 +99,20 @@ fn log_level_to_usize(level: &LogLevel) -> usize {
 }
 
 fn get_log_level() -> LogLevel {
-    unsafe {
-        INIT.call_once(|| {
-            LOG_LEVEL = Some(AtomicUsize::new(log_level_to_usize(&LogLevel::Info)));
-        });
-        match LOG_LEVEL.as_ref().unwrap().load(Ordering::Relaxed) {
-            0 => LogLevel::Debug,
-            1 => LogLevel::Info,
-            2 => LogLevel::Warn,
-            3 => LogLevel::Error,
-            _ => LogLevel::Info,
-        }
+    match LOG_LEVEL.load(Ordering::Relaxed) {
+        0 => LogLevel::Debug,
+        1 => LogLevel::Info,
+        2 => LogLevel::Warn,
+        3 => LogLevel::Error,
+        _ => LogLevel::Info,
     }
 }
 
-pub fn set_log_level(level: LogLevel) {
-    unsafe {
-        INIT.call_once(|| {
-            LOG_LEVEL = Some(AtomicUsize::new(log_level_to_usize(&level)));
-        });
-        LOG_LEVEL
-            .as_ref()
-            .unwrap()
-            .store(log_level_to_usize(&level), Ordering::Relaxed);
+pub fn set_log_level(level: LogLevel, silent: bool) {
+    if !silent {
+        println!("Setting log level to {}", level);
     }
+    LOG_LEVEL.store(log_level_to_usize(&level), Ordering::Relaxed);
 }
 
 pub fn log(level: LogLevel, msg: &str) {

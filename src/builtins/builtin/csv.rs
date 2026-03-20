@@ -1,10 +1,11 @@
 use crate::builtins::path_utils::{candidate_paths, resolve_write_path};
-use crate::builtins::{BuiltinResult, Context};
+use crate::builtins::{BuiltinResult, Context, LAST_EXEC_RESULT};
 use crate::core::AppState;
 use csv::{ReaderBuilder, WriterBuilder};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
+use crate::util::{LogLevel, log};
 
 pub fn builtin_csv_read(
     args: &[String],
@@ -13,7 +14,7 @@ pub fn builtin_csv_read(
     app_state: &AppState,
 ) -> BuiltinResult {
     if args.is_empty() {
-        eprintln!("[ERROR] csv.read: missing filename");
+        log(LogLevel::Error, "csv.read: missing filename");
         return BuiltinResult::Error("missing filename".to_string());
     }
     let filename = &args[0];
@@ -33,11 +34,7 @@ pub fn builtin_csv_read(
     let mut rdr = match reader_opt {
         Some(r) => r,
         None => {
-            eprintln!(
-                "[WARN] csv.read: unable to open {} via any candidate -> {}",
-                filename,
-                errors.join(", ")
-            );
+            log(LogLevel::Warn, &format!("csv.read: unable to open {} via any candidate -> {}", filename, errors.join(", ")));
             if let Some(var_name) = assign_to {
                 context.insert(var_name.to_string(), JsonValue::Array(Vec::new()));
             }
@@ -53,18 +50,19 @@ pub fn builtin_csv_read(
                     .map(|(k, v)| (k, JsonValue::String(v)))
                     .collect(),
             )),
-            Err(e) => eprintln!("[ERROR] csv.read: {}", e),
+            Err(e) => log(LogLevel::Warn, &format!("csv.read: {}", e)),
         }
     }
     if let Some(var_name) = assign_to {
-        context.insert(var_name.to_string(), JsonValue::Array(records));
+        context.insert(var_name.to_string(), JsonValue::Array(records.clone()));
     }
+    context.insert(LAST_EXEC_RESULT.to_string(), JsonValue::Array(records.clone()));
     BuiltinResult::Ok
 }
 
-pub fn builtin_csv_write(args: &[String], ctx: &Context, app_state: &AppState) -> BuiltinResult {
+pub fn builtin_csv_write(args: &[String], ctx: &mut Context, app_state: &AppState) -> BuiltinResult {
     if args.len() < 2 {
-        eprintln!("[ERROR] csv.write: missing arguments");
+        log(LogLevel::Error, "csv.write: missing filename");
         return BuiltinResult::Ok;
     }
     let filename = &args[0];
@@ -72,7 +70,7 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context, app_state: &AppState) -
     let arr = match ctx.get(var) {
         Some(JsonValue::Array(arr)) => arr,
         _ => {
-            eprintln!("[ERROR] csv.write: variable not found or not array");
+            log(LogLevel::Error, "csv.write: variable not found or not array");
             return BuiltinResult::Error("variable not found or not array".to_string());
         }
     };
@@ -81,7 +79,7 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context, app_state: &AppState) -
     let mut wtr = match WriterBuilder::new().from_path(&target_path) {
         Ok(w) => w,
         Err(e) => {
-            eprintln!("[ERROR] csv.write ({}): {}", target_path.display(), e);
+            log(LogLevel::Error, "csv.write: unable to open write");
             return BuiltinResult::Error(e.to_string());
         }
     };
@@ -92,7 +90,7 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context, app_state: &AppState) -
             if index == 0 {
                 let headers: Vec<&str> = obj.keys().map(|k| k.as_str()).collect();
                 if let Err(e) = wtr.write_record(&headers) {
-                    eprintln!("[ERROR] csv.write: {}", e);
+                    log(LogLevel::Error, "csv.write: error writing headers");
                     return BuiltinResult::Error(e.to_string());
                 }
             }
@@ -102,22 +100,23 @@ pub fn builtin_csv_write(args: &[String], ctx: &Context, app_state: &AppState) -
                 .map(|&k| obj[k].as_str().unwrap_or(""))
                 .collect();
             if let Err(e) = wtr.write_record(&values) {
-                eprintln!("[ERROR] csv.write: {}", e);
+                log(LogLevel::Error, "csv.write: error writing record");
                 return BuiltinResult::Error(e.to_string());
             }
         }
         index += 1;
     }
     if let Err(e) = wtr.flush() {
-        eprintln!("[ERROR] csv.write: {}", e);
+        log(LogLevel::Error, "csv.write: unable to flush records");
         return BuiltinResult::Error(e.to_string());
     }
+    ctx.insert(LAST_EXEC_RESULT.to_string(), arr.clone().into());
     BuiltinResult::Ok
 }
 
-pub fn builtin_csv_append(args: &[String], ctx: &Context, app_state: &AppState) -> BuiltinResult {
+pub fn builtin_csv_append(args: &[String], ctx: &mut Context, app_state: &AppState) -> BuiltinResult {
     if args.len() < 2 {
-        eprintln!("[ERROR] csv.append: missing arguments");
+        log(LogLevel::Error, "csv.append: missing filename");
         return BuiltinResult::Error("missing arguments".to_string());
     }
     let filename = &args[0];
@@ -125,7 +124,7 @@ pub fn builtin_csv_append(args: &[String], ctx: &Context, app_state: &AppState) 
     let obj = match ctx.get(var) {
         Some(JsonValue::Object(obj)) => obj,
         _ => {
-            eprintln!("[ERROR] csv.append: variable not found or not object");
+            log(LogLevel::Error, "csv.append: variable not found or not object");
             return BuiltinResult::Error("variable not found or not object".to_string());
         }
     };
@@ -139,7 +138,7 @@ pub fn builtin_csv_append(args: &[String], ctx: &Context, app_state: &AppState) 
     {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("[ERROR] csv.append ({}): {}", target_path.display(), e);
+            log(LogLevel::Error, "csv.append: unable to open file");
             return BuiltinResult::Error(e.to_string());
         }
     };
@@ -148,7 +147,7 @@ pub fn builtin_csv_append(args: &[String], ctx: &Context, app_state: &AppState) 
     if !file_exists {
         let headers: Vec<&str> = obj.keys().map(|k| k.as_str()).collect();
         if let Err(e) = wtr.write_record(&headers) {
-            eprintln!("[ERROR] csv.append: {}", e);
+            log(LogLevel::Error, "csv.append: error writing headers");
             return BuiltinResult::Error(e.to_string());
         }
     }
@@ -168,12 +167,15 @@ pub fn builtin_csv_append(args: &[String], ctx: &Context, app_state: &AppState) 
         })
         .collect();
     if let Err(e) = wtr.write_record(&values) {
-        eprintln!("[ERROR] csv.append: {}", e);
+        log(LogLevel::Error, "csv.append: error writing record");
         return BuiltinResult::Error(e.to_string());
     }
     if let Err(e) = wtr.flush() {
-        eprintln!("[ERROR] csv.append: {}", e);
+        log(LogLevel::Error, "csv.append: unable to flush records");
         return BuiltinResult::Error(e.to_string());
     }
+
+    let obj_value = JsonValue::Object(obj.clone());
+    ctx.insert(LAST_EXEC_RESULT.to_string(), obj_value.clone());
     BuiltinResult::Ok
 }
