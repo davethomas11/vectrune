@@ -134,6 +134,30 @@ impl RuneDocument {
         self.sections = p0.sections.clone();
     }
 
+    pub fn merge(&mut self, other: RuneDocument) {
+        for other_section in other.sections {
+            if let Some(existing_section) = self
+                .sections
+                .iter_mut()
+                .find(|s| s.path == other_section.path)
+            {
+                // Merge kv
+                for (k, v) in other_section.kv {
+                    existing_section.kv.insert(k, v);
+                }
+                // Merge series
+                for (k, mut v) in other_section.series {
+                    let existing_v = existing_section.series.entry(k).or_insert_with(Vec::new);
+                    existing_v.append(&mut v);
+                }
+                // Merge records
+                existing_section.records.extend(other_section.records);
+            } else {
+                self.sections.push(other_section);
+            }
+        }
+    }
+
     pub(crate) fn from_str(s: &str) -> Result<RuneDocument, String> {
         match parse_rune(s) {
             Ok(doc) => Ok(doc),

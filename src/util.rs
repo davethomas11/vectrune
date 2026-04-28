@@ -87,7 +87,7 @@ impl fmt::Display for LogLevel {
     }
 }
 
-static LOG_LEVEL: Lazy<AtomicUsize> = Lazy::new(|| AtomicUsize::new(log_level_to_usize(&LogLevel::Info)));
+static LOG_LEVEL: Lazy<AtomicUsize> = Lazy::new(|| AtomicUsize::new(log_level_to_usize(&LogLevel::Debug)));
 
 fn log_level_to_usize(level: &LogLevel) -> usize {
     match level {

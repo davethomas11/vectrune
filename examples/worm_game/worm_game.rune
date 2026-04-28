@@ -1,0 +1,61 @@
+#!RUNE
+
+@App
+name = Multi-Worm
+type = Rest
+port = 3000
+
+@Frontend
+type = static
+path = %ROOT%
+src = assets
+
+@Memory/game_state
+players = {}
+food = {"x": 15, "y": 15}
+
+@Websocket /ws
+on_connect:
+    log "New player connected"
+on_disconnect:
+    log "Player disconnected"
+    # Note: In a full implementation, we'd use ws.id to remove them from game_state
+
+@Event /ws /join
+run:
+    id = ws.id
+    state = get-memory game_state
+    
+    # Initialize new player at a random-ish position
+    state.players.[id] = {
+        "x": 10,
+        "y": 10,
+        "color": "hsl(120, 70%, 50%)",
+        "score": 0
+    }
+    
+    set-memory game_state
+    ws.broadcast /ws state
+
+@Event /ws /move
+run:
+    id = ws.id
+    event = parse-json body
+    state = get-memory game_state
+    
+    # Update player position
+    if state.players.[id] != null:
+        state.players.[id].x = event.x
+        state.players.[id].y = event.y
+        
+        # Simple collision with food
+        if state.players.[id].x == state.food.x:
+            if state.players.[id].y == state.food.y:
+                state.players.[id].score = state.players.[id].score + 1
+                # Move food (simple mock of randomness)
+                state.food.x = state.food.x + 3
+                if state.food.x > 19:
+                    state.food.x = 2
+    
+    set-memory game_state
+    ws.broadcast /ws state

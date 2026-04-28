@@ -10,7 +10,6 @@ use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use regex::Regex;
 use crate::arithmetic::eval_arithmetic;
 
 #[derive(Clone)]
@@ -75,6 +74,46 @@ pub fn extract_auth_configs(doc: &RuneDocument) -> HashMap<String, Section> {
 }
 
 // Helper to resolve simple literals and dotted paths in context
+fn split_path_parts(ident: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut current_part = String::new();
+    let mut in_bracket = false;
+
+    for c in ident.chars() {
+        if c == '[' {
+            if !current_part.is_empty() {
+                parts.push(current_part.clone());
+                current_part.clear();
+            }
+            in_bracket = true;
+        } else if c == ']' {
+            parts.push(format!("[{}]", current_part.trim()));
+            current_part.clear();
+            in_bracket = false;
+        } else if c == '.' && !in_bracket {
+            if !current_part.is_empty() {
+                parts.push(current_part.clone());
+                current_part.clear();
+            }
+        } else {
+            current_part.push(c);
+        }
+    }
+
+    if !current_part.is_empty() {
+        parts.push(current_part);
+    }
+
+    parts
+}
+
+fn json_value_to_lookup_key(value: &serde_json::Value) -> String {
+    value
+        .as_str()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| value.to_string())
+}
+
 pub fn resolve_path(
     ctx: &Context,
     ident: &str,
@@ -99,22 +138,68 @@ pub fn resolve_path(
         return Some(serde_json::Value::from(n));
     }
 
-    let mut parts = ident.split('.');
-    let first = parts.next().unwrap_or("");
+    let parts = split_path_parts(ident);
+    if parts.is_empty() {
+        return None;
+    }
+
     let mut current: Option<serde_json::Value> = None;
-    if first == "it" {
-        current = it.cloned();
-    } else if let Some(val) = ctx.get(first) {
-        current = Some(val.clone());
-    } else if let Some(serde_json::Value::Object(map)) = ctx.get("path.params") {
-        if let Some(v) = map.get(first) {
-            current = Some(v.clone());
+    let mut start_index = 0usize;
+
+    for prefix_len in (1..=parts.len()).rev() {
+        let prefix = parts[..prefix_len].join(".");
+        if prefix == "it" {
+            current = it.cloned();
+            start_index = prefix_len;
+            break;
+        }
+        if let Some(val) = ctx.get(&prefix) {
+            current = Some(val.clone());
+            start_index = prefix_len;
+            break;
         }
     }
-    for key in parts {
-        match current.take() {
-            Some(serde_json::Value::Object(m)) => current = m.get(key).cloned(),
-            Some(_) | None => return None,
+
+    if current.is_none() {
+        let first = &parts[0];
+        if first == "it" {
+            current = it.cloned();
+            start_index = 1;
+        } else if let Some(serde_json::Value::Object(map)) = ctx.get("path.params") {
+            if let Some(v) = map.get(first) {
+                current = Some(v.clone());
+                start_index = 1;
+            }
+        }
+    }
+
+    if start_index >= parts.len() {
+        return current;
+    }
+
+    for key in parts.iter().skip(start_index) {
+        if key.starts_with('[') && key.ends_with(']') {
+            let inner_expr = &key[1..key.len() - 1];
+            // Resolve the inner expression (could be a variable or a literal)
+            let resolved_key = resolve_path(ctx, inner_expr, it)?;
+            let key_str = json_value_to_lookup_key(&resolved_key);
+
+            match current.take() {
+                Some(serde_json::Value::Object(m)) => current = m.get(&key_str).cloned(),
+                Some(serde_json::Value::Array(a)) => {
+                    if let Ok(idx) = key_str.parse::<usize>() {
+                        current = a.get(idx).cloned();
+                    } else {
+                        return None;
+                    }
+                }
+                _ => return None,
+            }
+        } else {
+            match current.take() {
+                Some(serde_json::Value::Object(m)) => current = m.get(key).cloned(),
+                _ => return None,
+            }
         }
     }
     current
@@ -169,6 +254,7 @@ pub async fn execute_steps_inner(
         match step {
             Value::String(s) => {
                 let step_str = s.trim();
+                log(LogLevel::Debug, &format!("execute_steps_inner: processing step='{}'", step_str));
                 if let Some(eq_pos) = find_assignment_equals(step_str) {
                     let (var, cmd) = step_str.split_at(eq_pos);
                     let var = var.trim();
@@ -183,7 +269,7 @@ pub async fn execute_steps_inner(
                 } else {
                     log(
                         LogLevel::Debug,
-                        &format!("Handling plain cmd - step: '{}'", step),
+                        &format!("Handling plain cmd - step: '{}'", step_str),
                     );
                     if let Some(resp) = handle_plain_command(&state, ctx, step_str).await {
                         return Some(resp);
@@ -206,6 +292,201 @@ pub async fn execute_steps_inner(
     resolve_last_response(steps, ctx)
 }
 
+pub fn mutate_path(
+    ctx: &mut Context,
+    ident: &str,
+    new_val: serde_json::Value,
+) -> bool {
+    let raw_parts = split_path_parts(ident);
+    let mut parts = Vec::with_capacity(raw_parts.len());
+
+    for part in raw_parts {
+        if part.starts_with('[') && part.ends_with(']') {
+            let inner_expr = &part[1..part.len() - 1];
+            let resolved_key = resolve_path(ctx, inner_expr, None)
+                .map(|v| json_value_to_lookup_key(&v))
+                .unwrap_or_else(|| inner_expr.trim_matches('"').to_string());
+            parts.push(resolved_key);
+        } else {
+            parts.push(part);
+        }
+    }
+
+    if parts.is_empty() {
+        return false;
+    }
+
+    let first = parts[0].clone();
+    if parts.len() == 1 {
+        ctx.insert(first, new_val);
+        return true;
+    }
+
+    // Traverse to the parent of the last part
+    let mut current = if let Some(val) = ctx.get_mut(&first) {
+        val
+    } else {
+        return false;
+    };
+
+    for j in 1..parts.len() - 1 {
+        let key = &parts[j];
+        match current {
+            serde_json::Value::Object(m) => {
+                if !m.contains_key(key) {
+                    return false;
+                }
+                current = m.get_mut(key).unwrap();
+            }
+            serde_json::Value::Array(a) => {
+                if let Ok(idx) = key.parse::<usize>() {
+                    if idx >= a.len() {
+                        return false;
+                    }
+                    current = &mut a[idx];
+                } else {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+    }
+
+    // Apply the final part
+    let last_key = &parts[parts.len() - 1];
+    match current {
+        serde_json::Value::Object(m) => {
+            m.insert(last_key.clone(), new_val);
+            true
+        }
+        serde_json::Value::Array(a) => {
+            if let Ok(idx) = last_key.parse::<usize>() {
+                if idx < a.len() {
+                    a[idx] = new_val;
+                    true
+                } else if idx == a.len() {
+                    a.push(new_val);
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        }
+        _ => false,
+    }
+}
+
+fn is_purely_arithmetic_expression(expr: &str) -> bool {
+    !expr.is_empty()
+        && expr
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c.is_whitespace() || "+-*/()".contains(c))
+}
+
+fn json_value_as_f64(value: &serde_json::Value) -> Option<f64> {
+    match value {
+        serde_json::Value::Number(n) => n.as_f64(),
+        serde_json::Value::String(s) => s.parse::<f64>().ok(),
+        serde_json::Value::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
+        _ => None,
+    }
+}
+
+fn is_bare_identifier_operand(operand: &str) -> bool {
+    !operand.is_empty()
+        && !operand.chars().any(char::is_whitespace)
+        && operand
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.'))
+}
+
+fn find_top_level_arithmetic_operator(expr: &str) -> Option<(usize, char)> {
+    let mut depth = 0usize;
+    let mut prev_non_ws: Option<char> = None;
+
+    for (idx, ch) in expr.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => depth = depth.saturating_sub(1),
+            '+' | '-' | '*' | '/' if depth == 0 => {
+                let next_non_ws = expr[idx + ch.len_utf8()..]
+                    .chars()
+                    .find(|c| !c.is_whitespace());
+                let is_unary_sign = matches!(ch, '+' | '-')
+                    && prev_non_ws.map(|c| "+-*/(".contains(c)).unwrap_or(true);
+                let is_hyphenated_identifier = ch == '-'
+                    && prev_non_ws
+                        .map(|c| c.is_ascii_alphabetic() || c == '_')
+                        .unwrap_or(false)
+                    && next_non_ws
+                        .map(|c| c.is_ascii_alphabetic() || c == '_')
+                        .unwrap_or(false);
+                if !is_unary_sign && !is_hyphenated_identifier {
+                    return Some((idx, ch));
+                }
+            }
+            _ => {}
+        }
+
+        if !ch.is_whitespace() {
+            prev_non_ws = Some(ch);
+        }
+    }
+
+    None
+}
+
+async fn resolve_numeric_operand(
+    state: &AppState,
+    ctx: &mut Context,
+    operand: &str,
+    temp_label: &str,
+) -> Option<f64> {
+    let operand = operand.trim();
+    if operand.is_empty() {
+        return None;
+    }
+
+    if let Ok(n) = operand.parse::<f64>() {
+        return Some(n);
+    }
+
+    if let Some(value) = resolve_path(ctx, operand, None) {
+        if let Some(n) = json_value_as_f64(&value) {
+            return Some(n);
+        }
+    }
+
+    if is_purely_arithmetic_expression(operand) {
+        return eval_arithmetic(operand).ok();
+    }
+
+    if is_bare_identifier_operand(operand) {
+        return None;
+    }
+
+    let parts: Vec<String> = operand.split_whitespace().map(|s| s.to_string()).collect();
+    if parts.is_empty() {
+        return None;
+    }
+
+    let temp_var = format!("___arith_operand_{}_{}___", temp_label, ctx.len());
+    let res = call_builtin(&parts[0], &parts[1..], ctx, state, Some(temp_var.as_str())).await;
+    match res {
+        BuiltinResult::Ok => {
+            let numeric = ctx.get(&temp_var).and_then(json_value_as_f64);
+            ctx.remove(&temp_var);
+            numeric
+        }
+        BuiltinResult::Respond(_, _) | BuiltinResult::Error(_) => {
+            ctx.remove(&temp_var);
+            None
+        }
+    }
+}
+
 /// Dispatches different types of assignments (Object, Arithmetic, Array, or Builtin)
 async fn handle_assignment(
     state: &AppState,
@@ -216,20 +497,23 @@ async fn handle_assignment(
     // 1. Object Construction: var = { ... }
     if cmd.starts_with('{') {
         let map = parse_object_literal(ctx, cmd);
-        ctx.insert(var.to_string(), serde_json::Value::Object(map));
+        mutate_path(ctx, var, serde_json::Value::Object(map));
         return None;
     }
 
     // 2. Arithmetic: var = x + y
     if let Some(result) = try_execute_arithmetic(state, ctx, var, cmd).await {
-        ctx.insert(var.to_string(), result);
+        mutate_path(ctx, var, result);
         return None;
     }
 
-    // 3. Array Index Assignment: users[0] = val
-    if var.contains('[') && var.ends_with(']') {
-        if try_handle_array_assignment(ctx, var, cmd) {
-            return None;
+    // 3. Nested or Path Assignment
+    if var.contains('.') || var.contains('[') {
+        // Resolve the RHS
+        if let Some(val) = resolve_path(ctx, cmd, None) {
+             if mutate_path(ctx, var, val) {
+                 return None;
+             }
         }
     }
 
@@ -272,7 +556,7 @@ fn parse_object_literal(
     let mut map = serde_json::Map::new();
     let content = cmd.trim_matches(|c| c == '{' || c == '}');
 
-    for pair in content.split(',') {
+    for pair in split_outside_quotes(content, ',') {
         let pair = pair.trim();
         if pair.is_empty() {
             continue;
@@ -280,7 +564,11 @@ fn parse_object_literal(
 
         if let Some(colon_pos) = find_char_outside_quotes(pair, ':') {
             let (key, val_expr) = pair.split_at(colon_pos);
-            let key = key.trim().trim_start_matches('{').trim();
+            let key = key
+                .trim()
+                .trim_start_matches('{')
+                .trim()
+                .trim_matches('"');
             let val_expr = val_expr[1..].trim();
 
             let mut value = resolve_path(ctx, val_expr, None).unwrap_or(serde_json::Value::Null);
@@ -329,8 +617,6 @@ fn handle_builtin_result(res: BuiltinResult) -> Option<(u16, String)> {
     }
 }
 
-// --- Utility Helpers (Simplified logic from original) ---
-
 fn find_assignment_equals(s: &str) -> Option<usize> {
     let mut in_quotes = false;
     let bytes = s.as_bytes();
@@ -346,7 +632,7 @@ fn find_assignment_equals(s: &str) -> Option<usize> {
             } else {
                 '\0'
             };
-            if prev != '=' && next != '=' {
+            if prev != '=' && next != '=' && prev != '!' && next != '>' && prev != '<' {
                 return Some(i);
             }
         }
@@ -367,212 +653,104 @@ fn find_char_outside_quotes(s: &str, target: char) -> Option<usize> {
     None
 }
 
+fn split_outside_quotes<'a>(s: &'a str, delimiter: char) -> Vec<&'a str> {
+    let mut parts = Vec::new();
+    let mut start = 0usize;
+    let mut in_quotes = false;
+
+    for (i, c) in s.char_indices() {
+        if c == '"' {
+            in_quotes = !in_quotes;
+        }
+        if c == delimiter && !in_quotes {
+            parts.push(&s[start..i]);
+            start = i + c.len_utf8();
+        }
+    }
+
+    parts.push(&s[start..]);
+    parts
+}
+
 async fn try_execute_arithmetic(
     state: &AppState,
     ctx: &mut Context,
     var: &str,
     cmd: &str,
 ) -> Option<serde_json::Value> {
-    let arith_ops = ["+", "-", "*", "/", "(", ")", " "];
     let mut resolved_cmd = String::new();
     for token in cmd.split_whitespace() {
         // If the token is a math operator or a literal number, keep it
-        if arith_ops.contains(&token)
+        if ["+", "-", "*", "/", "(", ")"].contains(&token)
             || token.parse::<f64>().is_ok()
             || token.chars().all(|c| c == '(' || c == ')')
         {
-            log(LogLevel::Debug, &format!("Is math token: '{}'", token));
             resolved_cmd.push_str(token);
         } else {
             // Try to resolve from context
-            if let Some(val) = ctx.get(token) {
-                // Strip wrapping quotes "" if value is wrapped
-                if let JsonValue::String(s) = val {
-                    let stripped = if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
-                        &s[1..s.len() - 1]
-                    } else {
-                        s.as_str()
-                    };
-
-                    let re = Regex::new(r"\d+\.?\d*").unwrap();
-                    if re.is_match(stripped) {
-                        resolved_cmd.push_str(stripped);
-                    } else {
-                        log(LogLevel::Debug, &format!("Is not numeric string token: '{}'", token));
-                        resolved_cmd.push_str(token);
-                    }
+            if let Some(val) = resolve_path(ctx, token, None) {
+                if let Some(n) = val.as_f64() {
+                    resolved_cmd.push_str(&n.to_string());
+                } else if let Some(n) = val.as_i64() {
+                    resolved_cmd.push_str(&n.to_string());
                 } else {
-                    if let Some(n) = val.as_f64() {
-                        log(LogLevel::Debug, &format!("Is ctx token: '{}'", token));
-                        resolved_cmd.push_str(&n.to_string());
-                    } else if let Some(n) = val.as_i64() {
-                        log(LogLevel::Debug, &format!("Is ctx token: '{}'", token));
-                        resolved_cmd.push_str(&n.to_string());
-                    } else {
-                        // Not a number, put original token back (or handle error)
-                        log(LogLevel::Debug, &format!("Is not ctx token: '{}' '{}'", token, val));
-                        resolved_cmd.push_str(token);
-                    }
+                    resolved_cmd.push_str(token);
                 }
             } else {
-                // Not in context, keep as is
                 resolved_cmd.push_str(token);
             }
         }
         resolved_cmd.push(' ');
     }
     let resolved_cmd = resolved_cmd.trim();
-    log(
-        LogLevel::Debug,
-        &format!("Resolved arithmetic command: '{}'", resolved_cmd),
-    );
+    log(LogLevel::Debug, &format!("try_execute_arithmetic: var={}, resolved_cmd='{}'", var, resolved_cmd));
 
-    if let Ok(val) = resolved_cmd.parse::<f64>() {
-        return Some(val.into());
-    }
-
-    let mut op_found = None;
-    let mut op_pos = 0;
-
-    for op in arith_ops.iter() {
-        if let Some(pos) = cmd.find(&format!(" {} ", op)) {
-            log(
-                LogLevel::Debug,
-                &format!("Found arithmetic operator '{}' in cmd '{}'", op, cmd),
-            );
-            op_found = Some(*op);
-            op_pos = pos;
-            break;
-        }
-    }
-
-    if op_found.is_none() {
-        return None;
-    }
-
-    // If cmd is all numeric with math signs, parse directly
-    if resolved_cmd
-        .chars()
-        .all(|c| c.is_digit(10) || c == '.' || arith_ops.contains(&c.to_string().as_str()))
-    {
-        log(LogLevel::Debug, "Command is arithmetic only.");
+    if is_purely_arithmetic_expression(resolved_cmd) {
+        log(LogLevel::Debug, "try_execute_arithmetic: evaluating purely arithmetic expression via eval_arithmetic");
         return if let Ok(result) = eval_arithmetic(resolved_cmd) {
-            if can_cast_to_i64(result) {
-                log(LogLevel::Debug, "Can cast to i64.");
-                ctx.insert(var.to_string(), serde_json::Value::from(result as i64));
-                log(
-                    LogLevel::Debug,
-                    &format!("Can cast to i64 for var '{}' with result {}.", var, result),
-                );
-                Some(serde_json::Value::from(result as i64))
+            let val = if can_cast_to_i64(result) {
+                serde_json::Value::from(result as i64)
             } else {
-                ctx.insert(var.to_string(), serde_json::Value::from(result));
-                Some(serde_json::Value::from(result))
-            }
+                serde_json::Value::from(result)
+            };
+            ctx.insert(var.to_string(), val.clone());
+            Some(val)
         } else {
+            log(LogLevel::Debug, "try_execute_arithmetic: eval_arithmetic failed");
             None
         };
     }
 
-    let op = op_found?;
+    let (op_pos, op) = find_top_level_arithmetic_operator(resolved_cmd)?;
     let (left_str, right_str) = resolved_cmd.split_at(op_pos);
     let left_str = left_str.trim();
-    let right_str = right_str[op.len() + 1..].trim(); // Skip op and space
+    let right_str = right_str[op.len_utf8()..].trim();
 
-    // Evaluate Left: Try builtin first, then resolve_path
-    let mut left_val = None;
-    let left_parts: Vec<String> = left_str.split_whitespace().map(|s| s.to_string()).collect();
+    let left_val = resolve_numeric_operand(state, ctx, left_str, "left").await;
+    let right_val = resolve_numeric_operand(state, ctx, right_str, "right").await;
 
-    if !left_parts.is_empty() {
-        let res = call_builtin(
-            &left_parts[0],
-            &left_parts[1..],
-            ctx,
-            state,
-            Some(&var.to_string()),
-        )
-            .await;
-        if let BuiltinResult::Ok = res {
-            left_val = ctx.get(var).cloned();
-        } else {
-            left_val = resolve_path(ctx, &left_parts[0], None);
-        }
-    }
-
-    // Evaluate Right: Try numeric literal first, then resolve_path
-    let right_val = if let Ok(n) = right_str.parse::<f64>() {
-        Some(serde_json::Value::from(n))
-    } else {
-        resolve_path(ctx, right_str, None)
-    };
+    log(LogLevel::Debug, &format!("try_execute_arithmetic: left_val={:?}, right_val={:?}", left_val, right_val));
 
     // Perform Math
-    if let (Some(serde_json::Value::Number(l)), Some(serde_json::Value::Number(r))) =
-        (left_val, right_val)
-    {
-        let l_f = l.as_f64()?;
-        let r_f = r.as_f64()?;
-
+    if let (Some(l_f), Some(r_f)) = (left_val, right_val) {
         let result = match op {
-            "+" => l_f + r_f,
-            "-" => l_f - r_f,
-            "*" => l_f * r_f,
-            "/" => l_f / r_f,
+            '+' => l_f + r_f,
+            '-' => l_f - r_f,
+            '*' => l_f * r_f,
+            '/' => l_f / r_f,
             _ => 0.0,
         };
 
-        return if can_cast_to_i64(result) {
-            Some(serde_json::Value::from(result as i64))
+        let val = if can_cast_to_i64(result) {
+            serde_json::Value::from(result as i64)
         } else {
-            Some(serde_json::Value::from(result))
+            serde_json::Value::from(result)
         };
+        ctx.insert(var.to_string(), val.clone());
+        return Some(val);
     }
 
     None
-}
-
-fn try_handle_array_assignment(ctx: &mut Context, var_expr: &str, cmd_rhs: &str) -> bool {
-    let bracket_pos = match var_expr.find('[') {
-        Some(pos) => pos,
-        None => return false,
-    };
-
-    let base_name = var_expr[..bracket_pos].trim();
-    let index_expr = var_expr[bracket_pos + 1..var_expr.len() - 1].trim();
-
-    // 1. Resolve the Index
-    let idx: usize = if let Ok(n) = index_expr.parse::<i64>() {
-        if n < 0 {
-            return false;
-        }
-        n as usize
-    } else if let Some(serde_json::Value::Number(n)) = ctx.get(index_expr) {
-        match n.as_i64() {
-            Some(i) if i >= 0 => i as usize,
-            _ => return false,
-        }
-    } else {
-        return false;
-    };
-
-    // 2. Resolve the RHS Value (The value being assigned)
-    // In your original logic, this only handles single-token RHS
-    let parts: Vec<&str> = cmd_rhs.split_whitespace().collect();
-    if parts.len() != 1 {
-        return false;
-    }
-
-    if let Some(val_to_assign) = resolve_path(ctx, parts[0], None) {
-        // 3. Perform the mutation if the base is an array
-        if let Some(arr) = ctx.get_mut(base_name).and_then(|v| v.as_array_mut()) {
-            if idx < arr.len() {
-                arr[idx] = val_to_assign;
-                return true;
-            }
-        }
-    }
-
-    false
 }
 
 fn can_cast_to_i64(n: f64) -> bool {
@@ -587,43 +765,22 @@ pub fn resolve_last_response(steps: &[Value], ctx: &mut Context) -> Option<(u16,
     }
     let step = step.unwrap().as_str().unwrap().trim();
 
-    log(
-        LogLevel::Debug,
-        &format!("Resolving last response for step: '{}'", step),
-    );
-
     // Case 1: Assignment
     if let Some(eq_pos) = step.find('=') {
         let lhs = step[..eq_pos].trim();
         if let Some(val) = ctx.get(lhs) {
-            log(
-                LogLevel::Debug,
-                &format!("Resolving last response for lhs: {}", val),
-            );
             Some((200, format!("{}", val)))
         } else {
-            log(
-                LogLevel::Debug,
-                &format!("Didn't resolve last response for lhs: {}", lhs),
-            );
             None
         }
     } else {
         // Case 2: Builtin result
         if let Some(result) = get_last_builtin_result(ctx) {
-            log(
-                LogLevel::Debug,
-                &format!("Resolving last response for result: {}", result),
-            );
             Some((200, format!("{}", result)))
         } else {
             // Case 3: Variable
             let var = step.trim();
             if let Some(val) = ctx.get(var) {
-                log(
-                    LogLevel::Debug,
-                    &format!("Resolving last response for variable '{}': {}", var, val),
-                );
                 Some((200, format!("{}", val)))
             } else {
                 None
@@ -668,14 +825,7 @@ pub async fn execute_steps(
         ctx.insert("body".to_string(), body_str.clone().into());
     }
 
-    log(LogLevel::Debug, &format!("Executing steps: {:?}", steps));
-
     let last_response = execute_steps_inner(state.clone(), &steps, &mut ctx).await;
-
-    log(
-        LogLevel::Debug,
-        &format!("Last response: {:?}", last_response),
-    );
 
     if let Some((code, msg)) = last_response {
         (StatusCode::from_u16(code).unwrap_or(StatusCode::OK), msg)
@@ -731,7 +881,6 @@ pub async fn initialize_memory_from_doc(doc: &RuneDocument, path: &PathBuf) {
                                             &format!("Loaded memory from {}", file_path.display()),
                                         );
                                         for (k, v) in obj.iter() {
-                                            log(LogLevel::Debug, &format!("Setting Memory from file - key: {}, value: {:?}", k, v));
                                             crate::builtins::builtin::memory::set_memory(
                                                 k,
                                                 v.clone(),
@@ -790,10 +939,6 @@ pub async fn initialize_memory_from_doc(doc: &RuneDocument, path: &PathBuf) {
             } else {
                 serde_json::Value::Null
             };
-            log(
-                LogLevel::Debug,
-                &format!("Setting Memory for {}: {:?}", key, memory_data),
-            );
             crate::builtins::builtin::memory::set_memory(key, memory_data).await;
         }
     }

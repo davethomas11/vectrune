@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rune Multiplayer Worm</title>
+    <style>
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background: #222; 
+            color: #eee; 
+            font-family: sans-serif;
+            margin-top: 50px;
+        }
+        canvas { 
+            background: #000; 
+            border: 4px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .stats { margin-top: 20px; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+    <h1>Vectrune Multiplayer Worm</h1>
+    <canvas id="game" width="400" height="400"></canvas>
+    <div class="stats" id="status">Connecting to Vectrune...</div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        const GRID_SIZE = 20;
+        const TILE_COUNT = 20;
+
+        let ws = new WebSocket(`ws://${location.host}/ws`);
+        let gameState = { players: {}, food: { x: 15, y: 15 } };
+        let myId = null;
+        let myPos = { x: 10, y: 10 };
+
+        ws.onopen = () => {
+            statusEl.innerText = "Joined Game! Use Arrow Keys to move.";
+            ws.send(JSON.stringify({ type: 'join' }));
+        };
+
+        ws.onmessage = (e) => {
+            gameState = JSON.parse(e.data);
+            draw();
+        };
+
+        function draw() {
+            // Clear
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Food
+            ctx.fillStyle = '#ff4444';
+            ctx.beginPath();
+            ctx.arc(gameState.food.x * GRID_SIZE + GRID_SIZE/2, 
+                    gameState.food.y * GRID_SIZE + GRID_SIZE/2, 
+                    GRID_SIZE/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw Players
+            for (let id in gameState.players) {
+                const p = gameState.players[id];
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x * GRID_SIZE, p.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
+                
+                // If it's us, draw a small indicator
+                if (id === myId) {
+                    ctx.strokeStyle = 'white';
+                    ctx.strokeRect(p.x * GRID_SIZE, p.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            let moved = false;
+            switch(e.key) {
+                case 'ArrowUp':    myPos.y--; moved = true; break;
+                case 'ArrowDown':  myPos.y++; moved = true; break;
+                case 'ArrowLeft':  myPos.x--; moved = true; break;
+                case 'ArrowRight': myPos.x++; moved = true; break;
+            }
+
+            if (moved) {
+                // Keep in bounds
+                myPos.x = (myPos.x + TILE_COUNT) % TILE_COUNT;
+                myPos.y = (myPos.y + TILE_COUNT) % TILE_COUNT;
+                
+                ws.send(JSON.stringify({ 
+                    type: 'move', 
+                    x: myPos.x, 
+                    y: myPos.y 
+                }));
+            }
+        });
+    </script>
+</body>
+</html>

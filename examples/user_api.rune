@@ -6,6 +6,7 @@
 name = User API
 version = 1.0
 type = REST
+swagger = true
 
 @Schema/User
 id = number
@@ -19,6 +20,7 @@ run:
     respond 200 users
 
 @Route/POST /users
+expect = User
 run:
     parse-json
     validate body #User

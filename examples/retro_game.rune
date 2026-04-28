@@ -1,0 +1,35 @@
+#!RUNE
+
+@App
+name = Retro Games WebSocket Server
+version = 1.0
+type = Rest
+
+@Memory/rooms
+@Memory/sessions
+
+@Schema/SocketEnvelope
+fields:
+    type: String
+    version: Integer
+    requestId: String
+    roomCode: String
+    payload: Object
+
+@Websocket /ws
+on_connect:
+    log "New connection established"
+on_disconnect:
+    log "Connection closed"
+
+@Event /ws room.join
+run:
+    event = parse-json body
+    validate event #SocketEnvelope
+    # ... logic for room.join ...
+    ws.broadcast /ws roomCode event
+
+@Event /ws player.ready
+run:
+    # ... logic for player.ready ...
+    ws.broadcast /ws roomCode event

@@ -105,6 +105,16 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
         }
 
         if let Some(sec) = current_section.as_mut() {
+            // Handle Event/Websocket specific handlers (on_connect:, on_disconnect:, on_message:, or generic on <event>:)
+            if line.ends_with(':') && (line.starts_with("on_") || line.starts_with("on ")) {
+                 let key = line[..line.len() - 1].trim().to_string();
+                 let indent = raw.chars().take_while(|c| c.is_whitespace()).count();
+                 sec.series.entry(key.clone()).or_insert_with(Vec::new);
+                 series_stack.clear(); // Clear nesting for new handler
+                 series_stack.push((indent, vec![key]));
+                 continue;
+            }
+
             // Map block parsing: allowed anywhere, but only if '=' is NOT before '{'
             if line.contains('{') {
                 let eq_idx = line.find('=');
@@ -190,9 +200,16 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 continue;
             }
 
-            if line.ends_with(':') {
+            // Determine if this line starts a new nested block (ends with : or starts with if/else)
+            let starts_block = line.ends_with(':') || (line.starts_with("if ") && !line.contains('='));
+            
+            if starts_block {
                 // Start or continue a (possibly nested) series list
-                let key = line[..line.len() - 1].trim().to_string();
+                let key = if line.ends_with(':') {
+                    line[..line.len() - 1].trim().to_string()
+                } else {
+                    line.trim().to_string()
+                };
                 let indent = raw.chars().take_while(|c| c.is_whitespace()).count();
 
                 // Pop stack until we find a parent with smaller indent

@@ -18,6 +18,7 @@ pub mod builtin {
     pub mod respond;
     pub mod validate;
     pub mod function;
+    pub mod ws;
 }
 pub mod path_utils;
 
@@ -33,6 +34,7 @@ use builtin::parse_json::builtin_parse_json;
 use builtin::respond::builtin_respond;
 use builtin::validate::builtin_validate;
 use crate::builtins::builtin::function::{builtin_func, invoke_func};
+use crate::builtins::builtin::ws::{builtin_ws_broadcast, builtin_ws_id, builtin_ws_send};
 
 pub const LAST_EXEC_RESULT: &str = "___last_exec_result___";
 
@@ -445,6 +447,9 @@ pub async fn call_builtin(
         "clear-memory" | "memory.clear" => builtin_clear_memory(args, ctx).await,
         "del-memory" | "memory.del" => builtin_del_memory(args, ctx).await,
         "append" | "memory.append" => builtin_append(args, assign_to, ctx).await,
+        "ws.id" => builtin_ws_id(ctx, assign_to).await,
+        "ws.send" => builtin_ws_send(args, ctx).await,
+        "ws.broadcast" | "broadcast-websocket" => builtin_ws_broadcast(args, ctx).await,
         "return" => {
             if args.is_empty() {
                 log(LogLevel::Error, "return: missing return value");
