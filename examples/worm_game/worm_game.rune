@@ -34,7 +34,7 @@ run:
         "score": 0
     }
     
-    set-memory game_state
+    set-memory game_state state
     ws.broadcast /ws state
 
 @Event /ws /move
@@ -57,5 +57,5 @@ run:
                 if state.food.x > 19:
                     state.food.x = 2
     
-    set-memory game_state
+    set-memory game_state state
     ws.broadcast /ws state

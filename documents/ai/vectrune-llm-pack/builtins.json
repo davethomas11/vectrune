@@ -1,0 +1,246 @@
+{
+  "version": 1,
+  "status": "starter",
+  "builtins": [
+    {
+      "name": "log",
+      "aliases": null,
+      "category": "diagnostics",
+      "summary": "Log a message and store the expanded message as the last execution result.",
+      "behavior": {
+        "placeholder_expansion": true,
+        "expansion_syntax": "{expr}",
+        "notes": [
+          "Expansions resolve through normal runtime path lookup.",
+          "Unknown placeholders remain unchanged."
+        ]
+      },
+      "arguments": [
+        {
+          "name": "message",
+          "variadic": true,
+          "optional": null,
+          "default": null
+        }
+      ],
+      "writes_context": [
+        "___last_exec_result___"
+      ]
+    },
+    {
+      "name": "respond",
+      "aliases": null,
+      "category": "http",
+      "summary": "Return an HTTP-style response from a step sequence.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": []
+    },
+    {
+      "name": "parse-json",
+      "aliases": null,
+      "category": "data",
+      "summary": "Parse JSON from a source variable, defaulting to body.",
+      "behavior": null,
+      "arguments": [
+        {
+          "name": "source",
+          "variadic": null,
+          "optional": true,
+          "default": "body"
+        }
+      ],
+      "writes_context": [
+        "body or assigned variable",
+        "___last_exec_result___"
+      ]
+    },
+    {
+      "name": "validate",
+      "aliases": null,
+      "category": "schema",
+      "summary": "Validate data against conditions or schema-driven expectations.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "csv.read",
+      "aliases": null,
+      "category": "io",
+      "summary": "Read CSV data from disk into runtime context.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "csv.write",
+      "aliases": null,
+      "category": "io",
+      "summary": "Write CSV data from runtime context to disk.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "csv.append",
+      "aliases": null,
+      "category": "io",
+      "summary": "Append a record to a CSV file.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "json.read",
+      "aliases": null,
+      "category": "io",
+      "summary": "Read JSON data from disk into runtime context.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "datasource",
+      "aliases": null,
+      "category": "data",
+      "summary": "Access configured datasource behavior.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "load-rune",
+      "aliases": null,
+      "category": "io",
+      "summary": "Load another Rune document and optionally transform its output.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "memory.set",
+      "aliases": [
+        "set-memory"
+      ],
+      "category": "memory",
+      "summary": "Persist a value in shared memory.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "memory.get",
+      "aliases": [
+        "get-memory"
+      ],
+      "category": "memory",
+      "summary": "Retrieve a value from shared memory.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "memory.clear",
+      "aliases": [
+        "clear-memory"
+      ],
+      "category": "memory",
+      "summary": "Clear memory entries.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "memory.del",
+      "aliases": [
+        "del-memory"
+      ],
+      "category": "memory",
+      "summary": "Delete a memory entry.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "append",
+      "aliases": [
+        "memory.append"
+      ],
+      "category": "collection",
+      "summary": "Append data to a collection-like value.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": null
+    },
+    {
+      "name": "ws.id",
+      "aliases": null,
+      "category": "websocket",
+      "summary": "Access the current websocket connection id.",
+      "behavior": null,
+      "arguments": null,
+      "writes_context": [
+        "assigned variable"
+      ]
+    },
+    {
+      "name": "ws.send",
+      "aliases": null,
+      "category": "websocket",
+      "summary": "Send a websocket message to a target connection.",
+      "behavior": null,
+      "arguments": [
+        {
+          "name": "path",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        },
+        {
+          "name": "ws_id",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        },
+        {
+          "name": "message",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        }
+      ],
+      "writes_context": null
+    },
+    {
+      "name": "ws.broadcast",
+      "aliases": [
+        "broadcast-websocket"
+      ],
+      "category": "websocket",
+      "summary": "Broadcast a websocket message.",
+      "behavior": {
+        "placeholder_expansion": null,
+        "expansion_syntax": null,
+        "notes": [
+          "Slash-prefixed websocket paths such as /ws are treated as normal command arguments."
+        ]
+      },
+      "arguments": [
+        {
+          "name": "path",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        },
+        {
+          "name": "message",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        }
+      ],
+      "writes_context": null
+    }
+  ]
+}

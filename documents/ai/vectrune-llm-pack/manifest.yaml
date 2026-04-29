@@ -1,0 +1,19 @@
+version: 1
+status: generated
+source_of_truth: knowledge/
+files:
+- path: builtins.json
+  kind: structured-export
+  source: knowledge/reference/builtins.yaml
+- path: runtime-context.json
+  kind: structured-export
+  source: knowledge/reference/runtime-context.yaml
+- path: app-types.json
+  kind: structured-export
+  source: knowledge/reference/app-types.yaml
+- path: examples.jsonl
+  kind: retrieval-corpus
+  source: knowledge/reference/examples.yaml
+notes:
+- This pack is generated from knowledge/ and should not drift from it.
+- Hand-authored README files may remain curated while data files are regenerated.

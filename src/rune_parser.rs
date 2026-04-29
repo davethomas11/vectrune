@@ -1,4 +1,4 @@
-use crate::rune_ast::{Record, RuneDocument, Section, Value};
+use crate::rune_ast::{json_to_ast_value, Record, RuneDocument, Section, Value};
 use std::collections::HashMap;
 
 #[derive(thiserror::Error, Debug)]
@@ -105,20 +105,11 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
         }
 
         if let Some(sec) = current_section.as_mut() {
-            // Handle Event/Websocket specific handlers (on_connect:, on_disconnect:, on_message:, or generic on <event>:)
-            if line.ends_with(':') && (line.starts_with("on_") || line.starts_with("on ")) {
-                 let key = line[..line.len() - 1].trim().to_string();
-                 let indent = raw.chars().take_while(|c| c.is_whitespace()).count();
-                 sec.series.entry(key.clone()).or_insert_with(Vec::new);
-                 series_stack.clear(); // Clear nesting for new handler
-                 series_stack.push((indent, vec![key]));
-                 continue;
-            }
-
             // Map block parsing: allowed anywhere, but only if '=' is NOT before '{'
+            // Also check that '{' is not inside quotes
             if line.contains('{') {
                 let eq_idx = line.find('=');
-                let brace_idx = line.find('{');
+                let brace_idx = line.rfind('{').filter(|&idx| !is_char_in_quotes(line, idx));
                 if brace_idx.is_some() && (eq_idx.is_none() || eq_idx.unwrap() > brace_idx.unwrap())
                 {
                     let key = line[..brace_idx.unwrap()].trim().to_string();
@@ -201,14 +192,15 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
             }
 
             // Determine if this line starts a new nested block (ends with : or starts with if/else)
-            let starts_block = line.ends_with(':') || (line.starts_with("if ") && !line.contains('='));
+            let trimmed_line = line.trim_start();
+            let starts_block = trimmed_line.ends_with(':') || (trimmed_line.starts_with("if ") && !trimmed_line.contains('='));
             
             if starts_block {
                 // Start or continue a (possibly nested) series list
-                let key = if line.ends_with(':') {
-                    line[..line.len() - 1].trim().to_string()
+                let key = if trimmed_line.ends_with(':') {
+                    trimmed_line[..trimmed_line.len() - 1].trim().to_string()
                 } else {
-                    line.trim().to_string()
+                    trimmed_line.trim().to_string()
                 };
                 let indent = raw.chars().take_while(|c| c.is_whitespace()).count();
 
@@ -416,7 +408,21 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 };
                 let mut parts = pline.splitn(2, '=');
                 let key = parts.next().unwrap().trim().to_string();
-                let value_raw = parts.next().unwrap().trim();
+                let mut value_raw = parts.next().unwrap().trim().to_string();
+
+                // Handle multiline or inline object literal { ... }
+                if value_raw.starts_with('{') {
+                    let mut assignment = value_raw;
+                    while !assignment.trim_end().ends_with('}') {
+                        if let Some(next_line) = lines.next() {
+                            assignment.push_str("\n");
+                            assignment.push_str(next_line.trim_end());
+                        } else {
+                            break;
+                        }
+                    }
+                    value_raw = assignment;
+                }
 
                 let value = if value_raw.starts_with('(') && value_raw.ends_with(')') {
                     let inner = &value_raw[1..value_raw.len() - 1];
@@ -435,6 +441,12 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                         })
                         .collect();
                     Value::List(items)
+                } else if value_raw.starts_with('{') && value_raw.ends_with('}') {
+                    // Simple JSON object parsing for KV
+                    match serde_json::from_str::<serde_json::Value>(&value_raw) {
+                        Ok(v) => json_to_ast_value(&v),
+                        Err(_) => Value::String(value_raw),
+                    }
                 } else if value_raw == "true" {
                     Value::Bool(true)
                 } else if value_raw == "false" {
@@ -555,3 +567,17 @@ pub fn parse_rune_line(line: &str) -> Result<ParsedLine, ParseError> {
     // Raw line
     Ok(ParsedLine::Raw(line.to_string()))
 }
+
+fn is_char_in_quotes(s: &str, target_idx: usize) -> bool {
+    let mut in_quotes = false;
+    for (i, ch) in s.chars().enumerate() {
+        if i >= target_idx {
+            break;
+        }
+        if ch == '"' {
+            in_quotes = !in_quotes;
+        }
+    }
+    in_quotes
+}
+

@@ -238,6 +238,22 @@ async fn main() -> anyhow::Result<()> {
                         .value_parser(["debug", "info", "warn", "error"]),
                 )
         )
+        .subcommand(
+            Command::new("knowledge")
+                .about("Knowledge-source tooling for docs and AI exports")
+                .subcommand_required(true)
+                .subcommand(
+                    Command::new("export")
+                        .about("Regenerate docs and AI export artifacts from knowledge/")
+                        .arg(
+                            Arg::new("root")
+                                .long("root")
+                                .num_args(1)
+                                .value_name("PATH")
+                                .help("Workspace root containing knowledge/, language/docs/, and documents/ai/"),
+                        ),
+                ),
+        )
         .get_matches();
 
     let log_level = matches
@@ -307,6 +323,11 @@ async fn main() -> anyhow::Result<()> {
 
     if let Some(("repl", _)) = matches.subcommand() {
         crate::cli::handle_repl().await?;
+        return Ok(());
+    }
+
+    if let Some(("knowledge", knowledge_matches)) = matches.subcommand() {
+        cli::handle_knowledge(knowledge_matches)?;
         return Ok(());
     }
 

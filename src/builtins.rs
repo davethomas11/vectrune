@@ -221,76 +221,56 @@ pub async fn call_builtin(
             let rv = resolve_path(ctx, it, right).unwrap_or(JsonValue::Null);
 
             // Helper to compare with light coercion between common types (e.g., "1" == 1)
-            fn loose_eq(a: &JsonValue, b: &JsonValue) -> bool {
-                // Fast path
-                if a == b {
-                    return true;
-                }
-
-                // Number <-> String numeric
+            fn loose_cmp(a: &JsonValue, b: &JsonValue) -> Option<std::cmp::Ordering> {
+                use serde_json::Value::*;
                 match (a, b) {
-                    (JsonValue::Number(na), JsonValue::String(bs)) => {
-                        if let Ok(parsed) = bs.parse::<f64>() {
-                            if let Some(af) = na.as_f64() {
-                                return af == parsed;
-                            }
+                    (Number(na), Number(nb)) => na.as_f64().partial_cmp(&nb.as_f64()),
+                    (String(sa), String(sb)) => {
+                        if let (Ok(na), Ok(nb)) = (sa.parse::<f64>(), sb.parse::<f64>()) {
+                            na.partial_cmp(&nb)
+                        } else {
+                            sa.partial_cmp(sb)
                         }
-                        false
                     }
-                    (JsonValue::String(as_), JsonValue::Number(nb)) => {
-                        if let Ok(parsed) = as_.parse::<f64>() {
-                            if let Some(bf) = nb.as_f64() {
-                                return parsed == bf;
-                            }
+                    (Number(na), String(sb)) => {
+                        if let (Some(fa), Ok(fb)) = (na.as_f64(), sb.parse::<f64>()) {
+                            fa.partial_cmp(&fb)
+                        } else {
+                            None
                         }
-                        false
                     }
-                    // Bool <-> String boolean
-                    (JsonValue::Bool(ab), JsonValue::String(bs)) => {
-                        if bs.eq_ignore_ascii_case("true") {
-                            return *ab == true;
+                    (String(sa), Number(nb)) => {
+                        if let (Ok(fa), Some(fb)) = (sa.parse::<f64>(), nb.as_f64()) {
+                            fa.partial_cmp(&fb)
+                        } else {
+                            None
                         }
-                        if bs.eq_ignore_ascii_case("false") {
-                            return *ab == false;
-                        }
-                        false
                     }
-                    (JsonValue::String(as_), JsonValue::Bool(bb)) => {
-                        if as_.eq_ignore_ascii_case("true") {
-                            return *bb == true;
+                    (Bool(ba), Bool(bb)) => ba.partial_cmp(bb),
+                    (Null, Null) => Some(std::cmp::Ordering::Equal),
+                    _ => {
+                        if a == b {
+                            Some(std::cmp::Ordering::Equal)
+                        } else {
+                            None
                         }
-                        if as_.eq_ignore_ascii_case("false") {
-                            return *bb == false;
-                        }
-                        false
                     }
-                    // Number <-> Bool (treat true=1, false=0)
-                    (JsonValue::Number(n), JsonValue::Bool(b)) => {
-                        if let Some(f) = n.as_f64() {
-                            return (if *b { 1.0 } else { 0.0 }) == f;
-                        }
-                        false
-                    }
-                    (JsonValue::Bool(b), JsonValue::Number(n)) => {
-                        if let Some(f) = n.as_f64() {
-                            return (if *b { 1.0 } else { 0.0 }) == f;
-                        }
-                        false
-                    }
-                    // String numeric <-> String numeric (compare numerically to avoid "01" vs "1")
-                    (JsonValue::String(as_), JsonValue::String(bs)) => {
-                        if let (Ok(af), Ok(bf)) = (as_.parse::<f64>(), bs.parse::<f64>()) {
-                            return af == bf;
-                        }
-                        false
-                    }
-                    _ => false,
                 }
             }
 
             match op {
-                "==" => loose_eq(&lv, &rv),
-                "!=" => !loose_eq(&lv, &rv),
+                "==" => loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Equal),
+                "!=" => loose_cmp(&lv, &rv) != Some(std::cmp::Ordering::Equal),
+                ">=" => matches!(
+                    loose_cmp(&lv, &rv),
+                    Some(std::cmp::Ordering::Greater) | Some(std::cmp::Ordering::Equal)
+                ),
+                "<=" => matches!(
+                    loose_cmp(&lv, &rv),
+                    Some(std::cmp::Ordering::Less) | Some(std::cmp::Ordering::Equal)
+                ),
+                ">" => loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Greater),
+                "<" => loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Less),
                 _ => false,
             }
         }

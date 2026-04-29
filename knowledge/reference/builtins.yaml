@@ -1,0 +1,147 @@
+version: 1
+status: starter
+builtins:
+  - name: log
+    category: diagnostics
+    summary: Log a message and store the expanded message as the last execution result.
+    arguments:
+      - name: message
+        variadic: true
+    behavior:
+      placeholder_expansion: true
+      expansion_syntax: "{expr}"
+      notes:
+        - Expansions resolve through normal runtime path lookup.
+        - Unknown placeholders remain unchanged.
+    writes_context:
+      - ___last_exec_result___
+    sources:
+      - src/builtins/builtin/logger.rs
+      - tests/logger_parameter_expansion_test.rs
+  - name: respond
+    category: http
+    summary: Return an HTTP-style response from a step sequence.
+    writes_context: []
+    sources:
+      - src/builtins/builtin/respond.rs
+  - name: parse-json
+    category: data
+    summary: Parse JSON from a source variable, defaulting to body.
+    arguments:
+      - name: source
+        optional: true
+        default: body
+    writes_context:
+      - body or assigned variable
+      - ___last_exec_result___
+    sources:
+      - src/builtins/builtin/parse_json.rs
+  - name: validate
+    category: schema
+    summary: Validate data against conditions or schema-driven expectations.
+    sources:
+      - src/builtins/builtin/validate.rs
+  - name: csv.read
+    category: io
+    summary: Read CSV data from disk into runtime context.
+    sources:
+      - src/builtins/builtin/csv.rs
+  - name: csv.write
+    category: io
+    summary: Write CSV data from runtime context to disk.
+    sources:
+      - src/builtins/builtin/csv.rs
+  - name: csv.append
+    category: io
+    summary: Append a record to a CSV file.
+    sources:
+      - src/builtins/builtin/csv.rs
+  - name: json.read
+    category: io
+    summary: Read JSON data from disk into runtime context.
+    sources:
+      - src/builtins/builtin/json.rs
+  - name: datasource
+    category: data
+    summary: Access configured datasource behavior.
+    sources:
+      - src/builtins/builtin/data_source.rs
+  - name: load-rune
+    category: io
+    summary: Load another Rune document and optionally transform its output.
+    sources:
+      - src/builtins.rs
+  - name: memory.set
+    aliases:
+      - set-memory
+    category: memory
+    summary: Persist a value in shared memory.
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/memory.rs
+  - name: memory.get
+    aliases:
+      - get-memory
+    category: memory
+    summary: Retrieve a value from shared memory.
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/memory.rs
+  - name: memory.clear
+    aliases:
+      - clear-memory
+    category: memory
+    summary: Clear memory entries.
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/memory.rs
+  - name: memory.del
+    aliases:
+      - del-memory
+    category: memory
+    summary: Delete a memory entry.
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/memory.rs
+  - name: append
+    aliases:
+      - memory.append
+    category: collection
+    summary: Append data to a collection-like value.
+    sources:
+      - src/builtins.rs
+  - name: ws.id
+    category: websocket
+    summary: Access the current websocket connection id.
+    writes_context:
+      - assigned variable
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/ws.rs
+  - name: ws.send
+    category: websocket
+    summary: Send a websocket message to a target connection.
+    arguments:
+      - name: path
+      - name: ws_id
+      - name: message
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/ws.rs
+  - name: ws.broadcast
+    aliases:
+      - broadcast-websocket
+    category: websocket
+    summary: Broadcast a websocket message.
+    arguments:
+      - name: path
+      - name: message
+    behavior:
+      notes:
+        - Slash-prefixed websocket paths such as /ws are treated as normal command arguments.
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/ws.rs
+notes:
+  - This is a starter catalog, not yet a complete schema of every argument contract.
+  - Keep aliases and side effects in sync with src/builtins.rs.

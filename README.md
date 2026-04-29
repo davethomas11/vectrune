@@ -110,6 +110,9 @@ Common commands and options:
     # Use the AI command (if enabled)
     vectrune --ai "Give me CLI commands to list Docker containers"
 
+    # Regenerate docs/AI export artifacts from the shared knowledge source
+    vectrune knowledge export
+
     # Show help
     vectrune --help
 

@@ -206,26 +206,44 @@ pub fn resolve_path(
 }
 
 pub fn eval_condition(ctx: &Context, expr: &str, it: Option<&serde_json::Value>) -> bool {
-    // very simple: support == and != with loose numeric equality
-    fn loose_eq(a: &serde_json::Value, b: &serde_json::Value) -> bool {
+    // support ==, !=, >, <, >=, <= with loose numeric equality
+    fn loose_cmp(a: &serde_json::Value, b: &serde_json::Value) -> Option<std::cmp::Ordering> {
         use serde_json::Value::*;
-        if a == b {
-            return true;
-        }
         match (a, b) {
-            (Number(na), String(sb)) => {
-                if let Some(da) = na.as_f64() {
-                    return sb.parse::<f64>().ok().map(|db| db == da).unwrap_or(false);
+            (Number(na), Number(nb)) => match (na.as_f64(), nb.as_f64()) {
+                (Some(na), Some(nb)) => na.partial_cmp(&nb),
+                _ => None,
+            },
+            (String(sa), String(sb)) => {
+                if let (Ok(na), Ok(nb)) = (sa.parse::<f64>(), sb.parse::<f64>()) {
+                    na.partial_cmp(&nb)
+                } else {
+                    sa.partial_cmp(sb)
                 }
-                false
+            }
+            (Number(na), String(sb)) => {
+                if let Ok(nb) = sb.parse::<f64>() {
+                    na.as_f64().and_then(|na| na.partial_cmp(&nb))
+                } else {
+                    None
+                }
             }
             (String(sa), Number(nb)) => {
-                if let Some(db) = nb.as_f64() {
-                    return sa.parse::<f64>().ok().map(|da| da == db).unwrap_or(false);
+                if let Ok(na) = sa.parse::<f64>() {
+                    nb.as_f64().and_then(|nb| na.partial_cmp(&nb))
+                } else {
+                    None
                 }
-                false
             }
-            _ => false,
+            (Bool(ba), Bool(bb)) => ba.partial_cmp(bb),
+            (Null, Null) => Some(std::cmp::Ordering::Equal),
+            _ => {
+                if a == b {
+                    Some(std::cmp::Ordering::Equal)
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -233,13 +251,43 @@ pub fn eval_condition(ctx: &Context, expr: &str, it: Option<&serde_json::Value>)
         let (l, r) = expr.split_at(pos);
         let lv = resolve_path(ctx, l.trim(), it).unwrap_or(serde_json::Value::Null);
         let rv = resolve_path(ctx, r[2..].trim(), it).unwrap_or(serde_json::Value::Null);
-        return loose_eq(&lv, &rv);
+        return loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Equal);
     }
     if let Some(pos) = expr.find("!=") {
         let (l, r) = expr.split_at(pos);
         let lv = resolve_path(ctx, l.trim(), it).unwrap_or(serde_json::Value::Null);
         let rv = resolve_path(ctx, r[2..].trim(), it).unwrap_or(serde_json::Value::Null);
-        return !loose_eq(&lv, &rv);
+        return loose_cmp(&lv, &rv) != Some(std::cmp::Ordering::Equal);
+    }
+    if let Some(pos) = expr.find(">=") {
+        let (l, r) = expr.split_at(pos);
+        let lv = resolve_path(ctx, l.trim(), it).unwrap_or(serde_json::Value::Null);
+        let rv = resolve_path(ctx, r[2..].trim(), it).unwrap_or(serde_json::Value::Null);
+        return matches!(
+            loose_cmp(&lv, &rv),
+            Some(std::cmp::Ordering::Greater) | Some(std::cmp::Ordering::Equal)
+        );
+    }
+    if let Some(pos) = expr.find("<=") {
+        let (l, r) = expr.split_at(pos);
+        let lv = resolve_path(ctx, l.trim(), it).unwrap_or(serde_json::Value::Null);
+        let rv = resolve_path(ctx, r[2..].trim(), it).unwrap_or(serde_json::Value::Null);
+        return matches!(
+            loose_cmp(&lv, &rv),
+            Some(std::cmp::Ordering::Less) | Some(std::cmp::Ordering::Equal)
+        );
+    }
+    if let Some(pos) = expr.find(">") {
+        let (l, r) = expr.split_at(pos);
+        let lv = resolve_path(ctx, l.trim(), it).unwrap_or(serde_json::Value::Null);
+        let rv = resolve_path(ctx, r[1..].trim(), it).unwrap_or(serde_json::Value::Null);
+        return loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Greater);
+    }
+    if let Some(pos) = expr.find("<") {
+        let (l, r) = expr.split_at(pos);
+        let lv = resolve_path(ctx, l.trim(), it).unwrap_or(serde_json::Value::Null);
+        let rv = resolve_path(ctx, r[1..].trim(), it).unwrap_or(serde_json::Value::Null);
+        return loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Less);
     }
     false
 }
@@ -538,7 +586,7 @@ async fn handle_plain_command(
         return None;
     }
 
-    if !step.starts_with("func") {
+    if !is_known_command_name(ctx, &parts[0]) {
         if let Some(_) = try_execute_arithmetic(state, ctx, LAST_EXEC_RESULT, step).await {
             return None;
         }
@@ -755,6 +803,53 @@ async fn try_execute_arithmetic(
 
 fn can_cast_to_i64(n: f64) -> bool {
     n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64
+}
+
+fn is_known_command_name(ctx: &Context, name: &str) -> bool {
+    if ctx.contains_key(&format!("func:{}", name)) {
+        return true;
+    }
+
+    if matches!(
+        name,
+        "func"
+            | "log"
+            | "respond"
+            | "parse-json"
+            | "validate"
+            | "csv.read"
+            | "csv.write"
+            | "csv.append"
+            | "json.read"
+            | "datasource"
+            | "load-rune"
+            | "set-memory"
+            | "memory.set"
+            | "get-memory"
+            | "memory.get"
+            | "clear-memory"
+            | "memory.clear"
+            | "del-memory"
+            | "memory.del"
+            | "append"
+            | "memory.append"
+            | "ws.id"
+            | "ws.send"
+            | "ws.broadcast"
+            | "broadcast-websocket"
+            | "return"
+            | "#"
+    ) {
+        return true;
+    }
+
+    if let Some(dot_pos) = name.find('.') {
+        let target = &name[..dot_pos];
+        let method = &name[dot_pos + 1..];
+        return matches!(method, "find" | "find-index" | "max" | "remove") && ctx.contains_key(target);
+    }
+
+    false
 }
 
 /// Check last step for a response

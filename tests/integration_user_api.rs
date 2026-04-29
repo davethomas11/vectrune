@@ -131,6 +131,76 @@ run:
 }
 
 #[tokio::test]
+async fn swagger_includes_put_delete_and_path_parameters() {
+    let script = r#"#!RUNE
+
+@App
+name = User API
+type = REST
+version = 1.0
+swagger = true
+
+@Schema/User
+id = number
+name = string
+email = string
+
+@Route/PUT /users/{id}
+expect = User
+run:
+    respond 200 "User updated"
+
+@Route/DELETE /users/{id}
+run:
+    respond 200 "User deleted"
+"#;
+
+    let app = build_router_from_str(script).await;
+
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/openapi.json")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let text = String::from_utf8(body_bytes.to_vec()).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&text).unwrap();
+
+    assert!(val["paths"]["/users/{id}"]["put"].is_object());
+    assert!(val["paths"]["/users/{id}"]["delete"].is_object());
+
+    let put_params = &val["paths"]["/users/{id}"]["put"]["parameters"];
+    assert!(put_params.is_array());
+    assert!(put_params
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|p| p["name"] == "id" && p["in"] == "path"));
+
+    let delete_params = &val["paths"]["/users/{id}"]["delete"]["parameters"];
+    assert!(delete_params.is_array());
+    assert!(delete_params
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|p| p["name"] == "id" && p["in"] == "path"));
+
+    assert_eq!(
+        val["paths"]["/users/{id}"]["put"]["requestBody"]["content"]["application/json"]["schema"]["$ref"],
+        "#/components/schemas/User"
+    );
+}
+
+#[tokio::test]
 async fn get_user_by_id_not_found() {
     let csv_path = write_temp_users_csv(&[("1", "Alice", "a@example.com")]);
     let csv = csv_path.to_string_lossy();

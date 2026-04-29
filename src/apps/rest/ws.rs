@@ -100,8 +100,10 @@ async fn handle_message(text: String, conn_id: Uuid, state: &AppState, path: &st
     let event_type = json.get("type").and_then(|v| v.as_str());
     if let Some(t) = event_type {
         // Try to find @Event /ws /t
+        // Note: path already includes the leading /, but we need to normalize both for comparison
         let normalized_event = t.trim_start_matches('/');
-        let event_path = vec!["Event".to_string(), path.to_string(), normalized_event.to_string()];
+        let normalized_path = path.trim_start_matches('/');
+        let event_path = vec!["Event".to_string(), normalized_path.to_string(), normalized_event.to_string()];
         if let Some(event_section) = state.doc.sections.iter().find(|s| s.path == event_path) {
             if let Some(steps) = event_section.series.get("run") {
                 let mut params = HashMap::new();
@@ -122,7 +124,8 @@ async fn handle_message(text: String, conn_id: Uuid, state: &AppState, path: &st
 }
 
 async fn run_generic_on_message(text: String, conn_id: Uuid, state: &AppState, path: &str) {
-     if let Some(ws_section) = state.doc.sections.iter().find(|s| s.path == vec!["Websocket".to_string(), path.to_string()]) {
+     // path is already normalized (no leading /), so we can compare directly
+     if let Some(ws_section) = state.doc.sections.iter().find(|s| s.path.len() >= 2 && s.path[0] == "Websocket" && s.path[1] == path) {
         if let Some(steps) = ws_section.series.get("on_message") {
             let mut params = HashMap::new();
             params.insert("ws_id".to_string(), conn_id.to_string());

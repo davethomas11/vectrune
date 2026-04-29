@@ -1,3 +1,5 @@
+use axum::extract::ws::Message;
+use rune_runtime::apps::rest::ws::{WsConnection, WS_REGISTRY};
 use rune_runtime::builtins::Context;
 use rune_runtime::core::{execute_steps_inner, resolve_path, AppState};
 use rune_runtime::rune_ast::{RuneDocument, Value};
@@ -5,6 +7,10 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::mpsc;
+use tokio::time::timeout;
+use uuid::Uuid;
 
 fn app_state() -> AppState {
     AppState {
@@ -140,6 +146,63 @@ async fn worm_game_collision_flow_updates_nested_paths_and_arithmetic() {
         resolve_path(&ctx, "state.players.[id].y", None),
         Some(json!(16))
     );
+}
+
+#[tokio::test]
+async fn websocket_id_builtin_assigns_connection_id_from_context() {
+    let mut ctx = Context::new();
+    ctx.insert("ws_id".to_string(), json!("player-1"));
+
+    let steps = [Value::String("id = ws.id".to_string())];
+
+    let _ = execute_steps_inner(app_state(), &steps, &mut ctx).await;
+
+    assert_eq!(ctx.get("id"), Some(&json!("player-1")));
+}
+
+#[tokio::test]
+async fn websocket_broadcast_command_with_path_argument_is_not_treated_as_arithmetic() {
+    let path = "/ws".to_string();
+    let conn_id = Uuid::new_v4();
+    let (tx, mut rx) = mpsc::unbounded_channel();
+
+    {
+        let mut registry = WS_REGISTRY.lock().unwrap();
+        registry.clear();
+        registry
+            .entry(path.clone())
+            .or_default()
+            .insert(conn_id, WsConnection { tx });
+    }
+
+    let mut ctx = Context::new();
+    ctx.insert(
+        "state".to_string(),
+        json!({
+            "players": {
+                "player-1": { "x": 10, "y": 10, "score": 0 }
+            },
+            "food": { "x": 15, "y": 15 }
+        }),
+    );
+
+    let steps = [Value::String("ws.broadcast /ws state".to_string())];
+
+    let _ = execute_steps_inner(app_state(), &steps, &mut ctx).await;
+
+    let msg = timeout(Duration::from_millis(200), rx.recv())
+        .await
+        .expect("expected ws.broadcast to send a websocket message")
+        .expect("expected websocket message in channel");
+
+    match msg {
+        Message::Text(text) => {
+            assert_eq!(text.to_string(), json!(ctx.get("state").unwrap()).to_string());
+        }
+        other => panic!("expected websocket text message, got {other:?}"),
+    }
+
+    WS_REGISTRY.lock().unwrap().clear();
 }
 
 

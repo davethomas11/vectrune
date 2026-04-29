@@ -42,6 +42,7 @@ run:
     respond 200 user
 
 @Route/PUT /users/{id}
+expect = User
 run:
     parse-json
     validate body #User
@@ -51,7 +52,8 @@ run:
     index = users.find-index it.id == id
     if index == -1:
         respond 404 "User not found"
-    users[index] = body
+    users[index].name = body.name
+    users[index].email = body.email
     csv.write "users.csv" users
     respond 200 "User updated"
 

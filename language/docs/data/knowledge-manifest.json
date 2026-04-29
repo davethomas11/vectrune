@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "status": "starter",
+  "source_of_truth": "knowledge/",
+  "sections": [
+    {
+      "id": "reference-quick-look",
+      "title": "App Types",
+      "description": "Small generated snapshot of runtime context and supported app types."
+    },
+    {
+      "id": "builtin-reference",
+      "title": "Builtins",
+      "description": "Starter builtin reference generated from the shared knowledge source."
+    },
+    {
+      "id": "curated-examples",
+      "title": "Curated Examples",
+      "description": "High-signal examples recommended for learning and AI retrieval."
+    }
+  ],
+  "data_files": {
+    "builtins": "data/builtins.json",
+    "appTypes": "data/app-types.json",
+    "runtimeContext": "data/runtime-context.json",
+    "examples": "data/examples.json"
+  }
+}

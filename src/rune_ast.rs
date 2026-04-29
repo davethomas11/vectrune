@@ -13,29 +13,29 @@ pub struct RuneDocument {
     pub sections: Vec<Section>,
 }
 
+pub fn json_to_ast_value(v: &serde_json::Value) -> Value {
+    match v {
+        serde_json::Value::String(s) => Value::String(s.clone()),
+        serde_json::Value::Number(n) => Value::Number(n.as_f64().unwrap_or(0.0)),
+        serde_json::Value::Bool(b) => Value::Bool(*b),
+        serde_json::Value::Array(arr) => {
+            Value::List(arr.iter().map(json_to_ast_value).collect())
+        }
+        serde_json::Value::Object(obj) => {
+            let mut map = HashMap::new();
+            for (k, v) in obj {
+                map.insert(k.clone(), json_to_ast_value(v));
+            }
+            Value::Map(map)
+        }
+        serde_json::Value::Null => Value::String("".to_string()),
+    }
+}
+
 impl RuneDocument {
     /// Corrected from_json to handle the nested path structure created by to_json
     pub fn from_json(p0: &serde_json::Value) -> RuneDocument {
         let mut sections = Vec::new();
-
-        fn json_to_ast_value(v: &serde_json::Value) -> Value {
-            match v {
-                serde_json::Value::String(s) => Value::String(s.clone()),
-                serde_json::Value::Number(n) => Value::Number(n.as_f64().unwrap_or(0.0)),
-                serde_json::Value::Bool(b) => Value::Bool(*b),
-                serde_json::Value::Array(arr) => {
-                    Value::List(arr.iter().map(json_to_ast_value).collect())
-                }
-                serde_json::Value::Object(obj) => {
-                    let mut map = HashMap::new();
-                    for (k, v) in obj {
-                        map.insert(k.clone(), json_to_ast_value(v));
-                    }
-                    Value::Map(map)
-                }
-                serde_json::Value::Null => Value::String("".to_string()),
-            }
-        }
 
         fn walk_json(
             current_val: &serde_json::Value,
