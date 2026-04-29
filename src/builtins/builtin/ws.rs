@@ -18,7 +18,10 @@ pub async fn builtin_ws_send(args: &[String], ctx: &Context) -> BuiltinResult {
         return BuiltinResult::Error("ws.send requires <path> <ws_id> <message>".to_string());
     }
     let path = &args[0];
-    let ws_id = &args[1];
+    let ws_id = ctx
+        .get(&args[1])
+        .and_then(|v| v.as_str())
+        .unwrap_or(&args[1]);
     let msg = &args[2];
 
     // If msg is a variable in ctx, use its value

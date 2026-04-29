@@ -18,7 +18,7 @@ app_types:
       - "@Event /path /event-type defines JSON-based event handlers (checks message.type field)"
       - "ws.id builtin retrieves the connection UUID"
       - "ws.broadcast /path message sends to all connections on that path"
-      - "ws.send /path connection_id message sends to a specific connection"
+      - "ws.send /path connection_id message sends to a specific connection; the connection id may be passed directly or via a context variable"
     sources:
       - src/apps/rest/ws.rs
       - src/builtins/builtin/ws.rs

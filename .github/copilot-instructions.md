@@ -57,6 +57,15 @@ If you find a mismatch, fix `knowledge/` first, then update downstream docs.
 - `knowledge/runtime/cli.md`
 - `knowledge/reference/`
 
+## Local machine overrides
+
+Machine-specific paths and environment details must stay out of the public repo.
+
+- If present, consult `.github/copilot-local.md` for local-only overrides before falling back to generic setup assumptions.
+- Treat `.github/copilot-local.md` as optional, higher priority than generic environment guesses, and never commit its machine-specific contents.
+- Use `.github/copilot-local.example.md` as the tracked template for the expected format.
+- Current intended use: local tool paths such as an explicit Windows `cargo.exe` path for this workstation.
+
 ## Done criteria
 
 A task that changes public Vectrune behavior is not complete until the corresponding knowledge files have been reviewed and updated.

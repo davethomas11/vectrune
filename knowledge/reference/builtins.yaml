@@ -61,6 +61,24 @@ builtins:
     summary: Read JSON data from disk into runtime context.
     sources:
       - src/builtins/builtin/json.rs
+  - name: delete
+    category: context
+    summary: Remove a variable or nested path from runtime context.
+    arguments:
+      - name: variable_or_path
+        description: Variable name or path like state.players.[id] to remove
+    sources:
+      - src/builtins/builtin/context_ops.rs
+  - name: is-set
+    category: context
+    summary: Check if a variable or path exists in context, assigns boolean result.
+    arguments:
+      - name: variable_or_path
+        description: Variable name or path like state.players.[id] to check
+    writes_context:
+      - assigned variable (boolean true/false)
+    sources:
+      - src/builtins/builtin/context_ops.rs
   - name: datasource
     category: data
     summary: Access configured datasource behavior.
@@ -125,6 +143,10 @@ builtins:
       - name: path
       - name: ws_id
       - name: message
+    behavior:
+      notes:
+        - The `ws_id` argument may be either a literal connection id or a context variable that resolves to the current target connection id.
+        - If the `message` argument resolves to a structured value in context, it is serialized to JSON before sending.
     sources:
       - src/builtins.rs
       - src/builtins/builtin/ws.rs

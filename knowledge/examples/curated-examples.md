@@ -57,6 +57,21 @@ Use this example when explaining:
 - in-memory data workflows
 - mutation logic and derived IDs
 
+## 5. WebSocket worm game
+
+- Source: `examples/worm_game/worm_game.rune`
+- Companion: `examples/worm_game/assets/index.html`
+- Why it matters:
+  - demonstrates `@Websocket` and `@Event` flow with JSON message dispatch
+  - shows `json.read`, `ws.id`, `ws.send`, `ws.broadcast`, memory-backed state, and bracket-path mutation
+  - now includes rotating player colors, score display, and growth capped at 10 segments
+
+Use this example when explaining:
+- websocket event routing
+- real-time shared state updates
+- syncing frontend UI with authoritative runtime state
+- simple gameplay/state-machine patterns in `.rune`
+
 ## Selection guidance
 
 When expanding this curated set, prefer examples that are:
@@ -69,6 +84,5 @@ When expanding this curated set, prefer examples that are:
 
 Once the starter set is stable, likely next candidates are:
 - memory-oriented REST examples
-- websocket/game-state examples such as worm-game
 - auth examples
 - datasource examples

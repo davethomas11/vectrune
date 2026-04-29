@@ -74,7 +74,7 @@ pub fn extract_auth_configs(doc: &RuneDocument) -> HashMap<String, Section> {
 }
 
 // Helper to resolve simple literals and dotted paths in context
-fn split_path_parts(ident: &str) -> Vec<String> {
+pub fn split_path_parts(ident: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current_part = String::new();
     let mut in_bracket = false;
@@ -637,6 +637,42 @@ fn parse_object_literal(
     map
 }
 
+/// Like execute_steps_inner but does NOT call resolve_last_response at the end.
+/// Used for conditional blocks so the outer loop continues after the if-body.
+#[async_recursion]
+async fn execute_steps_inner_no_fallthrough(
+    state: AppState,
+    steps: &[Value],
+    ctx: &mut Context,
+) -> Option<(u16, String)> {
+    for step in steps {
+        match step {
+            Value::String(s) => {
+                let step_str = s.trim();
+                if let Some(eq_pos) = find_assignment_equals(step_str) {
+                    let (var, cmd) = step_str.split_at(eq_pos);
+                    let var = var.trim();
+                    let cmd = cmd[1..].trim();
+                    if let Some(resp) = handle_assignment(&state, ctx, var, cmd).await {
+                        return Some(resp);
+                    }
+                } else {
+                    if let Some(resp) = handle_plain_command(&state, ctx, step_str).await {
+                        return Some(resp);
+                    }
+                }
+            }
+            Value::Map(m) => {
+                if let Some(resp) = handle_conditional_block(&state, m, ctx).await {
+                    return Some(resp);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 /// Handles the logic for "if" blocks in the steps
 async fn handle_conditional_block(
     state: &AppState,
@@ -648,7 +684,11 @@ async fn handle_conditional_block(
         if let Some(cond) = k.strip_prefix("if ") {
             if let Value::List(nested) = v {
                 if eval_condition(ctx, cond, None) {
-                    return execute_steps_inner(state.clone(), nested, ctx).await;
+                    // Execute nested steps; only propagate if it was an explicit respond/error,
+                    // not the implicit end-of-block fallthrough from resolve_last_response.
+                    if let Some(resp) = execute_steps_inner_no_fallthrough(state.clone(), nested, ctx).await {
+                        return Some(resp);
+                    }
                 }
             }
         }
@@ -831,6 +871,8 @@ fn is_known_command_name(ctx: &Context, name: &str) -> bool {
             | "memory.clear"
             | "del-memory"
             | "memory.del"
+            | "delete"
+            | "is-set"
             | "append"
             | "memory.append"
             | "ws.id"
@@ -854,11 +896,10 @@ fn is_known_command_name(ctx: &Context, name: &str) -> bool {
 
 /// Check last step for a response
 pub fn resolve_last_response(steps: &[Value], ctx: &mut Context) -> Option<(u16, String)> {
-    let step = steps.last();
-    if step.is_none() {
-        return None;
-    }
-    let step = step.unwrap().as_str().unwrap().trim();
+    let step = match steps.last() {
+        Some(Value::String(step)) => step.trim(),
+        _ => return None,
+    };
 
     // Case 1: Assignment
     if let Some(eq_pos) = step.find('=') {

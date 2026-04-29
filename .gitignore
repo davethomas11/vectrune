@@ -39,3 +39,6 @@ out/
 dist/
 
 testdata/
+
+# Local Copilot machine-specific overrides
+.github/copilot-local.md

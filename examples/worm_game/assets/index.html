@@ -19,18 +19,52 @@
             border: 4px solid #444;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
-        .stats { margin-top: 20px; font-size: 1.2rem; }
+        .stats {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            width: 400px;
+        }
+        .stats-row {
+            margin-bottom: 8px;
+        }
+        .scoreboard {
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid #444;
+            background: #111;
+            border-radius: 8px;
+        }
+        .scoreboard h2 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+        }
+        .scoreboard ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .scoreboard li {
+            margin: 4px 0;
+        }
     </style>
 </head>
 <body>
     <h1>Vectrune Multiplayer Worm</h1>
     <canvas id="game" width="400" height="400"></canvas>
-    <div class="stats" id="status">Connecting to Vectrune...</div>
+    <div class="stats">
+        <div class="stats-row" id="status">Connecting to Vectrune...</div>
+        <div class="stats-row" id="yourScore">Your score: 0</div>
+        <div class="scoreboard">
+            <h2>Player Scores</h2>
+            <ul id="scoreboard"></ul>
+        </div>
+    </div>
 
     <script>
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
         const statusEl = document.getElementById('status');
+        const yourScoreEl = document.getElementById('yourScore');
+        const scoreboardEl = document.getElementById('scoreboard');
         const GRID_SIZE = 20;
         const TILE_COUNT = 20;
 
@@ -38,16 +72,104 @@
         let gameState = { players: {}, food: { x: 15, y: 15 } };
         let myId = null;
         let myPos = { x: 10, y: 10 };
+        let playerTrails = {};
 
         ws.onopen = () => {
-            statusEl.innerText = "Joined Game! Use Arrow Keys to move.";
+            statusEl.innerText = "Connected. Joining game...";
             ws.send(JSON.stringify({ type: 'join' }));
         };
 
         ws.onmessage = (e) => {
-            gameState = JSON.parse(e.data);
+            const message = JSON.parse(e.data);
+
+            if (message && message.type === 'self' && message.id) {
+                myId = message.id;
+                syncLocalPlayerState();
+                renderStats();
+                draw();
+                return;
+            }
+
+            gameState = message;
+            syncPlayerTrails();
+            syncLocalPlayerState();
+            renderStats();
             draw();
         };
+
+        ws.onclose = () => {
+            statusEl.innerText = 'Disconnected from Vectrune.';
+        };
+
+        function syncLocalPlayerState() {
+            if (myId && gameState.players && gameState.players[myId]) {
+                myPos = {
+                    x: gameState.players[myId].x,
+                    y: gameState.players[myId].y
+                };
+            }
+        }
+
+        function syncPlayerTrails() {
+            const nextTrails = {};
+            const players = gameState.players || {};
+
+            for (const [id, player] of Object.entries(players)) {
+                const head = { x: player.x, y: player.y };
+                const desiredLength = Math.max(1, Math.min(player.size || 1, 10));
+                let trail = (playerTrails[id] || []).map(segment => ({ ...segment }));
+
+                if (!trail.length) {
+                    trail = [head];
+                }
+
+                if (trail[0].x !== head.x || trail[0].y !== head.y) {
+                    trail.unshift(head);
+                } else {
+                    trail[0] = head;
+                }
+
+                while (trail.length < desiredLength) {
+                    trail.push({ ...trail[trail.length - 1] });
+                }
+
+                nextTrails[id] = trail.slice(0, desiredLength);
+            }
+
+            playerTrails = nextTrails;
+        }
+
+        function renderStats() {
+            const players = gameState.players || {};
+            const entries = Object.entries(players).sort(([, a], [, b]) => (b.score || 0) - (a.score || 0));
+
+            if (myId && players[myId]) {
+                const me = players[myId];
+                statusEl.innerText = `Connected as ${myId.slice(0, 8)}… Use Arrow Keys to move.`;
+                yourScoreEl.innerText = `Your score: ${me.score || 0} | Length: ${me.size || 1} | Position: (${me.x}, ${me.y})`;
+            } else if (myId) {
+                statusEl.innerText = 'Joined Game! Waiting for your player state...';
+                yourScoreEl.innerText = 'Your score: 0';
+            } else {
+                statusEl.innerText = 'Joined Game! Waiting for your player assignment...';
+                yourScoreEl.innerText = 'Your score: 0';
+            }
+
+            scoreboardEl.innerHTML = '';
+            if (!entries.length) {
+                const empty = document.createElement('li');
+                empty.textContent = 'No players connected yet.';
+                scoreboardEl.appendChild(empty);
+                return;
+            }
+
+            for (const [id, player] of entries) {
+                const item = document.createElement('li');
+                const label = id === myId ? 'You' : id.slice(0, 8);
+                item.textContent = `${label}: ${player.score || 0} pts | len ${player.size || 1} @ (${player.x}, ${player.y})`;
+                scoreboardEl.appendChild(item);
+            }
+        }
 
         function draw() {
             // Clear
@@ -65,18 +187,31 @@
             // Draw Players
             for (let id in gameState.players) {
                 const p = gameState.players[id];
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x * GRID_SIZE, p.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
-                
+                const trail = playerTrails[id] || [{ x: p.x, y: p.y }];
+
+                for (let i = trail.length - 1; i >= 0; i--) {
+                    const segment = trail[i];
+                    const alpha = Math.max(0.35, 1 - (i * 0.08));
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(segment.x * GRID_SIZE, segment.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
+                }
+                ctx.globalAlpha = 1;
+
                 // If it's us, draw a small indicator
                 if (id === myId) {
                     ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
                     ctx.strokeRect(p.x * GRID_SIZE, p.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
                 }
             }
         }
 
         window.addEventListener('keydown', (e) => {
+            if (!myId || ws.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
             let moved = false;
             switch(e.key) {
                 case 'ArrowUp':    myPos.y--; moved = true; break;
@@ -97,6 +232,8 @@
                 }));
             }
         });
+
+        renderStats();
     </script>
 </body>
 </html>

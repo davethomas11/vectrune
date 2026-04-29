@@ -133,25 +133,35 @@ examples:
       - Best starter example for GraphQL and Lambda-adjacent workflows.
   - id: example.websocket.worm-game
     title: Multiplayer Worm Game
-    summary: Real-time WebSocket example featuring on_connect handlers, JSON event dispatch, WebSocket builtins, memory state management, and HTML5 canvas frontend.
+    summary: Real-time WebSocket example featuring event dispatch, direct self-identification messages, rotating player colors, worm growth up to length 10, score tracking, and an HTML5 canvas frontend.
     source_path: examples/worm_game/worm_game.rune
     companion_files:
       - examples/worm_game/assets/index.html
+      - examples/worm_game/worm_colors.json
     app_type: WebSocket
     concepts:
       - websocket sections
       - on_connect and on_disconnect handlers
       - event-based JSON dispatch
+      - json-backed palette loading
       - ws.id builtin
+      - ws.send builtin
       - ws.broadcast builtin
+      - delete builtin for cleanup
       - memory state
       - object path mutation
+      - client/server state synchronization
+      - rotating color palette assignment
+      - growth capped at 10 segments
+      - in-page score display
       - frontend static hosting
     builtins:
+      - json.read
       - log
       - get-memory
       - set-memory
       - ws.id
+      - ws.send
       - ws.broadcast
     runtime_context:
       - ws_id
@@ -168,6 +178,11 @@ examples:
     notes:
       - Primary example for teaching WebSocket and real-time patterns.
       - Demonstrates JSON-based event routing through @Event sections.
+      - The frontend receives a direct self-identification message so it can sync local movement with server state and render player scores.
+      - The example loads its rotating color palette from `worm_colors.json` via `json.read`.
+      - Player colors rotate through a fixed palette as new worms join.
+      - Worm length grows when food is eaten and is capped at 10.
+      - Player data is cleaned up from state when they disconnect using the `delete` builtin.
 notes:
   - Prefer examples already backed by tests or central README workflows.
   - Add auth, datasource, and memory API examples once their reference pages are added.

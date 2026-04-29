@@ -7,6 +7,7 @@ use std::string::ToString;
 
 pub mod builtin {
     pub mod commands;
+    pub mod context_ops;
     pub mod csv;
     pub mod data_source;
     pub mod json;
@@ -35,6 +36,7 @@ use builtin::respond::builtin_respond;
 use builtin::validate::builtin_validate;
 use crate::builtins::builtin::function::{builtin_func, invoke_func};
 use crate::builtins::builtin::ws::{builtin_ws_broadcast, builtin_ws_id, builtin_ws_send};
+use crate::builtins::builtin::context_ops::{builtin_delete, builtin_is_set};
 
 pub const LAST_EXEC_RESULT: &str = "___last_exec_result___";
 
@@ -427,6 +429,8 @@ pub async fn call_builtin(
         "clear-memory" | "memory.clear" => builtin_clear_memory(args, ctx).await,
         "del-memory" | "memory.del" => builtin_del_memory(args, ctx).await,
         "append" | "memory.append" => builtin_append(args, assign_to, ctx).await,
+        "delete" => builtin_delete(args, ctx),
+        "is-set" => builtin_is_set(args, ctx, assign_to),
         "ws.id" => builtin_ws_id(ctx, assign_to).await,
         "ws.send" => builtin_ws_send(args, ctx).await,
         "ws.broadcast" | "broadcast-websocket" => builtin_ws_broadcast(args, ctx).await,

@@ -12,29 +12,41 @@ src = assets
 
 @Memory/game_state
 players = {}
-food = {"x": 15, "y": 15}
+food = {"x": 5, "y": 5}
+next_color_index = 0
 
 @Websocket /ws
 on_connect:
     log "New player connected"
 on_disconnect:
     log "Player disconnected"
-    # Note: In a full implementation, we'd use ws.id to remove them from game_state
+    state = get-memory game_state
+    id = ws.id
+    delete state.players.[id]
+    set-memory game_state state
+    ws.broadcast /ws state
 
 @Event /ws /join
 run:
     id = ws.id
     state = get-memory game_state
-    
+    worm_colors = json.read worm_colors.json
+
     # Initialize new player at a random-ish position
     state.players.[id] = {
         "x": 10,
         "y": 10,
-        "color": "hsl(120, 70%, 50%)",
-        "score": 0
+        "color": worm_colors.[state.next_color_index],
+        "score": 0,
+        "size": 1
     }
-    
+    state.next_color_index = state.next_color_index + 1
+    if state.next_color_index > 9:
+        state.next_color_index = 0
+
     set-memory game_state state
+    session = { "type": "self", "id": id }
+    ws.send /ws id session
     ws.broadcast /ws state
 
 @Event /ws /move
@@ -42,20 +54,31 @@ run:
     id = ws.id
     event = parse-json body
     state = get-memory game_state
-    
+    log "Move event received for player"
+
     # Update player position
     if state.players.[id] != null:
+        log "Player exists, updating position"
         state.players.[id].x = event.x
         state.players.[id].y = event.y
         
         # Simple collision with food
         if state.players.[id].x == state.food.x:
+            log "X matches food, checking Y"
             if state.players.[id].y == state.food.y:
+                log "Collision detected!"
                 state.players.[id].score = state.players.[id].score + 1
+                next_size = state.players.[id].size + 1
+                if next_size > 10:
+                    next_size = 10
+                state.players.[id].size = next_size
                 # Move food (simple mock of randomness)
                 state.food.x = state.food.x + 3
                 if state.food.x > 19:
                     state.food.x = 2
     
+    log "About to save state and broadcast"
     set-memory game_state state
+    log "State saved, broadcasting"
     ws.broadcast /ws state
+    log "Broadcast sent"
