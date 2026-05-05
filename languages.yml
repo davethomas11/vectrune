@@ -1,0 +1,9 @@
+Rune:
+  type: programming
+  extensions:
+    - .rune
+  ace_mode: text
+  tm_scope: source.rune
+  color: "#3b82f6"
+  description: "Vectrune: Declarative configuration and data language"
+

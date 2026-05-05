@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>fileTypes</key>
+	<array>
+		<string>rune</string>
+	</array>
+	<key>name</key>
+	<string>Rune</string>
+	<key>patterns</key>
+	<array>
+		<dict>
+			<key>comment</key>
+			<string>Comment</string>
+			<key>match</key>
+			<string>#.*$</string>
+			<key>name</key>
+			<string>comment.line.rune</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Section header like @App, @Route, @Page, @Logic, @Style</string>
+			<key>match</key>
+			<string>^@[A-Za-z]+(?:/[A-Za-z0-9_-]+)?</string>
+			<key>name</key>
+			<string>entity.name.tag.rune</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>String literals</string>
+			<key>match</key>
+			<string>"(?:\\.|[^"\\])*"</string>
+			<key>name</key>
+			<string>string.quoted.double.rune</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Keywords: if, then, else, for, in, return, stop, action, func, derive</string>
+			<key>match</key>
+			<string>\b(if|then|else|for|in|return|stop|action|func|derive|from|use|state|view|style|logic|path|run|respond)\b</key>
+			<key>name</key>
+			<string>keyword.control.rune</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Numbers</string>
+			<key>match</key>
+			<string>\b-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?\b</string>
+			<key>name</key>
+			<string>constant.numeric.rune</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Boolean and null literals</string>
+			<key>match</key>
+			<string>\b(true|false|null)\b</string>
+			<key>name</key>
+			<string>constant.language.rune</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Template interpolation {variable}</string>
+			<key>match</key>
+			<string>\{[^}]+\}</string>
+			<key>name</key>
+			<string>variable.language.rune</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Operators</string>
+			<key>match</key>
+			<string>(=|!=|==|\+|-|\*|/|&amp;|\||\?|:)</string>
+			<key>name</key>
+			<string>keyword.operator.rune</string>
+		</dict>
+	</array>
+	<key>scopeName</key>
+	<string>source.rune</string>
+	<key>uuid</key>
+	<string>D8D5E82E-3D5B-46B5-B38E-8C841C21347D</string>
+</dict>
+</plist>
+
