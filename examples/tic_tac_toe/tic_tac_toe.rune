@@ -1,0 +1,39 @@
+#!RUNE
+
+# Rune-Web frontend example.
+# This example exercises page rendering, derived values, loops, and client-side actions.
+
+import "parts"
+
+@App
+name = Tic Tac Toe
+version = 1.0
+type = REST
+port = 3000
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = tic-tac-toe
+
+@Page/tic-tac-toe
+title = Tic Tac Toe
+style = game
+logic = game
+view:
+    main .screen:
+        h1 "Tic Tac Toe"
+        p .status "{status_text}"
+
+        div .scoreboard:
+            span .score <- ["X {score.X}", "O {score.O}", "Draws {score.draws}"]
+
+        div .board:
+            button .cell data-index="{index}" click=play(index) "{cell}" <- (cell, index) in board
+
+        button .reset click=reset "Play Again"
+
+
+
+
+

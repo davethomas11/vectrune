@@ -11,11 +11,39 @@ Examples include:
 - `@Route/GET /users`
 - `@Websocket/ws`
 - `@Frontend`
+- `@Page/home`
+- `@Style/site`
+- `@Logic/site`
 
 Within sections, common constructs are:
 - key-value pairs like `name = User API`
 - series blocks like `run:` with indented steps
 - records introduced with `+` in data-oriented sections
+
+Frontend-oriented documents may also use `@Page`, `@Style`, and `@Logic` sections when `@Frontend type = rune-web` is configured. This is currently treated as a frontend mode layered onto app routing, not as a separate `@App type`.
+
+## Import declarations
+
+Rune files may declare top-level imports before sections and other top-level content:
+
+```rune
+#!RUNE
+import "parts"
+import "shared_logic.rune"
+
+@App
+name = Multi File App
+type = REST
+```
+
+Current import behavior:
+- `import "file.rune"` loads another Rune file before parsing the current file
+- `import "directory"` loads all `.rune` files directly inside that directory in sorted filename order
+- imports are resolved relative to the importing file's directory
+- imported sections are merged first, then the current file is merged on top
+- later local key-value assignments override imported key-value assignments when section paths match
+
+Import declarations are handled by a pre-parse loading step. They are not normal runtime statements.
 
 Section key-value pairs may also use inline object literals, including empty objects.
 

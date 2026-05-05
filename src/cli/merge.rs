@@ -1,6 +1,8 @@
 use crate::rune_ast::{RuneDocument, Value};
+use crate::rune_parser::load_rune_document_from_path;
 use serde_json;
 use std::fs;
+use std::path::Path;
 
 pub fn handle_merge(input_doc: &RuneDocument, spec: &str) -> Result<RuneDocument, String> {
     // spec format: base_file@selector
@@ -8,17 +10,18 @@ pub fn handle_merge(input_doc: &RuneDocument, spec: &str) -> Result<RuneDocument
         .split_once('@')
         .ok_or_else(|| "Merge spec must be in format base_file@selector".to_string())?;
 
-    let base_content = fs::read_to_string(base_file)
-        .map_err(|e| format!("Failed to read base file {}: {}", base_file, e))?;
-
     let mut base_doc = if base_file.ends_with(".yaml") || base_file.ends_with(".yml") {
+        let base_content = fs::read_to_string(base_file)
+            .map_err(|e| format!("Failed to read base file {}: {}", base_file, e))?;
         RuneDocument::from_yaml(&base_content)?
     } else if base_file.ends_with(".json") {
+        let base_content = fs::read_to_string(base_file)
+            .map_err(|e| format!("Failed to read base file {}: {}", base_file, e))?;
         let json_val: serde_json::Value = serde_json::from_str(&base_content)
             .map_err(|e| format!("Failed to parse base JSON: {}", e))?;
         RuneDocument::from_json(&json_val)
     } else {
-        RuneDocument::from_str(&base_content)?
+        load_rune_document_from_path(Path::new(base_file)).map_err(|e| e.to_string())?
     };
 
     apply_merge(&mut base_doc, input_doc, selector)?;

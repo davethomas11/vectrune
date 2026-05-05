@@ -1,5 +1,7 @@
 use crate::rune_ast::{json_to_ast_value, Record, RuneDocument, Section, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
@@ -7,6 +9,170 @@ pub enum ParseError {
     NoSection(String),
     #[error("General parse error: {0}")]
     General(String),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum LoadError {
+    #[error("Failed to read Rune path {path}: {source}")]
+    Io {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Failed to parse Rune content from {path}: {source}")]
+    Parse {
+        path: String,
+        #[source]
+        source: ParseError,
+    },
+    #[error("Invalid import declaration in {path}: {message}")]
+    InvalidImport { path: String, message: String },
+    #[error("Import cycle detected while loading {path}")]
+    ImportCycle { path: String },
+}
+
+pub fn load_rune_document_from_path(path: &Path) -> Result<RuneDocument, LoadError> {
+    let mut visiting = HashSet::new();
+    let mut loaded = HashSet::new();
+    load_rune_document_from_path_inner(path, &mut visiting, &mut loaded)
+}
+
+pub fn load_rune_document_from_str_with_base(
+    content: &str,
+    base_dir: &Path,
+    source_name: &str,
+) -> Result<RuneDocument, LoadError> {
+    let mut visiting = HashSet::new();
+    let mut loaded = HashSet::new();
+    load_rune_document_from_content_inner(content, base_dir, source_name, &mut visiting, &mut loaded)
+}
+
+fn load_rune_document_from_path_inner(
+    path: &Path,
+    visiting: &mut HashSet<PathBuf>,
+    loaded: &mut HashSet<PathBuf>,
+) -> Result<RuneDocument, LoadError> {
+    let canonical = canonicalize_for_tracking(path)?;
+
+    if loaded.contains(&canonical) {
+        return Ok(RuneDocument { sections: Vec::new() });
+    }
+    if !visiting.insert(canonical.clone()) {
+        return Err(LoadError::ImportCycle {
+            path: canonical.display().to_string(),
+        });
+    }
+
+    let result = if canonical.is_dir() {
+        let mut entries = fs::read_dir(&canonical)
+            .map_err(|source| LoadError::Io {
+                path: canonical.display().to_string(),
+                source,
+            })?
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|entry| entry.extension().and_then(|ext| ext.to_str()) == Some("rune"))
+            .collect::<Vec<_>>();
+        entries.sort();
+
+        let mut doc = RuneDocument { sections: Vec::new() };
+        for entry in entries {
+            let imported = load_rune_document_from_path_inner(&entry, visiting, loaded)?;
+            doc.merge(imported);
+        }
+        Ok(doc)
+    } else {
+        let content = fs::read_to_string(&canonical).map_err(|source| LoadError::Io {
+            path: canonical.display().to_string(),
+            source,
+        })?;
+        let base_dir = canonical.parent().unwrap_or_else(|| Path::new("."));
+        load_rune_document_from_content_inner(
+            &content,
+            base_dir,
+            &canonical.display().to_string(),
+            visiting,
+            loaded,
+        )
+    };
+
+    visiting.remove(&canonical);
+    if result.is_ok() {
+        loaded.insert(canonical);
+    }
+    result
+}
+
+fn load_rune_document_from_content_inner(
+    content: &str,
+    base_dir: &Path,
+    source_name: &str,
+    visiting: &mut HashSet<PathBuf>,
+    loaded: &mut HashSet<PathBuf>,
+) -> Result<RuneDocument, LoadError> {
+    let (imports, stripped_content) = extract_imports(content, source_name)?;
+
+    let mut doc = RuneDocument { sections: Vec::new() };
+    for import_path in imports {
+        let resolved = base_dir.join(import_path);
+        let imported = load_rune_document_from_path_inner(&resolved, visiting, loaded)?;
+        doc.merge(imported);
+    }
+
+    let current = parse_rune(&stripped_content).map_err(|source| LoadError::Parse {
+        path: source_name.to_string(),
+        source,
+    })?;
+    doc.merge(current);
+    Ok(doc)
+}
+
+fn extract_imports(content: &str, source_name: &str) -> Result<(Vec<String>, String), LoadError> {
+    let mut imports = Vec::new();
+    let mut stripped_lines = Vec::new();
+    let mut imports_allowed = true;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        let is_top_level = !line.starts_with(' ') && !line.starts_with('\t');
+
+        if is_top_level && trimmed.starts_with("import ") {
+            if !imports_allowed {
+                return Err(LoadError::InvalidImport {
+                    path: source_name.to_string(),
+                    message: "import declarations must appear before sections and other top-level content".to_string(),
+                });
+            }
+            imports.push(parse_import_path(trimmed, source_name)?);
+            continue;
+        }
+
+        stripped_lines.push(line.to_string());
+
+        if is_top_level && !trimmed.is_empty() && !trimmed.starts_with('#') {
+            imports_allowed = false;
+        }
+    }
+
+    Ok((imports, stripped_lines.join("\n")))
+}
+
+fn parse_import_path(line: &str, source_name: &str) -> Result<String, LoadError> {
+    let rest = line["import ".len()..].trim();
+    if rest.len() >= 2 && rest.starts_with('"') && rest.ends_with('"') {
+        return Ok(rest[1..rest.len() - 1].to_string());
+    }
+
+    Err(LoadError::InvalidImport {
+        path: source_name.to_string(),
+        message: format!("expected import \"path\" but found `{}`", line),
+    })
+}
+
+fn canonicalize_for_tracking(path: &Path) -> Result<PathBuf, LoadError> {
+    path.canonicalize().map_err(|source| LoadError::Io {
+        path: path.display().to_string(),
+        source,
+    })
 }
 
 fn parse_map_block<I: Iterator<Item = String>>(lines: &mut I) -> HashMap<String, Value> {
@@ -255,7 +421,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                     }
                 }
                 // Handle object assignment in series right after series start
-                if line.contains('=') && line.contains('{') {
+                if is_object_assignment_line(line) {
                     if let Some((_, path)) = series_stack.last().cloned() {
                         let mut maybe_list: Option<&mut Vec<Value>> = None;
                         {
@@ -278,7 +444,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                             }
                         }
                         if let Some(list) = maybe_list {
-                            let mut assignment = line.to_string();
+                            let mut assignment = line.trim().to_string();
                             while !assignment.trim_end().ends_with('}') {
                                 if let Some(next_line) = lines.next() {
                                     assignment.push_str("\n");
@@ -390,8 +556,8 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
 
                     if let Some(list) = maybe_list {
                         // Robust handling: object assignment at any point in series
-                        if line.contains('=') && line.contains('{') {
-                            let mut assignment = line.to_string();
+                        if is_object_assignment_line(line) {
+                            let mut assignment = line.trim().to_string();
                             while !assignment.trim_end().ends_with('}') {
                                 if let Some(next_line) = lines.next() {
                                     assignment.push_str("\n");
@@ -434,7 +600,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 let mut value_raw = parts.next().unwrap().trim().to_string();
 
                 // Handle multiline or inline object literal { ... }
-                if value_raw.starts_with('{') {
+                if looks_like_object_literal_start(&value_raw) {
                     let mut assignment = value_raw;
                     while !assignment.trim_end().ends_with('}') {
                         if let Some(next_line) = lines.next() {
@@ -464,7 +630,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                         })
                         .collect();
                     Value::List(items)
-                } else if value_raw.starts_with('{') && value_raw.ends_with('}') {
+                } else if looks_like_object_literal_start(&value_raw) && value_raw.trim_end().ends_with('}') {
                     // Simple JSON object parsing for KV
                     match serde_json::from_str::<serde_json::Value>(&value_raw) {
                         Ok(v) => json_to_ast_value(&v),
@@ -602,5 +768,21 @@ fn is_char_in_quotes(s: &str, target_idx: usize) -> bool {
         }
     }
     in_quotes
+}
+
+fn looks_like_object_literal_start(value_raw: &str) -> bool {
+    let trimmed = value_raw.trim_start();
+    if !trimmed.starts_with('{') {
+        return false;
+    }
+
+    let rest = trimmed[1..].trim_start();
+    rest.is_empty() || rest.starts_with('"') || rest.starts_with('}')
+}
+
+fn is_object_assignment_line(line: &str) -> bool {
+    line.find('=')
+        .map(|eq_idx| looks_like_object_literal_start(&line[eq_idx + 1..]))
+        .unwrap_or(false)
 }
 

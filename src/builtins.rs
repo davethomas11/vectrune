@@ -1,6 +1,6 @@
 // src/builtins.rs
 
-use crate::rune_parser::parse_rune;
+use crate::rune_parser::load_rune_document_from_path;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::string::ToString;
@@ -56,20 +56,13 @@ pub fn builtin_load_rune(
     assign_to: Option<&str>,
     app_state: &AppState,
 ) -> BuiltinResult {
-    use std::fs;
     if args.is_empty() {
         eprintln!("[ERROR] load-rune: missing filename");
         return BuiltinResult::Error("missing filename".to_string());
     }
     let filename = app_state.path.join(&args[0]);
-    match fs::read_to_string(filename) {
-        Ok(content) => {
-            let rune_doc = match parse_rune(&content) {
-                Ok(doc) => doc,
-                Err(e) => {
-                    return BuiltinResult::Error(format!("load-rune parse error: {}", e));
-                }
-            };
+    match load_rune_document_from_path(&filename) {
+        Ok(rune_doc) => {
             if let Some(var_name) = assign_to {
                 if args.len() >= 3 && &args[1] == "as" {
                     let output_type = &args[2];

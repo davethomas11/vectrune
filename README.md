@@ -83,6 +83,8 @@ You can run scripts with the `vectrune` CLI. Pass a file path, or use `-` to rea
     # From STDIN
     cat examples/user_api.rune | vectrune -
 
+Rune files may also declare top-level imports such as `import "shared.rune"` or `import "parts"` to load another Rune file or a directory of `.rune` files before parsing.
+
 
 CLI Commands
 ------------

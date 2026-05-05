@@ -1,0 +1,82 @@
+@Style/game
+tokens:
+    page-bg = #0f172a
+    surface = #334155
+    cell-surface = #475569
+    text-main = #cbd5e1
+    text-strong = #f8fafc
+    accent = #15803d
+    accent-text = #f0fdf4
+    gap = 12px
+    cell-size = 96px
+    card-round = 16px
+    pill = 999px
+
+presets:
+    page-base:
+        margin = 0
+        font = system-ui
+
+    screen-layout:
+        stack = center
+        gap = 18px
+        pad = 24px
+
+    badge:
+        bg = {surface}
+        color = {text-strong}
+        pad = 8px 12px
+        round = {pill}
+
+    button-base:
+        border = 0
+        weight = 700
+
+    cell-button:
+        use = (button-base)
+        size = {cell-size}
+        round = {card-round}
+        bg = {surface}
+        color = {text-strong}
+
+    accent-button:
+        use = (button-base)
+        pad = 10px 16px
+        round = {pill}
+        bg = {accent}
+        color = {accent-text}
+
+rules:
+    body:
+        use = (page-base)
+        bg = {page-bg}
+        color = {text-main}
+
+    .screen:
+        min-height = 100vh
+        use = (screen-layout)
+
+    .scoreboard:
+        inline = center
+        gap = {gap}
+        wrap = yes
+
+    .score:
+        use = (badge)
+
+    .status:
+        color = {text-strong}
+
+    .board:
+        display = grid
+        columns = 3 x {cell-size}
+        gap = {gap}
+
+    .cell:
+        use = (cell-button)
+        bg = {cell-surface}
+        text-size = 42px
+
+    .reset:
+        use = (accent-button)
+

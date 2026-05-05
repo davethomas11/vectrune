@@ -24,9 +24,14 @@ app_types:
       - src/builtins/builtin/ws.rs
       - examples/worm_game/worm_game.rune
   - name: Frontend Static Hosting
-    summary: "Static/frontend hosting through `@Frontend` configuration."
+    summary: "Frontend hosting through `@Frontend` configuration."
+    behavior:
+      - "`@Frontend type = static` serves files from the configured `src` path"
+      - "`@Frontend type = rune-web` normalizes `@Page`, `@Style`, and `@Logic` sections and mounts frontend output at the configured frontend path"
+      - "`rune-web` is currently a frontend mode mounted through REST routing, not a separate `@App type`"
     sources:
       - src/apps/rest/mod.rs
+      - src/apps/rune_web/
       - vectrune_docs.rune
   - name: AWS Lambda Packaging/Runtime
     summary: Lambda-aware packaging and runtime entry flow through CLI tooling and Lambda runtime support.

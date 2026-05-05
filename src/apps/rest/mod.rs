@@ -1,6 +1,7 @@
 pub mod ws;
 pub mod swagger;
 
+use crate::apps::rune_web::build_rune_web_router;
 use crate::core::{execute_steps, extract_auth_configs, jwt_auth, AppState};
 use crate::crud_web_fe::create_web_fe_handler;
 use crate::rune_ast::Value;
@@ -153,6 +154,8 @@ pub async fn build_rest_router(state: AppState) -> Router {
                     } else {
                         router = router.nest_service(wpath, service);
                     }
+                } else if frontend_type == "rune-web" {
+                    router = router.merge(build_rune_web_router(state.clone()).await);
                 }
             }
         }

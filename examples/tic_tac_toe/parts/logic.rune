@@ -1,0 +1,42 @@
+@Logic/game
+state:
+    board = ["", "", "", "", "", "", "", "", ""]
+    turn = X
+    winner = ""
+    score = { "X": 0, "O": 0, "draws": 0 }
+    # Each number's bits represent a winning line (e.g., 7 is 000000111)
+    WINS = [7, 56, 448, 73, 146, 292, 273, 84]
+
+derive:
+    status_text from winner:
+        X then "Winner: X"
+        O then "Winner: O"
+        draw then "Draw game"
+        "" then "Turn: {turn}"
+
+func win(board, player):
+    # Syntax: check if player's bitmask 'contains' any winning mask
+    return WINS.any(mask => (board.mask(player) & mask) == mask)
+
+action play(index):
+    stop when winner != "" or board.[index] != ""
+
+    board.[index] = turn
+
+    win board turn:
+        winner = turn
+        score.[turn]++
+        stop
+
+    full board:
+        winner = draw
+        score.draws++
+        stop
+
+    swap turn X O
+
+action reset:
+    board = ["", "", "", "", "", "", "", "", ""]
+    turn = X
+    winner = ""
+

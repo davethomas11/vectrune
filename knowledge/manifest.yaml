@@ -28,6 +28,38 @@ pages:
       - src/rune_parser.rs
       - src/rune_ast.rs
       - src/core/mod.rs
+  - id: language.rune-web-architecture
+    path: language/rune-web-architecture.md
+    kind: page
+    title: Rune-Web Architecture
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/rune_web/
+      - examples/tic_tac_toe/
+      - tests/integration_app.rs
+  - id: language.css-tokens-presets
+    path: language/css-tokens-presets.md
+    kind: page
+    title: CSS Tokens & Presets
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/rune_web/css.rs
+      - examples/tic_tac_toe/parts/style.rune
+  - id: language.javascript-runtime
+    path: language/javascript-runtime.md
+    kind: page
+    title: JavaScript Runtime
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/rune_web/jscodegen.rs
+      - src/apps/rune_web/parser.rs
+      - examples/tic_tac_toe/parts/logic.rune
   - id: runtime.cli
     path: runtime/cli.md
     kind: page

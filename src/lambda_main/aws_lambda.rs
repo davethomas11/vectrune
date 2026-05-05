@@ -76,21 +76,12 @@ pub mod handler {
 }
 
 pub async fn cold_start(rune_path: &str) {
-    use std::fs;
     use std::sync::Arc;
     use crate::core::{extract_schemas, extract_data_sources};
-    use crate::rune_parser::parse_rune;
-    let script_content = match fs::read_to_string(rune_path) {
-        Ok(content) => content,
-        Err(e) => {
-            let _ = RUNE_DOC.set(Err(format!("Failed to read rune file: {}", e)));
-            let _ = ROUTER.set(None);
-            return;
-        }
-    };
-    let doc_result = match parse_rune(&script_content) {
+    use crate::rune_parser::load_rune_document_from_path;
+    let doc_result = match load_rune_document_from_path(std::path::Path::new(rune_path)) {
         Ok(doc) => Ok(Arc::new(doc)),
-        Err(e) => Err(format!("Failed to parse rune file: {:?}", e)),
+        Err(e) => Err(format!("Failed to load rune file: {}", e)),
     };
     let router = if let Ok(ref doc_arc) = doc_result {
         let schemas = Arc::new(extract_schemas(doc_arc));

@@ -1,10 +1,9 @@
 use rune_runtime::cli::{calculate, transform};
-use rune_runtime::rune_parser::parse_rune;
-use std::fs;
+use rune_runtime::rune_parser::load_rune_document_from_path;
+use std::path::Path;
 
 fn load_example(path: &str) -> rune_runtime::rune_ast::RuneDocument {
-    let contents = fs::read_to_string(path).expect("read example");
-    parse_rune(&contents).expect("parse_rune should succeed")
+    load_rune_document_from_path(Path::new(path)).expect("load_rune_document_from_path should succeed")
 }
 
 #[test]

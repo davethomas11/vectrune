@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tic Tac Toe</title>
+  <style>
+    :root {
+      --page-bg: #0f172a;
+      --surface: #334155;
+      --cell-surface: #475569;
+      --text-main: #cbd5e1;
+      --text-strong: #f8fafc;
+      --accent: #15803d;
+      --accent-text: #f0fdf4;
+      --gap: 12px;
+      --cell-size: 96px;
+      --card-round: 16px;
+      --pill: 999px;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui;
+      background: var(--page-bg);
+      color: var(--text-main);
+    }
+    .screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .scoreboard {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--gap);
+      flex-wrap: wrap;
+    }
+    .score {
+      background: var(--surface);
+      color: var(--text-strong);
+      padding: 8px 12px;
+      border-radius: var(--pill);
+    }
+    .status {
+      color: var(--text-strong);
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, var(--cell-size));
+      gap: var(--gap);
+    }
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      border-radius: var(--card-round);
+      border: 0;
+      background: var(--cell-surface);
+      color: var(--text-strong);
+      font-size: 42px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .reset {
+      padding: 10px 16px;
+      border-radius: var(--pill);
+      border: 0;
+      background: var(--accent);
+      color: var(--accent-text);
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main class="screen">
+    <h1>Tic Tac Toe</h1>
+    <p class="status" id="status">Turn: X</p>
+
+    <div class="scoreboard">
+      <span class="score" id="score-x">X 0</span>
+      <span class="score" id="score-o">O 0</span>
+      <span class="score" id="score-draws">Draws 0</span>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <button class="reset" id="reset">Play Again</button>
+  </main>
+
+  <script>
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const scoreXEl = document.getElementById('score-x');
+    const scoreOEl = document.getElementById('score-o');
+    const scoreDrawsEl = document.getElementById('score-draws');
+    const resetEl = document.getElementById('reset');
+
+    const state = {
+      board: ['', '', '', '', '', '', '', '', ''],
+      turn: 'X',
+      winner: '',
+      score: { X: 0, O: 0, draws: 0 }
+    };
+
+    const lines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6]
+    ];
+
+    function full(board) {
+      return board.every(Boolean);
+    }
+
+    function win(board, player) {
+      return lines.some(([a, b, c]) => board[a] === player && board[b] === player && board[c] === player);
+    }
+
+    function render() {
+      boardEl.innerHTML = '';
+      state.board.forEach((cell, index) => {
+        const button = document.createElement('button');
+        button.className = 'cell';
+        button.textContent = cell;
+        button.addEventListener('click', () => play(index));
+        boardEl.appendChild(button);
+      });
+
+      if (state.winner === 'X') statusEl.textContent = 'Winner: X';
+      else if (state.winner === 'O') statusEl.textContent = 'Winner: O';
+      else if (state.winner === 'draw') statusEl.textContent = 'Draw game';
+      else statusEl.textContent = `Turn: ${state.turn}`;
+
+      scoreXEl.textContent = `X ${state.score.X}`;
+      scoreOEl.textContent = `O ${state.score.O}`;
+      scoreDrawsEl.textContent = `Draws ${state.score.draws}`;
+    }
+
+    function play(index) {
+      if (state.winner) return;
+      if (state.board[index]) return;
+
+      state.board[index] = state.turn;
+
+      if (win(state.board, state.turn)) {
+        state.winner = state.turn;
+        state.score[state.turn] += 1;
+        render();
+        return;
+      }
+
+      if (full(state.board)) {
+        state.winner = 'draw';
+        state.score.draws += 1;
+        render();
+        return;
+      }
+
+      state.turn = state.turn === 'X' ? 'O' : 'X';
+      render();
+    }
+
+    function reset() {
+      state.board = ['', '', '', '', '', '', '', '', ''];
+      state.turn = 'X';
+      state.winner = '';
+      render();
+    }
+
+    resetEl.addEventListener('click', reset);
+    render();
+  </script>
+</body>
+</html>
+
+
+

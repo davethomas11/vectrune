@@ -26,6 +26,17 @@ Current top-level flags include:
 - `--host` — override app host for server runtimes
 - `-p`, `--port` — override app port for server runtimes
 
+## Rune file loading behavior
+
+For Rune input, the CLI now performs an import-aware pre-parse load step.
+
+Current behavior:
+- a script path may point to a single `.rune` file or a directory of `.rune` files
+- top-level `import "..."` declarations inside Rune files are resolved before parsing
+- imported directories load direct child `.rune` files in sorted filename order
+- imports are resolved relative to the importing file
+- when sections overlap, imported content is merged first and the importing file is merged after it
+
 ## Output formats
 
 The current CLI parser advertises these output format values:

@@ -86,9 +86,10 @@ builtins:
       - src/builtins/builtin/data_source.rs
   - name: load-rune
     category: io
-    summary: Load another Rune document and optionally transform its output.
+    summary: Load another Rune document or directory of Rune files, resolving top-level imports before parsing.
     sources:
       - src/builtins.rs
+      - src/rune_parser.rs
   - name: memory.set
     aliases:
       - set-memory

@@ -86,3 +86,4 @@ Once the starter set is stable, likely next candidates are:
 - memory-oriented REST examples
 - auth examples
 - datasource examples
+- the multi-file `examples/tic_tac_toe/` rune-web proposal for teaching imports and frontend-oriented sections

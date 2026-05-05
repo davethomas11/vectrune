@@ -121,4 +121,70 @@ run:
     }
 }
 
+#[test]
+fn preserves_placeholder_braces_in_series_items() {
+    let section = first_section(
+        r#"@Page/demo
+view:
+    main:
+        p "Turn: {turn}"
+        button click=play(index) "{cell}"
+"#,
+    );
+
+    let view = section.series.get("view").expect("expected view series");
+    let main_block = match view.first() {
+        Some(Value::Map(map)) => map.get("main").expect("expected main block"),
+        other => panic!("expected first view item to be a map, got {other:?}"),
+    };
+
+    let items = match main_block {
+        Value::List(items) => items,
+        other => panic!("expected main block to contain a list, got {other:?}"),
+    };
+
+    assert_eq!(items.len(), 2, "expected both child items to remain separate");
+    assert_eq!(items[0].to_json(), json!("p \"Turn: {turn}\""));
+    assert_eq!(items[1].to_json(), json!("button click=play(index) \"{cell}\""));
+}
+
+#[test]
+fn preserves_token_style_braces_and_following_sections() {
+    let doc = parse_rune(
+        r#"@Page/demo
+view:
+    div .board:
+        button .cell "{cell}"
+
+@Style/game
+rules:
+    .cell:
+        bg = {surface}
+        color = {text}
+"#,
+    )
+    .expect("parse_rune should succeed");
+
+    assert_eq!(doc.sections.len(), 2, "expected Page and Style sections");
+    assert_eq!(doc.sections[0].path, vec!["Page".to_string(), "demo".to_string()]);
+    assert_eq!(doc.sections[1].path, vec!["Style".to_string(), "game".to_string()]);
+
+    let style_rules = doc.sections[1]
+        .series
+        .get("rules")
+        .expect("expected rules series");
+    let cell_block = match style_rules.first() {
+        Some(Value::Map(map)) => map.get(".cell").expect("expected .cell rule block"),
+        other => panic!("expected first rules item to be a map, got {other:?}"),
+    };
+    let items = match cell_block {
+        Value::List(items) => items,
+        other => panic!("expected .cell rule block to contain a list, got {other:?}"),
+    };
+
+    assert_eq!(items.len(), 2, "expected both style declarations");
+    assert_eq!(items[0].to_json(), json!("bg = {surface}"));
+    assert_eq!(items[1].to_json(), json!("color = {text}"));
+}
+
 

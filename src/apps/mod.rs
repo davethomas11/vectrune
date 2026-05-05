@@ -1,5 +1,6 @@
 pub mod graphql;
 pub mod rest;
+pub mod rune_web;
 
 use self::graphql::build_graphql_router;
 use self::rest::build_rest_router;

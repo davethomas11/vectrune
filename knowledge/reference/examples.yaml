@@ -183,6 +183,35 @@ examples:
       - Player colors rotate through a fixed palette as new worms join.
       - Worm length grows when food is eaten and is capped at 10.
       - Player data is cleaned up from state when they disconnect using the `delete` builtin.
+  - id: example.frontend.tic-tac-toe-proposal
+    title: Tic Tac Toe Frontend Proposal
+    summary: Proposed rune-web example showing multi-file frontend authoring with imports, page structure, reusable style tokens and presets, and client logic blocks.
+    source_path: examples/tic_tac_toe/tic_tac_toe.rune
+    companion_files:
+      - examples/tic_tac_toe/parts/style.rune
+      - examples/tic_tac_toe/parts/logic.rune
+      - examples/tic_tac_toe/preview.html
+    app_type: REST
+    concepts:
+      - frontend rune-web proposal
+      - import declarations
+      - page sections
+      - style tokens
+      - style presets
+      - logic actions
+      - multi-file rune composition
+    builtins: [ ]
+    runtime_context: [ ]
+    cli_workflows:
+      - vectrune examples/tic_tac_toe/ -o json
+    related_knowledge:
+      - language.core
+      - runtime.cli
+      - reference.app-types
+    status: emerging
+    notes:
+      - Demonstrates importing a directory of `.rune` files before parsing the root document.
+      - Style and logic sections are split into companion files under `examples/tic_tac_toe/parts/`.
 notes:
   - Prefer examples already backed by tests or central README workflows.
   - Add auth, datasource, and memory API examples once their reference pages are added.

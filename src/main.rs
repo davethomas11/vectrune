@@ -13,7 +13,7 @@ mod util;
 
 use crate::core::{extract_data_sources, extract_schemas, get_app_type};
 use crate::rune_ast::{RuneDocument, Value};
-use crate::rune_parser::parse_rune;
+use crate::rune_parser::{load_rune_document_from_path, load_rune_document_from_str_with_base};
 use crate::util::{api_doc, json_to_xml, log, set_log_level, LogLevel};
 use axum::serve;
 use clap::{Arg, Command};
@@ -362,7 +362,7 @@ async fn main() -> anyhow::Result<()> {
     let mut doc: Option<RuneDocument> = None;
 
     fn parse_content(
-        _path: &str,
+        path: &str,
         content: &str,
         input_format: Option<&str>,
     ) -> anyhow::Result<RuneDocument> {
@@ -373,7 +373,11 @@ async fn main() -> anyhow::Result<()> {
             }
             Some("xml") => RuneDocument::from_xml(content).map_err(|e| anyhow::anyhow!(e)),
             Some("yaml") => RuneDocument::from_yaml(content).map_err(|e| anyhow::anyhow!(e)),
-            _ => parse_rune(content).map_err(|e| anyhow::anyhow!(e)),
+            _ => {
+                let base_dir = std::env::current_dir()?;
+                load_rune_document_from_str_with_base(content, &base_dir, path)
+                    .map_err(|e| anyhow::anyhow!(e))
+            }
         }
     }
 
@@ -396,19 +400,12 @@ async fn main() -> anyhow::Result<()> {
             }
         } else {
             let path = std::path::Path::new(path_str);
-            if path.is_dir() {
-                for entry in fs::read_dir(path)? {
-                    let entry = entry?;
-                    let p = entry.path();
-                    if p.extension().and_then(|s| s.to_str()) == Some("rune") {
-                        let content = fs::read_to_string(&p)?;
-                        let file_doc = parse_content(p.to_str().unwrap(), &content, input_format)?;
-                        if let Some(ref mut d) = doc {
-                            d.merge(file_doc);
-                        } else {
-                            doc = Some(file_doc);
-                        }
-                    }
+            if input_format.is_none() && (path.is_dir() || path.extension().and_then(|s| s.to_str()) == Some("rune")) {
+                let file_doc = load_rune_document_from_path(path).map_err(|e| anyhow::anyhow!(e))?;
+                if let Some(ref mut d) = doc {
+                    d.merge(file_doc);
+                } else {
+                    doc = Some(file_doc);
                 }
             } else {
                 let content = fs::read_to_string(path).unwrap_or_else(|err| {
