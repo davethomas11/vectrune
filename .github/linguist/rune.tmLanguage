@@ -8,77 +8,249 @@
 	</array>
 	<key>name</key>
 	<string>Vectrune</string>
-	<key>patterns</key>
-	<array>
-		<dict>
-			<key>comment</key>
-			<string>Comment</string>
-			<key>match</key>
-			<string>#.*$</string>
-			<key>name</key>
-			<string>comment.line.rune</string>
-		</dict>
-		<dict>
-			<key>comment</key>
-			<string>Section header like @App, @Route, @Page, @Logic, @Style</string>
-			<key>match</key>
-			<string>^@[A-Za-z]+(?:/[A-Za-z0-9_-]+)?</string>
-			<key>name</key>
-			<string>entity.name.tag.rune</string>
-		</dict>
-		<dict>
-			<key>comment</key>
-			<string>String literals</string>
-			<key>match</key>
-			<string>"(?:\\.|[^"\\])*"</string>
-			<key>name</key>
-			<string>string.quoted.double.rune</string>
-		</dict>
-		<dict>
-			<key>comment</key>
-			<string>Keywords: if, then, else, for, in, return, stop, action, func, derive</string>
-			<key>match</key>
-			<string>\b(if|then|else|for|in|return|stop|action|func|derive|from|use|state|view|style|logic|path|run|respond)\b</key>
-			<key>name</key>
-			<string>keyword.control.rune</string>
-		</dict>
-		<dict>
-			<key>comment</key>
-			<string>Numbers</string>
-			<key>match</key>
-			<string>\b-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?\b</string>
-			<key>name</key>
-			<string>constant.numeric.rune</string>
-		</dict>
-		<dict>
-			<key>comment</key>
-			<string>Boolean and null literals</string>
-			<key>match</key>
-			<string>\b(true|false|null)\b</string>
-			<key>name</key>
-			<string>constant.language.rune</string>
-		</dict>
-		<dict>
-			<key>comment</key>
-			<string>Template interpolation {variable}</string>
-			<key>match</key>
-			<string>\{[^}]+\}</string>
-			<key>name</key>
-			<string>variable.language.rune</string>
-		</dict>
-		<dict>
-			<key>comment</key>
-			<string>Operators</string>
-			<key>match</key>
-			<string>(=|!=|==|\+|-|\*|/|&amp;|\||\?|:)</string>
-			<key>name</key>
-			<string>keyword.operator.rune</string>
-		</dict>
-	</array>
 	<key>scopeName</key>
 	<string>source.rune</string>
 	<key>uuid</key>
 	<string>D8D5E82E-3D5B-46B5-B38E-8C841C21347D</string>
+	<key>patterns</key>
+	<array>
+		<dict><key>include</key><string>#shebang</string></dict>
+		<dict><key>include</key><string>#comment</string></dict>
+		<dict><key>include</key><string>#import</string></dict>
+		<dict><key>include</key><string>#section</string></dict>
+		<dict><key>include</key><string>#block-keyword</string></dict>
+		<dict><key>include</key><string>#action-def</string></dict>
+		<dict><key>include</key><string>#func-def</string></dict>
+		<dict><key>include</key><string>#record-entry</string></dict>
+		<dict><key>include</key><string>#record-marker</string></dict>
+		<dict><key>include</key><string>#css-selector</string></dict>
+		<dict><key>include</key><string>#keyword</string></dict>
+		<dict><key>include</key><string>#builtin</string></dict>
+		<dict><key>include</key><string>#string</string></dict>
+		<dict><key>include</key><string>#template-interpolation</string></dict>
+		<dict><key>include</key><string>#constant</string></dict>
+		<dict><key>include</key><string>#number</string></dict>
+		<dict><key>include</key><string>#operator</string></dict>
+		<dict><key>include</key><string>#path-placeholder</string></dict>
+	</array>
+	<key>repository</key>
+	<dict>
+
+		<!-- #!RUNE shebang -->
+		<key>shebang</key>
+		<dict>
+			<key>match</key>
+			<string>^#!RUNE\b.*$</string>
+			<key>name</key>
+			<string>comment.line.shebang.rune</string>
+		</dict>
+
+		<!-- # comment -->
+		<key>comment</key>
+		<dict>
+			<key>match</key>
+			<string>#(?!!).*$</string>
+			<key>name</key>
+			<string>comment.line.number-sign.rune</string>
+		</dict>
+
+		<!-- import "parts" -->
+		<key>import</key>
+		<dict>
+			<key>match</key>
+			<string>^(import)\s+("(?:[^"\\]|\\.)*")</string>
+			<key>captures</key>
+			<dict>
+				<key>1</key><dict><key>name</key><string>keyword.control.import.rune</string></dict>
+				<key>2</key><dict><key>name</key><string>string.quoted.double.rune</string></dict>
+			</dict>
+		</dict>
+
+		<!--
+			@Section         e.g. @App, @Frontend
+			@Section/id      e.g. @Page/home, @Logic/game, @Style/game
+			@Section/VERB /path  e.g. @Route/GET /users/{id}, @Schema/User
+		-->
+		<key>section</key>
+		<dict>
+			<key>match</key>
+			<string>^(@)([A-Za-z][A-Za-z0-9]*)(?:(/)([A-Za-z0-9_-]+)(?:\s+(.+))?)?</string>
+			<key>captures</key>
+			<dict>
+				<key>1</key><dict><key>name</key><string>punctuation.definition.section.rune</string></dict>
+				<key>2</key><dict><key>name</key><string>entity.name.section.type.rune</string></dict>
+				<key>3</key><dict><key>name</key><string>punctuation.separator.section.rune</string></dict>
+				<key>4</key><dict><key>name</key><string>entity.name.section.id.rune</string></dict>
+				<key>5</key><dict><key>name</key><string>entity.name.section.qualifier.rune</string></dict>
+			</dict>
+		</dict>
+
+		<!-- block-opening labels: run:  state:  view:  derive:  tokens:  presets:  rules: -->
+		<key>block-keyword</key>
+		<dict>
+			<key>match</key>
+			<string>^\s*(run|state|view|derive|tokens|presets|rules)\s*:$</string>
+			<key>captures</key>
+			<dict>
+				<key>1</key><dict><key>name</key><string>keyword.other.block.rune</string></dict>
+			</dict>
+		</dict>
+
+		<!-- action play(index): -->
+		<key>action-def</key>
+		<dict>
+			<key>match</key>
+			<string>^\s*(action)\s+([A-Za-z_][A-Za-z0-9_-]*)(\s*\([^)]*\))?\s*:?\s*$</string>
+			<key>captures</key>
+			<dict>
+				<key>1</key><dict><key>name</key><string>keyword.declaration.action.rune</string></dict>
+				<key>2</key><dict><key>name</key><string>entity.name.function.action.rune</string></dict>
+				<key>3</key><dict><key>name</key><string>meta.parameters.rune</string></dict>
+			</dict>
+		</dict>
+
+		<!-- func win(board, player): -->
+		<key>func-def</key>
+		<dict>
+			<key>match</key>
+			<string>^\s*(func)\s+([A-Za-z_][A-Za-z0-9_-]*)(\s*\([^)]*\))?\s*:?\s*$</string>
+			<key>captures</key>
+			<dict>
+				<key>1</key><dict><key>name</key><string>keyword.declaration.function.rune</string></dict>
+				<key>2</key><dict><key>name</key><string>entity.name.function.rune</string></dict>
+				<key>3</key><dict><key>name</key><string>meta.parameters.rune</string></dict>
+			</dict>
+		</dict>
+
+		<!--
+			key = value  — all key/value assignments:
+			  name = Tony Hawk
+			  board.[index] = turn
+			  score.[turn]++  (handled by operator)
+		-->
+		<key>record-entry</key>
+		<dict>
+			<key>match</key>
+			<string>^\s*([A-Za-z_][A-Za-z0-9_.:\[\]-]*)\s*(=)(?!=)</string>
+			<key>captures</key>
+			<dict>
+				<key>1</key><dict><key>name</key><string>variable.other.property.rune</string></dict>
+				<key>2</key><dict><key>name</key><string>keyword.operator.assignment.rune</string></dict>
+			</dict>
+		</dict>
+
+		<!-- + record entry marker (multi-record sections like @Skateboarder) -->
+		<key>record-marker</key>
+		<dict>
+			<key>match</key>
+			<string>^\s*(\+)\s</string>
+			<key>captures</key>
+			<dict>
+				<key>1</key><dict><key>name</key><string>punctuation.definition.record.rune</string></dict>
+			</dict>
+		</dict>
+
+		<!-- CSS-style selectors in @Style rules block: .board: body: -->
+		<key>css-selector</key>
+		<dict>
+			<key>match</key>
+			<string>^\s*(\.?[A-Za-z][A-Za-z0-9_-]*)\s*:\s*$</string>
+			<key>captures</key>
+			<dict>
+				<key>1</key><dict><key>name</key><string>entity.name.selector.rune</string></dict>
+			</dict>
+		</dict>
+
+		<!-- Control flow and logic keywords -->
+		<key>keyword</key>
+		<dict>
+			<key>match</key>
+			<string>\b(if|else|then|for|in|return|stop|when|from|use|swap|full|or|and|not)\b</string>
+			<key>name</key>
+			<string>keyword.control.rune</string>
+		</dict>
+
+		<!-- Built-in functions and commands -->
+		<key>builtin</key>
+		<dict>
+			<key>match</key>
+			<string>\b(respond|log|validate|parse-json|csv\.read|csv\.write|csv\.append)\b</string>
+			<key>name</key>
+			<string>support.function.builtin.rune</string>
+		</dict>
+
+		<!-- "double-quoted string" with interpolation inside -->
+		<key>string</key>
+		<dict>
+			<key>begin</key>
+			<string>"</string>
+			<key>end</key>
+			<string>"</string>
+			<key>name</key>
+			<string>string.quoted.double.rune</string>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>match</key>
+					<string>\{[A-Za-z_][A-Za-z0-9_.:\[\]-]*\}</string>
+					<key>name</key>
+					<string>variable.other.interpolated.rune</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\\.</string>
+					<key>name</key>
+					<string>constant.character.escape.rune</string>
+				</dict>
+			</array>
+		</dict>
+
+		<!-- {variable} interpolation outside strings (view templates, derive values) -->
+		<key>template-interpolation</key>
+		<dict>
+			<key>match</key>
+			<string>\{[A-Za-z_][A-Za-z0-9_.:\[\]-]*\}</string>
+			<key>name</key>
+			<string>variable.other.interpolated.rune</string>
+		</dict>
+
+		<!-- true false null draw -->
+		<key>constant</key>
+		<dict>
+			<key>match</key>
+			<string>\b(true|false|null|draw)\b</string>
+			<key>name</key>
+			<string>constant.language.rune</string>
+		</dict>
+
+		<!-- 0  42  3.14  -1 -->
+		<key>number</key>
+		<dict>
+			<key>match</key>
+			<string>\b-?(0|[1-9][0-9]*)(\.[0-9]+)?\b</string>
+			<key>name</key>
+			<string>constant.numeric.rune</string>
+		</dict>
+
+		<!-- == != &lt;- =&gt; ++ -- + - * / & | -->
+		<key>operator</key>
+		<dict>
+			<key>match</key>
+			<string>(==|!=|&lt;-|=&gt;|&lt;=|&gt;=|\+\+|--|\+|-|\*|/|&amp;|\|)</string>
+			<key>name</key>
+			<string>keyword.operator.rune</string>
+		</dict>
+
+		<!-- %ROOT%  %PLACEHOLDER% path tokens -->
+		<key>path-placeholder</key>
+		<dict>
+			<key>match</key>
+			<string>%[A-Z_]+%</string>
+			<key>name</key>
+			<string>constant.other.placeholder.rune</string>
+		</dict>
+
+	</dict>
 </dict>
 </plist>
 
