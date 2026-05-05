@@ -1,3 +1,4 @@
-*.rune linguist-language=Rune linguist-detectable=true
+*.rune linguist-language=Vectrune linguist-detectable=true
+*.rune diff=vectrune
 
 

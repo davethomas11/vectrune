@@ -1,0 +1,21 @@
+{
+  "comments": {
+    "lineComment": "#"
+  },
+  "brackets": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"]
+  ],
+  "autoClosingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    ["\"", "\""]
+  ],
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*(if|else|for|action|func|derive|state|view|style|logic)\\b.*:$",
+    "decreaseIndentPattern": "^\\s*$"
+  }
+}
+

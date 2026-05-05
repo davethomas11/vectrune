@@ -7,7 +7,7 @@
 		<string>rune</string>
 	</array>
 	<key>name</key>
-	<string>Rune</string>
+	<string>Vectrune</string>
 	<key>patterns</key>
 	<array>
 		<dict>
