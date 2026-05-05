@@ -1,5 +1,6 @@
 # Rust/Cargo
 /target/
+/target_knowledge_export/
 **/*.rs.bk
 Cargo.lock
 
@@ -38,3 +39,6 @@ out/
 dist/
 
 testdata/
+
+# Local Copilot machine-specific overrides
+.github/copilot-local.md

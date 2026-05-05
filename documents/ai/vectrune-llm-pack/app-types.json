@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "status": "starter",
+  "app_types": [
+    {
+      "name": "REST",
+      "summary": "HTTP application mode for route-oriented APIs and optional Swagger output."
+    },
+    {
+      "name": "GraphQL",
+      "summary": "GraphQL application mode."
+    },
+    {
+      "name": "WebSocket",
+      "summary": "Real-time websocket handling through dedicated sections and websocket builtins."
+    },
+    {
+      "name": "Frontend Static Hosting",
+      "summary": "Static/frontend hosting through `@Frontend` configuration."
+    },
+    {
+      "name": "AWS Lambda Packaging/Runtime",
+      "summary": "Lambda-aware packaging and runtime entry flow through CLI tooling and Lambda runtime support."
+    }
+  ]
+}

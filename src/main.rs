@@ -39,8 +39,9 @@ async fn main() -> anyhow::Result<()> {
         .about("Vectrune: Structured data in motion.")
         .arg(
             Arg::new("SCRIPT")
-                .help("Path to the .rune script, or '-' to read from STDIN")
-                .index(1)
+                .help("Path to the .rune script, directory, or '-' to read from STDIN")
+                .num_args(1..)
+                .action(clap::ArgAction::Append)
                 .conflicts_with("ai"),
         )
         .arg(
@@ -237,6 +238,22 @@ async fn main() -> anyhow::Result<()> {
                         .value_parser(["debug", "info", "warn", "error"]),
                 )
         )
+        .subcommand(
+            Command::new("knowledge")
+                .about("Knowledge-source tooling for docs and AI exports")
+                .subcommand_required(true)
+                .subcommand(
+                    Command::new("export")
+                        .about("Regenerate docs and AI export artifacts from knowledge/")
+                        .arg(
+                            Arg::new("root")
+                                .long("root")
+                                .num_args(1)
+                                .value_name("PATH")
+                                .help("Workspace root containing knowledge/, language/docs/, and documents/ai/"),
+                        ),
+                ),
+        )
         .get_matches();
 
     let log_level = matches
@@ -309,6 +326,11 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if let Some(("knowledge", knowledge_matches)) = matches.subcommand() {
+        cli::handle_knowledge(knowledge_matches)?;
+        return Ok(());
+    }
+
     // Use gemini-1.5-flash for free google access, but allow override for users with local models or Ollama Pro
     // Requires Google AI key set as environment variable GEMINI_API_KEY
     let model = matches.get_one::<String>("ml").map(|s| s.as_str());
@@ -326,81 +348,84 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let script_path = match matches.get_one::<String>("SCRIPT") {
-        Some(path) => path.as_str(),
+    let script_paths: Vec<&str> = match matches.get_many::<String>("SCRIPT") {
+        Some(paths) => paths.map(|s| s.as_str()).collect(),
         None => {
             log(
                 LogLevel::Error,
-                "No Vectrune script provided. Pass a .rune file or '-' for STDIN.",
+                "No Vectrune script provided. Pass a .rune file, directory, or '-' for STDIN.",
             );
             process::exit(1);
         }
     };
 
-    let script_content = if script_path == "-" {
-        use std::io::Read;
-        let mut buf = String::new();
-        std::io::stdin()
-            .read_to_string(&mut buf)
-            .unwrap_or_else(|err| {
+    let mut doc: Option<RuneDocument> = None;
+
+    fn parse_content(
+        _path: &str,
+        content: &str,
+        input_format: Option<&str>,
+    ) -> anyhow::Result<RuneDocument> {
+        match input_format {
+            Some("json") => {
+                let json_value: serde_json::Value = serde_json::from_str(content)?;
+                Ok(RuneDocument::from_json(&json_value))
+            }
+            Some("xml") => RuneDocument::from_xml(content).map_err(|e| anyhow::anyhow!(e)),
+            Some("yaml") => RuneDocument::from_yaml(content).map_err(|e| anyhow::anyhow!(e)),
+            _ => parse_rune(content).map_err(|e| anyhow::anyhow!(e)),
+        }
+    }
+
+    for path_str in &script_paths {
+        if *path_str == "-" {
+            use std::io::Read;
+            let mut buf = String::new();
+            std::io::stdin().read_to_string(&mut buf).unwrap_or_else(|err| {
                 log(
                     LogLevel::Error,
                     &format!("Error reading script from STDIN: {}", err),
                 );
                 process::exit(1);
             });
-        buf
-    } else {
-        fs::read_to_string(script_path).unwrap_or_else(|err| {
-            log(LogLevel::Error, &format!("Error reading script: {}", err));
-            process::exit(1);
-        })
-    };
-
-    let mut doc: RuneDocument = match input_format {
-        Some("json") => {
-            // Convert JSON input to Rune format
-            let json_value: serde_json::Value = serde_json::from_str(&script_content)
-                .unwrap_or_else(|err| {
-                    log(
-                        LogLevel::Error,
-                        &format!("Error parsing JSON input: {}", err),
-                    );
+            let stdin_doc = parse_content("-", &buf, input_format)?;
+            if let Some(ref mut d) = doc {
+                d.merge(stdin_doc);
+            } else {
+                doc = Some(stdin_doc);
+            }
+        } else {
+            let path = std::path::Path::new(path_str);
+            if path.is_dir() {
+                for entry in fs::read_dir(path)? {
+                    let entry = entry?;
+                    let p = entry.path();
+                    if p.extension().and_then(|s| s.to_str()) == Some("rune") {
+                        let content = fs::read_to_string(&p)?;
+                        let file_doc = parse_content(p.to_str().unwrap(), &content, input_format)?;
+                        if let Some(ref mut d) = doc {
+                            d.merge(file_doc);
+                        } else {
+                            doc = Some(file_doc);
+                        }
+                    }
+                }
+            } else {
+                let content = fs::read_to_string(path).unwrap_or_else(|err| {
+                    log(LogLevel::Error, &format!("Error reading script {}: {}", path_str, err));
                     process::exit(1);
                 });
-            RuneDocument::from_json(&json_value)
+                let file_doc = parse_content(path_str, &content, input_format)?;
+                if let Some(ref mut d) = doc {
+                    d.merge(file_doc);
+                } else {
+                    doc = Some(file_doc);
+                }
+            }
         }
-        Some("xml") => match RuneDocument::from_xml(&script_content) {
-            Ok(doc) => doc,
-            Err(err) => {
-                log(
-                    LogLevel::Error,
-                    &format!("Error parsing XML input: {}", err),
-                );
-                process::exit(1);
-            }
-        },
-        Some("yaml") => match RuneDocument::from_yaml(&script_content) {
-            Ok(doc) => doc,
-            Err(err) => {
-                log(
-                    LogLevel::Error,
-                    &format!("Error parsing YAML input: {}", err),
-                );
-                process::exit(1);
-            }
-        },
-        _ => match parse_rune(&script_content) {
-            Ok(doc) => doc,
-            Err(err) => {
-                log(
-                    LogLevel::Error,
-                    &format!("Error parsing Vectrune script: {}", err),
-                );
-                process::exit(1);
-            }
-        },
-    };
+    }
+
+    let mut doc = doc.ok_or_else(|| anyhow::anyhow!("No documents loaded."))?;
 
     // Calculation mode
     if let Some(expr) = calc_expr {
@@ -558,13 +583,17 @@ async fn main() -> anyhow::Result<()> {
         log(LogLevel::Info, "Press Ctrl+C to stop the server.");
         log(LogLevel::Debug, &format!("Config: \n{}", api_doc(&doc)));
 
-        let rune_dir = if script_path == "-" {
+        let rune_dir = if script_paths.contains(&"-") {
             env::current_dir()?
         } else {
-            std::path::Path::new(script_path)
-                .parent()
-                .map(|p| p.to_path_buf())
-                .unwrap_or_else(|| std::env::current_dir().unwrap())
+            let p = std::path::Path::new(script_paths[0]);
+            if p.is_dir() {
+                p.to_path_buf()
+            } else {
+                p.parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+            }
         };
 
         let schemas = std::sync::Arc::new(extract_schemas(&doc));

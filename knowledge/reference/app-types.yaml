@@ -1,0 +1,40 @@
+version: 1
+status: starter
+app_types:
+  - name: REST
+    summary: HTTP application mode for route-oriented APIs and optional Swagger output.
+    sources:
+      - src/apps/rest/
+      - examples/user_api.rune
+  - name: GraphQL
+    summary: GraphQL application mode.
+    sources:
+      - src/apps/graphql/
+      - examples/book_graphql.rune
+  - name: WebSocket
+    summary: Real-time websocket handling through dedicated sections and websocket builtins.
+    behavior:
+      - "@Websocket /path defines on_connect, on_disconnect, and on_message handlers"
+      - "@Event /path /event-type defines JSON-based event handlers (checks message.type field)"
+      - "ws.id builtin retrieves the connection UUID"
+      - "ws.broadcast /path message sends to all connections on that path"
+      - "ws.send /path connection_id message sends to a specific connection; the connection id may be passed directly or via a context variable"
+    sources:
+      - src/apps/rest/ws.rs
+      - src/builtins/builtin/ws.rs
+      - examples/worm_game/worm_game.rune
+  - name: Frontend Static Hosting
+    summary: "Static/frontend hosting through `@Frontend` configuration."
+    sources:
+      - src/apps/rest/mod.rs
+      - vectrune_docs.rune
+  - name: AWS Lambda Packaging/Runtime
+    summary: Lambda-aware packaging and runtime entry flow through CLI tooling and Lambda runtime support.
+    sources:
+      - src/main.rs
+      - src/lambda_main.rs
+      - src/lambda_main/
+notes:
+  - The exact section syntax and behavior for each app type should be expanded over time.
+  - Keep this file aligned with examples and runtime implementation.
+  - WebSocket Event handlers are matched by normalizing section paths (e.g., @Event /ws /join becomes ["Event", "ws", "join"])

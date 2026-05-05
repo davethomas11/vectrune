@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 indicatif = "0.17"
 lazy_static = "1.4"
-axum = "0.8.8"
+axum = { version = "0.8.8", features = ["ws"] }
 tokio = { version = "1", features = ["full"] }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
@@ -40,10 +40,12 @@ tar = "0.4"
 flate2 = "1"
 lambda_runtime = "0.11"
 aws_lambda_events = "0.13"
-tower = "0.4"
+tower = { version = "0.5.3", features = ["util"] }
 async-trait = "0.1"
 once_cell = "1.21.4"
 regex = "1.12.3"
+uuid = { version = "1", features = ["v4"] }
+futures = "0.3"
 
 [dev-dependencies]
 tower = { version = "0.5.3", features = ["util"] }

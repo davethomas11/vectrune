@@ -1,0 +1,9 @@
+#!RUNE
+@App
+type = REST
+port = 3005
+swagger = true
+
+@Route/GET /hello
+run:
+    respond 200 "Hello from file 1"

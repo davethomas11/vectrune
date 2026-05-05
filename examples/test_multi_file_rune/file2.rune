@@ -1,0 +1,4 @@
+#!RUNE
+@Route/GET /world
+run:
+    respond 200 "Hello from file 2"

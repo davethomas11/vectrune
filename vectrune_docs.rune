@@ -1,0 +1,11 @@
+#!RUNE
+
+@App
+name = Vectrune Documentation
+type = REST
+version = 1.0
+
+@Frontend
+type = static
+src = language/docs
+path = %ROOT%

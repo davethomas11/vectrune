@@ -1,4 +1,4 @@
-use crate::rune_ast::{Record, RuneDocument, Section, Value};
+use crate::rune_ast::{json_to_ast_value, Record, RuneDocument, Section, Value};
 use std::collections::HashMap;
 
 #[derive(thiserror::Error, Debug)]
@@ -106,11 +106,15 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
 
         if let Some(sec) = current_section.as_mut() {
             // Map block parsing: allowed anywhere, but only if '=' is NOT before '{'
+            // Also check that '{' is not inside quotes
             if line.contains('{') {
                 let eq_idx = line.find('=');
-                let brace_idx = line.find('{');
-                if brace_idx.is_some() && (eq_idx.is_none() || eq_idx.unwrap() > brace_idx.unwrap())
-                {
+                let brace_idx = line.rfind('{').filter(|&idx| !is_char_in_quotes(line, idx));
+                let is_map_block = brace_idx
+                    .map(|idx| eq_idx.is_none() || eq_idx.unwrap() > idx)
+                    .unwrap_or(false);
+
+                if is_map_block {
                     let key = line[..brace_idx.unwrap()].trim().to_string();
                     // Collect map block lines
                     let mut map_lines = Vec::new();
@@ -125,75 +129,45 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                     let map = parse_map_block(&mut map_iter);
                     sec.kv.insert(key, Value::Map(map));
                     continue;
-                } else if brace_idx.is_some()
-                    && eq_idx.is_some()
-                    && eq_idx.unwrap() < brace_idx.unwrap()
-                {
-                    // Handle object assignment (e.g., foo = { ... })
-                    let mut assignment = line.to_string();
-                    while !assignment.trim_end().ends_with('}') {
-                        if let Some(next_line) = lines.next() {
-                            assignment.push_str(next_line.trim_end());
-                        } else {
-                            break;
-                        }
-                    }
-                    // Clean up whitespace and newlines
-                    let cleaned = assignment
-                        .lines()
-                        .map(|l| l.trim())
-                        .filter(|l| !l.is_empty())
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    // Add as a string to the current series if inside a series
-                    if !series_stack.is_empty() {
-                        if let Some((_, path)) = series_stack.last().cloned() {
-                            let mut maybe_list: Option<&mut Vec<Value>> = None;
-                            {
-                                let top_key = &path[0];
-                                if let Some(list) = sec.series.get_mut(top_key) {
-                                    let mut current_list: *mut Vec<Value> = list as *mut _;
-                                    for nested_key in path.iter().skip(1) {
-                                        unsafe {
-                                            if let Some(Value::Map(m)) = (*current_list).last_mut()
-                                            {
-                                                if let Some(Value::List(inner)) =
-                                                    m.get_mut(nested_key)
-                                                {
-                                                    current_list = inner as *mut _;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    unsafe {
-                                        maybe_list = Some(&mut *current_list);
-                                    }
-                                }
-                            }
-                            if let Some(list) = maybe_list {
-                                list.push(Value::String(cleaned));
-                            }
-                        }
-                    } else {
-                        // Otherwise, add as a string to section kv
-                        sec.kv
-                            .insert("statement".to_string(), Value::String(cleaned));
-                    }
+                }
+            }
+
+            // Multiline key: must be at end of line or followed only by whitespace
+            // to avoid matching comparison operators like "if x > 1"
+            if let Some(idx) = line.find('>') {
+                let after_brace = &line[idx + 1..];
+                if after_brace.trim().is_empty() {
+                    let key = line[..idx].trim().to_string();
+                    multiline_key = Some(key);
+                    multiline_buf.clear();
                     continue;
                 }
             }
 
-            if let Some(idx) = line.find('>') {
-                let key = line[..idx].trim().to_string();
-                multiline_key = Some(key);
-                multiline_buf.clear();
-                continue;
-            }
+            // Determine if this line starts a new nested block (ends with : or starts with if/else)
+            let trimmed_line = line.trim_start();
+            let starts_block = trimmed_line.ends_with(':') || (trimmed_line.starts_with("if ") && !trimmed_line.contains('='));
+            let indent = raw.chars().take_while(|c| c.is_whitespace()).count();
 
-            if line.ends_with(':') {
+            // A block start is a NEW series only if it's not indented within an active series
+            // If there's an active series and this line is more indented, it's an ITEM in that series
+            let is_series_declaration = if starts_block && !series_stack.is_empty() {
+                // Check if this indentation is deeper than the current series level
+                let current_series_indent = series_stack.last().map(|(ind, _)| *ind).unwrap_or(0);
+                indent <= current_series_indent
+            } else if starts_block {
+                true
+            } else {
+                false
+            };
+
+            if is_series_declaration {
                 // Start or continue a (possibly nested) series list
-                let key = line[..line.len() - 1].trim().to_string();
-                let indent = raw.chars().take_while(|c| c.is_whitespace()).count();
+                let key = if trimmed_line.ends_with(':') {
+                    trimmed_line[..trimmed_line.len() - 1].trim().to_string()
+                } else {
+                    trimmed_line.trim().to_string()
+                };
 
                 // Pop stack until we find a parent with smaller indent
                 while let Some((parent_indent, _)) = series_stack.last() {
@@ -325,6 +299,64 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 // Determine the indentation of this item line (based on raw to preserve spaces/tabs)
                 let item_indent = raw.chars().take_while(|c| c.is_whitespace()).count();
 
+                // Check if this indented line is itself a block starter (e.g., "if" statement)
+                let trimmed_indented = line.trim_start();
+                let is_indented_block_start = trimmed_indented.ends_with(':') || (trimmed_indented.starts_with("if ") && !trimmed_indented.contains('='));
+
+                if is_indented_block_start {
+                    // This is a nested block starter within the current series
+                    // Pop stack until we find a parent with smaller indent
+                    while let Some((parent_indent, _)) = series_stack.last() {
+                        if item_indent <= *parent_indent {
+                            series_stack.pop();
+                        } else {
+                            break;
+                        }
+                    }
+
+                    if let Some((_, path)) = series_stack.last().cloned() {
+                        let key = if trimmed_indented.ends_with(':') {
+                            trimmed_indented[..trimmed_indented.len() - 1].trim().to_string()
+                        } else {
+                            trimmed_indented.trim().to_string()
+                        };
+
+                        // Find the parent list
+                        let mut maybe_list: Option<&mut Vec<Value>> = None;
+                        {
+                            let top_key = &path[0];
+                            if let Some(list) = sec.series.get_mut(top_key) {
+                                let mut current_list: *mut Vec<Value> = list as *mut _;
+                                for nested_key in path.iter().skip(1) {
+                                    unsafe {
+                                        if let Some(Value::Map(m)) = (*current_list).last_mut() {
+                                            if let Some(Value::List(inner)) = m.get_mut(nested_key) {
+                                                current_list = inner as *mut _;
+                                            }
+                                        }
+                                    }
+                                }
+                                unsafe {
+                                    maybe_list = Some(&mut *current_list);
+                                }
+                            }
+                        }
+
+                        if let Some(parent_list) = maybe_list {
+                            // Push a new map with the nested key -> empty list
+                            let mut nested = HashMap::new();
+                            nested.insert(key.clone(), Value::List(Vec::new()));
+                            parent_list.push(Value::Map(nested));
+
+                            // Extend path and push to stack
+                            let mut new_path = path.clone();
+                            new_path.push(key);
+                            series_stack.push((item_indent, new_path));
+                        }
+                    }
+                    continue;
+                }
+
                 // If indentation decreased or returned to a parent level, move up the stack
                 while let Some((parent_indent, _)) = series_stack.last() {
                     if item_indent <= *parent_indent {
@@ -399,7 +431,21 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 };
                 let mut parts = pline.splitn(2, '=');
                 let key = parts.next().unwrap().trim().to_string();
-                let value_raw = parts.next().unwrap().trim();
+                let mut value_raw = parts.next().unwrap().trim().to_string();
+
+                // Handle multiline or inline object literal { ... }
+                if value_raw.starts_with('{') {
+                    let mut assignment = value_raw;
+                    while !assignment.trim_end().ends_with('}') {
+                        if let Some(next_line) = lines.next() {
+                            assignment.push_str("\n");
+                            assignment.push_str(next_line.trim_end());
+                        } else {
+                            break;
+                        }
+                    }
+                    value_raw = assignment;
+                }
 
                 let value = if value_raw.starts_with('(') && value_raw.ends_with(')') {
                     let inner = &value_raw[1..value_raw.len() - 1];
@@ -418,6 +464,12 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                         })
                         .collect();
                     Value::List(items)
+                } else if value_raw.starts_with('{') && value_raw.ends_with('}') {
+                    // Simple JSON object parsing for KV
+                    match serde_json::from_str::<serde_json::Value>(&value_raw) {
+                        Ok(v) => json_to_ast_value(&v),
+                        Err(_) => Value::String(value_raw),
+                    }
                 } else if value_raw == "true" {
                     Value::Bool(true)
                 } else if value_raw == "false" {
@@ -538,3 +590,17 @@ pub fn parse_rune_line(line: &str) -> Result<ParsedLine, ParseError> {
     // Raw line
     Ok(ParsedLine::Raw(line.to_string()))
 }
+
+fn is_char_in_quotes(s: &str, target_idx: usize) -> bool {
+    let mut in_quotes = false;
+    for (i, ch) in s.chars().enumerate() {
+        if i >= target_idx {
+            break;
+        }
+        if ch == '"' {
+            in_quotes = !in_quotes;
+        }
+    }
+    in_quotes
+}
+

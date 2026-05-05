@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vectrune Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+        }
+        #sidebar {
+            width: 280px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-right: 1px solid #e0e0e0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            height: 100vh;
+            overflow-y: auto;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        #sidebar h1 {
+            font-size: 1.8em;
+            margin-top: 0;
+            color: #0050e3; /* Vectrune primary color suggestion */
+            border-bottom: 2px solid #0050e3;
+            padding-bottom: 10px;
+        }
+        #sidebar h2 {
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        #sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #sidebar li {
+            margin-bottom: 8px;
+        }
+        #sidebar a {
+            text-decoration: none;
+            color: #333;
+            display: block;
+            padding: 5px 0;
+            transition: color 0.3s ease;
+        }
+        #sidebar a:hover, #sidebar a.active {
+            color: #0050e3;
+            font-weight: 500;
+        }
+        #sidebar .search-container {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        #sidebar input[type="text"] {
+            width: calc(100% - 10px);
+            padding: 8px 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        #content {
+            margin-left: 300px; /* Sidebar width + padding */
+            padding: 30px;
+            width: calc(100% - 300px);
+            box-sizing: border-box;
+        }
+        #content h1 {
+            font-size: 2.5em;
+            color: #0050e3;
+            margin-top: 0;
+            border-bottom: 3px solid #0050e3;
+            padding-bottom: 15px;
+        }
+        #content h2 {
+            font-size: 1.8em;
+            color: #0050e3;
+            margin-top: 30px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        #content h3 {
+            font-size: 1.4em;
+            color: #0050e3;
+            margin-top: 25px;
+            margin-bottom: 8px;
+        }
+        #content h4 {
+            font-size: 1.2em;
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 5px;
+        }
+        #content pre {
+            background-color: #eef2f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            border: 1px solid #d0d8d0;
+        }
+        #content code {
+            font-family: 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+        }
+        #content .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .search-result {
+            background-color: #fff3cd !important;
+        }
+        /* Specific styles for code snippets within markdown */
+        .language-rune {
+            color: #000; /* Default code color */
+        }
+        .language-json {
+            color: #000;
+        }
+        .language-yaml {
+            color: #000;
+        }
+        .language-rust {
+            color: #000;
+        }
+        .reference-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin: 16px 0 24px;
+        }
+        .reference-card {
+            background: #ffffff;
+            border: 1px solid #dce5eb;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .reference-card h4 {
+            margin-top: 0;
+        }
+        .reference-card p {
+            margin-bottom: 0;
+        }
+        .pill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0;
+            margin: 10px 0 0;
+            list-style: none;
+        }
+        .pill-list li {
+            background: #eef3ff;
+            color: #184aa8;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.85em;
+        }
+        .source-path {
+            display: inline-block;
+            margin-top: 10px;
+            color: #5b6470;
+            font-size: 0.9em;
+        }
+        .small-note {
+            color: #5b6470;
+            font-size: 0.95em;
+        }
+        .inline-code-list code {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Vectrune Docs</h1>
+        <div class="search-container">
+            <input type="text" id="search" placeholder="Search documentation...">
+        </div>
+        <h2>Documentation Sections</h2>
+        <ul>
+            <li><a href="#introduction">Introduction</a></li>
+            <li><a href="#core-language">Core Language</a>
+                <ul>
+                    <li><a href="#data-structures">Data Structures</a></li>
+                    <li><a href="#data-types">Data Types</a></li>
+                    <li><a href="#dynamic-features">Dynamic Features</a></li>
+                </ul>
+            </li>
+            <li><a href="#built-in-functions">Built-in Functions</a>
+                <ul>
+                    <li><a href="#data-handling-manipulation">Data Handling & Manipulation</a></li>
+                    <li><a href="#database-data-source-integration">Database & Data Source Integration</a></li>
+                    <li><a href="#web-networking">Web & Networking</a></li>
+                    <li><a href="#language-scripting">Language & Scripting</a></li>
+                    <li><a href="#memory-state-management">Memory & State Management</a></li>
+                    <li><a href="#api-response-handling">API & Response Handling</a></li>
+                    <li><a href="#validation-conditions">Validation & Conditions</a></li>
+                </ul>
+            </li>
+            <li><a href="#command-line-interface-cli-tools">CLI Tools</a>
+                <ul>
+                    <li><a href="#top-level-commands-options">Top-Level Commands & Options</a></li>
+                    <li><a href="#subcommands">Subcommands</a>
+                        <ul>
+                            <li><a href="#lambda">lambda</a></li>
+                            <li><a href="#sam">sam</a></li>
+                            <li><a href="#repl">repl</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li><a href="#examples">Examples</a>
+                <ul>
+                    <li><a href="#core-language-data-handling-1">Core Language & Data Handling</a></li>
+                    <li><a href="#web-api-development-rest--graphql">Web API Development (REST & GraphQL)</a></li>
+                    <li><a href="#aws-lambda-integration">AWS Lambda Integration</a></li>
+                    <li><a href="#game-development">Game Development</a></li>
+                    <li><a href="#data-source-interaction">Data Source Interaction</a></li>
+                </ul>
+            </li>
+            <li><a href="#generated-reference-snapshot">Generated Reference Snapshot</a>
+                <ul>
+                    <li><a href="#reference-quick-look">Reference Quick Look</a></li>
+                    <li><a href="#builtin-reference">Builtins Snapshot</a></li>
+                    <li><a href="#curated-examples">Curated Examples</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div id="content">
+        <h1 id="introduction">Vectrune Language Capabilities</h1>
+        <p>Vectrune is a powerful and versatile tool and language designed for building applications, APIs, and scripting complex data workflows. It combines a declarative configuration language with robust runtime capabilities for web services, data processing, AI integration, and more.</p>
+
+        <h2 id="core-language">1. Core Language Features (.rune Files)</h2>
+        <p>The <code>.rune</code> file format is central to Vectrune, enabling declarative definition of data structures, configurations, and application logic.</p>
+
+        <h3 id="data-structures">1.1. Data Structures</h3>
+        <p>Vectrune uses a hierarchical structure to organize data:</p>
+        <ul>
+            <li><strong>Sections:</strong> Represent distinct blocks of configuration or data, identified by hierarchical paths using <code>@</code>.
+                <ul>
+                    <li>Example: <code>@App</code>, <code>@Database/Users</code>, <code>@API/Routes/GET/users</code></li>
+                </ul>
+            </li>
+            <li><strong>Key-Value Pairs (KV):</strong> Simple assignments within sections.
+                <ul>
+                    <li>Example: <code>name = "Vectrune"</code></li>
+                </ul>
+            </li>
+            <li><strong>Series:</strong> Named lists of values, used for collections.
+                <ul>
+                    <li>Example: <code>run:</code> followed by indented items.</li>
+                </ul>
+            </li>
+            <li><strong>Records:</strong> Structured data, often used within Series to represent objects or items.
+                <ul>
+                    <li>Example: <code>+ host = "localhost"</code>, <code>+ port = 3000</code></li>
+                </ul>
+            </li>
+            <li><strong>Nested Structures:</strong> Supports nested maps within Series and Records.</li>
+        </ul>
+
+        <h3 id="data-types">1.2. Data Types</h3>
+        <p>Vectrune's <code>Value</code> enum supports:</p>
+        <ul>
+            <li><strong>String:</strong> Textual data.</li>
+            <li><strong>Number:</strong> Floating-point numbers (<code>f64</code>).</li>
+            <li><strong>Boolean:</strong> <code>true</code> or <code>false</code>.</li>
+            <li><strong>List:</strong> Ordered collections of <code>Value</code>s, defined inline with <code>(...)</code>.</li>
+            <li><strong>Map:</strong> Key-value pairs, defined inline with <code>{...}</code> or within Records.</li>
+        </ul>
+
+        <h3 id="dynamic-features">1.3. Dynamic Features</h3>
+        <ul>
+            <li><strong>Environment Variable Substitution:</strong> Values can be dynamically set using environment variables via <code>$VAR$</code> syntax.</li>
+            <li><strong>Multiline Values:</strong> Supports defining multiline strings for configuration values.</li>
+            <li><strong>Event Handlers:</strong> Defines handlers for events, common in web services (<code>on_connect:</code>, <code>on_message:</code>, <code>on_request:</code>).</li>
+            <li><strong>Basic Logic:</strong> Supports inline list and object definitions, and rudimentary <code>if</code> statements for conditional logic within certain contexts.</li>
+        </ul>
+
+        <h2 id="built-in-functions">2. Built-in Functions</h2>
+        <p>Vectrune provides a rich set of built-in functions accessible within <code>.rune</code> scripts and CLI commands.</p>
+
+        <h3 id="data-handling-manipulation">2.1. Data Handling & Manipulation</h3>
+        <ul>
+            <li><strong><code>csv.read &lt;filename&gt; [assign_to]</code></strong>: Reads a CSV file into a JSON array of objects. Supports multiple candidate paths for the file.
+                <ul>
+                    <li>Example: <code>data = csv.read data.csv</code></li>
+                </ul>
+            </li>
+            <li><strong><code>csv.write &lt;filename&gt; &lt;variable&gt;</code></strong>: Writes a JSON array (from <code>&lt;variable&gt;</code>) to a CSV file, creating headers from object keys.
+                <ul>
+                    <li>Example: <code>csv.write output.csv my_data_array</code></li>
+                </ul>
+            </li>
+            <li><strong><code>csv.append &lt;filename&gt; &lt;object_variable&gt;</code></strong>: Appends a single JSON object (from <code>&lt;object_variable&gt;</code>) as a row to a CSV file.
+                <ul>
+                    <li>Example: <code>csv.append logs.csv new_log_entry</code></li>
+                </ul>
+            </li>
+            <li><strong><code>json.read &lt;filename&gt; [assign_to]</code></strong>: Reads a JSON file into a JSON value. Requires an assignment target.
+                <ul>
+                    <li>Example: <code>config = json.read config.json</code></li>
+                </ul>
+            </li>
+            <li><strong><code>parse-json [value_variable] [assign_to]</code></strong>: Parses a JSON string (from <code>value_variable</code>, defaults to <code>body</code>) into a JSON value.
+                <ul>
+                    <li>Example: <code>parsed_body = parse-json body</code></li>
+                </ul>
+            </li>
+            <li><strong><code>append &lt;variable&gt; &lt;value&gt;</code></strong>: Appends a <code>value</code> (or variable) to a JSON array in context.
+                <ul>
+                    <li>Example: <code>my_list = []; append my_list "item1"</code> (then <code>my_list</code> would be <code>["item1"]</code>)</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3 id="database-data-source-integration">2.2. Database & Data Source Integration</h3>
+        <ul>
+            <li><strong><code>datasource create_table &lt;schema_name&gt; in &lt;data_source_name&gt;</code></strong>: Creates a table in the specified data source based on a schema definition.
+                <ul>
+                    <li>Example: <code>datasource create_table User in db_config</code></li>
+                </ul>
+            </li>
+            <li><strong><code>datasource fetch_all &lt;schema_name&gt; from &lt;data_source_name&gt; [into &lt;variable&gt;]</code></strong>: Fetches all records for a schema from a data source.
+                <ul>
+                    <li>Example: <code>users = datasource fetch_all User from db_config into users_data</code></li>
+                </ul>
+            </li>
+            <li><strong><code>datasource fetch &lt;schema_name&gt; from &lt;data_source_name&gt; [into &lt;variable&gt;]</code></strong>: Fetches a single record by ID. Requires ID to be present in context (e.g., <code>path.params.id</code> or <code>body.id</code>).
+                <ul>
+                    <li>Example: <code>user = datasource fetch User from db_config into user_data</code> (assuming <code>path.params.id</code> is set)</li>
+                </ul>
+            </li>
+            <li><strong><code>datasource insert &lt;schema_name&gt; into &lt;data_source_name&gt;</code></strong>: Inserts a record. Requires <code>body</code> variable to be a JSON object with data.
+                <ul>
+                    <li>Example: <code>datasource insert User into db_config</code> (after setting <code>body = { "name": "...", "email": "..." }</code>)</li>
+                </ul>
+            </li>
+            <li><strong><code>datasource update &lt;schema_name&gt; in &lt;data_source_name&gt;</code></strong>: Updates a record by ID. Requires ID in context and data in <code>body</code>.
+                <ul>
+                    <li>Example: <code>datasource update User in db_config</code> (after setting <code>body</code> and <code>path.params.id</code>)</li>
+                </ul>
+            </li>
+            <li><strong><code>datasource delete &lt;schema_name&gt; from &lt;data_source_name&gt;</code></strong>: Deletes a record by ID. Requires ID in context.
+                <ul>
+                    <li>Example: <code>datasource delete User from db_config</code> (assuming <code>path.params.id</code> is set)</li>
+                </ul>
+            </li>
+            <li><strong><code>mysql.query &lt;query_string&gt; [param1] [param2] ... [assign_to]</code></strong>: Executes a MySQL query with optional parameter binding from context variables.
+                <ul>
+                    <li>Example: <code>mysql.query "SELECT * FROM users WHERE id = ?" user_id into results</code></li>
+                </ul>
+            </li>
+            <li><strong><code>postgres.query &lt;query_string&gt; [param1] [param2] ... [assign_to]</code></strong>: Executes a PostgreSQL query with optional parameter binding from context variables.
+                <ul>
+                    <li>Example: <code>postgres.query "SELECT * FROM products WHERE category = $1" product_category into products_list</code></li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3 id="web-networking">2.3. Web & Networking</h3>
+        <ul>
+            <li><strong><code>ws.id [assign_to]</code></strong>: Gets the WebSocket connection ID (if available in context) and assigns it to a variable.</li>
+            <li><strong><code>ws.send &lt;path&gt; &lt;ws_id&gt; &lt;message&gt;</code></strong>: Sends a message to a specific WebSocket connection.</li>
+            <li><strong><code>ws.broadcast &lt;path&gt; &lt;message&gt;</code></strong>: Broadcasts a message to all connections on a given path.</li>
+        </ul>
+
+        <h3 id="language-scripting">2.4. Language & Scripting</h3>
+        <ul>
+            <li><strong><code>func &lt;name&gt; &lt;step1&gt;; &lt;step2&gt;; ...</code></strong>: Defines a reusable function with a sequence of steps.
+                <ul>
+                    <li>Example: <code>func process_data name: string; log "Processing data..."</code></li>
+                </ul>
+            </li>
+            <li><strong><code>invoke_func &lt;name&gt; [arg1] [arg2] ... [assign_to]</code></strong>: Invokes a previously defined function, optionally passing arguments and capturing the result.
+                <ul>
+                    <li>Example: <code>result = invoke_func process_data "my_data"</code></li>
+                </ul>
+            </li>
+            <li><strong><code>log &lt;message&gt;</code></strong>: Writes an informational log message.
+                <ul>
+                    <li>Example: <code>log "Starting script..."</code></li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3 id="memory-state-management">2.5. Memory & State Management</h3>
+        <ul>
+            <li><strong><code>memory.clear</code></strong>: Clears all stored memory.</li>
+            <li><strong><code>memory.delete &lt;key&gt;</code></strong>: Deletes a specific key from memory.</li>
+            <li><strong><code>memory.set &lt;key&gt; [value]</code></strong>: Sets a key in memory to a <code>value</code> (or variable).
+                <ul>
+                    <li>Example: <code>memory.set api_key "your_secret_key"</code></li>
+                </ul>
+            </li>
+            <li><strong><code>memory.get &lt;key&gt; [assign_to]</code></strong>: Retrieves a value from memory and assigns it to a variable.
+                <ul>
+                    <li>Example: <code>api_key = memory.get api_key</code></li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3 id="api-response-handling">2.6. API & Response Handling</h3>
+        <ul>
+            <li><strong><code>respond [status_code] [message]</code></strong>: Generates an HTTP response (used within API route handlers).
+                <ul>
+                    <li>Example: <code>respond 200 "Data retrieved"</code> or <code>respond 404 "Not found"</code></li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3 id="validation-conditions">2.7. Validation & Conditions</h3>
+        <ul>
+            <li><strong><code>validate &lt;variable&gt; #&lt;schema_name&gt;</code></strong>: Validates a variable against a defined schema. Responds with 400 on failure.
+                <ul>
+                    <li>Example: <code>validate body #UserSchema</code></li>
+                </ul>
+            </li>
+            <li><strong><code>validate &lt;left&gt; &lt;op&gt; &lt;right&gt; &lt;message&gt;</code></strong>: Evaluates a condition (e.g., <code>id == 123</code>) and responds with <code>message</code> (400) if false.
+                <ul>
+                    <li>Supported operators: <code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>.</li>
+                    <li>Example: <code>validate user_id == "abc" "Invalid user ID"</code></li>
+                </ul>
+            </li>
+            <li><strong><code>if &lt;condition&gt;:</code></strong>: Conditional block support in scripts.
+                <ul>
+                    <li>Supported operators: <code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>.</li>
+                    <li>Example: <code>if state.score &gt; 10: log "High score!"</code></li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2 id="command-line-interface-cli-tools">3. Command-Line Interface (CLI) Tools</h2>
+        <p>Vectrune provides a powerful command-line interface for executing scripts, managing applications, and interacting with various services.</p>
+
+        <h3 id="top-level-commands-options">3.1. Top-Level Commands & Options</h3>
+        <ul>
+            <li><strong><code>SCRIPT</code> (positional)</strong>: Path to one or more <code>.rune</code> scripts, directories containing <code>.rune</code> files, or <code>-</code> to read from STDIN.
+                <ul>
+                    <li>Example: <code>vectrune my_script.rune ./configs/</code></li>
+                </ul>
+            </li>
+            <li><strong><code>-i, --input &lt;input_format&gt;</code></strong>: Specifies the input format of scripts/data.
+                <ul>
+                    <li>Allowed values: <code>json</code>, <code>rune</code>, <code>xml</code>, <code>yaml</code>.</li>
+                </ul>
+            </li>
+            <li><strong><code>-o, --output &lt;output_format&gt;</code></strong>: Specifies the output format for script execution results.
+                <ul>
+                    <li>Allowed values: <code>text</code>, <code>json</code>, <code>rune</code>, <code>xml</code>, <code>yaml</code>, <code>curl</code>.</li>
+                </ul>
+            </li>
+            <li><strong><code>--calculate &lt;EXPR&gt;</code></strong>: Performs a calculation over data loaded from scripts.
+                <ul>
+                    <li>Example: <code>vectrune --calculate "avg Section.value" data.rune</code></li>
+                </ul>
+            </li>
+            <li><strong><code>--transform &lt;SPEC&gt;</code></strong>: Transforms data based on a transformation specification.
+                <ul>
+                    <li>Example: <code>vectrune --transform "@Target key:[@Section.field]" input.rune</code></li>
+                </ul>
+            </li>
+            <li><strong><code>--merge-with &lt;MERGE_SPEC&gt;</code></strong>: Merges data from another document.
+                <ul>
+                    <li>Example: <code>vectrune --merge-with "base.rune@section_to_merge" file1.rune</code></li>
+                </ul>
+            </li>
+            <li><strong><code>-l, --log-level &lt;LEVEL&gt;</code></strong>: Sets the verbosity of logging output.
+                <ul>
+                    <li>Allowed values: <code>debug</code>, <code>info</code>, <code>warn</code>, <code>error</code>. (Default: <code>info</code>)</li>
+                </ul>
+            </li>
+            <li><strong><code>--ai &lt;PROMPT&gt;</code></strong>: Sends a prompt to a local AI model (e.g., Ollama) for assistance.
+                <ul>
+                    <li>Example: <code>vectrune --ai "Generate a README for this project"</code></li>
+                </ul>
+            </li>
+            <li><strong><code>--model &lt;MODEL&gt;</code></strong>: Specifies the AI model to use with <code>--ai</code> (default: <code>phi4</code>).</li>
+            <li><strong><code>-p, --port &lt;PORT&gt;</code></strong>: Overrides the default port (3000) for running REST/GraphQL servers.</li>
+            <li><strong><code>--host &lt;HOST&gt;</code></strong>: Overrides the default host (<code>127.0.0.1</code>) for running REST/GraphQL servers.</li>
+        </ul>
+
+        <h3 id="subcommands">3.2. Subcommands</h3>
+        <h4><code>lambda</code></h4>
+        <p>AWS Lambda tooling for VectRune.</p>
+        <ul>
+            <li><strong><code>lambda launch</code></strong>: Launches the Vectrune Lambda runtime for handling AWS Lambda events.</li>
+            <li><strong><code>lambda package</code></strong>: Bundles the Vectrune runtime, Rune sources, and configuration into a Lambda artifact.
+                <ul>
+                    <li><strong><code>--rune &lt;PATH&gt;</code></strong>: Specifies the Rune file or directory to include (default: <code>app.rune</code>).</li>
+                    <li><strong><code>--config &lt;PATH&gt;</code></strong>: Optional path to a config file or directory to include.</li>
+                    <li><strong><code>--binary &lt;PATH&gt;</code></strong>: Path to the Lambda-compatible VectRune binary.</li>
+                    <li><strong><code>--mode &lt;MODE&gt;</code></strong>: Selects the packaging mode (<code>zip</code> or <code>container</code>; default: <code>zip</code>).</li>
+                    <li><strong><code>--output &lt;FILE&gt;</code></strong>: Specifies the output artifact path.</li>
+                    <li><strong><code>--image-name &lt;NAME&gt;</code></strong>: Optional container image tag metadata.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h4><code>sam</code></h4>
+        <p>AWS SAM tooling for VectRune.</p>
+        <ul>
+            <li><strong><code>sam generate</code></strong>: Generates a SAM YAML file for a Lambda ZIP bundle.
+                <ul>
+                    <li><strong><code>--bundle &lt;PATH&gt;</code></strong>: Path to the Lambda ZIP bundle (default: <code>dist/vectrune-lambda.zip</code>).</li>
+                    <li><strong><code>--output &lt;FILE&gt;</code></strong>: Path for the output SAM YAML file (default: <code>sam.yaml</code>).</li>
+                </ul>
+            </li>
+            <li><strong><code>sam local</code></strong>: Runs local SAM testing for a Lambda ZIP bundle.
+                <ul>
+                    <li><strong><code>--bundle &lt;PATH&gt;</code></strong>: Path to the Lambda ZIP bundle (default: <code>dist/vectrune-lambda.zip</code>).</li>
+                    <li><strong><code>--sam &lt;FILE&gt;</code></strong>: Path to the SAM YAML file to use (default: <code>sam.yaml</code>).</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h4><code>repl</code></h4>
+        <p>Starts the Vectrune REPL (Read-Eval-Print Loop) for interactive command execution.</p>
+        <ul>
+            <li><strong><code>--log-level &lt;LEVEL&gt;</code></strong>: Sets the log level for the REPL session (debug, info, warn, error).</li>
+        </ul>
+
+        <h2 id="examples">4. Examples</h2>
+        <p>Vectrune's power is best understood through practical examples. These demonstrate how to leverage its language features, built-in modules, and application development capabilities.</p>
+
+        <h3 id="core-language-data-handling-1">4.1. Core Language & Data Handling</h3>
+        <ul>
+            <li><strong><code>app.rune</code> / <code>example.rune</code></strong>: These demonstrate basic <code>.rune</code> file structure, sections, key-value pairs, and simple lists/records, serving as an introduction to the declarative syntax.</li>
+            <li><strong><code>json_import.rune</code></strong>: Shows how to read and process data from a JSON file using <code>json.read</code> or <code>parse-json</code> built-ins.
+                <ul>
+                    <li><em>Illustrates:</em> Reading external data, basic data manipulation.</li>
+                </ul>
+            </li>
+            <li><strong><code>data.json</code> / <code>skaters.json</code></strong>: Sample JSON data files used with <code>.rune</code> scripts for demonstrating data loading and processing.</li>
+        </ul>
+
+        <h3 id="web-api-development-rest--graphql">4.2. Web API Development (REST & GraphQL)</h3>
+        <ul>
+            <li><strong><code>user_api.rune</code></strong>: Defines a REST API for user management, showcasing:
+                <ul>
+                    <li>Route definitions (<code>@API/Routes/GET/users</code>, <code>@API/Routes/POST/users</code>).</li>
+                    <li>HTTP methods (GET, POST, PUT, DELETE).</li>
+                    <li><code>datasource</code> built-ins for CRUD operations (e.g., <code>datasource fetch_all User from UserDB</code>).</li>
+                    <li><code>respond</code> built-in for returning HTTP status and messages.</li>
+                    <li>Schema definitions (<code>@Schema/User</code>).</li>
+                    <li><em>Illustrates:</em> Full-stack API development with data persistence.</li>
+                </ul>
+            </li>
+            <li><strong><code>auth_example.rune</code></strong>: Demonstrates authentication mechanisms, possibly involving request headers, token validation, or user lookup.
+                <ul>
+                    <li><em>Illustrates:</em> Security and authentication patterns.</li>
+                </ul>
+            </li>
+            <li><strong><code>book_graphql.rune</code></strong>: Defines a GraphQL API, showcasing:
+                <ul>
+                    <li>GraphQL schema definitions.</li>
+                    <li>GraphQL query/mutation resolvers using built-ins.</li>
+                    <li>Interaction with data sources.</li>
+                    <li><em>Illustrates:</em> Building complex, schema-driven APIs.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3 id="aws-lambda-integration">4.3. AWS Lambda Integration</h3>
+        <ul>
+            <li><strong><code>examples/lambda/book_graphql_lambda/book_graphql_lambda.rune</code></strong>: Shows how to build a GraphQL API as an AWS Lambda function.
+                <ul>
+                    <li><em>Illustrates:</em> Serverless computing, integrating GraphQL with Lambda runtime.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3 id="game-development">4.4. Game Development</h3>
+        <ul>
+            <li><strong><code>retro_game.rune</code> / <code>worm_game/worm_game.rune</code></strong>: Examples for game logic development, potentially using:
+                <ul>
+                    <li>Game state management via <code>memory.set</code>/<code>memory.get</code>.</li>
+                    <li>Input handling and simple rendering logic.</li>
+                    <li><em>Illustrates:</em> Application development beyond typical web services.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3 id="data-source-interaction">4.5. Data Source Interaction</h3>
+        <ul>
+            <li><strong><code>datasource.rune</code></strong>: Provides examples of connecting to and querying different data sources like MySQL or PostgreSQL using the <code>datasource</code> built-in.
+                <ul>
+                    <li><em>Illustrates:</em> Database connectivity and data retrieval.</li>
+                </ul>
+            </li>
+            <li><strong><code>memory_api.rune</code> / <code>memory_from_json_api.rune</code></strong>: Demonstrate using the <code>memory</code> built-ins for state management, potentially loading/saving state from JSON.
+                <ul>
+                    <li><em>Illustrates:</em> Persistent state management within scripts or applications.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2 id="generated-reference-snapshot">5. Generated Reference Snapshot</h2>
+        <p>This section is a starter bridge from the shared <code>knowledge/</code> source into the docs site currently served by <code>vectrune_docs.rune</code>. It keeps the existing static docs shell while surfacing reference data generated from the shared knowledge layer.</p>
+
+        <h3 id="reference-quick-look">5.1. Reference Quick Look</h3>
+        <p class="small-note">Generated from app-type and runtime-context reference files.</p>
+        <div id="reference-quick-look-content" class="reference-grid"></div>
+
+        <h3 id="builtin-reference">5.2. Builtins Snapshot</h3>
+        <p class="small-note">A small starter subset of builtins exported from the shared knowledge source.</p>
+        <div id="builtin-reference-content" class="reference-grid"></div>
+
+        <h3 id="curated-examples">5.3. Curated Examples</h3>
+        <p class="small-note">These examples are the first recommended teaching set for both the docs site and AI retrieval workflows.</p>
+        <div id="curated-examples-content" class="reference-grid"></div>
+
+        ***
+        <p>This updated content provides a more detailed overview of Vectrune's capabilities, including its built-in functions, CLI tools, and practical examples.</p>
+        <script>
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            async function loadJson(path) {
+                const response = await fetch(path);
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${path}: ${response.status}`);
+                }
+                return response.json();
+            }
+
+            function renderReferenceQuickLook(appTypes, runtimeContext) {
+                const container = document.getElementById('reference-quick-look-content');
+                const appTypeItems = (appTypes.app_types || [])
+                    .map(item => `<li><strong>${escapeHtml(item.name)}</strong>: ${escapeHtml(item.summary)}</li>`)
+                    .join('');
+                const runtimeItems = (runtimeContext.context_values || [])
+                    .map(item => `<li><strong><code>${escapeHtml(item.name)}</code></strong>: ${escapeHtml(item.summary)}</li>`)
+                    .join('');
+
+                container.innerHTML = `
+                    <div class="reference-card">
+                        <h4>Supported App Types</h4>
+                        <ul class="inline-code-list">${appTypeItems}</ul>
+                    </div>
+                    <div class="reference-card">
+                        <h4>Runtime Context</h4>
+                        <ul class="inline-code-list">${runtimeItems}</ul>
+                    </div>
+                `;
+            }
+
+            function renderBuiltins(builtinsData) {
+                const container = document.getElementById('builtin-reference-content');
+                const builtins = builtinsData.builtins || [];
+                container.innerHTML = builtins.map(builtin => {
+                    const aliasHtml = builtin.aliases && builtin.aliases.length
+                        ? `<ul class="pill-list">${builtin.aliases.map(alias => `<li>${escapeHtml(alias)}</li>`).join('')}</ul>`
+                        : '';
+                    const expansionNote = builtin.behavior && builtin.behavior.placeholder_expansion
+                        ? `<p><strong>Placeholder expansion:</strong> <code>${escapeHtml(builtin.behavior.expansion_syntax || '{expr}')}</code></p>`
+                        : '';
+                    return `
+                        <div class="reference-card">
+                            <h4><code>${escapeHtml(builtin.name)}</code></h4>
+                            <p>${escapeHtml(builtin.summary || '')}</p>
+                            <p class="small-note">Category: ${escapeHtml(builtin.category || 'general')}</p>
+                            ${expansionNote}
+                            ${aliasHtml}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function renderExamples(examplesData) {
+                const container = document.getElementById('curated-examples-content');
+                const examples = examplesData.examples || [];
+                container.innerHTML = examples.map(example => `
+                    <div class="reference-card">
+                        <h4>${escapeHtml(example.title)}</h4>
+                        <p>${escapeHtml(example.summary || '')}</p>
+                        <p class="small-note">App type: ${escapeHtml(example.app_type || 'n/a')}</p>
+                        <ul class="pill-list">
+                            ${(example.concepts || []).slice(0, 6).map(concept => `<li>${escapeHtml(concept)}</li>`).join('')}
+                        </ul>
+                        <span class="source-path">Source: <code>${escapeHtml(example.source_path || '')}</code></span>
+                    </div>
+                `).join('');
+            }
+
+            Promise.all([
+                loadJson('data/knowledge-manifest.json').catch(() => null),
+                loadJson('data/app-types.json'),
+                loadJson('data/runtime-context.json'),
+                loadJson('data/builtins.json'),
+                loadJson('data/examples.json')
+            ]).then(([, appTypes, runtimeContext, builtins, examples]) => {
+                renderReferenceQuickLook(appTypes, runtimeContext);
+                renderBuiltins(builtins);
+                renderExamples(examples);
+            }).catch(error => {
+                const ids = [
+                    'reference-quick-look-content',
+                    'builtin-reference-content',
+                    'curated-examples-content'
+                ];
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerHTML = `<div class="reference-card"><p>Generated docs data failed to load.</p><p class="small-note">${escapeHtml(error.message)}</p></div>`;
+                    }
+                });
+            });
+
+            const searchInput = document.getElementById('search');
+            const contentDiv = document.getElementById('content');
+            const sidebarLinks = document.querySelectorAll('#sidebar a');
+            const contentSections = contentDiv.querySelectorAll('h2, h3, h4, p, ul, pre');
+
+            // Store original text content for search
+            const sectionTexts = Array.from(contentSections).map(section => ({
+                element: section,
+                text: section.textContent.toLowerCase(),
+                id: section.id || `section-${Math.random().toString(36).substr(2, 9)}` // Assign ID if missing
+            }));
+
+            // Ensure all sections have IDs for linking
+            contentSections.forEach(section => {
+                if (!section.id) {
+                    section.id = `section-${Math.random().toString(36).substr(2, 9)}`;
+                }
+            });
+
+            // Highlight search results
+            function highlight(text) {
+                const searchRegex = new RegExp(`(${searchInput.value.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+                return text.replace(searchRegex, '<span class="highlight">$1</span>');
+            }
+
+            function filterContent() {
+                const searchTerm = searchInput.value.trim().toLowerCase();
+                
+                // Clear previous highlights
+                contentSections.forEach(section => {
+                    section.innerHTML = section.textContent; // Reset to original text
+                    section.style.display = ''; // Show all sections by default
+                    section.classList.remove('search-result');
+                });
+                sidebarLinks.forEach(link => link.classList.remove('active'));
+
+                if (searchTerm === '') {
+                    // Show all sections and reset active link
+                    contentSections.forEach(section => {
+                        section.innerHTML = section.textContent;
+                        section.classList.remove('search-result');
+                    });
+                    return;
+                }
+
+                const matchingSections = sectionTexts.filter(item => item.text.includes(searchTerm));
+
+                // Hide non-matching sections
+                contentSections.forEach(section => {
+                    const isMatch = matchingSections.some(match => match.element === section);
+                    if (!isMatch) {
+                        section.style.display = 'none';
+                    }
+                });
+
+                // Apply highlights and mark as search result
+                matchingSections.forEach(item => {
+                    item.element.innerHTML = item.element.textContent.replace(
+                        new RegExp(`(${searchInput.value.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'),
+                        '<span class="highlight">$1</span>'
+                    );
+                    item.element.style.display = ''; // Ensure it's visible
+                    item.element.classList.add('search-result');
+                    
+                    // Activate corresponding sidebar link
+                    const link = document.querySelector(`#sidebar a[href="#${item.element.id}"]`);
+                    if (link) {
+                        link.classList.add('active');
+                        // Optionally scroll sidebar to the active link
+                        link.scrollIntoView({ block: 'center' });
+                    }
+                });
+            }
+
+            searchInput.addEventListener('input', filterContent);
+
+            // Active link highlighting on scroll
+            const observerOptions = {
+                root: null, // Use document's viewport as root
+                threshold: 0.5 // Trigger when 50% of the section is visible
+            };
+
+            const sectionObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                        const id = entry.target.id;
+                        sidebarLinks.forEach(link => {
+                            if (link.getAttribute('href') === `#${id}`) {
+                                link.classList.add('active');
+                            } else {
+                                link.classList.remove('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            contentSections.forEach(section => {
+                if (section.id) { // Only observe sections with IDs
+                    sectionObserver.observe(section);
+                }
+            });
+
+            // Initial filtering if there's a pre-filled search term (e.g., from URL hash)
+            filterContent();
+        </script>
+    </div>
+</body>
+</html>

@@ -1,3 +1,6 @@
+pub mod ws;
+pub mod swagger;
+
 use crate::core::{execute_steps, extract_auth_configs, jwt_auth, AppState};
 use crate::crud_web_fe::create_web_fe_handler;
 use crate::rune_ast::Value;
@@ -16,6 +19,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tower_http::services::ServeDir;
+use crate::apps::rest::ws::ws_handler;
 
 pub async fn build_rest_router(state: AppState) -> Router {
     // Initialize Memory from @Memory sections
@@ -26,6 +30,7 @@ pub async fn build_rest_router(state: AppState) -> Router {
     let mut router = Router::with_state(Router::new(), state.clone());
 
     // If @App section has a "run" kv, execute its steps once
+    let mut swagger_enabled = false;
     if let Some(app_section) = state
         .doc
         .sections
@@ -35,27 +40,93 @@ pub async fn build_rest_router(state: AppState) -> Router {
         if let Some(run_steps) = app_section.series.get("run") {
             let _ = execute_steps(state.clone(), run_steps.clone(), None, None).await;
         }
+        if let Some(Value::Bool(true)) = app_section.kv.get("swagger") {
+            swagger_enabled = true;
+        }
+    }
+
+    if swagger_enabled {
+        let openapi_json = Arc::new(swagger::generate_openapi_json(&state.doc));
+        let openapi_json_clone = openapi_json.clone();
+        router = router.route(
+            "/openapi.json",
+            get(move || {
+                let json = openapi_json_clone.clone();
+                async move { (axum::http::StatusCode::OK, json.to_string()) }
+            }),
+        );
+        router = router.route(
+            "/swagger-ui",
+            get(move || async {
+                axum::response::Html(format!(
+                    r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" >
+    <style>
+        html {{ box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }}
+        *, *:before, *:after {{ box-sizing: inherit; }}
+        body {{ margin:0; background: #fafafa; }}
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" charset="UTF-8"> </script>
+    <script>
+        window.onload = function() {{
+            const ui = SwaggerUIBundle({{
+                url: "/openapi.json",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                ],
+            }});
+            window.ui = ui;
+        }};
+    </script>
+</body>
+</html>"#
+                ))
+            }),
+        );
     }
 
     // Serve static files
     router = router.nest_service("/assets", ServeDir::new(state.path.clone()));
 
     for section in &state.doc.sections {
+        if section.path.first().map(|s| s.as_str()) == Some("Websocket") {
+            let path_raw = section.path.get(1).map(|s| s.as_str()).unwrap_or("/ws");
+            let path = if path_raw.starts_with('/') {
+                path_raw.to_string()
+            } else {
+                format!("/{}", path_raw)
+            };
+            let state_clone = state.clone();
+            let p = path.clone();
+            router = router.route(&path, get(move |ws| ws_handler(ws, state_clone, p)));
+            continue;
+        }
+
         if section.path.first().map(|s| s.as_str()) == Some("Frontend") {
             if let Some(Value::String(frontend_type)) = section.kv.get("type") {
+                let fe_path = section
+                    .kv
+                    .get("path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("/");
+                let wpath = if fe_path == "%ROOT%" { "/" } else { fe_path };
+
                 if frontend_type == "web" {
-                    let fe_path = section
-                        .kv
-                        .get("path")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("/");
                     let layout = section
                         .kv
                         .get("layout")
                         .and_then(|v| v.as_str())
                         .unwrap_or("");
                     if layout == "crud_powered" {
-                        let wpath = if fe_path == "%ROOT%" { "/" } else { fe_path };
                         let state_clone = state.clone();
                         let name = section
                             .kv
@@ -66,6 +137,21 @@ pub async fn build_rest_router(state: AppState) -> Router {
                             wpath,
                             get(move || create_web_fe_handler(state_clone.clone(), name)),
                         );
+                    }
+                } else if frontend_type == "static" {
+                    let local_path = section
+                        .kv
+                        .get("src")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(".");
+                    let full_local_path = state.path.join(local_path);
+                    crate::util::log(crate::util::LogLevel::Info, &format!("Serving static files from: {:?}", full_local_path));
+                    
+                    let service = ServeDir::new(full_local_path).append_index_html_on_directories(true);
+                    if wpath == "/" {
+                        router = router.fallback_service(service);
+                    } else {
+                        router = router.nest_service(wpath, service);
                     }
                 }
             }
@@ -285,3 +371,4 @@ async fn token_handler(
     .unwrap();
     (StatusCode::OK, token).into_response()
 }
+

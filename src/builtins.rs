@@ -7,6 +7,7 @@ use std::string::ToString;
 
 pub mod builtin {
     pub mod commands;
+    pub mod context_ops;
     pub mod csv;
     pub mod data_source;
     pub mod json;
@@ -18,6 +19,7 @@ pub mod builtin {
     pub mod respond;
     pub mod validate;
     pub mod function;
+    pub mod ws;
 }
 pub mod path_utils;
 
@@ -33,6 +35,8 @@ use builtin::parse_json::builtin_parse_json;
 use builtin::respond::builtin_respond;
 use builtin::validate::builtin_validate;
 use crate::builtins::builtin::function::{builtin_func, invoke_func};
+use crate::builtins::builtin::ws::{builtin_ws_broadcast, builtin_ws_id, builtin_ws_send};
+use crate::builtins::builtin::context_ops::{builtin_delete, builtin_is_set};
 
 pub const LAST_EXEC_RESULT: &str = "___last_exec_result___";
 
@@ -219,76 +223,56 @@ pub async fn call_builtin(
             let rv = resolve_path(ctx, it, right).unwrap_or(JsonValue::Null);
 
             // Helper to compare with light coercion between common types (e.g., "1" == 1)
-            fn loose_eq(a: &JsonValue, b: &JsonValue) -> bool {
-                // Fast path
-                if a == b {
-                    return true;
-                }
-
-                // Number <-> String numeric
+            fn loose_cmp(a: &JsonValue, b: &JsonValue) -> Option<std::cmp::Ordering> {
+                use serde_json::Value::*;
                 match (a, b) {
-                    (JsonValue::Number(na), JsonValue::String(bs)) => {
-                        if let Ok(parsed) = bs.parse::<f64>() {
-                            if let Some(af) = na.as_f64() {
-                                return af == parsed;
-                            }
+                    (Number(na), Number(nb)) => na.as_f64().partial_cmp(&nb.as_f64()),
+                    (String(sa), String(sb)) => {
+                        if let (Ok(na), Ok(nb)) = (sa.parse::<f64>(), sb.parse::<f64>()) {
+                            na.partial_cmp(&nb)
+                        } else {
+                            sa.partial_cmp(sb)
                         }
-                        false
                     }
-                    (JsonValue::String(as_), JsonValue::Number(nb)) => {
-                        if let Ok(parsed) = as_.parse::<f64>() {
-                            if let Some(bf) = nb.as_f64() {
-                                return parsed == bf;
-                            }
+                    (Number(na), String(sb)) => {
+                        if let (Some(fa), Ok(fb)) = (na.as_f64(), sb.parse::<f64>()) {
+                            fa.partial_cmp(&fb)
+                        } else {
+                            None
                         }
-                        false
                     }
-                    // Bool <-> String boolean
-                    (JsonValue::Bool(ab), JsonValue::String(bs)) => {
-                        if bs.eq_ignore_ascii_case("true") {
-                            return *ab == true;
+                    (String(sa), Number(nb)) => {
+                        if let (Ok(fa), Some(fb)) = (sa.parse::<f64>(), nb.as_f64()) {
+                            fa.partial_cmp(&fb)
+                        } else {
+                            None
                         }
-                        if bs.eq_ignore_ascii_case("false") {
-                            return *ab == false;
-                        }
-                        false
                     }
-                    (JsonValue::String(as_), JsonValue::Bool(bb)) => {
-                        if as_.eq_ignore_ascii_case("true") {
-                            return *bb == true;
+                    (Bool(ba), Bool(bb)) => ba.partial_cmp(bb),
+                    (Null, Null) => Some(std::cmp::Ordering::Equal),
+                    _ => {
+                        if a == b {
+                            Some(std::cmp::Ordering::Equal)
+                        } else {
+                            None
                         }
-                        if as_.eq_ignore_ascii_case("false") {
-                            return *bb == false;
-                        }
-                        false
                     }
-                    // Number <-> Bool (treat true=1, false=0)
-                    (JsonValue::Number(n), JsonValue::Bool(b)) => {
-                        if let Some(f) = n.as_f64() {
-                            return (if *b { 1.0 } else { 0.0 }) == f;
-                        }
-                        false
-                    }
-                    (JsonValue::Bool(b), JsonValue::Number(n)) => {
-                        if let Some(f) = n.as_f64() {
-                            return (if *b { 1.0 } else { 0.0 }) == f;
-                        }
-                        false
-                    }
-                    // String numeric <-> String numeric (compare numerically to avoid "01" vs "1")
-                    (JsonValue::String(as_), JsonValue::String(bs)) => {
-                        if let (Ok(af), Ok(bf)) = (as_.parse::<f64>(), bs.parse::<f64>()) {
-                            return af == bf;
-                        }
-                        false
-                    }
-                    _ => false,
                 }
             }
 
             match op {
-                "==" => loose_eq(&lv, &rv),
-                "!=" => !loose_eq(&lv, &rv),
+                "==" => loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Equal),
+                "!=" => loose_cmp(&lv, &rv) != Some(std::cmp::Ordering::Equal),
+                ">=" => matches!(
+                    loose_cmp(&lv, &rv),
+                    Some(std::cmp::Ordering::Greater) | Some(std::cmp::Ordering::Equal)
+                ),
+                "<=" => matches!(
+                    loose_cmp(&lv, &rv),
+                    Some(std::cmp::Ordering::Less) | Some(std::cmp::Ordering::Equal)
+                ),
+                ">" => loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Greater),
+                "<" => loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Less),
                 _ => false,
             }
         }
@@ -445,6 +429,11 @@ pub async fn call_builtin(
         "clear-memory" | "memory.clear" => builtin_clear_memory(args, ctx).await,
         "del-memory" | "memory.del" => builtin_del_memory(args, ctx).await,
         "append" | "memory.append" => builtin_append(args, assign_to, ctx).await,
+        "delete" => builtin_delete(args, ctx),
+        "is-set" => builtin_is_set(args, ctx, assign_to),
+        "ws.id" => builtin_ws_id(ctx, assign_to).await,
+        "ws.send" => builtin_ws_send(args, ctx).await,
+        "ws.broadcast" | "broadcast-websocket" => builtin_ws_broadcast(args, ctx).await,
         "return" => {
             if args.is_empty() {
                 log(LogLevel::Error, "return: missing return value");

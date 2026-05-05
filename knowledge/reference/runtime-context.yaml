@@ -1,0 +1,51 @@
+version: 1
+status: starter
+context_values:
+  - name: body
+    summary: Request body value available during route execution.
+    notes:
+      - Initially stored as a raw string when present.
+      - "After `parse-json`, it may become a structured JSON value."
+    sources:
+      - src/core/mod.rs
+      - src/builtins/builtin/parse_json.rs
+  - name: path.params
+    summary: Map of request path parameters.
+    notes:
+      - "Route params are also inserted as flat top-level variables such as `id`."
+      - "Nested access like `path.params.id` is supported."
+    sources:
+      - src/core/mod.rs
+  - name: ___last_exec_result___
+    summary: Stores the last builtin or step result used by response resolution and related flows.
+    notes:
+      - "`log` writes the expanded message here."
+      - "`parse-json` writes the parsed value here."
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/logger.rs
+      - src/builtins/builtin/parse_json.rs
+path_resolution:
+  summary: Runtime expressions resolve variables and nested data through a shared path lookup model.
+  supported_patterns:
+    - id
+    - body.name
+    - path.params.id
+    - state.players.[id].score
+    - it.id
+  notes:
+    - Bracket lookups allow variable-driven path segments.
+    - Missing values typically resolve as absent rather than throwing path exceptions.
+    - Different builtins may choose different fallback behavior after lookup fails.
+placeholder_expansion:
+  current_users:
+    - log
+  syntax: "{expr}"
+  behavior:
+    - "`expr` is resolved through the runtime path lookup model."
+    - unknown placeholders remain unchanged in log messages.
+sources:
+  - src/core/mod.rs
+  - src/builtins/builtin/logger.rs
+  - tests/logger_parameter_expansion_test.rs
+  - tests/worm_game_path_regression.rs

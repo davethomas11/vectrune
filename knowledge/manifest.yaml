@@ -1,0 +1,104 @@
+version: 1
+status: starter
+purpose:
+  - shared knowledge source for AI and docs
+  - stable reference layer between runtime behavior and rendered docs
+pages:
+  - id: product.overview
+    path: product/overview.md
+    kind: page
+    title: Product Overview
+    audience:
+      - ai
+      - human
+    sources:
+      - README.md
+      - capabilities.md
+      - src/main.rs
+  - id: language.core
+    path: language/core-language.md
+    kind: page
+    title: Core Language
+    audience:
+      - ai
+      - human
+    sources:
+      - README.md
+      - capabilities.md
+      - src/rune_parser.rs
+      - src/rune_ast.rs
+      - src/core/mod.rs
+  - id: runtime.cli
+    path: runtime/cli.md
+    kind: page
+    title: CLI Runtime
+    audience:
+      - ai
+      - human
+    sources:
+      - README.md
+      - src/main.rs
+  - id: examples.curated
+    path: examples/curated-examples.md
+    kind: page
+    title: Curated Examples
+    audience:
+      - ai
+      - human
+    sources:
+      - examples/
+      - tests/
+      - README.md
+references:
+  - id: reference.builtins
+    path: reference/builtins.yaml
+    kind: structured-reference
+    title: Builtins
+    audience:
+      - ai
+      - docs-generator
+    sources:
+      - src/builtins.rs
+      - src/builtins/builtin/
+      - tests/
+  - id: reference.runtime-context
+    path: reference/runtime-context.yaml
+    kind: structured-reference
+    title: Runtime Context
+    audience:
+      - ai
+      - docs-generator
+    sources:
+      - src/core/mod.rs
+      - src/builtins/builtin/parse_json.rs
+      - src/builtins/builtin/logger.rs
+      - tests/logger_parameter_expansion_test.rs
+  - id: reference.app-types
+    path: reference/app-types.yaml
+    kind: structured-reference
+    title: App Types
+    audience:
+      - ai
+      - docs-generator
+    sources:
+      - src/apps/
+      - src/main.rs
+      - examples/
+  - id: reference.examples
+    path: reference/examples.yaml
+    kind: structured-reference
+    title: Curated Example Metadata
+    audience:
+      - ai
+      - docs-generator
+    sources:
+      - examples/
+      - tests/
+      - README.md
+policies:
+  maintenance: agents/maintenance.md
+  rendered_docs_root: language/docs/
+  primary_instruction_file: .github/copilot-instructions.md
+notes:
+  - Add new entries here when new knowledge pages or structured reference files are added.
+  - Prefer updating existing concept pages over creating many overlapping docs.
