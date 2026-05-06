@@ -1,0 +1,65 @@
+pre code[class*="language-"] {
+  display: block;
+  white-space: pre;
+}
+
+pre code[class*="language-"] .token.comment,
+pre code[class*="language-"] .token.shebang {
+  color: #94a3b8;
+}
+
+pre code[class*="language-"] .token.string {
+  color: #f9a8d4;
+}
+
+pre code[class*="language-"] .token.escape {
+  color: #fcd34d;
+}
+
+pre code[class*="language-"] .token.keyword,
+pre code[class*="language-"] .token.block-keyword {
+  color: #c084fc;
+  font-weight: 700;
+}
+
+pre code[class*="language-"] .token.builtin,
+pre code[class*="language-"] .token.command {
+  color: #38bdf8;
+}
+
+pre code[class*="language-"] .token.function,
+pre code[class*="language-"] .token.section-id,
+pre code[class*="language-"] .token.url {
+  color: #60a5fa;
+}
+
+pre code[class*="language-"] .token.section-type,
+pre code[class*="language-"] .token.property {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+pre code[class*="language-"] .token.section-punctuation,
+pre code[class*="language-"] .token.record-marker,
+pre code[class*="language-"] .token.punctuation,
+pre code[class*="language-"] .token.operator {
+  color: #fbbf24;
+}
+
+pre code[class*="language-"] .token.section-qualifier,
+pre code[class*="language-"] .token.parameters,
+pre code[class*="language-"] .token.flag {
+  color: #a5b4fc;
+}
+
+pre code[class*="language-"] .token.number,
+pre code[class*="language-"] .token.constant,
+pre code[class*="language-"] .token.placeholder {
+  color: #86efac;
+}
+
+pre code[class*="language-"] .token.interpolation {
+  color: #fdba74;
+  font-weight: 700;
+}
+

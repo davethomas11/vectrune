@@ -4,6 +4,7 @@
 - **Frontend:** Static site (Astro, Next.js, or plain HTML/JS for MVP)
 - **Playground Backend:** Simple API endpoint (Node, Rust, or serverless) that runs vectrune CLI and returns output/errors
 - **Content:** Markdown docs, example .rune files, and walkthroughs
+- **Syntax Highlighting:** Local static JS/CSS highlighter for `rune`, PowerShell, and shell samples during the MVP phase
 
 ## Playground Flow
 1. User edits code in browser (Monaco/CodeMirror editor)
@@ -17,6 +18,10 @@
 - `/docs` – Markdown docs for language tour, API reference, FAQ
 - `/examples` – Example .rune files (memory_api.rune, book_graphql.rune, etc.)
 - `/playground` – Playground HTML/JS and backend API
+
+## MVP teaching-site note
+- Keep code highlighting self-hosted and static for now so the site works without a frontend framework or CDN dependency.
+- Reuse or extend the local Rune token rules when adding walkthrough pages or a future playground editor.
 
 ## Security
 - Backend runs vectrune in a sandboxed process (resource/time limits)
