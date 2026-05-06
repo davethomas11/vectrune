@@ -1,0 +1,25 @@
+@Component/LanguageTourSection
+view:
+    section #tour .card:
+        div .section-heading:
+            p .eyebrow "%i18n.LanguageTour.eyebrow%"
+            h2 "%i18n.LanguageTour.headline%"
+        div .tour-grid:
+            article .tour-card:
+                h3 "%i18n.LanguageTour.app_title%"
+                p "%i18n.LanguageTour.app_desc%"
+            article .tour-card:
+                h3 "%i18n.LanguageTour.schema_title%"
+                p "%i18n.LanguageTour.schema_desc%"
+            article .tour-card:
+                h3 "%i18n.LanguageTour.route_title%"
+                p "%i18n.LanguageTour.route_desc%"
+            article .tour-card:
+                h3 "%i18n.LanguageTour.component_title%"
+                p "%i18n.LanguageTour.component_desc%"
+            article .tour-card:
+                h3 "%i18n.LanguageTour.builtins_title%"
+                p "%i18n.LanguageTour.builtins_desc%"
+        pre:
+            code .code-block .language-rune "%i18n.LanguageTour.example_code%"
+

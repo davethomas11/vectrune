@@ -101,6 +101,40 @@
       "writes_context": null
     },
     {
+      "name": "delete",
+      "aliases": null,
+      "category": "context",
+      "summary": "Remove a variable or nested path from runtime context.",
+      "behavior": null,
+      "arguments": [
+        {
+          "name": "variable_or_path",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        }
+      ],
+      "writes_context": null
+    },
+    {
+      "name": "is-set",
+      "aliases": null,
+      "category": "context",
+      "summary": "Check if a variable or path exists in context, assigns boolean result.",
+      "behavior": null,
+      "arguments": [
+        {
+          "name": "variable_or_path",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        }
+      ],
+      "writes_context": [
+        "assigned variable (boolean true/false)"
+      ]
+    },
+    {
       "name": "datasource",
       "aliases": null,
       "category": "data",
@@ -113,7 +147,7 @@
       "name": "load-rune",
       "aliases": null,
       "category": "io",
-      "summary": "Load another Rune document and optionally transform its output.",
+      "summary": "Load another Rune document or directory of Rune files, resolving top-level imports before parsing.",
       "behavior": null,
       "arguments": null,
       "writes_context": null
@@ -189,7 +223,14 @@
       "aliases": null,
       "category": "websocket",
       "summary": "Send a websocket message to a target connection.",
-      "behavior": null,
+      "behavior": {
+        "placeholder_expansion": null,
+        "expansion_syntax": null,
+        "notes": [
+          "The `ws_id` argument may be either a literal connection id or a context variable that resolves to the current target connection id.",
+          "If the `message` argument resolves to a structured value in context, it is serialized to JSON before sending."
+        ]
+      },
       "arguments": [
         {
           "name": "path",

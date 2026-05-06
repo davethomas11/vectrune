@@ -32,6 +32,7 @@ app_types:
     sources:
       - src/apps/rest/mod.rs
       - src/apps/rune_web/
+      - teaching_website/teaching.rune
       - vectrune_docs.rune
   - name: AWS Lambda Packaging/Runtime
     summary: Lambda-aware packaging and runtime entry flow through CLI tooling and Lambda runtime support.

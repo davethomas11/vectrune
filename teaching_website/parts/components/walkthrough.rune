@@ -1,0 +1,32 @@
+@Component/WalkthroughSection
+view:
+    section #walkthrough .card:
+        div .section-heading:
+            p .eyebrow "%i18n.Walkthrough.eyebrow%"
+            h2 "%i18n.Walkthrough.headline%"
+            p .section-copy "%i18n.Walkthrough.description%"
+        div .walkthrough-grid:
+            article .walkthrough-card:
+                h3 "%i18n.Walkthrough.step1_title%"
+                pre:
+                    code .code-block .language-rune "%i18n.Walkthrough.step1_code%"
+                p "%i18n.Walkthrough.step1_desc%"
+            article .walkthrough-card:
+                h3 "%i18n.Walkthrough.step2_title%"
+                pre:
+                    code .code-block .language-rune "%i18n.Walkthrough.step2_code%"
+                p "%i18n.Walkthrough.step2_desc%"
+            article .walkthrough-card:
+                h3 "%i18n.Walkthrough.step3_title%"
+                pre:
+                    code .code-block .language-rune "%i18n.Walkthrough.step3_code%"
+                p "%i18n.Walkthrough.step3_desc%"
+            article .walkthrough-card:
+                h3 "%i18n.Walkthrough.step4_title%"
+                pre:
+                    code .code-block .language-rune "%i18n.Walkthrough.step4_code%"
+                p "%i18n.Walkthrough.step4_desc%"
+        div .callout .callout-info:
+            strong "%i18n.Walkthrough.callout_title%"
+            p "%i18n.Walkthrough.callout_text%"
+

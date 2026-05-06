@@ -12,6 +12,7 @@ Examples include:
 - `@Websocket/ws`
 - `@Frontend`
 - `@Page/home`
+- `@Component/HeroBanner`
 - `@Style/site`
 - `@Logic/site`
 
@@ -20,7 +21,53 @@ Within sections, common constructs are:
 - series blocks like `run:` with indented steps
 - records introduced with `+` in data-oriented sections
 
-Frontend-oriented documents may also use `@Page`, `@Style`, and `@Logic` sections when `@Frontend type = rune-web` is configured. This is currently treated as a frontend mode layered onto app routing, not as a separate `@App type`.
+Frontend-oriented documents may also use `@Page`, `@Component`, `@Style`, and `@Logic` sections when `@Frontend type = rune-web` is configured. This is currently treated as a frontend mode layered onto app routing, not as a separate `@App type`.
+
+## Rune-Web components
+
+Rune-Web supports reusable view sections through `@Component/<name>`.
+
+```rune
+@Component/HeroBanner
+view:
+    section .hero:
+        h1 "Learn Vectrune"
+
+@Page/home
+view:
+    main:
+        HeroBanner
+```
+
+Current component behavior:
+- component references are expanded during frontend parsing, before server rendering and browser runtime generation
+- referencing a component in `view:` uses the component name as a tag-like node, such as `HeroBanner`
+- component invocations inherit page state and loop locals automatically
+- props (named string values) can be passed at the invocation site as key-value pairs: `HeroBanner title="Learn Vectrune"`
+
+### Component props
+
+Props give each component invocation its own values without touching shared app state.
+Inside the component `view:`, reference props with the standard `{propName}` interpolation syntax.
+
+```rune
+@Component/Greeting
+view:
+    div .greeting:
+        h2 "{name}"
+        p "Welcome to {place}"
+
+@Page/home
+view:
+    main:
+        Greeting name="Vectrune" place="the teaching site"
+```
+
+- Props are **static strings** evaluated at invocation time.
+- Props can reference loop locals or state using `{…}` syntax at the invocation site (e.g., `title="{item.name}"`).
+- Multiple props are space-separated on a single invocation line.
+- Component definitions remain reusable — the same `@Component` can be invoked with different props in different places.
+- Classes, ids, inline text, events, and child content on the invocation line are not supported; use props instead.
 
 ## Import declarations
 

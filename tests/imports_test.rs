@@ -138,5 +138,49 @@ version = 1.0
     assert_eq!(app.kv.get("version").unwrap().to_string(), "1");
 }
 
+#[test]
+fn imports_component_sections_for_rune_web_documents() {
+    let temp = tempdir().expect("tempdir");
+    let root = temp.path();
+    let parts = root.join("parts");
+    fs::create_dir_all(&parts).expect("create parts dir");
+
+    fs::write(
+        parts.join("hero.rune"),
+        r#"@Component/HeroBanner
+view:
+    section .hero:
+        h1 "Learn Vectrune"
+"#,
+    )
+    .expect("write hero.rune");
+
+    fs::write(
+        root.join("app.rune"),
+        r#"#!RUNE
+import "parts"
+
+@App
+name = Import Demo
+type = REST
+
+@Frontend
+type = rune-web
+page = home
+
+@Page/home
+view:
+    main:
+        HeroBanner
+"#,
+    )
+    .expect("write app.rune");
+
+    let doc = load_rune_document_from_path(&root.join("app.rune")).expect("load root document");
+
+    assert!(doc.sections.iter().any(|s| s.path == vec!["Component".to_string(), "HeroBanner".to_string()]));
+    assert!(doc.sections.iter().any(|s| s.path == vec!["Page".to_string(), "home".to_string()]));
+}
+
 
 

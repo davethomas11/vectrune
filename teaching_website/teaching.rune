@@ -1,13 +1,14 @@
+#!RUNE
+
+import "parts"
+
 @App
 name = Vectrune Teaching Website
 version = 0.1.0
-type = static
-root = ./teaching_website
+type = REST
 
-@Route/GET /
-run:
-    return file index.html
-
-@Route/GET /{path}
-run:
-    return file {path}
+@Frontend
+type = rune-web
+path = %ROOT%
+page = learn-vectrune
+locale = en_us

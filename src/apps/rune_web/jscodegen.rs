@@ -13,12 +13,13 @@ use super::ast::{LogicDefinition, ViewNode};
 pub struct JsCodegen {
     page: ViewNode,
     logic: LogicDefinition,
+    i18n_json: String,
 }
 
 impl JsCodegen {
-    /// Create a new code generator from a page tree and logic definition.
-    pub fn new(page: ViewNode, logic: LogicDefinition) -> Self {
-        JsCodegen { page, logic }
+    /// Create a new code generator from a page tree, logic definition, and i18n JSON.
+    pub fn new(page: ViewNode, logic: LogicDefinition, i18n_json: String) -> Self {
+        JsCodegen { page, logic, i18n_json }
     }
 
     /// Generate complete JavaScript application code.
@@ -32,6 +33,7 @@ impl JsCodegen {
             .unwrap_or_else(|_| "{}".to_string());
         let page_json = serde_json::to_string(&self.page)
             .unwrap_or_else(|_| "{}".to_string());
+        let i18n_json = &self.i18n_json;
 
         format!(
             r#"(function() {{
@@ -39,6 +41,7 @@ impl JsCodegen {
   const derivedDefinitions = {derived_json};
   const helperDefinitions = {helper_json};
   const actionDefinitions = {actions_json};
+  const i18nData = {i18n_json};
 
   function escapeHtml(value) {{
     return String(value)
@@ -119,6 +122,67 @@ impl JsCodegen {
     return trimmed;
   }}
 
+  function decodeEscapes(value) {{
+    const OPEN = '\uE000';
+    const CLOSE = '\uE001';
+    const input = String(value || '');
+    let output = '';
+
+    for (let i = 0; i < input.length; i += 1) {{
+      const ch = input[i];
+      if (ch === '\\' && i + 1 < input.length) {{
+        i += 1;
+        const next = input[i];
+        if (next === 'n') output += '\n';
+        else if (next === 'r') output += '\r';
+        else if (next === 't') output += '\t';
+        else if (next === '"') output += '"';
+        else if (next === '\'') output += '\'';
+        else if (next === '\\') output += '\\';
+        else if (next === '{{') output += OPEN;
+        else if (next === '}}') output += CLOSE;
+        else output += next;
+        continue;
+      }}
+
+      output += ch;
+    }}
+
+    return output;
+  }}
+
+  function expandPercentI18n(value) {{
+    const input = String(value || '');
+    let output = '';
+
+    for (let i = 0; i < input.length; i += 1) {{
+      const ch = input[i];
+      if (ch !== '%') {{
+        output += ch;
+        continue;
+      }}
+
+      let inner = '';
+      let closed = false;
+      for (i += 1; i < input.length; i += 1) {{
+        if (input[i] === '%') {{
+          closed = true;
+          break;
+        }}
+        inner += input[i];
+      }}
+
+      if (closed && inner.startsWith('i18n.')) {{
+        output += `{{${{inner}}}}`;
+      }} else {{
+        output += `%${{inner}}`;
+        if (closed) output += '%';
+      }}
+    }}
+
+    return output;
+  }}
+
   function tryParseLiteral(expr) {{
     const trimmed = String(expr || '').trim();
     if (trimmed === '') return undefined;
@@ -181,7 +245,7 @@ impl JsCodegen {
   }}
 
   const app = {{
-    state: {state_json},
+    state: Object.assign({{}}, {state_json}, {{ i18n: i18nData }}),
     derived: {{}},
     computeDerived: function() {{
       const baseScope = Object.assign({{}}, this.state, this.derived);
@@ -405,10 +469,15 @@ impl JsCodegen {
   }}
 
   function interpolate(template, scope) {{
-    return String(template || '').replace(/\{{([^}}]+)\}}/g, function(_match, expr) {{
+    const OPEN = '\uE000';
+    const CLOSE = '\uE001';
+    return expandPercentI18n(decodeEscapes(String(template || '')))
+      .replace(/\{{([^}}]+)\}}/g, function(_match, expr) {{
       const resolved = valueToString(evaluateExpression(expr, scope));
       return resolved.includes('{{') && resolved.includes('}}') ? interpolate(resolved, scope) : resolved;
-    }});
+      }})
+      .replace(new RegExp(OPEN, 'g'), '{{')
+      .replace(new RegExp(CLOSE, 'g'), '}}');
   }}
 
   function assignPath(pathExpr, value, locals) {{
@@ -521,6 +590,23 @@ impl JsCodegen {
       const conditional = node.Conditional;
       if (!Boolean(evaluateExpression(conditional.condition, buildScope(locals)))) return '';
       return (conditional.body || []).map((child) => renderNode(child, locals)).join('');
+    }}
+
+    if (node.ComponentScope) {{
+      const scope = node.ComponentScope;
+      // Merge props into the app state for rendering, but not into loop locals (locals
+      // are reserved for loop-level data-rune-scope emission).
+      const prevState = Object.assign({{}}, app.state);
+      for (const [key, value] of Object.entries(scope.props || {{}})) {{
+        app.state[key] = interpolate(value, buildScope(locals));
+      }}
+      const result = renderNode(scope.body, locals);
+      // Restore state to avoid permanent mutation
+      Object.assign(app.state, prevState);
+      for (const key of Object.keys(scope.props || {{}})) {{
+        if (!(key in prevState)) delete app.state[key];
+      }}
+      return result;
     }}
 
     if (node.Text !== undefined) {{
@@ -698,7 +784,7 @@ mod tests {
             }],
         };
 
-        let gen = JsCodegen::new(page, logic);
+        let gen = JsCodegen::new(page, logic, "{}".to_string());
         let code = gen.generate();
         assert!(code.contains("const pageTree ="));
         assert!(code.contains("const helperDefinitions ="));
@@ -724,7 +810,7 @@ mod tests {
             )]),
             actions: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("".to_string()), logic);
+        let gen = JsCodegen::new(ViewNode::Text("".to_string()), logic, "{}".to_string());
         let code = gen.generate();
         // bitwise AND operator
         assert!(code.contains("' & '"));
@@ -743,7 +829,7 @@ mod tests {
             helpers: HashMap::new(),
             actions: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic);
+        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string());
         assert_eq!(gen.parse_value("\"hello\""), serde_json::Value::String("hello".to_string()));
         assert_eq!(gen.parse_value("42"), serde_json::json!(42));
         assert_eq!(gen.parse_value("true"), serde_json::json!(true));

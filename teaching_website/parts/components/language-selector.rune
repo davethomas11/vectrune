@@ -1,0 +1,12 @@
+@Component/LanguageSelector
+view:
+    div .language-selector:
+        span .language-label "Language:"
+        a .language-link href="?locale=en_us" "English"
+        span .language-sep " / "
+        a .language-link href="?locale=es" "Español"
+        span .language-sep " / "
+        a .language-link href="?locale=fr" "Français"
+
+
+

@@ -1,0 +1,16 @@
+@Component/TeachingHeader
+view:
+    header .site-header:
+        div .brand:
+            p .eyebrow "Teaching site preview"
+            h1 "%i18n.Header.brand_name%"
+            p .subtitle "%i18n.Common.tagline%"
+        nav .site-nav:
+            a href=#quickstart "%i18n.Header.nav_quickstart%"
+            a href=#tour "%i18n.Header.nav_tour%"
+            a href=#walkthrough "%i18n.Header.nav_walkthrough%"
+            a href=#examples "%i18n.Header.nav_examples%"
+            a href=#next "%i18n.Header.nav_next%"
+        div .header-actions:
+            LanguageSelector
+

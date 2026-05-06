@@ -1,0 +1,18 @@
+import "components"
+import "i18n"
+
+@Page/learn-vectrune
+title = Learn Vectrune
+style = teaching-site
+view:
+    div .site-shell:
+        TeachingHeader
+        main .page:
+            HeroSection
+            QuickstartSection
+            LanguageTourSection
+            WalkthroughSection
+            ExamplesSection
+            WhatsNextSection
+        TeachingFooter
+        script src=/assets/syntax-highlight.js

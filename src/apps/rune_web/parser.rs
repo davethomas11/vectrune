@@ -30,8 +30,10 @@ pub fn parse_rune_web_frontend(
     default_page_name: &str,
 ) -> Result<RuneWebFrontend, ParseError> {
     let mut page_views = HashMap::new();
+    let mut component_definitions = HashMap::new();
     let mut style_definitions = HashMap::new();
     let mut logic_definitions = HashMap::new();
+    let mut i18n_sections = HashMap::new();
 
     // Extract @Page sections
     for section in &doc.sections {
@@ -39,6 +41,15 @@ pub fn parse_rune_web_frontend(
             let page_name = &section.path[1];
             let page_def = parse_page_section(section)?;
             page_views.insert(page_name.clone(), page_def);
+        }
+    }
+
+    // Extract @Component sections
+    for section in &doc.sections {
+        if section.path.len() == 2 && section.path[0] == "Component" {
+            let component_name = &section.path[1];
+            let component_def = parse_component_section(section)?;
+            component_definitions.insert(component_name.clone(), component_def);
         }
     }
 
@@ -60,6 +71,15 @@ pub fn parse_rune_web_frontend(
         }
     }
 
+    // Extract @I18N sections
+    for section in &doc.sections {
+        if section.path.len() == 2 && section.path[0] == "I18N" {
+            let locale = &section.path[1];
+            let i18n_def = parse_i18n_section(section);
+            i18n_sections.insert(locale.clone(), i18n_def);
+        }
+    }
+
     if page_views.is_empty() {
         return Err(ParseError(format!(
             "No @Page sections found; expected at least @Page/{}",
@@ -67,10 +87,36 @@ pub fn parse_rune_web_frontend(
         )));
     }
 
+    let mut resolved_components = HashMap::new();
+    let component_names: Vec<String> = component_definitions.keys().cloned().collect();
+    for component_name in component_names {
+        let resolved_view = resolve_component_tree(
+            &component_name,
+            &component_definitions,
+            &mut resolved_components,
+            &mut Vec::new(),
+        )?;
+        resolved_components.insert(component_name.clone(), ComponentDefinition {
+            view_tree: resolved_view,
+        });
+    }
+
+    for (page_name, page_def) in page_views.iter_mut() {
+        let page_path = format!("@Page/{}", page_name);
+        page_def.view_tree = expand_component_refs_in_node(
+            &page_def.view_tree,
+            &component_definitions,
+            &mut resolved_components,
+            &mut vec![page_path],
+        )?;
+    }
+
     Ok(RuneWebFrontend {
         page_views,
+        component_definitions: resolved_components,
         style_definitions,
         logic_definitions,
+        i18n_sections,
     })
 }
 
@@ -110,6 +156,191 @@ fn parse_page_section(section: &crate::rune_ast::Section) -> Result<PageDefiniti
         logic_ref,
         view_tree,
     })
+}
+
+/// Parse a `@Component/<name>` section.
+fn parse_component_section(
+    section: &crate::rune_ast::Section,
+) -> Result<ComponentDefinition, ParseError> {
+    let view_tree = if let Some(view_items) = section.series.get("view") {
+        parse_view_nodes(view_items)?
+    } else {
+        return Err(ParseError(
+            "Component section missing 'view:' block".to_string(),
+        ));
+    };
+
+    Ok(ComponentDefinition { view_tree })
+}
+
+fn resolve_component_tree(
+    component_name: &str,
+    component_definitions: &HashMap<String, ComponentDefinition>,
+    resolved_components: &mut HashMap<String, ComponentDefinition>,
+    stack: &mut Vec<String>,
+) -> Result<ViewNode, ParseError> {
+    if let Some(component) = resolved_components.get(component_name) {
+        return Ok(component.view_tree.clone());
+    }
+
+    if stack.iter().any(|name| name == component_name) {
+        let mut cycle = stack.clone();
+        cycle.push(component_name.to_string());
+        return Err(ParseError(format!(
+            "Recursive component reference detected: {}",
+            cycle.join(" -> ")
+        )));
+    }
+
+    let component = component_definitions.get(component_name).ok_or_else(|| {
+        ParseError(format!("Unknown component reference: {}", component_name))
+    })?;
+
+    stack.push(component_name.to_string());
+    let expanded = expand_component_refs_in_node(
+        &component.view_tree,
+        component_definitions,
+        resolved_components,
+        stack,
+    )?;
+    stack.pop();
+
+    Ok(expanded)
+}
+
+fn expand_component_refs_in_node(
+    node: &ViewNode,
+    component_definitions: &HashMap<String, ComponentDefinition>,
+    resolved_components: &mut HashMap<String, ComponentDefinition>,
+    stack: &mut Vec<String>,
+) -> Result<ViewNode, ParseError> {
+    match node {
+        ViewNode::Element {
+            tag,
+            classes,
+            id,
+            attrs,
+            events,
+            text,
+            for_each,
+            children,
+        } => {
+            if component_definitions.contains_key(tag) {
+                if !classes.is_empty()
+                    || id.is_some()
+                    || !events.is_empty()
+                    || text.is_some()
+                    || !children.is_empty()
+                {
+                    return Err(ParseError(format!(
+                        "Component invocation '{}' does not yet support classes, ids, events, text, or child content (use props instead)",
+                        tag
+                    )));
+                }
+
+                let component_tree = resolve_component_tree(
+                    tag,
+                    component_definitions,
+                    resolved_components,
+                    stack,
+                )?;
+
+                // Wrap with ComponentScope if any props were passed
+                let scoped_tree = if attrs.is_empty() {
+                    component_tree
+                } else {
+                    ViewNode::ComponentScope {
+                        props: attrs.clone(),
+                        body: Box::new(component_tree),
+                    }
+                };
+
+                if let Some(for_each) = for_each {
+                    return Ok(ViewNode::Loop {
+                        item_name: for_each.item_name.clone(),
+                        index_name: for_each.index_name.clone(),
+                        collection: for_each.collection.clone(),
+                        body: vec![scoped_tree],
+                    });
+                }
+
+                return Ok(scoped_tree);
+            }
+
+            let mut expanded_children = Vec::new();
+            for child in children {
+                expanded_children.push(expand_component_refs_in_node(
+                    child,
+                    component_definitions,
+                    resolved_components,
+                    stack,
+                )?);
+            }
+
+            Ok(ViewNode::Element {
+                tag: tag.clone(),
+                classes: classes.clone(),
+                id: id.clone(),
+                attrs: attrs.clone(),
+                events: events.clone(),
+                text: text.clone(),
+                for_each: for_each.clone(),
+                children: expanded_children,
+            })
+        }
+        ViewNode::Loop {
+            item_name,
+            index_name,
+            collection,
+            body,
+        } => {
+            let mut expanded_body = Vec::new();
+            for child in body {
+                expanded_body.push(expand_component_refs_in_node(
+                    child,
+                    component_definitions,
+                    resolved_components,
+                    stack,
+                )?);
+            }
+
+            Ok(ViewNode::Loop {
+                item_name: item_name.clone(),
+                index_name: index_name.clone(),
+                collection: collection.clone(),
+                body: expanded_body,
+            })
+        }
+        ViewNode::Conditional { condition, body } => {
+            let mut expanded_body = Vec::new();
+            for child in body {
+                expanded_body.push(expand_component_refs_in_node(
+                    child,
+                    component_definitions,
+                    resolved_components,
+                    stack,
+                )?);
+            }
+
+            Ok(ViewNode::Conditional {
+                condition: condition.clone(),
+                body: expanded_body,
+            })
+        }
+        ViewNode::Text(text) => Ok(ViewNode::Text(text.clone())),
+        ViewNode::ComponentScope { props, body } => {
+            let expanded_body = expand_component_refs_in_node(
+                body,
+                component_definitions,
+                resolved_components,
+                stack,
+            )?;
+            Ok(ViewNode::ComponentScope {
+                props: props.clone(),
+                body: Box::new(expanded_body),
+            })
+        }
+    }
 }
 
 /// Parse view nodes from a series list.
@@ -209,6 +440,7 @@ fn tokenize_element_line(s: &str) -> Vec<String> {
 
     for ch in s.chars() {
         if escape_next {
+            current.push('\\');
             current.push(ch);
             escape_next = false;
         } else if ch == '\\' {
@@ -224,6 +456,9 @@ fn tokenize_element_line(s: &str) -> Vec<String> {
         } else {
             current.push(ch);
         }
+    }
+    if escape_next {
+        current.push('\\');
     }
     if !current.is_empty() {
         tokens.push(current);
@@ -874,6 +1109,236 @@ action replay():
         assert_eq!(reset.steps.len(), 1);
         assert_eq!(replay.steps.len(), 1);
     }
+
+    #[test]
+    fn preserves_escaped_sequences_in_view_text_tokens() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Page/demo
+view:
+    pre:
+        code .language-rune "line 1\nline 2 \"quoted\" \{literal\}"
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "demo").expect("expected frontend parse");
+        let page = frontend.page_views.get("demo").expect("page should exist");
+
+        match &page.view_tree {
+            ViewNode::Element { tag, children, .. } => {
+                assert_eq!(tag, "pre");
+                match &children[0] {
+                    ViewNode::Element { tag, text, .. } => {
+                        assert_eq!(tag, "code");
+                        assert_eq!(
+                            text.as_deref(),
+                            Some("line 1\\nline 2 \\\"quoted\\\" \\{literal\\}")
+                        );
+                    }
+                    _ => panic!("expected code element"),
+                }
+            }
+            _ => panic!("expected root element"),
+        }
+    }
+
+    #[test]
+    fn expands_component_references_inside_pages() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/HeroBanner
+view:
+    section .hero:
+        h1 "Learn Vectrune"
+
+@Page/home
+view:
+    main:
+        HeroBanner
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let page = frontend.page_views.get("home").expect("page should exist");
+
+        match &page.view_tree {
+            ViewNode::Element { children, .. } => match &children[0] {
+                ViewNode::Element { tag, classes, children, .. } => {
+                    assert_eq!(tag, "section");
+                    assert_eq!(classes, &vec!["hero".to_string()]);
+                    assert!(matches!(children[0], ViewNode::Element { .. }));
+                }
+                _ => panic!("expected expanded component element"),
+            },
+            _ => panic!("expected root element"),
+        }
+    }
+
+    #[test]
+    fn expands_component_references_with_inline_loop_bindings() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/ScoreBadge
+view:
+    span .score "{cell}"
+
+@Page/home
+view:
+    div:
+        ScoreBadge <- (cell, index) in board
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let page = frontend.page_views.get("home").expect("page should exist");
+
+        match &page.view_tree {
+            ViewNode::Element { children, .. } => match &children[0] {
+                ViewNode::Loop { item_name, index_name, collection, body } => {
+                    assert_eq!(item_name, "cell");
+                    assert_eq!(index_name.as_deref(), Some("index"));
+                    assert_eq!(collection, "board");
+                    match &body[0] {
+                        ViewNode::Element { tag, text, .. } => {
+                            assert_eq!(tag, "span");
+                            assert_eq!(text.as_deref(), Some("{cell}"));
+                        }
+                        _ => panic!("expected expanded component body"),
+                    }
+                }
+                _ => panic!("expected loop produced from component invocation"),
+            },
+            _ => panic!("expected root element"),
+        }
+    }
+
+    #[test]
+    fn rejects_recursive_component_references() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/A
+view:
+    B
+
+@Component/B
+view:
+    A
+
+@Page/home
+view:
+    A
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let err = parse_rune_web_frontend(&doc, "home").expect_err("expected recursive component error");
+        assert!(err.to_string().contains("Recursive component reference detected"));
+    }
+
+    #[test]
+    fn expands_component_with_props_into_component_scope_node() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/HeroBanner
+view:
+    section .hero:
+        h1 "{title}"
+
+@Page/home
+view:
+    main:
+        HeroBanner title="Learn Vectrune"
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let page = frontend.page_views.get("home").expect("page should exist");
+
+        // main > ComponentScope > section.hero > h1
+        match &page.view_tree {
+            ViewNode::Element { children, .. } => match &children[0] {
+                ViewNode::ComponentScope { props, body } => {
+                    assert_eq!(props.get("title").map(|s| s.as_str()), Some("Learn Vectrune"));
+                    match body.as_ref() {
+                        ViewNode::Element { tag, classes, .. } => {
+                            assert_eq!(tag, "section");
+                            assert_eq!(classes, &vec!["hero".to_string()]);
+                        }
+                        _ => panic!("expected section element inside ComponentScope"),
+                    }
+                }
+                _ => panic!("expected ComponentScope from component invocation with props"),
+            },
+            _ => panic!("expected root main element"),
+        }
+    }
+
+    #[test]
+    fn component_without_props_expands_directly_without_scope_wrapper() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/Footer
+view:
+    footer .site-footer:
+        p "bottom"
+
+@Page/home
+view:
+    main:
+        Footer
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let page = frontend.page_views.get("home").expect("page should exist");
+
+        match &page.view_tree {
+            ViewNode::Element { children, .. } => match &children[0] {
+                ViewNode::Element { tag, .. } => assert_eq!(tag, "footer"),
+                _ => panic!("expected footer element — no scope wrapper for zero-prop component"),
+            },
+            _ => panic!("expected root main element"),
+        }
+    }
+}
+
+/// Parse an `@I18N/<locale>` section into an [`I18nSection`].
+///
+/// Each `Value::Map` entry in `section.kv` is treated as a named translation group:
+/// ```text
+/// @I18N/en_us
+/// Nav {
+///     home = "Home"
+///     about = "About"
+/// }
+/// ```
+fn parse_i18n_section(section: &crate::rune_ast::Section) -> I18nSection {
+    let mut groups = HashMap::new();
+
+    for (group_name, value) in &section.kv {
+        if let Value::Map(entries) = value {
+            let mut translations = HashMap::new();
+            for (key, val) in entries {
+                if let Some(s) = val.as_str() {
+                    translations.insert(key.clone(), s.to_string());
+                }
+            }
+            groups.insert(group_name.clone(), translations);
+        }
+    }
+
+    I18nSection { groups }
 }
 
 

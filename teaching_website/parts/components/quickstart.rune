@@ -1,0 +1,52 @@
+@Component/QuickstartSection
+view:
+    section #quickstart .card:
+        div .section-heading:
+            p .eyebrow "%i18n.Quickstart.eyebrow%"
+            h2 "%i18n.Quickstart.headline%"
+            p .section-copy "%i18n.Quickstart.description%"
+        div .install-section:
+            h3 "%i18n.Quickstart.install_title%"
+            div .install-grid:
+                article .install-card:
+                    h4 "%i18n.Quickstart.homebrew_title%"
+                    pre:
+                        code .code-block .language-bash "%i18n.Quickstart.homebrew_cmd%"
+                    p "%i18n.Quickstart.verify_with%"
+                    pre:
+                        code .code-block .language-bash "%i18n.Quickstart.verify_cmd%"
+                article .install-card:
+                    h4 "%i18n.Quickstart.windows_title%"
+                    p "%i18n.Quickstart.windows_desc%"
+                    ul:
+                        li "%i18n.Quickstart.windows_step1%"
+                        li "%i18n.Quickstart.windows_step2%"
+                        li "%i18n.Quickstart.windows_step3%"
+                    a .content-link href="https://github.com/davethomas11/vectrune/releases" target=_blank "%i18n.Quickstart.releases_link%"
+                article .install-card:
+                    h4 "%i18n.Quickstart.source_title%"
+                    pre:
+                        code .code-block .language-bash "%i18n.Quickstart.source_cmd%"
+                    p "%i18n.Quickstart.source_note%"
+        div .steps-grid:
+            article .step-card:
+                span .step-number "1"
+                h3 "%i18n.Quickstart.steps_verify%"
+                pre:
+                    code .code-block .language-bash "%i18n.Quickstart.steps_verify_cmd%"
+            article .step-card:
+                span .step-number "2"
+                h3 "%i18n.Quickstart.steps_run%"
+                pre:
+                    code .code-block .language-bash "%i18n.Quickstart.steps_run_cmd%"
+                p "%i18n.Quickstart.steps_run_note%"
+            article .step-card:
+                span .step-number "3"
+                h3 "%i18n.Quickstart.steps_hit%"
+                pre:
+                    code .code-block .language-bash "%i18n.Quickstart.steps_hit_cmd%"
+                p "%i18n.Quickstart.steps_hit_result%"
+        div .callout .callout-success:
+            strong "%i18n.Quickstart.callout_title%"
+            p "%i18n.Quickstart.callout_text%"
+

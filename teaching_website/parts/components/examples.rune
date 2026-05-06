@@ -1,0 +1,28 @@
+@Component/ExamplesSection
+view:
+    section #examples .card:
+        div .section-heading:
+            p .eyebrow "%i18n.Examples.eyebrow%"
+            h2 "%i18n.Examples.headline%"
+        div .examples-grid:
+            article .example-card:
+                span .tag .tag-beginner "%i18n.Examples.app_level%"
+                h3 "%i18n.Examples.app_title%"
+                p "%i18n.Examples.app_desc%"
+            article .example-card:
+                span .tag .tag-beginner "%i18n.Examples.skaters_level%"
+                h3 "%i18n.Examples.skaters_title%"
+                p "%i18n.Examples.skaters_desc%"
+            article .example-card:
+                span .tag .tag-practical "%i18n.Examples.user_api_level%"
+                h3 "%i18n.Examples.user_api_title%"
+                p "%i18n.Examples.user_api_desc%"
+            article .example-card:
+                span .tag .tag-practical "%i18n.Examples.graphql_level%"
+                h3 "%i18n.Examples.graphql_title%"
+                p "%i18n.Examples.graphql_desc%"
+            article .example-card:
+                span .tag .tag-advanced "%i18n.Examples.tic_level%"
+                h3 "%i18n.Examples.tic_title%"
+                p "%i18n.Examples.tic_desc%"
+

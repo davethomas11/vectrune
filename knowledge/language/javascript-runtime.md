@@ -9,6 +9,8 @@ Rune-Web generates self-contained JavaScript that manages client-side state and 
 3. **Action Dispatch** - Named action handlers that mutate state
 4. **Re-rendering** - Automatic DOM updates when state changes
 
+`@Component/<name>` sections are expanded before JavaScript generation. The browser runtime does not have a separate component system yet; it renders the already-expanded page tree.
+
 ## State Declaration
 
 State is declared in the `@Logic` section's `state:` block:

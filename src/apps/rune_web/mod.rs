@@ -22,8 +22,9 @@ pub mod jscodegen;
 
 use crate::core::AppState;
 use crate::util::{log, LogLevel};
-use axum::{response::Html, routing::get, Router};
+use axum::{extract::Query, response::Html, routing::get, Router};
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
+use std::collections::HashMap;
 
 /// Build a mountable rune-web frontend router.
 ///
@@ -43,6 +44,11 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
         .and_then(|s| s.kv.get("page"))
         .and_then(|v| v.as_str())
         .unwrap_or("index");
+
+    let active_locale = frontend_section
+        .and_then(|s| s.kv.get("locale"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
 
     let mount_path_raw = frontend_section
         .and_then(|s| s.kv.get("path"))
@@ -74,10 +80,26 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
                 ),
             );
 
-            let html = render_frontend_shell(&frontend, page_name);
-            Router::new().route(mount_path, get(move || {
-                let html = html.clone();
-                async move { Html(html) }
+            let frontend = frontend.clone();
+            let page_name = page_name.to_string();
+            let default_locale = active_locale.clone();
+
+            Router::new().route(mount_path, get(move |Query(params): Query<HashMap<String, String>>| {
+                let frontend = frontend.clone();
+                let page_name = page_name.clone();
+                let default_locale = default_locale.clone();
+                async move {
+                    let request_locale = params
+                        .get("locale")
+                        .map(String::as_str)
+                        .filter(|locale| frontend.i18n_sections.contains_key(*locale));
+                    let html = render_frontend_shell(
+                        &frontend,
+                        &page_name,
+                        request_locale.or(default_locale.as_deref()),
+                    );
+                    Html(html)
+                }
             }))
         }
         Err(e) => {
@@ -90,7 +112,7 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
     }
 }
 
-fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str) -> String {
+fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, active_locale: Option<&str>) -> String {
     let page = frontend.page_views.get(page_name);
     let title = page
         .map(|page| page.title.as_str())
@@ -100,7 +122,35 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str) -> St
     let logic = page
         .and_then(|p| p.logic_ref.as_ref())
         .and_then(|logic_name| frontend.logic_definitions.get(logic_name));
-    let runtime_data = build_runtime_data(logic);
+    let mut runtime_data = build_runtime_data(logic);
+
+    // Resolve active locale: explicit `locale = xx` on @Frontend, else first defined.
+    let resolved_locale = active_locale
+        .and_then(|l| frontend.i18n_sections.get(l).map(|s| (l.to_string(), s)))
+        .or_else(|| {
+            let mut keys: Vec<&String> = frontend.i18n_sections.keys().collect();
+            keys.sort();
+            keys.first().and_then(|k| frontend.i18n_sections.get(*k).map(|s| ((*k).clone(), s)))
+        });
+
+    // Inject the active locale's translations as runtime_data["i18n"]
+    let i18n_json = if let Some((_, i18n)) = resolved_locale {
+        let mut i18n_obj = serde_json::Map::new();
+        for (group_name, entries) in &i18n.groups {
+            let mut group_obj = serde_json::Map::new();
+            for (key, val) in entries {
+                group_obj.insert(key.clone(), JsonValue::String(val.clone()));
+            }
+            i18n_obj.insert(group_name.clone(), JsonValue::Object(group_obj));
+        }
+        let i18n_value = JsonValue::Object(i18n_obj);
+        let json_str = serde_json::to_string(&i18n_value).unwrap_or_else(|_| "{}".to_string());
+        runtime_data.insert("i18n".to_string(), i18n_value);
+        json_str
+    } else {
+        "{}".to_string()
+    };
+
     let locals = JsonMap::new();
 
     let page_html = page
@@ -108,7 +158,7 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str) -> St
         .unwrap_or_else(|| String::from("<p>Page not found</p>"));
 
     let style_html = render_styles(frontend, page.and_then(|p| p.style_ref.clone()));
-    let logic_html = render_logic(page, logic.cloned());
+    let logic_html = render_logic(page, logic.cloned(), &i18n_json);
 
     format!(
         r#"<!DOCTYPE html>
@@ -213,6 +263,20 @@ fn render_view_node(node: &ast::ViewNode, data: &JsonMap<String, JsonValue>, loc
             }
         }
         ast::ViewNode::Text(s) => html_escape(&interpolate_template(s, data, locals)),
+        ast::ViewNode::ComponentScope { props, body } => {
+            // Merge component props into data so they are available for interpolation
+            // but do NOT appear in data-rune-scope (which is reserved for loop locals).
+            let mut child_data = data.clone();
+            for (key, value) in props {
+                child_data.insert(
+                    key.clone(),
+                    serde_json::Value::String(
+                        interpolate_template(value, data, locals),
+                    ),
+                );
+            }
+            render_view_node(body, &child_data, locals)
+        }
     }
 }
 
@@ -312,6 +376,41 @@ fn apply_derived_values(
     }
 }
 
+/// Expand `%i18n.Group.key%` shorthand to `{i18n.Group.key}` before template interpolation.
+fn expand_percent_i18n(input: &str) -> String {
+    let mut output = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '%' {
+            // Collect until closing %
+            let mut inner = String::new();
+            let mut closed = false;
+            for c in chars.by_ref() {
+                if c == '%' {
+                    closed = true;
+                    break;
+                }
+                inner.push(c);
+            }
+            if closed && inner.starts_with("i18n.") {
+                output.push('{');
+                output.push_str(&inner);
+                output.push('}');
+            } else {
+                // Not a recognized %...% token — pass through verbatim
+                output.push('%');
+                output.push_str(&inner);
+                if closed {
+                    output.push('%');
+                }
+            }
+        } else {
+            output.push(ch);
+        }
+    }
+    output
+}
+
 fn normalize_literal(input: &str) -> String {
     let trimmed = input.trim();
     if trimmed.len() >= 2
@@ -325,11 +424,33 @@ fn normalize_literal(input: &str) -> String {
 }
 
 fn interpolate_template(template: &str, data: &JsonMap<String, JsonValue>, locals: &JsonMap<String, JsonValue>) -> String {
+    const LITERAL_OPEN_BRACE: &str = "\u{E000}";
+    const LITERAL_CLOSE_BRACE: &str = "\u{E001}";
+
+    // Pre-pass: rewrite %i18n.Group.key% → {i18n.Group.key}
+    let template = expand_percent_i18n(template);
+
     let mut rendered = String::new();
     let mut chars = template.chars().peekable();
 
     while let Some(ch) = chars.next() {
-        if ch == '{' {
+        if ch == '\\' {
+            if let Some(next) = chars.next() {
+                match next {
+                    'n' => rendered.push('\n'),
+                    'r' => rendered.push('\r'),
+                    't' => rendered.push('\t'),
+                    '"' => rendered.push('"'),
+                    '\'' => rendered.push('\''),
+                    '\\' => rendered.push('\\'),
+                    '{' => rendered.push_str(LITERAL_OPEN_BRACE),
+                    '}' => rendered.push_str(LITERAL_CLOSE_BRACE),
+                    other => rendered.push(other),
+                }
+            } else {
+                rendered.push('\\');
+            }
+        } else if ch == '{' {
             let mut expr = String::new();
             let mut found_end = false;
             while let Some(next) = chars.next() {
@@ -359,6 +480,8 @@ fn interpolate_template(template: &str, data: &JsonMap<String, JsonValue>, local
     }
 
     rendered
+        .replace(LITERAL_OPEN_BRACE, "{")
+        .replace(LITERAL_CLOSE_BRACE, "}")
 }
 
 fn resolve_expression_value(
@@ -551,10 +674,10 @@ fn render_styles(frontend: &ast::RuneWebFrontend, style_ref: Option<String>) -> 
 
 /// Render JavaScript setup for client-side logic.
 /// Uses the JavaScript code generator to create functional handler code.
-fn render_logic(page: Option<&ast::PageDefinition>, logic: Option<ast::LogicDefinition>) -> String {
+fn render_logic(page: Option<&ast::PageDefinition>, logic: Option<ast::LogicDefinition>, i18n_json: &str) -> String {
     match (page, logic) {
         (Some(page), Some(logic)) => {
-            let codegen = jscodegen::JsCodegen::new(page.view_tree.clone(), logic);
+            let codegen = jscodegen::JsCodegen::new(page.view_tree.clone(), logic, i18n_json.to_string());
             let js_code = codegen.generate();
             format!("<script>\n{}</script>", js_code)
         }

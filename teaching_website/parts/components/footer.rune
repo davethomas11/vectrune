@@ -1,0 +1,5 @@
+@Component/TeachingFooter
+view:
+    footer .site-footer:
+        p "%i18n.Footer.copyright%"
+

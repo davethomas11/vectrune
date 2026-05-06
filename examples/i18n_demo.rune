@@ -1,0 +1,109 @@
+#!RUNE
+
+@App
+name = I18N Demo
+version = 1.0
+type = REST
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = home
+locale = en_us
+
+@I18N/en_us
+Common {
+    app-title = "Vectrune Quick Start"
+    welcome = "Welcome to Vectrune"
+}
+Nav {
+    home = "Home"
+    docs = "Documentation"
+    examples = "Examples"
+}
+Hero {
+    headline = "Build APIs and Frontends in One File"
+    subheading = "Define routes, pages, and logic with declarative sections"
+}
+CTA {
+    primary = "Get Started"
+    secondary = "Learn More"
+}
+
+@I18N/es
+Common {
+    app-title = "Inicio Rápido Vectrune"
+    welcome = "Bienvenido a Vectrune"
+}
+Nav {
+    home = "Inicio"
+    docs = "Documentación"
+    examples = "Ejemplos"
+}
+Hero {
+    headline = "Construye APIs y Frontends en Un Archivo"
+    subheading = "Define rutas, páginas y lógica con secciones declarativas"
+}
+CTA {
+    primary = "Comenzar"
+    secondary = "Más Información"
+}
+
+@I18N/fr
+Common {
+    app-title = "Démarrage Rapide Vectrune"
+    welcome = "Bienvenue sur Vectrune"
+}
+Nav {
+    home = "Accueil"
+    docs = "Documentation"
+    examples = "Exemples"
+}
+Hero {
+    headline = "Créez des API et des Frontends en Un Fichier"
+    subheading = "Définissez des routes, des pages et de la logique avec des sections déclaratives"
+}
+CTA {
+    primary = "Commencer"
+    secondary = "En Savoir Plus"
+}
+
+@Component/NavBar
+view:
+    nav .navbar .container-fluid:
+        div .nav-brand:
+            p "%i18n.Common.app-title%"
+        ul .nav-menu:
+            li:
+                a href="#" "%i18n.Nav.home%"
+            li:
+                a href="#" "%i18n.Nav.docs%"
+            li:
+                a href="#" "%i18n.Nav.examples%"
+
+@Component/HeroSection
+view:
+    section .hero .py-5:
+        div .container:
+            h1 .display-4 "%i18n.Hero.headline%"
+            p .lead "%i18n.Hero.subheading%"
+            div .cta-buttons .mt-4:
+                a .btn .btn-primary href="#" "%i18n.CTA.primary%"
+                a .btn .btn-secondary href="#" "%i18n.CTA.secondary%"
+
+@Component/Welcome
+view:
+    div .alert .alert-info:
+        p:
+            strong "%i18n.Common.welcome%"
+            span " to the Vectrune i18n demo!"
+
+@Page/home
+title = Vectrune i18n Demo
+view:
+    div:
+        NavBar
+        main .main-content:
+            HeroSection
+            Welcome
+

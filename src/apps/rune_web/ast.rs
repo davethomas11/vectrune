@@ -12,11 +12,35 @@ pub struct RuneWebFrontend {
     /// All page views, keyed by name (e.g., "tic-tac-toe")
     pub page_views: HashMap<String, PageDefinition>,
 
+    /// All reusable component views, keyed by name (e.g., "HeroBanner")
+    pub component_definitions: HashMap<String, ComponentDefinition>,
+
     /// All style definitions, keyed by name (e.g., "game")
     pub style_definitions: HashMap<String, StyleDefinition>,
 
     /// All logic definitions, keyed by name (e.g., "game")
     pub logic_definitions: HashMap<String, LogicDefinition>,
+
+    /// All i18n locale bundles, keyed by locale code (e.g., "en_us")
+    pub i18n_sections: HashMap<String, I18nSection>,
+}
+
+/// An i18n locale bundle from `@I18N/<locale>`.
+///
+/// Each locale bundle holds named translation groups:
+/// ```text
+/// @I18N/en_us
+/// Nav {
+///     home = "Home"
+///     about = "About"
+/// }
+/// ```
+/// Translations are referenced in view strings as `{i18n.Nav.home}` or `%i18n.Nav.home%`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct I18nSection {
+    /// Translation groups, keyed by group name (e.g., "Nav").
+    /// Each group maps translation keys to localized strings.
+    pub groups: HashMap<String, HashMap<String, String>>,
 }
 
 /// A page definition from `@Page/<name>`.
@@ -33,6 +57,14 @@ pub struct PageDefinition {
     pub logic_ref: Option<String>,
 
     /// The view tree structure
+    pub view_tree: ViewNode,
+}
+
+/// A reusable component definition from `@Component/<name>`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
+pub struct ComponentDefinition {
+    /// The component's normalized view tree.
     pub view_tree: ViewNode,
 }
 
@@ -64,6 +96,16 @@ pub enum ViewNode {
     Conditional {
         condition: String,
         body: Vec<ViewNode>,
+    },
+
+    /// A component invocation scope: injects props as locals before rendering the body.
+    /// Props are static string values passed at the component invocation site.
+    ComponentScope {
+        /// Prop values passed at the invocation site, e.g., `title="Hello"`
+        props: HashMap<String, String>,
+
+        /// The expanded component view tree
+        body: Box<ViewNode>,
     },
 
     /// Raw text content
@@ -145,6 +187,3 @@ pub enum ActionStep {
         steps: Vec<ActionStep>,
     },
 }
-
-
-

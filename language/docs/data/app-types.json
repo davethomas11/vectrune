@@ -16,7 +16,7 @@
     },
     {
       "name": "Frontend Static Hosting",
-      "summary": "Static/frontend hosting through `@Frontend` configuration."
+      "summary": "Frontend hosting through `@Frontend` configuration."
     },
     {
       "name": "AWS Lambda Packaging/Runtime",

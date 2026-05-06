@@ -25,13 +25,18 @@ type = rune-web
 path = %ROOT%
 page = home
 
+@Component/HeroBanner
+view:
+    section .hero:
+        h1 "Welcome"
+
 @Page/home
 title = Home
 style = themed
 logic = stateful
 view:
     main .container:
-        h1 "Welcome"
+        HeroBanner
         button .primary click=greet "Say Hello"
 
 @Style/themed
@@ -52,15 +57,17 @@ action greet():
 
 ### 1. Parsing Layer (`parser.rs`)
 
-**Responsibility**: Extract and normalize `@Page`, `@Style`, and `@Logic` sections into internal AST structures.
+**Responsibility**: Extract and normalize `@Page`, `@Component`, `@Style`, and `@Logic` sections into internal AST structures.
 
 **Key Components**:
-- `parse_rune_web_frontend()` - Main entry point, orchestrates extraction of all three section types
+`parse_rune_web_frontend()` - Main entry point, orchestrates extraction of all frontend section types
 - `parse_page_section()` - Extracts view trees from `@Page` definitions
+- `parse_component_section()` - Extracts reusable view trees from `@Component` definitions
 - `parse_style_section()` - Normalizes CSS tokens, presets, and rules
 - `parse_logic_section()` - Parses state, derived values, and action definitions
+- `parse_i18n_section()` - Extracts translation groups from `@I18N/<locale>` definitions
 
-**Output**: `RuneWebFrontend` AST with typed page/style/logic maps
+**Output**: `RuneWebFrontend` AST with typed page/component/style/logic/i18n maps
 
 ### 2. AST Layer (`ast.rs`)
 
@@ -69,12 +76,91 @@ action greet():
 **Key Types**:
 - `RuneWebFrontend` - Root container for all frontend definitions
 - `PageDefinition` - Represents a single page with title, style/logic refs, and view tree
+- `ComponentDefinition` - Represents a reusable view tree that can be expanded into pages or other components
 - `ViewNode` - Recursive enum for elements, loops, conditionals, text, and element-level `for_each` bindings
 - `StyleDefinition` - Tokens, presets, CSS rules
 - `LogicDefinition` - State, structured derived values, scoped helper functions, and action handlers
+- `I18nSection` - Translation groups for a specific locale
 - `ActionDefinition` - Named action with parameters and structured runtime steps
 
 **Design Decision**: AST types are independent of rendering; multiple rendering targets (HTML, native, server-side) could theoretically use the same AST.
+
+### Reusable Components
+
+`@Component/<name>` provides a parse-time reuse mechanism for repeated view fragments.
+
+```rune
+@Component/ScoreBadge
+view:
+    span .score "{cell}"
+
+@Page/home
+view:
+    div .scoreboard:
+        ScoreBadge <- (cell, index) in board
+```
+
+Current behavior:
+- component references are expanded during parsing, so renderers only see ordinary `ViewNode`s
+- components can reference other components
+- recursive component references are rejected with a parse error
+- component invocations currently support loop bindings, but do not yet support props, slots, or invocation-site attributes/classes/events
+
+### Internationalization (i18n)
+
+`@I18N/<locale>` defines translation bundles for content localization.
+
+```rune
+@I18N/en_us
+Nav {
+    home = "Home"
+    about = "About"
+}
+Hero {
+    headline = "Welcome to Vectrune"
+}
+
+@I18N/fr_fr
+Nav {
+    home = "Accueil"
+    about = "À propos"
+}
+Hero {
+    headline = "Bienvenue sur Vectrune"
+}
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = home
+locale = en_us
+
+@Page/home
+view:
+    div:
+        h1 "%i18n.Hero.headline%"
+        nav:
+            a "%i18n.Nav.home%"
+            a "%i18n.Nav.about%"
+```
+
+**Translation Reference Syntax**:
+- `%i18n.Group.key%` - Percent-delimited syntax converted to `{i18n.Group.key}` at render time
+- `{i18n.Group.key}` - Direct curly-brace syntax also supported
+
+**Locale Selection**:
+- Request override: `?locale=fr_fr` on the mounted frontend URL
+- Explicit: `locale = fr_fr` on `@Frontend` section
+- Default: First defined locale by alphabetical order of section definition
+
+**Rendering**:
+- **SSR**: Translations resolved at server render time from the request locale override or active frontend locale
+- **JavaScript**: Translation bundle injected into `app.state.i18n` for client-side access
+
+**Current Behavior**:
+- Translation groups are flat maps of key-value strings
+- Missing translation keys render as empty strings (no fallback chain)
+- All locales are active in the browser runtime (`app.state.i18n` contains full bundle)
 
 ### 3. Compilation Layer
 
@@ -126,7 +212,7 @@ Produces:
 
 #### JavaScript Code Generator (`jscodegen.rs`)
 
-**Responsibility**: Transform logic definitions and the page AST into functional JavaScript that manages state and handles events.
+**Responsibility**: Transform logic definitions and the already-expanded page AST into functional JavaScript that manages state and handles events.
 
 **Key Operations**:
 - **State Initialization**: Emit typed JavaScript object matching Rune state
@@ -167,10 +253,11 @@ const app = {
 **Responsibility**: Orchestrate compilation and render complete HTML document for client delivery.
 
 **Key Functions**:
-- `render_frontend_shell()` - Compose DOCTYPE, head (meta, title, styles), body (app div, server-rendered preview HTML, logic script)
+- `render_frontend_shell()` - Compose DOCTYPE, head (meta, title, styles), body (app div, server-rendered preview HTML, logic script); also resolves active locale and injects i18n bundle
 - `render_view_node()` - Recursively render AST view tree to HTML with interpolation, loops, and conditions
 - `render_styles()` - Compile styles to `<style>` tag
-- `render_logic()` - Compile page AST + logic to a browser runtime script
+- `render_logic()` - Compile the expanded page AST + logic + i18n bundle to a browser runtime script
+- `expand_percent_i18n()` - Pre-process `%i18n.Group.key%` syntax to `{i18n.Group.key}` before interpolation
 
 **Output**: Complete, self-contained HTML document ready for HTTP delivery
 
@@ -242,10 +329,22 @@ view:
 3. element-level `for_each` loops and classic loop nodes
 4. full-page rerendering after actions
 5. zero-argument actions in either `action reset:` or `action reset():` form
+6. escaped string sequences in page text and attributes such as `\n`, `\t`, `\"`, `\\`, `\{`, and `\}`
+7. parse-time component expansion from `@Component/<name>` references
+8. i18n translation bundles with `%i18n.Group.key%` or `{i18n.Group.key}` reference syntax
 
 **Still deferred**:
 - arbitrary inline expressions inside `{...}`
 - dependency tracking and partial DOM patching
+
+Escaped sequences are decoded at render time before interpolation. This makes multiline code samples practical inside `@Page` definitions without forcing separate HTML files:
+
+```rune
+@Page/docs
+view:
+    pre:
+        code .language-rune "@App\nname = Demo\nrun:\n    log \"ok\""
+```
 
 ### Derived Values
 
