@@ -15,6 +15,18 @@ pages:
       - README.md
       - capabilities.md
       - src/main.rs
+  - id: product.mass-adoption
+    path: product/mass-adoption.md
+    kind: page
+    title: Mass Adoption Strategy
+    audience:
+      - ai
+      - human
+    sources:
+      - .github/copilot-instructions.md
+      - knowledge/product/overview.md
+      - README.md
+      - examples/
   - id: language.core
     path: language/core-language.md
     kind: page

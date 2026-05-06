@@ -23,6 +23,14 @@ It is intended to support two downstream consumers:
 - `examples/` — curated teaching examples and example guidance
 - `reference/` — structured reference files for builtins, app types, runtime context, and related concepts
 
+## Strategy and backlog ownership
+
+- `product/overview.md` captures the high-level framing for what Vectrune is and where it is currently focused.
+- `product/mass-adoption.md` captures the current strategy lens for making Vectrune easier to adopt.
+- `documents/feature/growth_backlog/` holds execution-oriented backlog notes that can evolve faster than the canonical knowledge pages.
+
+Keep stable product framing in `knowledge/` and keep initiative-level planning in `documents/feature/`.
+
 ## Source-of-truth workflow
 
 Use this flow when making public changes:

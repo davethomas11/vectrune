@@ -1,5 +1,18 @@
 # Copilot Instructions for Vectrune
 
+## Product vision
+
+Vectrune aims for mass adoption. Favor decisions that make the product easier to learn, easier to trust, and easier to ship in real projects.
+
+When multiple valid options exist, prefer the one that most improves:
+- clarity of the `.rune` language and generated output
+- onboarding speed for new users
+- reliability, predictability, and safe defaults
+- documentation quality, examples, and copy-paste workflows
+- low-friction setup across common developer environments
+
+Avoid unnecessary complexity, surprising behavior, and niche optimizations that make the core experience harder to understand or adopt.
+
 ## Knowledge base maintenance is required
 
 Vectrune now has a shared knowledge source under `knowledge/` intended to power both:

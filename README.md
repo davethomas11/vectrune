@@ -1,15 +1,73 @@
-Vectrune
-========
+# Vectrune
+
 ![Vectrune Logo](intellij_plugin/src/resources/icons/rune.png)
 
-Vectrune is a **declarative + functional** configuration language intended for:
-- describing structured data
+Vectrune is a declarative language and runtime for structured data, APIs, and small app workflows.
 
-Tagline: Vectrune: Structured data in motion.
+It is designed to make common application code easier to read, easier to trust, and easier to ship.
 
-What does Vectrune look like?
-----------------------------
-Here is a simple example of a Vectrune script showing some basic data about some skateboarders:
+## Why Vectrune
+
+Use Vectrune when you want to:
+- define REST or GraphQL behavior in a compact `.rune` document
+- model structured data without a lot of boilerplate
+- keep request handling, validation, and docs generation close together
+- prototype small apps and workflows quickly with readable source files
+
+## 5-minute first success
+
+The fastest way to see Vectrune do something useful from this repository is to run the minimal REST example.
+
+### 1. Verify your toolchain
+
+```powershell
+rustc --version
+cargo --version
+```
+
+### 2. Build and run the example app
+
+```powershell
+cargo run -- examples/app.rune
+```
+
+### 3. Hit the health route
+
+```powershell
+curl http://127.0.0.1:3000/health
+```
+
+Expected result:
+
+```text
+OK
+```
+
+If you already have the `vectrune` binary installed, you can run the same example with:
+
+```powershell
+vectrune examples/app.rune
+```
+
+## What Vectrune looks like
+
+Small REST app:
+
+```rune
+#!RUNE
+
+@App
+name = Example API
+type = REST
+version = 1.0
+
+@Route/GET /health
+run:
+    log "Health check"
+    respond 200 "OK"
+```
+
+Structured data document:
 
 ```rune
 #!RUNE
@@ -27,99 +85,84 @@ Here is a simple example of a Vectrune script showing some basic data about some
   style = Street
 ```
 
-Vectrune can also be used for:
-- declaring HTTP routes
+## Recommended starter examples
 
-Example:
+Start with one of these depending on what you want to learn first:
 
-```rune
-#!RUNE
-@Route/GET /health
-run:
-  respond 200 ok
+- `examples/app.rune` — smallest complete `@App` + `@Route` example
+- `examples/skateboarders.rune` — simplest structured data document
+- `examples/user_api.rune` — REST API with schemas, validation, and CRUD-style routes
+- `examples/book_graphql.rune` — GraphQL example with memory-backed state
+- `examples/tic_tac_toe/` — multi-file Rune-Web example with UI, logic, and style parts
+
+## Installation
+
+### Homebrew (macOS/Linux)
+
+```sh
+brew tap davethomas11/homebrew-vectrune
+brew install vectrune
 ```
 
-(Things to come: )
-- defining executable workflows
-- binding to built‑in or plugin‑provided functions
-- powering lightweight APIs and automation systems
-- DSL integrations into popular frameworks SaaS platforms
+### From source
 
-Things you can do with Vectrune
------------------------
-Vectrune is a small DSL and runtime for building HTTP APIs (backed by Axum). This repository contains the runtime, built-ins, examples, and integration tests.
+```powershell
+cargo build --release
+```
 
-Prerequisites
--------------
+The binary will be available at `target/release/vectrune`.
 
-- Rust toolchain (stable) with Cargo
-- macOS/Linux/Windows supported via Rust
+## Running scripts
 
-Verify your toolchain:
+You can run a script with the `vectrune` CLI. Pass a file path, or use `-` to read the script from standard input.
 
-    rustc --version
-    cargo --version
+```powershell
+vectrune examples/user_api.rune
+```
 
-Build
------
-
-From the project root:
-
-    cargo build
-
-Run examples
-------------
-
-There are sample Vectrune scripts in "examples/":
-
-- examples/app.rune
-- examples/user_api.rune
-
-You can run scripts with the `vectrune` CLI. Pass a file path, or use `-` to read the script from STDIN:
-
-    # From a file
-    vectrune examples/user_api.rune
-
-    # From STDIN
-    cat examples/user_api.rune | vectrune -
+```sh
+cat examples/user_api.rune | vectrune -
+```
 
 Rune files may also declare top-level imports such as `import "shared.rune"` or `import "parts"` to load another Rune file or a directory of `.rune` files before parsing.
 
-
-CLI Commands
-------------
+## Common CLI workflows
 
 Vectrune provides several CLI commands for interacting with scripts and data:
 
 Basic usage:
 
-    vectrune <script.rune> [options]
+```text
+vectrune <script.rune> [options]
+```
 
 Common commands and options:
 
-    # Run a script
-    vectrune examples/user_api.rune
+```powershell
+# Run a script
+vectrune examples/user_api.rune
 
-    # Calculate an aggregate over data
-    vectrune examples/skateboarders.rune --calculate "avg Skateboarder.age"
+# Calculate an aggregate over data
+vectrune examples/skateboarders.rune --calculate "avg Skateboarder.age"
 
-    # Transform data into a new document
-    vectrune examples/skateboarders.rune --transform "@Skaters name:[@Skateboarder.name]"
+# Transform data into a new document
+vectrune examples/skateboarders.rune --transform "@Skaters name:[@Skateboarder.name]"
 
-    # Merge two documents using a custom expression
-    vectrune -i <input_format> <input_file> --merge-with '<base_file>@<selector>' -o <output_format>
+# Merge two documents using a custom expression
+vectrune -i <input_format> <input_file> --merge-with '<base_file>@<selector>' -o <output_format>
 
-    # Use the AI command (if enabled)
-    vectrune --ai "Give me CLI commands to list Docker containers"
+# Use the AI command (if enabled)
+vectrune --ai "Give me CLI commands to list Docker containers"
 
-    # Regenerate docs/AI export artifacts from the shared knowledge source
-    vectrune knowledge export
+# Regenerate docs/AI export artifacts from the shared knowledge source
+vectrune knowledge export
 
-    # Show help
-    vectrune --help
+# Show help
+vectrune --help
 
-    # Show version
-    vectrune --version
+# Show version
+vectrune --version
+```
 
 Lambda Packaging (AWS Lambda)
 ----------------------------
@@ -177,8 +220,7 @@ ollama pull phi4
 - `VECTRUNE_AI_MODEL` (optional): Ollama model to use for generation (default: `phi4`)
 
 
-Tests
------
+## Tests
 
 This project has unit and integration tests. Integration tests live under "tests/":
 
@@ -215,32 +257,13 @@ Useful flags:
     # Run tests single-threaded (if needed for shared resources)
     cargo test -- --test-threads=1
 
-Installation
-------------
-
-### Homebrew (macOS/Linux)
-
-You can install Vectrune using Homebrew:
-
-```sh
-brew tap davethomas11/homebrew-vectrune
-brew install vectrune
-```
-
-### From Source
-
-1. Clone the repository.
-2. Build with Cargo:
-   ```bash
-   cargo build --release
-   ```
-3. The binary will be at `target/release/vectrune`.
+## Additional installation and CI options
 
 ### From GitHub Releases
 
 You can download pre-compiled binaries for Linux and macOS from the GitHub Releases page.
 
-1. Go to the [Releases](https://github.com/your-username/rune/releases) page.
+1. Go to the [Releases](https://github.com/davethomas11/vectrune/releases) page.
 2. Download the appropriate `.tar.gz` for your platform:
    - `vectrune-linux-x86_64.tar.gz`
    - `vectrune-macos-x86_64.tar.gz`
@@ -267,7 +290,7 @@ run_vectrune:
     - apt-get update && apt-get install -y curl tar
     - |
       VECTRUNE_VERSION="v0.1.0" # Use the desired version
-      curl -L "https://github.com/your-username/rune/releases/download/${VECTRUNE_VERSION}/vectrune-linux-x86_64.tar.gz" | tar -xz
+      curl -L "https://github.com/davethomas11/vectrune/releases/download/${VECTRUNE_VERSION}/vectrune-linux-x86_64.tar.gz" | tar -xz
       chmod +x vectrune
       mv vectrune /usr/local/bin/
   script:
@@ -307,10 +330,6 @@ This substitution works for:
 
 If you want to use a literal string with dollar signs, do not wrap the entire value in `$...$`.
 
-# Vectrune
-
-Vectrune is a runtime for structured data in motion, supporting REST, GraphQL, and more.
-
 ## Running Vectrune with Custom Host and Port
 
 Vectrune now supports specifying the bind address and port via CLI flags or in the App section of your .rune file.
@@ -326,12 +345,12 @@ Example:
 vectrune --host 0.0.0.0 --port 8080 myapi.rune
 ```
 
-### App Section in .rune File
+### App Section in `.rune` File
 
-You can also specify host and port in your .rune file:
+You can also specify host and port in your `.rune` file:
 
 ```rune
-[App]
+@App
 host = "0.0.0.0"
 port = 8080
 ```

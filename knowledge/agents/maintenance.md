@@ -27,10 +27,12 @@ Review and update `knowledge/` whenever a change affects:
 Before closing a user-facing feature task:
 1. Find the relevant source behavior in `src/`
 2. Check whether tests/examples already capture it
-3. Update one or more files in `knowledge/`
-4. Update `knowledge/manifest.yaml` if you add a new page or reference file
-5. Add or update tests if behavior changed
-6. If docs-site wording or nav should change, update or queue follow-up work in `language/docs/`
+3. Check `product/mass-adoption.md` if the task affects onboarding, trust, examples, or developer workflow fit
+4. Update one or more files in `knowledge/`
+5. Update `knowledge/manifest.yaml` if you add a new page or reference file
+6. Add or update tests if behavior changed
+7. If docs-site wording or nav should change, update or queue follow-up work in `language/docs/`
+8. If the task changes adoption priorities or initiative planning, update `documents/feature/growth_backlog/`
 
 ## Authoring rules
 
@@ -55,11 +57,16 @@ If any downstream docs disagree with runtime behavior, update `knowledge/` first
 ## Starter content map
 
 - `product/overview.md` — high-level positioning and capability summary
+- `product/mass-adoption.md` — product strategy lens for onboarding, trust, and growth priorities
 - `language/core-language.md` — language model, section syntax, evaluation model, and examples
 - `runtime/cli.md` — CLI behavior and command surface
 - `reference/builtins.yaml` — structured builtin catalog starter
 - `reference/runtime-context.yaml` — runtime variables and path lookup behavior
 - `reference/app-types.yaml` — supported app/runtime types
+
+Related planning docs outside `knowledge/`:
+- `documents/feature/growth_backlog/feature_plan.md` — prioritized adoption initiatives
+- `documents/feature/growth_backlog/user_stories.md` — user-story view of adoption work
 
 ## Good change patterns
 
