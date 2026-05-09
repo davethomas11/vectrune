@@ -1,0 +1,51 @@
+@Language/en
+name = English
+
+@Intent/en/WeightTimelineSurvey
+mandatory:
+  - birth year
+  - weight
+optional:
+  - graph
+  - plot
+phrases:
+  - over time
+  - through out their life time
+  - throughout their lifetime
+title = Weight over time
+intro = Let's build a weight timeline together.
+birth_year_prompt = What year were you born?
+
+@Intent/en/Onboarding
+optional:
+  - onboarding
+  - welcome
+  - steps
+welcome_message = Welcome to Vectrune!
+steps = ("What is your name?" "What is your role?")
+completion_message = You're all set!
+
+@Intent/en/FormWizard
+optional:
+  - form
+  - wizard
+title = Data Entry Form
+steps = ("Enter your first name:" "Enter your last name:")
+submit_label = Submit
+
+@Intent/en/QADialog
+optional:
+  - qa
+  - questions
+  - dialog
+questions = ("What is your favorite color?" "Where do you live?")
+completion_message = Thank you for your answers.
+
+@Intent/en/DataCollectionFlow
+optional:
+  - data
+  - collection
+  - flow
+title = User Data Collection
+fields = (email phone)
+completion_message = Data saved successfully.

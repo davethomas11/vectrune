@@ -212,6 +212,33 @@ examples:
     notes:
       - Demonstrates importing a directory of `.rune` files before parsing the root document.
       - Style and logic sections are split into companion files under `examples/tic_tac_toe/parts/`.
+  - id: example.vectrune.weight-timeline
+    title: Weight Timeline Natural-Language Script
+    summary: Prototype `.vectrune` example that compiles an English natural-language request into a deterministic interactive survey and ASCII graph.
+    source_path: examples/vectrune/together.we.are.vectrune
+    companion_files:
+      - examples/vectrune/README.md
+    app_type: vectrune-script
+    concepts:
+      - vectrune natural-language scripts
+      - deterministic language engine
+      - shared execution engine
+      - interactive stdin collection
+      - ASCII graph rendering
+    builtins: [ ]
+    runtime_context: [ ]
+    cli_workflows:
+      - vectrune examples/vectrune/together.we.are.vectrune
+    test_refs:
+      - tests/integration_vectrune_cli.rs
+    related_knowledge:
+      - runtime.cli
+      - runtime.execution-engine
+      - language.vectrune-scripts
+    status: emerging
+    notes:
+      - Demonstrates the first rule-based English language engine for `.vectrune`.
+      - Compiles to executable statements rather than relying on probabilistic interpretation.
 notes:
   - Prefer examples already backed by tests or central README workflows.
   - Add auth, datasource, and memory API examples once their reference pages are added.

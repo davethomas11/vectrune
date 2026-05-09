@@ -1,0 +1,14 @@
+#!VECT
+stdio -> "What is your name?"
+name <- stdio
+stdio -> "Hi {name}!"
+stdio -> "Do you want to hear a secret? (yes or no)"
+answer <- stdio
+if answer == "yes":
+    stdio -> "Nice to meet you, {name}. The flowers are listening."
+else if answer == "no":
+    stdio -> "Fair enough, {name}. Some secrets can stay in the field."
+else:
+    stdio -> "I didn't understand '{answer}'. Let's try that again."
+    repeat from line 4
+

@@ -1,0 +1,19 @@
+#!VECT
+stdio -> "Welcome to the world of Vect! This is a simple text-based adventure game."
+.. "You stand in a field of flowers, the sun is shining and the birds are singing."
+.. "In the distance, you see a small village with colorful houses and friendly people."
+.. "1. Walk towards the village."
+.. "2. Stay in the field and enjoy the beauty of nature."
+.. "What do you choose? (1 or 2)"
+
+choice <- stdio
+
+if choice == "1":
+    stdio -> "You walk towards the village and are greeted by the friendly villagers."
+    .. "They invite you to join them for a feast and you have a wonderful time."
+else if choice == "2":
+    stdio -> "You decide to stay in the field and enjoy the beauty of nature."
+    .. "You lie down on the grass, watch the clouds, and feel at peace."
+else:
+    stdio -> "Invalid choice. Please choose 1 or 2."
+    repeat from line 6

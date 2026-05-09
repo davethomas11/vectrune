@@ -1,4 +1,5 @@
 use crate::rune_ast::{json_to_ast_value, Record, RuneDocument, Section, Value};
+use crate::util::unescape_string;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -194,7 +195,7 @@ fn parse_map_block<I: Iterator<Item = String>>(lines: &mut I) -> HashMap<String,
                         Err(_) => Value::String(String::new()),
                     }
                 } else {
-                    Value::String(value_raw.trim_matches('"').to_string())
+                    Value::String(unescape_string(value_raw.trim_matches('"')))
                 };
             map.insert(key, value);
         }
@@ -569,8 +570,8 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                             list.push(Value::String(assignment));
                             continue;
                         }
-                        let item_text = if line.starts_with('-') {
-                            line[1..].trim().to_string()
+                        let item_text = if line.trim_start().starts_with('-') {
+                            line.trim_start()[1..].trim().to_string()
                         } else {
                             line.trim().to_string()
                         };
@@ -652,7 +653,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                             Err(_) => Value::String(String::new()),
                         }
                     } else {
-                        Value::String(value_raw.trim_matches('"').to_string())
+                        Value::String(unescape_string(value_raw.trim_matches('"')))
                     }
                 };
 

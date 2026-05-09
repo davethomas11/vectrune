@@ -1,0 +1,25 @@
+@Language/fr
+name = Français
+
+@Intent/fr/WeightTimelineSurvey
+mandatory:
+  - année de naissance
+  - poids
+optional:
+  - graphique
+  - tracer
+phrases:
+  - au fil du temps
+  - tout au long de sa vie
+title = Poids au fil du temps
+intro = Construisons ensemble une chronologie de votre poids.
+birth_year_prompt = En quelle année êtes-vous né ?
+
+@Intent/fr/Onboarding
+optional:
+  - accueil
+  - bienvenue
+  - étapes
+welcome_message = Bienvenue sur Vectrune !
+steps = ("Quel est votre nom ?" "Quel est votre rôle ?")
+completion_message = Vous êtes prêt !

@@ -10,9 +10,12 @@ view:
         main .page:
             HeroSection
             QuickstartSection
+            SandboxSection
             LanguageTourSection
             WalkthroughSection
             ExamplesSection
             WhatsNextSection
         TeachingFooter
         script src=/assets/syntax-highlight.js
+        script type="module" src="/assets/wasm-init.js"
+        script src=/assets/sandbox.js

@@ -3,8 +3,11 @@ use crate::rune_ast::{RuneDocument, Section, Value};
 use crate::rune_parser::ParsedLine;
 use crate::util::{log, LogLevel};
 use async_recursion::async_recursion;
-use axum::http::StatusCode;
+pub use http::StatusCode;
+
+#[cfg(not(target_arch = "wasm32"))]
 use axum::{http::Request, middleware::Next, response::Response};
+#[cfg(not(target_arch = "wasm32"))]
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -288,6 +291,22 @@ pub fn eval_condition(ctx: &Context, expr: &str, it: Option<&serde_json::Value>)
         let lv = resolve_path(ctx, l.trim(), it).unwrap_or(serde_json::Value::Null);
         let rv = resolve_path(ctx, r[1..].trim(), it).unwrap_or(serde_json::Value::Null);
         return loose_cmp(&lv, &rv) == Some(std::cmp::Ordering::Less);
+    }
+    // `<lhs> contains <rhs>` — string substring test
+    if let Some(pos) = expr.find(" contains ") {
+        let lhs = expr[..pos].trim();
+        let rhs = expr[pos + " contains ".len()..].trim();
+        let lv = resolve_path(ctx, lhs, it).unwrap_or(serde_json::Value::Null);
+        let rv = resolve_path(ctx, rhs, it).unwrap_or(serde_json::Value::Null);
+        let lstr = match &lv {
+            serde_json::Value::String(s) => s.to_lowercase(),
+            other => serde_json::to_string(other).unwrap_or_default().to_lowercase(),
+        };
+        let rstr = match &rv {
+            serde_json::Value::String(s) => s.to_lowercase(),
+            other => serde_json::to_string(other).unwrap_or_default().to_lowercase(),
+        };
+        return lstr.contains(&rstr);
     }
     false
 }
@@ -970,6 +989,7 @@ pub async fn execute_steps(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn jwt_auth(
     req: Request<axum::body::Body>,
     next: Next,

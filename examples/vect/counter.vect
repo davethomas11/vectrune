@@ -1,0 +1,17 @@
+#!VECT
+# Demonstrates: set, while loop, stop
+
+set count = 0
+
+stdio -> "How high should I count? (enter a number, or 0 to quit)"
+limit <- stdio
+
+if limit == "0":
+    stop "Goodbye!"
+
+while count < limit:
+    set count = {count} + 1
+    stdio -> "Count: {count}"
+
+stdio -> "Done! Counted to {limit}."
+

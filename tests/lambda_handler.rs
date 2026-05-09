@@ -1,4 +1,4 @@
-use lambda_runtime::{LambdaEvent, Error};
+use lambda_runtime::LambdaEvent;
 use serde_json::json;
 use rune_runtime::lambda_main::aws_lambda::{handler::execution_event, cold_start};
 use std::fs;

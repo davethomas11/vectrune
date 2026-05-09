@@ -1,0 +1,28 @@
+#!VECT
+# Demonstrates: set, contains, stop with message
+
+stdio -> "Welcome to the Vectrune keyword demo."
+stdio -> "Type a sentence and I'll check if it contains a keyword."
+stdio -> "Type 'quit' at any time to exit."
+
+set keyword = "vectrune"
+
+stdio -> "Sentence:"
+input <- stdio
+
+if input contains "quit":
+    stop "Thanks for trying the demo. Bye!"
+
+if input contains keyword:
+    stdio -> "Yes! Your sentence contains '{keyword}'."
+else:
+    stdio -> "Nope. Try mentioning '{keyword}' somewhere."
+
+stdio -> "Try again? (yes / no)"
+again <- stdio
+
+if again == "yes":
+    repeat from line 9
+else:
+    stop "All done. Happy coding!"
+

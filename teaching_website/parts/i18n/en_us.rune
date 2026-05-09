@@ -109,12 +109,15 @@ WhatsNext {
     eyebrow = "What next"
     headline = "Where the teaching site is going"
     coming_title = "Coming next"
-    coming_1 = "Runnable playground backed by the Vectrune CLI"
+    coming_1 = "Full-featured Wasm playground (now in preview!)"
     coming_2 = "Step-by-step language tour pages"
     coming_3 = "Builtin reference pages sourced from knowledge/"
     coming_4 = "More guided walkthroughs for REST, GraphQL, and Rune-Web"
     intent_title = "Current intent"
-    intent_text = "This first version is intentionally lightweight. It exists to reduce onboarding friction, highlight the best starter examples, and create a stable base for future interactive learning features."
+    intent_text = "We are currently transitioning this teaching site to be fully interactive. The sandbox is now powered by the actual Vectrune runtime compiled to WebAssembly, ensuring that what you see in your browser is exactly what you get when running the CLI locally."
+}
+Sandbox {
+    error_wasm_missing = "The Vectrune WASM module is not loaded.\n\nTo enable the sandbox locally, run:\nwasm-pack build --target web --out-dir teaching_website/pkg"
 }
 Footer {
     copyright = "© 2026 Vectrune Project - teaching site preview"

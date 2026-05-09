@@ -9,16 +9,20 @@ pub mod builtin {
     pub mod commands;
     pub mod context_ops;
     pub mod csv;
+    #[cfg(not(target_arch = "wasm32"))]
     pub mod data_source;
     pub mod json;
     pub mod logger;
     pub mod memory;
+    #[cfg(not(target_arch = "wasm32"))]
     pub mod mysql;
     pub mod parse_json;
+    #[cfg(not(target_arch = "wasm32"))]
     pub mod postgres;
     pub mod respond;
     pub mod validate;
     pub mod function;
+    #[cfg(not(target_arch = "wasm32"))]
     pub mod ws;
 }
 pub mod path_utils;
@@ -28,6 +32,7 @@ use crate::builtins::builtin::memory::{builtin_clear_memory, builtin_del_memory,
 use crate::core::AppState;
 use crate::util::{json_to_xml, log, LogLevel};
 use builtin::csv::{builtin_csv_append, builtin_csv_read, builtin_csv_write};
+#[cfg(not(target_arch = "wasm32"))]
 use builtin::data_source::builtin_data_source;
 use builtin::json::builtin_json_read;
 use builtin::logger::builtin_log;
@@ -35,12 +40,36 @@ use builtin::parse_json::builtin_parse_json;
 use builtin::respond::builtin_respond;
 use builtin::validate::builtin_validate;
 use crate::builtins::builtin::function::{builtin_func, invoke_func};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::builtins::builtin::ws::{builtin_ws_broadcast, builtin_ws_id, builtin_ws_send};
 use crate::builtins::builtin::context_ops::{builtin_delete, builtin_is_set};
 
 pub const LAST_EXEC_RESULT: &str = "___last_exec_result___";
 
 pub type Context = HashMap<String, JsonValue>;
+
+/// Check if a name is a known builtin function.
+pub fn is_builtin(name: &str) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let ws_builtins = ["ws.id", "ws.send", "ws.broadcast", "broadcast-websocket"];
+    #[cfg(target_arch = "wasm32")]
+    let ws_builtins: [&str; 0] = [];
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let db_builtins = ["datasource"];
+    #[cfg(target_arch = "wasm32")]
+    let db_builtins: [&str; 0] = [];
+
+    let core_builtins = [
+        "func", "log", "respond", "parse-json", "validate", "csv.read", "csv.write",
+        "csv.append", "json.read", "load-rune", "set-memory",
+        "memory.set", "get-memory", "memory.get", "clear-memory", "memory.clear",
+        "del-memory", "memory.del", "append", "memory.append", "delete", "is-set",
+        "return", "#"
+    ];
+
+    core_builtins.contains(&name) || ws_builtins.contains(&name) || db_builtins.contains(&name)
+}
 
 #[derive(Debug)]
 pub enum BuiltinResult {
@@ -415,6 +444,7 @@ pub async fn call_builtin(
         "csv.write" => builtin_csv_write(args, ctx, app_state),
         "csv.append" => builtin_csv_append(args, ctx, app_state),
         "json.read" => builtin_json_read(args, ctx, assign_to, app_state),
+        #[cfg(not(target_arch = "wasm32"))]
         "datasource" => builtin_data_source(args, ctx, &app_state, assign_to).await,
         "load-rune" => builtin_load_rune(args, ctx, assign_to, app_state),
         "set-memory" | "memory.set" => builtin_set_memory(args, ctx).await,
@@ -424,8 +454,11 @@ pub async fn call_builtin(
         "append" | "memory.append" => builtin_append(args, assign_to, ctx).await,
         "delete" => builtin_delete(args, ctx),
         "is-set" => builtin_is_set(args, ctx, assign_to),
+        #[cfg(not(target_arch = "wasm32"))]
         "ws.id" => builtin_ws_id(ctx, assign_to).await,
+        #[cfg(not(target_arch = "wasm32"))]
         "ws.send" => builtin_ws_send(args, ctx).await,
+        #[cfg(not(target_arch = "wasm32"))]
         "ws.broadcast" | "broadcast-websocket" => builtin_ws_broadcast(args, ctx).await,
         "return" => {
             if args.is_empty() {

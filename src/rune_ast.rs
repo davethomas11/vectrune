@@ -3,7 +3,6 @@ use serde_json;
 use serde_yaml;
 use std::collections::HashMap;
 use std::fmt;
-use std::process;
 
 use crate::rune_parser::parse_rune;
 use quick_xml::de::from_str as xml_from_str;
@@ -159,13 +158,9 @@ impl RuneDocument {
     }
 
     pub(crate) fn from_str(s: &str) -> Result<RuneDocument, String> {
-        match parse_rune(s) {
-            Ok(doc) => Ok(doc),
-            Err(err) => {
-                eprintln!("Error parsing Vectrune script: {}", err);
-                process::exit(1);
-            }
-        }
+        parse_rune(s).map_err(|err| {
+            format!("Error parsing Vectrune script: {}", err)
+        })
     }
 
     pub fn get_section(&self, name: &str) -> Option<&Section> {

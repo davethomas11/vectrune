@@ -1,15 +1,18 @@
 // src/main.rs
+#![cfg(not(target_arch = "wasm32"))]
 mod apps;
 mod arithmetic;
 mod builtins;
 mod cli;
 mod core;
 mod crud_web_fe;
+mod execution;
 mod lambda_main;
 mod memory;
 mod rune_ast;
 mod rune_parser;
 mod util;
+mod vectrune;
 
 use crate::core::{extract_data_sources, extract_schemas, get_app_type};
 use crate::rune_ast::{RuneDocument, Value};
@@ -39,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
         .about("Vectrune: Structured data in motion.")
         .arg(
             Arg::new("SCRIPT")
-                .help("Path to the .rune script, directory, or '-' to read from STDIN")
+                .help("Path to the .rune, .vect, or .vectrune script, directory, or '-' to read from STDIN")
                 .num_args(1..)
                 .action(clap::ArgAction::Append)
                 .conflicts_with("ai"),
@@ -119,6 +122,13 @@ async fn main() -> anyhow::Result<()> {
                 .value_name("HOST")
                 .num_args(1)
                 .default_value("127.0.0.1"),
+        )
+        .arg(
+            Arg::new("watch")
+                .short('w')
+                .long("watch")
+                .help("Watch for file changes and automatically restart the server")
+                .action(clap::ArgAction::SetTrue),
         )
         .subcommand(
             Command::new("lambda")
@@ -342,6 +352,7 @@ async fn main() -> anyhow::Result<()> {
     let ai_prompt = matches.get_one::<String>("ai").map(|s| s.as_str());
     let port_override = matches.get_one::<u16>("port").copied();
     let host_override = matches.get_one::<String>("host").map(|s| s.as_str());
+    let watch_files = matches.get_flag("watch");
 
     if let Some(prompt) = ai_prompt {
         cli::handle_ai(prompt, model).await?;
@@ -353,306 +364,368 @@ async fn main() -> anyhow::Result<()> {
         None => {
             log(
                 LogLevel::Error,
-                "No Vectrune script provided. Pass a .rune file, directory, or '-' for STDIN.",
+                "No Vectrune script provided. Pass a .rune file, .vect file, .vectrune file, directory, or '-' for STDIN.",
             );
             process::exit(1);
         }
     };
 
-    let mut doc: Option<RuneDocument> = None;
-
-    fn parse_content(
-        path: &str,
-        content: &str,
-        input_format: Option<&str>,
-    ) -> anyhow::Result<RuneDocument> {
-        match input_format {
-            Some("json") => {
-                let json_value: serde_json::Value = serde_json::from_str(content)?;
-                Ok(RuneDocument::from_json(&json_value))
-            }
-            Some("xml") => RuneDocument::from_xml(content).map_err(|e| anyhow::anyhow!(e)),
-            Some("yaml") => RuneDocument::from_yaml(content).map_err(|e| anyhow::anyhow!(e)),
-            _ => {
-                let base_dir = std::env::current_dir()?;
-                load_rune_document_from_str_with_base(content, &base_dir, path)
-                    .map_err(|e| anyhow::anyhow!(e))
-            }
-        }
-    }
-
-    for path_str in &script_paths {
-        if *path_str == "-" {
-            use std::io::Read;
-            let mut buf = String::new();
-            std::io::stdin().read_to_string(&mut buf).unwrap_or_else(|err| {
-                log(
-                    LogLevel::Error,
-                    &format!("Error reading script from STDIN: {}", err),
-                );
-                process::exit(1);
-            });
-            let stdin_doc = parse_content("-", &buf, input_format)?;
-            if let Some(ref mut d) = doc {
-                d.merge(stdin_doc);
-            } else {
-                doc = Some(stdin_doc);
-            }
-        } else {
-            let path = std::path::Path::new(path_str);
-            if input_format.is_none() && (path.is_dir() || path.extension().and_then(|s| s.to_str()) == Some("rune")) {
-                let file_doc = load_rune_document_from_path(path).map_err(|e| anyhow::anyhow!(e))?;
-                if let Some(ref mut d) = doc {
-                    d.merge(file_doc);
-                } else {
-                    doc = Some(file_doc);
-                }
-            } else {
-                let content = fs::read_to_string(path).unwrap_or_else(|err| {
-                    log(LogLevel::Error, &format!("Error reading script {}: {}", path_str, err));
-                    process::exit(1);
-                });
-                let file_doc = parse_content(path_str, &content, input_format)?;
-                if let Some(ref mut d) = doc {
-                    d.merge(file_doc);
-                } else {
-                    doc = Some(file_doc);
-                }
-            }
-        }
-    }
-
-    let mut doc = doc.ok_or_else(|| anyhow::anyhow!("No documents loaded."))?;
-
-    // Calculation mode
-    if let Some(expr) = calc_expr {
-        if let Err(e) = crate::cli::handle_calculate(&doc, expr) {
-            log(LogLevel::Error, &format!("{}", e));
-            process::exit(1);
-        }
-        process::exit(0);
-    }
-
-    // Transform mode
-    if let Some(spec) = transform_spec {
-        match crate::cli::handle_transform(&doc, spec) {
-            Ok(new_doc) => {
-                doc.update_from(&new_doc);
-            }
-            Err(e) => {
-                log(LogLevel::Error, &format!("Transform error: {}", e));
-                process::exit(1);
-            }
-        }
-    }
-
-    // Merge mode
-    if let Some(spec) = merge_spec {
-        match crate::cli::handle_merge(&doc, spec) {
-            Ok(merged_doc) => {
-                doc = merged_doc;
-            }
-            Err(e) => {
-                log(LogLevel::Error, &format!("Merge error: {}", e));
-                process::exit(1);
-            }
-        }
-    }
-
-    let app_type = get_app_type(&doc);
-    log(
-        LogLevel::Info,
-        &format!("Detected App type: {:?}", app_type),
-    );
-
-    let doc_host = doc
-        .get_section("App")
-        .and_then(|sec| sec.kv.get("host"))
-        .and_then(|val| val.as_str());
-    let effective_host = host_override.or(doc_host).unwrap_or("127.0.0.1");
-    let doc_port = doc
-        .get_section("App")
-        .and_then(|sec| sec.kv.get("port"))
-        .and_then(|val| val.as_u64())
-        .and_then(|v| u16::try_from(v).ok());
-    let effective_port = port_override.unwrap_or(doc_port.unwrap_or(3000));
-
-    if app_type == Some("REST".to_string()) && output_format == Some("curl") {
-        // Get port from App section, default to 3000
-        let port = doc
-            .get_section("App")
-            .and_then(|sec| sec.kv.get("port"))
-            .and_then(|val| val.as_u64())
-            .unwrap_or(3000);
-        let host_port = format!("localhost:{}", port);
-        // Generate curl commands for REST routes
-        let routes = doc.get_sections("Route");
-        for route in routes {
-            if let Some(path) = route.path.join("/").strip_prefix("Route/").and_then(|p| {
-                p.strip_prefix(&format!(
-                    "{}/",
-                    route.path.get(1).map(|s| s.as_str()).unwrap_or("GET")
-                ))
-            }) {
-                let method = route.path.get(1).map(|s| s.as_str()).unwrap_or("GET");
-                if method == "CRUD" {
-                    // For CRUD, print for both collection and item paths
-                    let collection_path = path;
-                    // Dynamically build example JSON body from schema
-                    let mut obj_body = String::from("{");
-                    if let Some(Value::String(schema_name)) = route.kv.get("schema") {
-                        // Find the schema section by path ["Schema", schema_name]
-                        let schema_section = doc.sections.iter().find(|sec| {
-                            sec.path.len() == 2
-                                && sec.path[0] == "Schema"
-                                && sec.path[1] == *schema_name
-                        });
-                        if let Some(schema_section) = schema_section {
-                            let mut first = true;
-                            for (field, typ) in &schema_section.kv {
-                                if !first {
-                                    obj_body.push_str(",\n");
-                                } else {
-                                    first = false;
-                                }
-                                let example = match typ.as_str().unwrap_or("") {
-                                    "string" => format!("  \"{}\": \"example\"", field),
-                                    "number" => format!("  \"{}\": 123", field),
-                                    "bool" => format!("  \"{}\": true", field),
-                                    _ => format!("  \"{}\": null", field),
-                                };
-                                obj_body.push_str(&example);
-                            }
-                        }
-                    }
-                    obj_body.push_str("\n}");
-
-                    // GET collection
-                    println!("curl -X GET    http://{}/{}", host_port, collection_path);
-                    // POST collection (create)
-                    println!("curl -X POST   http://{}/{} \\", host_port, collection_path);
-                    println!("     -H 'Content-Type: application/json' \\");
-                    println!("     -d '{}'", obj_body.replace("'", "\\'"));
-                    // GET item
-                    println!(
-                        "curl -X GET    http://{}/{}/123",
-                        host_port, collection_path
-                    );
-                    // PUT item (update)
-                    println!(
-                        "curl -X PUT    http://{}/{}/123 \\",
-                        host_port, collection_path
-                    );
-                    println!("     -H 'Content-Type: application/json' \\");
-                    println!("     -d '{}'", obj_body.replace("'", "\\'"));
-                    // DELETE item
-                    println!(
-                        "curl -X DELETE http://{}/{}/123",
-                        host_port, collection_path
-                    );
-                    continue;
-                }
-
-                let mut curl_cmd = format!("curl -X {} http://{}/{}", method, host_port, path);
-                if let Some(description) = route.kv.get("description") {
-                    if let Value::String(desc) = description {
-                        curl_cmd.push_str(&format!("  # {}", desc));
-                    }
-                }
-                log(LogLevel::Info, &curl_cmd);
-            }
-        }
-        process::exit(0);
-    }
-    if app_type
-        .as_ref()
-        .map(|t| crate::apps::app_type_supported(t))
-        .unwrap_or(false)
-        && output_format == None
+    if input_format.is_none()
+        && calc_expr.is_none()
+        && transform_spec.is_none()
+        && merge_spec.is_none()
+        && output_format.is_none()
+        && script_paths.len() == 1
+        && script_paths[0] != "-"
     {
-        log(
-            LogLevel::Info,
-            &format!(
-                "Starting Vectrune {} application...",
-                app_type.as_deref().unwrap_or("REST")
-            ),
-        );
-        log(LogLevel::Info, "Press Ctrl+C to stop the server.");
-        log(LogLevel::Debug, &format!("Config: \n{}", api_doc(&doc)));
-
-        let rune_dir = if script_paths.contains(&"-") {
-            env::current_dir()?
-        } else {
-            let p = std::path::Path::new(script_paths[0]);
-            if p.is_dir() {
-                p.to_path_buf()
-            } else {
-                p.parent()
-                    .map(|p| p.to_path_buf())
-                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+        let script_path = std::path::Path::new(script_paths[0]);
+        match script_path.extension().and_then(|s| s.to_str()) {
+            Some("vect") => {
+                cli::handle_vect_file(script_path)?;
+                return Ok(());
             }
-        };
-
-        let schemas = std::sync::Arc::new(extract_schemas(&doc));
-        let data_sources = std::sync::Arc::new(extract_data_sources(&doc));
-        let app = apps::build_vectrune_router(
-            std::sync::Arc::new(doc.clone()),
-            schemas.clone(),
-            data_sources.clone(),
-            rune_dir.clone(),
-        )
-        .await;
-        let host_address = format!("{}:{}", effective_host, effective_port);
-        let listener = TcpListener::bind(host_address.clone()).await?;
-        log(
-            LogLevel::Info,
-            &format!("Vectrune runtime listening on http://{}", host_address),
-        );
-        serve(listener, app).await?;
-        Ok(())
-    } else {
-        log(LogLevel::Debug, "Parsed Vectrune script:");
-        match output_format {
-            Some("json") => {
-                let json_output =
-                    serde_json::to_string_pretty(&doc.to_json()).unwrap_or_else(|err| {
-                        log(
-                            LogLevel::Error,
-                            &format!("Error converting to JSON: {}", err),
-                        );
-                        process::exit(1);
-                    });
-                println!("{}", json_output);
-                process::exit(0);
-            }
-            Some("text") => {
-                let text_output = format!("{}", doc);
-                println!("{}", text_output);
-                process::exit(0);
-            }
-            Some("rune") => {
-                // For Vectrune output, we can just print the original script content
-                println!("{}", doc);
-                process::exit(0);
-            }
-            Some("xml") => {
-                let xml_output = json_to_xml(&doc.to_json(), "root");
-                println!("{}", xml_output);
-                process::exit(0);
-            }
-            Some("yaml") => {
-                let yaml_output = serde_yaml::to_string(&doc.to_json()).unwrap_or_else(|err| {
-                    eprintln!("Error converting to YAML: {}", err);
-                    process::exit(1);
-                });
-                println!("{}", yaml_output);
-                process::exit(0);
+            Some("vectrune") => {
+                cli::handle_vectrune_file(script_path)?;
+                return Ok(());
             }
             _ => {}
         }
+    }
 
-        println!("{}", doc);
-        process::exit(0);
+    if input_format.is_none()
+        && script_paths.iter().any(|path| {
+            *path != "-"
+                && std::path::Path::new(path)
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    == Some("vect")
+        })
+    {
+        return Err(anyhow::anyhow!(
+            ".vect prototype execution currently supports a single .vect file with no --input, --output, --calculate, --transform, or --merge-with flags"
+        ));
+    }
+
+    if input_format.is_none()
+        && script_paths.iter().any(|path| {
+            *path != "-"
+                && std::path::Path::new(path)
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    == Some("vectrune")
+        })
+    {
+        return Err(anyhow::anyhow!(
+            ".vectrune prototype execution currently supports a single .vectrune file with no --input, --output, --calculate, --transform, or --merge-with flags"
+        ));
+    }
+
+    let watch_rx = if watch_files {
+        log(LogLevel::Info, "Watch mode enabled (-w). Changes will trigger server restart.");
+        let watcher_paths: Vec<&str> = script_paths.iter().map(|s| s.as_ref()).collect();
+        Some(cli::start_file_watcher(watcher_paths)?)
+    } else {
+        None
+    };
+
+    loop {
+        let mut doc: Option<RuneDocument> = None;
+
+        for path_str in &script_paths {
+            if *path_str == "-" {
+                use std::io::Read;
+                let mut buf = String::new();
+                std::io::stdin().read_to_string(&mut buf).unwrap_or_else(|err| {
+                    log(
+                        LogLevel::Error,
+                        &format!("Error reading script from STDIN: {}", err),
+                    );
+                    process::exit(1);
+                });
+                let stdin_doc = parse_content("-", &buf, input_format)?;
+                if let Some(ref mut d) = doc {
+                    d.merge(stdin_doc);
+                } else {
+                    doc = Some(stdin_doc);
+                }
+            } else {
+                let path = std::path::Path::new(path_str);
+                if input_format.is_none() && (path.is_dir() || path.extension().and_then(|s| s.to_str()) == Some("rune")) {
+                    let file_doc = load_rune_document_from_path(path).map_err(|e| anyhow::anyhow!(e))?;
+                    if let Some(ref mut d) = doc {
+                        d.merge(file_doc);
+                    } else {
+                        doc = Some(file_doc);
+                    }
+                } else {
+                    let content = fs::read_to_string(path).unwrap_or_else(|err| {
+                        log(LogLevel::Error, &format!("Error reading script {}: {}", path_str, err));
+                        process::exit(1);
+                    });
+                    let file_doc = parse_content(path_str, &content, input_format)?;
+                    if let Some(ref mut d) = doc {
+                        d.merge(file_doc);
+                    } else {
+                        doc = Some(file_doc);
+                    }
+                }
+            }
+        }
+
+        let mut doc = doc.ok_or_else(|| anyhow::anyhow!("No documents loaded."))?;
+
+        // Calculation mode
+        if let Some(expr) = calc_expr {
+            if let Err(e) = crate::cli::handle_calculate(&doc, expr) {
+                log(LogLevel::Error, &format!("{}", e));
+                process::exit(1);
+            }
+            process::exit(0);
+        }
+
+        // Transform mode
+        if let Some(spec) = transform_spec {
+            match crate::cli::handle_transform(&doc, spec) {
+                Ok(new_doc) => {
+                    doc.update_from(&new_doc);
+                }
+                Err(e) => {
+                    log(LogLevel::Error, &format!("Transform error: {}", e));
+                    process::exit(1);
+                }
+            }
+        }
+
+        // Merge mode
+        if let Some(spec) = merge_spec {
+            match crate::cli::handle_merge(&doc, spec) {
+                Ok(merged_doc) => {
+                    doc = merged_doc;
+                }
+                Err(e) => {
+                    log(LogLevel::Error, &format!("Merge error: {}", e));
+                    process::exit(1);
+                }
+            }
+        }
+
+        let app_type = get_app_type(&doc);
+
+        if app_type
+            .as_ref()
+            .map(|t| crate::apps::app_type_supported(t))
+            .unwrap_or(false)
+            && output_format == None
+        {
+            let doc_host = doc
+                .get_section("App")
+                .and_then(|sec| sec.kv.get("host"))
+                .and_then(|val| val.as_str());
+            let effective_host = host_override.or(doc_host).unwrap_or("127.0.0.1");
+            let doc_port = doc
+                .get_section("App")
+                .and_then(|sec| sec.kv.get("port"))
+                .and_then(|val| val.as_u64())
+                .and_then(|v| u16::try_from(v).ok());
+            let effective_port = port_override.unwrap_or(doc_port.unwrap_or(3000));
+
+            log(
+                LogLevel::Info,
+                &format!(
+                    "Starting Vectrune {} application...",
+                    app_type.as_deref().unwrap_or("REST")
+                ),
+            );
+            log(LogLevel::Info, "Press Ctrl+C to stop the server.");
+            log(LogLevel::Debug, &format!("Config: \n{}", api_doc(&doc)));
+
+            let rune_dir = if script_paths.contains(&"-") {
+                env::current_dir()?
+            } else {
+                let p = std::path::Path::new(script_paths[0]);
+                if p.is_dir() {
+                    p.to_path_buf()
+                } else {
+                    p.parent()
+                        .map(|p| p.to_path_buf())
+                        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+                }
+            };
+
+            let schemas = std::sync::Arc::new(extract_schemas(&doc));
+            let data_sources = std::sync::Arc::new(extract_data_sources(&doc));
+            let app = apps::build_vectrune_router(
+                std::sync::Arc::new(doc.clone()),
+                schemas.clone(),
+                data_sources.clone(),
+                rune_dir.clone(),
+            )
+            .await;
+            let host_address = format!("{}:{}", effective_host, effective_port);
+            let listener = TcpListener::bind(host_address.clone()).await?;
+            log(
+                LogLevel::Info,
+                &format!("Vectrune runtime listening on http://{}", host_address),
+            );
+
+            if let Some(ref rx) = watch_rx {
+                let (close_tx, close_rx) = tokio::sync::oneshot::channel::<()>();
+                let server = serve(listener, app).with_graceful_shutdown(async {
+                    let _ = close_rx.await;
+                });
+
+                tokio::select! {
+                    _ = server => {
+                        log(LogLevel::Info, "Server stopped.");
+                        break;
+                    }
+                    _ = async {
+                        // Wait for a change
+                        while rx.try_recv().is_ok() {} // Clear any pending
+                        loop {
+                            if rx.try_recv().is_ok() {
+                                break;
+                            }
+                            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                        }
+                    } => {
+                        log(LogLevel::Info, "File change detected. Restarting server...");
+                        let _ = close_tx.send(());
+                        // Give it a moment to release the port
+                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                        continue;
+                    }
+                }
+            } else {
+                serve(listener, app).await?;
+                break;
+            }
+        } else {
+            // Non-server mode: curl generation or document output
+            if app_type == Some("REST".to_string()) && output_format == Some("curl") {
+                let doc_port = doc
+                    .get_section("App")
+                    .and_then(|sec| sec.kv.get("port"))
+                    .and_then(|val| val.as_u64())
+                    .unwrap_or(3000);
+                let doc_host = doc
+                    .get_section("App")
+                    .and_then(|sec| sec.kv.get("host"))
+                    .and_then(|val| val.as_str())
+                    .unwrap_or("localhost");
+                let host_port = format!("{}:{}", doc_host, doc_port);
+                let routes = doc.get_sections("Route");
+                for route in routes {
+                    if let Some(path) = route.path.join("/").strip_prefix("Route/").and_then(|p| {
+                        p.strip_prefix(&format!(
+                            "{}/",
+                            route.path.get(1).map(|s| s.as_str()).unwrap_or("GET")
+                        ))
+                    }) {
+                        let method = route.path.get(1).map(|s| s.as_str()).unwrap_or("GET");
+                        if method == "CRUD" {
+                            let collection_path = path;
+                            let mut obj_body = String::from("{");
+                            if let Some(Value::String(schema_name)) = route.kv.get("schema") {
+                                if let Some(schema_section) = doc.sections.iter().find(|sec| {
+                                    sec.path.len() == 2
+                                        && sec.path[0] == "Schema"
+                                        && sec.path[1] == *schema_name
+                                }) {
+                                    let mut first = true;
+                                    for (field, typ) in &schema_section.kv {
+                                        if !first { obj_body.push_str(",\n"); } else { first = false; }
+                                        let example = match typ.as_str().unwrap_or("") {
+                                            "string" => format!("  \"{}\": \"example\"", field),
+                                            "number" => format!("  \"{}\": 123", field),
+                                            "bool"   => format!("  \"{}\": true", field),
+                                            _        => format!("  \"{}\": null", field),
+                                        };
+                                        obj_body.push_str(&example);
+                                    }
+                                }
+                            }
+                            obj_body.push_str("\n}");
+                            println!("curl -X GET    http://{}/{}", host_port, collection_path);
+                            println!("curl -X POST   http://{}/{} \\", host_port, collection_path);
+                            println!("     -H 'Content-Type: application/json' \\");
+                            println!("     -d '{}'", obj_body.replace('\'', "\\'"));
+                            println!("curl -X GET    http://{}/{}/123", host_port, collection_path);
+                            println!("curl -X PUT    http://{}/{}/123 \\", host_port, collection_path);
+                            println!("     -H 'Content-Type: application/json' \\");
+                            println!("     -d '{}'", obj_body.replace('\'', "\\'"));
+                            println!("curl -X DELETE http://{}/{}/123", host_port, collection_path);
+                            continue;
+                        }
+                        let mut curl_cmd = format!("curl -X {} http://{}/{}", method, host_port, path);
+                        if let Some(Value::String(desc)) = route.kv.get("description") {
+                            curl_cmd.push_str(&format!("  # {}", desc));
+                        }
+                        println!("{}", curl_cmd);
+                    }
+                }
+                break;
+            }
+
+            // Document output (json, xml, yaml, text, rune, or default)
+            log(LogLevel::Debug, "Parsed Vectrune script:");
+            match output_format {
+                Some("json") => {
+                    let json_output =
+                        serde_json::to_string_pretty(&doc.to_json()).unwrap_or_else(|err| {
+                            log(LogLevel::Error, &format!("Error converting to JSON: {}", err));
+                            process::exit(1);
+                        });
+                    println!("{}", json_output);
+                }
+                Some("text") => {
+                    println!("{}", doc);
+                }
+                Some("rune") => {
+                    println!("{}", doc);
+                }
+                Some("xml") => {
+                    let xml_output = json_to_xml(&doc.to_json(), "root");
+                    println!("{}", xml_output);
+                }
+                Some("yaml") => {
+                    let yaml_output = serde_yaml::to_string(&doc.to_json()).unwrap_or_else(|err| {
+                        eprintln!("Error converting to YAML: {}", err);
+                        process::exit(1);
+                    });
+                    println!("{}", yaml_output);
+                }
+                _ => {
+                    println!("{}", doc);
+                }
+            }
+            break;
+        }
+    }
+    Ok(())
+}
+
+fn parse_content(
+    path: &str,
+    content: &str,
+    input_format: Option<&str>,
+) -> anyhow::Result<crate::rune_ast::RuneDocument> {
+    match input_format {
+        Some("json") => {
+            let json_value: serde_json::Value = serde_json::from_str(content)?;
+            Ok(crate::rune_ast::RuneDocument::from_json(&json_value))
+        }
+        Some("xml") => {
+            crate::rune_ast::RuneDocument::from_xml(content).map_err(|e| anyhow::anyhow!(e))
+        }
+        Some("yaml") => {
+            crate::rune_ast::RuneDocument::from_yaml(content).map_err(|e| anyhow::anyhow!(e))
+        }
+        _ => {
+            let base_dir = std::env::current_dir()?;
+            load_rune_document_from_str_with_base(content, &base_dir, path)
+                .map_err(|e| anyhow::anyhow!(e))
+        }
     }
 }
 

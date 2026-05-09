@@ -72,6 +72,33 @@ pages:
       - src/apps/rune_web/jscodegen.rs
       - src/apps/rune_web/parser.rs
       - examples/tic_tac_toe/parts/logic.rune
+  - id: language.vectrune-scripts
+    path: language/vectrune-scripts.md
+    kind: page
+    title: .vectrune Scripts
+    audience:
+      - ai
+      - human
+    sources:
+      - src/vectrune/
+      - src/execution/
+      - src/cli/vectrune.rs
+      - examples/vectrune/
+      - tests/integration_vectrune_cli.rs
+  - id: language.vect-scripts
+    path: language/vect-scripts.md
+    kind: page
+    title: .vect Script Language
+    audience:
+      - ai
+      - human
+    sources:
+      - src/cli/vect.rs
+      - src/execution/ir.rs
+      - src/execution/runtime.rs
+      - src/core/mod.rs
+      - examples/vect/
+      - tests/integration_vect_cli.rs
   - id: runtime.cli
     path: runtime/cli.md
     kind: page
@@ -82,6 +109,21 @@ pages:
     sources:
       - README.md
       - src/main.rs
+      - src/cli/watch.rs
+      - Cargo.toml
+  - id: runtime.execution-engine
+    path: runtime/execution-engine.md
+    kind: page
+    title: Execution Engine
+    audience:
+      - ai
+      - human
+    sources:
+      - src/core/mod.rs
+      - src/cli/vect.rs
+      - src/main.rs
+      - tests/integration_vect_cli.rs
+      - documents/feature/rune_executor_engine/
   - id: examples.curated
     path: examples/curated-examples.md
     kind: page
@@ -139,6 +181,18 @@ references:
       - examples/
       - tests/
       - README.md
+  - id: reference.intents
+    path: reference/intents.md
+    kind: page
+    title: Intent Variants
+    audience:
+      - ai
+      - human
+      - docs-generator
+    sources:
+      - src/vectrune/ast.rs
+      - examples/
+      - documents/feature/intent_language_agent/feature.md
 policies:
   maintenance: agents/maintenance.md
   rendered_docs_root: language/docs/

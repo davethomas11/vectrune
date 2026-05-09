@@ -6,6 +6,8 @@ This page summarizes the current CLI surface visible from `src/main.rs` and user
 
 Common entrypoints include:
 - `vectrune <script.rune>`
+- `vectrune <script.vect>`
+- `vectrune <script.vectrune>`
 - `vectrune -` to read a script from STDIN
 - `vectrune <script.rune> --calculate <expr>`
 - `vectrune <script.rune> --transform <spec>`
@@ -25,6 +27,7 @@ Current top-level flags include:
 - `--model` — select the model for `--ai`
 - `--host` — override app host for server runtimes
 - `-p`, `--port` — override app port for server runtimes
+- `-w`, `--watch` — watch for file changes and automatically restart the server (development mode)
 
 ## Rune file loading behavior
 
@@ -36,6 +39,74 @@ Current behavior:
 - imported directories load direct child `.rune` files in sorted filename order
 - imports are resolved relative to the importing file
 - when sections overlap, imported content is merged first and the importing file is merged after it
+
+## Development mode: hot reloading with `-w` / `--watch`
+
+When running a Vectrune app in server mode (REST, GraphQL, etc.), the `-w` flag enables automatic file monitoring:
+
+**Usage:**
+```bash
+vectrune app.rune -w -p 3000
+vectrune app.rune -w -l debug --host 0.0.0.0
+```
+
+**Behavior:**
+- A background file watcher monitors the app directory and subdirectories
+- Detects changes to `.rune`, `.json`, and `.yaml` files
+- When changes are detected, logs "Changes detected. Preparing to restart..."
+- User must manually restart the server (Ctrl+C and re-run the command) to apply changes
+
+**Implementation:**
+- Cross-platform file system monitoring via `notify` crate (FSEvents on macOS/Linux, ReadDirectoryChangesW on Windows)
+- Background thread spawned during server startup
+- Non-blocking notifications to allow server to continue handling requests while monitoring
+
+**Common workflow:**
+```bash
+# Terminal 1: Start app with watch mode
+vectrune ./app.rune -w -p 3000
+
+# Terminal 2: Edit files
+# Edit app.rune, routes, schemas, etc.
+
+# Back in Terminal 1: See "Changes detected..."
+# Press Ctrl+C
+# Run the command again to restart with new code
+```
+
+## `.vect` prototype script behavior
+
+The CLI now supports a separate prototype script format for interactive execution:
+
+- a single `.vect` file can be run directly with `vectrune <script.vect>`
+- `.vect` files do **not** go through the Rune document loader
+- `.vect` execution is currently interactive and has direct access to stdin/stdout
+- current prototype syntax includes:
+  - `stdio -> "text"`
+  - `.. "continued text"`
+  - `name <- stdio`
+  - `stdio -> "Hello {name}"`
+  - `if ...:`, `else if ...:`, `else:`
+  - `repeat from line N`
+
+Current prototype constraints:
+- `.vect` execution currently supports one file at a time
+- `.vect` does not support `--input`, `--output`, `--calculate`, `--transform`, or `--merge-with`
+- `.vect` is intentionally separate from `.rune` app/runtime loading
+
+## `.vectrune` prototype behavior
+
+The CLI also supports a higher-level prototype natural-language surface:
+
+- a single `.vectrune` file can be run directly with `vectrune <script.vectrune>`
+- `.vectrune` files compile through a deterministic language engine into executable statements for the shared runtime
+- the current engine is English-only and rule-based
+- the current supported intent is a weight-timeline survey that asks for birth year, collects `age=weight` points, and renders an ASCII graph
+
+Current prototype constraints:
+- `.vectrune` execution currently supports one file at a time
+- `.vectrune` does not support `--input`, `--output`, `--calculate`, `--transform`, or `--merge-with`
+- unsupported natural-language requests fail with an explicit compiler error
 
 ## Output formats
 

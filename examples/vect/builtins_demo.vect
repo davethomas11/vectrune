@@ -1,0 +1,33 @@
+#!VECT
+# Demonstrates calling builtins directly: log, parse-json, is-set
+
+stdio -> "Demonstrating builtins in .vect"
+stdio -> ""
+
+stdio -> "What's your name?"
+name <- stdio
+
+# Use the log builtin directly (no 'call' keyword needed)
+log "User entered name: {name}"
+
+stdio -> ""
+stdio -> "Enter some JSON (e.g., {\"age\":30}):"
+json_input <- stdio
+
+# Parse JSON directly
+parse-json json_input as data
+
+# Check if parsing succeeded
+is-set data as has_data
+
+if has_data == true:
+    stdio -> "Successfully parsed JSON!"
+    stdio -> "Data contains: {data}"
+else:
+    stdio -> "Failed to parse JSON."
+
+stdio -> ""
+stdio -> "Done!"
+
+
+

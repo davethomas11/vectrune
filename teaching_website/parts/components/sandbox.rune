@@ -1,0 +1,26 @@
+@Component/SandboxSection
+view:
+    section #sandbox .card:
+        div .section-heading:
+            p .eyebrow "Interactive"
+            h2 "Try Vectrune in your browser"
+            p "Type some Rune code below and run it directly in this sandbox."
+        
+        div .sandbox-container:
+            div .editor-pane:
+                h3 "Code"
+                textarea #sandbox-editor [
+                    spellcheck=false
+                    placeholder="Type your .rune code here..."
+                ]:
+                    "@App\nname = Sandbox\ntype = REST\n\nrun:\n    log \"Initializing sandbox...\"\n    message = \"Hello from Vectrune WASM!\"\n    respond 200 message"
+                button #run-button .cta: "Run"
+            
+            div .output-pane:
+                h3 "Output"
+                div #sandbox-output .terminal [
+                    data-error-wasm-missing="%i18n.Sandbox.error_wasm_missing%"
+                ]:
+                    "Click 'Run' to see output here..."
+        div .sandbox-hints:
+            p "Try changing the log message or adding new routes."
