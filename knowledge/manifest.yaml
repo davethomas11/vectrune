@@ -72,7 +72,40 @@ pages:
       - src/apps/rune_web/jscodegen.rs
       - src/apps/rune_web/parser.rs
       - examples/tic_tac_toe/parts/logic.rune
-  - id: language.vectrune-scripts
+   - id: language.reactive-memory
+     path: language/reactive-memory.md
+     kind: page
+     title: Reactive Memory for Rune-Web
+     audience:
+       - ai
+       - human
+     sources:
+       - src/memory/reactive.rs
+       - src/apps/rune_web/jscodegen.rs
+       - src/memory/mod.rs
+   - id: language.memory-hooks
+     path: language/memory-hooks.md
+     kind: page
+     title: Memory Hooks — Signal/Observer Pattern
+     audience:
+       - ai
+       - human
+     sources:
+       - src/memory/hooks.rs
+       - src/memory/mod.rs
+   - id: feature.memory-reactivity-architecture
+     path: language/memory-reactivity-complete.md
+     kind: page
+     title: Complete Memory Reactivity Architecture
+     audience:
+       - ai
+       - human
+     sources:
+       - src/memory/reactive.rs
+       - src/memory/hooks.rs
+       - src/apps/rune_web/jscodegen.rs
+
+   - id: language.vectrune-scripts
     path: language/vectrune-scripts.md
     kind: page
     title: .vectrune Scripts
@@ -135,6 +168,17 @@ pages:
       - examples/
       - tests/
       - README.md
+  - id: language.parser-conditional-in-series
+    path: language/parser-conditional-in-series.md
+    kind: page
+    title: Parser — Conditional Statements in Series Blocks
+    audience:
+      - ai
+      - developer
+    sources:
+      - tests/conditional_in_series_test.rs
+      - src/rune_parser.rs
+    status: verified
 references:
   - id: reference.builtins
     path: reference/builtins.yaml

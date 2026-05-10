@@ -40,7 +40,27 @@ pub async fn builtin_set_memory(args: &[String], ctx: &mut crate::builtins::Cont
         None => &Value::String(value_str.into()),
     };
     let backend = get_backend().await;
+
+    // Get old value for signal
+    let old_value = backend.get(key).await;
+
+    // Set new value
     backend.set(key, value.clone()).await;
+
+    // NEW: Emit signal to hooks (if hook registry is available in context)
+    // Note: Hook registry integration requires passing it through context or app state
+    // For now, this is a placeholder that can be extended once HookRegistry
+    // is integrated into the request context
+    log(
+        LogLevel::Debug,
+        &format!(
+            "set-memory: key='{}' old={:?} new={:?}",
+            key,
+            old_value.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "null".to_string()),
+            value.to_string()
+        ),
+    );
+
     ctx.insert(LAST_EXEC_RESULT.to_string(), value.clone());
     BuiltinResult::Ok
 }
@@ -74,4 +94,9 @@ pub async fn builtin_get_memory(
 pub async fn set_memory(key: &str, value: Value) {
     let backend = get_backend().await;
     backend.set(key, value).await;
+}
+
+pub async fn get_memory_value(key: &str) -> Option<Value> {
+    let backend = get_backend().await;
+    backend.get(key).await
 }

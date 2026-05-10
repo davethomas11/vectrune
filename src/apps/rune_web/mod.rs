@@ -22,6 +22,7 @@ pub mod jscodegen;
 
 use crate::core::AppState;
 use crate::util::{log, LogLevel};
+use crate::builtins::builtin::memory::get_memory_value;
 use axum::{extract::Query, response::Html, routing::get, Router};
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
 use std::collections::HashMap;
@@ -68,8 +69,19 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
         ),
     );
 
+    // Extract reactivity settings from Frontend section
+    let reactivity_mode = frontend_section
+        .and_then(|s| s.kv.get("reactivity"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let ws_endpoint = frontend_section
+        .and_then(|s| s.kv.get("endpoint"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
     match parser::parse_rune_web_frontend(&state.doc, page_name) {
-        Ok(frontend) => {
+        Ok(mut frontend) => {
             log(
                 LogLevel::Info,
                 &format!(
@@ -80,23 +92,56 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
                 ),
             );
 
+            // Auto-inject logic for websocket reactivity if not already present
+            if reactivity_mode.as_deref() == Some("websocket") {
+                if let Some(page_def) = frontend.page_views.get(page_name) {
+                    if page_def.logic_ref.is_none() {
+                        // Create a default logic block for websocket support
+                        let resolved_endpoint = ws_endpoint.as_ref().map(|s| s.as_str()).unwrap_or("/ws");
+                        let auto_logic = create_websocket_logic_block(resolved_endpoint);
+                        frontend.logic_definitions.insert("_auto_websocket".to_string(), auto_logic);
+
+                        // Update page reference to point to auto-generated logic
+                        if let Some(page_def) = frontend.page_views.get_mut(page_name) {
+                            page_def.logic_ref = Some("_auto_websocket".to_string());
+                        }
+                    }
+                }
+            }
+
             let frontend = frontend.clone();
             let page_name = page_name.to_string();
             let default_locale = active_locale.clone();
+            let ws_endpoint = ws_endpoint.clone();
 
             Router::new().route(mount_path, get(move |Query(params): Query<HashMap<String, String>>| {
                 let frontend = frontend.clone();
                 let page_name = page_name.clone();
                 let default_locale = default_locale.clone();
+                let ws_endpoint = ws_endpoint.clone();
                 async move {
                     let request_locale = params
                         .get("locale")
                         .map(String::as_str)
                         .filter(|locale| frontend.i18n_sections.contains_key(*locale));
+
+                    // Pre-fetch all memory keys referenced by MemoryBinding nodes in this page
+                    let memory_keys = frontend.page_views.get(&page_name)
+                        .map(|p| collect_memory_keys(&p.view_tree))
+                        .unwrap_or_default();
+                    let mut pre_fetched_memory: JsonMap<String, JsonValue> = JsonMap::new();
+                    for key in memory_keys {
+                        if let Some(value) = get_memory_value(&key).await {
+                            pre_fetched_memory.insert(key, value);
+                        }
+                    }
+
                     let html = render_frontend_shell(
                         &frontend,
                         &page_name,
                         request_locale.or(default_locale.as_deref()),
+                        ws_endpoint,
+                        &pre_fetched_memory,
                     );
                     Html(html)
                 }
@@ -112,7 +157,7 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
     }
 }
 
-fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, active_locale: Option<&str>) -> String {
+fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, active_locale: Option<&str>, ws_endpoint: Option<String>, pre_fetched_memory: &JsonMap<String, JsonValue>) -> String {
     let page = frontend.page_views.get(page_name);
     let title = page
         .map(|page| page.title.as_str())
@@ -123,6 +168,11 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, activ
         .and_then(|p| p.logic_ref.as_ref())
         .and_then(|logic_name| frontend.logic_definitions.get(logic_name));
     let mut runtime_data = build_runtime_data(logic);
+
+    // Merge pre-fetched memory values so MemoryBinding nodes resolve on SSR
+    for (key, value) in pre_fetched_memory {
+        runtime_data.insert(key.clone(), value.clone());
+    }
 
     // Resolve active locale: explicit `locale = xx` on @Frontend, else first defined.
     let resolved_locale = active_locale
@@ -158,7 +208,7 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, activ
         .unwrap_or_else(|| String::from("<p>Page not found</p>"));
 
     let style_html = render_styles(frontend, page.and_then(|p| p.style_ref.clone()));
-    let logic_html = render_logic(page, logic.cloned(), &i18n_json);
+    let logic_html = render_logic(page, logic.cloned(), &i18n_json, ws_endpoint, pre_fetched_memory);
 
     format!(
         r#"<!DOCTYPE html>
@@ -263,6 +313,7 @@ fn render_view_node(node: &ast::ViewNode, data: &JsonMap<String, JsonValue>, loc
             }
         }
         ast::ViewNode::Text(s) => html_escape(&interpolate_template(s, data, locals)),
+        ast::ViewNode::Comment(s) => format!("<!-- {} -->", interpolate_template(s, data, locals)),
         ast::ViewNode::ComponentScope { props, body } => {
             // Merge component props into data so they are available for interpolation
             // but do NOT appear in data-rune-scope (which is reserved for loop locals).
@@ -276,6 +327,16 @@ fn render_view_node(node: &ast::ViewNode, data: &JsonMap<String, JsonValue>, loc
                 );
             }
             render_view_node(body, &child_data, locals)
+        }
+        ast::ViewNode::MemoryBinding { var, key, body } => {
+            // SSR: memory may not be populated yet; look it up from data if present.
+            let mem_value = data.get(key.as_str()).cloned().unwrap_or(JsonValue::Null);
+            let mut child_locals = locals.clone();
+            child_locals.insert(var.clone(), mem_value);
+            body.iter()
+                .map(|child| render_view_node(child, data, &child_locals))
+                .collect::<Vec<_>>()
+                .join("")
         }
     }
 }
@@ -335,6 +396,43 @@ fn render_element_node(
 
     elem.push_str(&format!("</{}>", tag));
     elem
+}
+
+/// Walk the view tree and collect all memory keys referenced by MemoryBinding nodes.
+fn collect_memory_keys(node: &ast::ViewNode) -> Vec<String> {
+    let mut keys = Vec::new();
+    collect_memory_keys_inner(node, &mut keys);
+    keys
+}
+
+fn collect_memory_keys_inner(node: &ast::ViewNode, keys: &mut Vec<String>) {
+    match node {
+        ast::ViewNode::MemoryBinding { key, body, .. } => {
+            keys.push(key.clone());
+            for child in body {
+                collect_memory_keys_inner(child, keys);
+            }
+        }
+        ast::ViewNode::Element { children, .. } => {
+            for child in children {
+                collect_memory_keys_inner(child, keys);
+            }
+        }
+        ast::ViewNode::Loop { body, .. } => {
+            for child in body {
+                collect_memory_keys_inner(child, keys);
+            }
+        }
+        ast::ViewNode::Conditional { body, .. } => {
+            for child in body {
+                collect_memory_keys_inner(child, keys);
+            }
+        }
+        ast::ViewNode::ComponentScope { body, .. } => {
+            collect_memory_keys_inner(body, keys);
+        }
+        ast::ViewNode::Text(_) | ast::ViewNode::Comment(_) => {}
+    }
 }
 
 fn build_runtime_data(logic: Option<&ast::LogicDefinition>) -> JsonMap<String, JsonValue> {
@@ -674,10 +772,12 @@ fn render_styles(frontend: &ast::RuneWebFrontend, style_ref: Option<String>) -> 
 
 /// Render JavaScript setup for client-side logic.
 /// Uses the JavaScript code generator to create functional handler code.
-fn render_logic(page: Option<&ast::PageDefinition>, logic: Option<ast::LogicDefinition>, i18n_json: &str) -> String {
+fn render_logic(page: Option<&ast::PageDefinition>, logic: Option<ast::LogicDefinition>, i18n_json: &str, ws_endpoint: Option<String>, pre_fetched_memory: &JsonMap<String, JsonValue>) -> String {
     match (page, logic) {
         (Some(page), Some(logic)) => {
-            let codegen = jscodegen::JsCodegen::new(page.view_tree.clone(), logic, i18n_json.to_string());
+            let memory_seed: std::collections::HashMap<String, serde_json::Value> =
+                pre_fetched_memory.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+            let codegen = jscodegen::JsCodegen::new(page.view_tree.clone(), logic, i18n_json.to_string(), ws_endpoint, memory_seed);
             let js_code = codegen.generate();
             format!("<script>\n{}</script>", js_code)
         }
@@ -685,3 +785,28 @@ fn render_logic(page: Option<&ast::PageDefinition>, logic: Option<ast::LogicDefi
     }
 }
 
+fn create_websocket_logic_block(_ws_endpoint: &str) -> ast::LogicDefinition {
+    use std::collections::HashMap;
+
+    // Create a minimal logic block with emit action support
+    let mut actions = HashMap::new();
+
+    // Add a built-in emit action
+    actions.insert(
+        "emit".to_string(),
+        ast::ActionDefinition {
+            params: vec!["event_name".to_string(), "payload".to_string()],
+            steps: vec![
+                // This will be handled in the JavaScript runtime
+                ast::ActionStep::Statement("window.__runeWebEmit(event_name, payload)".to_string()),
+            ],
+        },
+    );
+
+    ast::LogicDefinition {
+        state: HashMap::new(),
+        derived: HashMap::new(),
+        helpers: HashMap::new(),
+        actions,
+    }
+}

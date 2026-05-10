@@ -129,9 +129,15 @@ pub async fn call_builtin(
     let mut processed_args = Vec::new();
     let mut in_quotes = false;
     let mut current = String::new();
+    let mut in_inline_object = false;
 
     for arg in args {
-        if in_quotes {
+        if arg == "{" || arg == "[" {
+            in_inline_object = true;
+        } else if arg == "}" || arg == "]" {
+            in_inline_object = false;
+        }
+        if in_quotes && !in_inline_object {
             current.push(' ');
             current.push_str(arg);
             if arg.ends_with('"') && !arg.ends_with("\\\"") {
@@ -145,10 +151,10 @@ pub async fn call_builtin(
                 }
                 current.clear();
             }
-        } else if arg.starts_with('"') && !arg.ends_with('"') {
+        } else if arg.starts_with('"') && !arg.ends_with('"') && !in_inline_object {
             in_quotes = true;
             current = arg.clone();
-        } else if arg.starts_with('"') && arg.ends_with('"') && arg.len() >= 2 {
+        } else if arg.starts_with('"') && arg.ends_with('"') && arg.len() >= 2 && !in_inline_object {
             // Remove surrounding quotes
             processed_args.push(arg[1..arg.len() - 1].to_string());
         } else {

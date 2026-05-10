@@ -1,0 +1,160 @@
+#!RUNE
+
+# SPECIFICATION: RUNE-WEB REACTIVE BINDING
+# Goal: Components using 'get-memory' must re-render when the server
+# broadcasts a memory update over the declared WebSocket.
+
+# 1. MEMORY INITIALIZATION
+@Memory
+initial_state = {
+    "global_score": 0
+}
+
+# 2. THE BACKEND DECLARATION
+@Websocket /ws
+on_connect:
+    log "Frontend linked to reactivity engine"
+
+# 3. THE REACTIVE COMPONENT
+@Component/LiveStat
+view:
+    # RULE: rune-web must track that this component depends on 'global_score'
+    score = get-memory global_score
+    div .stat-card:
+        div .score-display:
+            span .label "Current Score"
+            span .value "{score}"
+
+# 4. THE TRIGGER EVENT
+@Event /ws /update_score
+run:
+    event = parse-json body
+
+    log "Received score update event with payload: {event.payload}"
+    # Update local state
+    score = get-memory global_score
+    if score == null:
+        score = 0
+    new_score = score + event.payload.add
+    set-memory global_score new_score
+
+    # RULE: ws.broadcast is the signal to the frontend to find
+    # all components using 'get-memory global_score' and re-render them.
+    ws.broadcast /ws { "type": "memory_update", "key": "global_score", "value": new_score }
+
+# 5. FRONTEND DECLARATION
+@Frontend
+type = rune-web
+path = %ROOT%
+page = reactivity-contract-rune-web
+reactivity = websocket
+endpoint = /ws
+
+# 6. PAGE DEFINITION
+@Page/reactivity-contract-rune-web
+style = reactivity-contract
+view:
+    div .page-container:
+        div .header:
+            h1 "Reactivity Contract Test"
+            p "Update the score below — watch it sync instantly!"
+        div .content:
+            div .stats-section:
+                LiveStat
+            div .controls-section:
+                button .update-button on_click="emit('update_score', {'add':1})" "➕ Increase Score"
+
+# 7. APP CONFIGURATION
+@App
+name = Reactivity Contract Test
+version = 0.1
+type = REST
+
+# 8. STYLES
+@Style/reactivity-contract
+rules:
+    body:
+        font-family = system-ui, -apple-system, sans-serif
+        background = #f5f5f5
+        margin = 0
+        padding = 0
+
+    .page-container:
+        max-width = 800px
+        margin = 0 auto
+        padding = 40px 20px
+
+    .header:
+        text-align = center
+        margin-bottom = 40px
+        padding-bottom = 20px
+        border-bottom = 2px solid #ddd
+
+    .header h1:
+        color = #333
+        font-size = 32px
+        margin = 0 0 10px 0
+
+    .header p:
+        color = #666
+        font-size = 16px
+        margin = 0
+
+    .content:
+        display = flex
+        flex-direction = column
+        gap = 30px
+
+    .stats-section:
+        padding = 20px
+
+    .stat-card:
+        background = white
+        border-radius = 12px
+        padding = 30px
+        box-shadow = 0 2px 8px rgba(0,0,0,0.1)
+        text-align = center
+
+    .score-display:
+        display = flex
+        flex-direction = column
+        gap = 15px
+        align-items = center
+
+    .label:
+        font-size = 14px
+        color = #999
+        text-transform = uppercase
+        letter-spacing = 1px
+        font-weight = 600
+
+    .value:
+        font-size = 56px
+        font-weight = bold
+        color = #4CAF50
+        font-variant-numeric = tabular-nums
+
+    .controls-section:
+        display = flex
+        justify-content = center
+
+    .update-button:
+        background = #4CAF50
+        color = white
+        border = none
+        border-radius = 8px
+        padding = 14px 32px
+        font-size = 16px
+        font-weight = 600
+        cursor = pointer
+        transition = all 0.2s ease
+        box-shadow = 0 2px 4px rgba(0,0,0,0.1)
+
+    .update-button:hover:
+        background = #45a049
+        box-shadow = 0 4px 8px rgba(0,0,0,0.15)
+        transform = translateY(-2px)
+
+    .update-button:active:
+        transform = translateY(0)
+        box-shadow = 0 2px 4px rgba(0,0,0,0.1)

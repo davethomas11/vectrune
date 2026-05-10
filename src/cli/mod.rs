@@ -8,6 +8,8 @@ pub mod repl;
 pub mod vect;
 pub mod vectrune;
 pub mod watch;
+#[allow(dead_code)]
+pub mod hooks_commands;
 
 pub use ai::handle_ai;
 pub use calculate::handle_calculate;
@@ -19,6 +21,7 @@ pub use repl::handle_repl;
 pub use vect::handle_vect_file;
 pub use vectrune::handle_vectrune_file;
 pub use watch::start_file_watcher;
+pub use hooks_commands::cmd_hooks;
 
 pub fn handle_sam_generate(bundle_path: &str, output_path: &str) -> anyhow::Result<()> {
     // Generate a basic SAM YAML file for the Lambda ZIP bundle

@@ -2,6 +2,24 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+pub mod reactive;
+pub mod hooks;
+pub mod hook_parser;
+pub mod hook_context;
+
+#[allow(dead_code)]
+pub use reactive::{ReactiveMemoryBackend, ReactiveMemoryConfig, BroadcastMode};
+#[allow(dead_code)]
+pub use hooks::{
+    HookRegistry, HookConfig, MemorySignal, MemoryObserver,
+    WebSocketObserver, WebhookObserver, SSEObserver, LocalObserver,
+    ReactivityProvider, ReactivityConfig,
+};
+#[allow(dead_code)]
+pub use hook_parser::{ParsedHook, parse_hooks_from_document, register_hooks};
+#[allow(dead_code)]
+pub use hook_context::HookContextManager;
+
 #[async_trait]
 pub trait MemoryBackend: Send + Sync {
     async fn get(&self, key: &str) -> Option<serde_json::Value>;

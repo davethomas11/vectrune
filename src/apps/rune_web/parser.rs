@@ -327,6 +327,7 @@ fn expand_component_refs_in_node(
                 body: expanded_body,
             })
         }
+        ViewNode::Comment(text) => Ok(ViewNode::Comment(text.clone())),
         ViewNode::Text(text) => Ok(ViewNode::Text(text.clone())),
         ViewNode::ComponentScope { props, body } => {
             let expanded_body = expand_component_refs_in_node(
@@ -338,6 +339,22 @@ fn expand_component_refs_in_node(
             Ok(ViewNode::ComponentScope {
                 props: props.clone(),
                 body: Box::new(expanded_body),
+            })
+        }
+        ViewNode::MemoryBinding { var, key, body } => {
+            let mut expanded_body = Vec::new();
+            for child in body {
+                expanded_body.push(expand_component_refs_in_node(
+                    child,
+                    component_definitions,
+                    resolved_components,
+                    stack,
+                )?);
+            }
+            Ok(ViewNode::MemoryBinding {
+                var: var.clone(),
+                key: key.clone(),
+                body: expanded_body,
             })
         }
     }
@@ -367,18 +384,47 @@ fn parse_view_nodes(items: &[Value]) -> Result<ViewNode, ParseError> {
 
 /// Extract a list of view nodes from a series.
 fn extract_view_nodes(items: &[Value]) -> Result<Vec<ViewNode>, ParseError> {
+    extract_view_nodes_from(items, 0)
+}
+
+fn extract_view_nodes_from(items: &[Value], start: usize) -> Result<Vec<ViewNode>, ParseError> {
     let mut nodes = Vec::new();
-    for item in items {
+    let mut i = start;
+    while i < items.len() {
+        let item = &items[i];
         match item {
             Value::String(s) => {
                 let trimmed = s.trim();
                 if trimmed.is_empty() {
+                    i += 1;
+                    continue;
+                }
+
+                // Skip comments - they start with #
+                if trimmed.starts_with('#') {
+                    let comment_text = trimmed[1..].trim().to_string();
+                    nodes.push(ViewNode::Comment(comment_text));
+                    i += 1;
                     continue;
                 }
 
                 // Skip control structure markers - they're handled as map keys
                 if trimmed.starts_with("each ") || trimmed.starts_with("if ") {
+                    i += 1;
                     continue;
+                }
+
+                // Detect `var = get-memory key` bindings
+                if let Some(binding) = try_parse_memory_binding(trimmed) {
+                    // Everything after this binding becomes its body
+                    let body = extract_view_nodes_from(items, i + 1)?;
+                    nodes.push(ViewNode::MemoryBinding {
+                        var: binding.0,
+                        key: binding.1,
+                        body,
+                    });
+                    // Memory binding consumes all remaining siblings
+                    return Ok(nodes);
                 }
 
                 // Try to parse as an element first
@@ -388,17 +434,36 @@ fn extract_view_nodes(items: &[Value]) -> Result<Vec<ViewNode>, ParseError> {
                     // Fall back to text node
                     nodes.push(ViewNode::Text(s.clone()));
                 }
+                i += 1;
             }
             Value::Map(map) => {
                 // Process each key-value pair in the map
                 for (key, values) in map {
                     nodes.push(parse_view_element_or_control(key, values)?);
                 }
+                i += 1;
             }
-            _ => {}
+            _ => {
+                i += 1;
+            }
         }
     }
     Ok(nodes)
+}
+
+/// If `s` matches `<var> = get-memory <key>`, returns `Some((var, key))`.
+fn try_parse_memory_binding(s: &str) -> Option<(String, String)> {
+    // Split on " = get-memory " or " = memory.get "
+    for sep in &[" = get-memory ", " = memory.get "] {
+        if let Some(pos) = s.find(sep) {
+            let var = s[..pos].trim().to_string();
+            let key = s[pos + sep.len()..].trim().to_string();
+            if !var.is_empty() && !key.is_empty() && !var.contains(' ') {
+                return Some((var, key));
+            }
+        }
+    }
+    None
 }
 
 /// Try to parse an element from a string like "h1 "text content"" or "main .screen .active"
@@ -507,7 +572,16 @@ fn extract_element_parts(
                 };
 
                 if name.starts_with("on") || name == "click" || name == "change" {
-                    events.insert(name.to_string(), value_unquoted.to_string());
+                    // Strip "on_" or "on" prefix for event names
+                    let event_name = if name.starts_with("on_") {
+                        name[3..].to_string()
+                    } else if name.starts_with("on") && name.len() > 2 && !name[2..].starts_with('_') {
+                        // Handle onClicke style (camelCase without underscore)
+                        name[2..].to_string()
+                    } else {
+                        name.to_string()
+                    };
+                    events.insert(event_name, value_unquoted.to_string());
                 } else {
                     attrs.insert(name.to_string(), value_unquoted.to_string());
                 }
@@ -949,10 +1023,16 @@ fn parse_kv_string(s: &str) -> Option<(String, String)> {
     let s = s.trim();
     let parts: Vec<_> = s.splitn(2, '=').collect();
     if parts.len() == 2 {
-        Some((
-            parts[0].trim().to_string(),
-            parts[1].trim().to_string(),
-        ))
+        let key = parts[0].trim().to_string();
+        let mut value = parts[1].trim().to_string();
+
+        // Remove surrounding quotes from value if present
+        if (value.starts_with('"') && value.ends_with('"')) ||
+           (value.starts_with('\'') && value.ends_with('\'')) {
+            value = value[1..value.len() - 1].to_string();
+        }
+
+        Some((key, value))
     } else {
         None
     }

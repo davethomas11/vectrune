@@ -368,15 +368,43 @@ action play(index):
     board.[index] = turn
 ```
 
-Supported action features currently include assignment, increment, `stop`, `stop when`, predicate blocks, `+`, equality checks, boolean `or/and`, scoped helper calls, and the generic builtins `full` and `swap`.
+Supported action features currently include assignment, increment, `stop`, `stop when`, predicate blocks, `+`, equality checks, boolean `or/and`, scoped helper calls, and the generic builtins `full` and `swap`. When a WebSocket endpoint is configured, the `emit(eventName, payload)` function is also available for sending server events.
 
 Game-specific rules such as Tic Tac Toe win detection should live in `func` helpers inside the page's own `@Logic` block rather than inside the shared `rune_web` library runtime.
 
-### Server Binding
+### Server Binding and WebSocket Communication
 
-Rune-Web is still **client-only** today. No server communication is generated from event handlers.
+Rune-Web supports **server communication** via WebSocket when configured with `@Frontend reactivity = websocket` and `endpoint = /path`.
 
-**Potential Phase 3**: WebSocket/fetch API generation to call back to server.
+#### The `emit` Function
+
+The `emit` function is a built-in action available in all rune-web pages when a WebSocket endpoint is configured. It allows frontend event handlers to send messages to the server:
+
+```rune
+@Page/counter
+view:
+    button on_click="emit('increment', {'step': 1})" "+1"
+
+@Frontend
+type = rune-web
+path = %ROOT%
+reactivity = websocket
+endpoint = /ws
+```
+
+When the button is clicked, the `emit` function sends a WebSocket message with:
+- **Event name**: `'increment'` — identifies the event type to the server
+- **Payload**: `{'step': 1}` — arbitrary JSON data sent to the server
+
+Server-side event handlers receive these messages and can respond with state updates that trigger reactivity (see `@Event /ws` handlers).
+
+#### Implicit WebSocket Name
+
+The `emit` function uses the configured WebSocket endpoint. When a single WebSocket endpoint is configured (the common case), the endpoint is implied and does not need to be specified as a parameter.
+
+**Current scope**: WebSocket-based server communication for event emission and memory synchronization.
+
+**Future enhancements**: REST API binding for fetch-based actions, GraphQL subscriptions for reactive updates.
 
 ## Testing Strategy
 

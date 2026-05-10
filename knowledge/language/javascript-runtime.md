@@ -470,16 +470,38 @@ derive:
 
 ## Integration with Server
 
-**Currently**: Rune-Web logic runs entirely client-side.
-
-**Future**: Phase 3 will add server communication:
+**WebSocket Communication**: When a Rune-Web app is configured with `@Frontend reactivity = websocket` and an `endpoint`, the `emit` function becomes available for sending messages to the server:
 
 ```rune
-action play(index):
-    board.[index] = turn
-    # Planned: send to server for validation
-    # fetch("/api/game/move", { index })
+@Page/counter
+logic = counter
+view:
+    button on_click="emit('increment', {'step': 1})" "+1"
+
+@Logic/counter
+state:
+    count = 0
+
+@Frontend
+type = rune-web
+path = %ROOT%
+reactivity = websocket
+endpoint = /ws
 ```
+
+**WebSocket Event Structure**: Events sent via `emit` are formatted as JSON:
+
+```javascript
+// Browser sends:
+{
+  "event": "increment",
+  "payload": { "step": 1 }
+}
+```
+
+Server-side handlers receive these messages and can respond with state updates via `ws.broadcast`, which trigger client-side reactivity.
+
+**Future**: Phase 3 will extend server communication to include REST API binding and GraphQL subscriptions.
 
 ## References
 

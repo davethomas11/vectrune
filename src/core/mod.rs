@@ -1084,6 +1084,29 @@ pub async fn initialize_memory_from_doc(doc: &RuneDocument, path: &PathBuf) {
             }
 
             // Fallback to existing logic
+            // Only process if there's a key specified (path[1])
+            if section.path.len() < 2 {
+                log(LogLevel::Debug, "Memory section without specific key - processing initial_state or kv properties");
+                // No specific key - process initial_state or kv properties
+                if let Some(Value::Map(state)) = section.kv.get("initial_state") {
+                    for (k, v) in state {
+                        if let Ok(json_val) = serde_json::to_value(v) {
+                            log(LogLevel::Debug, &format!("Setting memory key '{}' to value: {}", k, json_val));
+                            crate::builtins::builtin::memory::set_memory(k, json_val).await;
+                        }
+                    }
+                } else if !section.kv.is_empty() {
+                    // Set all kv pairs as memory
+                    for (k, v) in &section.kv {
+                        if let Ok(json_val) = serde_json::to_value(v) {
+                            log(LogLevel::Debug, &format!("Setting memory key '{}' to value: {}", k, json_val));
+                            crate::builtins::builtin::memory::set_memory(k, json_val).await;
+                        }
+                    }
+                }
+                continue;
+            }
+
             let key = &section.path[1];
             let memory_data = if !section.records.is_empty() {
                 serde_json::to_value(&section.records.iter().map(|r| &r.kv).collect::<Vec<_>>())

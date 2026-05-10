@@ -108,6 +108,20 @@ pub enum ViewNode {
         body: Box<ViewNode>,
     },
 
+    /// A memory binding: `var = get-memory key`
+    /// Reads `key` from server memory into a local variable `var` for child nodes.
+    MemoryBinding {
+        /// The local variable name to bind the memory value to
+        var: String,
+        /// The memory key to read from
+        key: String,
+        /// Child nodes rendered with `var` in scope
+        body: Vec<ViewNode>,
+    },
+
+    /// HTML comment (not escaped)
+    Comment(String),
+
     /// Raw text content
     Text(String),
 }

@@ -274,11 +274,16 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
         if let Some(sec) = current_section.as_mut() {
             // Map block parsing: allowed anywhere, but only if '=' is NOT before '{'
             // Also check that '{' is not inside quotes
+            // And only if the key is a simple identifier (not a function call with arguments)
             if line.contains('{') {
                 let eq_idx = line.find('=');
                 let brace_idx = line.rfind('{').filter(|&idx| !is_char_in_quotes(line, idx));
                 let is_map_block = brace_idx
-                    .map(|idx| eq_idx.is_none() || eq_idx.unwrap() > idx)
+                    .map(|idx| {
+                        let is_no_assignment = eq_idx.is_none() || eq_idx.unwrap() > idx;
+                        let is_simple_key = is_valid_map_block_key(line[..idx].trim());
+                        is_no_assignment && is_simple_key
+                    })
                     .unwrap_or(false);
 
                 if is_map_block {
@@ -785,5 +790,20 @@ fn is_object_assignment_line(line: &str) -> bool {
     line.find('=')
         .map(|eq_idx| looks_like_object_literal_start(&line[eq_idx + 1..]))
         .unwrap_or(false)
+}
+
+fn is_valid_map_block_key(key: &str) -> bool {
+    // A valid map block key should only contain:
+    // - alphanumeric characters
+    // - underscores
+    // - dots (for nested property access like "outer.inner")
+    // - hyphens (for CSS-like selectors like ".class-name")
+    //
+    // It should NOT contain:
+    // - spaces (which indicate function arguments follow)
+    // - slashes (which indicate path segments like "/path")
+    // - parentheses (which indicate function calls)
+    // Any of these characters suggest it's a function call with arguments, not a map block
+    !key.contains(' ') && !key.contains('/') && !key.contains('(')
 }
 

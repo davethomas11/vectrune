@@ -64,6 +64,12 @@ async fn main() -> anyhow::Result<()> {
                 .value_parser(["text", "json", "rune", "xml", "yaml", "curl"]),
         )
         .arg(
+            Arg::new("filter")
+                .long("filter")
+                .help("Filter output to only include sections matching a path, e.g. '@Memory' or '@Page'")
+                .value_name("FILTER_PATH"),
+        )
+        .arg(
             Arg::new("calculate")
                 .long("calculate")
                 .num_args(1)
@@ -353,6 +359,7 @@ async fn main() -> anyhow::Result<()> {
     let port_override = matches.get_one::<u16>("port").copied();
     let host_override = matches.get_one::<String>("host").map(|s| s.as_str());
     let watch_files = matches.get_flag("watch");
+    let filter_path = matches.get_one::<String>("filter").map(|s| s.as_str());
 
     if let Some(prompt) = ai_prompt {
         cli::handle_ai(prompt, model).await?;
@@ -669,6 +676,12 @@ async fn main() -> anyhow::Result<()> {
 
             // Document output (json, xml, yaml, text, rune, or default)
             log(LogLevel::Debug, "Parsed Vectrune script:");
+
+            // Apply filter if specified
+            if let Some(filter) = filter_path {
+                doc = apply_filter(&doc, filter);
+            }
+
             match output_format {
                 Some("json") => {
                     let json_output =
@@ -739,6 +752,38 @@ async fn launch_lambda() -> std::io::Result<()> {
             );
             Err(std::io::Error::new(std::io::ErrorKind::Other, e))
         }
+    }
+}
+
+fn apply_filter(doc: &RuneDocument, filter: &str) -> RuneDocument {
+    // Parse filter path - supports formats like "@Memory", "@Memory/Details", or "Memory"
+    let filter_normalized = if filter.starts_with('@') {
+        &filter[1..]
+    } else {
+        filter
+    };
+
+    let filter_parts: Vec<&str> = filter_normalized.split('/').collect();
+
+    // Filter sections: keep only those that match the filter path
+    let filtered_sections: Vec<_> = doc
+        .sections
+        .iter()
+        .filter(|section| {
+            // Check if the section path starts with the filter parts
+            if section.path.len() >= filter_parts.len() {
+                filter_parts.iter().enumerate().all(|(i, &part)| {
+                    section.path[i] == part
+                })
+            } else {
+                false
+            }
+        })
+        .cloned()
+        .collect();
+
+    RuneDocument {
+        sections: filtered_sections,
     }
 }
 

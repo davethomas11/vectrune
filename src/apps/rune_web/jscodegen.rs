@@ -8,18 +8,22 @@
 /// - execute a small interpreted subset of action steps
 
 use super::ast::{LogicDefinition, ViewNode};
+use std::collections::HashMap;
 
 /// JavaScript code generator from a page + logic definition.
 pub struct JsCodegen {
     page: ViewNode,
     logic: LogicDefinition,
     i18n_json: String,
+    ws_endpoint: Option<String>,
+    /// Memory values pre-fetched at request time, seeded into initial JS state.
+    memory_seed: HashMap<String, serde_json::Value>,
 }
 
 impl JsCodegen {
     /// Create a new code generator from a page tree, logic definition, and i18n JSON.
-    pub fn new(page: ViewNode, logic: LogicDefinition, i18n_json: String) -> Self {
-        JsCodegen { page, logic, i18n_json }
+    pub fn new(page: ViewNode, logic: LogicDefinition, i18n_json: String, ws_endpoint: Option<String>, memory_seed: HashMap<String, serde_json::Value>) -> Self {
+        JsCodegen { page, logic, i18n_json, ws_endpoint, memory_seed }
     }
 
     /// Generate complete JavaScript application code.
@@ -530,6 +534,21 @@ impl JsCodegen {
       }}
       return true;
     }}
+    // Handle function calls like window.__runeWebEmit(arg1, arg2)
+    if (trimmed.includes('(') && trimmed.endsWith(')')) {{
+      const parenIndex = trimmed.indexOf('(');
+      const funcName = trimmed.slice(0, parenIndex).trim();
+      const argsStr = trimmed.slice(parenIndex + 1, -1);
+
+      // Check for window.__runeWebEmit or other function calls
+      if (funcName === 'window.__runeWebEmit') {{
+        const args = argsStr ? splitTopLevel(argsStr, ',').map(arg => evaluateExpression(arg, buildScope(locals))) : [];
+        if (window.__runeWebEmit && typeof window.__runeWebEmit === 'function') {{
+          window.__runeWebEmit.apply(null, args);
+        }}
+        return true;
+      }}
+    }}
     if (trimmed.includes('=')) {{
       const eqIndex = trimmed.indexOf('=');
       const left = trimmed.slice(0, eqIndex).trim();
@@ -609,8 +628,21 @@ impl JsCodegen {
       return result;
     }}
 
+    if (node.MemoryBinding) {{
+      const binding = node.MemoryBinding;
+      // Reading from app.state (the proxy) registers this component as a subscriber
+      // so re-renders fire automatically when this memory key updates via WebSocket.
+      const memValue = app.state[binding.key];
+      const childLocals = Object.assign({{}}, locals || {{}}, {{ [binding.var]: memValue }});
+      return (binding.body || []).map((child) => renderNode(child, childLocals)).join('');
+    }}
+
     if (node.Text !== undefined) {{
       return escapeHtml(interpolate(node.Text, buildScope(locals)));
+    }}
+
+    if (node.Comment !== undefined) {{
+      return `<!--${{interpolate(node.Comment, buildScope(locals))}}-->`;
     }}
 
     return '';
@@ -669,9 +701,107 @@ impl JsCodegen {
     }});
   }}
 
+  // ============================================================
+  // Memory Subscription System
+  // ============================================================
+  // Track which components are subscribed to memory keys
+  const memorySubscriptions = {{}};
+
+  // Store original state as the memory-backed state
+  const memoryState = Object.assign({{}}, app.state);
+
+  // Override app.state property to intercept reads and register subscriptions
+  const stateProxy = new Proxy(memoryState, {{
+    get(target, prop) {{
+      // If this is being accessed during a render, register subscription
+      if (window.__renderingComponent && typeof prop === 'string') {{
+        if (!memorySubscriptions[prop]) {{
+          memorySubscriptions[prop] = new Set();
+        }}
+        memorySubscriptions[prop].add(window.__renderingComponent);
+      }}
+      return target[prop];
+    }},
+    set(target, prop, value) {{
+      target[prop] = value;
+      return true;
+    }}
+  }});
+
+  // Replace app.state with the proxy
+  Object.defineProperty(app, 'state', {{
+    get: function() {{ return stateProxy; }},
+    set: function(val) {{ Object.assign(memoryState, val); }},
+    configurable: true
+  }});
+
+  // Override render to track which component is being rendered
+  const originalRender = app.render;
+  app.render = function() {{
+    window.__renderingComponent = 'app';
+    originalRender.call(this);
+    window.__renderingComponent = null;
+  }};
+
+  // Factory for component-specific renders
+  function createComponentRender(componentId) {{
+    return function() {{
+      window.__renderingComponent = componentId;
+      app.computeDerived();
+      const elem = document.getElementById(componentId);
+      if (elem) {{
+        const newHtml = renderNode(pageTree, {{}});
+        elem.innerHTML = newHtml;
+      }}
+      window.__renderingComponent = null;
+    }};
+  }}
+
+  // WebSocket listener for memory updates from the server
+  function setupMemoryUpdateListener() {{
+    // Try to connect to the server for memory updates
+    // This assumes a WebSocket is available via window.__ws or we establish one
+    if (window.__ws && window.__ws.addEventListener) {{
+      window.__ws.addEventListener('message', function(event) {{
+        try {{
+          const data = JSON.parse(event.data);
+          if (data.type === 'memory_update' && data.key) {{
+            // Update the memory state
+            memoryState[data.key] = data.value;
+
+            // Find all components subscribed to this key
+            if (memorySubscriptions[data.key]) {{
+              memorySubscriptions[data.key].forEach((componentId) => {{
+                // Schedule a re-render for this component
+                if (componentId === 'app') {{
+                  requestAnimationFrame(app.render.bind(app));
+                }} else {{
+                  const componentRender = createComponentRender(componentId);
+                  requestAnimationFrame(componentRender);
+                }}
+              }});
+            }} else {{
+              // If no specific subscribers, re-render the whole app
+              requestAnimationFrame(app.render.bind(app));
+            }}
+          }}
+        }} catch (_err) {{
+          // Silently ignore parse errors
+        }}
+      }});
+    }}
+  }}
+
+  // Initialize memory subscriptions
+  setupMemoryUpdateListener();
+
   bindEvent('click');
   bindEvent('change');
   window.runeWebApp = app;
+
+  // Initialize WebSocket emit functionality if endpoint configured
+  {ws_setup}
+
   app.render();
 }})();"#,
             state_json = state_json,
@@ -679,6 +809,39 @@ impl JsCodegen {
             helper_json = helper_json,
             actions_json = actions_json,
             page_json = page_json,
+            ws_setup = if self.ws_endpoint.is_some() {
+                format!(r#"
+  window.__runeWebEmit = function(eventName, payload) {{
+    const ws = window.__runeWebSocket;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {{
+      console.warn('WebSocket not connected');
+      return;
+    }}
+    ws.send(JSON.stringify({{ type: eventName, payload: payload || {{}} }}));
+  }};
+
+  // Connect to WebSocket for bidirectional updates
+  window.__runeWebSocket = new WebSocket('{endpoint}');
+  window.__runeWebSocket.onmessage = function(event) {{
+    try {{
+      const message = JSON.parse(event.data);
+      if (message.type === 'memory_update') {{
+        // Update local state if memory changed
+        app.state[message.key] = message.value;
+        app.render();
+      }}
+    }} catch (_err) {{
+      // Silently ignore parse errors
+    }}
+  }};
+  window.__runeWebSocket.onerror = function(error) {{
+    console.error('WebSocket error:', error);
+  }};
+"#, endpoint = self.ws_endpoint.as_ref().unwrap()
+                )
+            } else {
+                String::new()
+            }
         )
     }
 
@@ -686,6 +849,11 @@ impl JsCodegen {
         let mut normalized = serde_json::Map::new();
         for (key, val) in &self.logic.state {
             normalized.insert(key.clone(), self.parse_value(val));
+        }
+        // Overlay pre-fetched memory values — these are live server values that
+        // MemoryBinding nodes read from app.state[key], so they must be in initial state.
+        for (key, val) in &self.memory_seed {
+            normalized.insert(key.clone(), val.clone());
         }
         serde_json::Value::Object(normalized).to_string()
     }
@@ -702,6 +870,9 @@ impl JsCodegen {
         }
         if trimmed == "false" {
             return serde_json::Value::Bool(false);
+        }
+        if trimmed == "null" {
+            return serde_json::Value::Null;
         }
         if let Ok(number) = trimmed.parse::<f64>() {
             if let Some(number) = serde_json::Number::from_f64(number) {
@@ -784,7 +955,7 @@ mod tests {
             }],
         };
 
-        let gen = JsCodegen::new(page, logic, "{}".to_string());
+        let gen = JsCodegen::new(page, logic, "{}".to_string(), None);
         let code = gen.generate();
         assert!(code.contains("const pageTree ="));
         assert!(code.contains("const helperDefinitions ="));
@@ -810,7 +981,7 @@ mod tests {
             )]),
             actions: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("".to_string()), logic, "{}".to_string());
+        let gen = JsCodegen::new(ViewNode::Text("".to_string()), logic, "{}".to_string(), None);
         let code = gen.generate();
         // bitwise AND operator
         assert!(code.contains("' & '"));
@@ -829,13 +1000,15 @@ mod tests {
             helpers: HashMap::new(),
             actions: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string());
+        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None);
         assert_eq!(gen.parse_value("\"hello\""), serde_json::Value::String("hello".to_string()));
         assert_eq!(gen.parse_value("42"), serde_json::json!(42));
         assert_eq!(gen.parse_value("true"), serde_json::json!(true));
         assert_eq!(gen.parse_value("[1,2,3]"), serde_json::json!([1, 2, 3]));
     }
 }
+
+
 
 
 
