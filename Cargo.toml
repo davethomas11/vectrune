@@ -1,6 +1,6 @@
-[package]
+﻿[package]
 name = "rune-runtime"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 authors = ["David Thomas"]
 description = "Vectrune: Structured data in motion."
@@ -70,3 +70,4 @@ tower = { version = "0.5.3", features = ["util"] }
 http = "1"
 uuid = { version = "1", features = ["v4", "js"] }
 assert_cmd = "2"
+
