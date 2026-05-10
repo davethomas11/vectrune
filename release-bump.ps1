@@ -50,25 +50,25 @@ if ($Version) {
 # Bump version if needed
 if (-not $NewVersion) {
     $Parts = $CurVersion -split '\.'
-    $Major = [int]$Parts[0]
-    $Minor = [int]$Parts[1]
-    $Patch = [int]$Parts[2]
+    $MajorNum = [int]$Parts[0]
+    $MinorNum = [int]$Parts[1]
+    $PatchNum = [int]$Parts[2]
 
     switch ($Mode) {
         "major" {
-            $Major++
-            $Minor = 0
-            $Patch = 0
+            $MajorNum++
+            $MinorNum = 0
+            $PatchNum = 0
         }
         "minor" {
-            $Minor++
-            $Patch = 0
+            $MinorNum++
+            $PatchNum = 0
         }
         "patch" {
-            $Patch++
+            $PatchNum++
         }
     }
-    $NewVersion = "$Major.$Minor.$Patch"
+    $NewVersion = "$MajorNum.$MinorNum.$PatchNum"
 }
 
 Write-Host "New version: $NewVersion" -ForegroundColor Green
@@ -93,9 +93,37 @@ if ($Cmp -le 0) {
     exit 1
 }
 
-# Update version in Cargo.toml
+# Update version in Cargo.toml - ONLY the [package] section version
 Write-Host "Updating $CargoFile..." -ForegroundColor Cyan
-$NewContent = $CargoContent -replace 'version = "[0-9.]+"', "version = ""$NewVersion"""
+
+# Split on [package] to isolate the package section
+$Lines = $CargoContent -split "`n"
+$NewLines = @()
+$InPackageSection = $false
+$VersionUpdated = $false
+
+foreach ($Line in $Lines) {
+    # Check if we're entering the [package] section
+    if ($Line -match '^\[package\]') {
+        $InPackageSection = $true
+        $NewLines += $Line
+    }
+    # Check if we're entering a different section
+    elseif ($Line -match '^\[' -and $InPackageSection) {
+        $InPackageSection = $false
+        $NewLines += $Line
+    }
+    # Update version only if in [package] section and not yet updated
+    elseif ($InPackageSection -and ($Line -match '^version = "([0-9]+\.[0-9]+\.[0-9]+)"') -and -not $VersionUpdated) {
+        $NewLines += "version = ""$NewVersion"""
+        $VersionUpdated = $true
+    }
+    else {
+        $NewLines += $Line
+    }
+}
+
+$NewContent = $NewLines -join "`n"
 Set-Content $CargoFile $NewContent -Encoding UTF8
 
 Write-Host "Version bumped from $CurVersion to $NewVersion in $CargoFile." -ForegroundColor Green
