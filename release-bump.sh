@@ -53,9 +53,20 @@ if verlte "$NEW_VERSION" "$CUR_VERSION"; then
   exit 1
 fi
 
-# Update version in Cargo.toml
-sed -i.bak "s/^version = \"[0-9.]*\"/version = \"$NEW_VERSION\"/" "$CARGO_FILE"
-rm -f "$CARGO_FILE.bak"
+# Update version in Cargo.toml - ONLY in [package] section
+# Use awk to find and replace only the first `version =` line after [package]
+awk '
+BEGIN { in_package = 0; version_updated = 0 }
+/^\[package\]/ { in_package = 1 }
+/^\[/ && !/^\[package\]/ && in_package { in_package = 0 }
+in_package && /^version = "/ && !version_updated {
+  print "version = \"'"$NEW_VERSION"'\""
+  version_updated = 1
+  next
+}
+{ print }
+' "$CARGO_FILE" > "$CARGO_FILE.tmp"
+mv "$CARGO_FILE.tmp" "$CARGO_FILE"
 
 echo "Version bumped from $CUR_VERSION to $NEW_VERSION in $CARGO_FILE."
 
