@@ -27,11 +27,14 @@ app_types:
     summary: "Frontend hosting through `@Frontend` configuration."
     behavior:
       - "`@Frontend type = static` serves files from the configured `src` path"
+      - "`vectrune app.rune -o html --path <route>` can print rendered HTML for `@Frontend type = static` by resolving the requested route to an HTML file under the configured `src` path"
       - "`@Frontend type = rune-web` normalizes `@Page`, `@Style`, and `@Logic` sections and mounts frontend output at the configured frontend path"
+      - "`vectrune app.rune -o html --path <route>` can print server-side rendered HTML for `@Frontend type = rune-web` when the requested route matches the configured frontend mount path"
       - "`rune-web` is currently a frontend mode mounted through REST routing, not a separate `@App type`"
     sources:
       - src/apps/rest/mod.rs
       - src/apps/rune_web/
+      - src/main.rs
       - teaching_website/teaching.rune
       - vectrune_docs.rune
   - name: AWS Lambda Packaging/Runtime

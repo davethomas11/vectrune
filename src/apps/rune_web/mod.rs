@@ -55,11 +55,7 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
         .and_then(|s| s.kv.get("path"))
         .and_then(|v| v.as_str())
         .unwrap_or("/");
-    let mount_path = if mount_path_raw == "%ROOT%" {
-        "/"
-    } else {
-        mount_path_raw
-    };
+    let mount_path = normalize_mount_path(mount_path_raw);
 
     log(
         LogLevel::Info,
@@ -124,25 +120,13 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
                         .get("locale")
                         .map(String::as_str)
                         .filter(|locale| frontend.i18n_sections.contains_key(*locale));
-
-                    // Pre-fetch all memory keys referenced by MemoryBinding nodes in this page
-                    let memory_keys = frontend.page_views.get(&page_name)
-                        .map(|p| collect_memory_keys(&p.view_tree))
-                        .unwrap_or_default();
-                    let mut pre_fetched_memory: JsonMap<String, JsonValue> = JsonMap::new();
-                    for key in memory_keys {
-                        if let Some(value) = get_memory_value(&key).await {
-                            pre_fetched_memory.insert(key, value);
-                        }
-                    }
-
-                    let html = render_frontend_shell(
+                    let html = render_page_html(
                         &frontend,
                         &page_name,
-                        request_locale.or(default_locale.as_deref()),
+                        request_locale,
+                        default_locale.as_deref(),
                         ws_endpoint,
-                        &pre_fetched_memory,
-                    );
+                    ).await;
                     Html(html)
                 }
             }))
@@ -154,6 +138,156 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
             );
             Router::new()
         }
+    }
+}
+
+pub async fn render_html_for_path(
+    doc: &crate::rune_ast::RuneDocument,
+    request_path: &str,
+) -> anyhow::Result<String> {
+    let frontend_section = doc
+        .sections
+        .iter()
+        .find(|s| s.path.first().map(|p| p.as_str()) == Some("Frontend"))
+        .ok_or_else(|| anyhow::anyhow!("-o html requires an @Frontend section"))?;
+
+    let frontend_type = frontend_section
+        .kv
+        .get("type")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("@Frontend type is required for -o html"))?;
+
+    if frontend_type != "rune-web" {
+        return Err(anyhow::anyhow!(
+            "-o html expected @Frontend type = rune-web but found '{}'",
+            frontend_type
+        ));
+    }
+
+    let page_name = frontend_section
+        .kv
+        .get("page")
+        .and_then(|v| v.as_str())
+        .unwrap_or("index");
+
+    let active_locale = frontend_section
+        .kv
+        .get("locale")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let mount_path = normalize_mount_path(
+        frontend_section
+            .kv
+            .get("path")
+            .and_then(|v| v.as_str())
+            .unwrap_or("/"),
+    );
+
+    if canonicalize_path(request_path) != canonicalize_path(mount_path) {
+        return Err(anyhow::anyhow!(
+            "Requested path '{}' is not mounted by @Frontend path '{}'",
+            normalize_request_path(request_path),
+            mount_path
+        ));
+    }
+
+    let reactivity_mode = frontend_section
+        .kv
+        .get("reactivity")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let ws_endpoint = frontend_section
+        .kv
+        .get("endpoint")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let mut frontend = parser::parse_rune_web_frontend(doc, page_name)
+        .map_err(|e| anyhow::anyhow!("Rune-Web parse error: {}", e))?;
+
+    if reactivity_mode.as_deref() == Some("websocket") {
+        if let Some(page_def) = frontend.page_views.get(page_name) {
+            if page_def.logic_ref.is_none() {
+                let resolved_endpoint = ws_endpoint.as_deref().unwrap_or("/ws");
+                let auto_logic = create_websocket_logic_block(resolved_endpoint);
+                frontend
+                    .logic_definitions
+                    .insert("_auto_websocket".to_string(), auto_logic);
+
+                if let Some(page_def) = frontend.page_views.get_mut(page_name) {
+                    page_def.logic_ref = Some("_auto_websocket".to_string());
+                }
+            }
+        }
+    }
+
+    Ok(
+        render_page_html(
+            &frontend,
+            page_name,
+            None,
+            active_locale.as_deref(),
+            ws_endpoint,
+        )
+        .await,
+    )
+}
+
+async fn render_page_html(
+    frontend: &ast::RuneWebFrontend,
+    page_name: &str,
+    request_locale: Option<&str>,
+    default_locale: Option<&str>,
+    ws_endpoint: Option<String>,
+) -> String {
+    let memory_keys = frontend
+        .page_views
+        .get(page_name)
+        .map(|p| collect_memory_keys(&p.view_tree))
+        .unwrap_or_default();
+    let mut pre_fetched_memory: JsonMap<String, JsonValue> = JsonMap::new();
+    for key in memory_keys {
+        if let Some(value) = get_memory_value(&key).await {
+            pre_fetched_memory.insert(key, value);
+        }
+    }
+
+    render_frontend_shell(
+        frontend,
+        page_name,
+        request_locale.or(default_locale),
+        ws_endpoint,
+        &pre_fetched_memory,
+    )
+}
+
+fn normalize_mount_path(path: &str) -> &str {
+    if path == "%ROOT%" {
+        "/"
+    } else {
+        path
+    }
+}
+
+fn normalize_request_path(path: &str) -> String {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        "/".to_string()
+    } else if trimmed.starts_with('/') {
+        trimmed.to_string()
+    } else {
+        format!("/{}", trimmed)
+    }
+}
+
+fn canonicalize_path(path: &str) -> String {
+    let normalized = normalize_request_path(path);
+    if normalized.len() > 1 {
+        normalized.trim_end_matches('/').to_string()
+    } else {
+        normalized
     }
 }
 

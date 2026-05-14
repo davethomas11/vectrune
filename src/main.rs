@@ -59,9 +59,17 @@ async fn main() -> anyhow::Result<()> {
             Arg::new("output")
                 .short('o')
                 .long("output")
-                .help("Enable verbose output")
+                .help("Output format")
                 .value_name("output_format")
-                .value_parser(["text", "json", "rune", "xml", "yaml", "curl"]),
+                .value_parser(["text", "json", "rune", "xml", "yaml", "curl", "html"]),
+        )
+        .arg(
+            Arg::new("path")
+                .long("path")
+                .help("Path to render when using -o html (default: /)")
+                .value_name("ROUTE_PATH")
+                .num_args(1)
+                .default_value("/"),
         )
         .arg(
             Arg::new("filter")
@@ -360,6 +368,10 @@ async fn main() -> anyhow::Result<()> {
     let host_override = matches.get_one::<String>("host").map(|s| s.as_str());
     let watch_files = matches.get_flag("watch");
     let filter_path = matches.get_one::<String>("filter").map(|s| s.as_str());
+    let render_path = matches
+        .get_one::<String>("path")
+        .map(|s| s.as_str())
+        .unwrap_or("/");
 
     if let Some(prompt) = ai_prompt {
         cli::handle_ai(prompt, model).await?;
@@ -517,6 +529,26 @@ async fn main() -> anyhow::Result<()> {
         }
 
         let app_type = get_app_type(&doc);
+
+        if output_format == Some("html") {
+            match get_frontend_type(&doc) {
+                Some("rune-web") => {
+                    let html = crate::apps::rune_web::render_html_for_path(&doc, render_path).await?;
+                    println!("{}", html);
+                    break;
+                }
+                Some("static") => {
+                    let html = render_static_html_for_path(&doc, &script_paths, render_path)?;
+                    println!("{}", html);
+                    break;
+                }
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "-o html requires @Frontend type = rune-web or @Frontend type = static"
+                    ));
+                }
+            }
+        }
 
         if app_type
             .as_ref()
@@ -785,6 +817,180 @@ fn apply_filter(doc: &RuneDocument, filter: &str) -> RuneDocument {
     RuneDocument {
         sections: filtered_sections,
     }
+}
+
+fn get_frontend_type(doc: &RuneDocument) -> Option<&str> {
+    doc.get_section("Frontend")
+        .and_then(|section| section.kv.get("type"))
+        .and_then(|value| value.as_str())
+}
+
+fn render_static_html_for_path(
+    doc: &RuneDocument,
+    script_paths: &[&str],
+    request_path: &str,
+) -> anyhow::Result<String> {
+    let frontend = doc
+        .get_section("Frontend")
+        .ok_or_else(|| anyhow::anyhow!("-o html requires an @Frontend section"))?;
+
+    let frontend_type = frontend
+        .kv
+        .get("type")
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| anyhow::anyhow!("@Frontend type is required for -o html"))?;
+
+    if frontend_type != "static" {
+        return Err(anyhow::anyhow!(
+            "-o html expected @Frontend type = static but found '{}'",
+            frontend_type
+        ));
+    }
+
+    let mount_path = normalize_frontend_mount_path(
+        frontend
+            .kv
+            .get("path")
+            .and_then(|value| value.as_str())
+            .unwrap_or("/"),
+    );
+
+    let relative_request = strip_mount_prefix(request_path, mount_path).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Requested path '{}' is not mounted by @Frontend path '{}'",
+            normalize_cli_path(request_path),
+            mount_path
+        )
+    })?;
+
+    let static_root = resolve_rune_base_dir(script_paths)?.join(
+        frontend
+            .kv
+            .get("src")
+            .and_then(|value| value.as_str())
+            .unwrap_or("."),
+    );
+
+    let candidate = resolve_static_html_candidate(&static_root, &relative_request).ok_or_else(|| {
+        anyhow::anyhow!(
+            "No static HTML file found for path '{}' under '{}'",
+            normalize_cli_path(request_path),
+            static_root.display()
+        )
+    })?;
+
+    let extension = candidate
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase());
+    if !matches!(extension.as_deref(), Some("html") | Some("htm")) {
+        return Err(anyhow::anyhow!(
+            "Resolved path '{}' is not an HTML file",
+            normalize_cli_path(request_path)
+        ));
+    }
+
+    fs::read_to_string(&candidate).map_err(|err| {
+        anyhow::anyhow!(
+            "Failed to read static HTML file '{}': {}",
+            candidate.display(),
+            err
+        )
+    })
+}
+
+fn resolve_rune_base_dir(script_paths: &[&str]) -> anyhow::Result<std::path::PathBuf> {
+    if script_paths.contains(&"-") {
+        return Ok(env::current_dir()?);
+    }
+
+    let first_path = script_paths
+        .first()
+        .ok_or_else(|| anyhow::anyhow!("No script path provided"))?;
+    let path = std::path::Path::new(first_path);
+    Ok(if path.is_dir() {
+        path.to_path_buf()
+    } else {
+        path.parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+    })
+}
+
+fn normalize_frontend_mount_path(path: &str) -> &str {
+    if path == "%ROOT%" {
+        "/"
+    } else {
+        path
+    }
+}
+
+fn normalize_cli_path(path: &str) -> String {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        "/".to_string()
+    } else if trimmed.starts_with('/') {
+        trimmed.to_string()
+    } else {
+        format!("/{}", trimmed)
+    }
+}
+
+fn canonicalize_cli_path(path: &str) -> String {
+    let normalized = normalize_cli_path(path);
+    if normalized.len() > 1 {
+        normalized.trim_end_matches('/').to_string()
+    } else {
+        normalized
+    }
+}
+
+fn strip_mount_prefix(request_path: &str, mount_path: &str) -> Option<String> {
+    let request = normalize_cli_path(request_path);
+    let mount = canonicalize_cli_path(mount_path);
+
+    if mount == "/" {
+        return Some(request);
+    }
+
+    let canonical_request = canonicalize_cli_path(&request);
+    if canonical_request == mount {
+        return Some("/".to_string());
+    }
+
+    request
+        .strip_prefix(&(mount.clone() + "/"))
+        .map(|suffix| format!("/{}", suffix))
+}
+
+fn resolve_static_html_candidate(
+    static_root: &std::path::Path,
+    relative_request: &str,
+) -> Option<std::path::PathBuf> {
+    let relative = relative_request.trim_start_matches('/');
+
+    if relative.is_empty() {
+        let index = static_root.join("index.html");
+        return index.exists().then_some(index);
+    }
+
+    if relative_request.ends_with('/') {
+        let nested_index = static_root.join(relative).join("index.html");
+        return nested_index.exists().then_some(nested_index);
+    }
+
+    let direct = static_root.join(relative);
+    if direct.is_dir() {
+        let nested_index = direct.join("index.html");
+        return nested_index.exists().then_some(nested_index);
+    }
+
+    if direct.exists() {
+        return Some(direct);
+    }
+
+    let nested_index = static_root.join(relative).join("index.html");
+    nested_index.exists().then_some(nested_index)
 }
 
 fn is_lambda_env() -> bool {

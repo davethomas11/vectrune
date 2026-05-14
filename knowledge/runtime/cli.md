@@ -19,6 +19,7 @@ Common entrypoints include:
 Current top-level flags include:
 - `-i`, `--input` — input format
 - `-o`, `--output` — output format
+- `--path` — request path to render when using `-o html` (defaults to `/`)
 - `--calculate` — run a calculation expression
 - `--transform` — run a transform expression
 - `--merge-with` — merge another input/document
@@ -117,6 +118,24 @@ The current CLI parser advertises these output format values:
 - `xml`
 - `yaml`
 - `curl`
+- `html`
+
+### `-o html` frontend rendering
+
+When a loaded Rune document includes `@Frontend type = rune-web` or `@Frontend type = static`, the CLI can print HTML instead of starting a server:
+
+```bash
+vectrune app.rune -o html
+vectrune app.rune -o html --path /docs/
+vectrune app.rune -o html --path /app
+```
+
+Current behavior:
+- `--path` defaults to `/`
+- for `@Frontend type = rune-web`, the CLI renders the mounted page for the requested frontend path
+- for `@Frontend type = static`, the CLI resolves the requested path under the configured static `src` directory and prints the matching `.html` file
+- if the requested `--path` does not match the configured frontend mount path, the CLI returns a clear error instead of guessing
+- if `-o html` is used without a detected `rune-web` or `static` frontend, the CLI returns an error
 
 ## Lambda subcommands
 
