@@ -4,6 +4,7 @@ mod emit_function_test {
     use rune_runtime::rune_parser::load_rune_document_from_path;
     use rune_runtime::apps::rune_web::{parser, ast};
     use std::path::Path;
+    use std::collections::HashMap;
 
     #[test]
     fn test_emit_function_in_generated_javascript() {
@@ -165,6 +166,7 @@ mod emit_function_test {
             logic,
             "{}".to_string(),
             Some("/ws".to_string()),
+            HashMap::new(),
         );
 
         let generated_code = codegen.generate();

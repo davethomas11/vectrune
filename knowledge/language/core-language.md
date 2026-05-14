@@ -68,6 +68,75 @@ view:
 - Multiple props are space-separated on a single invocation line.
 - Component definitions remain reusable — the same `@Component` can be invoked with different props in different places.
 - Classes, ids, inline text, events, and child content on the invocation line are not supported; use props instead.
+- When passing loop locals, props, or state into view text/attrs, use interpolation braces such as `TicketCard ticket={ticket}`, `id="{id}"`, or `h2 "{title}"`.
+
+#### Declaring expected props with `props:`
+
+A component can declare the props it expects using a bracket-list at the top of the section:
+
+```rune
+@Component/Card
+props: [title, subtitle?]
+view:
+    div .card:
+        h2 "{title}"
+        p "{subtitle}"
+```
+
+Behavior:
+- Props listed **without** `?` are **required**. If a caller omits one, the parser errors with the missing prop name.
+- Props listed **with** a trailing `?` are **optional**. Callers may omit them without error.
+- If no `props:` line is declared, no validation is performed — any invocation is accepted.
+
+```rune
+# props: [message, level?]
+# "message" is required, "level" is optional
+
+@Component/Alert
+props: [message, level?]
+view:
+    div .alert:
+        p "{message}"
+
+@Page/home
+view:
+    main:
+        Alert message="Something went wrong"    # ok — level is optional
+        Alert                                   # error — message is required
+```
+
+## Rune-Web loops
+
+Rune-Web currently supports two equivalent loop styles inside `view:` blocks.
+
+### Inline loop form
+
+This is the existing compact form used in the Tic Tac Toe example:
+
+```rune
+button .cell data-index="{index}" click=play(index) "{cell}" <- (cell, index) in board
+TicketCard ticket={ticket} <- ticket in board.backlog
+```
+
+### Block `for` form
+
+Rune-Web now also supports a block form that is often easier to read for nested component trees:
+
+```rune
+for ticket in board.backlog:
+    TicketCard ticket={ticket}
+
+for ticket, index in board.backlog:
+    div .row data-index="{index}":
+        TicketCard ticket={ticket}
+```
+
+Current behavior:
+- `for` is treated as a protected control keyword inside Rune-Web `view:` blocks
+- `for item in collection:` binds the current array item to `item`
+- `for item, index in collection:` binds the current array item to `item` and the zero-based array index to `index`
+- the block `for` form compiles to the same loop AST/runtime behavior as the inline `<- ... in ...` form
+- loop collections are currently array-oriented in server rendering and browser runtime generation
 
 ## Import declarations
 

@@ -14,6 +14,27 @@ Common entrypoints include:
 - `vectrune <script.rune> --merge-with <spec>`
 - `vectrune --ai <prompt>`
 
+## Local development install helpers
+
+The repository includes checked-in install helpers for repeat local development installs:
+- `install-dev.sh` — zsh-oriented local install for macOS/Linux-style environments
+- `install-dev.ps1` — Windows PowerShell local install
+
+Current `install-dev.ps1` behavior:
+- builds the local repository in release mode with Cargo
+- copies `target/release/vectrune.exe` into `$HOME\.local\bin`
+- adds `$HOME\.local\bin` to the user's Windows `PATH` unless `-NoPathUpdate` is supplied
+- creates a `v.cmd` shim in the same directory so `v` works as a short command in PowerShell and `cmd.exe`
+
+Example Windows usage:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\install-dev.ps1
+vectrune --version
+v --version
+```
+
 ## Common flags
 
 Current top-level flags include:

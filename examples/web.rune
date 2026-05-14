@@ -1,0 +1,252 @@
+#!RUNE
+
+# Rune-Web comprehensive example showcasing all core features.
+# This demonstrates: pages, components, props, loops, conditionals,
+# styles, state, derived values, and client-side actions.
+
+@App
+name = Rune-Web Feature Showcase
+version = 1.0
+type = REST
+port = 3000
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = showcase
+
+# ============================================================================
+# STYLE SECTION: Design tokens, presets, and CSS rules
+# ============================================================================
+
+@Style/showcase
+tokens:
+	primary-color = #3b82f6
+	secondary-color = #8b5cf6
+	success-color = #10b981
+	warning-color = #f59e0b
+	danger-color = #ef4444
+	bg-light = #f9fafb
+	bg-dark = #111827
+	text-primary = #1f2937
+	text-secondary = #6b7280
+	spacing-sm = 8px
+	spacing-md = 16px
+	spacing-lg = 24px
+	border-radius = 8px
+
+presets:
+	card:
+		bg = white
+		padding = {spacing-md}
+		border-radius = {border-radius}
+		box-shadow = 0 1px 3px rgba(0,0,0,0.1)
+
+	button-primary:
+		bg = {primary-color}
+		color = white
+		padding = {spacing-sm} {spacing-md}
+		border-radius = {border-radius}
+		border = none
+		font-weight = 600
+
+	button-secondary:
+		bg = {secondary-color}
+		color = white
+		padding = {spacing-sm} {spacing-md}
+		border-radius = {border-radius}
+		border = none
+
+rules:
+	body:
+		margin = 0
+		padding = {spacing-lg}
+		font-family = -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+		background-color = {bg-light}
+		color = {text-primary}
+
+	.container:
+		max-width = 1200px
+		margin = 0 auto
+
+	.card:
+		use = (card)
+		margin-bottom = {spacing-md}
+
+	.badge:
+        padding = {spacing-sm} {spacing-md}
+        border-radius = {border-radius}
+        color = black
+        font-size = 0.875rem
+        font-weight = 500
+
+    .success:
+        color = {success-color}
+
+    .warning:
+        color = {warning-color}
+
+    .error:
+        color = {danger-color}
+
+	.button:
+		use = (button-primary)
+		cursor = pointer
+
+	.filter-controls:
+		display = flex
+		gap = {spacing-md}
+
+	.list-item:
+		padding = {spacing-sm}
+		border-bottom = 1px solid #e5e7eb
+		display = flex
+		justify-content = space-between
+
+	.list-item.completed:
+		opacity = 0.6
+		text-decoration = line-through
+
+# ============================================================================
+# LOGIC SECTION: State, derived values, and client actions
+# ============================================================================
+
+@Logic/showcase
+state:
+	todos = [
+		{ "id": 1, "text": "Learn Rune-Web", "completed": false },
+		{ "id": 2, "text": "Build an app", "completed": false },
+		{ "id": 3, "text": "Deploy it", "completed": false }
+	]
+	filter = all
+	nextId = 4
+
+derive:
+	filteredTodos from filter:
+		all then "todos"
+		active then "todos.filter it.completed != true"
+		completed then "todos.filter it.completed == true"
+
+action toggleTodo(id):
+	for todo in todos:
+		if todo.id == id:
+			todo.completed = !todo.completed
+
+action addTodo(text):
+	todos.push({ "id": nextId, "text": text, "completed": false })
+	nextId = nextId + 1
+
+action removeTodo(id):
+	todos = todos.filter it.id != id
+
+action clearCompleted():
+	todos = todos.filter it.completed != true
+
+action setFilter(newFilter):
+	filter = newFilter
+
+# ============================================================================
+# COMPONENT SECTION: Reusable UI pieces with props
+# ============================================================================
+
+@Component/Badge
+props: [text, variant?]
+view:
+	span .badge .{variant}:
+		"{text}"
+
+@Component/TodoItem
+props: [todo]
+view:
+	div .list-item:
+		label:
+			input[type=checkbox] onclick="emit('toggleTodo', {id: {todo.id}})"
+			span " {todo.text}"
+		button .button-secondary onclick="emit('removeTodo', {id: {todo.id}})" "✕"
+
+@Component/FilterButton
+props: [label, value, isActive?]
+view:
+	button .button-secondary:
+		onclick="emit('setFilter', {newFilter: '{value}'})"
+		"{label}"
+
+# ============================================================================
+# PAGE SECTION: The main page with all features in action
+# ============================================================================
+
+@Page/showcase
+title = Rune-Web Feature Showcase
+style = showcase
+logic = showcase
+view:
+	main .container:
+		header:
+			h1 "Rune-Web Feature Showcase"
+			p "A TodoApp demonstrating pages, components, loops, state, and actions"
+
+		div .card:
+			h2 "Feature 1: Components with Props"
+			p "Reusable components accept props (required and optional with ?):"
+			p "props: [text, variant?]"
+
+			Badge text="Success" variant="success"
+			Badge text="Warning" variant="warning"
+			Badge text="Error" variant="error"
+
+		div .card:
+			h2 "Feature 2: State & Derived Values"
+			p "App state drives the UI, and derived values compute filtered lists."
+
+			div:
+				p "Total: {todos.length} | Active: {todos.filter it.completed != true.length}"
+
+		div .card:
+			h2 "Feature 3: Form & Event Handling"
+			div .form:
+				input[type=text][placeholder="Add a new todo..."] onchange="updateTodo(this.value)"
+				button .button onclick="emit('addTodo')" "Add Todo"
+
+		div .card:
+			h2 "Feature 4: Filter Controls"
+			p "Client-side actions update app state:"
+
+			div .filter-controls:
+				FilterButton label="All" value="all" isActive={filter == "all"}
+				FilterButton label="Active" value="active" isActive={filter == "active"}
+				FilterButton label="Completed" value="completed" isActive={filter == "completed"}
+
+		div .card:
+			h2 "Feature 5: Block For Loop"
+			p "Use for...in to loop over collections:"
+
+			for todo in filteredTodos:
+				TodoItem todo={todo}
+
+		div .card:
+			h2 "Feature 6: Inline Loop Alternative"
+			p "Inline loops with arrow syntax also work:"
+
+			ul:
+				li "<- item, idx in todos:"
+					"{idx}: {item.text}"
+
+		div .card:
+			h2 "Feature 7: Conditional Rendering"
+			p "Use if to show/hide sections:"
+
+			if todos.filter it.completed == true.length > 0:
+				div:
+					p "You have {todos.filter it.completed == true.length} done!"
+					button .button-secondary onclick="emit('clearCompleted')" "Clear Completed"
+
+		div .card:
+			h2 "Feature 8: Styles & CSS"
+			p "Define design tokens, presets, and CSS rules in @Style:"
+			p "- Design tokens: colors, sizes, spacing"
+			p "- Presets: reusable style groups"
+			p "- Rules: CSS selectors and properties"
+
+		footer:
+			p "Built with Rune-Web • All core features demonstrated above"
+

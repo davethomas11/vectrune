@@ -493,7 +493,14 @@ fn render_element_node(
     }
 
     if !classes.is_empty() {
-        elem.push_str(&format!(r#" class="{}""#, classes.join(" ")));
+        let rendered_classes: Vec<String> = classes
+            .iter()
+            .map(|c| interpolate_template(c, data, locals))
+            .filter(|c| !c.is_empty())
+            .collect();
+        if !rendered_classes.is_empty() {
+            elem.push_str(&format!(r#" class="{}""#, rendered_classes.join(" ")));
+        }
     }
 
     for (key, value) in attrs {

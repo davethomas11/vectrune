@@ -60,10 +60,26 @@ pub struct PageDefinition {
     pub view_tree: ViewNode,
 }
 
+/// A declared prop for a `@Component/<name>`.
+///
+/// Props ending with `?` in the source are optional; all others are required.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PropDeclaration {
+    /// The prop name without any trailing `?`.
+    pub name: String,
+    /// `true` when the prop was declared with a trailing `?` (e.g., `name?`).
+    pub required: bool,
+}
+
 /// A reusable component definition from `@Component/<name>`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct ComponentDefinition {
+    /// Declared props (from `props: [name, id?, ...]`).
+    /// When `None`, the component declares no props and no validation is performed.
+    /// When `Some(vec)`, each required prop must be passed at every invocation site.
+    pub props: Option<Vec<PropDeclaration>>,
+
     /// The component's normalized view tree.
     pub view_tree: ViewNode,
 }

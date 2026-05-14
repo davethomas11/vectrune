@@ -272,10 +272,15 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
         }
 
         if let Some(sec) = current_section.as_mut() {
-            // Map block parsing: allowed anywhere, but only if '=' is NOT before '{'
-            // Also check that '{' is not inside quotes
-            // And only if the key is a simple identifier (not a function call with arguments)
-            if line.contains('{') {
+            // Determine indentation early to use in multiple checks
+            let line_indent = raw.chars().take_while(|c| c.is_whitespace()).count();
+            let is_indented_in_series = series_stack.last()
+                .map(|(series_indent, _)| line_indent > *series_indent)
+                .unwrap_or(false);
+
+            // Map block parsing: allowed anywhere, but only if NOT indented in a series
+            // because indented lines in series should be treated as series items
+            if !is_indented_in_series && line.contains('{') {
                 let eq_idx = line.find('=');
                 let brace_idx = line.rfind('{').filter(|&idx| !is_char_in_quotes(line, idx));
                 let is_map_block = brace_idx
@@ -463,6 +468,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                         }
                     }
                 }
+                // Series declaration line processed; skip indented content check
                 continue;
             }
 
@@ -594,7 +600,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 current_records.push(rec);
             }
 
-            if line.contains('=') {
+            if line.contains('=') && !is_indented_in_series {
                 // Remove '+' from start if present
                 let pline = if line.starts_with('+') {
                     line[1..].trim_start()
@@ -609,6 +615,20 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 if looks_like_object_literal_start(&value_raw) {
                     let mut assignment = value_raw;
                     while !assignment.trim_end().ends_with('}') {
+                        if let Some(next_line) = lines.next() {
+                            assignment.push_str("\n");
+                            assignment.push_str(next_line.trim_end());
+                        } else {
+                            break;
+                        }
+                    }
+                    value_raw = assignment;
+                }
+
+                // Handle multiline array literal [ ... ]
+                if value_raw.trim_start().starts_with('[') && !value_raw.trim_end().ends_with(']') {
+                    let mut assignment = value_raw;
+                    while !assignment.trim_end().ends_with(']') {
                         if let Some(next_line) = lines.next() {
                             assignment.push_str("\n");
                             assignment.push_str(next_line.trim_end());
@@ -690,6 +710,31 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                         .insert("statement".to_string(), Value::String(assignment));
                 }
                 continue;
+            }
+
+            // Handle bracket-list syntax: `key: [item1, item2, ...]`
+            // Used for inline list declarations such as component props.
+            if let Some(colon_idx) = line.find(':') {
+                let key_part = line[..colon_idx].trim();
+                let rest = line[colon_idx + 1..].trim();
+                if !key_part.is_empty()
+                    && !key_part.contains(' ')
+                    && rest.starts_with('[')
+                    && rest.ends_with(']')
+                {
+                    let inner = &rest[1..rest.len() - 1];
+                    let items: Vec<Value> = inner
+                        .split(',')
+                        .map(|s| Value::String(s.trim().to_string()))
+                        .filter(|v| matches!(v, Value::String(s) if !s.is_empty()))
+                        .collect();
+                    if let Some(last) = current_records.last_mut() {
+                        last.kv.insert(key_part.to_string(), Value::List(items));
+                    } else {
+                        sec.kv.insert(key_part.to_string(), Value::List(items));
+                    }
+                    continue;
+                }
             }
 
             return Err(ParseError::General(format!("Unrecognized line: {}", line)));

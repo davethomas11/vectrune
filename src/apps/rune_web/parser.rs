@@ -97,6 +97,7 @@ pub fn parse_rune_web_frontend(
             &mut Vec::new(),
         )?;
         resolved_components.insert(component_name.clone(), ComponentDefinition {
+            props: component_definitions.get(&component_name).and_then(|c| c.props.clone()),
             view_tree: resolved_view,
         });
     }
@@ -162,6 +163,32 @@ fn parse_page_section(section: &crate::rune_ast::Section) -> Result<PageDefiniti
 fn parse_component_section(
     section: &crate::rune_ast::Section,
 ) -> Result<ComponentDefinition, ParseError> {
+    // Parse optional `props: [name, other?, ...]` declaration.
+    let props = if let Some(Value::List(items)) = section.kv.get("props") {
+        let declarations: Vec<PropDeclaration> = items
+            .iter()
+            .filter_map(|v| {
+                if let Value::String(s) = v {
+                    let s = s.trim();
+                    if s.is_empty() {
+                        return None;
+                    }
+                    let (name, required) = if s.ends_with('?') {
+                        (s[..s.len() - 1].to_string(), false)
+                    } else {
+                        (s.to_string(), true)
+                    };
+                    Some(PropDeclaration { name, required })
+                } else {
+                    None
+                }
+            })
+            .collect();
+        Some(declarations)
+    } else {
+        None
+    };
+
     let view_tree = if let Some(view_items) = section.series.get("view") {
         parse_view_nodes(view_items)?
     } else {
@@ -170,7 +197,7 @@ fn parse_component_section(
         ));
     };
 
-    Ok(ComponentDefinition { view_tree })
+    Ok(ComponentDefinition { props, view_tree })
 }
 
 fn resolve_component_tree(
@@ -236,6 +263,26 @@ fn expand_component_refs_in_node(
                         "Component invocation '{}' does not yet support classes, ids, events, text, or child content (use props instead)",
                         tag
                     )));
+                }
+
+                // Validate required props if the component declares a props list.
+                if let Some(declared_props) = component_definitions
+                    .get(tag)
+                    .and_then(|c| c.props.as_ref())
+                {
+                    let mut missing: Vec<&str> = Vec::new();
+                    for decl in declared_props {
+                        if decl.required && !attrs.contains_key(&decl.name) {
+                            missing.push(&decl.name);
+                        }
+                    }
+                    if !missing.is_empty() {
+                        return Err(ParseError(format!(
+                            "Component '{}' is missing required prop(s): {}. Declare optional props with a trailing '?' in the component's `props:` list.",
+                            tag,
+                            missing.join(", ")
+                        )));
+                    }
                 }
 
                 let component_tree = resolve_component_tree(
@@ -409,7 +456,10 @@ fn extract_view_nodes_from(items: &[Value], start: usize) -> Result<Vec<ViewNode
                 }
 
                 // Skip control structure markers - they're handled as map keys
-                if trimmed.starts_with("each ") || trimmed.starts_with("if ") {
+                if trimmed.starts_with("each ")
+                    || trimmed.starts_with("for ")
+                    || trimmed.starts_with("if ")
+                {
                     i += 1;
                     continue;
                 }
@@ -427,8 +477,12 @@ fn extract_view_nodes_from(items: &[Value], start: usize) -> Result<Vec<ViewNode
                     return Ok(nodes);
                 }
 
-                // Try to parse as an element first
-                if let Ok(node) = try_parse_element_from_string(trimmed) {
+                // If the line is a bare quoted string, treat it as a text node directly
+                if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2 {
+                    let inner = &trimmed[1..trimmed.len() - 1];
+                    nodes.push(ViewNode::Text(inner.to_string()));
+                // Try to parse as an element
+                } else if let Ok(node) = try_parse_element_from_string(trimmed) {
                     nodes.push(node);
                 } else {
                     // Fall back to text node
@@ -600,7 +654,7 @@ fn parse_view_element_or_control(
     let trimmed = key.trim();
 
     // Check for control structures first
-    if trimmed.starts_with("each ") {
+    if trimmed.starts_with("each ") || trimmed.starts_with("for ") {
         return parse_loop_structure(trimmed, values);
     }
     if trimmed.starts_with("if ") {
@@ -747,10 +801,12 @@ fn extract_first_string_value(value: &Value) -> Option<String> {
     }
 }
 
-/// Parse a loop structure: "each item, index in collection"
+/// Parse a loop structure: "each item in collection" or "for item, index in collection"
 fn parse_loop_structure(sig: &str, values: &Value) -> Result<ViewNode, ParseError> {
     let rest = if sig.starts_with("each ") {
         &sig[5..]
+    } else if sig.starts_with("for ") {
+        &sig[4..]
     } else {
         sig
     };
@@ -874,10 +930,46 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
 
     // Parse state from the "state:" series
     if let Some(state_items) = section.series.get("state") {
-        for item in state_items {
-            if let Value::String(s) = item {
-                if let Some((key, val)) = parse_kv_string(s) {
-                    state.insert(key, val);
+        // Group consecutive items by key until we hit the next key=value pair
+        let mut i = 0;
+        while i < state_items.len() {
+            match &state_items[i] {
+                Value::String(s) => {
+                    let trimmed = s.trim();
+                    // Check if this line starts a key = value assignment
+                    if let Some(eq_idx) = trimmed.find('=') {
+                        let key = trimmed[..eq_idx].trim().to_string();
+                        let val_start = trimmed[eq_idx + 1..].trim();
+
+                        // Collect all lines until the next key assignment or end
+                        let mut value_lines = vec![val_start.to_string()];
+                        i += 1;
+
+                        while i < state_items.len() {
+                            match &state_items[i] {
+                                Value::String(next_s) => {
+                                    let next_trimmed = next_s.trim();
+                                    // Stop if we hit another key = value
+                                    if next_trimmed.contains('=') && !next_trimmed.starts_with('{') && !next_trimmed.starts_with('[') {
+                                        break;
+                                    }
+                                    value_lines.push(next_s.clone());
+                                    i += 1;
+                                }
+                                _ => {
+                                    i += 1;
+                                }
+                            }
+                        }
+
+                        let full_value = value_lines.join("\n");
+                        state.insert(key, full_value);
+                        continue;
+                    }
+                    i += 1;
+                }
+                _ => {
+                    i += 1;
                 }
             }
         }
@@ -1389,6 +1481,196 @@ view:
                 _ => panic!("expected footer element — no scope wrapper for zero-prop component"),
             },
             _ => panic!("expected root main element"),
+        }
+    }
+
+    #[test]
+    fn parses_props_declaration_as_required_and_optional() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/Card
+props: [title, subtitle?]
+view:
+    div .card:
+        h2 "{title}"
+        p "{subtitle}"
+
+@Page/home
+view:
+    main:
+        Card title="Hello"
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+
+        // Component definition should carry the declared props
+        let card = frontend.component_definitions.get("Card").expect("Card should exist");
+        let props = card.props.as_ref().expect("Card should have declared props");
+        assert_eq!(props.len(), 2);
+        let title_prop = props.iter().find(|p| p.name == "title").expect("title prop");
+        let subtitle_prop = props.iter().find(|p| p.name == "subtitle").expect("subtitle prop");
+        assert!(title_prop.required, "title should be required");
+        assert!(!subtitle_prop.required, "subtitle should be optional");
+
+        // Page should have rendered — optional prop omitted without error
+        let page = frontend.page_views.get("home").expect("page should exist");
+        match &page.view_tree {
+            ViewNode::Element { children, .. } => {
+                // ComponentScope wraps the expanded tree because title was passed
+                assert!(
+                    matches!(children[0], ViewNode::ComponentScope { .. }),
+                    "expected ComponentScope node"
+                );
+            }
+            _ => panic!("expected root element"),
+        }
+    }
+
+    #[test]
+    fn errors_when_required_prop_is_missing() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/Alert
+props: [message, level?]
+view:
+    div .alert:
+        p "{message}"
+
+@Page/home
+view:
+    main:
+        Alert
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let err = parse_rune_web_frontend(&doc, "home")
+            .expect_err("expected missing required prop error");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("missing required prop") && msg.contains("message"),
+            "error should mention the missing prop name, got: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn no_props_declaration_skips_prop_validation() {
+        // Without a props: declaration, any or no attrs are accepted
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/Badge
+view:
+    span .badge "{label}"
+
+@Page/home
+view:
+    main:
+        Badge
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        parse_rune_web_frontend(&doc, "home").expect("no props declaration should allow any invocation");
+    }
+
+    #[test]
+    fn all_optional_props_declaration_never_errors() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Component/Tooltip
+props: [text?, placement?]
+view:
+    div .tooltip:
+        span "{text}"
+
+@Page/home
+view:
+    main:
+        Tooltip
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        parse_rune_web_frontend(&doc, "home")
+            .expect("all-optional props should not error when none are passed");
+    }
+
+    #[test]
+    fn parses_for_block_with_single_loop_variable() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Page/home
+view:
+    div .list:
+        for ticket in tickets:
+            TicketCard ticket={ticket}
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let page = frontend.page_views.get("home").expect("page should exist");
+
+        match &page.view_tree {
+            ViewNode::Element { children, .. } => match &children[0] {
+                ViewNode::Loop {
+                    item_name,
+                    index_name,
+                    collection,
+                    body,
+                } => {
+                    assert_eq!(item_name, "ticket");
+                    assert_eq!(index_name, &None);
+                    assert_eq!(collection, "tickets");
+                    assert_eq!(body.len(), 1);
+                }
+                _ => panic!("expected loop inside div body"),
+            },
+            _ => panic!("expected root element"),
+        }
+    }
+
+    #[test]
+    fn parses_for_block_with_two_loop_variables() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Page/home
+view:
+    div .board:
+        for ticket, index in board.backlog:
+            TicketCard ticket={ticket} data-index={index}
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let page = frontend.page_views.get("home").expect("page should exist");
+
+        match &page.view_tree {
+            ViewNode::Element { children, .. } => match &children[0] {
+                ViewNode::Loop {
+                    item_name,
+                    index_name,
+                    collection,
+                    body,
+                } => {
+                    assert_eq!(item_name, "ticket");
+                    assert_eq!(index_name.as_deref(), Some("index"));
+                    assert_eq!(collection, "board.backlog");
+                    assert_eq!(body.len(), 1);
+                }
+                _ => panic!("expected loop inside div body"),
+            },
+            _ => panic!("expected root element"),
         }
     }
 }

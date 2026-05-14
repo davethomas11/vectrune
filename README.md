@@ -104,6 +104,28 @@ brew tap davethomas11/homebrew-vectrune
 brew install vectrune
 ```
 
+### Windows local dev install
+
+For repeat local development installs on Windows PowerShell, use the checked-in installer script:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\install-dev.ps1
+```
+
+What it does:
+- builds `vectrune` in release mode from the current repo
+- installs `vectrune.exe` into `$HOME\.local\bin`
+- adds `$HOME\.local\bin` to your user `PATH`
+- installs a `v.cmd` shortcut in the same directory so you can run `v` as a quick command in PowerShell or `cmd.exe`
+
+After the script completes, open a new shell and verify:
+
+```powershell
+vectrune --version
+v --version
+```
+
 ### From source
 
 ```powershell

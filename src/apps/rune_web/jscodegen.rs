@@ -652,7 +652,11 @@ impl JsCodegen {
     const scope = buildScope(locals);
     let attrs = '';
     if (element.id) attrs += ` id="${{escapeHtml(interpolate(element.id, scope))}}"`;
-    if (element.classes && element.classes.length) attrs += ` class="${{element.classes.join(' ')}}"`;
+    if (element.classes && element.classes.length) {{
+      const renderedClasses = element.classes.map((c) => interpolate(c, scope)).filter((c) => c.length > 0);
+      if (renderedClasses.length) attrs += ` class="${{renderedClasses.join(' ')}}"`;
+    }}
+
 
     for (const [key, value] of Object.entries(element.attrs || {{}})) {{
       attrs += ` ${{key}}="${{escapeHtml(interpolate(value, scope))}}"`;
@@ -955,7 +959,7 @@ mod tests {
             }],
         };
 
-        let gen = JsCodegen::new(page, logic, "{}".to_string(), None);
+        let gen = JsCodegen::new(page, logic, "{}".to_string(), None, HashMap::new());
         let code = gen.generate();
         assert!(code.contains("const pageTree ="));
         assert!(code.contains("const helperDefinitions ="));
@@ -981,7 +985,7 @@ mod tests {
             )]),
             actions: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("".to_string()), logic, "{}".to_string(), None);
+        let gen = JsCodegen::new(ViewNode::Text("".to_string()), logic, "{}".to_string(), None, HashMap::new());
         let code = gen.generate();
         // bitwise AND operator
         assert!(code.contains("' & '"));
@@ -1000,7 +1004,7 @@ mod tests {
             helpers: HashMap::new(),
             actions: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None);
+        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new());
         assert_eq!(gen.parse_value("\"hello\""), serde_json::Value::String("hello".to_string()));
         assert_eq!(gen.parse_value("42"), serde_json::json!(42));
         assert_eq!(gen.parse_value("true"), serde_json::json!(true));
