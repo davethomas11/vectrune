@@ -216,4 +216,10 @@ pub enum ActionStep {
         condition: String,
         steps: Vec<ActionStep>,
     },
+    ForLoop {
+        item_name: String,
+        index_name: Option<String>,
+        collection: String,
+        steps: Vec<ActionStep>,
+    },
 }

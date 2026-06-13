@@ -193,8 +193,27 @@ impl CssCompiler {
             css.push_str("}\n");
         }
 
+        self.compile_rules(&mut css, "", rules);
+
+        css
+    }
+
+    fn compile_rules(&mut self, css: &mut String, parent_selector: &str, rules: &HashMap<String, HashMap<String, String>>) {
+        // First pass: Resolve all properties and nested rules for this level
+        let mut selector_to_props: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let mut selector_to_nested: HashMap<String, HashMap<String, HashMap<String, String>>> = HashMap::new();
+
         for (selector, props) in rules {
-            let mut resolved_props: Vec<(String, String)> = Vec::new();
+            let full_selector = if selector.starts_with('&') {
+                format!("{}{}", parent_selector, &selector[1..]).trim().to_string()
+            } else if !parent_selector.is_empty() {
+                format!("{} {}", parent_selector, selector).trim().to_string()
+            } else {
+                selector.clone()
+            };
+
+            let props_entry = selector_to_props.entry(full_selector.clone()).or_insert_with(Vec::new);
+            let nested_entry = selector_to_nested.entry(full_selector.clone()).or_insert_with(HashMap::new);
 
             for (key, val) in props {
                 if key == "use" {
@@ -202,24 +221,59 @@ impl CssCompiler {
                     match self.flatten_preset(preset_name) {
                         Ok(preset_props) => {
                             for (pk, pv) in preset_props {
-                                resolved_props.extend(self.normalize_declarations(&pk, &pv));
+                                props_entry.extend(self.normalize_declarations(&pk, &pv));
                             }
                         }
                         Err(e) => css.push_str(&format!("/* Error: {} */\n", e)),
                     }
+                } else if key.starts_with("nested:") {
+                    let nested_selector = &key[7..];
+                    if let Ok(nested_body) = serde_json::from_str::<HashMap<String, String>>(val) {
+                        if nested_selector.starts_with('#') {
+                            let property_name = &nested_selector[1..];
+                            for (sub_selector, sub_val) in nested_body {
+                                if sub_selector == "_" {
+                                    props_entry.extend(self.normalize_declarations(property_name, &sub_val));
+                                } else {
+                                    let target_selector = if sub_selector.starts_with('.') || sub_selector.starts_with('#') || sub_selector.starts_with(':') {
+                                        format!("&{}", sub_selector)
+                                    } else {
+                                        sub_selector.clone()
+                                    };
+                                    let sub_entry = nested_entry.entry(target_selector).or_insert_with(HashMap::new);
+                                    sub_entry.insert(property_name.to_string(), sub_val);
+                                }
+                            }
+                        } else {
+                            // Standard nested rule: merge into existing nested rules for this selector
+                            let sub_entry = nested_entry.entry(nested_selector.to_string()).or_insert_with(HashMap::new);
+                            for (nk, nv) in nested_body {
+                                sub_entry.insert(nk, nv);
+                            }
+                        }
+                    }
                 } else {
-                    resolved_props.extend(self.normalize_declarations(key, val));
+                    props_entry.extend(self.normalize_declarations(key, val));
                 }
             }
-
-            css.push_str(&format!("{} {{\n", selector));
-            for (key, val) in resolved_props {
-                css.push_str(&format!("  {}: {};\n", key, val));
-            }
-            css.push_str("}\n");
         }
 
-        css
+        // Second pass: Output CSS and recurse
+        for (selector, resolved_props) in selector_to_props {
+            if !resolved_props.is_empty() {
+                css.push_str(&format!("{} {{\n", selector));
+                for (key, val) in resolved_props {
+                    css.push_str(&format!("  {}: {};\n", key, val));
+                }
+                css.push_str("}\n");
+            }
+
+            if let Some(nested) = selector_to_nested.get(&selector) {
+                if !nested.is_empty() {
+                    self.compile_rules(css, &selector, nested);
+                }
+            }
+        }
     }
 }
 

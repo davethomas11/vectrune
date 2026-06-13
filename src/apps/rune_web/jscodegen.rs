@@ -29,8 +29,24 @@ impl JsCodegen {
     /// Generate complete JavaScript application code.
     pub fn generate(&self) -> String {
         let state_json = self.generate_state_json();
-        let derived_json = serde_json::to_string(&self.logic.derived)
+        
+        let mut normalized_derived = HashMap::new();
+        for (name, def) in &self.logic.derived {
+            let mut normalized_cases = Vec::new();
+            for case in &def.cases {
+                normalized_cases.push(serde_json::json!({
+                    "matcher": case.matcher,
+                    "value": case.value // Keep as string for evaluateExpression
+                }));
+            }
+            normalized_derived.insert(name.clone(), serde_json::json!({
+                "source": def.source,
+                "cases": normalized_cases
+            }));
+        }
+        let derived_json = serde_json::to_string(&normalized_derived)
             .unwrap_or_else(|_| "{}".to_string());
+
         let helper_json = serde_json::to_string(&self.logic.helpers)
             .unwrap_or_else(|_| "{}".to_string());
         let actions_json = serde_json::to_string(&self.logic.actions)
@@ -248,20 +264,60 @@ impl JsCodegen {
     }}
   }}
 
+  let isRendering = false;
+  const memorySubscriptions = {{}};
+
+  function makeReactive(obj) {{
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (obj.__isProxy) return obj;
+
+    return new Proxy(obj, {{
+      get(target, prop) {{
+        if (prop === '__isProxy') return true;
+        if (window.__renderingComponent && typeof prop === 'string' && !prop.startsWith('__')) {{
+          if (!(memorySubscriptions[prop] instanceof Set)) {{
+            memorySubscriptions[prop] = new Set();
+          }}
+          memorySubscriptions[prop].add(window.__renderingComponent);
+        }}
+        const val = target[prop];
+        if (val !== null && typeof val === 'object' && !val.__isProxy) {{
+          return makeReactive(val);
+        }}
+        return val;
+      }},
+      set(target, prop, value) {{
+        if (target[prop] === value) return true;
+        target[prop] = value;
+        if (!isRendering && app.render) {{
+          requestAnimationFrame(app.render.bind(app));
+        }}
+        return true;
+      }},
+      deleteProperty(target, prop) {{
+        delete target[prop];
+        if (!isRendering && app.render) {{
+          requestAnimationFrame(app.render.bind(app));
+        }}
+        return true;
+      }}
+    }});
+  }}
+
   const app = {{
-    state: Object.assign({{}}, {state_json}, {{ i18n: i18nData }}),
+    state: makeReactive(Object.assign({{}}, {state_json}, {{ i18n: i18nData }})),
     derived: {{}},
     computeDerived: function() {{
-      const baseScope = Object.assign({{}}, this.state, this.derived);
+      const baseScope = buildScope({{}});
       for (const [name, def] of Object.entries(derivedDefinitions)) {{
         const sourceValue = resolveValue(def.source, baseScope);
         const sourceKey = valueToString(sourceValue);
-        let resolved = '';
+        let resolved = undefined;
 
         for (const currentCase of def.cases || []) {{
           const matcher = normalizeLiteral(currentCase.matcher);
           if (matcher === '_' || matcher === sourceKey) {{
-            resolved = interpolate(normalizeLiteral(currentCase.value), Object.assign({{}}, this.state, this.derived));
+            resolved = evaluateExpression(currentCase.value, buildScope({{}}));
             break;
           }}
         }}
@@ -270,10 +326,16 @@ impl JsCodegen {
       }}
     }},
     render: function() {{
-      this.computeDerived();
-      const root = document.getElementById('app');
-      if (!root) return;
-      root.innerHTML = renderNode(pageTree, {{}});
+      if (isRendering) return;
+      isRendering = true;
+      try {{
+        this.computeDerived();
+        const root = document.getElementById('app');
+        if (!root) return;
+        root.innerHTML = renderNode(pageTree, {{}});
+      }} finally {{
+        isRendering = false;
+      }}
     }},
     invokeAction: function(name, args, locals) {{
       const def = actionDefinitions[name];
@@ -283,7 +345,6 @@ impl JsCodegen {
         scopedLocals[param] = args[index];
       }});
       executeSteps(def.steps || [], scopedLocals);
-      this.render();
     }}
   }};
 
@@ -295,19 +356,18 @@ impl JsCodegen {
     const segments = splitPathSegments(expr);
     if (!segments.length) return undefined;
 
-    let current = Object.prototype.hasOwnProperty.call(scope, segments[0]) ? scope[segments[0]] : undefined;
+    let current = scope[segments[0]];
     if (current === undefined) return undefined;
 
     for (let i = 1; i < segments.length; i += 1) {{
       const segment = segments[i];
-      const lookup = Object.prototype.hasOwnProperty.call(scope, segment) ? scope[segment] : segment;
-      if (Array.isArray(current)) {{
-        const index = Number(lookup);
-        current = Number.isInteger(index) ? current[index] : undefined;
-      }} else if (current && typeof current === 'object') {{
-        current = current[valueToString(lookup)];
+      if (current === null || current === undefined) return undefined;
+      
+      if (Array.isArray(current) && segment === 'length') {{
+        current = current.length;
       }} else {{
-        return undefined;
+        const lookup = Object.prototype.hasOwnProperty.call(scope, segment) ? scope[segment] : segment;
+        current = current[valueToString(lookup)];
       }}
     }}
 
@@ -377,7 +437,10 @@ impl JsCodegen {
     let trimmed = String(expr || '').trim();
     if (!trimmed) return undefined;
 
-    // Strip matched outer parentheses
+    if (trimmed.startsWith('{{') && trimmed.endsWith('}}')) {{
+      trimmed = trimmed.slice(1, -1).trim();
+    }}
+
     while (trimmed.startsWith('(') && trimmed.endsWith(')')) {{
       let d = 0;
       let matched = true;
@@ -390,6 +453,10 @@ impl JsCodegen {
       trimmed = trimmed.slice(1, -1).trim();
     }}
 
+    if (trimmed.startsWith('!')) {{
+      return !Boolean(evaluateExpression(trimmed.slice(1).trim(), scope, nextDepth));
+    }}
+
     const helperCall = parseHelperCall(trimmed);
     if (helperCall) {{
       return callHelper(
@@ -398,6 +465,52 @@ impl JsCodegen {
         scope,
         nextDepth
       );
+    }}
+
+    const methodMatch = trimmed.match(/^(.+?)\.(any|mask|filter|find|max)(?:\((.*)\)|\s+(.+?))(?:\.(length))?$/);
+    if (methodMatch) {{
+      const [, receiver, method, parenArgs, spaceArgs, trailingProp] = methodMatch;
+      const argsStr = (parenArgs !== undefined ? parenArgs : spaceArgs).trim();
+      const collection = evaluateExpression(receiver, scope, nextDepth);
+
+      let result = undefined;
+      if (method === 'mask' && Array.isArray(collection)) {{
+        const player = valueToString(evaluateExpression(argsStr, scope, nextDepth));
+        result = collection.reduce((acc, cell, i) => {{
+          return valueToString(cell) === player ? (acc | (1 << i)) : acc;
+        }}, 0);
+      }} else if ((method === 'any' || method === 'find' || method === 'filter' || method === 'max') && Array.isArray(collection)) {{
+        const arrowMatch = argsStr.match(/^(\w+)\s*=>\s*(.+)$/);
+        const [paramName, predExpr] = arrowMatch ? [arrowMatch[1], arrowMatch[2]] : ['it', argsStr];
+
+        if (method === 'any') {{
+          result = collection.some((item) => {{
+            const innerScope = Object.assign({{}}, scope, {{ [paramName]: item }});
+            return Boolean(evaluateExpression(predExpr, innerScope, nextDepth));
+          }});
+        }} else if (method === 'filter') {{
+          result = collection.filter((item) => {{
+            const innerScope = Object.assign({{}}, scope, {{ [paramName]: item }});
+            return Boolean(evaluateExpression(predExpr, innerScope, nextDepth));
+          }});
+        }} else if (method === 'find') {{
+          result = collection.find((item) => {{
+            const innerScope = Object.assign({{}}, scope, {{ [paramName]: item }});
+            return Boolean(evaluateExpression(predExpr, innerScope, nextDepth));
+          }});
+        }} else if (method === 'max') {{
+          result = collection.reduce((max, item) => {{
+            const innerScope = Object.assign({{}}, scope, {{ [paramName]: item }});
+            const val = evaluateExpression(predExpr, innerScope, nextDepth);
+            return (max === undefined || val > max) ? val : max;
+          }}, undefined);
+        }}
+      }}
+
+      if (trailingProp === 'length' && result !== undefined && result.length !== undefined) {{
+        return result.length;
+      }}
+      return result;
     }}
 
     if (includesTopLevel(trimmed, ' or ')) {{
@@ -434,38 +547,10 @@ impl JsCodegen {
       return Array.isArray(collection) && collection.every((item) => valueToString(item) !== '');
     }}
 
-    // Bitwise AND: expr & expr
     if (includesTopLevel(trimmed, ' & ')) {{
       const parts = splitTopLevel(trimmed, ' & ');
       if (parts.length === 2) {{
         return (evaluateExpression(parts[0], scope, nextDepth) & evaluateExpression(parts[1], scope, nextDepth));
-      }}
-    }}
-
-    // Method calls: collection.any(item => expr) and array.mask(valueExpr)
-    const methodMatch = trimmed.match(/^(.+?)\.(any|mask)\((.+)\)$/);
-    if (methodMatch) {{
-      const [, receiver, method, argsStr] = methodMatch;
-      const collection = evaluateExpression(receiver, scope, nextDepth);
-
-      if (method === 'mask' && Array.isArray(collection)) {{
-        // board.mask(player): build a bitmask where bit i is set if collection[i] === player
-        const player = valueToString(evaluateExpression(argsStr, scope, nextDepth));
-        return collection.reduce((acc, cell, i) => {{
-          return valueToString(cell) === player ? (acc | (1 << i)) : acc;
-        }}, 0);
-      }}
-
-      if (method === 'any' && Array.isArray(collection)) {{
-        // array.any(item => expr): true if any element satisfies the predicate
-        const arrowMatch = argsStr.match(/^(\w+)\s*=>\s*(.+)$/);
-        if (arrowMatch) {{
-          const [, paramName, predExpr] = arrowMatch;
-          return collection.some((item) => {{
-            const innerScope = Object.assign({{}}, scope, {{ [paramName]: item }});
-            return Boolean(evaluateExpression(predExpr, innerScope, nextDepth));
-          }});
-        }}
       }}
     }}
 
@@ -517,6 +602,25 @@ impl JsCodegen {
     const trimmed = String(statement || '').trim();
     if (!trimmed) return true;
     if (trimmed === 'stop') return false;
+
+    if (trimmed.startsWith('log ')) {{
+      console.log(interpolate(trimmed.slice(4), buildScope(locals)));
+      return true;
+    }}
+
+    const pushMatch = trimmed.match(/^(.+?)\.push\((.+)\)$/);
+    if (pushMatch) {{
+      const path = pushMatch[1].trim();
+      const arg = pushMatch[2].trim();
+      const collection = evaluateExpression(path, buildScope(locals));
+      if (Array.isArray(collection)) {{
+        const val = evaluateExpression(arg, buildScope(locals));
+        collection.push(val);
+        assignPath(path, collection, locals);
+      }}
+      return true;
+    }}
+
     if (trimmed.endsWith('++')) {{
       const path = trimmed.slice(0, -2).trim();
       const current = Number(evaluateExpression(path, buildScope(locals)) || 0);
@@ -534,13 +638,11 @@ impl JsCodegen {
       }}
       return true;
     }}
-    // Handle function calls like window.__runeWebEmit(arg1, arg2)
     if (trimmed.includes('(') && trimmed.endsWith(')')) {{
       const parenIndex = trimmed.indexOf('(');
       const funcName = trimmed.slice(0, parenIndex).trim();
       const argsStr = trimmed.slice(parenIndex + 1, -1);
 
-      // Check for window.__runeWebEmit or other function calls
       if (funcName === 'window.__runeWebEmit') {{
         const args = argsStr ? splitTopLevel(argsStr, ',').map(arg => evaluateExpression(arg, buildScope(locals))) : [];
         if (window.__runeWebEmit && typeof window.__runeWebEmit === 'function') {{
@@ -571,6 +673,24 @@ impl JsCodegen {
         const conditional = step.Conditional;
         if (Boolean(evaluateExpression(conditional.condition, buildScope(locals)))) {{
           if (!executeSteps(conditional.steps || [], locals)) return false;
+        }}
+      }}
+
+      if (Object.prototype.hasOwnProperty.call(step, 'ForLoop')) {{
+        const loop = step.ForLoop;
+        const collection = evaluateExpression(loop.collection, buildScope(locals));
+        if (Array.isArray(collection)) {{
+          for (let i = 0; i < collection.length; i++) {{
+            const item = collection[i];
+            const childLocals = Object.assign({{}}, locals || {{}});
+            childLocals[loop.item_name] = item;
+            if (loop.index_name) {{
+              childLocals[loop.index_name] = i;
+            }}
+            if (!executeSteps(loop.steps || [], childLocals)) {{
+              break;
+            }}
+          }}
         }}
       }}
     }}
@@ -613,25 +733,15 @@ impl JsCodegen {
 
     if (node.ComponentScope) {{
       const scope = node.ComponentScope;
-      // Merge props into the app state for rendering, but not into loop locals (locals
-      // are reserved for loop-level data-rune-scope emission).
-      const prevState = Object.assign({{}}, app.state);
+      const childLocals = Object.assign({{}}, locals || {{}});
       for (const [key, value] of Object.entries(scope.props || {{}})) {{
-        app.state[key] = interpolate(value, buildScope(locals));
+        childLocals[key] = evaluateExpression(value, buildScope(locals));
       }}
-      const result = renderNode(scope.body, locals);
-      // Restore state to avoid permanent mutation
-      Object.assign(app.state, prevState);
-      for (const key of Object.keys(scope.props || {{}})) {{
-        if (!(key in prevState)) delete app.state[key];
-      }}
-      return result;
+      return renderNode(scope.body, childLocals);
     }}
 
     if (node.MemoryBinding) {{
       const binding = node.MemoryBinding;
-      // Reading from app.state (the proxy) registers this component as a subscriber
-      // so re-renders fire automatically when this memory key updates via WebSocket.
       const memValue = app.state[binding.key];
       const childLocals = Object.assign({{}}, locals || {{}}, {{ [binding.var]: memValue }});
       return (binding.body || []).map((child) => renderNode(child, childLocals)).join('');
@@ -657,7 +767,6 @@ impl JsCodegen {
       if (renderedClasses.length) attrs += ` class="${{renderedClasses.join(' ')}}"`;
     }}
 
-
     for (const [key, value] of Object.entries(element.attrs || {{}})) {{
       attrs += ` ${{key}}="${{escapeHtml(interpolate(value, scope))}}"`;
     }}
@@ -665,7 +774,7 @@ impl JsCodegen {
       attrs += ` data-rune-scope="${{escapeHtml(JSON.stringify(locals))}}"`;
     }}
     for (const [eventName, handler] of Object.entries(element.events || {{}})) {{
-      attrs += ` data-on-${{eventName}}="${{escapeHtml(handler)}}"`;
+      attrs += ` data-on-${{eventName}}="${{escapeHtml(interpolate(handler, scope))}}"`;
     }}
 
     const text = element.text ? escapeHtml(interpolate(element.text, scope)) : '';
@@ -699,47 +808,12 @@ impl JsCodegen {
       const spec = parseHandlerSpec(element.getAttribute(`data-on-${{eventName}}`));
       if (!spec) return;
       const locals = readScope(element);
-      const scope = buildScope(locals);
+      const scope = buildScope(Object.assign({{}}, locals, {{ this: element }}));
       const args = spec.args.map((arg) => evaluateExpression(arg, scope));
       app.invokeAction(spec.name, args, locals);
     }});
   }}
 
-  // ============================================================
-  // Memory Subscription System
-  // ============================================================
-  // Track which components are subscribed to memory keys
-  const memorySubscriptions = {{}};
-
-  // Store original state as the memory-backed state
-  const memoryState = Object.assign({{}}, app.state);
-
-  // Override app.state property to intercept reads and register subscriptions
-  const stateProxy = new Proxy(memoryState, {{
-    get(target, prop) {{
-      // If this is being accessed during a render, register subscription
-      if (window.__renderingComponent && typeof prop === 'string') {{
-        if (!memorySubscriptions[prop]) {{
-          memorySubscriptions[prop] = new Set();
-        }}
-        memorySubscriptions[prop].add(window.__renderingComponent);
-      }}
-      return target[prop];
-    }},
-    set(target, prop, value) {{
-      target[prop] = value;
-      return true;
-    }}
-  }});
-
-  // Replace app.state with the proxy
-  Object.defineProperty(app, 'state', {{
-    get: function() {{ return stateProxy; }},
-    set: function(val) {{ Object.assign(memoryState, val); }},
-    configurable: true
-  }});
-
-  // Override render to track which component is being rendered
   const originalRender = app.render;
   app.render = function() {{
     window.__renderingComponent = 'app';
@@ -747,7 +821,6 @@ impl JsCodegen {
     window.__renderingComponent = null;
   }};
 
-  // Factory for component-specific renders
   function createComponentRender(componentId) {{
     return function() {{
       window.__renderingComponent = componentId;
@@ -761,22 +834,15 @@ impl JsCodegen {
     }};
   }}
 
-  // WebSocket listener for memory updates from the server
   function setupMemoryUpdateListener() {{
-    // Try to connect to the server for memory updates
-    // This assumes a WebSocket is available via window.__ws or we establish one
     if (window.__ws && window.__ws.addEventListener) {{
       window.__ws.addEventListener('message', function(event) {{
         try {{
           const data = JSON.parse(event.data);
           if (data.type === 'memory_update' && data.key) {{
-            // Update the memory state
             memoryState[data.key] = data.value;
-
-            // Find all components subscribed to this key
             if (memorySubscriptions[data.key]) {{
               memorySubscriptions[data.key].forEach((componentId) => {{
-                // Schedule a re-render for this component
                 if (componentId === 'app') {{
                   requestAnimationFrame(app.render.bind(app));
                 }} else {{
@@ -785,27 +851,19 @@ impl JsCodegen {
                 }}
               }});
             }} else {{
-              // If no specific subscribers, re-render the whole app
               requestAnimationFrame(app.render.bind(app));
             }}
           }}
-        }} catch (_err) {{
-          // Silently ignore parse errors
-        }}
+        }} catch (_err) {{}}
       }});
     }}
   }}
 
-  // Initialize memory subscriptions
   setupMemoryUpdateListener();
-
   bindEvent('click');
   bindEvent('change');
   window.runeWebApp = app;
-
-  // Initialize WebSocket emit functionality if endpoint configured
   {ws_setup}
-
   app.render();
 }})();"#,
             state_json = state_json,
@@ -824,24 +882,19 @@ impl JsCodegen {
     ws.send(JSON.stringify({{ type: eventName, payload: payload || {{}} }}));
   }};
 
-  // Connect to WebSocket for bidirectional updates
   window.__runeWebSocket = new WebSocket('{endpoint}');
   window.__runeWebSocket.onmessage = function(event) {{
     try {{
       const message = JSON.parse(event.data);
       if (message.type === 'memory_update') {{
-        // Update local state if memory changed
         app.state[message.key] = message.value;
         app.render();
       }}
-    }} catch (_err) {{
-      // Silently ignore parse errors
-    }}
+    }} catch (_err) {{}}
   }};
   window.__runeWebSocket.onerror = function(error) {{
     console.error('WebSocket error:', error);
-  }};
-"#, endpoint = self.ws_endpoint.as_ref().unwrap()
+  }};"#, endpoint = self.ws_endpoint.as_ref().unwrap()
                 )
             } else {
                 String::new()
@@ -854,18 +907,14 @@ impl JsCodegen {
         for (key, val) in &self.logic.state {
             normalized.insert(key.clone(), self.parse_value(val));
         }
-        // Overlay pre-fetched memory values — these are live server values that
-        // MemoryBinding nodes read from app.state[key], so they must be in initial state.
         for (key, val) in &self.memory_seed {
             normalized.insert(key.clone(), val.clone());
         }
         serde_json::Value::Object(normalized).to_string()
     }
 
-    /// Parse a Rune value literal to JSON.
     fn parse_value(&self, val: &str) -> serde_json::Value {
         let trimmed = val.trim();
-
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) {
             return value;
         }
@@ -987,11 +1036,8 @@ mod tests {
         };
         let gen = JsCodegen::new(ViewNode::Text("".to_string()), logic, "{}".to_string(), None, HashMap::new());
         let code = gen.generate();
-        // bitwise AND operator
         assert!(code.contains("' & '"));
-        // .mask() method support
         assert!(code.contains("method === 'mask'"));
-        // .any() method with arrow function support
         assert!(code.contains("method === 'any'"));
         assert!(code.contains("arrowMatch"));
     }
@@ -1011,8 +1057,3 @@ mod tests {
         assert_eq!(gen.parse_value("[1,2,3]"), serde_json::json!([1, 2, 3]));
     }
 }
-
-
-
-
-

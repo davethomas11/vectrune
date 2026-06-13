@@ -74,20 +74,22 @@ rules:
 		margin-bottom = {spacing-md}
 
 	.badge:
-        padding = {spacing-sm} {spacing-md}
-        border-radius = {border-radius}
-        color = black
-        font-size = 0.875rem
-        font-weight = 500
-
-    .success:
-        color = {success-color}
-
-    .warning:
-        color = {warning-color}
-
-    .error:
-        color = {danger-color}
+		padding = {spacing-sm} {spacing-md}
+		border-radius = {border-radius}
+		font-size = 0.875rem
+		font-weight = 500
+		margin = .4rem
+		#color:
+			.success = {success-color}
+			.warning = {warning-color}
+			.error = {danger-color}
+			_ = black
+		&.success:
+			background-color = #d1fae5
+		&.warning:
+			background-color = #fef3c7
+		&.error:
+			background-color = #fee2e2
 
 	.button:
 		use = (button-primary)
@@ -107,6 +109,18 @@ rules:
 		opacity = 0.6
 		text-decoration = line-through
 
+	.form:
+		display = flex
+		gap = {spacing-sm}
+		margin-bottom = {spacing-md}
+
+	input[type=text]:
+		padding = {spacing-sm}
+		border = 1px solid #d1d5db
+		border-radius = {border-radius}
+		flex = 1
+		font-size = 1rem
+
 # ============================================================================
 # LOGIC SECTION: State, derived values, and client actions
 # ============================================================================
@@ -120,21 +134,29 @@ state:
 	]
 	filter = all
 	nextId = 4
+	newTodoText = ""
 
 derive:
 	filteredTodos from filter:
-		all then "todos"
-		active then "todos.filter it.completed != true"
-		completed then "todos.filter it.completed == true"
+		all then todos
+		active then todos.filter it.completed != true
+		completed then todos.filter it.completed == true
 
 action toggleTodo(id):
+	log "Toggling todo {id}"
 	for todo in todos:
 		if todo.id == id:
 			todo.completed = !todo.completed
 
-action addTodo(text):
-	todos.push({ "id": nextId, "text": text, "completed": false })
+action updateTodo(text):
+	log "Updating newTodoText to: {text}"
+	newTodoText = text
+
+action addTodo():
+	log "Adding todo: {newTodoText}"
+	todos.push({ "id": nextId, "text": newTodoText, "completed": false })
 	nextId = nextId + 1
+	newTodoText = ""
 
 action removeTodo(id):
 	todos = todos.filter it.id != id
@@ -160,15 +182,15 @@ props: [todo]
 view:
 	div .list-item:
 		label:
-			input[type=checkbox] onclick="emit('toggleTodo', {id: {todo.id}})"
+			input[type=checkbox] change=toggleTodo({todo.id})
 			span " {todo.text}"
-		button .button-secondary onclick="emit('removeTodo', {id: {todo.id}})" "✕"
+		button .button-secondary click=removeTodo({todo.id}) "✕"
 
 @Component/FilterButton
 props: [label, value, isActive?]
 view:
 	button .button-secondary:
-		onclick="emit('setFilter', {newFilter: '{value}'})"
+		click=setFilter('{value}')
 		"{label}"
 
 # ============================================================================
@@ -204,8 +226,11 @@ view:
 		div .card:
 			h2 "Feature 3: Form & Event Handling"
 			div .form:
-				input[type=text][placeholder="Add a new todo..."] onchange="updateTodo(this.value)"
-				button .button onclick="emit('addTodo')" "Add Todo"
+				input:
+					type = text
+					placeholder = Add a new todo...
+					change = updateTodo(this.value)
+				button .button click=addTodo() "Add Todo"
 
 		div .card:
 			h2 "Feature 4: Filter Controls"
@@ -238,7 +263,7 @@ view:
 			if todos.filter it.completed == true.length > 0:
 				div:
 					p "You have {todos.filter it.completed == true.length} done!"
-					button .button-secondary onclick="emit('clearCompleted')" "Clear Completed"
+					button .button-secondary click=clearCompleted() "Clear Completed"
 
 		div .card:
 			h2 "Feature 8: Styles & CSS"

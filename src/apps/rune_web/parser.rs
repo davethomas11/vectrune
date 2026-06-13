@@ -662,12 +662,18 @@ fn parse_view_element_or_control(
     }
 
     // Otherwise parse as element
-    let (tag, classes, id, attrs, events, for_each) = parse_element_signature(trimmed)?;
-    let children = extract_view_content(values)?;
+    let (tag, mut classes, id, mut attrs, mut events, for_each) = parse_element_signature(trimmed)?;
+    
+    // Support indented attributes at the beginning of the body
+    let (body_attrs, body_events, remaining_values) = extract_indented_attributes(values)?;
+    attrs.extend(body_attrs);
+    events.extend(body_events);
+
+    let children = extract_view_content(&remaining_values)?;
 
     // Only set text if there are no children and value is a simple string
     let mut text = if children.is_empty() {
-        extract_first_string_value(values)
+        extract_first_string_value(&remaining_values)
     } else {
         None
     };
@@ -898,17 +904,8 @@ fn parse_style_section(section: &crate::rune_ast::Section) -> Result<StyleDefini
         for item in rule_items {
             if let Value::Map(map) = item {
                 for (selector, rule_body) in map {
-                    let mut rule_props = HashMap::new();
-                    if let Value::List(body_items) = rule_body {
-                        for body_item in body_items {
-                            if let Value::String(s) = body_item {
-                                if let Some((k, v)) = parse_kv_string(s) {
-                                    rule_props.insert(k, v);
-                                }
-                            }
-                        }
-                    }
-                    rules.insert(selector.clone(), rule_props);
+                    let props = parse_style_properties(rule_body)?;
+                    rules.insert(selector.clone(), props);
                 }
             }
         }
@@ -919,6 +916,37 @@ fn parse_style_section(section: &crate::rune_ast::Section) -> Result<StyleDefini
         presets,
         rules,
     })
+}
+
+/// Helper to recursively parse style properties from a Value (String or Map).
+fn parse_style_properties(body: &Value) -> Result<HashMap<String, String>, ParseError> {
+    let mut props = HashMap::new();
+    if let Value::List(items) = body {
+        for item in items {
+            match item {
+                Value::String(s) => {
+                    if let Some((k, v)) = parse_kv_string(s) {
+                        props.insert(k, v);
+                    }
+                }
+                Value::Map(map) => {
+                    for (nested_selector, nested_body) in map {
+                        // Store nested rules as special properties for the CSS compiler to flatten
+                        // We use a prefix or a structured key if needed, but for now we can
+                        // just pass the map as a JSON string or similar, or flatten later.
+                        // Actually, let's keep it simple: the AST currently only supports String values.
+                        // We'll update the AST to support nested structures.
+                        let nested_props = parse_style_properties(nested_body)?;
+                        let nested_json = serde_json::to_string(&nested_props)
+                            .unwrap_or_else(|_| "{}".to_string());
+                        props.insert(format!("nested:{}", nested_selector), nested_json);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(props)
 }
 
 /// Parse a `@Logic/<name>` section.
@@ -1092,15 +1120,60 @@ fn parse_action_steps(items: &[Value]) -> Result<Vec<ActionStep>, ParseError> {
             Value::Map(map) => {
                 for (key, value) in map {
                     let trimmed = key.trim();
-                    let condition = trimmed.strip_prefix("if ").unwrap_or(trimmed).trim();
-                    let nested_steps = match value {
-                        Value::List(nested) => parse_action_steps(nested)?,
-                        _ => Vec::new(),
-                    };
-                    steps.push(ActionStep::Conditional {
-                        condition: condition.to_string(),
-                        steps: nested_steps,
-                    });
+                    if trimmed.starts_with("if ") {
+                        let condition = trimmed.strip_prefix("if ").unwrap_or(trimmed).trim();
+                        let nested_steps = match value {
+                            Value::List(nested) => parse_action_steps(nested)?,
+                            _ => Vec::new(),
+                        };
+                        steps.push(ActionStep::Conditional {
+                            condition: condition.to_string(),
+                            steps: nested_steps,
+                        });
+                    } else if trimmed.starts_with("for ") {
+                        let loop_sig = trimmed.strip_prefix("for ").unwrap_or(trimmed).trim();
+                        if let Some(in_pos) = loop_sig.find(" in ") {
+                            let vars_part = &loop_sig[..in_pos].trim();
+                            let collection = loop_sig[in_pos + 4..].trim().to_string();
+
+                            let parts: Vec<&str> = vars_part.split(',').map(|p| p.trim()).collect();
+                            if parts.is_empty() {
+                                return Err(ParseError("Loop missing variable names".to_string()));
+                            }
+                            let item_name = parts[0].to_string();
+                            let index_name = if parts.len() > 1 {
+                                Some(parts[1].to_string())
+                            } else {
+                                None
+                            };
+
+                            let nested_steps = match value {
+                                Value::List(nested) => parse_action_steps(nested)?,
+                                _ => Vec::new(),
+                            };
+
+                            steps.push(ActionStep::ForLoop {
+                                item_name,
+                                index_name,
+                                collection,
+                                steps: nested_steps,
+                            });
+                        } else {
+                            return Err(ParseError(format!("Invalid for loop signature in action: {}", key)));
+                        }
+                    } else {
+                        // Default to conditional for helper calls or bare conditions
+                        let condition = trimmed.strip_prefix("if ").unwrap_or(trimmed).trim();
+                        let nested_steps = match value {
+                            Value::List(nested) => parse_action_steps(nested)?,
+                            _ => Vec::new(),
+                        };
+                        steps.push(ActionStep::Conditional {
+                            condition: condition.to_string(),
+                            steps: nested_steps,
+                        });
+                    }
+
                 }
             }
             _ => {}
@@ -1703,5 +1776,44 @@ fn parse_i18n_section(section: &crate::rune_ast::Section) -> I18nSection {
     I18nSection { groups }
 }
 
+fn is_event_attribute(name: &str) -> bool {
+    let name = name.trim();
+    name.starts_with("on") || name == "click" || name == "change" || name == "input"
+}
 
+fn is_valid_attr_name(name: &str) -> bool {
+    let name = name.trim();
+    !name.is_empty() && !name.contains(' ') && !name.contains('"') && !name.contains('\'') && !name.contains('{') && !name.contains('}')
+}
 
+/// Extract indented attributes from the beginning of a body.
+/// Returns (attrs, events, remaining_values).
+fn extract_indented_attributes(value: &Value) -> Result<(HashMap<String, String>, HashMap<String, String>, Value), ParseError> {
+    let mut attrs = HashMap::new();
+    let mut events = HashMap::new();
+    let mut remaining = Vec::new();
+    let mut still_parsing_attrs = true;
+
+    if let Value::List(items) = value {
+        for item in items {
+            if still_parsing_attrs {
+                if let Value::String(s) = item {
+                    if let Some((k, v)) = parse_kv_string(s) {
+                        if is_valid_attr_name(&k) {
+                            if is_event_attribute(&k) {
+                                events.insert(k, v);
+                            } else {
+                                attrs.insert(k, v);
+                            }
+                            continue;
+                        }
+                    }
+                }
+                still_parsing_attrs = false;
+            }
+            remaining.push(item.clone());
+        }
+    }
+
+    Ok((attrs, events, Value::List(remaining)))
+}
