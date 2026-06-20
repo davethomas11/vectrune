@@ -203,7 +203,7 @@ impl JsCodegen {
     return output;
   }}
 
-  function tryParseLiteral(expr) {{
+  function tryParseLiteral(expr, scope) {{
     const trimmed = String(expr || '').trim();
     if (trimmed === '') return undefined;
     if (trimmed === 'true') return true;
@@ -215,7 +215,9 @@ impl JsCodegen {
     }}
     if (trimmed.startsWith('[') || trimmed.startsWith('{{')) {{
       try {{
-        return (new Function(`return (${{trimmed}});`))();
+        const keys = scope ? Object.keys(scope).filter(k => k !== 'this' && /^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(k)) : [];
+        const vals = keys.map(k => scope[k]);
+        return (new Function(...keys, `return (${{trimmed}});`))(...vals);
       }} catch (_err) {{
         return undefined;
       }}
@@ -227,24 +229,45 @@ impl JsCodegen {
     const segments = [];
     let current = '';
     let inBrackets = false;
+    let inParens = 0;
 
-    for (const ch of String(expr || '')) {{
+    const str = String(expr || '');
+    for (let i = 0; i < str.length; i++) {{
+      const ch = str[i];
+      if (ch === '(') inParens++;
+      if (ch === ')') inParens = Math.max(0, inParens - 1);
+
+      if (inParens > 0 && !(ch === '(' && str.slice(i-3, i+1) === '[].(')) {{
+        current += ch;
+        continue;
+      }}
+
       if (ch === '.' && !inBrackets) {{
         if (current.trim()) segments.push(current.trim());
         current = '';
         continue;
       }}
       if (ch === '[') {{
+        if (str.slice(i, i + 4) === '[].(') {{
+           if (current.trim()) segments.push(current.trim());
+           current = '[].(';
+           i += 3;
+           inParens++;
+           continue;
+        }}
         if (current.trim()) segments.push(current.trim());
-        current = '';
+        current = '[';
         inBrackets = true;
         continue;
       }}
       if (ch === ']') {{
-        if (current.trim()) segments.push(current.trim());
-        current = '';
-        inBrackets = false;
-        continue;
+        if (inBrackets) {{
+          current += ']';
+          segments.push(current.trim());
+          current = '';
+          inBrackets = false;
+          continue;
+        }}
       }}
       current += ch;
     }}
@@ -365,9 +388,20 @@ impl JsCodegen {
       
       if (Array.isArray(current) && segment === 'length') {{
         current = current.length;
-      }} else {{
-        const lookup = Object.prototype.hasOwnProperty.call(scope, segment) ? scope[segment] : segment;
+      }} else if (Array.isArray(current) && segment.startsWith('[].(') && segment.endsWith(')')) {{
+        const condition = segment.slice(4, -1);
+        const match = current.find(item => {{
+          const innerScope = Object.assign({{}}, scope, {{ it: item }});
+          return Boolean(evaluateExpression(condition, innerScope, 0));
+        }});
+        if (match !== undefined) current = match;
+        else return undefined;
+      }} else if (segment.startsWith('[') && segment.endsWith(']')) {{
+        const innerExpr = segment.slice(1, -1);
+        const lookup = evaluateExpression(innerExpr, scope, 0);
         current = current[valueToString(lookup)];
+      }} else {{
+        current = current[segment];
       }}
     }}
 
@@ -375,7 +409,7 @@ impl JsCodegen {
   }}
 
   function resolveValue(expr, scope) {{
-    const literal = tryParseLiteral(expr);
+    const literal = tryParseLiteral(expr, scope);
     if (literal !== undefined) return literal;
     const pathValue = resolvePath(expr, scope);
     if (pathValue !== undefined) return pathValue;
@@ -436,10 +470,6 @@ impl JsCodegen {
     const nextDepth = (depth || 0) + 1;
     let trimmed = String(expr || '').trim();
     if (!trimmed) return undefined;
-
-    if (trimmed.startsWith('{{') && trimmed.endsWith('}}')) {{
-      trimmed = trimmed.slice(1, -1).trim();
-    }}
 
     while (trimmed.startsWith('(') && trimmed.endsWith(')')) {{
       let d = 0;
@@ -513,6 +543,20 @@ impl JsCodegen {
       return result;
     }}
 
+    if (includesTopLevel(trimmed, ' ? ')) {{
+      const parts = splitTopLevel(trimmed, ' ? ');
+      const condition = parts[0];
+      const rest = parts.slice(1).join(' ? ');
+      if (includesTopLevel(rest, ' : ')) {{
+        const colonParts = splitTopLevel(rest, ' : ');
+        const trueExpr = colonParts[0];
+        const falseExpr = colonParts.slice(1).join(' : ');
+        return Boolean(evaluateExpression(condition, scope, nextDepth))
+          ? evaluateExpression(trueExpr, scope, nextDepth)
+          : evaluateExpression(falseExpr, scope, nextDepth);
+      }}
+    }}
+
     if (includesTopLevel(trimmed, ' or ')) {{
       return splitTopLevel(trimmed, ' or ').some((part) => Boolean(evaluateExpression(part, scope, nextDepth)));
     }}
@@ -574,28 +618,73 @@ impl JsCodegen {
     if (!segments.length) return;
     const baseKey = segments[0];
 
-    if (segments.length === 1) {{
-      app.state[baseKey] = value;
-      return;
+    let current;
+    if (locals && Object.prototype.hasOwnProperty.call(locals, baseKey)) {{
+      current = locals[baseKey];
+      if (segments.length === 1) {{
+        locals[baseKey] = value;
+        return;
+      }}
+    }} else {{
+      current = app.state[baseKey];
+      if (segments.length === 1) {{
+        app.state[baseKey] = value;
+        return;
+      }}
     }}
 
-    let current = app.state[baseKey];
     for (let i = 1; i < segments.length - 1; i += 1) {{
-      const rawKey = segments[i];
+      const segment = segments[i];
       const scopeValue = buildScope(locals);
-      const lookup = Object.prototype.hasOwnProperty.call(scopeValue, rawKey) ? scopeValue[rawKey] : rawKey;
-      const key = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
-      if (current[key] === undefined) {{
-        current[key] = {{}};
+      
+      if (Array.isArray(current) && segment.startsWith('[].(') && segment.endsWith(')')) {{
+        const condition = segment.slice(4, -1);
+        const match = current.find(item => {{
+          const innerScope = Object.assign({{}}, scopeValue, {{ it: item }});
+          return Boolean(evaluateExpression(condition, innerScope, 0));
+        }});
+        if (match !== undefined) {{
+          current = match;
+          continue;
+        }} else return;
+      }} else if (segment.startsWith('[') && segment.endsWith(']')) {{
+        const innerExpr = segment.slice(1, -1);
+        const lookup = evaluateExpression(innerExpr, scopeValue, 0);
+        const key = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+        if (current[key] === undefined) {{
+          current[key] = {{}};
+        }}
+        current = current[key];
+      }} else {{
+        const key = segment;
+        if (current[key] === undefined) {{
+          current[key] = {{}};
+        }}
+        current = current[key];
       }}
-      current = current[key];
     }}
 
     const finalRawKey = segments[segments.length - 1];
     const scopeValue = buildScope(locals);
-    const lookup = Object.prototype.hasOwnProperty.call(scopeValue, finalRawKey) ? scopeValue[finalRawKey] : finalRawKey;
-    const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
-    current[finalKey] = value;
+    
+    if (Array.isArray(current) && finalRawKey.startsWith('[].(') && finalRawKey.endsWith(')')) {{
+      const condition = finalRawKey.slice(4, -1);
+      const index = current.findIndex(item => {{
+        const innerScope = Object.assign({{}}, scopeValue, {{ it: item }});
+        return Boolean(evaluateExpression(condition, innerScope, 0));
+      }});
+      if (index !== -1) {{
+         current[index] = value;
+      }}
+      return;
+    }} else if (finalRawKey.startsWith('[') && finalRawKey.endsWith(']')) {{
+      const innerExpr = finalRawKey.slice(1, -1);
+      const lookup = evaluateExpression(innerExpr, scopeValue, 0);
+      const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+      current[finalKey] = value;
+    }} else {{
+      current[finalRawKey] = value;
+    }}
   }}
 
   function executeStatement(statement, locals) {{
@@ -605,6 +694,13 @@ impl JsCodegen {
 
     if (trimmed.startsWith('log ')) {{
       console.log(interpolate(trimmed.slice(4), buildScope(locals)));
+      return true;
+    }}
+
+    if (trimmed.startsWith('invert ')) {{
+      const path = trimmed.slice(7).trim();
+      const currentVal = Boolean(evaluateExpression(path, buildScope(locals)));
+      assignPath(path, !currentVal, locals);
       return true;
     }}
 
@@ -735,7 +831,11 @@ impl JsCodegen {
       const scope = node.ComponentScope;
       const childLocals = Object.assign({{}}, locals || {{}});
       for (const [key, value] of Object.entries(scope.props || {{}})) {{
-        childLocals[key] = evaluateExpression(value, buildScope(locals));
+        let exprStr = String(value).trim();
+        if (exprStr.startsWith('{{') && exprStr.endsWith('}}')) {{
+          exprStr = exprStr.slice(1, -1).trim();
+        }}
+        childLocals[key] = evaluateExpression(exprStr, buildScope(locals));
       }}
       return renderNode(scope.body, childLocals);
     }}
@@ -768,7 +868,12 @@ impl JsCodegen {
     }}
 
     for (const [key, value] of Object.entries(element.attrs || {{}})) {{
-      attrs += ` ${{key}}="${{escapeHtml(interpolate(value, scope))}}"`;
+      const renderedValue = interpolate(value, scope);
+      if (renderedValue === 'false' || renderedValue === 'undefined' || renderedValue === 'null') {{
+        const boolAttrs = ['checked', 'disabled', 'readonly', 'selected', 'hidden', 'required', 'multiple', 'autofocus'];
+        if (boolAttrs.includes(key)) continue;
+      }}
+      attrs += ` ${{key}}="${{escapeHtml(renderedValue)}}"`;
     }}
     if (locals && Object.keys(locals).length) {{
       attrs += ` data-rune-scope="${{escapeHtml(JSON.stringify(locals))}}"`;

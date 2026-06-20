@@ -95,6 +95,25 @@ rules:
 		use = (button-primary)
 		cursor = pointer
 
+	.button-primary:
+		use = (button-primary)
+		cursor = pointer
+		
+	.button-secondary:
+		use = (button-secondary)
+		cursor = pointer
+
+	.example-preset:
+		use = (card)
+		background-color = #f3f4f6
+		margin-top = {spacing-sm}
+
+	.example-rule:
+		color = {success-color}
+		text-transform = uppercase
+		letter-spacing = 1px
+		margin-top = {spacing-sm}
+
 	.filter-controls:
 		display = flex
 		gap = {spacing-md}
@@ -144,9 +163,7 @@ derive:
 
 action toggleTodo(id):
 	log "Toggling todo {id}"
-	for todo in todos:
-		if todo.id == id:
-			todo.completed = !todo.completed
+	invert todos[].(it.id == id).completed
 
 action updateTodo(text):
 	log "Updating newTodoText to: {text}"
@@ -182,14 +199,17 @@ props: [todo]
 view:
 	div .list-item:
 		label:
-			input[type=checkbox] change=toggleTodo({todo.id})
+			input:
+				type = checkbox
+				change = toggleTodo({todo.id})
+				checked = {todo.completed}
 			span " {todo.text}"
 		button .button-secondary click=removeTodo({todo.id}) "✕"
 
 @Component/FilterButton
 props: [label, value, isActive?]
 view:
-	button .button-secondary:
+	button .{isActive ? 'button-primary' : 'button-secondary'}:
 		click=setFilter('{value}')
 		"{label}"
 
@@ -253,8 +273,7 @@ view:
 			p "Inline loops with arrow syntax also work:"
 
 			ul:
-				li "<- item, idx in todos:"
-					"{idx}: {item.text}"
+				li "{idx}: {item.text}" <- (item, idx) in todos
 
 		div .card:
 			h2 "Feature 7: Conditional Rendering"
@@ -268,9 +287,9 @@ view:
 		div .card:
 			h2 "Feature 8: Styles & CSS"
 			p "Define design tokens, presets, and CSS rules in @Style:"
-			p "- Design tokens: colors, sizes, spacing"
-			p "- Presets: reusable style groups"
-			p "- Rules: CSS selectors and properties"
+			p style="color: {primary-color}; font-weight: bold;" "- Design tokens: variables injected directly (like this primary-color text!)"
+			p .example-preset "- Presets: reusable style blocks (like the card padding and shadows on this box)"
+			p .example-rule "- Rules: standard CSS selectors applied to elements"
 
 		footer:
 			p "Built with Rune-Web • All core features demonstrated above"

@@ -520,7 +520,6 @@ fn try_parse_memory_binding(s: &str) -> Option<(String, String)> {
     None
 }
 
-/// Try to parse an element from a string like "h1 "text content"" or "main .screen .active"
 fn try_parse_element_from_string(s: &str) -> Result<ViewNode, ParseError> {
     let (element_source, for_each) = split_inline_loop_clause(s)?;
     let parts = tokenize_element_line(&element_source);
@@ -555,6 +554,7 @@ fn tokenize_element_line(s: &str) -> Vec<String> {
     let mut tokens = Vec::new();
     let mut current = String::new();
     let mut in_quotes = false;
+    let mut brace_depth = 0;
     let mut escape_next = false;
 
     for ch in s.chars() {
@@ -567,7 +567,13 @@ fn tokenize_element_line(s: &str) -> Vec<String> {
         } else if ch == '"' {
             in_quotes = !in_quotes;
             current.push(ch);
-        } else if ch.is_whitespace() && !in_quotes {
+        } else if ch == '{' && !in_quotes {
+            brace_depth += 1;
+            current.push(ch);
+        } else if ch == '}' && !in_quotes {
+            brace_depth -= 1;
+            current.push(ch);
+        } else if ch.is_whitespace() && !in_quotes && brace_depth <= 0 {
             if !current.is_empty() {
                 tokens.push(current.clone());
                 current.clear();
@@ -736,32 +742,26 @@ fn split_inline_loop_clause(s: &str) -> Result<(String, Option<ForEachDefinition
 
 fn parse_inline_loop_binding(sig: &str) -> Result<ForEachDefinition, ParseError> {
     let trimmed = sig.trim();
-    if trimmed.starts_with('(') {
-        if let Some(in_pos) = trimmed.find(" in ") {
-            let vars_part = trimmed[..in_pos].trim();
-            let collection = trimmed[in_pos + 4..].trim().to_string();
-            let vars_part = vars_part.trim_start_matches('(').trim_end_matches(')');
-            let parts: Vec<String> = vars_part
-                .split(',')
-                .map(|p| p.trim().to_string())
-                .filter(|p| !p.is_empty())
-                .collect();
+    if let Some(in_pos) = trimmed.find(" in ") {
+        let vars_part = trimmed[..in_pos].trim();
+        let collection = trimmed[in_pos + 4..].trim().to_string();
+        
+        let vars_part = vars_part.trim_start_matches('(').trim_end_matches(')');
+        let parts: Vec<String> = vars_part
+            .split(',')
+            .map(|p| p.trim().to_string())
+            .filter(|p| !p.is_empty())
+            .collect();
 
-            if parts.is_empty() {
-                return Err(ParseError("Inline loop missing iterator variables".to_string()));
-            }
-
-            return Ok(ForEachDefinition {
-                item_name: parts[0].clone(),
-                index_name: parts.get(1).cloned(),
-                collection,
-            });
+        if parts.is_empty() {
+            return Err(ParseError("Inline loop missing iterator variables".to_string()));
         }
 
-        return Err(ParseError(format!(
-            "Invalid inline loop syntax: {}",
-            trimmed
-        )));
+        return Ok(ForEachDefinition {
+            item_name: parts[0].clone(),
+            index_name: parts.get(1).cloned(),
+            collection,
+        });
     }
 
     Ok(ForEachDefinition {

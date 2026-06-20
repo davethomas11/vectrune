@@ -42,3 +42,6 @@ testdata/
 
 # Local Copilot machine-specific overrides
 .github/copilot-local.md
+
+# AI Scratch Scripts
+.scratch/
