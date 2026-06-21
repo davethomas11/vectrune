@@ -152,8 +152,6 @@ state:
 		{ "id": 3, "text": "Deploy it", "completed": false }
 	]
 	filter = all
-	nextId = 4
-	newTodoText = ""
 
 derive:
 	filteredTodos from filter:
@@ -165,18 +163,12 @@ action toggleTodo(id):
 	log "Toggling todo {id}"
 	invert todos[].(it.id == id).completed
 
-action updateTodo(text):
-	log "Updating newTodoText to: {text}"
-	newTodoText = text
-
-action addTodo():
+action addTodo(text):
 	log "Adding todo: {newTodoText}"
-	todos.push({ "id": nextId, "text": newTodoText, "completed": false })
-	nextId = nextId + 1
-	newTodoText = ""
+	todos.push({ "id": todos.length + 1, "text": text, "completed": false })
 
 action removeTodo(id):
-	todos = todos.filter it.id != id
+	delete todos[]id
 
 action clearCompleted():
 	todos = todos.filter it.completed != true
@@ -246,11 +238,10 @@ view:
 		div .card:
 			h2 "Feature 3: Form & Event Handling"
 			div .form:
-				input:
+				input .addTodoText:
 					type = text
 					placeholder = Add a new todo...
-					change = updateTodo(this.value)
-				button .button click=addTodo() "Add Todo"
+				button .button click=addTodo(@addTodoText.value) "Add Todo"
 
 		div .card:
 			h2 "Feature 4: Filter Controls"

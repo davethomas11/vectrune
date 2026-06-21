@@ -520,6 +520,7 @@ fn try_parse_memory_binding(s: &str) -> Option<(String, String)> {
     None
 }
 
+/// Try to parse an element from a string like "h1 "text content"" or "main .screen .active"
 fn try_parse_element_from_string(s: &str) -> Result<ViewNode, ParseError> {
     let (element_source, for_each) = split_inline_loop_clause(s)?;
     let parts = tokenize_element_line(&element_source);
@@ -964,6 +965,10 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
             match &state_items[i] {
                 Value::String(s) => {
                     let trimmed = s.trim();
+                    if trimmed.starts_with('#') {
+                        i += 1;
+                        continue;
+                    }
                     // Check if this line starts a key = value assignment
                     if let Some(eq_idx) = trimmed.find('=') {
                         let key = trimmed[..eq_idx].trim().to_string();
@@ -977,6 +982,12 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
                             match &state_items[i] {
                                 Value::String(next_s) => {
                                     let next_trimmed = next_s.trim();
+                                    
+                                    if next_trimmed.starts_with('#') {
+                                        i += 1;
+                                        continue;
+                                    }
+                                    
                                     // Stop if we hit another key = value
                                     if next_trimmed.contains('=') && !next_trimmed.starts_with('{') && !next_trimmed.starts_with('[') {
                                         break;

@@ -172,17 +172,11 @@ mod emit_function_test {
         let generated_code = codegen.generate();
 
         // Verify the generated code contains key components
-        assert!(generated_code.contains("window.__runeWebEmit"),
-                "Generated code should define window.__runeWebEmit function");
+        assert!(generated_code.contains("__RuneWeb.boot"),
+                "Generated code should use __RuneWeb.boot");
 
-        assert!(generated_code.contains("window.__runeWebSocket"),
-                "Generated code should set up window.__runeWebSocket");
-
-        assert!(generated_code.contains("new WebSocket"),
-                "Generated code should create WebSocket connection");
-
-        assert!(generated_code.contains("__runeWebSocket.onmessage"),
-                "Generated code should have WebSocket message handler");
+        assert!(generated_code.contains("wsEndpoint: '/ws'"),
+                "Generated code should pass wsEndpoint to boot");
 
         assert!(generated_code.contains("actionDefinitions"),
                 "Generated code should have action definitions");

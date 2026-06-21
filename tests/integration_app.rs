@@ -203,8 +203,7 @@ action reset:
     assert!(body.contains(r#"data-on-click="play(index)""#));
     assert!(body.contains(r#"data-on-click="reset""#));
     assert!(body.contains("data-rune-scope="));
-    assert!(body.contains("window.runeWebApp = app"));
-    assert!(body.contains("app.render();"));
+    assert!(body.contains("__RuneWeb.boot("));
     assert!(body.contains(r#""reset":{"params":[],"steps":["#));
 }
 
@@ -505,9 +504,8 @@ view:
         .expect("expected response body bytes");
     let body = String::from_utf8(body_bytes.to_vec()).expect("expected utf-8 body");
 
-    assert!(body.contains("i18nData"), "Expected i18nData constant in JS output");
+    assert!(body.contains("i18nData: {"), "Expected i18nData property in JS output");
     assert!(body.contains("\"home\""), "Expected translation key in JS output");
-    assert!(body.contains("i18n: i18nData"), "Expected i18n merged into app.state");
 }
 
 #[tokio::test]
@@ -561,8 +559,7 @@ view:
     let body = String::from_utf8(body_bytes.to_vec()).expect("expected utf-8 body");
 
     assert!(body.contains("<h1>Translated Title</h1>"), "Expected SSR translation to be present in app HTML");
-    assert!(body.contains("function expandPercentI18n(value)"), "Expected client i18n expansion helper in generated JS");
-    assert!(body.contains("return expandPercentI18n(decodeEscapes(String(template || '')))"), "Expected interpolate() to expand %i18n placeholders before rerender interpolation");
+    assert!(body.contains("__RuneWeb.boot("), "Expected TS runtime to be injected for rerendering");
 }
 
 #[tokio::test]
