@@ -1,6 +1,7 @@
 @Component/SandboxSection
+props: [code?, show_output?]
 view:
-    section #sandbox .card:
+    section #sandbox .card data-show-output="{show_output ?? false}":
         div .section-heading:
             p .eyebrow "Interactive"
             h2 "Try Vectrune in your browser"
@@ -9,18 +10,21 @@ view:
         div .sandbox-container:
             div .editor-pane:
                 h3 "Code"
-                textarea #sandbox-editor [
-                    spellcheck=false
-                    placeholder="Type your .rune code here..."
-                ]:
-                    "@App\nname = Sandbox\ntype = REST\n\nrun:\n    log \"Initializing sandbox...\"\n    message = \"Hello from Vectrune WASM!\"\n    respond 200 message"
-                button #run-button .cta: "Run"
+                textarea #sandbox-editor spellcheck=false placeholder="Type your .rune code here...":
+                    "{code ?? '@App\nname = Sandbox\ntype = REST\n\n@Route/GET /\nrun:\n    log \"Initializing sandbox...\"\n    message = \"Hello from Vectrune Emulator!\"\n    respond 200 message'}"
+                div .editor-actions style="display:flex; gap:0.5rem; align-items:center;":
+                    button #run-button .cta click="runSandbox(this)" "Run"
+                    if {show_output}:
+                        select #ast-format style="padding:0.5rem; border-radius:4px; border:1px solid #d8e1ee;":
+                            option value="json" "JSON"
+                            option value="yaml" "YAML"
+                            option value="xml" "XML"
+                        button #show-doc-button .secondary-cta click="showDoc(this)" "Show Document"
+                        button #show-ast-button .secondary-cta click="showAst(this)" "Show AST"
             
             div .output-pane:
                 h3 "Output"
-                div #sandbox-output .terminal [
-                    data-error-wasm-missing="%i18n.Sandbox.error_wasm_missing%"
-                ]:
+                div #sandbox-output .terminal data-error-wasm-missing="%i18n.Sandbox.error_wasm_missing%":
                     "Click 'Run' to see output here..."
         div .sandbox-hints:
             p "Try changing the log message or adding new routes."

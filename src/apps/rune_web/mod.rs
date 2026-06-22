@@ -446,6 +446,23 @@ fn render_view_node(node: &ast::ViewNode, data: &JsonMap<String, JsonValue>, loc
                 String::new()
             }
         }
+        ast::ViewNode::Match { expression, cases } => {
+            let expr_val = resolve_expression_value(expression, data, locals)
+                .unwrap_or(serde_json::Value::Null);
+            let expr_str = value_to_string(&expr_val);
+            let mut matched_html = String::new();
+            for case in cases {
+                let matcher = normalize_literal(&case.matcher);
+                if matcher == "_" || matcher == expr_str {
+                    matched_html = case.body.iter()
+                        .map(|child| render_view_node(child, data, locals))
+                        .collect::<Vec<_>>()
+                        .join("");
+                    break;
+                }
+            }
+            matched_html
+        }
         ast::ViewNode::Text(s) => html_escape(&interpolate_template(s, data, locals)),
         ast::ViewNode::Comment(s) => format!("<!-- {} -->", interpolate_template(s, data, locals)),
         ast::ViewNode::ComponentScope { props, body } => {
@@ -567,6 +584,13 @@ fn collect_memory_keys_inner(node: &ast::ViewNode, keys: &mut Vec<String>) {
         ast::ViewNode::Conditional { body, .. } => {
             for child in body {
                 collect_memory_keys_inner(child, keys);
+            }
+        }
+        ast::ViewNode::Match { cases, .. } => {
+            for case in cases {
+                for child in &case.body {
+                    collect_memory_keys_inner(child, keys);
+                }
             }
         }
         ast::ViewNode::ComponentScope { body, .. } => {
@@ -731,6 +755,31 @@ fn resolve_expression_value(
     let trimmed = expr.trim();
     if trimmed.is_empty() {
         return None;
+    }
+
+    if let Some((left, right)) = trimmed.split_once(" ?? ") {
+        if let Some(l_val) = resolve_expression_value(left, data, locals) {
+            let mut is_fallback = false;
+            if let Some(s) = l_val.as_str() {
+                if s == left.trim() && resolve_path_value(left.trim(), data, locals).is_none() {
+                    is_fallback = true;
+                }
+            }
+            if !l_val.is_null() && value_to_string(&l_val) != "" && !is_fallback {
+                return Some(l_val);
+            }
+        }
+        return resolve_expression_value(right, data, locals);
+    }
+
+    if let Some((left, right)) = trimmed.split_once(" ? ") {
+        if let Some((true_branch, false_branch)) = right.split_once(" : ") {
+            if evaluate_condition(left, data, locals) {
+                return resolve_expression_value(true_branch, data, locals);
+            } else {
+                return resolve_expression_value(false_branch, data, locals);
+            }
+        }
     }
 
     if trimmed.starts_with('[') || trimmed.starts_with('{') {

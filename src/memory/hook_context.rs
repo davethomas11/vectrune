@@ -107,6 +107,7 @@ mod tests {
             kv,
             series: HashMap::new(),
             records: Vec::new(),
+            source_file: None,
         };
 
         RuneDocument {

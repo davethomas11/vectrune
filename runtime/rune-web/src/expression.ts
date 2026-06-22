@@ -352,6 +352,20 @@ export function evaluateExpression(
     }
   }
 
+  // --- Nullish coalescing ---
+  if (includesTopLevel(trimmed, ' ?? ')) {
+    const parts = splitTopLevel(trimmed, ' ?? ');
+    const leftRaw = parts[0].trim();
+    let left = evaluateExpression(leftRaw, scope, nextDepth);
+    if (typeof left === 'string' && left === leftRaw && resolvePath(leftRaw, scope) === undefined && tryParseLiteral(leftRaw, scope) === undefined) {
+      left = undefined;
+    }
+    if (left !== undefined && left !== null && left !== '') {
+      return left;
+    }
+    return evaluateExpression(parts.slice(1).join(' ?? '), scope, nextDepth);
+  }
+
   // --- Logical operators ---
   if (includesTopLevel(trimmed, ' or ')) {
     return splitTopLevel(trimmed, ' or ').some((part) =>

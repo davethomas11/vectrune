@@ -1,0 +1,33 @@
+@Component/SidebarLayout
+state:
+    activePage = "home"
+bindings:
+    .active <-> activePage
+
+view:
+    div .app-layout:
+        TeachingHeader
+        div .app-body:
+            nav .sidebar:
+                div .nav-group:
+                    h3 "Introduction"
+                    button .nav-link {.active when 'home'} "Overview"
+                div .nav-group:
+                    h3 "REST API"
+                    button .nav-link {.active when 'rest_get'} "GET Requests"
+                    button .nav-link "POST Requests"
+                    button .nav-link "Validation"
+                div .nav-group:
+                    h3 "GraphQL"
+                    button .nav-link "Overview"
+                div .nav-group:
+                    h3 "Web Sockets"
+                    button .nav-link "Overview"
+                div .nav-group:
+                    h3 "Rune Web"
+                    button .nav-link "Overview"
+            
+            main .content-area:
+                match activePage:
+                    "home"      -> HomeContent
+                    "rest_get"  -> RestGetPage

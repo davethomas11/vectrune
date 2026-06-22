@@ -6,7 +6,7 @@ import { ctx } from './context';
 import { evaluateExpression } from './expression';
 import { interpolate } from './interpolation';
 import { buildScope } from './scope';
-import { escapeHtml } from './utils';
+import { escapeHtml, normalizeLiteral } from './utils';
 import type { ViewNode, ElementNode } from './types';
 
 // ---------------------------------------------------------------------------
@@ -76,6 +76,20 @@ export function renderNode(
       return (conditional.body || [])
         .map((child: ViewNode) => renderNode(child, locals))
         .join('');
+    }
+    return '';
+  }
+
+  if (node.Match) {
+    const match = node.Match;
+    const value = String(evaluateExpression(match.expression, buildScope(locals)));
+    for (const caseDef of match.cases) {
+      let matcher = normalizeLiteral(caseDef.matcher);
+      if (matcher === '_' || matcher === value) {
+        return (caseDef.body || [])
+          .map((child: ViewNode) => renderNode(child, locals))
+          .join('');
+      }
     }
     return '';
   }

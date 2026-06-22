@@ -56,6 +56,9 @@ pub struct PageDefinition {
     /// Reference to the logic definition for client behavior
     pub logic_ref: Option<String>,
 
+    /// Inline state variables
+    pub state: HashMap<String, String>,
+
     /// The view tree structure
     pub view_tree: ViewNode,
 }
@@ -79,6 +82,9 @@ pub struct ComponentDefinition {
     /// When `None`, the component declares no props and no validation is performed.
     /// When `Some(vec)`, each required prop must be passed at every invocation site.
     pub props: Option<Vec<PropDeclaration>>,
+
+    /// Inline state variables
+    pub state: HashMap<String, String>,
 
     /// The component's normalized view tree.
     pub view_tree: ViewNode,
@@ -112,6 +118,12 @@ pub enum ViewNode {
     Conditional {
         condition: String,
         body: Vec<ViewNode>,
+    },
+
+    /// A match switch: `match expression: ...`
+    Match {
+        expression: String,
+        cases: Vec<MatchCase>,
     },
 
     /// A component invocation scope: injects props as locals before rendering the body.
@@ -222,4 +234,10 @@ pub enum ActionStep {
         collection: String,
         steps: Vec<ActionStep>,
     },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MatchCase {
+    pub matcher: String,
+    pub body: Vec<ViewNode>,
 }

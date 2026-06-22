@@ -83,6 +83,7 @@ impl RuneDocument {
                         kv,
                         series,
                         records,
+                        source_file: None,
                     });
                 }
 
@@ -230,6 +231,8 @@ pub struct Section {
     pub kv: HashMap<String, Value>,
     pub series: HashMap<String, Vec<Value>>,
     pub records: Vec<Record>,
+    #[serde(skip)]
+    pub source_file: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -8,6 +8,12 @@ use std::collections::HashMap;
 
 use super::ast::*;
 
+use std::cell::RefCell;
+
+thread_local! {
+    static CURRENT_SOURCE_FILE: RefCell<Option<String>> = RefCell::new(None);
+}
+
 /// Parse error type for frontend parsing.
 #[derive(Debug)]
 pub struct ParseError(pub String);
@@ -38,6 +44,7 @@ pub fn parse_rune_web_frontend(
     // Extract @Page sections
     for section in &doc.sections {
         if section.path.len() == 2 && section.path[0] == "Page" {
+            CURRENT_SOURCE_FILE.with(|f| *f.borrow_mut() = section.source_file.clone());
             let page_name = &section.path[1];
             let page_def = parse_page_section(section)?;
             page_views.insert(page_name.clone(), page_def);
@@ -47,6 +54,7 @@ pub fn parse_rune_web_frontend(
     // Extract @Component sections
     for section in &doc.sections {
         if section.path.len() == 2 && section.path[0] == "Component" {
+            CURRENT_SOURCE_FILE.with(|f| *f.borrow_mut() = section.source_file.clone());
             let component_name = &section.path[1];
             let component_def = parse_component_section(section)?;
             component_definitions.insert(component_name.clone(), component_def);
@@ -98,6 +106,7 @@ pub fn parse_rune_web_frontend(
         )?;
         resolved_components.insert(component_name.clone(), ComponentDefinition {
             props: component_definitions.get(&component_name).and_then(|c| c.props.clone()),
+            state: component_definitions.get(&component_name).map(|c| c.state.clone()).unwrap_or_default(),
             view_tree: resolved_view,
         });
     }
@@ -110,6 +119,29 @@ pub fn parse_rune_web_frontend(
             &mut resolved_components,
             &mut vec![page_path],
         )?;
+
+        let logic_name = page_def.logic_ref.clone().unwrap_or_else(|| {
+            let name = format!("{}_logic", page_name);
+            page_def.logic_ref = Some(name.clone());
+            name
+        });
+
+        let logic = logic_definitions.entry(logic_name).or_insert_with(|| LogicDefinition {
+            state: HashMap::new(),
+            derived: HashMap::new(),
+            helpers: HashMap::new(),
+            actions: HashMap::new(),
+        });
+
+        for (k, v) in &page_def.state {
+            logic.state.insert(k.clone(), v.clone());
+        }
+
+        for comp in resolved_components.values() {
+            for (k, v) in &comp.state {
+                logic.state.insert(k.clone(), v.clone());
+            }
+        }
     }
 
     Ok(RuneWebFrontend {
@@ -119,6 +151,39 @@ pub fn parse_rune_web_frontend(
         logic_definitions,
         i18n_sections,
     })
+}
+
+fn parse_state_block(section: &crate::rune_ast::Section) -> HashMap<String, String> {
+    let mut state = HashMap::new();
+    if let Some(items) = section.series.get("state") {
+        for item in items {
+            if let Value::String(s) = item {
+                if let Some(idx) = s.find('=') {
+                    let key = s[..idx].trim().to_string();
+                    let val = s[idx + 1..].trim().to_string();
+                    state.insert(key, val);
+                }
+            }
+        }
+    }
+    state
+}
+
+fn parse_bindings(section: &crate::rune_ast::Section) -> HashMap<String, String> {
+    let mut bindings = HashMap::new();
+    if let Some(items) = section.series.get("bindings") {
+        for item in items {
+            if let Value::String(s) = item {
+                if let Some(idx) = s.find("<->") {
+                    let left = s[..idx].trim().to_string();
+                    let right = s[idx + 3..].trim();
+                    let right_var = right.split_whitespace().next().unwrap_or(right).to_string();
+                    bindings.insert(left, right_var);
+                }
+            }
+        }
+    }
+    bindings
 }
 
 /// Parse a `@Page/<name>` section.
@@ -142,9 +207,11 @@ fn parse_page_section(section: &crate::rune_ast::Section) -> Result<PageDefiniti
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
+    let bindings = parse_bindings(section);
+
     // Parse the view tree from the "view:" series
     let view_tree = if let Some(view_items) = section.series.get("view") {
-        parse_view_nodes(view_items)?
+        parse_view_nodes(view_items, &bindings)?
     } else {
         return Err(ParseError(
             "Page section missing 'view:' block".to_string(),
@@ -155,6 +222,7 @@ fn parse_page_section(section: &crate::rune_ast::Section) -> Result<PageDefiniti
         title,
         style_ref,
         logic_ref,
+        state: parse_state_block(section),
         view_tree,
     })
 }
@@ -189,15 +257,17 @@ fn parse_component_section(
         None
     };
 
+    let bindings = parse_bindings(section);
+
     let view_tree = if let Some(view_items) = section.series.get("view") {
-        parse_view_nodes(view_items)?
+        parse_view_nodes(view_items, &bindings)?
     } else {
         return Err(ParseError(
             "Component section missing 'view:' block".to_string(),
         ));
     };
 
-    Ok(ComponentDefinition { props, view_tree })
+    Ok(ComponentDefinition { props, state: parse_state_block(section), view_tree })
 }
 
 fn resolve_component_tree(
@@ -374,6 +444,29 @@ fn expand_component_refs_in_node(
                 body: expanded_body,
             })
         }
+        ViewNode::Match { expression, cases } => {
+            let mut expanded_cases = Vec::new();
+            for case in cases {
+                let mut expanded_body = Vec::new();
+                for child in &case.body {
+                    expanded_body.push(expand_component_refs_in_node(
+                        child,
+                        component_definitions,
+                        resolved_components,
+                        stack,
+                    )?);
+                }
+                expanded_cases.push(MatchCase {
+                    matcher: case.matcher.clone(),
+                    body: expanded_body,
+                });
+            }
+
+            Ok(ViewNode::Match {
+                expression: expression.clone(),
+                cases: expanded_cases,
+            })
+        }
         ViewNode::Comment(text) => Ok(ViewNode::Comment(text.clone())),
         ViewNode::Text(text) => Ok(ViewNode::Text(text.clone())),
         ViewNode::ComponentScope { props, body } => {
@@ -408,8 +501,8 @@ fn expand_component_refs_in_node(
 }
 
 /// Parse view nodes from a series list.
-fn parse_view_nodes(items: &[Value]) -> Result<ViewNode, ParseError> {
-    let children = extract_view_nodes(items)?;
+fn parse_view_nodes(items: &[Value], bindings: &HashMap<String, String>) -> Result<ViewNode, ParseError> {
+    let children = extract_view_nodes(items, bindings)?;
 
     // If there's only one top-level child, return it directly
     if children.len() == 1 {
@@ -430,11 +523,11 @@ fn parse_view_nodes(items: &[Value]) -> Result<ViewNode, ParseError> {
 }
 
 /// Extract a list of view nodes from a series.
-fn extract_view_nodes(items: &[Value]) -> Result<Vec<ViewNode>, ParseError> {
-    extract_view_nodes_from(items, 0)
+fn extract_view_nodes(items: &[Value], bindings: &HashMap<String, String>) -> Result<Vec<ViewNode>, ParseError> {
+    extract_view_nodes_from(items, 0, bindings)
 }
 
-fn extract_view_nodes_from(items: &[Value], start: usize) -> Result<Vec<ViewNode>, ParseError> {
+fn extract_view_nodes_from(items: &[Value], start: usize, bindings: &HashMap<String, String>) -> Result<Vec<ViewNode>, ParseError> {
     let mut nodes = Vec::new();
     let mut i = start;
     while i < items.len() {
@@ -467,7 +560,7 @@ fn extract_view_nodes_from(items: &[Value], start: usize) -> Result<Vec<ViewNode
                 // Detect `var = get-memory key` bindings
                 if let Some(binding) = try_parse_memory_binding(trimmed) {
                     // Everything after this binding becomes its body
-                    let body = extract_view_nodes_from(items, i + 1)?;
+                    let body = extract_view_nodes_from(items, i + 1, bindings)?;
                     nodes.push(ViewNode::MemoryBinding {
                         var: binding.0,
                         key: binding.1,
@@ -482,7 +575,7 @@ fn extract_view_nodes_from(items: &[Value], start: usize) -> Result<Vec<ViewNode
                     let inner = &trimmed[1..trimmed.len() - 1];
                     nodes.push(ViewNode::Text(inner.to_string()));
                 // Try to parse as an element
-                } else if let Ok(node) = try_parse_element_from_string(trimmed) {
+                } else if let Ok(node) = try_parse_element_from_string(trimmed, bindings) {
                     nodes.push(node);
                 } else {
                     // Fall back to text node
@@ -493,7 +586,7 @@ fn extract_view_nodes_from(items: &[Value], start: usize) -> Result<Vec<ViewNode
             Value::Map(map) => {
                 // Process each key-value pair in the map
                 for (key, values) in map {
-                    nodes.push(parse_view_element_or_control(key, values)?);
+                    nodes.push(parse_view_element_or_control(key, values, bindings)?);
                 }
                 i += 1;
             }
@@ -521,14 +614,14 @@ fn try_parse_memory_binding(s: &str) -> Option<(String, String)> {
 }
 
 /// Try to parse an element from a string like "h1 "text content"" or "main .screen .active"
-fn try_parse_element_from_string(s: &str) -> Result<ViewNode, ParseError> {
+fn try_parse_element_from_string(s: &str, bindings: &HashMap<String, String>) -> Result<ViewNode, ParseError> {
     let (element_source, for_each) = split_inline_loop_clause(s)?;
     let parts = tokenize_element_line(&element_source);
     if parts.is_empty() {
         return Err(ParseError("Empty element string".to_string()));
     }
 
-    let (tag, classes, id, attrs, events, mut text_content) = extract_element_parts(&parts)?;
+    let (tag, classes, id, attrs, events, mut text_content) = extract_element_parts(&parts, bindings)?;
 
     if text_content.is_none() {
         if let Some(for_each) = &for_each {
@@ -595,6 +688,7 @@ fn tokenize_element_line(s: &str) -> Vec<String> {
 /// Extract element parts from tokenized parts
 fn extract_element_parts(
     parts: &[String],
+    bindings: &HashMap<String, String>,
 ) -> Result<(String, Vec<String>, Option<String>, HashMap<String, String>, HashMap<String, String>, Option<String>), ParseError> {
     if parts.is_empty() {
         return Err(ParseError("No parts to parse".to_string()));
@@ -614,6 +708,21 @@ fn extract_element_parts(
         } else if part.starts_with('.') {
             // Class name
             classes.push(part[1..].to_string());
+        } else if part.starts_with('{') && part.ends_with('}') && part.contains(" when ") {
+            let inner = &part[1..part.len() - 1];
+            if let Some(when_idx) = inner.find(" when ") {
+                let selector = inner[..when_idx].trim();
+                let expr = inner[when_idx + 6..].trim();
+                if let Some(state_var) = bindings.get(selector) {
+                    let class_name = if selector.starts_with('.') {
+                        &selector[1..]
+                    } else {
+                        selector
+                    };
+                    classes.push(format!("{{{} == {} ? '{}' : ''}}", state_var, expr, class_name));
+                    events.insert("click".to_string(), format!("{} = {}", state_var, expr));
+                }
+            }
         } else if part.starts_with('#') {
             // ID
             id = Some(part[1..].to_string());
@@ -644,7 +753,34 @@ fn extract_element_parts(
                     };
                     events.insert(event_name, value_unquoted.to_string());
                 } else {
-                    attrs.insert(name.to_string(), value_unquoted.to_string());
+                    let mut final_value = value_unquoted.to_string();
+                    if final_value.starts_with("{raw ") && final_value.ends_with('}') {
+                        let rel_path = final_value[5..final_value.len() - 1].trim();
+                        
+                        let source_file = CURRENT_SOURCE_FILE.with(|f| f.borrow().clone());
+                        let base_dir = source_file
+                            .and_then(|sf| std::path::Path::new(&sf).parent().map(|p| p.to_path_buf()))
+                            .unwrap_or_else(|| std::path::Path::new(".").to_path_buf());
+                        let mut resolved_path = None;
+
+                        // Try exact relative path first
+                        let exact_path = base_dir.join(rel_path);
+                        if exact_path.exists() {
+                            resolved_path = Some(exact_path);
+                        } else {
+                            // Recursively search for the file by name
+                            let target_name = std::path::Path::new(rel_path).file_name().and_then(|n| n.to_str()).unwrap_or(rel_path);
+                            resolved_path = find_file_recursive(&base_dir, target_name);
+                        }
+
+                        if let Some(p) = resolved_path {
+                            if let Ok(content) = std::fs::read_to_string(&p) {
+                                let escaped = content.replace('\\', "\\\\").replace('\n', "\\n").replace('\r', "").replace('\'', "\\'");
+                                final_value = format!("'{}'", escaped);
+                            }
+                        }
+                    }
+                    attrs.insert(name.to_string(), final_value);
                 }
             }
         }
@@ -657,26 +793,30 @@ fn extract_element_parts(
 fn parse_view_element_or_control(
     key: &str,
     values: &Value,
+    bindings: &HashMap<String, String>,
 ) -> Result<ViewNode, ParseError> {
     let trimmed = key.trim();
 
     // Check for control structures first
     if trimmed.starts_with("each ") || trimmed.starts_with("for ") {
-        return parse_loop_structure(trimmed, values);
+        return parse_loop_structure(trimmed, values, bindings);
     }
     if trimmed.starts_with("if ") {
-        return parse_conditional_structure(trimmed, values);
+        return parse_conditional_structure(trimmed, values, bindings);
+    }
+    if trimmed.starts_with("match ") {
+        return parse_match_structure(trimmed, values, bindings);
     }
 
     // Otherwise parse as element
-    let (tag, mut classes, id, mut attrs, mut events, for_each) = parse_element_signature(trimmed)?;
+    let (tag, classes, id, mut attrs, mut events, for_each) = parse_element_signature(trimmed, bindings)?;
     
     // Support indented attributes at the beginning of the body
     let (body_attrs, body_events, remaining_values) = extract_indented_attributes(values)?;
     attrs.extend(body_attrs);
     events.extend(body_events);
 
-    let children = extract_view_content(&remaining_values)?;
+    let children = extract_view_content(&remaining_values, bindings)?;
 
     // Only set text if there are no children and value is a simple string
     let mut text = if children.is_empty() {
@@ -708,6 +848,7 @@ fn parse_view_element_or_control(
 /// Parse element signature like "main .screen #app data-foo=bar event=handler"
 fn parse_element_signature(
     sig: &str,
+    bindings: &HashMap<String, String>,
 ) -> Result<(
     String,
     Vec<String>,
@@ -718,7 +859,7 @@ fn parse_element_signature(
 ), ParseError> {
     let (element_source, for_each) = split_inline_loop_clause(sig)?;
     let parts = tokenize_element_line(&element_source);
-    let (tag, classes, id, attrs, events, _text) = extract_element_parts(&parts)?;
+    let (tag, classes, id, attrs, events, _text) = extract_element_parts(&parts, bindings)?;
     Ok((tag, classes, id, attrs, events, for_each))
 }
 
@@ -778,13 +919,13 @@ fn looks_like_literal_collection(expr: &str) -> bool {
 }
 
 /// Extract view nodes from a Value (usually a list of values under a map key).
-fn extract_view_content(value: &Value) -> Result<Vec<ViewNode>, ParseError> {
+fn extract_view_content(value: &Value, bindings: &HashMap<String, String>) -> Result<Vec<ViewNode>, ParseError> {
     match value {
-        Value::List(items) => extract_view_nodes(items),
+        Value::List(items) => extract_view_nodes(items, bindings),
         Value::Map(map) => {
             let mut nodes = Vec::new();
             for (key, val) in map {
-                nodes.push(parse_view_element_or_control(key, val)?);
+                nodes.push(parse_view_element_or_control(key, val, bindings)?);
             }
             Ok(nodes)
         }
@@ -809,7 +950,7 @@ fn extract_first_string_value(value: &Value) -> Option<String> {
 }
 
 /// Parse a loop structure: "each item in collection" or "for item, index in collection"
-fn parse_loop_structure(sig: &str, values: &Value) -> Result<ViewNode, ParseError> {
+fn parse_loop_structure(sig: &str, values: &Value, bindings: &HashMap<String, String>) -> Result<ViewNode, ParseError> {
     let rest = if sig.starts_with("each ") {
         &sig[5..]
     } else if sig.starts_with("for ") {
@@ -835,7 +976,7 @@ fn parse_loop_structure(sig: &str, values: &Value) -> Result<ViewNode, ParseErro
             None
         };
 
-        let body = extract_view_content(values)?;
+        let body = extract_view_content(values, bindings)?;
 
         Ok(ViewNode::Loop {
             item_name,
@@ -849,7 +990,7 @@ fn parse_loop_structure(sig: &str, values: &Value) -> Result<ViewNode, ParseErro
 }
 
 /// Parse a conditional structure: "if condition"
-fn parse_conditional_structure(sig: &str, values: &Value) -> Result<ViewNode, ParseError> {
+fn parse_conditional_structure(sig: &str, values: &Value, bindings: &HashMap<String, String>) -> Result<ViewNode, ParseError> {
     let rest = if sig.starts_with("if ") {
         &sig[3..]
     } else {
@@ -857,9 +998,61 @@ fn parse_conditional_structure(sig: &str, values: &Value) -> Result<ViewNode, Pa
     };
 
     let condition = rest.trim().to_string();
-    let body = extract_view_content(values)?;
+    let body = extract_view_content(values, bindings)?;
 
     Ok(ViewNode::Conditional { condition, body })
+}
+
+/// Parse a match structure: "match expression"
+fn parse_match_structure(sig: &str, values: &Value, bindings: &HashMap<String, String>) -> Result<ViewNode, ParseError> {
+    let expression = if sig.starts_with("match ") {
+        sig[6..].trim().to_string()
+    } else {
+        sig.to_string()
+    };
+
+    let mut cases = Vec::new();
+    match values {
+        Value::List(items) => {
+            for item in items {
+                if let Value::String(s) = item {
+                    if let Some(arrow_idx) = s.find("->") {
+                        let matcher = s[..arrow_idx].trim().to_string();
+                        let body_str = s[arrow_idx + 2..].trim();
+                        let body_node = try_parse_element_from_string(body_str, bindings)?;
+                        cases.push(MatchCase {
+                            matcher,
+                            body: vec![body_node],
+                        });
+                    }
+                }
+            }
+        }
+        Value::Map(map) => {
+            for (key, val) in map {
+                let mut matcher = key.trim().to_string();
+                let mut inline_body = None;
+                
+                if let Some(arrow_idx) = matcher.find("->") {
+                    let body_str = matcher[arrow_idx + 2..].trim().to_string();
+                    matcher = matcher[..arrow_idx].trim().to_string();
+                    if !body_str.is_empty() {
+                        inline_body = Some(try_parse_element_from_string(&body_str, bindings)?);
+                    }
+                }
+                
+                let mut body = extract_view_content(val, bindings)?;
+                if let Some(node) = inline_body {
+                    body.insert(0, node);
+                }
+                
+                cases.push(MatchCase { matcher, body });
+            }
+        }
+        _ => {}
+    }
+
+    Ok(ViewNode::Match { expression, cases })
 }
 
 /// Parse a `@Style/<name>` section.
@@ -1814,7 +2007,32 @@ fn extract_indented_attributes(value: &Value) -> Result<(HashMap<String, String>
                             if is_event_attribute(&k) {
                                 events.insert(k, v);
                             } else {
-                                attrs.insert(k, v);
+                                let mut final_value = v.clone();
+                                if final_value.starts_with("{raw ") && final_value.ends_with('}') {
+                                    let rel_path = final_value[5..final_value.len() - 1].trim();
+                                    
+                                    let source_file = CURRENT_SOURCE_FILE.with(|f| f.borrow().clone());
+                                    let base_dir = source_file
+                                        .and_then(|sf| std::path::Path::new(&sf).parent().map(|p| p.to_path_buf()))
+                                        .unwrap_or_else(|| std::path::Path::new(".").to_path_buf());
+                                    let mut resolved_path = None;
+
+                                    let exact_path = base_dir.join(rel_path);
+                                    if exact_path.exists() {
+                                        resolved_path = Some(exact_path);
+                                    } else {
+                                        let target_name = std::path::Path::new(rel_path).file_name().and_then(|n| n.to_str()).unwrap_or(rel_path);
+                                        resolved_path = find_file_recursive(&base_dir, target_name);
+                                    }
+
+                                    if let Some(p) = resolved_path {
+                                        if let Ok(content) = std::fs::read_to_string(&p) {
+                                            let escaped = content.replace('\\', "\\\\").replace('\n', "\\n").replace('\r', "").replace('\'', "\\'");
+                                            final_value = format!("'{}'", escaped);
+                                        }
+                                    }
+                                }
+                                attrs.insert(k, final_value);
                             }
                             continue;
                         }
@@ -1827,4 +2045,33 @@ fn extract_indented_attributes(value: &Value) -> Result<(HashMap<String, String>
     }
 
     Ok((attrs, events, Value::List(remaining)))
+}
+
+fn find_file_recursive(dir: &std::path::Path, filename: &str) -> Option<std::path::PathBuf> {
+    if !dir.is_dir() {
+        return None;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if path.is_dir() {
+                // Ignore target and node_modules
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name == "target" || name == "node_modules" || name == ".git" {
+                        continue;
+                    }
+                }
+                if let Some(found) = find_file_recursive(&path, filename) {
+                    return Some(found);
+                }
+            } else if path.is_file() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name == filename || path.ends_with(filename) {
+                        return Some(path);
+                    }
+                }
+            }
+        }
+    }
+    None
 }

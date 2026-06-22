@@ -251,6 +251,7 @@ mod tests {
             kv,
             series,
             records: Vec::new(),
+            source_file: None,
         }
     }
 
@@ -301,6 +302,7 @@ mod tests {
             kv,
             series: HashMap::new(),
             records: Vec::new(),
+            source_file: None,
         };
 
         let parsed_hook = parse_hook_section(&section).unwrap();

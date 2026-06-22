@@ -1,0 +1,10 @@
+@Component/HomeContent
+view:
+    div .page:
+        HeroSection
+        QuickstartSection
+        SandboxSection
+        LanguageTourSection
+        WalkthroughSection
+        ExamplesSection
+        WhatsNextSection

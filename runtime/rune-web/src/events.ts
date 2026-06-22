@@ -8,6 +8,7 @@ import { getWindowProp, setWindowProp } from './globals';
 import { buildScope } from './scope';
 import { splitTopLevel } from './utils';
 import { renderNode } from './rendering';
+import { executeStatement } from './statement';
 
 // ---------------------------------------------------------------------------
 // parseHandlerSpec — parse "actionName(arg1, arg2)" from data-on-* attribute
@@ -15,12 +16,16 @@ import { renderNode } from './rendering';
 
 export function parseHandlerSpec(
   spec: string,
-): { name: string; args: string[] } | null {
+): { name: string; args: string[]; raw: string } | null {
   const trimmed = String(spec || '').trim();
+  if (!trimmed) return null;
   const match = trimmed.match(/^([A-Za-z_][\w-]*)(?:\((.*)\))?$/);
-  if (!match) return null;
-  const args = match[2] ? splitTopLevel(match[2], ',') : [];
-  return { name: match[1], args };
+  if (match) {
+    const args = match[2] ? splitTopLevel(match[2], ',') : [];
+    return { name: match[1], args, raw: trimmed };
+  }
+  // Allow arbitrary statements like "activePage = 'home'"
+  return { name: '', args: [], raw: trimmed };
 }
 
 // ---------------------------------------------------------------------------
@@ -54,13 +59,18 @@ export function bindEvent(eventName: string): void {
     );
     if (!spec) return;
     const locals = readScope(element);
-    const scope = buildScope(
-      Object.assign({}, locals, { this: element }),
-    );
-    const args = spec.args.map((arg) =>
-      evaluateExpression(arg, scope),
-    );
-    ctx().app.invokeAction(spec.name, args, locals);
+    
+    if (spec.name) {
+      const scope = buildScope(
+        Object.assign({}, locals, { this: element }),
+      );
+      const args = spec.args.map((arg) =>
+        evaluateExpression(arg, scope),
+      );
+      ctx().app.invokeAction(spec.name, args, locals);
+    } else {
+      executeStatement(spec.raw, locals);
+    }
   });
 }
 

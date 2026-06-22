@@ -119,7 +119,7 @@ fn load_rune_document_from_content_inner(
         doc.merge(imported);
     }
 
-    let current = parse_rune(&stripped_content).map_err(|source| LoadError::Parse {
+    let current = parse_rune_with_source(&stripped_content, Some(source_name.to_string())).map_err(|source| LoadError::Parse {
         path: source_name.to_string(),
         source,
     })?;
@@ -204,6 +204,10 @@ fn parse_map_block<I: Iterator<Item = String>>(lines: &mut I) -> HashMap<String,
 }
 
 pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
+    parse_rune_with_source(input, None)
+}
+
+pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Result<RuneDocument, ParseError> {
     let mut sections: Vec<Section> = Vec::new();
     let mut current_section: Option<Section> = None;
     // Stack to manage nested series based on indentation.
@@ -250,6 +254,7 @@ pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
                 kv: HashMap::new(),
                 series: HashMap::new(),
                 records: Vec::new(),
+                source_file: source_file.clone(),
             });
             series_stack.clear();
             multiline_key = None;

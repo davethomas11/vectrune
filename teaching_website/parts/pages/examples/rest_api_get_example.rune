@@ -1,0 +1,9 @@
+@App
+name = GET Tutorial
+type = REST
+
+@Route/GET /users
+run:
+    users = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]
+    log "Returning users..."
+    respond 200 users

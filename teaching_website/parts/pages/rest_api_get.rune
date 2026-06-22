@@ -1,0 +1,9 @@
+@Component/RestGetPage
+view:
+    div .page:
+        div .section-heading:
+            p .eyebrow "REST API"
+            h2 "Handling GET Requests"
+            p "Vectrune makes it incredibly simple to create a GET endpoint and respond with data."
+            
+        SandboxSection show_output=true code="{raw examples/rest_api_get_example.rune}"

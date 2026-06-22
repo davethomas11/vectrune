@@ -9,6 +9,7 @@ export interface ViewNode {
   ComponentScope?: ComponentScopeNode;
   MemoryBinding?: MemoryBindingNode;
   Conditional?: ConditionalNode;
+  Match?: MatchNode;
   Text?: string;
   Comment?: string;
 }
@@ -45,6 +46,16 @@ export interface MemoryBindingNode {
 export interface ConditionalNode {
   condition: string;
   body: ViewNode[];
+}
+
+export interface MatchCase {
+  matcher: string;
+  body: ViewNode[];
+}
+
+export interface MatchNode {
+  expression: string;
+  cases: MatchCase[];
 }
 
 export interface ForEachDef {

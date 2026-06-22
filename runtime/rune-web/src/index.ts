@@ -70,7 +70,12 @@ export function boot(config: RuneWebConfig): RuneApp {
     ) {
       const context = ctx();
       const def = context.actionDefinitions[name];
-      if (!def) return;
+      if (!def) {
+        if (typeof window !== 'undefined' && typeof (window as any)[name] === 'function') {
+          (window as any)[name](...args);
+        }
+        return;
+      }
       const scopedLocals: Record<string, unknown> = Object.assign(
         {},
         locals || {},

@@ -1,21 +1,13 @@
 import "components"
 import "i18n"
+import "pages"
 
 @Page/learn-vectrune
 title = Learn Vectrune
 style = teaching-site
+logic = teaching
 view:
     div .site-shell:
-        TeachingHeader
-        main .page:
-            HeroSection
-            QuickstartSection
-            SandboxSection
-            LanguageTourSection
-            WalkthroughSection
-            ExamplesSection
-            WhatsNextSection
-        TeachingFooter
+        SidebarLayout
         script src=/assets/syntax-highlight.js
-        script type="module" src="/assets/wasm-init.js"
         script src=/assets/sandbox.js
