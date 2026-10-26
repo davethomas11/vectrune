@@ -11,6 +11,11 @@ Header {
     nav_examples = "Ejemplos"
     nav_next = "Qué sigue"
 }
+Banner {
+    badge = "Desarrollo temprano"
+    message = "Vectrune está en una etapa previa a la 1.0 y evoluciona rápidamente. La sintaxis y las API pueden cambiar entre versiones."
+    link = "Sigue el progreso en GitHub"
+}
 Hero {
     eyebrow = "Hito de adopción masiva"
     headline = "Obtén una aplicación Vectrune útil en minutos."

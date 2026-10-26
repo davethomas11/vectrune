@@ -1,0 +1,82 @@
+name: Deploy site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "teaching_website/**"
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build vectrune CLI
+        run: cargo build --release
+
+      - name: Render static site
+        env:
+          # Set repo variable PAGES_CNAME=vectrune.com once DNS is ready.
+          PAGES_CNAME: ${{ vars.PAGES_CNAME }}
+        run: |
+          set -euo pipefail
+          BIN="$GITHUB_WORKSPACE/target/release/vectrune"
+          OUT="$GITHUB_WORKSPACE/_site"
+          if [ -n "${PAGES_CNAME:-}" ]; then BASE="/"; else BASE="/${GITHUB_REPOSITORY#*/}/"; fi
+          mkdir -p "$OUT/assets"
+          cd teaching_website
+
+          # Render one static page per locale: / (en_us), /es/, /fr/
+          for loc in en_us es fr; do
+            if [ "$loc" = "en_us" ]; then dest="$OUT"; else dest="$OUT/$loc"; fi
+            mkdir -p "$dest"
+            sed -i "s/^locale = .*/locale = $loc/" parts/page.rune
+            "$BIN" teaching.rune -o html > "$dest/index.html"
+          done
+          git checkout -- parts/page.rune
+
+          # Rewrite query-string locale links and absolute asset paths for the static host
+          find "$OUT" -name index.html -exec sed -i \
+            -e "s#href=\"?locale=en_us\"#href=\"${BASE}\"#g" \
+            -e "s#href=\"?locale=\([a-z_]*\)\"#href=\"${BASE}\1/\"#g" \
+            -e "s#\(src\|href\)=\"/assets/#\1=\"${BASE}assets/#g" {} +
+
+          # Static assets referenced as /assets/*
+          cp *.js *.css "$OUT/assets/"
+          [ -d pkg ] && cp -r pkg "$OUT/assets/pkg" || true
+
+          if [ -n "${PAGES_CNAME:-}" ]; then echo "$PAGES_CNAME" > "$OUT/CNAME"; fi
+          touch "$OUT/.nojekyll"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

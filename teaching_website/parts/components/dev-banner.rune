@@ -1,0 +1,6 @@
+@Component/DevBanner
+view:
+    div .dev-banner role=status:
+        span .dev-banner-badge "%i18n.Banner.badge%"
+        span .dev-banner-text "%i18n.Banner.message%"
+        a .dev-banner-link href=https://github.com/davethomas11/vectrune "%i18n.Banner.link%"
