@@ -30,6 +30,16 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build rune-web runtime
+        working-directory: runtime/rune-web
+        run: |
+          npm install
+          npm run build
+
       - name: Build vectrune CLI
         run: cargo build --release
 
