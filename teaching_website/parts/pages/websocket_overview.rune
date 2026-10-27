@@ -1,0 +1,9 @@
+@Component/WebsocketOverviewPage
+view:
+    div .page:
+        div .section-heading:
+            p .eyebrow "Web Sockets"
+            h2 "Web Sockets & Streaming"
+            p "Establish persistent full-duplex WebSocket connections with declarative event hooks and broadcasting."
+            
+        SandboxSection show_output=true code="{raw examples/websocket_example.rune}"

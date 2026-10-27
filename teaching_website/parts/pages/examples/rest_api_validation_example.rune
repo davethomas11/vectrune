@@ -1,0 +1,15 @@
+@App
+name = Validation Tutorial
+type = REST
+
+@Schema/Product
+title = string
+price = number
+
+@Route/POST /products
+run:
+    parse-json
+    validate body #Product
+    validate body.price > 0 "Price must be greater than zero"
+    log "Product valid: {body.title} at ${body.price}"
+    respond 200 "Product validated successfully"

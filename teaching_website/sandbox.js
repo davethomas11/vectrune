@@ -3,6 +3,18 @@
 let emulatorApp = null;
 let serializeFn = null;
 
+function getEmulatorUrl() {
+    const script = document.querySelector('script[src*="sandbox.js"]');
+    if (script && script.src) {
+        return new URL('rune-emulator.js', script.src).href;
+    }
+    return '/assets/rune-emulator.js';
+}
+
+async function loadEmulator() {
+    return await import(getEmulatorUrl());
+}
+
 function renderResponse(response, container) {
     let outText = `Status: ${response.status}\n\n`;
     if (response.logs && response.logs.length > 0) {
@@ -24,7 +36,7 @@ window.showAst = async (btn) => {
     const code = editor.value;
     output.innerHTML = "<div>Parsing...</div>";
     try {
-        const { parse, serialize } = await import('./rune-emulator.js');
+        const { parse, serialize } = await loadEmulator();
         const doc = parse(code);
         const serialized = serialize(doc, astFormat.value);
         const resultContainer = document.createElement('div');
@@ -49,7 +61,7 @@ window.showDoc = async (btn) => {
     const code = editor.value;
     output.innerHTML = "<div>Parsing...</div>";
     try {
-        const { parse, serialize, toDocument } = await import('./rune-emulator.js');
+        const { parse, serialize, toDocument } = await loadEmulator();
         const doc = parse(code);
         const dataDoc = toDocument(doc);
         const serialized = serialize(dataDoc, astFormat.value);
@@ -75,7 +87,7 @@ window.runSandbox = async (btn) => {
     output.innerHTML = "<div>Running...</div>";
     
     try {
-        const { parse, createApp, serialize } = await import('./rune-emulator.js');
+        const { parse, createApp, serialize } = await loadEmulator();
         serializeFn = serialize;
         
         const doc = parse(code);

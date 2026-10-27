@@ -2,11 +2,11 @@
 view:
     div .language-selector:
         span .language-label "Language:"
-        a .language-link href="?locale=en_us" "English"
+        a .language-link href="/" "English"
         span .language-sep " / "
-        a .language-link href="?locale=es" "Español"
+        a .language-link href="/es/" "Español"
         span .language-sep " / "
-        a .language-link href="?locale=fr" "Français"
+        a .language-link href="/fr/" "Français"
 
 
 

@@ -1,0 +1,9 @@
+@Component/GraphqlOverviewPage
+view:
+    div .page:
+        div .section-heading:
+            p .eyebrow "GraphQL"
+            h2 "GraphQL API Overview"
+            p "Declare GraphQL types and query resolvers concisely without heavy framework overhead."
+            
+        SandboxSection show_output=true code="{raw examples/graphql_example.rune}"

@@ -1,0 +1,16 @@
+@App
+name = POST Tutorial
+type = REST
+
+@Schema/User
+name = string
+role = string
+
+@Route/POST /users
+expect = User
+run:
+    parse-json
+    validate body #User
+    log "Creating user: {body.name}"
+    created = { id: 42, name: body.name, role: body.role }
+    respond 201 created

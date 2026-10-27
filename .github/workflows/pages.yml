@@ -59,16 +59,19 @@ jobs:
           for loc in en_us es fr; do
             if [ "$loc" = "en_us" ]; then dest="$OUT"; else dest="$OUT/$loc"; fi
             mkdir -p "$dest"
-            sed -i "s/^locale = .*/locale = $loc/" parts/page.rune
+            sed -i "s/^locale = .*/locale = $loc/" teaching.rune
             "$BIN" teaching.rune -o html > "$dest/index.html"
           done
-          git checkout -- parts/page.rune
+          git checkout -- teaching.rune
 
-          # Rewrite query-string locale links and absolute asset paths for the static host
-          find "$OUT" -name index.html -exec sed -i \
-            -e "s#href=\"?locale=en_us\"#href=\"${BASE}\"#g" \
-            -e "s#href=\"?locale=\([a-z_]*\)\"#href=\"${BASE}\1/\"#g" \
-            -e "s#\(src\|href\)=\"/assets/#\1=\"${BASE}assets/#g" {} +
+          # Rewrite paths if hosted on subpath instead of custom domain root
+          if [ "$BASE" != "/" ]; then
+            find "$OUT" -name index.html -exec sed -i \
+              -e "s#href=\"/\"#href=\"${BASE}\"#g" \
+              -e "s#href=\"/es/\"#href=\"${BASE}es/\"#g" \
+              -e "s#href=\"/fr/\"#href=\"${BASE}fr/\"#g" \
+              -e "s#\(src\|href\)=\"/assets/#\1=\"${BASE}assets/#g" {} +
+          fi
 
           # Static assets referenced as /assets/*
           cp *.js *.css "$OUT/assets/"

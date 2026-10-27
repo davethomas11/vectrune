@@ -1,0 +1,12 @@
+@App
+name = WebSocket Chat
+type = WebSocket
+
+@Route/WS /chat
+run:
+    on connect:
+        log "Client connected to chat stream"
+        emit "Welcome to Vectrune real-time!"
+    on message:
+        log "Received message: {message}"
+        broadcast "User: {message}"
