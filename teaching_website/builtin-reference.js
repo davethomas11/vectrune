@@ -211,18 +211,77 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+const BUILTIN_DEMO_CODE = `@App
+name = Builtin Reference Playground
+type = REST
+
+@Schema/Item
+name = string
+price = number
+
+@Route/GET /demo
+run:
+    log "1. Diagnostics: Running builtin demo..."
+    
+    # Context & Collections
+    items = [
+        { name: "Skateboard Deck", price: 55 },
+        { name: "Urethane Wheels", price: 30 }
+    ]
+    is_valid = is-set items
+    log "Context check: items is set = {is_valid}"
+    
+    # Memory Operations
+    set-memory active_session "session_98234"
+    retrieved = get-memory active_session
+    log "Memory storage test: {retrieved}"
+    
+    # JSON Parsing & Validation
+    sample_json = "{\\"name\\": \\"Grip Tape\\", \\"price\\": 12}"
+    parsed_item = parse-json sample_json
+    validate parsed_item #Item
+    log "Validated item: {parsed_item.name} (\${parsed_item.price})"
+    
+    # Response
+    respond 200 {
+        status: "success",
+        memory: retrieved,
+        item: parsed_item,
+        inventory: items
+    }
+`;
+
+function initBuiltinDemoSandbox() {
+  const editor = document.querySelector('#sandbox-editor');
+  if (editor) {
+    const isBuiltinsPage = Boolean(document.getElementById('builtin-list'));
+    if (isBuiltinsPage && (!editor.dataset.initialized || editor.value.includes('name: "Skateboard Deck"') || editor.value.includes('name = Sandbox'))) {
+      editor.value = BUILTIN_DEMO_CODE;
+      editor.dataset.initialized = 'true';
+    }
+  }
+}
+
 // Auto-initialize when DOM is ready or component mounts
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', renderBuiltinCards);
-} else {
+function setupBuiltins() {
   renderBuiltinCards();
+  initBuiltinDemoSandbox();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupBuiltins);
+} else {
+  setupBuiltins();
 }
 
 // Observe page changes in Rune Web
 const observer = new MutationObserver((mutations) => {
   for (const m of mutations) {
-    if (document.getElementById('builtin-list') && !document.querySelector('.builtin-card')) {
-      renderBuiltinCards();
+    if (document.getElementById('builtin-list')) {
+      if (!document.querySelector('.builtin-card')) {
+        renderBuiltinCards();
+      }
+      initBuiltinDemoSandbox();
       break;
     }
   }

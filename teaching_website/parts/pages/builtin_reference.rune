@@ -28,4 +28,4 @@ view:
                     p .eyebrow "Playground"
                     h3 "Test Builtins In-Browser"
                     p "Select 'Load into Sandbox' on any builtin above, or write custom steps below to inspect output."
-                SandboxSection show_output=true code="{raw examples/builtin_reference_example.rune}"
+                SandboxSection show_output=true
