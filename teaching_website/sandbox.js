@@ -5,10 +5,8 @@ let serializeFn = null;
 
 function getEmulatorUrl() {
     const script = document.querySelector('script[src*="sandbox.js"]');
-    if (script && script.src) {
-        return new URL('rune-emulator.js', script.src).href;
-    }
-    return '/assets/rune-emulator.js';
+    const base = (script && script.src) ? new URL('rune-emulator.js', script.src).href : '/assets/rune-emulator.js';
+    return `${base}?t=${Date.now()}`;
 }
 
 async function loadEmulator() {

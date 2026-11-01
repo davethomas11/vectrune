@@ -10,5 +10,5 @@ view:
     div .site-shell:
         SidebarLayout
         script src=/assets/syntax-highlight.js
-        script src=/assets/sandbox.js
-        script src=/assets/builtin-reference.js
+        script src="/assets/sandbox.js?v=3"
+        script src="/assets/builtin-reference.js?v=3"
