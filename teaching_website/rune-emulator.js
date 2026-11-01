@@ -22,13 +22,13 @@ function tokenize(source) {
       tokens.push({ kind: "Blank", raw: rawLine, indent, line: lineNum });
       continue;
     }
+    if (COMMENT_RE.test(trimmed)) {
+      tokens.push({ kind: "Comment", raw: trimmed, indent, line: lineNum });
+      continue;
+    }
     if (indent === 0) {
       if (SHEBANG_RE.test(trimmed)) {
         tokens.push({ kind: "Shebang", raw: trimmed, indent: 0, line: lineNum });
-        continue;
-      }
-      if (COMMENT_RE.test(trimmed)) {
-        tokens.push({ kind: "Comment", raw: trimmed, indent: 0, line: lineNum });
         continue;
       }
       const importMatch = trimmed.match(IMPORT_RE);
@@ -119,8 +119,21 @@ function parseRunSteps(lines, baseIndent) {
     const assignMatch = text.match(/^(.+?)(?<![!<>=])=(?!=)(.*)$/);
     if (assignMatch && !text.match(/^.+?\.push\(/)) {
       const lhs = assignMatch[1].trim();
-      const rhs = assignMatch[2].trim();
+      let rhs = assignMatch[2].trim();
       if (/^[A-Za-z_][\w.\-[\]()]*$/.test(lhs) && !lhs.includes(" ")) {
+        // If rhs opens an object or array that isn't closed on this line, gather subsequent lines
+        const countBraces = (s) => (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
+        const countBrackets = (s) => (s.match(/\[/g) || []).length - (s.match(/\]/g) || []).length;
+        let braceBalance = countBraces(rhs);
+        let bracketBalance = countBrackets(rhs);
+        while (i < lines.length && (braceBalance > 0 || bracketBalance > 0)) {
+          const nextText = lines[i].text.trim();
+          rhs += " " + nextText;
+          braceBalance += countBraces(nextText);
+          bracketBalance += countBrackets(nextText);
+          i++;
+        }
+
         const rhsFirst = rhs.split(/\s+/)[0];
         if (BUILTIN_NAMES.has(rhsFirst)) {
           const builtinArgs = rhs.slice(rhsFirst.length).trim();
@@ -144,7 +157,18 @@ function parseRunSteps(lines, baseIndent) {
     }
     const firstToken = text.split(/\s+/)[0];
     if (BUILTIN_NAMES.has(firstToken)) {
-      const rest = text.slice(firstToken.length).trim();
+      let rest = text.slice(firstToken.length).trim();
+      const countBraces = (s) => (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
+      const countBrackets = (s) => (s.match(/\[/g) || []).length - (s.match(/\]/g) || []).length;
+      let braceBalance = countBraces(rest);
+      let bracketBalance = countBrackets(rest);
+      while (i < lines.length && (braceBalance > 0 || bracketBalance > 0)) {
+        const nextText = lines[i].text.trim();
+        rest += " " + nextText;
+        braceBalance += countBraces(nextText);
+        bracketBalance += countBrackets(nextText);
+        i++;
+      }
       const args = parseBuiltinArgs(rest);
       const step = { kind: "builtin", name: firstToken, args };
       steps.push(step);
@@ -160,16 +184,34 @@ function parseBuiltinArgs(raw) {
   let current = "";
   let inString = false;
   let stringChar = "";
+  let escaped = false;
+  let depth = 0;
   for (let i = 0; i < raw.length; i++) {
     const ch = raw[i];
     if (inString) {
-      current += ch;
-      if (ch === stringChar) inString = false;
+      if (escaped) {
+        current += ch;
+        escaped = false;
+      } else if (ch === "\\") {
+        current += ch;
+        escaped = true;
+      } else if (ch === stringChar) {
+        current += ch;
+        inString = false;
+      } else {
+        current += ch;
+      }
     } else if (ch === '"' || ch === "'") {
       inString = true;
       stringChar = ch;
       current += ch;
-    } else if (ch === " " || ch === "	") {
+    } else if (ch === "{" || ch === "[" || ch === "(") {
+      depth++;
+      current += ch;
+    } else if (ch === "}" || ch === "]" || ch === ")") {
+      if (depth > 0) depth--;
+      current += ch;
+    } else if ((ch === " " || ch === "\t") && depth === 0) {
       if (current) {
         args.push(current);
         current = "";
@@ -397,8 +439,12 @@ function valueToString(v) {
 }
 function normalizeLiteral(s) {
   const t = s.trim();
-  if (t.startsWith('"') && t.endsWith('"') || t.startsWith("'") && t.endsWith("'")) {
-    return t.slice(1, -1);
+  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+    try {
+      return JSON.parse(t);
+    } catch (_) {
+      return t.slice(1, -1).replace(/\\"/g, '"').replace(/\\'/g, "'").replace(/\\\\/g, "\\");
+    }
   }
   return t;
 }
@@ -407,12 +453,19 @@ function splitTopLevel(s, delim) {
   let depth = 0;
   let inStr = false;
   let strChar = "";
+  let escaped = false;
   let start = 0;
   const dLen = delim.length;
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
     if (inStr) {
-      if (ch === strChar) inStr = false;
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === strChar) {
+        inStr = false;
+      }
       continue;
     }
     if (ch === '"' || ch === "'") {
@@ -541,6 +594,35 @@ function resolveValue(expr, scope) {
   const path = resolvePath(expr, scope);
   if (path !== void 0) return path;
   return normalizeLiteral(expr);
+}
+function evaluateObjectLiteral(expr, scope, depth) {
+  const inner = expr.trim().slice(1, -1).trim();
+  if (!inner) return {};
+  const pairs = splitTopLevel(inner, ",");
+  const obj = {};
+  for (const pair of pairs) {
+    const trimmedPair = pair.trim();
+    if (!trimmedPair) continue;
+    const colonParts = splitTopLevel(trimmedPair, ":");
+    if (colonParts.length >= 2) {
+      const keyPart = colonParts[0].trim().replace(/^["']|["']$/g, "");
+      const valPart = colonParts.slice(1).join(":").trim();
+      obj[keyPart] = evaluateExpression(valPart, scope, depth + 1);
+    }
+  }
+  return obj;
+}
+function evaluateArrayLiteral(expr, scope, depth) {
+  const inner = expr.trim().slice(1, -1).trim();
+  if (!inner) return [];
+  const items = splitTopLevel(inner, ",");
+  const arr = [];
+  for (const item of items) {
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    arr.push(evaluateExpression(trimmed, scope, depth + 1));
+  }
+  return arr;
 }
 function evaluateExpression(expr, scope, depth = 0) {
   if (depth > MAX_DEPTH) return void 0;
@@ -700,6 +782,12 @@ function evaluateExpression(expr, scope, depth = 0) {
     const right = valueToString(evaluateExpression(tokens[3], scope, next));
     return current === left ? right : left;
   }
+  if (t.startsWith("{") && t.endsWith("}")) {
+    return evaluateObjectLiteral(t, scope, next);
+  }
+  if (t.startsWith("[") && t.endsWith("]")) {
+    return evaluateArrayLiteral(t, scope, next);
+  }
   return resolveValue(t, scope);
 }
 
@@ -799,7 +887,11 @@ function executeBuiltin(name, args, ctx, assignTarget) {
     try {
       parsed = JSON.parse(rawStr);
     } catch (_) {
-      parsed = rawStr;
+      try {
+        parsed = JSON.parse(rawStr.replace(/\\"/g, '"'));
+      } catch (__) {
+        parsed = rawStr;
+      }
     }
     if (assignTarget) {
       ctx.state[assignTarget] = parsed;
@@ -880,8 +972,8 @@ function executeBuiltin(name, args, ctx, assignTarget) {
     return void 0;
   }
   if (name === "is-set") {
-    const pathExpr = args.join(" ");
-    const val = evaluateExpression(pathExpr, scope);
+    const pathExpr = args.join(" ").trim();
+    const val = resolvePath(pathExpr, scope);
     const result = val !== void 0 && val !== null;
     if (assignTarget) ctx.state[assignTarget] = result;
     return result;
@@ -987,7 +1079,7 @@ function executeAssignment(step, ctx) {
   const firstToken = rhs.split(/\s+/)[0];
   if (isBuiltin(firstToken)) {
     const restStr = rhs.slice(firstToken.length).trim();
-    const args = restStr ? restStr.split(/\s+/) : [];
+    const args = parseBuiltinArgs(restStr);
     const result = executeBuiltin(firstToken, args, ctx, step.lhs);
     if (result === RESPONDED) return false;
     if (result !== void 0) {
@@ -1042,7 +1134,7 @@ function executeRawStep(text, ctx) {
   const firstToken = text.split(/\s+/)[0];
   if (isBuiltin(firstToken)) {
     const restStr = text.slice(firstToken.length).trim();
-    const args = restStr ? restStr.split(/\s+/) : [];
+    const args = parseBuiltinArgs(restStr);
     const result = executeBuiltin(firstToken, args, ctx);
     return result !== RESPONDED;
   }
