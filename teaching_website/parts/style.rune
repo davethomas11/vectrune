@@ -611,3 +611,186 @@ rules:
         padding = 2rem 3rem
         max-width = 1100px
 
+    .reference-shell:
+        margin-top = 1.5rem
+
+    .reference-controls:
+        background = {panel}
+        border = 1px solid {border}
+        border-radius = 12px
+        padding = 1.25rem
+        margin-bottom = 2rem
+        box-shadow = {shadow}
+
+    .search-input:
+        width = 100%
+        padding = 0.85rem 1.15rem
+        border = 1px solid {border}
+        border-radius = 8px
+        font-size = 1rem
+        font-family = inherit
+        background = #f8fafc
+        color = {text}
+        outline = none
+        transition = border-color 0.2s
+
+    .search-input:focus:
+        border-color = {brand}
+        background = #ffffff
+
+    .category-pills:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.5rem
+        margin-top = 1rem
+
+    .pill:
+        background = #f1f5f9
+        border = 1px solid #e2e8f0
+        padding = 0.4rem 0.85rem
+        border-radius = 20px
+        font-size = 0.82rem
+        font-weight = 600
+        color = {text-soft}
+        cursor = pointer
+        transition = all 0.2s
+
+    .pill:hover:
+        background = #e2e8f0
+        color = {text}
+
+    .pill.active:
+        background = {brand}
+        border-color = {brand}
+        color = #ffffff
+
+    .builtin-cards-grid:
+        display = grid
+        grid-template-columns = repeat(auto-fill, minmax(320px, 1fr))
+        gap = 1.25rem
+        margin-bottom = 3rem
+
+    .builtin-card:
+        background = {panel}
+        border = 1px solid {border}
+        border-radius = 12px
+        padding = 1.25rem
+        display = flex
+        flex-direction = column
+        justify-content = space-between
+        box-shadow = 0 4px 12px rgba(15, 23, 42, 0.04)
+        transition = transform 0.2s, box-shadow 0.2s
+
+    .builtin-card:hover:
+        transform = translateY(-2px)
+        box-shadow = {shadow}
+
+    .builtin-card-header:
+        display = flex
+        justify-content = space-between
+        align-items = center
+        margin-bottom = 0.75rem
+
+    .builtin-name:
+        margin = 0
+        font-size = 1.15rem
+        color = {brand}
+        font-family = monospace
+
+    .category-badge:
+        font-size = 0.72rem
+        font-weight = 700
+        text-transform = uppercase
+        padding = 0.2rem 0.55rem
+        border-radius = 4px
+        letter-spacing = 0.04em
+        background = #f1f5f9
+        color = #475569
+
+    .cat-diagnostics:
+        background = #fef3c7
+        color = #b45309
+
+    .cat-http:
+        background = #dbeafe
+        color = #1d4ed8
+
+    .cat-data:
+        background = #dcfce7
+        color = #15803d
+
+    .cat-schema:
+        background = #f3e8ff
+        color = #7e22ce
+
+    .cat-memory:
+        background = #e0e7ff
+        color = #4338ca
+
+    .cat-io:
+        background = #ffedd5
+        color = #c2410c
+
+    .cat-context:
+        background = #ccfbf1
+        color = #0f766e
+
+    .cat-websocket:
+        background = #fce7f3
+        color = #be185d
+
+    .builtin-summary:
+        font-size = 0.92rem
+        color = {text-soft}
+        margin = 0 0 1rem 0
+        line-height = 1.5
+
+    .builtin-syntax-box:
+        background = #0f172a
+        color = #38bdf8
+        padding = 0.6rem 0.85rem
+        border-radius = 6px
+        font-family = monospace
+        font-size = 0.82rem
+        margin-bottom = 1rem
+        overflow-x = auto
+        white-space = nowrap
+
+    .builtin-card-actions:
+        display = flex
+        justify-content = flex-end
+
+    .load-sandbox-btn:
+        background = #eff6ff
+        border = 1px solid #bfdbfe
+        color = {brand}
+        padding = 0.45rem 0.85rem
+        border-radius = 6px
+        font-size = 0.85rem
+        font-weight = 600
+        cursor = pointer
+        transition = all 0.2s
+
+    .load-sandbox-btn:hover:
+        background = {brand}
+        color = #ffffff
+        border-color = {brand}
+
+    .pulse-highlight:
+        animation = pulse-border 1.2s ease-in-out
+
+    .empty-results:
+        grid-column = 1 / -1
+        text-align = center
+        padding = 3rem
+        background = {panel}
+        border = 1px solid {border}
+        border-radius = 12px
+        color = {text-soft}
+
+    .interactive-reference-sandbox:
+        margin-top = 2rem
+        border-top = 2px dashed {border}
+        padding-top = 2.5rem
+
+

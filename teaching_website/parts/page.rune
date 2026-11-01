@@ -11,3 +11,4 @@ view:
         SidebarLayout
         script src=/assets/syntax-highlight.js
         script src=/assets/sandbox.js
+        script src=/assets/builtin-reference.js

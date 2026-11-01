@@ -19,6 +19,9 @@ view:
                     button .nav-link {.active when 'rest_post'} "POST Requests"
                     button .nav-link {.active when 'rest_validation'} "Validation"
                 div .nav-group:
+                    h3 "Reference"
+                    button .nav-link {.active when 'builtins'} "Builtin Library"
+                div .nav-group:
                     h3 "GraphQL"
                     button .nav-link {.active when 'graphql'} "Overview"
                 div .nav-group:
@@ -31,6 +34,7 @@ view:
             main .content-area:
                 match activePage:
                     "home"            -> HomeContent
+                    "builtins"        -> BuiltinReferencePage
                     "rest_get"        -> RestGetPage
                     "rest_post"       -> RestPostPage
                     "rest_validation" -> RestValidationPage

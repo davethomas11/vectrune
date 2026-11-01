@@ -1,0 +1,31 @@
+@Component/BuiltinReferencePage
+view:
+    div .page:
+        div .section-heading:
+            p .eyebrow "Standard Library"
+            h2 "Builtin Reference"
+            p .section-copy "Interactive guide to all Vectrune runtime builtins. Filter by category or search by name to inspect syntax, descriptions, and execute examples directly in your browser."
+
+        div .reference-shell:
+            div .reference-controls:
+                input #builtin-search .search-input placeholder="Filter builtins (e.g. log, csv, memory, validate)..." oninput="filterBuiltins()"
+                div .category-pills:
+                    button .pill .active onclick="selectCategory('all', this)" "All"
+                    button .pill onclick="selectCategory('diagnostics', this)" "Diagnostics"
+                    button .pill onclick="selectCategory('http', this)" "HTTP"
+                    button .pill onclick="selectCategory('data', this)" "Data & JSON"
+                    button .pill onclick="selectCategory('schema', this)" "Schema"
+                    button .pill onclick="selectCategory('memory', this)" "Memory"
+                    button .pill onclick="selectCategory('io', this)" "I/O & CSV"
+                    button .pill onclick="selectCategory('context', this)" "Context"
+                    button .pill onclick="selectCategory('websocket', this)" "WebSockets"
+
+            div #builtin-list .builtin-cards-grid:
+                # Builtin cards dynamically populated & filterable via builtin-reference.js
+
+            div .interactive-reference-sandbox:
+                div .section-heading:
+                    p .eyebrow "Playground"
+                    h3 "Test Builtins In-Browser"
+                    p "Select 'Load into Sandbox' on any builtin above, or write custom steps below to inspect output."
+                SandboxSection show_output=true code="{raw examples/builtin_reference_example.rune}"
