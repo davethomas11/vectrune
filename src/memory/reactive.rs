@@ -1,4 +1,4 @@
-﻿/// Reactive memory backend wrapper that broadcasts updates via WebSocket.
+/// Reactive memory backend wrapper that broadcasts updates via WebSocket.
 use crate::memory::MemoryBackend;
 use async_trait::async_trait;
 use serde_json::{json, Value as JsonValue};
@@ -72,9 +72,11 @@ impl MemoryBackend for ReactiveMemoryBackend {
         self.inner.clear().await;
     }
 }
+#[allow(dead_code)]
 pub fn make_reactive(backend: Arc<dyn MemoryBackend + Send + Sync>) -> Arc<ReactiveMemoryBackend> {
     Arc::new(ReactiveMemoryBackend::new(backend, ReactiveMemoryConfig::default()))
 }
+#[allow(dead_code)]
 pub fn make_reactive_with_config(backend: Arc<dyn MemoryBackend + Send + Sync>, config: ReactiveMemoryConfig) -> Arc<ReactiveMemoryBackend> {
     Arc::new(ReactiveMemoryBackend::new(backend, config))
 }

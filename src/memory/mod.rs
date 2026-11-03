@@ -7,17 +7,17 @@ pub mod hooks;
 pub mod hook_parser;
 pub mod hook_context;
 
-#[allow(dead_code)]
+#[allow(dead_code, unused_imports)]
 pub use reactive::{ReactiveMemoryBackend, ReactiveMemoryConfig, BroadcastMode};
-#[allow(dead_code)]
+#[allow(dead_code, unused_imports)]
 pub use hooks::{
     HookRegistry, HookConfig, MemorySignal, MemoryObserver,
     WebSocketObserver, WebhookObserver, SSEObserver, LocalObserver,
     ReactivityProvider, ReactivityConfig,
 };
-#[allow(dead_code)]
+#[allow(dead_code, unused_imports)]
 pub use hook_parser::{ParsedHook, parse_hooks_from_document, register_hooks};
-#[allow(dead_code)]
+#[allow(dead_code, unused_imports)]
 pub use hook_context::HookContextManager;
 
 #[async_trait]

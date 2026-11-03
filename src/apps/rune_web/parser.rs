@@ -761,17 +761,15 @@ fn extract_element_parts(
                         let base_dir = source_file
                             .and_then(|sf| std::path::Path::new(&sf).parent().map(|p| p.to_path_buf()))
                             .unwrap_or_else(|| std::path::Path::new(".").to_path_buf());
-                        let mut resolved_path = None;
-
-                        // Try exact relative path first
-                        let exact_path = base_dir.join(rel_path);
-                        if exact_path.exists() {
-                            resolved_path = Some(exact_path);
-                        } else {
-                            // Recursively search for the file by name
-                            let target_name = std::path::Path::new(rel_path).file_name().and_then(|n| n.to_str()).unwrap_or(rel_path);
-                            resolved_path = find_file_recursive(&base_dir, target_name);
-                        }
+                        let resolved_path = {
+                            let exact_path = base_dir.join(rel_path);
+                            if exact_path.exists() {
+                                Some(exact_path)
+                            } else {
+                                let target_name = std::path::Path::new(rel_path).file_name().and_then(|n| n.to_str()).unwrap_or(rel_path);
+                                find_file_recursive(&base_dir, target_name)
+                            }
+                        };
 
                         if let Some(p) = resolved_path {
                             if let Ok(content) = std::fs::read_to_string(&p) {
@@ -2015,15 +2013,15 @@ fn extract_indented_attributes(value: &Value) -> Result<(HashMap<String, String>
                                     let base_dir = source_file
                                         .and_then(|sf| std::path::Path::new(&sf).parent().map(|p| p.to_path_buf()))
                                         .unwrap_or_else(|| std::path::Path::new(".").to_path_buf());
-                                    let mut resolved_path = None;
-
-                                    let exact_path = base_dir.join(rel_path);
-                                    if exact_path.exists() {
-                                        resolved_path = Some(exact_path);
-                                    } else {
-                                        let target_name = std::path::Path::new(rel_path).file_name().and_then(|n| n.to_str()).unwrap_or(rel_path);
-                                        resolved_path = find_file_recursive(&base_dir, target_name);
-                                    }
+                                    let resolved_path = {
+                                        let exact_path = base_dir.join(rel_path);
+                                        if exact_path.exists() {
+                                            Some(exact_path)
+                                        } else {
+                                            let target_name = std::path::Path::new(rel_path).file_name().and_then(|n| n.to_str()).unwrap_or(rel_path);
+                                            find_file_recursive(&base_dir, target_name)
+                                        }
+                                    };
 
                                     if let Some(p) = resolved_path {
                                         if let Ok(content) = std::fs::read_to_string(&p) {

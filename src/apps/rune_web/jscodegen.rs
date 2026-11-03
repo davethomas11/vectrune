@@ -28,8 +28,6 @@ impl JsCodegen {
 
     /// Generate complete JavaScript application code.
     pub fn generate(&self) -> String {
-        let state_json = self.generate_state_json();
-        
         let mut normalized_derived = HashMap::new();
         for (name, def) in &self.logic.derived {
             let mut normalized_cases = Vec::new();

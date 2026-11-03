@@ -6,4 +6,4 @@ view:
             h2 "Declarative Reactive Frontend"
             p "Build client-side applications with reactive state, two-way bindings, and scoped styles in pure Vectrune."
             
-        SandboxSection show_output=true code="{raw examples/rune_web_example.rune}"
+        SandboxSection show_output=true

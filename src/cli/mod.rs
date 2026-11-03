@@ -21,6 +21,7 @@ pub use repl::handle_repl;
 pub use vect::handle_vect_file;
 pub use vectrune::handle_vectrune_file;
 pub use watch::start_file_watcher;
+#[allow(unused_imports)]
 pub use hooks_commands::cmd_hooks;
 
 pub fn handle_sam_generate(bundle_path: &str, output_path: &str) -> anyhow::Result<()> {
