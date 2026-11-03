@@ -112,6 +112,41 @@ const VECTRUNE_BUILTINS = [
     syntax: "doc = load-rune <file_or_dir_path>",
     summary: "Load and dynamically parse an external .rune document into an active data graph.",
     snippet: `@App\nname = LoadRune Demo\ntype = REST\n\n@Route/GET /\nrun:\n    data = load-rune skateboarders.rune\n    respond 200 data`
+  },
+  {
+    name: "to-number",
+    category: "data",
+    syntax: "num = to-number <string_or_variable>",
+    summary: "Coerce a string or boolean into a floating-point number.",
+    snippet: `@App\nname = ToNumber Demo\ntype = REST\n\n@Route/GET /\nrun:\n    raw_count = "42"\n    count = to-number raw_count\n    next_count = count + 1\n    respond 200 { parsed: count, next: next_count }`
+  },
+  {
+    name: "to-string",
+    category: "data",
+    syntax: "str = to-string <numeric_or_variable>",
+    summary: "Convert any value or expression into a string representation.",
+    snippet: `@App\nname = ToString Demo\ntype = REST\n\n@Route/GET /\nrun:\n    total = 100\n    str_val = to-string total\n    respond 200 { formatted: str_val }`
+  },
+  {
+    name: "to-bool",
+    category: "data",
+    syntax: "flag = to-bool <string_or_number_or_variable>",
+    summary: "Coerce truthy/falsy strings ('true', '1') or numbers into a boolean.",
+    snippet: `@App\nname = ToBool Demo\ntype = REST\n\n@Route/GET /\nrun:\n    flag_str = "true"\n    active = to-bool flag_str\n    respond 200 { is_active: active }`
+  },
+  {
+    name: "uuid.v4 / uuid",
+    category: "data",
+    syntax: "id = uuid.v4",
+    summary: "Generate a cryptographically random RFC 4122 version 4 UUID string.",
+    snippet: `@App\nname = UUID Demo\ntype = REST\n\n@Route/GET /new-id\nrun:\n    user_id = uuid.v4\n    log "Generated UUID: {user_id}"\n    respond 200 { id: user_id }`
+  },
+  {
+    name: "now",
+    category: "data",
+    syntax: "ts = now [\"iso\" | \"millis\" | \"unix\"]",
+    summary: "Retrieve current UTC timestamp in ISO-8601 string, millisecond integer, or Unix seconds.",
+    snippet: `@App\nname = Now Demo\ntype = REST\n\n@Route/GET /time\nrun:\n    iso_time = now\n    epoch_ms = now "millis"\n    respond 200 { iso: iso_time, millis: epoch_ms }`
   }
 ];
 

@@ -900,6 +900,12 @@ fn is_known_command_name(ctx: &Context, name: &str) -> bool {
             | "broadcast-websocket"
             | "return"
             | "#"
+            | "to-number"
+            | "to-string"
+            | "to-bool"
+            | "uuid.v4"
+            | "uuid"
+            | "now"
     ) {
         return true;
     }

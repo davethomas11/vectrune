@@ -90,7 +90,13 @@ var BUILTIN_NAMES = /* @__PURE__ */ new Set([
   "ws.send",
   "ws.broadcast",
   "broadcast-websocket",
-  "stop"
+  "stop",
+  "to-number",
+  "to-string",
+  "to-bool",
+  "uuid.v4",
+  "uuid",
+  "now"
 ]);
 function parseRunSteps(lines, baseIndent) {
   const steps = [];
@@ -1004,6 +1010,44 @@ function executeBuiltin(name, args, ctx, assignTarget) {
     if (assignTarget) ctx.state[assignTarget] = null;
     return null;
   }
+  if (name === "to-number") {
+    const raw = args.join(" ").trim();
+    const val = evaluateExpression(raw, scope);
+    const num = Number(val);
+    const result = isNaN(num) ? null : num;
+    if (assignTarget) ctx.state[assignTarget] = result;
+    return result;
+  }
+  if (name === "to-string") {
+    const raw = args.join(" ").trim();
+    const val = evaluateExpression(raw, scope);
+    const result = val !== null && val !== undefined ? String(val) : "";
+    if (assignTarget) ctx.state[assignTarget] = result;
+    return result;
+  }
+  if (name === "to-bool") {
+    const raw = args.join(" ").trim();
+    const val = evaluateExpression(raw, scope);
+    const result = typeof val === "string" ? (val.toLowerCase() === "true" || val === "1") : Boolean(val);
+    if (assignTarget) ctx.state[assignTarget] = result;
+    return result;
+  }
+  if (name === "uuid.v4" || name === "uuid") {
+    const result = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === "x" ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+    if (assignTarget) ctx.state[assignTarget] = result;
+    return result;
+  }
+  if (name === "now") {
+    const fmt = (args[0] ?? "").replace(/["']/g, "").toLowerCase();
+    const now = new Date();
+    const result = fmt === "millis" ? now.getTime() : fmt === "unix" || fmt === "seconds" ? Math.floor(now.getTime() / 1000) : now.toISOString();
+    if (assignTarget) ctx.state[assignTarget] = result;
+    return result;
+  }
   ctx.logs.push(`[emulator] Unknown builtin: ${name}`);
   return void 0;
 }
@@ -1031,7 +1075,13 @@ var KNOWN_BUILTINS = /* @__PURE__ */ new Set([
   "load-rune",
   "is-set",
   "delete",
-  "stop"
+  "stop",
+  "to-number",
+  "to-string",
+  "to-bool",
+  "uuid.v4",
+  "uuid",
+  "now"
 ]);
 function isBuiltin(name) {
   return KNOWN_BUILTINS.has(name);

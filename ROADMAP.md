@@ -16,7 +16,13 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
 4. **Commit & Deploy**:
    - Commit with a clear conventional commit message (e.g. `feat(...)` or `fix(...)`).
    - Push to `main` (which automatically triggers the GitHub Pages deploy workflow).
-5. **Status Update**: Mark the task as `[x]` with the commit hash and date, then log a concise summary.
+5. **Binary Releases**:
+   - Whenever changes modify the core binary or runtime (`src/`, `Cargo.toml`):
+     - Bump the version in `Cargo.toml` (e.g. `0.2.6`).
+     - Create an annotated git tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z: <summary>"`.
+     - Push the tag: `git push origin vX.Y.Z`.
+     - This triggers `.github/workflows/release.yml`, building binaries across 7 OS/architecture targets and publishing a new GitHub Release.
+6. **Status Update**: Mark the task as `[x]` with the commit hash and date, then log a concise summary.
 
 **Task Status Legend**:
 - `[ ]` Open (Ready to be picked up)
@@ -105,9 +111,9 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
         "banned"  -> respond 403 "Access denied"
         _         -> respond 400 "Invalid status"
     ```
-- [ ] **Type Coercion Builtins**:
-  - Add explicit casting functions: `to-number(val)`, `to-bool(val)`, `to-string(val)`.
-  - Simplifies handling of path parameters (`/users/{id}`) and query strings in arithmetic/comparison expressions.
+- [x] **Type Coercion Builtins**:
+  - Added explicit casting builtins: `to-number(val)`, `to-bool(val)`, and `to-string(val)` across Rust runtime and browser emulator.
+  - Enabled direct coercion of path parameters, query strings, and booleans in expression pipelines. *(Release: `v0.2.6` - 2026-11-02)*
 
 ---
 
@@ -119,12 +125,12 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
 - [ ] **Embedded SQLite Data Source (`sqlite`)**:
   - Add embedded SQLite query support (`sqlite.query <sql>`, `sqlite.exec <sql>`) alongside existing MySQL and Postgres connectors.
   - Enables instant, file-backed local persistence without running external database containers.
-- [ ] **Crypto, Hashing & UUID Builtins**:
-  - Add `uuid.v4` for idempotent primary key generation.
-  - Add `hash.sha256 <data>` and password hashing helpers (`bcrypt.hash <pwd>`, `bcrypt.verify <pwd> <hash>`).
-- [ ] **DateTime & Timestamp Utilities**:
-  - Add `now()` returning ISO-8601 UTC timestamp or Unix milliseconds.
-  - Add `date.format <ts> <fmt>` and `date.add <ts> <duration>` for session expiration and audit logging.
+- [ ] **Crypto & Hashing Builtins**:
+  - [x] Added `uuid.v4` / `uuid` generating cryptographically random RFC 4122 v4 UUIDs across Rust runtime and emulator. *(Release: `v0.2.6` - 2026-11-02)*
+  - [ ] Add `hash.sha256 <data>` and password hashing helpers (`bcrypt.hash <pwd>`, `bcrypt.verify <pwd> <hash>`).
+- [x] **DateTime & Timestamp Utilities (`now`)**:
+  - Added `now` builtin supporting ISO-8601 UTC strings, Unix seconds (`now "unix"`), and millisecond epochs (`now "millis"`). *(Release: `v0.2.6` - 2026-11-02)*
+  - [ ] Add `date.format <ts> <fmt>` and `date.add <ts> <duration>` for custom formatting.
 
 ---
 

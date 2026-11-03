@@ -24,10 +24,14 @@ pub mod builtin {
     pub mod function;
     #[cfg(not(target_arch = "wasm32"))]
     pub mod ws;
+    pub mod coercion;
 }
 pub mod path_utils;
 
 use crate::builtins::builtin::commands::builtin_append;
+use crate::builtins::builtin::coercion::{
+    builtin_now, builtin_to_bool, builtin_to_number, builtin_to_string, builtin_uuid_v4,
+};
 use crate::builtins::builtin::memory::{builtin_clear_memory, builtin_del_memory, builtin_get_memory, builtin_set_memory};
 use crate::core::AppState;
 use crate::util::{json_to_xml, log, LogLevel};
@@ -65,7 +69,8 @@ pub fn is_builtin(name: &str) -> bool {
         "csv.append", "json.read", "load-rune", "set-memory",
         "memory.set", "get-memory", "memory.get", "clear-memory", "memory.clear",
         "del-memory", "memory.del", "append", "memory.append", "delete", "is-set",
-        "return", "#"
+        "return", "#",
+        "to-number", "to-string", "to-bool", "uuid.v4", "uuid", "now"
     ];
 
     core_builtins.contains(&name) || ws_builtins.contains(&name) || db_builtins.contains(&name)
@@ -460,6 +465,11 @@ pub async fn call_builtin(
         "append" | "memory.append" => builtin_append(args, assign_to, ctx).await,
         "delete" => builtin_delete(args, ctx),
         "is-set" => builtin_is_set(args, ctx, assign_to),
+        "to-number" => builtin_to_number(args, assign_to, ctx),
+        "to-string" => builtin_to_string(args, assign_to, ctx),
+        "to-bool" => builtin_to_bool(args, assign_to, ctx),
+        "uuid.v4" | "uuid" => builtin_uuid_v4(args, assign_to, ctx),
+        "now" => builtin_now(args, assign_to, ctx),
         #[cfg(not(target_arch = "wasm32"))]
         "ws.id" => builtin_ws_id(ctx, assign_to).await,
         #[cfg(not(target_arch = "wasm32"))]

@@ -205,6 +205,78 @@ fn execute_stmt<R: BufRead, W: Write>(
                     ctx.remove(&args[0]);
                     Ok(ControlFlow::Continue)
                 }
+                "to-number" => {
+                    let target_var = assign_to.as_deref().unwrap_or("___result___");
+                    let num = if let Some(arg) = args.first() {
+                        if let Some(v) = ctx.get(arg) {
+                            match v {
+                                JsonValue::Number(n) => Some(n.clone()),
+                                JsonValue::String(s) => s.trim().parse::<f64>().ok().and_then(serde_json::Number::from_f64),
+                                JsonValue::Bool(b) => Some((if *b { 1 } else { 0 }).into()),
+                                _ => None,
+                            }
+                        } else {
+                            arg.trim().parse::<f64>().ok().and_then(serde_json::Number::from_f64)
+                        }
+                    } else {
+                        None
+                    };
+                    ctx.insert(target_var.to_string(), num.map(JsonValue::Number).unwrap_or(JsonValue::Null));
+                    Ok(ControlFlow::Continue)
+                }
+                "to-string" => {
+                    let target_var = assign_to.as_deref().unwrap_or("___result___");
+                    let s = if let Some(arg) = args.first() {
+                        if let Some(v) = ctx.get(arg) {
+                            match v {
+                                JsonValue::String(s) => s.clone(),
+                                other => other.to_string(),
+                            }
+                        } else {
+                            arg.trim_matches('"').to_string()
+                        }
+                    } else {
+                        String::new()
+                    };
+                    ctx.insert(target_var.to_string(), JsonValue::String(s));
+                    Ok(ControlFlow::Continue)
+                }
+                "to-bool" => {
+                    let target_var = assign_to.as_deref().unwrap_or("___result___");
+                    let b = if let Some(arg) = args.first() {
+                        if let Some(v) = ctx.get(arg) {
+                            match v {
+                                JsonValue::Bool(b) => *b,
+                                JsonValue::Number(n) => n.as_f64().map_or(false, |num| num != 0.0),
+                                JsonValue::String(s) => s.eq_ignore_ascii_case("true") || s == "1",
+                                _ => false,
+                            }
+                        } else {
+                            arg.eq_ignore_ascii_case("true") || arg == "1"
+                        }
+                    } else {
+                        false
+                    };
+                    ctx.insert(target_var.to_string(), JsonValue::Bool(b));
+                    Ok(ControlFlow::Continue)
+                }
+                "uuid.v4" | "uuid" => {
+                    let target_var = assign_to.as_deref().unwrap_or("___result___");
+                    let new_uuid = uuid::Uuid::new_v4().to_string();
+                    ctx.insert(target_var.to_string(), JsonValue::String(new_uuid));
+                    Ok(ControlFlow::Continue)
+                }
+                "now" => {
+                    let target_var = assign_to.as_deref().unwrap_or("___result___");
+                    let format = args.first().map(|s| s.trim_matches('"').to_lowercase());
+                    let result = match format.as_deref() {
+                        Some("millis") => JsonValue::Number(chrono::Utc::now().timestamp_millis().into()),
+                        Some("unix") | Some("seconds") => JsonValue::Number(chrono::Utc::now().timestamp().into()),
+                        _ => JsonValue::String(chrono::Utc::now().to_rfc3339()),
+                    };
+                    ctx.insert(target_var.to_string(), result);
+                    Ok(ControlFlow::Continue)
+                }
                 other => {
                     bail!("builtin `{}` not yet implemented in .vect standalone execution", other)
                 }
