@@ -30,7 +30,7 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
 ### Track 1: Teaching Site & Interactive Learning ([vectrune.com](https://vectrune.com))
 
 - [x] **Fix Builtin Demo Sandbox Corrupted Syntax**: Resolved Rune-Web template interpolation stripping curly braces and quotes from `{raw ...}` imports; fixed emulator multi-line objects, comment tokenization, and schema validation. *(Commit: `b8875d9` - 2026-11-01)*
-- [ ] **Fix Subpage Code Snippet Loading**: Update `rest_api_get.rune`, `rest_api_post.rune`, `rest_api_validation.rune`, `graphql_overview.rune`, `websocket_overview.rune`, and `rune_web_overview.rune` to inject untampered code snippets into `#sandbox-editor` via JS instead of `code="{raw ...}"` to prevent brace stripping.
+- [x] **Fix Subpage Code Snippet Loading**: Updated `rest_api_get.rune`, `rest_api_post.rune`, `rest_api_validation.rune`, `graphql_overview.rune`, `websocket_overview.rune`, and `rune_web_overview.rune` to inject canonical, untampered code snippets into `#sandbox-editor` via JS page detection; added reactive mock runners for REST, GraphQL, WebSocket, and Rune-Web components. *(Commit: `ca2df80` - 2026-11-02)*
 - [ ] **Enrich REST Tutorial Pages**:
   - Add request payload walkthrough cards for `POST /products` and `POST /users`.
   - Add interactive schema validation breakdown on the Validation page.
@@ -63,10 +63,11 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
 
 ### Track 3: Core Compiler & Runtime Engine (Rust)
 
-- [ ] **Clean Up Compiler Warnings**:
-  - Fix unused assignments for `resolved_path` in `src/apps/rune_web/parser.rs`.
-  - Fix unused `state_json` in `src/apps/rune_web/jscodegen.rs`.
-  - Remove unused imports in `src/cli/mod.rs` and `src/memory/mod.rs`.
+- [x] **Clean Up Compiler Warnings**:
+  - Eliminated unused assignment warnings in `src/apps/rune_web/parser.rs`.
+  - Removed unused `state_json` in `src/apps/rune_web/jscodegen.rs`.
+  - Cleaned up unused imports and dead code annotations in `src/cli/mod.rs`, `src/memory/mod.rs`, and `src/memory/reactive.rs`.
+  - Verified `cargo check --offline` passes with zero warnings. *(Commit: `ca2df80` - 2026-11-02)*
 - [ ] **Compiler Syntax Diagnostics**:
   - Improve error reporting when a `.rune` file has unclosed strings, unbalanced braces, or missing section headers.
 - [ ] **Knowledge Export Refresh**:
