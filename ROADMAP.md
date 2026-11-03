@@ -85,3 +85,69 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
   - Add a concise header comment in each example explaining what concept it demonstrates.
 - [ ] **Editor Tooling Documentation**:
   - Document installation and configuration for the VS Code extension (`rune-vscode/`) and IntelliJ plugin (`intellij_plugin/`).
+
+---
+
+### Track 5: Language Expressiveness & Ergonomics
+
+- [ ] **First-Class Reusable Actions (`@Action`)**:
+  - Introduce `@Action/<name>` blocks with declared `params: [...]` and executable `run:` step sequences.
+  - Allow route handlers and components to invoke actions (e.g. `result = run calcDiscount(cart, coupon)`) to eliminate duplicated logic.
+- [ ] **Precondition Guard Syntax (`guard`)**:
+  - Add `guard <condition> else <action>` statement to `run:` blocks (e.g. `guard user != null else respond 401 "Unauthorized"`).
+  - Eliminates deeply nested `if` statements for early-exit validation and authentication checks.
+- [ ] **Pattern Matching in Route Logic (`match`)**:
+  - Extend pattern matching (already implemented in Rune-Web views) into backend `run:` steps:
+    ```rune
+    match status:
+        "active"  -> respond 200 "Account in good standing"
+        "pending" -> respond 202 "Verification required"
+        "banned"  -> respond 403 "Access denied"
+        _         -> respond 400 "Invalid status"
+    ```
+- [ ] **Type Coercion Builtins**:
+  - Add explicit casting functions: `to-number(val)`, `to-bool(val)`, `to-string(val)`.
+  - Simplifies handling of path parameters (`/users/{id}`) and query strings in arithmetic/comparison expressions.
+
+---
+
+### Track 6: Standard Library Builtins
+
+- [ ] **Native Outbound HTTP Client (`http.get` / `http.post`)**:
+  - Add builtins for outbound HTTP requests: `res = http.get <url>` and `res = http.post <url> <body> [headers]`.
+  - Enables microservice communication, external webhooks (Stripe, GitHub), and LLM/AI model API calls directly from `.rune` routes.
+- [ ] **Embedded SQLite Data Source (`sqlite`)**:
+  - Add embedded SQLite query support (`sqlite.query <sql>`, `sqlite.exec <sql>`) alongside existing MySQL and Postgres connectors.
+  - Enables instant, file-backed local persistence without running external database containers.
+- [ ] **Crypto, Hashing & UUID Builtins**:
+  - Add `uuid.v4` for idempotent primary key generation.
+  - Add `hash.sha256 <data>` and password hashing helpers (`bcrypt.hash <pwd>`, `bcrypt.verify <pwd> <hash>`).
+- [ ] **DateTime & Timestamp Utilities**:
+  - Add `now()` returning ISO-8601 UTC timestamp or Unix milliseconds.
+  - Add `date.format <ts> <fmt>` and `date.add <ts> <duration>` for session expiration and audit logging.
+
+---
+
+### Track 7: Developer Tooling & Testing ("Complete Tool" Layer)
+
+- [ ] **Native In-Language Test Runner (`@Test` & `vectrune test`)**:
+  - Introduce `@Test/<name>` sections directly in `.rune` files:
+    ```rune
+    @Test/UserCreation
+    run:
+        req = { method: "POST", path: "/users", body: { name: "Alice", role: "admin" } }
+        res = test-request req
+        assert res.status == 201
+        assert res.body.id == 42
+    ```
+  - Implement CLI command `vectrune test` to auto-discover, execute, and report test assertions with exit codes for CI.
+- [ ] **Canonical Formatter & Linter (`vectrune fmt` & `vectrune check`)**:
+  - `vectrune fmt`: Formats indentation, key-value spacing, and section headers to standard style.
+  - `vectrune check`: Statically validates schemas, routes, props, and missing imports without launching the server.
+- [ ] **Language Server Protocol (`vectrune lsp`)**:
+  - Implement a lightweight LSP server in Rust providing real-time diagnostics, hover documentation for builtins, and syntax completion for VS Code, Neovim, and Zed.
+- [ ] **Project Scaffolder (`vectrune new`)**:
+  - Implement `vectrune new <project-name> --template <rest|graphql|fullstack>` to generate starter files, schemas, tests, and configuration.
+- [ ] **Shareable Playgrounds & Multi-File Tabs in Browser Emulator**:
+  - Add URL hash encoding or GitHub Gist export to the browser sandbox for sharing runnable snippets.
+  - Add multi-file tabs (`app.rune`, `schemas.rune`, `data.csv`) to test multi-file imports (`import "..."`) in-browser.
