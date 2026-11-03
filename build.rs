@@ -1,5 +1,13 @@
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
+
+fn run_npm(dir: &Path, args: &[&str]) -> std::io::Result<std::process::ExitStatus> {
+    if cfg!(target_os = "windows") {
+        Command::new("cmd").arg("/C").arg("npm").args(args).current_dir(dir).status()
+    } else {
+        Command::new("npm").args(args).current_dir(dir).status()
+    }
+}
 
 fn main() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -13,11 +21,7 @@ fn main() {
     if runtime_dir.exists() {
         // Run npm install if node_modules is missing
         if !runtime_dir.join("node_modules").exists() {
-            let status = Command::new("cmd")
-                .args(&["/C", "npm", "install"])
-                .current_dir(&runtime_dir)
-                .status();
-            
+            let status = run_npm(&runtime_dir, &["install"]);
             if let Ok(status) = status {
                 if !status.success() {
                     println!("cargo:warning=Failed to run npm install in rune-web runtime");
@@ -26,11 +30,7 @@ fn main() {
         }
 
         // Run npm run build
-        let status = Command::new("cmd")
-            .args(&["/C", "npm", "run", "build"])
-            .current_dir(&runtime_dir)
-            .status();
-
+        let status = run_npm(&runtime_dir, &["run", "build"]);
         match status {
             Ok(status) => {
                 if !status.success() {
