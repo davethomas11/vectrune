@@ -155,6 +155,7 @@ WhatsNext {
     intent_text = "Le bac à sable utilise un émulateur JavaScript pour REST, les documents et GraphQL. Les aperçus Rune-Web sont compilés depuis les exemples du dépôt. Utilisez le CLI natif pour les serveurs et le système de fichiers."
 }
 Sandbox {
+    dynamic_ai_native = "Les sites IA dynamiques nécessitent le serveur natif et un moteur IA. Lancez cargo run -- examples/dynamic_ai_web.rune pour essayer le café."
     edit_hint = "Modifiez le code, puis appuyez sur Exécuter pour appliquer les modifications."
     run = "Exécuter"
     run_changes = "Appliquer les modifications"
@@ -383,4 +384,19 @@ BuiltinSummary {
     to_bool = "Convertit une valeur en booléen."
     uuid_v4 = "Génère un UUID aléatoire de version 4."
     now = "Obtient l’heure UTC actuelle."
+}
+
+DynamicAi {
+    nav = "Sites IA dynamiques"
+    eyebrow = "Type d’application expérimental"
+    title = "Sites IA dynamiques"
+    intro = "Décrivez un site en Rune et laissez un moteur IA générer ses pages HTML et API JSON. Utilisez Ollama en local ou une CLI Codex ou Copilot authentifiée."
+    syntax_1 = "@App type = dynamic-ai-web sélectionne le serveur IA. engine choisit ollama, codex ou copilot ; model sélectionne un modèle compatible."
+    syntax_2 = "@Site et @Content décrivent le site et @Data fournit les données de référence. @Page décrit une page HTML complète générée sur son chemin."
+    syntax_3 = "@Route/METHOD /chemin décrit une réponse JSON plutôt qu’un bloc run:. Le moteur reçoit les paramètres de chemin, la requête et le corps JSON avec les données publiques du site."
+    native_title = "Exécuter avec le CLI natif"
+    native_body = "Les sites IA dynamiques nécessitent un serveur et le moteur choisi. L’hébergement statique et le bac à sable du navigateur n’exécutent pas les fournisseurs IA. Les points de terminaison génèrent des données ; la persistance et les transactions nécessitent une logique distincte."
+    engines_title = "Choisissez le moteur"
+    engines_body = "Ollama utilise son API locale et phi4 par défaut. Codex et Copilot utilisent leurs CLI authentifiées dans des espaces temporaires avec des contrôles de génération. En changeant de moteur, retirez model = phi4 ou choisissez un modèle compatible."
+    behavior = "Les pages sont brièvement mises en cache ; les API sont générées à chaque requête. Configurez cache_seconds, timeout_seconds et max_concurrent dans @App. Un HTML ou JSON invalide produit une erreur. Le contenu varie selon le modèle."
 }

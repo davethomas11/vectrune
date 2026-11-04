@@ -339,6 +339,35 @@
       ],
       "status": "recommended",
       "notes": null
+    },
+    {
+      "id": "example.ai.dynamic-cafe",
+      "title": "Dynamic AI Cafe",
+      "summary": "Generate HTML pages and JSON APIs from descriptive Rune sections and menu records.",
+      "source_path": "examples/dynamic_ai_web.rune",
+      "companion_files": null,
+      "app_type": "dynamic-ai-web",
+      "concepts": [
+        "descriptive websites",
+        "AI-generated HTML",
+        "AI-backed JSON endpoints",
+        "Ollama and CLI providers"
+      ],
+      "builtins": [],
+      "runtime_context": [],
+      "cli_workflows": [
+        "vectrune examples/dynamic_ai_web.rune --watch"
+      ],
+      "test_refs": [
+        "tests/dynamic_ai_web.rs",
+        "tests/dynamic_ai_cli.rs"
+      ],
+      "related_knowledge": [
+        "language.dynamic-ai-web",
+        "language.core"
+      ],
+      "status": "experimental",
+      "notes": null
     }
   ]
 }

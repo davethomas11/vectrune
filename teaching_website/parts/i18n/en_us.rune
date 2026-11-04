@@ -155,6 +155,7 @@ WhatsNext {
     intent_text = "The browser sandbox runs a JavaScript emulator for REST, data documents, and GraphQL. Rune-Web previews are compiled from the repository examples. Use the native CLI for server and filesystem behavior."
 }
 Sandbox {
+    dynamic_ai_native = "Dynamic AI sites need the native server and an AI engine. Run cargo run -- examples/dynamic_ai_web.rune to try the cafe."
     edit_hint = "Edit the source, then press Run to apply your changes."
     run = "Run"
     run_changes = "Run changes"
@@ -383,4 +384,19 @@ BuiltinSummary {
     to_bool = "Convert a value to a boolean."
     uuid_v4 = "Generate a random version 4 UUID."
     now = "Get the current UTC time."
+}
+
+DynamicAi {
+    nav = "Dynamic AI sites"
+    eyebrow = "Experimental application type"
+    title = "Dynamic AI sites"
+    intro = "Describe a website in Rune and let an AI engine generate its HTML pages and JSON APIs. Use Ollama locally, or a signed-in Codex or Copilot CLI."
+    syntax_1 = "@App type = dynamic-ai-web selects the AI server. engine chooses ollama, codex, or copilot; model selects a compatible model."
+    syntax_2 = "@Site and @Content describe the site, while @Data supplies grounding records. @Page describes a complete generated HTML page at its path."
+    syntax_3 = "@Route/METHOD /path describes a JSON response rather than a run: block. The engine receives path parameters, query and JSON body alongside the public site data."
+    native_title = "Run with the native CLI"
+    native_body = "Dynamic AI sites need a running server and the selected engine. Static hosting and the teaching browser sandbox do not run AI providers. Generated endpoints return data; persistence and transactions require separate application logic."
+    engines_title = "Choose your engine"
+    engines_body = "Ollama uses its local generation API and defaults to phi4. Codex and Copilot use their authenticated CLIs in temporary workspaces with generation-only controls. When changing engines, remove model = phi4 or choose a model supported by that engine."
+    behavior = "Pages are cached briefly; APIs are generated on each request. Configure cache_seconds, timeout_seconds and max_concurrent in @App. Invalid generated HTML or JSON returns an error. AI content varies by model."
 }
