@@ -93,6 +93,7 @@ Start with one of these depending on what you want to learn first:
 - `examples/skateboarders.rune` — simplest structured data document
 - `examples/user_api.rune` — REST API with schemas, validation, and CRUD-style routes
 - `examples/book_graphql.rune` — GraphQL example with memory-backed state
+- `examples/dynamic_ai_web_codex.rune` and `examples/dynamic_ai_web_copilot.rune` — ready-to-run AI cafe demos for authenticated CLIs
 - `examples/dynamic_ai_web.rune` — [descriptive AI sites](knowledge/language/dynamic-ai-web.md) with Ollama, Codex CLI, or Copilot CLI
 - `examples/sales_report.rune` — one-line grouped CSV reports with [`summarize`](knowledge/language/summarize.md)
 - `examples/tic_tac_toe/` — multi-file Rune-Web example with UI, logic, and style parts

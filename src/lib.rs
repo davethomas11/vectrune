@@ -1,4 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
+pub mod cache;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod apps;
 pub mod builtins;
 #[cfg(not(target_arch = "wasm32"))]

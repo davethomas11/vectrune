@@ -61,7 +61,11 @@ pages:
       - human
     sources:
       - src/apps/dynamic_ai_web/
+      - src/apps/dynamic_ai_web/generations.rs
+      - src/cache.rs
       - examples/dynamic_ai_web.rune
+      - examples/dynamic_ai_web_codex.rune
+      - examples/dynamic_ai_web_copilot.rune
       - tests/dynamic_ai_web.rs
       - tests/dynamic_ai_cli.rs
   - id: language.rune-web-architecture

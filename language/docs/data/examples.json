@@ -368,6 +368,60 @@
       ],
       "status": "experimental",
       "notes": null
+    },
+    {
+      "id": "example.ai.dynamic-cafe-codex",
+      "title": "Dynamic AI Cafe (Codex CLI)",
+      "summary": "Generate a cafe and recommendation API using an authenticated Codex CLI.",
+      "source_path": "examples/dynamic_ai_web_codex.rune",
+      "companion_files": null,
+      "app_type": "dynamic-ai-web",
+      "concepts": [
+        "descriptive websites",
+        "AI-backed JSON endpoints",
+        "Codex CLI provider"
+      ],
+      "builtins": [],
+      "runtime_context": [],
+      "cli_workflows": [
+        "vectrune examples/dynamic_ai_web_codex.rune --watch"
+      ],
+      "test_refs": [
+        "tests/dynamic_ai_web.rs",
+        "tests/dynamic_ai_cli.rs"
+      ],
+      "related_knowledge": [
+        "language.dynamic-ai-web"
+      ],
+      "status": "experimental",
+      "notes": null
+    },
+    {
+      "id": "example.ai.dynamic-cafe-copilot",
+      "title": "Dynamic AI Cafe (Copilot CLI)",
+      "summary": "Generate a cafe and recommendation API using an authenticated Copilot CLI.",
+      "source_path": "examples/dynamic_ai_web_copilot.rune",
+      "companion_files": null,
+      "app_type": "dynamic-ai-web",
+      "concepts": [
+        "descriptive websites",
+        "AI-backed JSON endpoints",
+        "Copilot CLI provider"
+      ],
+      "builtins": [],
+      "runtime_context": [],
+      "cli_workflows": [
+        "vectrune examples/dynamic_ai_web_copilot.rune --watch"
+      ],
+      "test_refs": [
+        "tests/dynamic_ai_web.rs",
+        "tests/dynamic_ai_cli.rs"
+      ],
+      "related_knowledge": [
+        "language.dynamic-ai-web"
+      ],
+      "status": "experimental",
+      "notes": null
     }
   ]
 }

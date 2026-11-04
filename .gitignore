@@ -46,3 +46,6 @@ testdata/
 
 # AI Scratch Scripts
 .scratch/
+
+# Local runtime generations
+.vectrune/
