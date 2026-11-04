@@ -1,0 +1,74 @@
+@Component/DocumentSyntaxPage
+view:
+    div .page .document-syntax-page:
+        section .card:
+            div .section-heading:
+                p .eyebrow "%i18n.DocumentSyntax.eyebrow%"
+                h2 "%i18n.DocumentSyntax.title%"
+                p .lead "%i18n.DocumentSyntax.intro%"
+            nav .document-toc aria-label="%i18n.DocumentSyntax.contents%":
+                a .secondary-cta href=#document-sections "%i18n.DocumentSyntax.sections_title%"
+                a .secondary-cta href=#document-values "%i18n.DocumentSyntax.values_title%"
+                a .secondary-cta href=#document-records "%i18n.DocumentSyntax.records_title%"
+                a .secondary-cta href=#document-series "%i18n.DocumentSyntax.series_title%"
+                a .secondary-cta href=#document-objects "%i18n.DocumentSyntax.objects_title%"
+                a .secondary-cta href=#document-playground "%i18n.DocumentSyntax.try_title%"
+        section #document-sections .card:
+            h3 "%i18n.DocumentSyntax.sections_title%"
+            p "%i18n.DocumentSyntax.sections_body%"
+            DocumentSyntaxSample source="{raw ../../content/document-syntax/sections.rune}" output="{raw ../../content/document-syntax/sections.json}"
+            p .document-note "%i18n.DocumentSyntax.sections_note%"
+        section #document-values .card:
+            h3 "%i18n.DocumentSyntax.values_title%"
+            p "%i18n.DocumentSyntax.values_body%"
+            DocumentSyntaxSample source="{raw ../../content/document-syntax/key-values.rune}" output="{raw ../../content/document-syntax/key-values.json}"
+            p .document-note "%i18n.DocumentSyntax.values_note%"
+        section #document-records .card:
+            h3 "%i18n.DocumentSyntax.records_title%"
+            p "%i18n.DocumentSyntax.records_body%"
+            DocumentSyntaxSample source="{raw ../../content/document-syntax/records.rune}" output="{raw ../../content/document-syntax/records.json}"
+            p .document-note "%i18n.DocumentSyntax.records_note%"
+        section #document-series .card:
+            h3 "%i18n.DocumentSyntax.series_title%"
+            p "%i18n.DocumentSyntax.series_body%"
+            DocumentSyntaxSample source="{raw ../../content/document-syntax/series.rune}" output="{raw ../../content/document-syntax/series.json}"
+            p .document-note "%i18n.DocumentSyntax.series_note%"
+        section #document-objects .card:
+            h3 "%i18n.DocumentSyntax.objects_title%"
+            p "%i18n.DocumentSyntax.objects_body%"
+            DocumentSyntaxSample source="{raw ../../content/document-syntax/objects.rune}" output="{raw ../../content/document-syntax/objects.json}"
+            p .document-note "%i18n.DocumentSyntax.objects_note%"
+        section .card:
+            h3 "%i18n.DocumentSyntax.rules_title%"
+            ul .document-rules:
+                li "%i18n.DocumentSyntax.rule_sections%"
+                li "%i18n.DocumentSyntax.rule_comments%"
+                li "%i18n.DocumentSyntax.rule_indent%"
+                li "%i18n.DocumentSyntax.rule_records%"
+            div .callout .callout-info:
+                strong "%i18n.DocumentSyntax.data_title%"
+                p "%i18n.DocumentSyntax.data_body%"
+        section #document-playground .card:
+            h3 "%i18n.DocumentSyntax.try_title%"
+            p "%i18n.DocumentSyntax.try_body%"
+            p .document-note "%i18n.DocumentSyntax.try_formats%"
+        SandboxSection code="{raw ../../content/document-syntax/playground.rune}" show_output=true mode=data
+        section .card:
+            h3 "%i18n.DocumentSyntax.export_title%"
+            p "%i18n.DocumentSyntax.export_body%"
+            pre:
+                code .code-block .language-bash "vectrune notes.rune -o json\nvectrune notes.rune -o yaml\nvectrune notes.rune -o xml"
+            a .content-link href=#app click="openExample('skaters')" "%i18n.DocumentSyntax.next_link%"
+
+@Component/DocumentSyntaxSample
+props: [source, output]
+view:
+    div .document-sample:
+        div:
+            h4 "Rune"
+            pre:
+                code .code-block .language-rune "{source}"
+        div:
+            h4 "%i18n.DocumentSyntax.json_label%"
+            pre:
+                code .code-block .language-json "{output}"

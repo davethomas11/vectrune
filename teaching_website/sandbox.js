@@ -2,6 +2,32 @@
 
 let serializeFn = null;
 const graphqlRuntimes = new WeakMap();
+const sandboxSources = new WeakMap();
+
+function updateSandboxEditStatus(editor) {
+    if (!sandboxSources.has(editor)) sandboxSources.set(editor, editor.defaultValue);
+    const container = editor.closest('.sandbox-container');
+    const status = container?.querySelector('.sandbox-edit-status');
+    const button = container?.querySelector('#run-button');
+    if (!status || !button) return;
+    const pending = editor.value !== sandboxSources.get(editor);
+    status.hidden = !pending;
+    const label = pending ? button.dataset.changesLabel : button.dataset.runLabel;
+    if (button.textContent !== label) button.textContent = label;
+    editor.closest('.code-editor').dataset.pendingChanges = String(pending);
+    editor.title = pending ? status.textContent : '';
+    if (pending) editor.setAttribute('aria-describedby', status.id);
+    else editor.removeAttribute('aria-describedby');
+}
+
+function markSandboxApplied(editor, source) {
+    sandboxSources.set(editor, source);
+    updateSandboxEditStatus(editor);
+}
+
+document.addEventListener('input', (event) => {
+    if (event.target.matches('#sandbox-editor')) updateSandboxEditStatus(event.target);
+});
 
 const PAGE_SNIPPETS = {
     rest_get: `@App
@@ -111,6 +137,7 @@ function updateSandboxSnippet() {
     if (editor.dataset.currentPage !== page) {
         if (PAGE_SNIPPETS[page]) {
             editor.value = PAGE_SNIPPETS[page];
+            sandboxSources.set(editor, editor.value);
             editor.dispatchEvent(new Event('input', { bubbles: true }));
             editor.dataset.currentPage = page;
             const output = document.querySelector('#sandbox-output');
@@ -123,8 +150,8 @@ function updateSandboxSnippet() {
 
 function getEmulatorUrl() {
     const script = document.querySelector('script[src*="sandbox.js"]');
-    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=7', location.href));
-    url.search = script ? new URL(script.src).search : '?v=7';
+    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=9', location.href));
+    url.search = script ? new URL(script.src).search : '?v=9';
     return url.href;
 }
 
@@ -276,6 +303,7 @@ window.runSandbox = async (btn) => {
         if (mode === 'data' || (!doc.app && !doc.routes.length && !doc.graphql.fields.length && !/@(?:Component|Page|Frontend)\b/.test(code))) {
             const format = container.querySelector('#ast-format')?.value || 'json';
             output.replaceChildren(createCodeResult(serialize(toDocument(doc), format), format));
+            markSandboxApplied(editor, code);
             return;
         }
         output.innerHTML = '';
@@ -303,7 +331,7 @@ window.runSandbox = async (btn) => {
             routeSelect.style.flex = '1';
             routeSelect.style.padding = '0.5rem';
             routeSelect.style.borderRadius = '4px';
-            routeSelect.style.background = '#1e293b';
+            routeSelect.style.background = 'var(--panel-strong)';
             routeSelect.style.color = '#fff';
             routeSelect.style.border = '1px solid rgba(148, 163, 184, 0.3)';
             routeSelect.style.fontSize = '0.95rem';
@@ -324,7 +352,7 @@ window.runSandbox = async (btn) => {
             bodyInput.style.padding = '0.5rem';
             bodyInput.style.borderRadius = '4px';
             bodyInput.style.fontFamily = 'monospace';
-            bodyInput.style.background = '#1e293b';
+            bodyInput.style.background = 'var(--panel-strong)';
             bodyInput.style.color = '#fff';
             bodyInput.style.border = '1px solid rgba(148, 163, 184, 0.3)';
 
@@ -428,7 +456,7 @@ window.runSandbox = async (btn) => {
             const title = document.createElement('div');
             title.style.fontWeight = 'bold';
             title.style.marginBottom = '0.5rem';
-            title.style.color = '#38bdf8';
+            title.style.color = 'var(--syntax-builtin)';
             title.textContent = 'WebSocket Real-Time Stream (ws://localhost:3000/chat)';
 
             const msgRow = document.createElement('div');
@@ -441,7 +469,7 @@ window.runSandbox = async (btn) => {
             msgInput.style.flex = '1';
             msgInput.style.padding = '0.5rem';
             msgInput.style.borderRadius = '4px';
-            msgInput.style.background = '#1e293b';
+            msgInput.style.background = 'var(--panel-strong)';
             msgInput.style.color = '#fff';
             msgInput.style.border = '1px solid rgba(148, 163, 184, 0.3)';
 
@@ -489,6 +517,7 @@ window.runSandbox = async (btn) => {
             output.appendChild(resultContainer);
         }
         
+        markSandboxApplied(editor, code);
     } catch (err) {
         output.textContent = "Error: " + err;
         console.error("Sandbox runtime error:", err);
@@ -504,5 +533,7 @@ if (document.readyState === 'loading') {
 
 const pageObserver = new MutationObserver(() => {
     updateSandboxSnippet();
+    const editor = document.querySelector('#sandbox-editor');
+    if (editor && !sandboxSources.has(editor)) updateSandboxEditStatus(editor);
 });
 pageObserver.observe(document.body, { childList: true, subtree: true });

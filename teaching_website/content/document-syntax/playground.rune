@@ -1,0 +1,12 @@
+#!RUNE
+# Change the title, change a value, or add another record.
+@Notebook
+title = My Rune notebook
+published = false
+
+@Entry
++ title = Learn key-value pairs
+  complete = true
+
++ title = Try records
+  complete = false

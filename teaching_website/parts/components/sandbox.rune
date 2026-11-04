@@ -15,8 +15,8 @@ view:
                         code .code-block .language-rune
                     textarea #sandbox-editor .syntax-editor spellcheck=false wrap=off aria-label="Vectrune source code" placeholder="Type your .rune code here...":
                         "{code ?? '@App\nname = Sandbox\ntype = REST\n\n@Route/GET /\nrun:\n    log \"Initializing sandbox...\"\n    message = \"Hello from Vectrune Emulator!\"\n    respond 200 message'}"
-                div .editor-actions style="display:flex; gap:0.5rem; align-items:center;":
-                    button #run-button .cta click="runSandbox(this)" "Run"
+                div .editor-actions:
+                    button #run-button .cta click="runSandbox(this)" data-run-label="%i18n.Sandbox.run%" data-changes-label="%i18n.Sandbox.run_changes%" "%i18n.Sandbox.run%"
                     if {show_output}:
                         select #ast-format style="padding:0.5rem; border-radius:4px; border:1px solid #d8e1ee;":
                             option value="json" "JSON"
@@ -24,6 +24,7 @@ view:
                             option value="xml" "XML"
                         button #show-doc-button .secondary-cta click="showDoc(this)" "Show Document"
                         button #show-ast-button .secondary-cta click="showAst(this)" "Show AST"
+                p #sandbox-edit-status .sandbox-edit-status role=status aria-live=polite hidden=true "%i18n.Sandbox.pending_changes%"
             
             div .output-pane:
                 h3 "Output"
@@ -31,4 +32,4 @@ view:
                 div #sandbox-output .terminal data-error-wasm-missing="%i18n.Sandbox.error_wasm_missing%":
                     "Click 'Run' to see output here..."
         div .sandbox-hints:
-            p "Try changing the log message or adding new routes."
+            p "%i18n.Sandbox.edit_hint%"

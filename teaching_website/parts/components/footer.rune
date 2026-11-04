@@ -1,5 +1,8 @@
 @Component/TeachingFooter
 view:
     footer .site-footer:
+        div .footer-brand:
+            img src=/assets/rune-logo.png width=32 height=32 alt="" decoding=async
+            strong "%i18n.Common.app_name%"
         p "%i18n.Footer.copyright%"
 

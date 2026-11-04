@@ -1,0 +1,5 @@
+@Checklist
+steps:
+    Create a document
+    Add a section
+    Export to JSON

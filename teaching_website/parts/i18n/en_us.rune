@@ -1,11 +1,15 @@
 @I18N/en_us
 Common {
+    locale = "en_us"
+    language_label = "Language:"
     built_with = "Built entirely with Rune-Web"
     site_source = "View the teaching site source on GitHub (opens in a new tab)"
     app_name = "Vectrune"
     tagline = "A practical path from first API to reusable examples."
 }
 Header {
+    kicker = "The Vectrune language"
+    home_label = "Vectrune home"
     brand_name = "Learn Vectrune"
     nav_quickstart = "Quickstart"
     nav_tour = "Language tour"
@@ -19,9 +23,9 @@ Banner {
     link = "Follow progress on GitHub"
 }
 Hero {
-    eyebrow = "Mass-adoption milestone"
+    eyebrow = "Structured data in motion"
     headline = "Get to a useful Vectrune app in minutes."
-    lead = "Vectrune is a declarative language and runtime for structured data, APIs, and small app workflows. This teaching-site version focuses on one clear goal: help you run a working app, understand the file shape, and pick the right next example."
+    lead = "From your first API to interactive web apps, Vectrune keeps data and behavior in one readable language. Start small, explore real examples, and try them in your browser."
     cta_primary = "Start the 5-minute path"
     cta_secondary = "Browse starter examples"
     sidebar_title = "Why Vectrune"
@@ -29,6 +33,7 @@ Hero {
     reason_2 = "Compact REST and GraphQL definitions"
     reason_3 = "Validation and data flow close to routes"
     reason_4 = "Examples designed to copy into real projects"
+    lab_link = "Explore live examples →"
 }
 Quickstart {
     eyebrow = "Quickstart"
@@ -148,9 +153,51 @@ WhatsNext {
     intent_text = "We are currently transitioning this teaching site to be fully interactive. The sandbox is now powered by the actual Vectrune runtime compiled to WebAssembly, ensuring that what you see in your browser is exactly what you get when running the CLI locally."
 }
 Sandbox {
+    edit_hint = "Edit the source, then press Run to apply your changes."
+    run = "Run"
+    run_changes = "Run changes"
+    pending_changes = "Changes not applied. Press Run to apply your edits."
     error_wasm_missing = "The Vectrune WASM module is not loaded.\n\nTo enable the sandbox locally, run:\nwasm-pack build --target web --out-dir teaching_website/pkg"
 }
 Footer {
     copyright = "© 2026 Vectrune Project - teaching site preview"
 }
 
+
+DocumentSyntax {
+    nav = "Document Syntax"
+    eyebrow = "Language essentials"
+    title = "Rune document syntax"
+    intro = "A Rune file can be a structured data document on its own. Start with sections, add key-value pairs, and use records or series when you need more than one item."
+    contents = "On this page"
+    sections_title = "Sections"
+    sections_body = "Start a section with @ followed by its name. The lines below belong to that section until the next @ header. A slash in the header creates a nested path: @Guide/Author places Author inside Guide."
+    sections_note = "#!RUNE is an optional file marker. The JSON beside each example is generated from that exact source by the Vectrune CLI."
+    values_title = "Key-value pairs"
+    values_body = "A key-value pair (KV) gives a field a name and a value: key = value. Plain text can be written without quotes. Numbers and true or false become numeric and boolean values in the exported document."
+    values_note = "Each pair belongs to the current section, or to the current record after a + marker. Use = for a value; use : for a series."
+    records_title = "Records"
+    records_body = "Use + to begin a new record: a group of fields describing one item. Put the first field after +, then indent its remaining fields. Another + begins another record in the same section."
+    records_note = "Records export as a list under the section’s record key. A blank line makes them easier to read; the + marker starts the next item."
+    series_title = "Series"
+    series_body = "A series is an ordered list. Write a name followed by a colon, then indent one item per line. The steps below become a list of strings, in the same order."
+    series_note = "Indentation groups the items under steps:. In application sections, run: uses this same series shape for executable steps; these checklist items are just data."
+    objects_title = "Objects and inline lists"
+    objects_body = "Use a JSON-style object when a field needs named subfields. For a compact list of simple values, use parentheses with spaces between items. Use a series when you want a longer, readable list."
+    objects_note = "The object’s field names and text values use double quotes. The parenthesized features list contains two separate string values."
+    rules_title = "A few rules to remember"
+    rule_sections = "Keep @ section headers at the start of the line. Use / to name nested sections."
+    rule_comments = "A line beginning with # is a comment. Use full-line comments to explain your document."
+    rule_indent = "Use consistent spaces to indent series items and the continuation fields of records."
+    rule_records = "Put section-wide values before the first +. Following key-value pairs belong to the current record until a new record or section begins."
+    data_title = "Documents can stand on their own"
+    data_body = "You do not need @App, a server, or a run: block to describe data. Sections such as @Notebook and @Entry are your own names. Application sections such as @Route add runtime behavior when you build an app."
+    try_title = "Try a document"
+    try_body = "Change the notebook title or a completion value, or add another + record. Press Run to see the new document. The editor will flag edits that have not been applied."
+    try_formats = "Choose JSON, YAML, or XML and press Run or Show Document to export the current source. Show AST displays the parser’s internal structure."
+    export_title = "Use the same syntax locally"
+    export_body = "Save a document as notes.rune, then choose an output format with -o. The CLI also handles the series and inline-list examples above."
+    next_link = "Explore the skateboarder document →"
+    json_label = "JSON output"
+    tour_link = "Learn document syntax: sections, key-value pairs, and records →"
+}

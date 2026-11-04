@@ -17,6 +17,7 @@ view:
                 div .nav-group:
                     h3 "Introduction"
                     button .nav-link {.active when 'home'} click="navigate('home')" "Overview"
+                    button .nav-link {.active when 'documents'} click="navigate('documents')" "%i18n.DocumentSyntax.nav%"
                 div .nav-group:
                     h3 "REST API"
                     button .nav-link {.active when 'rest_get'} click="navigate('rest_get')" "GET Requests"
@@ -41,6 +42,7 @@ view:
             main .content-area:
                 match activePage:
                     "home"            -> HomeContent
+                    "documents"       -> DocumentSyntaxPage
                     "examples"        -> ExampleLab
                     "builtins"        -> BuiltinReferencePage
                     "rest_get"        -> RestGetPage

@@ -1,10 +1,12 @@
 @Component/TeachingHeader
 view:
     header .site-header:
-        div .brand:
-            p .eyebrow "Teaching site preview"
-            h1 "%i18n.Header.brand_name%"
-            p .subtitle "%i18n.Common.tagline%"
+        a .brand href=#app click="navigate('home')" aria-label="%i18n.Header.home_label%":
+            img .brand-logo src=/assets/rune-logo.png width=64 height=64 alt="" decoding=async
+            div .brand-copy:
+                p .eyebrow "%i18n.Header.kicker%"
+                h1 "%i18n.Common.app_name%"
+                p .subtitle "%i18n.Common.tagline%"
         nav .site-nav:
             a href=#quickstart "%i18n.Header.nav_quickstart%"
             a href=#tour "%i18n.Header.nav_tour%"

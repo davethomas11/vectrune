@@ -9,10 +9,13 @@ view:
                 a .cta href=#quickstart "%i18n.Hero.cta_primary%"
                 a .secondary-cta href=#examples "%i18n.Hero.cta_secondary%"
         aside .hero-panel:
-            h3 "%i18n.Hero.sidebar_title%"
+            div .hero-panel-heading:
+                img .hero-logo src=/assets/rune-logo.png width=80 height=80 alt="" aria-hidden=true decoding=async
+                h3 "%i18n.Hero.sidebar_title%"
             ul:
                 li "%i18n.Hero.reason_1%"
                 li "%i18n.Hero.reason_2%"
                 li "%i18n.Hero.reason_3%"
                 li "%i18n.Hero.reason_4%"
+            a .content-link .hero-lab-link href=#app click="openExample('counter')" "%i18n.Hero.lab_link%"
 

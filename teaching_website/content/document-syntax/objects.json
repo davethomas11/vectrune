@@ -1,0 +1,12 @@
+{
+  "Settings": {
+    "features": [
+      "records",
+      "exports"
+    ],
+    "owner": {
+      "name": "Mina",
+      "role": "editor"
+    }
+  }
+}

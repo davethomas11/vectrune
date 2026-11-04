@@ -1,0 +1,8 @@
+@Skateboarder
++ name = Mina
+  style = Street
+  active = true
+
++ name = Jules
+  style = Vert
+  active = false

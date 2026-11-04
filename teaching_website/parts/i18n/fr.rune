@@ -1,11 +1,15 @@
 @I18N/fr
 Common {
+    locale = "fr"
+    language_label = "Langue :"
     built_with = "Site entièrement créé avec Rune-Web"
     site_source = "Voir le code du site sur GitHub (nouvel onglet)"
     app_name = "Vectrune"
     tagline = "Un chemin pratique de votre première API aux exemples réutilisables."
 }
 Header {
+    kicker = "Le langage Vectrune"
+    home_label = "Accueil Vectrune"
     brand_name = "Apprendre Vectrune"
     nav_quickstart = "Démarrage rapide"
     nav_tour = "Visite de la langue"
@@ -19,9 +23,9 @@ Banner {
     link = "Suivez les progrès sur GitHub"
 }
 Hero {
-    eyebrow = "Jalon d'adoption massive"
+    eyebrow = "Les données en mouvement"
     headline = "Obtenez une application Vectrune utile en quelques minutes."
-    lead = "Vectrune est un langage déclaratif et un runtime pour les données structurées, les API et les petits flux de travail d'application. Cette version du site d'enseignement se concentre sur un objectif clair : vous aider à exécuter une application fonctionnelle, comprendre la structure du fichier et choisir le bon exemple."
+    lead = "De votre première API aux applications web interactives, Vectrune réunit données et comportement dans un langage lisible. Explorez des exemples concrets et essayez-les dans votre navigateur."
     cta_primary = "Commencez le parcours de 5 minutes"
     cta_secondary = "Parcourez les exemples de démarrage"
     sidebar_title = "Pourquoi Vectrune"
@@ -29,6 +33,7 @@ Hero {
     reason_2 = "Définitions REST et GraphQL compactes"
     reason_3 = "Validation et flux de données proches des routes"
     reason_4 = "Les exemples sont conçus pour être copiés dans les vrais projets"
+    lab_link = "Explorer les exemples interactifs →"
 }
 Quickstart {
     eyebrow = "Démarrage rapide"
@@ -147,7 +152,51 @@ WhatsNext {
     intent_title = "Intention actuelle"
     intent_text = "Cette première version est intentionnellement légère. Elle existe pour réduire les frictions d'intégration, mettre en évidence les meilleurs exemples de démarrage et créer une base stable pour les futures fonctionnalités d'apprentissage interactif."
 }
+Sandbox {
+    edit_hint = "Modifiez le code, puis appuyez sur Exécuter pour appliquer les modifications."
+    run = "Exécuter"
+    run_changes = "Appliquer les modifications"
+    pending_changes = "Modifications non appliquées. Appuyez sur Exécuter pour les appliquer."
+}
 Footer {
     copyright = "© 2026 Projet Vectrune - aperçu du site d'enseignement"
 }
 
+
+DocumentSyntax {
+    nav = "Syntaxe des documents"
+    eyebrow = "Bases du langage"
+    title = "Syntaxe des documents Rune"
+    intro = "Un fichier Rune peut être un document de données structurées à lui seul. Commencez par des sections, ajoutez des paires clé-valeur, puis utilisez des enregistrements ou des séries pour plusieurs éléments."
+    contents = "Sur cette page"
+    sections_title = "Sections"
+    sections_body = "Commencez une section par @ suivi de son nom. Les lignes suivantes appartiennent à cette section jusqu’au prochain en-tête @. Une barre crée un chemin imbriqué : @Guide/Author place Author dans Guide."
+    sections_note = "#!RUNE est un marqueur de fichier facultatif. Le JSON à côté de chaque exemple est généré à partir de ce code exact par le CLI Vectrune."
+    values_title = "Paires clé-valeur"
+    values_body = "Une paire clé-valeur (KV) donne un nom et une valeur à un champ : clé = valeur. Le texte simple peut s’écrire sans guillemets. Les nombres et true ou false deviennent des valeurs numériques et booléennes à l’export."
+    values_note = "Chaque paire appartient à la section actuelle, ou à l’enregistrement actuel après un marqueur +. Utilisez = pour une valeur et : pour une série."
+    records_title = "Enregistrements"
+    records_body = "Utilisez + pour commencer un enregistrement : un groupe de champs décrivant un élément. Écrivez le premier champ après +, puis indentez les suivants. Un autre + commence un nouvel enregistrement dans la même section."
+    records_note = "Les enregistrements sont exportés sous forme de liste dans la clé record de la section. Une ligne vide facilite la lecture ; le marqueur + commence l’élément suivant."
+    series_title = "Séries"
+    series_body = "Une série est une liste ordonnée. Écrivez un nom suivi de deux-points, puis indentez un élément par ligne. Les étapes ci-dessous deviennent une liste de chaînes dans le même ordre."
+    series_note = "L’indentation regroupe les éléments sous steps:. Dans les sections d’application, run: utilise cette même forme pour des étapes exécutables ; cette liste contient seulement des données."
+    objects_title = "Objets et listes en ligne"
+    objects_body = "Utilisez un objet de style JSON lorsqu’un champ nécessite des sous-champs nommés. Pour une liste compacte de valeurs simples, utilisez des parenthèses et séparez les éléments par des espaces. Une série convient à une liste plus longue."
+    objects_note = "Les noms des champs et les valeurs textuelles de l’objet utilisent des guillemets doubles. La liste features entre parenthèses contient deux chaînes distinctes."
+    rules_title = "Quelques règles à retenir"
+    rule_sections = "Placez les en-têtes @ au début de la ligne. Utilisez / pour nommer des sections imbriquées."
+    rule_comments = "Une ligne commençant par # est un commentaire. Utilisez des commentaires sur leur propre ligne pour expliquer le document."
+    rule_indent = "Utilisez des espaces cohérents pour indenter les éléments des séries et les champs suivants des enregistrements."
+    rule_records = "Placez les valeurs de la section avant le premier +. Les paires suivantes appartiennent à l’enregistrement actuel jusqu’au prochain enregistrement ou à la prochaine section."
+    data_title = "Les documents se suffisent à eux-mêmes"
+    data_body = "Vous n’avez besoin ni de @App, ni de serveur, ni de bloc run: pour décrire des données. Les noms comme @Notebook et @Entry vous appartiennent. Les sections comme @Route ajoutent un comportement lors de la création d’une application."
+    try_title = "Essayez un document"
+    try_body = "Modifiez le titre, une valeur de réalisation ou ajoutez un enregistrement +. Appuyez sur Exécuter pour voir le résultat. L’éditeur signale les modifications non appliquées."
+    try_formats = "Choisissez JSON, YAML ou XML puis appuyez sur Exécuter ou Show Document pour exporter le code actuel. Show AST affiche la structure interne de l’analyseur."
+    export_title = "Utilisez la même syntaxe localement"
+    export_body = "Enregistrez un document dans notes.rune, puis choisissez un format avec -o. Le CLI traite aussi les exemples de séries et de listes en ligne ci-dessus."
+    next_link = "Explorez le document des skateboarders →"
+    json_label = "Sortie JSON"
+    tour_link = "Découvrez la syntaxe : sections, paires clé-valeur et enregistrements →"
+}

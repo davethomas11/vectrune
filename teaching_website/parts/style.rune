@@ -1,77 +1,85 @@
 @Style/teaching-site
 tokens:
-    bg = #f3f6fb
-    panel = #ffffff
-    panel-strong = #0f172a
-    text = #172033
-    text-soft = #5b6578
-    border = #d8e1ee
-    brand = #2563eb
-    brand-dark = #1d4ed8
+    bg = #f3f7f4
+    panel = rgba(255, 255, 255, 0.88)
+    panel-strong = #142f35
+    text = #193a3f
+    text-soft = #526c6c
+    border = #d5e3dd
+    brand = #285f64
+    brand-dark = #173e44
     success-bg = #ecfdf3
     success-border = #86efac
-    info-bg = #eff6ff
-    info-border = #93c5fd
-    shadow = 0 18px 45px rgba(15, 23, 42, 0.08)
-    code-inline-bg = #eef2ff
-    code-inline-text = #1e3a8a
-    hero-panel-bg = #f8fbff
-    hero-panel-border = #cfe0ff
-    beginner-bg = #dcfce7
-    beginner-text = #166534
-    practical-bg = #dbeafe
-    practical-text = #1d4ed8
-    advanced-bg = #f3e8ff
-    advanced-text = #7e22ce
-    syntax-comment = #94a3b8
-    syntax-string = #f9a8d4
+    info-bg = #eaf5f2
+    info-border = #a9cfca
+    shadow = inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 16px 42px rgba(26, 67, 66, 0.065)
+    code-inline-bg = #e9f2ee
+    code-inline-text = #285b60
+    hero-panel-bg = rgba(248, 253, 250, 0.78)
+    hero-panel-border = #d1e3da
+    beginner-bg = #e2f3e8
+    beginner-text = #245f45
+    practical-bg = #e3f1ef
+    practical-text = #285f64
+    advanced-bg = #fff0e8
+    advanced-text = #a5432e
+    syntax-comment = #9db5b7
+    syntax-string = #ffc1ad
     syntax-escape = #fcd34d
-    syntax-keyword = #c084fc
-    syntax-builtin = #38bdf8
-    syntax-function = #60a5fa
-    syntax-property = #f8fafc
-    syntax-operator = #fbbf24
+    syntax-keyword = #d7c5ff
+    syntax-builtin = #86ddd3
+    syntax-function = #9bc6ef
+    syntax-property = #edf8f5
+    syntax-operator = #f1c58c
     syntax-qualifier = #a5b4fc
-    syntax-number = #86efac
-    syntax-interpolation = #fdba74
+    syntax-number = #ace1b4
+    syntax-interpolation = #ffd29c
+    accent = #ed7d62
+    accent-ink = #a5432e
+    brand-gradient = linear-gradient(160deg, #3b7c7e 0%, #23565e 70%, #1b454d 100%)
+    brand-gradient-hover = linear-gradient(160deg, #438a8b 0%, #2c6870 70%, #23545d 100%)
 presets:
     card-surface:
-        background = {panel}
-        border = 1px solid {border}
-        round = 18px
+        background = linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.78))
+        border = 1px solid rgba(255, 255, 255, 0.95)
+        round = 24px
         box-shadow = {shadow}
         padding = 2rem
+        backdrop-filter = blur(10px)
 
     sub-card:
-        background = #fcfdff
+        background = linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(244, 250, 246, 0.75))
         border = 1px solid {border}
-        round = 14px
-        padding = 1rem 1.1rem
+        round = 16px
+        padding = 1.2rem
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.9)
 
     button-primary:
-        background = {brand}
+        background = {brand-gradient}
         color = white
         padding = 0.85rem 1.35rem
-        round = 10px
+        round = 12px
         text-decoration = none
         font-weight = 700
         display = inline-block
-        border = none
+        border = 1px solid rgba(27, 70, 75, 0.15)
         cursor = pointer
-        transition = all 0.2s ease
-        box-shadow = 0 4px 6px rgba(37, 99, 235, 0.2)
+        transition = background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 16px rgba(29, 79, 82, 0.2)
 
     button-secondary:
-        background = #f8fbff
+        background = linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 248, 243, 0.8))
         color = {brand}
         padding = 0.85rem 1.35rem
-        round = 10px
+        round = 12px
         text-decoration = none
         font-weight = 700
         display = inline-block
-        border = 1px solid #bfd4ff
+        border = 1px solid #c6dcd4
         cursor = pointer
         transition = all 0.2s ease
+        box-shadow = inset 0 1px 0 white, 0 3px 10px rgba(28, 72, 69, 0.04)
+
 rules:
     *:
         box-sizing = border-box
@@ -82,9 +90,10 @@ rules:
     body:
         margin = 0
         font-family = Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
-        background = linear-gradient(180deg, #eef4ff 0%, var(--bg) 220px)
+        background = radial-gradient(900px 600px at 100% 0%, rgba(169, 216, 201, 0.28), transparent), radial-gradient(700px 500px at 0% 25rem, rgba(244, 178, 150, 0.16), transparent), linear-gradient(180deg, #fbfcf9, #f3f7f4 70rem)
         color = {text}
         line-height = 1.6
+        -webkit-font-smoothing = antialiased
 
     .site-shell:
         min-height = 100vh
@@ -101,19 +110,26 @@ rules:
         max-width = calc(100% - 2rem)
         min-height = 44px
         padding = 0.65rem 0.9rem
-        border = 1px solid #334155
+        border = 1px solid rgba(160, 203, 190, 0.4)
         border-radius = 14px
-        background = {panel-strong}
-        color = #e2e8f0
-        box-shadow = 0 4px 18px rgba(15, 23, 42, 0.2)
+        background = linear-gradient(160deg, rgba(40, 84, 88, 0.95), rgba(21, 53, 60, 0.97))
+        color = #edf8f2
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.17), 0 6px 22px rgba(26, 63, 63, 0.19)
         font-size = 0.82rem
         font-weight = 600
         line-height = 1.35
         text-decoration = none
+        backdrop-filter = blur(14px)
 
     .built-with-tag:hover:
-        background = {brand-dark}
+        background = {brand-gradient-hover}
         color = white
+
+    .built-with-compact:
+        display = none
+
+    .brand-logo, .hero-logo, .footer-brand img:
+        filter = contrast(1.1)
 
     .built-with-tag:focus-visible:
         outline = 2px solid {brand}
@@ -125,24 +141,25 @@ rules:
         justify-content = center
         gap = 0.75rem
         flex-wrap = wrap
-        padding = 0.6rem 1.5rem
-        background = linear-gradient(90deg, #f59e0b 0%, #f97316 100%)
-        color = #1c1203
-        font-size = 0.92rem
+        padding = 0.45rem 1.5rem
+        background = linear-gradient(100deg, #f9e9df, #e5f1e9)
+        color = #345556
+        font-size = 0.8rem
         font-weight = 600
         text-align = center
+        border-bottom = 1px solid rgba(36, 83, 79, 0.07)
 
     .dev-banner-badge:
-        background = rgba(28, 18, 3, 0.85)
-        color = #fde68a
+        background = #27555b
+        color = #fff0e4
         padding = 0.15rem 0.6rem
         round = 999px
-        font-size = 0.72rem
-        letter-spacing = 0.1em
+        font-size = 0.65rem
+        letter-spacing = 0.09em
         text-transform = uppercase
 
     .dev-banner-link:
-        color = #1c1203
+        color = {accent-ink}
         text-decoration = underline
         font-weight = 700
 
@@ -150,78 +167,95 @@ rules:
         position = sticky
         top = 0
         z-index = 10
-        background = rgba(15, 23, 42, 0.92)
-        color = white
+        background = rgba(249, 253, 250, 0.86)
+        color = {text}
         padding = 1rem 2rem
         display = flex
         align-items = center
         justify-content = space-between
-        gap = 1.5rem
+        gap = 1rem
         flex-wrap = wrap
-        backdrop-filter = blur(10px)
+        backdrop-filter = blur(20px) saturate(150%)
+        -webkit-backdrop-filter = blur(20px) saturate(150%)
+        border-bottom = 1px solid rgba(42, 91, 87, 0.1)
+        box-shadow = 0 5px 24px rgba(37, 80, 77, 0.04)
 
     .brand h1:
         margin = 0
-        font-size = 2rem
+        font-size = 1.65rem
+        line-height = 1.12
+        letter-spacing = -0.045em
+        color = {brand-dark}
 
     .subtitle:
         margin = 0.35rem 0 0
-        color = rgba(255, 255, 255, 0.78)
+        color = {text-soft}
+        font-size = 0.82rem
+        line-height = 1.45
+        max-width = 32ch
 
     .eyebrow:
         display = inline-block
         margin = 0 0 0.35rem
-        font-size = 0.78rem
+        font-size = 0.72rem
         font-weight = 700
-        letter-spacing = 0.12em
+        letter-spacing = 0.1em
         text-transform = uppercase
-        color = #7dd3fc
+        color = #527b75
 
     .site-nav:
         display = flex
         flex-wrap = wrap
-        gap = 1rem
+        gap = 0.25rem
+        justify-content = center
 
     .site-nav a:
-        color = white
+        color = #345c5e
         text-decoration = none
         font-weight = 600
-        opacity = 0.92
+        opacity = 1
+        font-size = 0.86rem
+        padding = 0.4rem 0.65rem
+        border-radius = 10px
+        transition = background 0.2s ease, color 0.2s ease
 
     .header-actions:
         display = flex
         align-items = center
-        gap = 1rem
+        gap = 0.5rem
 
     .language-selector:
         display = flex
         align-items = center
         gap = 0.5rem
-        font-size = 0.95rem
+        font-size = 0.8rem
 
     .language-label:
-        color = rgba(255, 255, 255, 0.92)
+        color = {text-soft}
         font-weight = 600
+        font-size = 0.76rem
+        padding-left = 0.2rem
 
     .language-link:
-        color = rgba(255, 255, 255, 0.7)
+        color = #466966
         text-decoration = none
-        padding = 0.25rem 0.4rem
+        padding = 0.25rem 0.35rem
         border-radius = 5px
         transition = all 0.2s ease
         cursor = pointer
 
     .language-link:hover:
-        background = rgba(255, 255, 255, 0.1)
-        color = white
+        background = #e6f1eb
+        color = {brand-dark}
 
-    .language-link.active:
-        color = #60a5fa
+    .language-link.active, .language-link[aria-current=page]:
+        color = {brand}
         font-weight = 700
-        background = rgba(96, 165, 250, 0.1)
+        background = #e4f2ec
 
     .language-sep:
-        color = rgba(255, 255, 255, 0.5)
+        color = #94ada6
+        font-size = 0.7rem
 
     .card:
         use = (card-surface)
@@ -230,25 +264,38 @@ rules:
     .hero:
         display = grid
         grid-template-columns = repeat(auto-fit, minmax(min(280px, 100%), 1fr))
-        gap = 2rem
+        gap = 1.75rem
         align-items = start
+        position = relative
+        overflow = hidden
+        isolation = isolate
 
     .hero h2:
         margin-top = 0
-        font-size = clamp(2rem, 5vw, 3.25rem)
-        line-height = 1.12
+        font-size = clamp(2.15rem, 4vw, 3.5rem)
+        line-height = 1.07
+        letter-spacing = -0.055em
+        color = {brand-dark}
+        margin-bottom = 1.2rem
 
     .lead:
         max-width = 60ch
+        font-size = 1.02rem
+        line-height = 1.75
 
     .hero-panel:
-        background = {hero-panel-bg}
-        border = 1px solid {hero-panel-border}
+        background = linear-gradient(155deg, rgba(255, 255, 255, 0.88), rgba(231, 245, 236, 0.65))
+        border = 1px solid #d2e3d8
         round = 16px
-        padding = 1.25rem 1.3rem
+        padding = 1.25rem
+        box-shadow = inset 0 1px 0 white, 0 10px 28px rgba(43, 88, 77, 0.05)
+        backdrop-filter = blur(12px)
 
     .hero-panel h3:
         margin-top = 0
+        margin = 0
+        color = {brand-dark}
+        letter-spacing = -0.025em
 
     .hero-panel ul:
         margin = 0
@@ -264,26 +311,29 @@ rules:
         use = (button-primary)
 
     .cta:hover:
-        background = {brand-dark}
+        background = {brand-gradient-hover}
         transform = translateY(-1px)
-        box-shadow = 0 6px 10px rgba(37, 99, 235, 0.3)
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 20px rgba(29, 79, 82, 0.22)
 
     .cta:active:
         transform = translateY(1px)
-        box-shadow = 0 2px 4px rgba(37, 99, 235, 0.2)
+        box-shadow = inset 0 1px 4px rgba(14, 52, 57, 0.16)
 
     .secondary-cta:
         use = (button-secondary)
 
     .secondary-cta:hover:
-        background = #eef4ff
-        border = 1px solid {brand}
+        background = #e7f2ec
+        border = 1px solid #9bbfb2
 
     .section-heading:
         margin-bottom = 1.25rem
 
     .section-heading h2:
         margin = 0.15rem 0 0.5rem
+        letter-spacing = -0.035em
+        line-height = 1.2
+        color = {brand-dark}
 
     .section-copy:
         margin-bottom = 0
@@ -302,10 +352,11 @@ rules:
         gap = 1rem
 
     .install-card:
-        background = {bg}
+        background = rgba(235, 245, 239, 0.65)
         border = 1px solid {border}
         round = 12px
         padding = 1.25rem 1.25rem 1rem
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.9)
 
     .install-card h4:
         margin = 0 0 0.6rem
@@ -372,17 +423,51 @@ rules:
         width = 2rem
         height = 2rem
         border-radius = 999px
-        background = #dbeafe
-        color = {brand-dark}
+        background = linear-gradient(145deg, #fce5d7, #fff2e7)
+        color = {accent-ink}
         font-weight = 800
+        border = 1px solid #efdbc9
 
     .page:
         max-width = 1200px
         margin = 0 auto
-        padding = 2rem 1rem
+        padding = 0
 
     .page > section:
         margin-bottom = 2.5rem
+
+    .document-toc:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.65rem
+
+    .document-syntax-page section[id]:
+        scroll-margin-top = 12rem
+
+    .document-toc a:
+        padding = 0.55rem 0.85rem
+        font-size = 0.9rem
+
+    .document-sample:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(min(300px, 100%), 1fr))
+        gap = 1.25rem
+
+    .document-sample > div:
+        min-width = 0
+
+    .document-sample h4:
+        margin = 0.75rem 0 0.5rem
+        color = {text-soft}
+        font-size = 0.82rem
+        letter-spacing = 0.04em
+
+    .document-note:
+        color = {text-soft}
+        font-size = 0.92rem
+
+    .document-rules li:
+        margin-bottom = 0.65rem
 
     .sandbox-container:
         display = flex
@@ -396,16 +481,37 @@ rules:
         display = flex
         flex-direction = column
 
+    .editor-actions:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.5rem
+        align-items = center
+
+    .sandbox-edit-status:
+        margin = 0.75rem 0 0
+        padding = 0.65rem 0.85rem
+        background = #fff0e8
+        color = {accent-ink}
+        border = 1px solid #efc9b9
+        border-radius = 10px
+        font-size = 0.88rem
+        font-weight = 600
+
+    .code-editor[data-pending-changes=true]:
+        border-color = {accent}
+        box-shadow = 0 0 0 1px {accent}
+
     .code-editor:
         position = relative
         height = 300px
         min-height = 12rem
         resize = vertical
         overflow = hidden
-        border = 1px solid rgba(148, 163, 184, 0.2)
+        border = 1px solid rgba(106, 159, 153, 0.45)
         border-radius = 12px
         background = {panel-strong}
         margin-bottom = 1rem
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 20px rgba(22, 61, 62, 0.08)
 
     .syntax-editor:
         position = absolute
@@ -461,30 +567,30 @@ rules:
         -webkit-text-fill-color = {syntax-comment}
 
     .syntax-editor::selection:
-        background = rgba(96, 165, 250, 0.35)
+        background = rgba(110, 188, 169, 0.35)
 
     .code-editor:focus-within:
         outline = 2px solid {brand}
         outline-offset = 2px
 
     .terminal:
-        background = #1e293b
-        color = #38bdf8
+        background = linear-gradient(145deg, #1b3e43, #142f35)
+        color = #b3e2db
         padding = 1rem
         round = 12px
         font-family = monospace
         min-height = 300px
         white-space = pre-wrap
         overflow-y = auto
-        border = 1px solid rgba(148, 163, 184, 0.1)
+        border = 1px solid rgba(128, 182, 172, 0.25)
         overflow-wrap = anywhere
         overflow-x = auto
 
     .sandbox-hints:
         margin-top = 1.5rem
         padding = 0.75rem 1rem
-        background = #f8fafc
-        border-left = 4px solid {brand}
+        background = #edf6ef
+        border-left = 3px solid #9dcbb3
         round = 4px
 
     h3:
@@ -516,7 +622,8 @@ rules:
         padding = 1rem
         border-radius = 12px
         overflow-x = auto
-        border = 1px solid rgba(148, 163, 184, 0.28)
+        border = 1px solid rgba(128, 182, 172, 0.25)
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.06)
 
     pre code:
         background = transparent
@@ -564,9 +671,12 @@ rules:
 
     .site-footer:
         text-align = center
-        color = #6b7280
-        padding = 1rem 0 2rem
-        font-size = 0.95rem
+        color = {text-soft}
+        padding = 2rem 1rem 1rem
+        font-size = 0.85rem
+        max-width = 1400px
+        margin = 0 auto
+        border-top = 1px solid rgba(42, 91, 87, 0.1)
 
     .code-block .token.comment:
         color = {syntax-comment}
@@ -670,23 +780,23 @@ rules:
     .app-body:
         display = flex
         flex = 1
-        max-width = 1400px
+        max-width = 1440px
         margin = 0 auto
         width = 100%
 
     .sidebar:
-        width = 250px
-        flex = 0 0 250px
-        padding = 2rem 1.5rem
-        border-right = 1px solid {border}
-        background = transparent
+        width = 232px
+        flex = 0 0 232px
+        padding = 2.5rem 1.25rem
+        border-right = 1px solid rgba(36, 87, 83, 0.08)
+        background = linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent 50rem)
 
     .sidebar h3:
         margin = 0 0 0.5rem 0.5rem
-        font-size = 0.85rem
+        font-size = 0.68rem
         text-transform = uppercase
-        color = {text-soft}
-        letter-spacing = 0.05em
+        color = #6c8983
+        letter-spacing = 0.1em
 
     .nav-group:
         margin-bottom = 1.5rem
@@ -695,39 +805,41 @@ rules:
         display = block
         width = 100%
         text-align = left
-        padding = 0.5rem 0.75rem
+        padding = 0.65rem 0.8rem
         background = transparent
         border = none
-        border-radius = 6px
-        color = {text}
-        font-size = 0.95rem
+        border-radius = 10px
+        color = #3e6260
+        font-size = 0.88rem
         cursor = pointer
         transition = all 0.2s
+        font-family = inherit
 
     .nav-link:hover:
-        background = #e2e8f0
+        background = rgba(232, 243, 236, 0.9)
 
     .nav-link.active:
-        background = {brand}
+        background = {brand-gradient}
         color = white
         font-weight = 600
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 12px rgba(30, 82, 82, 0.12)
 
     .nav-link.active:hover:
-        background = {brand-dark}
+        background = {brand-gradient-hover}
 
     .content-area:
         flex = 1
         min-width = 0
-        padding = 2rem 3rem
-        max-width = 1100px
+        padding = 2.5rem 2rem
+        max-width = none
 
     .reference-shell:
         margin-top = 1.5rem
 
     .reference-controls:
-        background = {panel}
+        background = linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(249, 253, 250, 0.8))
         border = 1px solid {border}
-        border-radius = 12px
+        border-radius = 18px
         padding = 1.25rem
         margin-bottom = 2rem
         box-shadow = {shadow}
@@ -735,11 +847,11 @@ rules:
     .search-input:
         width = 100%
         padding = 0.85rem 1.15rem
-        border = 1px solid {border}
-        border-radius = 8px
+        border = 1px solid #c6dad1
+        border-radius = 10px
         font-size = 1rem
         font-family = inherit
-        background = #f8fafc
+        background = rgba(249, 253, 250, 0.9)
         color = {text}
         outline = none
         transition = border-color 0.2s
@@ -747,6 +859,7 @@ rules:
     .search-input:focus:
         border-color = {brand}
         background = #ffffff
+        box-shadow = 0 0 0 3px rgba(52, 112, 106, 0.1)
 
     .category-pills:
         display = flex
@@ -755,24 +868,27 @@ rules:
         margin-top = 1rem
 
     .pill:
-        background = #f1f5f9
-        border = 1px solid #e2e8f0
+        background = rgba(255, 255, 255, 0.78)
+        border = 1px solid #d3e3da
         padding = 0.4rem 0.85rem
         border-radius = 20px
         font-size = 0.82rem
         font-weight = 600
-        color = {text-soft}
+        color = #496d66
         cursor = pointer
         transition = all 0.2s
+        font-family = inherit
+        box-shadow = inset 0 1px 0 white
 
     .pill:hover:
-        background = #e2e8f0
+        background = #e9f3ed
         color = {text}
 
     .pill.active:
-        background = {brand}
-        border-color = {brand}
+        background = {brand-gradient}
+        border-color = #30656a
         color = #ffffff
+        box-shadow = inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 3px 10px rgba(40, 95, 100, 0.12)
 
     .builtin-cards-grid:
         display = grid
@@ -781,9 +897,9 @@ rules:
         margin-bottom = 3rem
 
     .builtin-card:
-        background = {panel}
+        background = linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(247, 252, 249, 0.88))
         border = 1px solid {border}
-        border-radius = 12px
+        border-radius = 18px
         padding = 1.25rem
         display = flex
         flex-direction = column
@@ -814,16 +930,16 @@ rules:
         padding = 0.2rem 0.55rem
         border-radius = 4px
         letter-spacing = 0.04em
-        background = #f1f5f9
-        color = #475569
+        background = #edf4ef
+        color = #496b63
 
     .cat-diagnostics:
         background = #fef3c7
         color = #b45309
 
     .cat-http:
-        background = #dbeafe
-        color = #1d4ed8
+        background = #e1f0ee
+        color = #285f64
 
     .cat-data:
         background = #dcfce7
@@ -838,8 +954,8 @@ rules:
         color = #4338ca
 
     .cat-io:
-        background = #ffedd5
-        color = #c2410c
+        background = #fff0e5
+        color = #a5432e
 
     .cat-context:
         background = #ccfbf1
@@ -856,8 +972,8 @@ rules:
         line-height = 1.5
 
     .builtin-syntax-box:
-        background = #0f172a
-        color = #38bdf8
+        background = {panel-strong}
+        color = #b3e2db
         padding = 0.6rem 0.85rem
         border-radius = 6px
         font-family = monospace
@@ -871,8 +987,8 @@ rules:
         justify-content = flex-end
 
     .load-sandbox-btn:
-        background = #eff6ff
-        border = 1px solid #bfdbfe
+        background = #edf7f0
+        border = 1px solid #bedbca
         color = {brand}
         padding = 0.45rem 0.85rem
         border-radius = 6px
@@ -880,6 +996,7 @@ rules:
         font-weight = 600
         cursor = pointer
         transition = all 0.2s
+        font-family = inherit
 
     .load-sandbox-btn:hover:
         background = {brand}
@@ -1003,9 +1120,126 @@ rules:
         max-height = 20rem
         overflow = auto
 
+    a:focus-visible, button:focus-visible, select:focus-visible:
+        outline = 2px solid {brand}
+        outline-offset = 3px
+
+    .brand:
+        display = flex
+        align-items = center
+        gap = 0.8rem
+        min-width = 0
+        max-width = 360px
+        color = inherit
+        text-decoration = none
+
+    .brand-copy:
+        min-width = 0
+
+    .brand-logo:
+        display = block
+        width = 64px
+        height = 64px
+        flex-shrink = 0
+        border-radius = 50%
+        mix-blend-mode = multiply
+
+    .brand .eyebrow:
+        color = #547c79
+        font-size = 0.62rem
+        letter-spacing = 0.11em
+        margin-bottom = 0.25rem
+
+    .site-nav a:hover:
+        background = rgba(40, 95, 100, 0.07)
+        color = {brand-dark}
+
+    .header-actions .language-selector:
+        gap = 0.15rem
+        padding = 0.2rem 0.35rem
+        background = rgba(255, 255, 255, 0.62)
+        border = 1px solid rgba(200, 219, 211, 0.7)
+        border-radius = 12px
+
+    .card.hero:
+        background = radial-gradient(ellipse at 100% 0%, rgba(242, 177, 145, 0.15), transparent 65%), linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(247, 253, 248, 0.82))
+        border = 1px solid rgba(255, 255, 255, 0.98)
+
+    .hero::before:
+        content = '""'
+        position = absolute
+        width = 20rem
+        height = 20rem
+        right = -10rem
+        top = -12rem
+        border-radius = 50%
+        background = radial-gradient(circle, rgba(237, 125, 98, 0.18), rgba(255, 255, 255, 0) 70%)
+        pointer-events = none
+
+    .hero > *:
+        position = relative
+        z-index = 1
+
+    .hero-copy > .eyebrow:
+        padding = 0.35rem 0.65rem
+        background = #fff0e7
+        border = 1px solid #f1dbcd
+        border-radius = 999px
+        color = {accent-ink}
+        font-size = 0.65rem
+        letter-spacing = 0.06em
+        margin-bottom = 1rem
+
+    .hero-panel-heading:
+        display = flex
+        align-items = center
+        gap = 0.65rem
+        margin-bottom = 0.8rem
+
+    .hero-logo:
+        width = 72px
+        height = 72px
+        flex-shrink = 0
+        border-radius = 50%
+        mix-blend-mode = multiply
+
+    .hero-panel li:
+        margin-bottom = 0.5rem
+        font-size = 0.92rem
+
+    .hero-panel li::marker:
+        color = {accent}
+
+    .hero-lab-link:
+        display = inline-block
+        margin-top = 1rem
+        font-size = 0.9rem
+        text-underline-offset = 4px
+
+    .hero-lab-link:hover:
+        text-decoration = underline
+
+    .builtin-card:hover, .example-card:hover:
+        border-color = #adcfc0
+        box-shadow = inset 0 1px 0 white, 0 12px 28px rgba(39, 87, 76, 0.09)
+
+    .footer-brand:
+        display = flex
+        align-items = center
+        justify-content = center
+        gap = 0.5rem
+        color = {brand-dark}
+
+    .footer-brand img:
+        border-radius = 50%
+        mix-blend-mode = multiply
+
 # Responsive overrides are emitted after base rules, in the order below.
 responsive:
     (max-width: 1000px):
+        .document-syntax-page section[id]:
+            scroll-margin-top = 1rem
+
         .site-header:
             position = static
             padding = 1.25rem 1.5rem
@@ -1060,23 +1294,44 @@ responsive:
             padding = 0
 
     (max-width: 640px):
+        .built-with-tag:
+            padding = 0.55rem 0.7rem
+            gap = 0.4rem
+            font-size = 0.72rem
+
+        .built-with-label:
+            position = absolute
+            width = 1px
+            height = 1px
+            overflow = hidden
+            clip-path = inset(50%)
+            white-space = nowrap
+
+        .built-with-compact:
+            display = inline
+
         .dev-banner:
             padding = 0.65rem 1rem
             gap = 0.35rem 0.65rem
-            font-size = 0.85rem
+            font-size = 0.75rem
 
         .site-header:
             padding = 1rem
             align-items = flex-start
 
         .brand h1:
-            font-size = 1.75rem
+            font-size = 1.5rem
 
         .subtitle:
-            font-size = 0.95rem
+            font-size = 0.82rem
 
         .site-nav:
-            gap = 0.25rem 1rem
+            gap = 0.25rem
+            justify-content = flex-start
+
+        .brand-logo:
+            width = 52px
+            height = 52px
 
         .header-actions:
             width = 100%
@@ -1097,14 +1352,14 @@ responsive:
 
         .card:
             padding = 1.25rem
-            border-radius = 14px
+            border-radius = 18px
             margin-bottom = 1.25rem
 
         .hero, .sandbox-container:
             gap = 1rem
 
         .hero h2:
-            font-size = clamp(1.75rem, 7vw, 2.5rem)
+            font-size = clamp(2rem, 7vw, 2.6rem)
 
         .hero-actions > a:
             width = 100%
@@ -1118,4 +1373,14 @@ responsive:
 
         .site-footer:
             padding = 1rem
+
+    (prefers-reduced-motion: reduce):
+        html:
+            scroll-behavior = auto
+
+        .cta, .secondary-cta, .nav-link, .pill, .language-link, .site-nav a, .builtin-card:
+            transition = none
+
+        .cta:hover, .cta:active, .builtin-card:hover:
+            transform = none
 

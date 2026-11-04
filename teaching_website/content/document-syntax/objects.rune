@@ -1,0 +1,3 @@
+@Settings
+owner = { "name": "Mina", "role": "editor" }
+features = (records exports)

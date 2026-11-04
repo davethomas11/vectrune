@@ -1,12 +1,12 @@
 @Component/LanguageSelector
 view:
     div .language-selector:
-        span .language-label "Language:"
-        a .language-link href="/" "English"
+        span .language-label "%i18n.Common.language_label%"
+        a .language-link href="/" aria-current="{i18n.Common.locale == 'en_us' ? 'page' : 'false'}" "English"
         span .language-sep " / "
-        a .language-link href="/es/" "Español"
+        a .language-link href="/es/" aria-current="{i18n.Common.locale == 'es' ? 'page' : 'false'}" "Español"
         span .language-sep " / "
-        a .language-link href="/fr/" "Français"
+        a .language-link href="/fr/" aria-current="{i18n.Common.locale == 'fr' ? 'page' : 'false'}" "Français"
 
 
 

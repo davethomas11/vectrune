@@ -1,0 +1,16 @@
+{
+  "Skateboarder": {
+    "record": [
+      {
+        "active": true,
+        "name": "Mina",
+        "style": "Street"
+      },
+      {
+        "active": false,
+        "name": "Jules",
+        "style": "Vert"
+      }
+    ]
+  }
+}

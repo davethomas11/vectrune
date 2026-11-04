@@ -83,7 +83,7 @@ jobs:
           fi
 
           # Static assets referenced as /assets/*
-          cp *.js *.css "$OUT/assets/"
+          cp *.js *.css *.png "$OUT/assets/"
           [ -d pkg ] && cp -r pkg "$OUT/assets/pkg" || true
 
           if [ -n "${PAGES_CNAME:-}" ]; then echo "$PAGES_CNAME" > "$OUT/CNAME"; fi

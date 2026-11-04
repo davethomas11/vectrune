@@ -1,5 +1,6 @@
 @Component/BuiltWithTag
 view:
     a .built-with-tag href=https://github.com/davethomas11/vectrune/tree/main/teaching_website target=_blank rel="noopener noreferrer" title="%i18n.Common.site_source%":
-        span "%i18n.Common.built_with%"
+        span .built-with-label "%i18n.Common.built_with%"
+        span .built-with-compact aria-hidden=true "100% Rune-Web"
         span aria-hidden=true "↗"

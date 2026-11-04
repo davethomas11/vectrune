@@ -22,4 +22,5 @@ view:
                 p "%i18n.LanguageTour.builtins_desc%"
         pre:
             code .code-block .language-rune "%i18n.LanguageTour.example_code%"
+        a .content-link href=#app click="navigate('documents')" "%i18n.DocumentSyntax.tour_link%"
 
