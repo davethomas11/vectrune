@@ -1,0 +1,22 @@
+@Component/GraphqlConsole
+view:
+    div .graphql-console hidden=true data-ready="%i18n.Examples.graphql_ready%":
+        label for=graphql-preset "%i18n.Examples.graphql_examples%"
+        select #graphql-preset .graphql-preset .search-input aria-label="%i18n.Examples.graphql_examples%"
+        label for=graphql-query "%i18n.Examples.graphql_query%"
+        div .code-editor .query-editor:
+            pre .editor-highlight aria-hidden=true:
+                code .code-block .language-graphql
+            textarea #graphql-query .syntax-editor .graphql-query spellcheck=false wrap=off aria-label="%i18n.Examples.graphql_query%"
+        label for=graphql-variables "%i18n.Examples.graphql_variables%"
+        div .code-editor .variables-editor:
+            pre .editor-highlight aria-hidden=true:
+                code .code-block .language-json
+            textarea #graphql-variables .syntax-editor .graphql-variables spellcheck=false wrap=off aria-label="%i18n.Examples.graphql_variables%"
+        label for=graphql-operation-name "%i18n.Examples.graphql_operation_name%"
+        input #graphql-operation-name .graphql-operation-name .search-input autocomplete=off aria-label="%i18n.Examples.graphql_operation_name%"
+        button .cta .graphql-execute click="executeGraphql(this)" "%i18n.Examples.graphql_execute%"
+        details .graphql-schema:
+            summary "%i18n.Examples.graphql_schema%"
+            pre:
+                code .code-block .language-graphql

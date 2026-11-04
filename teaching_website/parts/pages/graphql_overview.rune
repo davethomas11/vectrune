@@ -6,4 +6,4 @@ view:
             h2 "GraphQL API Overview"
             p "Declare GraphQL types and query resolvers concisely without heavy framework overhead."
             
-        SandboxSection show_output=true
+        GraphqlExample

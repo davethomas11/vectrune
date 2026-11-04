@@ -7,6 +7,8 @@ const outPath = 'dist/rune-emulator.js';
 await esbuild.build({
   entryPoints: ['src/index.ts'],
   bundle: true,
+  minify: true,
+  supported: { 'template-literal': false },
   format: 'esm',
   outfile: outPath,
   sourcemap: true,

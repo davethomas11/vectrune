@@ -124,10 +124,17 @@ Examples {
     rest_hint = "Run the app, choose an endpoint, and send a request. Edit the source and run again to try your changes."
     users_hint = "This is the repository User API. Its CSV file lives in browser memory: create a user with POST, then fetch the users with GET. Run again to reset the file."
     data_hint = "Edit the records and use Run to inspect the document as JSON. Show Document also supports YAML and XML."
-    graphql_hint = "Read the complete queries and mutations below. GraphQL execution needs the local Vectrune runtime; the browser emulator does not run these resolvers. From your repository checkout, run:"
+    graphql_hint = "Run the app to explore real queries and mutations. Choose a sample operation or write your own. Changes stay in browser memory; Run resets the starting records."
     web_hint = "This preview is compiled from the actual Rune example, including its styles and actions. Interact with the app, then expand the source below."
     sandbox_title = "Read, edit, run"
     sandbox_hint = "The editor contains the example source. Run executes it in your browser; Show Document and Show AST help inspect it."
+    graphql_ready = "Choose an operation, edit the query or variables, then execute. Mutations share memory with subsequent queries."
+    graphql_examples = "Example operation"
+    graphql_query = "Query or mutation"
+    graphql_variables = "Variables (JSON object)"
+    graphql_operation_name = "Operation name (optional)"
+    graphql_execute = "Execute GraphQL"
+    graphql_schema = "View GraphQL schema"
 }
 WhatsNext {
     eyebrow = "What next"

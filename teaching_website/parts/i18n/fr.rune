@@ -124,10 +124,17 @@ Examples {
     rest_hint = "Lancez l’application, choisissez un endpoint et envoyez une requête. Modifiez le code et relancez pour tester les changements."
     users_hint = "Voici l’API utilisateurs du dépôt. Son CSV reste en mémoire dans le navigateur : créez un utilisateur avec POST, puis consultez avec GET. Relancez pour réinitialiser le fichier."
     data_hint = "Modifiez les enregistrements et utilisez Run pour afficher le document en JSON. Show Document propose aussi YAML et XML."
-    graphql_hint = "Lisez les requêtes et mutations complètes. GraphQL nécessite le runtime Vectrune local ; l’émulateur du navigateur n’exécute pas ces resolvers. Depuis le dépôt, lancez :"
+    graphql_hint = "Lancez l’application pour tester de vraies requêtes et mutations. Choisissez une opération ou écrivez la vôtre. Les changements restent dans le navigateur ; Run réinitialise les données."
     web_hint = "Cet aperçu est compilé à partir du véritable exemple Rune, avec ses styles et ses actions. Testez l’application, puis ouvrez le code source."
     sandbox_title = "Lire, modifier, exécuter"
     sandbox_hint = "L’éditeur contient le code de l’exemple. Run l’exécute dans le navigateur ; Show Document et Show AST permettent de l’inspecter."
+    graphql_ready = "Choisissez une opération, modifiez la requête ou les variables, puis exécutez. Les mutations partagent la mémoire avec les requêtes suivantes."
+    graphql_examples = "Exemple d’opération"
+    graphql_query = "Requête ou mutation"
+    graphql_variables = "Variables (objet JSON)"
+    graphql_operation_name = "Nom de l’opération (facultatif)"
+    graphql_execute = "Exécuter GraphQL"
+    graphql_schema = "Voir le schéma GraphQL"
 }
 WhatsNext {
     eyebrow = "Prochaines étapes"

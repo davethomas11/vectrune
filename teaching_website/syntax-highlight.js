@@ -236,10 +236,27 @@
     return restore(text);
   }
 
+  function highlightGraphql(source) {
+    const { stash, restore } = createStash(source);
+    let text = source.replace(/"""[\s\S]*?"""|"(?:\\.|[^"\\])*"|#[^\n]*/g,
+      match => stash(wrap(match.startsWith('#') ? 'comment' : 'string', escapeHtml(match))));
+    text = escapeHtml(text);
+    text = text.replace(/\b(query|mutation|subscription|fragment|on|type|input|enum|scalar|interface|union|implements|schema|directive|extend|repeatable)\b/g,
+      match => stash(wrap('keyword', match)));
+    text = text.replace(/\$[_A-Za-z]\w*/g, match => stash(wrap('interpolation', match)));
+    text = text.replace(/@[_A-Za-z]\w*/g, match => stash(wrap('builtin', match)));
+    text = text.replace(/\b[A-Z][_A-Za-z0-9]*\b/g, match => stash(wrap('type', match)));
+    text = text.replace(/\b(true|false|null)\b/g, match => stash(wrap('constant', match)));
+    text = text.replace(/-?\b\d+(?:\.\d+)?\b/g, match => stash(wrap('number', match)));
+    text = text.replace(/[{}()[\],:!]|\.{3}/g, match => stash(wrap('punctuation', match)));
+    return restore(text);
+  }
+
   function highlight(source, language) {
     if (language === 'rune' || language === 'vectrune') return highlightRune(source);
     if (['powershell', 'bash', 'shell'].includes(language)) return highlightShell(source);
     if (['json', 'yaml', 'yml', 'xml'].includes(language)) return highlightData(source, language);
+    if (language === 'graphql' || language === 'gql') return highlightGraphql(source);
     return escapeHtml(source);
   }
 
@@ -263,7 +280,7 @@
     if (!code) return;
     if (highlighted.get(editor) !== editor.value) {
       highlighted.set(editor, editor.value);
-      code.innerHTML = highlightRune(editor.value) + '\n';
+      code.innerHTML = highlight(editor.value, languageFromClassName(code.className) || 'rune') + '\n';
     }
     wrapper.classList.add('highlight-ready');
     backdrop.scrollTop = editor.scrollTop;

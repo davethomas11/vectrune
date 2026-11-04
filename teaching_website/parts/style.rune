@@ -407,7 +407,7 @@ rules:
         background = {panel-strong}
         margin-bottom = 1rem
 
-    #sandbox-editor:
+    .syntax-editor:
         position = absolute
         inset = 0
         width = 100%
@@ -452,15 +452,15 @@ rules:
     .highlight-ready .editor-highlight:
         display = block
 
-    .highlight-ready #sandbox-editor:
+    .highlight-ready .syntax-editor:
         color = transparent
         -webkit-text-fill-color = transparent
 
-    #sandbox-editor::placeholder:
+    .syntax-editor::placeholder:
         color = {syntax-comment}
         -webkit-text-fill-color = {syntax-comment}
 
-    #sandbox-editor::selection:
+    .syntax-editor::selection:
         background = rgba(96, 165, 250, 0.35)
 
     .code-editor:focus-within:
@@ -975,6 +975,34 @@ rules:
         font-family = monospace
         font-size = 1rem
 
+    .graphql-console label:
+        display = block
+        margin = 0.75rem 0 0.4rem
+        font-weight = 600
+
+    .code-editor.query-editor:
+        height = 16rem
+
+    .code-editor.variables-editor:
+        height = 9rem
+        min-height = 6rem
+
+    .graphql-execute:
+        margin-top = 1rem
+
+    .graphql-schema:
+        margin = 1rem 0
+
+    .graphql-schema summary:
+        cursor = pointer
+        padding = 0.5rem 0
+        color = {brand}
+        font-weight = 600
+
+    .graphql-schema pre:
+        max-height = 20rem
+        overflow = auto
+
 # Responsive overrides are emitted after base rules, in the order below.
 responsive:
     (max-width: 1000px):
@@ -1085,7 +1113,7 @@ responsive:
         .reference-controls, .builtin-card, .install-card, .hero-panel:
             padding = 1rem
 
-        #sandbox-editor:
+        .syntax-editor:
             font-size = 1rem
 
         .site-footer:

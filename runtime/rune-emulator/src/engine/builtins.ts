@@ -280,7 +280,7 @@ export function executeBuiltin(
   // -------------------------------------------------------------------------
   if (name === 'memory.set' || name === 'set-memory') {
     if (args.length >= 2) {
-      const key = args[0];
+      const key = parseCsvKey(args[0]);
       const val = evaluateExpression(args.slice(1).join(' '), scope);
       ctx.memoryStore[key] = val;
     } else if (args.length === 1) {
@@ -296,7 +296,7 @@ export function executeBuiltin(
   // memory.get / get-memory
   // -------------------------------------------------------------------------
   if (name === 'memory.get' || name === 'get-memory') {
-    const key = args[0];
+    const key = parseCsvKey(args[0]);
     const val = ctx.memoryStore[key];
     if (assignTarget) ctx.state[assignTarget] = val;
     return val;
@@ -306,7 +306,7 @@ export function executeBuiltin(
   // memory.del / del-memory
   // -------------------------------------------------------------------------
   if (name === 'memory.del' || name === 'del-memory') {
-    const key = args[0];
+    const key = parseCsvKey(args[0]);
     delete ctx.memoryStore[key];
     return undefined;
   }
@@ -324,7 +324,14 @@ export function executeBuiltin(
   // -------------------------------------------------------------------------
   // append / memory.append
   // -------------------------------------------------------------------------
-  if (name === 'append' || name === 'memory.append') {
+  if (name === 'memory.append') {
+    const key = parseCsvKey(args[0]);
+    const target = ctx.memoryStore[key] ?? (ctx.memoryStore[key] = []);
+    if (!Array.isArray(target)) throw new Error(`Memory '${key}' is not a list`);
+    target.push(evaluateExpression(args.slice(1).join(' '), scope));
+    return undefined;
+  }
+  if (name === 'append') {
     const targetExpr = args[0];
     const val = evaluateExpression(args.slice(1).join(' '), scope);
     const target = resolvePath(targetExpr, { ...ctx.state, ...ctx.pathParams });

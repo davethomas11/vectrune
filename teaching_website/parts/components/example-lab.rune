@@ -20,7 +20,7 @@ view:
             "app" -> FirstApiExample
             "skaters" -> DataDocumentExample
             "users" -> UserApiExample
-            "graphql" -> GraphqlSourceExample
+            "graphql" -> GraphqlExample
             "counter" -> CounterExample
             "tic" -> TicTacToeExample
 
@@ -45,18 +45,12 @@ view:
         p "%i18n.Examples.data_hint%"
         SandboxSection code="{raw ../../../examples/skateboarders.rune}" show_output=true mode=data
 
-@Component/GraphqlSourceExample
+@Component/GraphqlExample
 view:
-    section .card:
-        span .tag .tag-practical "%i18n.Examples.local_runtime%"
+    section .example-workspace:
         h2 "Book GraphQL API"
         p "%i18n.Examples.graphql_hint%"
-        pre:
-            code .code-block .language-bash "vectrune examples/book_graphql.rune"
-        details .example-source:
-            open = true
-            summary "%i18n.Examples.source_label%"
-            ExampleSource code="{raw ../../../examples/book_graphql.rune}"
+        SandboxSection code="{raw ../../../examples/book_graphql.rune}" show_output=true mode=graphql
 
 @Component/CounterExample
 view:

@@ -9,6 +9,7 @@ import type {
   SchemaSection,
   RouteSection,
   RunStep,
+  GraphqlField,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -214,6 +215,7 @@ export function parseSections(source: string): RuneDocument {
     schemas: {},
     routes: [],
     rawSections: {},
+    graphql: { types: {}, fields: [] },
   };
 
   // We'll process tokens section by section
@@ -269,6 +271,36 @@ export function parseSections(source: string): RuneDocument {
     } else if (sectionType === 'Schema') {
       const schemaName = sectionSub;
       doc.schemas[schemaName] = parseSchemaSection(sectionTokens);
+    } else if (sectionType === 'Type') {
+      doc.graphql.types[sectionSub] = parseSchemaSection(sectionTokens);
+    } else if (sectionType === 'GraphQL') {
+      const [operation, type] = sectionSub.split('/');
+      if (operation !== 'Query' && operation !== 'Mutation') {
+        throw new Error(`Unsupported GraphQL section: ${sectionSub}`);
+      }
+      let field: GraphqlField | null = null;
+      let body: IndentedLine[] = [];
+      const finish = () => {
+        if (field) {
+          field.run = parseRunSteps(body, body[0]?.indent ?? 4);
+          doc.graphql.fields.push(field);
+        }
+      };
+      for (const token of sectionTokens) {
+        if (token.indent === 0 && token.raw.endsWith(':')) {
+          finish();
+          field = parseGraphqlField(token.raw.slice(0, -1), operation === 'Query' ? 'query' : 'mutation', type);
+          body = [];
+        } else if (field) {
+          body.push({ text: token.raw, indent: token.indent });
+        }
+      }
+      finish();
+    } else if (sectionType === 'Query' || sectionType === 'Mutation') {
+      const field = parseGraphqlField(sectionSub, sectionType === 'Query' ? 'query' : 'mutation');
+      const body = sectionTokens.filter(token => !(token.indent === 0 && token.raw === 'run:'));
+      field.run = parseRunSteps(body.map(token => ({ text: token.raw, indent: token.indent })), body[0]?.indent ?? 4);
+      doc.graphql.fields.push(field);
     } else if (sectionType === 'Route') {
       const route = parseRouteSection(sectionSub, sectionTokens);
       if (route) doc.routes.push(route);
@@ -299,6 +331,23 @@ export function parseSections(source: string): RuneDocument {
   }
 
   return doc;
+}
+
+function parseGraphqlField(signature: string, kind: GraphqlField['kind'], type?: string): GraphqlField {
+  const match = signature.match(/^([_A-Za-z]\w*)(?:\((.*?)\))?\s*(?:->\s*(.+))?$/);
+  if (!match) throw new Error(`Invalid GraphQL resolver: ${signature}`);
+  const [, name, parameters, declaredType] = match;
+  const args: Record<string, string> = {};
+  for (const parameter of parameters?.split(',') ?? []) {
+    if (!parameter.trim()) continue;
+    const argument = parameter.trim().match(/^([_A-Za-z]\w*)\s*:\s*([\w[\]!]+)$/);
+    if (!argument) throw new Error(`Invalid GraphQL argument: ${parameter}`);
+    args[argument[1]] = argument[2];
+  }
+  const singular = name.endsWith('s') ? name.replace(/s+$/, '') : name;
+  const inferred = singular.charAt(0).toUpperCase() + singular.slice(1);
+  const returnType = declaredType ?? (type ? `${type}!` : kind === 'mutation' ? 'JSON' : name.endsWith('s') ? `[${inferred}!]!` : `${inferred}!`);
+  return { kind, name, args, returnType, run: [] };
 }
 
 // ---------------------------------------------------------------------------

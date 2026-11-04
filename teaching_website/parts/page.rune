@@ -10,6 +10,6 @@ view:
     div .site-shell:
         SidebarLayout
         BuiltWithTag
-        script src="/assets/syntax-highlight.js?v=2"
-        script src="/assets/sandbox.js?v=6"
+        script src="/assets/syntax-highlight.js?v=3"
+        script src="/assets/sandbox.js?v=7"
         script src="/assets/builtin-reference.js?v=5"

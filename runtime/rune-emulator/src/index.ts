@@ -20,6 +20,9 @@ import { handleRequest } from './engine/mock-api';
 import { executeSteps } from './engine/executor';
 import { createRequestContext } from './engine/context';
 import { serialize as _serialize } from './serializer/index';
+import { createGraphqlEngine } from './engine/graphql';
+import type { GraphqlRequest, GraphqlExample } from './engine/graphql';
+export type { GraphqlRequest, GraphqlExample } from './engine/graphql';
 
 export type { RuneDocument, AppSection, SchemaSection, RouteSection, RunStep } from './types';
 export type { MockRequest, MockResponse } from './engine/context';
@@ -64,6 +67,8 @@ export interface RuneEmulatorApp {
   document: ReturnType<typeof parseSections>;
   /** Execute a mock HTTP request against this app */
   request(req: import('./engine/context').MockRequest): import('./engine/context').MockResponse;
+  graphql(req: GraphqlRequest): import('./engine/context').MockResponse;
+  graphqlInfo(): { schema: string; examples: GraphqlExample[] };
   /** Direct access to the mutable file store (for inspection / updates) */
   fileStore: Record<string, unknown[]>;
   /** Direct access to the mutable memory store */
@@ -91,7 +96,28 @@ export function createApp(
   seed: SeedData = {},
 ): RuneEmulatorApp {
   const fileStore: Record<string, unknown[]> = Object.assign({}, seed.files ?? {});
-  const memoryStore: Record<string, unknown> = Object.assign({}, seed.memory ?? {});
+  const memoryStore: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(doc.rawSections)) {
+    if (name.startsWith('Memory/')) {
+      memoryStore[name.slice('Memory/'.length)] = JSON.parse(JSON.stringify(value.record ?? value));
+    } else if (name === 'Memory') {
+      Object.assign(memoryStore, JSON.parse(JSON.stringify(value)));
+    }
+  }
+  Object.assign(memoryStore, seed.memory ?? {});
+  let engine: ReturnType<typeof createGraphqlEngine> | undefined;
+  const graphqlInfo = () => (engine ??= createGraphqlEngine(doc, fileStore, memoryStore)).info;
+  const graphql = (req: GraphqlRequest): import('./engine/context').MockResponse => {
+    try {
+      if (!req || typeof req.query !== 'string') throw new Error('GraphQL requests need a query string.');
+      if (req.variables !== undefined && (req.variables === null || typeof req.variables !== 'object' || Array.isArray(req.variables))) {
+        throw new Error('GraphQL variables must be a JSON object.');
+      }
+      return (engine ??= createGraphqlEngine(doc, fileStore, memoryStore)).execute(req);
+    } catch (error) {
+      return { status: 400, body: { errors: [{ message: error instanceof Error ? error.message : String(error) }] }, logs: [] };
+    }
+  };
 
   // Run @App run: block if present (e.g. to seed memory from data)
   if (doc.app && doc.app.run.length > 0) {
@@ -104,8 +130,17 @@ export function createApp(
     document: doc,
     fileStore,
     memoryStore,
+    graphql,
+    graphqlInfo,
 
     request(req) {
+      if (doc.graphql.fields.length && req.method.toUpperCase() === 'POST' && req.path === '/graphql') {
+        try {
+          return graphql(JSON.parse(req.body ?? '{}'));
+        } catch (_) {
+          return { status: 400, body: { errors: [{ message: 'GraphQL request body must be valid JSON.' }] }, logs: [] };
+        }
+      }
       return handleRequest(
         {
           routes: doc.routes,
@@ -145,6 +180,13 @@ export function serialize(
 // Re-export individual serializers for direct use
 export { toJson, toYaml, toXml } from './serializer/index';
 
+function formatDocumentStep(step: import('./types').RunStep): unknown {
+  if (step.kind === 'raw') return step.text;
+  if (step.kind === 'assignment') return `${step.lhs} = ${step.rhs}`;
+  if (step.kind === 'if') return { [`if ${step.condition}`]: step.body.map(formatDocumentStep) };
+  return `${step.name} ${step.args.map(arg => arg.includes(' ') && !arg.startsWith('"') ? '"' + arg + '"' : arg).join(' ')}`.trim();
+}
+
 // ---------------------------------------------------------------------------
 // toDocument
 // ---------------------------------------------------------------------------
@@ -162,25 +204,37 @@ export function toDocument(doc: import('./types').RuneDocument): Record<string, 
   }
 
   if (Object.keys(doc.schemas).length > 0) {
-    result['Schema'] = {};
+    const schemas: Record<string, unknown> = {};
+    result.Schema = schemas;
     for (const [name, schema] of Object.entries(doc.schemas)) {
-      result['Schema'][name] = schema.fields;
+      schemas[name] = schema.fields;
     }
   }
 
+  if (Object.keys(doc.graphql.types).length) result.Type = Object.fromEntries(Object.entries(doc.graphql.types).map(([name, type]) => [name, type.fields]));
+  if (doc.graphql.fields.length) {
+    const sections: Record<string, Record<string, unknown>> = {};
+    for (const field of doc.graphql.fields) {
+      const section = field.kind === 'query' ? 'Query' : 'Mutation';
+      const args = Object.entries(field.args).map(([name, type]) => `${name}: ${type}`).join(', ');
+      const signature = `${field.name}${args ? `(${args})` : ''} -> ${field.returnType}`;
+      (sections[section] ??= {})[signature] = field.run.map(formatDocumentStep);
+    }
+    result.GraphQL = sections;
+  }
+
   if (doc.routes.length > 0) {
-    result['Route'] = {};
+    const routes: Record<string, Record<string, unknown>> = {};
+    result.Route = routes;
     for (const route of doc.routes) {
-      if (!result['Route'][route.method]) {
-        result['Route'][route.method] = {};
-      }
+      routes[route.method] ??= {};
       
       const parts = route.path.split('/').filter((p: string) => p.length > 0);
-      let current: any = result['Route'][route.method];
+      let current = routes[route.method];
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
         if (!current[part]) current[part] = {};
-        current = current[part];
+        current = current[part] as Record<string, unknown>;
       }
       
       if (route.expect) current.expect = route.expect;
@@ -188,16 +242,8 @@ export function toDocument(doc: import('./types').RuneDocument): Record<string, 
         current[k] = v;
       }
       
-      const formatStep = (step: any): any => {
-        if (step.kind === 'raw') return step.text;
-        if (step.kind === 'builtin') return `${step.name} ${step.args.map((a: string) => a.includes(' ') && !a.startsWith('"') ? '"' + a + '"' : a).join(' ')}`.trim();
-        if (step.kind === 'assignment') return `${step.lhs} = ${step.rhs}`;
-        if (step.kind === 'if') return { [`if ${step.condition}`]: step.body.map(formatStep) };
-        return JSON.stringify(step);
-      };
-      
       if (route.run.length > 0) {
-         current.run = route.run.map(formatStep);
+         current.run = route.run.map(formatDocumentStep);
       }
     }
   }

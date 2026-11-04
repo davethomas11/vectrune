@@ -19,6 +19,18 @@ export interface RuneDocument {
   routes: RouteSection[];
   /** Any other @<SectionType>/<name> sections, raw key-value data */
   rawSections: Record<string, Record<string, unknown>>;
+  graphql: {
+    types: Record<string, SchemaSection>;
+    fields: GraphqlField[];
+  };
+}
+
+export interface GraphqlField {
+  kind: 'query' | 'mutation';
+  name: string;
+  args: Record<string, string>;
+  returnType: string;
+  run: RunStep[];
 }
 
 export interface AppSection {

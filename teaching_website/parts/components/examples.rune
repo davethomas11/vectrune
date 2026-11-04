@@ -24,7 +24,7 @@ view:
                 span .tag .tag-practical "%i18n.Examples.graphql_level%"
                 h3 "%i18n.Examples.graphql_title%"
                 p "%i18n.Examples.graphql_desc%"
-                a .secondary-cta href=#app click="openExample('graphql')" "%i18n.Examples.source_label%"
+                a .secondary-cta href=#app click="openExample('graphql')" "%i18n.Examples.run_label%"
             article .example-card:
                 span .tag .tag-advanced "%i18n.Examples.tic_level%"
                 h3 "%i18n.Examples.tic_title%"

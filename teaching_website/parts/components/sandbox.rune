@@ -13,7 +13,7 @@ view:
                 div .code-editor:
                     pre .editor-highlight aria-hidden=true:
                         code .code-block .language-rune
-                    textarea #sandbox-editor spellcheck=false wrap=off aria-label="Vectrune source code" placeholder="Type your .rune code here...":
+                    textarea #sandbox-editor .syntax-editor spellcheck=false wrap=off aria-label="Vectrune source code" placeholder="Type your .rune code here...":
                         "{code ?? '@App\nname = Sandbox\ntype = REST\n\n@Route/GET /\nrun:\n    log \"Initializing sandbox...\"\n    message = \"Hello from Vectrune Emulator!\"\n    respond 200 message'}"
                 div .editor-actions style="display:flex; gap:0.5rem; align-items:center;":
                     button #run-button .cta click="runSandbox(this)" "Run"
@@ -27,6 +27,7 @@ view:
             
             div .output-pane:
                 h3 "Output"
+                GraphqlConsole
                 div #sandbox-output .terminal data-error-wasm-missing="%i18n.Sandbox.error_wasm_missing%":
                     "Click 'Run' to see output here..."
         div .sandbox-hints:

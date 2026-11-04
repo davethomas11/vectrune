@@ -6,6 +6,8 @@ on:
     paths:
       - "teaching_website/**"
       - "examples/**"
+      - "runtime/rune-emulator/**"
+      - "runtime/rune-web/**"
       - "src/**"
       - "Cargo.toml"
       - "Cargo.lock"

@@ -1,6 +1,7 @@
 // sandbox.js - Bridges the UI with the Vectrune Emulator
 
 let serializeFn = null;
+const graphqlRuntimes = new WeakMap();
 
 const PAGE_SNIPPETS = {
     rest_get: `@App
@@ -105,6 +106,7 @@ function updateSandboxSnippet() {
     if (page === 'builtins' || page === 'home') return;
     const editor = document.querySelector('#sandbox-editor');
     if (!editor) return;
+    if (editor.closest('[data-sandbox-mode]')?.dataset.sandboxMode === 'graphql') return;
 
     if (editor.dataset.currentPage !== page) {
         if (PAGE_SNIPPETS[page]) {
@@ -121,8 +123,9 @@ function updateSandboxSnippet() {
 
 function getEmulatorUrl() {
     const script = document.querySelector('script[src*="sandbox.js"]');
-    const base = (script && script.src) ? new URL('rune-emulator.js', script.src).href : '/assets/rune-emulator.js';
-    return `${base}?t=${Date.now()}`;
+    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=7', location.href));
+    url.search = script ? new URL(script.src).search : '?v=7';
+    return url.href;
 }
 
 async function loadEmulator() {
@@ -147,6 +150,55 @@ function renderResponse(response, container) {
     outText += 'Response:\n';
     container.textContent = outText;
     container.appendChild(createCodeResult(bodyStr, 'json'));
+}
+
+window.executeGraphql = (button) => {
+    const container = button.closest('.sandbox-container');
+    const output = container?.querySelector('#sandbox-output');
+    const app = graphqlRuntimes.get(container);
+    if (!app || !output) return;
+    const consoleUI = container.querySelector('.graphql-console');
+    try {
+        const variables = JSON.parse(consoleUI.querySelector('.graphql-variables').value || '{}');
+        if (!variables || typeof variables !== 'object' || Array.isArray(variables)) {
+            throw new Error('GraphQL variables must be a JSON object.');
+        }
+        const response = app.graphql({
+            query: consoleUI.querySelector('.graphql-query').value,
+            variables,
+            operationName: consoleUI.querySelector('.graphql-operation-name').value.trim() || undefined,
+        });
+        renderResponse(response, output);
+    } catch (error) {
+        renderResponse({ status: 400, body: { errors: [{ message: error.message }] }, logs: [] }, output);
+    }
+};
+
+function showGraphqlConsole(container, app, output) {
+    const info = app.graphqlInfo();
+    const consoleUI = container.querySelector('.graphql-console');
+    graphqlRuntimes.set(container, app);
+    const select = consoleUI.querySelector('.graphql-preset');
+    select.replaceChildren(...info.examples.map((example, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = example.label;
+        return option;
+    }));
+    const loadExample = () => {
+        const example = info.examples[Number(select.value)];
+        for (const [selector, value] of [['.graphql-query', example.query], ['.graphql-variables', JSON.stringify(example.variables, null, 2)]]) {
+            const editor = consoleUI.querySelector(selector);
+            editor.value = value;
+            editor.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        consoleUI.querySelector('.graphql-operation-name').value = '';
+    };
+    select.onchange = loadExample;
+    consoleUI.querySelector('.graphql-schema code').textContent = info.schema;
+    consoleUI.hidden = false;
+    loadExample();
+    output.textContent = consoleUI.dataset.ready;
 }
 
 window.showAst = async (btn) => {
@@ -210,6 +262,9 @@ window.runSandbox = async (btn) => {
 
     const code = editor.value;
     output.innerHTML = "<div>Running...</div>";
+    const graphqlConsole = container.querySelector('.graphql-console');
+    if (graphqlConsole) graphqlConsole.hidden = true;
+    graphqlRuntimes.delete(container);
     
     try {
         const { parse, createApp, serialize, toDocument } = await loadEmulator();
@@ -218,7 +273,7 @@ window.runSandbox = async (btn) => {
         const doc = parse(code);
         const emulatorApp = createApp(doc);
         const mode = btn.closest('[data-sandbox-mode]')?.dataset.sandboxMode;
-        if (mode === 'data' || (!doc.app && !doc.routes.length && !/@(?:Component|Page|Frontend)\b/.test(code))) {
+        if (mode === 'data' || (!doc.app && !doc.routes.length && !doc.graphql.fields.length && !/@(?:Component|Page|Frontend)\b/.test(code))) {
             const format = container.querySelector('#ast-format')?.value || 'json';
             output.replaceChildren(createCodeResult(serialize(toDocument(doc), format), format));
             return;
@@ -357,8 +412,8 @@ window.runSandbox = async (btn) => {
             resultContainer.textContent = "Click 'Send Request' to execute the endpoint.";
         }
         // 2. GraphQL Application
-        else if (appType === 'GRAPHQL') {
-            output.textContent = 'GraphQL resolvers require the local Vectrune runtime. Open the GraphQL example in Example Lab to read the source and see the run command.';
+        else if (appType === 'GRAPHQL' || doc.graphql.fields.length) {
+            showGraphqlConsole(container, emulatorApp, output);
         }
         // 3. WebSocket Application
         else if (appType === 'WEBSOCKET' || code.includes('@Route/WS')) {
