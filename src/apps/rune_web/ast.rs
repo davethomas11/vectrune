@@ -166,6 +166,18 @@ pub struct StyleDefinition {
 
     /// CSS rules, keyed by selector
     pub rules: HashMap<String, HashMap<String, String>>,
+
+    /// Responsive overrides in source order, applied after the base rules.
+    /// Authored as `responsive:` with media conditions such as
+    /// `(max-width: 640px):` containing the same selector/property syntax as `rules:`.
+    #[serde(default)]
+    pub responsive: Vec<ResponsiveStyleRule>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResponsiveStyleRule {
+    pub condition: String,
+    pub rules: HashMap<String, HashMap<String, String>>,
 }
 
 /// A logic definition from `@Logic/<name>`.

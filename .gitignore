@@ -37,6 +37,7 @@ out/
 *.log
 
 dist/
+node_modules/
 
 testdata/
 

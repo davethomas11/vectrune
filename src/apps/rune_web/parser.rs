@@ -1103,10 +1103,35 @@ fn parse_style_section(section: &crate::rune_ast::Section) -> Result<StyleDefini
         }
     }
 
+    let mut responsive = Vec::new();
+    if let Some(items) = section.series.get("responsive") {
+        for item in items {
+            if let Value::Map(conditions) = item {
+                for (condition, body) in conditions {
+                    let mut responsive_rules = HashMap::new();
+                    if let Value::List(selectors) = body {
+                        for selector in selectors {
+                            if let Value::Map(entries) = selector {
+                                for (selector, properties) in entries {
+                                    responsive_rules.insert(selector.clone(), parse_style_properties(properties)?);
+                                }
+                            }
+                        }
+                    }
+                    responsive.push(ResponsiveStyleRule {
+                        condition: condition.clone(),
+                        rules: responsive_rules,
+                    });
+                }
+            }
+        }
+    }
+
     Ok(StyleDefinition {
         tokens,
         presets,
         rules,
+        responsive,
     })
 }
 

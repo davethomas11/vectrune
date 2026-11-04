@@ -1,6 +1,7 @@
 @Component/SidebarLayout
 state:
     activePage = "home"
+    navigationOpen = false
 bindings:
     .active <-> activePage
 
@@ -8,28 +9,31 @@ view:
     div .app-layout:
         DevBanner
         TeachingHeader
-        div .app-body:
-            nav .sidebar:
+        div .app-body data-navigation-open="{navigationOpen}":
+            button .navigation-toggle type=button click="navigationOpen = !navigationOpen" aria-expanded="{navigationOpen}" aria-controls=site-navigation:
+                span "Browse documentation"
+                span aria-hidden=true "☰"
+            nav #site-navigation .sidebar aria-label="Documentation":
                 div .nav-group:
                     h3 "Introduction"
-                    button .nav-link {.active when 'home'} "Overview"
+                    button .nav-link {.active when 'home'} click="navigate('home')" "Overview"
                 div .nav-group:
                     h3 "REST API"
-                    button .nav-link {.active when 'rest_get'} "GET Requests"
-                    button .nav-link {.active when 'rest_post'} "POST Requests"
-                    button .nav-link {.active when 'rest_validation'} "Validation"
+                    button .nav-link {.active when 'rest_get'} click="navigate('rest_get')" "GET Requests"
+                    button .nav-link {.active when 'rest_post'} click="navigate('rest_post')" "POST Requests"
+                    button .nav-link {.active when 'rest_validation'} click="navigate('rest_validation')" "Validation"
                 div .nav-group:
                     h3 "Reference"
-                    button .nav-link {.active when 'builtins'} "Builtin Library"
+                    button .nav-link {.active when 'builtins'} click="navigate('builtins')" "Builtin Library"
                 div .nav-group:
                     h3 "GraphQL"
-                    button .nav-link {.active when 'graphql'} "Overview"
+                    button .nav-link {.active when 'graphql'} click="navigate('graphql')" "Overview"
                 div .nav-group:
                     h3 "Web Sockets"
-                    button .nav-link {.active when 'websocket'} "Overview"
+                    button .nav-link {.active when 'websocket'} click="navigate('websocket')" "Overview"
                 div .nav-group:
                     h3 "Rune Web"
-                    button .nav-link {.active when 'rune_web'} "Overview"
+                    button .nav-link {.active when 'rune_web'} click="navigate('rune_web')" "Overview"
             
             main .content-area:
                 match activePage:

@@ -6,7 +6,7 @@
 /// - Property validation and vendor prefix generation
 /// - Circular reference detection and warning
 
-use super::ast::StyleDefinition;
+use super::ast::{ResponsiveStyleRule, StyleDefinition};
 use std::collections::HashMap;
 
 /// CSS compilation context that tracks tokens, presets, and resolves references.
@@ -14,6 +14,7 @@ pub struct CssCompiler {
     tokens: HashMap<String, String>,
     presets: HashMap<String, HashMap<String, String>>,
     preset_chain: Vec<String>, // For cycle detection during resolution
+    responsive: Vec<ResponsiveStyleRule>,
 }
 
 impl CssCompiler {
@@ -23,6 +24,7 @@ impl CssCompiler {
             tokens: style.tokens.clone(),
             presets: style.presets.clone(),
             preset_chain: Vec::new(),
+            responsive: style.responsive.clone(),
         }
     }
 
@@ -195,6 +197,13 @@ impl CssCompiler {
 
         self.compile_rules(&mut css, "", rules);
 
+        // Preserve source order so later breakpoint overrides win the cascade.
+        for responsive in self.responsive.clone() {
+            css.push_str(&format!("@media {} {{\n", responsive.condition));
+            self.compile_rules(&mut css, "", &responsive.rules);
+            css.push_str("}\n");
+        }
+
         css
     }
 
@@ -282,8 +291,55 @@ mod tests {
     use super::*;
 
     #[test]
+    fn responsive_styles_preserve_cascade_order_and_support_presets_and_tokens() {
+        let document = crate::rune_parser::parse_rune(r#"
+@Page/demo
+view:
+    div .card "Responsive example"
+
+@Style/responsive
+tokens:
+    panel = #ffffff
+presets:
+    compact:
+        padding = 1rem
+rules:
+    .card:
+        padding = 2rem
+responsive:
+    (max-width: 1000px):
+        .card:
+            use = (compact)
+            background = {panel}
+            &:hover:
+                color = {panel}
+    (max-width: 640px):
+        .card:
+            padding = 0.5rem
+"#).expect("valid Rune styles");
+        let frontend = super::super::parser::parse_rune_web_frontend(&document, "demo")
+            .expect("valid frontend");
+        let style = &frontend.style_definitions["responsive"];
+        assert_eq!(style.responsive.len(), 2);
+
+        let css = CssCompiler::new(style).compile(&style.rules);
+        let base = css.find("padding: 2rem;").unwrap();
+        let tablet = css.find("@media (max-width: 1000px) {\n").unwrap();
+        let phone = css.find("@media (max-width: 640px) {\n").unwrap();
+        assert!(base < tablet && tablet < phone);
+        let tablet_css = &css[tablet..phone];
+        assert!(tablet_css.contains("padding: 1rem;"));
+        assert!(tablet_css.contains("background: var(--panel);"));
+        assert!(tablet_css.contains(".card:hover {\n  color: var(--panel);\n}"));
+        assert!(tablet_css.ends_with("}\n}\n"));
+        assert!(css[phone..].contains("padding: 0.5rem;"));
+        assert!(css.ends_with("}\n}\n"));
+    }
+
+    #[test]
     fn test_token_substitution() {
         let style = StyleDefinition {
+            responsive: Vec::new(),
             tokens: [("color-primary".to_string(), "#ff0000".to_string())]
                 .iter()
                 .cloned()
@@ -321,6 +377,7 @@ mod tests {
         );
 
         let style = StyleDefinition {
+            responsive: Vec::new(),
             tokens: HashMap::new(),
             presets: presets.clone(),
             rules: HashMap::new(),
@@ -351,6 +408,7 @@ mod tests {
         );
 
         let style = StyleDefinition {
+            responsive: Vec::new(),
             tokens: HashMap::new(),
             presets,
             rules: HashMap::new(),
@@ -365,6 +423,7 @@ mod tests {
     #[test]
     fn test_compound_token_expansion_and_alias_declarations() {
         let style = StyleDefinition {
+            responsive: Vec::new(),
             tokens: [
                 ("cell-size".to_string(), "96px".to_string()),
                 ("page-bg".to_string(), "#0f172a".to_string()),
@@ -402,6 +461,7 @@ mod tests {
     #[test]
     fn test_layout_shorthand_normalization() {
         let style = StyleDefinition {
+            responsive: Vec::new(),
             tokens: HashMap::new(),
             presets: HashMap::new(),
             rules: HashMap::from([

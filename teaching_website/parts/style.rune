@@ -192,9 +192,6 @@ rules:
 
     .language-sep:
         color = rgba(255, 255, 255, 0.5)
-        max-width = 1120px
-        margin = 2rem auto 3rem
-        padding = 0 1rem
 
     .card:
         use = (card-surface)
@@ -202,7 +199,7 @@ rules:
 
     .hero:
         display = grid
-        grid-template-columns = repeat(auto-fit, minmax(280px, 1fr))
+        grid-template-columns = repeat(auto-fit, minmax(min(280px, 100%), 1fr))
         gap = 2rem
         align-items = start
 
@@ -271,7 +268,7 @@ rules:
 
     .install-grid:
         display = grid
-        grid-template-columns = repeat(auto-fit, minmax(240px, 1fr))
+        grid-template-columns = repeat(auto-fit, minmax(min(240px, 100%), 1fr))
         gap = 1rem
 
     .install-card:
@@ -292,28 +289,28 @@ rules:
 
     .steps-grid:
         display = grid
-        grid-template-columns = repeat(auto-fit, minmax(220px, 1fr))
+        grid-template-columns = repeat(auto-fit, minmax(min(220px, 100%), 1fr))
         gap = 1rem
 
     .tour-grid:
         display = grid
-        grid-template-columns = repeat(auto-fit, minmax(240px, 1fr))
+        grid-template-columns = repeat(auto-fit, minmax(min(240px, 100%), 1fr))
         gap = 1rem
         margin-bottom = 1.25rem
 
     .walkthrough-grid:
         display = grid
-        grid-template-columns = repeat(auto-fit, minmax(260px, 1fr))
+        grid-template-columns = repeat(auto-fit, minmax(min(260px, 100%), 1fr))
         gap = 1rem
 
     .examples-grid:
         display = grid
-        grid-template-columns = repeat(auto-fit, minmax(240px, 1fr))
+        grid-template-columns = repeat(auto-fit, minmax(min(240px, 100%), 1fr))
         gap = 1rem
 
     .next-grid:
         display = grid
-        grid-template-columns = repeat(auto-fit, minmax(260px, 1fr))
+        grid-template-columns = repeat(auto-fit, minmax(min(260px, 100%), 1fr))
         gap = 1rem
 
     .step-card:
@@ -361,8 +358,8 @@ rules:
         margin-top = 1.5rem
 
     .editor-pane, .output-pane:
-        flex = 1
-        min-width = 300px
+        flex = 1 1 300px
+        min-width = 0
         display = flex
         flex-direction = column
 
@@ -388,6 +385,8 @@ rules:
         white-space = pre-wrap
         overflow-y = auto
         border = 1px solid rgba(148, 163, 184, 0.1)
+        overflow-wrap = anywhere
+        overflow-x = auto
 
     .sandbox-hints:
         margin-top = 1.5rem
@@ -568,6 +567,7 @@ rules:
 
     .sidebar:
         width = 250px
+        flex = 0 0 250px
         padding = 2rem 1.5rem
         border-right = 1px solid {border}
         background = transparent
@@ -608,6 +608,7 @@ rules:
 
     .content-area:
         flex = 1
+        min-width = 0
         padding = 2rem 3rem
         max-width = 1100px
 
@@ -666,7 +667,7 @@ rules:
 
     .builtin-cards-grid:
         display = grid
-        grid-template-columns = repeat(auto-fill, minmax(320px, 1fr))
+        grid-template-columns = repeat(auto-fill, minmax(min(320px, 100%), 1fr))
         gap = 1.25rem
         margin-bottom = 3rem
 
@@ -793,4 +794,142 @@ rules:
         border-top = 2px dashed {border}
         padding-top = 2.5rem
 
+    .navigation-toggle:
+        display = none
+
+    .page, .hero > *, .install-grid > *, .steps-grid > *, .tour-grid > *, .walkthrough-grid > *, .examples-grid > *, .next-grid > *, .builtin-card:
+        min-width = 0
+
+    .content-area, .site-header, .site-footer:
+        overflow-wrap = anywhere
+
+    pre, .code-block, .builtin-syntax-box:
+        overflow-wrap = normal
+
+    .editor-actions, .language-selector, .builtin-card-header:
+        flex-wrap = wrap
+        gap = 0.5rem
+
+    .nav-link, .language-link, .site-nav a, .pill, .load-sandbox-btn:
+        min-height = 44px
+
+    .language-link, .site-nav a:
+        display = inline-flex
+        align-items = center
+
+# Responsive overrides are emitted after base rules, in the order below.
+responsive:
+    (max-width: 1000px):
+        .site-header:
+            position = static
+            padding = 1.25rem 1.5rem
+            gap = 0.75rem 1.5rem
+
+        .site-nav:
+            width = 100%
+            gap = 0.25rem 1.25rem
+
+        .app-body:
+            flex-direction = column
+
+        .sidebar:
+            flex = none
+            width = 100%
+            display = none
+            grid-template-columns = repeat(3, minmax(0, 1fr))
+            gap = 1rem
+            padding = 1.25rem 1.5rem
+            border-right = 0
+            border-bottom = 1px solid {border}
+
+        .navigation-toggle:
+            display = flex
+            align-items = center
+            justify-content = space-between
+            width = 100%
+            min-height = 52px
+            padding = 0.75rem 1.5rem
+            border = 0
+            border-bottom = 1px solid {border}
+            background = {panel}
+            color = {text}
+            font-size = inherit
+            font-family = inherit
+            font-weight = 600
+            text-align = left
+            cursor = pointer
+
+        .app-body[data-navigation-open="true"] .sidebar:
+            display = grid
+
+        .nav-group:
+            margin = 0
+            min-width = 0
+
+        .content-area:
+            width = 100%
+            padding = 1.5rem
+
+        .page:
+            padding = 0
+
+    (max-width: 640px):
+        .dev-banner:
+            padding = 0.65rem 1rem
+            gap = 0.35rem 0.65rem
+            font-size = 0.85rem
+
+        .site-header:
+            padding = 1rem
+            align-items = flex-start
+
+        .brand h1:
+            font-size = 1.75rem
+
+        .subtitle:
+            font-size = 0.95rem
+
+        .site-nav:
+            gap = 0.25rem 1rem
+
+        .header-actions:
+            width = 100%
+
+        .language-selector:
+            gap = 0.25rem
+
+        .sidebar:
+            grid-template-columns = repeat(2, minmax(0, 1fr))
+            padding = 1rem
+            gap = 1rem 0.5rem
+
+        .nav-link:
+            padding = 0.6rem 0.5rem
+
+        .content-area:
+            padding = 1.25rem 0.75rem
+
+        .card:
+            padding = 1.25rem
+            border-radius = 14px
+            margin-bottom = 1.25rem
+
+        .hero, .sandbox-container:
+            gap = 1rem
+
+        .hero h2:
+            font-size = clamp(1.75rem, 7vw, 2.5rem)
+
+        .hero-actions > a:
+            width = 100%
+            text-align = center
+
+        .reference-controls, .builtin-card, .install-card, .hero-panel:
+            padding = 1rem
+
+        #sandbox-editor:
+            font-size = 1rem
+
+        .site-footer:
+            padding = 1rem
 

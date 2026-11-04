@@ -1,0 +1,4 @@
+@Logic/teaching
+action navigate(page):
+    activePage = page
+    navigationOpen = false
