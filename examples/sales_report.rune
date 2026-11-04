@@ -1,0 +1,30 @@
+#!RUNE
+
+@App
+name = One-line Sales Reports
+type = REST
+port = 3000
+
+@Route/GET /report
+run:
+    sales = csv.read "sales_report.csv"
+    report = summarize sales by region sum amount
+    respond 200 report
+
+@Route/GET /averages
+run:
+    sales = csv.read "sales_report.csv"
+    report = summarize sales by region avg amount
+    respond 200 report
+
+@Route/GET /counts
+run:
+    sales = csv.read "sales_report.csv"
+    report = summarize sales by region
+    respond 200 report
+
+@Route/POST /report
+run:
+    parse-json
+    report = summarize body by region sum amount
+    respond 200 report

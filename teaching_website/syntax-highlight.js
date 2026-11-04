@@ -141,11 +141,11 @@
     line = highlightInterpolation(line, stash);
 
     line = line.replace(/%[A-Z_]+%/g, (match) => stash(wrap('placeholder', match)));
-    line = line.replace(/\b(respond|log|validate|parse-json|csv\.(read|write|append)|json\.(read|write)|memory\.(get|set|append|clear|del)|ws\.(id|send|broadcast)|uuid(?:\.v4)?|load-rune|set-memory|get-memory|clear-memory|del-memory|is-set|to-number|to-string|to-bool|now|increment|decrement|append|delete|clone|sum|avg|min|max|count|flatten|unique|randomize)\b/g, (match) => stash(wrap('builtin', match)));
+    line = line.replace(/\b(respond|log|validate|parse-json|csv\.(read|write|append)|json\.(read|write)|memory\.(get|set|append|clear|del)|ws\.(id|send|broadcast)|uuid(?:\.v4)?|load-rune|set-memory|get-memory|clear-memory|del-memory|is-set|to-number|to-string|to-bool|now|summarize|increment|decrement|append|delete|clone|sum|avg|min|max|count|flatten|unique|randomize)\b/g, (match) => stash(wrap('builtin', match)));
     line = line.replace(/#[\da-fA-F]{3,8}\b/g, (match) => stash(wrap('number', match)));
     line = line.replace(/#[A-Za-z_][\w-]*/g, (match) => stash(wrap('type', match)));
     line = line.replace(/\.[A-Za-z_][\w-]*/g, (match) => stash(wrap('selector', match)));
-    line = line.replace(/\b(if|else|then|for|each|in|return|stop|when|from|use|swap|full|or|and|not|match)\b/g, (match) => stash(wrap('keyword', match)));
+    line = line.replace(/\b(if|else|then|for|each|in|return|stop|when|from|by|use|swap|full|or|and|not|match)\b/g, (match) => stash(wrap('keyword', match)));
     line = line.replace(/\b(string|number|boolean|bool|integer|String|Number|Boolean|Integer|Object|Array)\b/g, (match) => stash(wrap('type', match)));
     line = line.replace(/\b([A-Za-z_][\w-]*)(?=\s*=)/g, (match) => stash(wrap('attribute', match)));
     line = line.replace(/\b([A-Za-z_][\w-]*)(?=\s*:)/g, (match) => stash(wrap('property', match)));

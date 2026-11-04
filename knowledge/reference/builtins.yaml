@@ -165,6 +165,35 @@ builtins:
     sources:
       - src/builtins.rs
       - src/builtins/builtin/ws.rs
+  - name: summarize
+    category: data
+    summary: Group records into counts and optional sums, averages, minimums, or maximums.
+    arguments:
+      - name: records
+      - name: by
+      - name: group_path
+      - name: aggregate
+        optional: true
+      - name: value_path
+        optional: true
+    behavior:
+      notes:
+        - "Syntax: summarize <records> by <group-path> [sum|avg|min|max <value-path>]."
+        - Returns group/count records in first-seen order; an aggregate adds its named field.
+        - Group keys are typed scalars; missing keys join the null group.
+        - Numeric strings are accepted; missing, null, and blank metric cells are ignored.
+        - Count includes every row; average divides by numeric cells only.
+        - Invalid data and sum/average overflow stop execution with a builtin error.
+        - Source records are unchanged; assignments and last result update only on success.
+        - Supported in native Rune run steps and the browser emulator.
+    writes_context:
+      - assigned variable
+      - ___last_exec_result___
+    sources:
+      - src/builtins/builtin/summarize.rs
+      - runtime/rune-emulator/src/engine/summarize.ts
+      - tests/fixtures/summarize.json
+      - tests/summarize_builtin.rs
 notes:
   - This is a starter catalog, not yet a complete schema of every argument contract.
   - Keep aliases and side effects in sync with src/builtins.rs.

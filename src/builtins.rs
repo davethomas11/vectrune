@@ -25,6 +25,7 @@ pub mod builtin {
     #[cfg(not(target_arch = "wasm32"))]
     pub mod ws;
     pub mod coercion;
+    pub mod summarize;
 }
 pub mod path_utils;
 
@@ -70,7 +71,7 @@ pub fn is_builtin(name: &str) -> bool {
         "memory.set", "get-memory", "memory.get", "clear-memory", "memory.clear",
         "del-memory", "memory.del", "append", "memory.append", "delete", "is-set",
         "return", "#",
-        "to-number", "to-string", "to-bool", "uuid.v4", "uuid", "now"
+        "to-number", "to-string", "to-bool", "uuid.v4", "uuid", "now", "summarize"
     ];
 
     core_builtins.contains(&name) || ws_builtins.contains(&name) || db_builtins.contains(&name)
@@ -470,6 +471,7 @@ pub async fn call_builtin(
         "to-bool" => builtin_to_bool(args, assign_to, ctx),
         "uuid.v4" | "uuid" => builtin_uuid_v4(args, assign_to, ctx),
         "now" => builtin_now(args, assign_to, ctx),
+        "summarize" => builtin::summarize::builtin_summarize(args, ctx, assign_to),
         #[cfg(not(target_arch = "wasm32"))]
         "ws.id" => builtin_ws_id(ctx, assign_to).await,
         #[cfg(not(target_arch = "wasm32"))]

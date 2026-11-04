@@ -303,6 +303,42 @@
         "Demonstrates the first rule-based English language engine for `.vectrune`.",
         "Compiles to executable statements rather than relying on probabilistic interpretation."
       ]
+    },
+    {
+      "id": "example.rest.sales-report",
+      "title": "One-line Sales Reports",
+      "summary": "Group CSV rows or a JSON request into totals, averages, and counts with summarize.",
+      "source_path": "examples/sales_report.rune",
+      "companion_files": null,
+      "app_type": "REST",
+      "concepts": [
+        "grouped aggregation",
+        "CSV data",
+        "JSON requests"
+      ],
+      "builtins": [
+        "csv.read",
+        "summarize",
+        "parse-json",
+        "respond"
+      ],
+      "runtime_context": [
+        "body",
+        "___last_exec_result___"
+      ],
+      "cli_workflows": [
+        "vectrune examples/sales_report.rune"
+      ],
+      "test_refs": [
+        "tests/summarize_builtin.rs",
+        "runtime/rune-emulator/tests/summarize.test.ts"
+      ],
+      "related_knowledge": [
+        "language.summarize",
+        "language.core"
+      ],
+      "status": "recommended",
+      "notes": null
     }
   ]
 }

@@ -282,6 +282,62 @@
         }
       ],
       "writes_context": null
+    },
+    {
+      "name": "summarize",
+      "aliases": null,
+      "category": "data",
+      "summary": "Group records into counts and optional sums, averages, minimums, or maximums.",
+      "behavior": {
+        "placeholder_expansion": null,
+        "expansion_syntax": null,
+        "notes": [
+          "Syntax: summarize <records> by <group-path> [sum|avg|min|max <value-path>].",
+          "Returns group/count records in first-seen order; an aggregate adds its named field.",
+          "Group keys are typed scalars; missing keys join the null group.",
+          "Numeric strings are accepted; missing, null, and blank metric cells are ignored.",
+          "Count includes every row; average divides by numeric cells only.",
+          "Invalid data and sum/average overflow stop execution with a builtin error.",
+          "Source records are unchanged; assignments and last result update only on success.",
+          "Supported in native Rune run steps and the browser emulator."
+        ]
+      },
+      "arguments": [
+        {
+          "name": "records",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        },
+        {
+          "name": "by",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        },
+        {
+          "name": "group_path",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        },
+        {
+          "name": "aggregate",
+          "variadic": null,
+          "optional": true,
+          "default": null
+        },
+        {
+          "name": "value_path",
+          "variadic": null,
+          "optional": true,
+          "default": null
+        }
+      ],
+      "writes_context": [
+        "assigned variable",
+        "___last_exec_result___"
+      ]
     }
   ]
 }

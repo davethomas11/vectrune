@@ -906,6 +906,7 @@ fn is_known_command_name(ctx: &Context, name: &str) -> bool {
             | "uuid.v4"
             | "uuid"
             | "now"
+            | "summarize"
     ) {
         return true;
     }

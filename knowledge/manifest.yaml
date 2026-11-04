@@ -40,6 +40,18 @@ pages:
       - src/rune_parser.rs
       - src/rune_ast.rs
       - src/core/mod.rs
+  - id: language.summarize
+    path: language/summarize.md
+    kind: page
+    title: One-line Reports with Summarize
+    audience:
+      - ai
+      - human
+    sources:
+      - src/builtins/builtin/summarize.rs
+      - runtime/rune-emulator/src/engine/summarize.ts
+      - tests/summarize_builtin.rs
+      - examples/sales_report.rune
   - id: language.rune-web-architecture
     path: language/rune-web-architecture.md
     kind: page

@@ -1,0 +1,726 @@
+[
+  {
+    "name": "counts in first-seen order",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2
+      },
+      {
+        "group": "East",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "sum values",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2,
+        "sum": 30.0
+      },
+      {
+        "group": "East",
+        "count": 1,
+        "sum": 8.0
+      }
+    ]
+  },
+  {
+    "name": "avg values",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "operation": "avg",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2,
+        "avg": 15.0
+      },
+      {
+        "group": "East",
+        "count": 1,
+        "avg": 8.0
+      }
+    ]
+  },
+  {
+    "name": "min values",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "operation": "min",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2,
+        "min": 12.0
+      },
+      {
+        "group": "East",
+        "count": 1,
+        "min": 8.0
+      }
+    ]
+  },
+  {
+    "name": "max values",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "operation": "max",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2,
+        "max": 18.0
+      },
+      {
+        "group": "East",
+        "count": 1,
+        "max": 8.0
+      }
+    ]
+  },
+  {
+    "name": "numeric CSV text, whitespace and missing cells",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "-2.5"
+      },
+      {
+        "region": "A",
+        "amount": " +3.5 "
+      },
+      {
+        "region": "A",
+        "amount": "1e2"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      },
+      {
+        "region": "A",
+        "amount": null
+      },
+      {
+        "region": "A"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 6,
+        "sum": 101.0
+      }
+    ]
+  },
+  {
+    "name": "average divides by numeric cells rather than rows",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 10
+      },
+      {
+        "region": "A",
+        "amount": null
+      },
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": "20"
+      }
+    ],
+    "group": "region",
+    "operation": "avg",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 4,
+        "avg": 15.0
+      }
+    ]
+  },
+  {
+    "name": "all missing sum",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "sum": 0.0
+      }
+    ]
+  },
+  {
+    "name": "all missing avg",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "avg",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "avg": null
+      }
+    ]
+  },
+  {
+    "name": "all missing min",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "min",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "min": null
+      }
+    ]
+  },
+  {
+    "name": "all missing max",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "max",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "max": null
+      }
+    ]
+  },
+  {
+    "name": "nested fields",
+    "rows": [
+      {
+        "customer": {
+          "region": "North"
+        },
+        "price": {
+          "net": 4
+        }
+      },
+      {
+        "customer": {
+          "region": "North"
+        },
+        "price": {
+          "net": "6"
+        }
+      },
+      {
+        "customer": null
+      }
+    ],
+    "group": "customer.region",
+    "operation": "sum",
+    "value": "price.net",
+    "expected": [
+      {
+        "group": "North",
+        "count": 2,
+        "sum": 10.0
+      },
+      {
+        "group": null,
+        "count": 1,
+        "sum": 0.0
+      }
+    ]
+  },
+  {
+    "name": "typed keys and normalized numeric groups",
+    "rows": [
+      {
+        "region": 1
+      },
+      {
+        "region": "1"
+      },
+      {
+        "region": true
+      },
+      {
+        "region": null
+      },
+      {},
+      {
+        "region": "null"
+      },
+      {
+        "region": 1.0
+      },
+      {
+        "region": "true"
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": 1,
+        "count": 2
+      },
+      {
+        "group": "1",
+        "count": 1
+      },
+      {
+        "group": true,
+        "count": 1
+      },
+      {
+        "group": null,
+        "count": 2
+      },
+      {
+        "group": "null",
+        "count": 1
+      },
+      {
+        "group": "true",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "prototype-like strings remain normal group names",
+    "rows": [
+      {
+        "region": "__proto__"
+      },
+      {
+        "region": "constructor"
+      },
+      {
+        "region": "__proto__"
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": "__proto__",
+        "count": 2
+      },
+      {
+        "group": "constructor",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "signed zero shares a group",
+    "rows": [
+      {
+        "region": 0
+      },
+      {
+        "region": -0.0
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": 0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "name": "count ignores nonnumeric metric fields",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "hello"
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": "A",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "empty list",
+    "rows": [],
+    "group": "region",
+    "expected": []
+  },
+  {
+    "name": "empty sum",
+    "rows": [],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": []
+  },
+  {
+    "name": "negative and fractional values",
+    "rows": [
+      {
+        "region": "A",
+        "amount": -10
+      },
+      {
+        "region": "A",
+        "amount": 2.5
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "sum": -7.5
+      }
+    ]
+  },
+  {
+    "name": "decimal CSV variants",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "+.5"
+      },
+      {
+        "region": "A",
+        "amount": "1."
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "sum": 1.5
+      }
+    ]
+  },
+  {
+    "name": "source must be list",
+    "rows": {},
+    "group": "region",
+    "error": "summarize: source must be a list of records"
+  },
+  {
+    "name": "all rows must be records",
+    "rows": [
+      {
+        "region": "A"
+      },
+      12
+    ],
+    "group": "region",
+    "error": "summarize: row 2 must be a record"
+  },
+  {
+    "name": "group rejects list",
+    "rows": [
+      {
+        "region": []
+      }
+    ],
+    "group": "region",
+    "error": "summarize: row 1 group field 'region' must be a scalar"
+  },
+  {
+    "name": "group rejects dict",
+    "rows": [
+      {
+        "region": {}
+      }
+    ],
+    "group": "region",
+    "error": "summarize: row 1 group field 'region' must be a scalar"
+  },
+  {
+    "name": "metric rejects text",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "not a number"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects boolean",
+    "rows": [
+      {
+        "region": "A",
+        "amount": true
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects list",
+    "rows": [
+      {
+        "region": "A",
+        "amount": []
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects nan",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "NaN"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects infinity",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "Infinity"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects hex",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "0x10"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "sum overflow",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1e+308
+      },
+      {
+        "region": "A",
+        "amount": 1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: sum overflow for field 'amount'"
+  },
+  {
+    "name": "avg overflow",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1e+308
+      },
+      {
+        "region": "A",
+        "amount": 1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "avg",
+    "value": "amount",
+    "error": "summarize: avg overflow for field 'amount'"
+  },
+  {
+    "name": "max does not accumulate a sum",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1e+308
+      },
+      {
+        "region": "A",
+        "amount": 1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "max",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "max": 1e+308
+      }
+    ]
+  },
+  {
+    "name": "invalid metric",
+    "rows": [],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "error": "summarize: expected <records> by <group-path> [sum|avg|min|max <value-path>]"
+  },
+  {
+    "name": "empty group path",
+    "rows": [],
+    "group": "",
+    "error": "summarize: expected <records> by <group-path> [sum|avg|min|max <value-path>]"
+  },
+  {
+    "name": "empty metric path",
+    "rows": [],
+    "group": "region",
+    "operation": "sum",
+    "value": "",
+    "error": "summarize: expected <records> by <group-path> [sum|avg|min|max <value-path>]"
+  },
+  {
+    "name": "invalid nested path",
+    "rows": [],
+    "group": "customer..region",
+    "error": "summarize: expected <records> by <group-path> [sum|avg|min|max <value-path>]"
+  }
+]

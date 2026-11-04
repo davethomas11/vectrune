@@ -35,8 +35,8 @@ const t = (key) => window.siteText('Sandbox.' + key);
 
 function getEmulatorUrl() {
     const script = document.querySelector('script[src*="sandbox.js"]');
-    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=10', location.href));
-    url.search = script ? new URL(script.src).search : '?v=10';
+    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=11', location.href));
+    url.search = script ? new URL(script.src).search : '?v=11';
     return url.href;
 }
 

@@ -361,6 +361,7 @@ Tutorial {
 }
 
 BuiltinSummary {
+    summarize = "Crea recuentos, totales, promedios, mínimos o máximos por grupo en una línea."
     log = "Registra un mensaje de diagnóstico con valores interpolados."
     respond = "Envía un estado HTTP y un cuerpo de respuesta."
     return = "Devuelve un valor desde un manejador o resolutor."
