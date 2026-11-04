@@ -1,0 +1,95 @@
+@Component/ExampleLab
+state:
+    selectedExample = "app"
+bindings:
+    .active <-> selectedExample
+view:
+    div .page .example-lab:
+        div .section-heading:
+            p .eyebrow "%i18n.Examples.lab_eyebrow%"
+            h2 "%i18n.Examples.lab_title%"
+            p "%i18n.Examples.lab_description%"
+        nav .example-picker aria-label="Choose an example":
+            button .pill {.active when 'app'} click="openExample('app')" "First API"
+            button .pill {.active when 'skaters'} click="openExample('skaters')" "Data document"
+            button .pill {.active when 'users'} click="openExample('users')" "User API"
+            button .pill {.active when 'graphql'} click="openExample('graphql')" "GraphQL"
+            button .pill {.active when 'counter'} click="openExample('counter')" "Counter"
+            button .pill {.active when 'tic'} click="openExample('tic')" "Tic Tac Toe"
+        match selectedExample:
+            "app" -> FirstApiExample
+            "skaters" -> DataDocumentExample
+            "users" -> UserApiExample
+            "graphql" -> GraphqlSourceExample
+            "counter" -> CounterExample
+            "tic" -> TicTacToeExample
+
+@Component/FirstApiExample
+view:
+    section .example-workspace:
+        h2 "Your first API"
+        p "%i18n.Examples.rest_hint%"
+        SandboxSection code="{raw ../../../examples/app.rune}" show_output=true
+
+@Component/UserApiExample
+view:
+    section .example-workspace:
+        h2 "User API"
+        p "%i18n.Examples.users_hint%"
+        SandboxSection code="{raw ../../../examples/user_api.rune}" show_output=true
+
+@Component/DataDocumentExample
+view:
+    section .example-workspace:
+        h2 "A document, three formats"
+        p "%i18n.Examples.data_hint%"
+        SandboxSection code="{raw ../../../examples/skateboarders.rune}" show_output=true mode=data
+
+@Component/GraphqlSourceExample
+view:
+    section .card:
+        span .tag .tag-practical "%i18n.Examples.local_runtime%"
+        h2 "Book GraphQL API"
+        p "%i18n.Examples.graphql_hint%"
+        pre:
+            code .code-block .language-bash "vectrune examples/book_graphql.rune"
+        details .example-source:
+            open = true
+            summary "%i18n.Examples.source_label%"
+            ExampleSource code="{raw ../../../examples/book_graphql.rune}"
+
+@Component/CounterExample
+view:
+    WebExample title=Counter preview="{preview ../../../examples/counter.rune}" source="{raw ../../../examples/counter.rune}"
+
+@Component/TicTacToeExample
+view:
+    WebExample title="Tic Tac Toe" preview="{preview ../../../examples/tic_tac_toe/tic_tac_toe.rune}" source="{raw ../../../examples/tic_tac_toe/tic_tac_toe.rune}" logic_source="{raw ../../../examples/tic_tac_toe/parts/logic.rune}" style_source="{raw ../../../examples/tic_tac_toe/parts/style.rune}"
+
+@Component/WebExample
+props: [title, preview, source, logic_source?, style_source?]
+view:
+    section .card .web-example:
+        div .section-heading:
+            span .tag .tag-practical "%i18n.Examples.live_preview%"
+            h2 "{title}"
+            p "%i18n.Examples.web_hint%"
+        iframe .example-preview src="{preview}" title="{title}" sandbox=allow-scripts
+        details .example-source:
+            summary "%i18n.Examples.source_label%"
+            h3 "Main .rune"
+            ExampleSource code="{source}"
+            if logic_source ?? false:
+                details .source-file:
+                    summary "parts/logic.rune"
+                    ExampleSource code="{logic_source}"
+            if style_source ?? false:
+                details .source-file:
+                    summary "parts/style.rune"
+                    ExampleSource code="{style_source}"
+
+@Component/ExampleSource
+props: [code]
+view:
+    pre .example-code:
+        code .code-block .language-rune "{code}"

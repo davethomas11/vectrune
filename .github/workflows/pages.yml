@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "teaching_website/**"
+      - "examples/**"
       - "src/**"
       - "Cargo.toml"
       - "Cargo.lock"
@@ -42,6 +43,12 @@ jobs:
 
       - name: Build vectrune CLI
         run: cargo build --release
+
+      - name: Build browser emulator
+        working-directory: runtime/rune-emulator
+        run: |
+          npm ci
+          npm run build
 
       - name: Render static site
         env:

@@ -22,29 +22,49 @@ export function valueToString(v: unknown): string {
 function normalizeLiteral(s: string): string {
   const t = s.trim();
   if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
-    return t.slice(1, -1);
+    try {
+      return JSON.parse(t);
+    } catch (_) {
+      return t.slice(1, -1).replace(/\\"/g, '"').replace(/\\'/g, "'").replace(/\\\\/g, "\\");
+    }
   }
   return t;
 }
 
 /** Split on a delimiter only at paren/bracket depth === 0 */
 export function splitTopLevel(s: string, delim: string): string[] {
-  const results: string[] = [];
+  const results = [];
   let depth = 0;
   let inStr = false;
-  let strChar = '';
+  let strChar = "";
+  let escaped = false;
   let start = 0;
   const dLen = delim.length;
-
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
     if (inStr) {
-      if (ch === strChar) inStr = false;
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === strChar) {
+        inStr = false;
+      }
       continue;
     }
-    if (ch === '"' || ch === "'") { inStr = true; strChar = ch; continue; }
-    if (ch === '(' || ch === '[' || ch === '{') { depth++; continue; }
-    if (ch === ')' || ch === ']' || ch === '}') { depth--; continue; }
+    if (ch === '"' || ch === "'") {
+      inStr = true;
+      strChar = ch;
+      continue;
+    }
+    if (ch === "(" || ch === "[" || ch === "{") {
+      depth++;
+      continue;
+    }
+    if (ch === ")" || ch === "]" || ch === "}") {
+      depth--;
+      continue;
+    }
     if (depth === 0 && s.slice(i, i + dLen) === delim) {
       results.push(s.slice(start, i));
       start = i + dLen;
@@ -177,6 +197,37 @@ export function resolveValue(expr: string, scope: Scope): unknown {
 // ---------------------------------------------------------------------------
 // Main evaluateExpression
 // ---------------------------------------------------------------------------
+
+function evaluateObjectLiteral(expr: string, scope: Scope, depth: number): Record<string, unknown> {
+  const inner = expr.trim().slice(1, -1).trim();
+  if (!inner) return {};
+  const pairs = splitTopLevel(inner, ",");
+  const obj: Record<string, unknown> = {};
+  for (const pair of pairs) {
+    const trimmedPair = pair.trim();
+    if (!trimmedPair) continue;
+    const colonParts = splitTopLevel(trimmedPair, ":");
+    if (colonParts.length >= 2) {
+      const keyPart = colonParts[0].trim().replace(/^["']|["']$/g, "");
+      const valPart = colonParts.slice(1).join(":").trim();
+      obj[keyPart] = evaluateExpression(valPart, scope, depth + 1);
+    }
+  }
+  return obj;
+}
+
+function evaluateArrayLiteral(expr: string, scope: Scope, depth: number): unknown[] {
+  const inner = expr.trim().slice(1, -1).trim();
+  if (!inner) return [];
+  const items = splitTopLevel(inner, ",");
+  const arr = [];
+  for (const item of items) {
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    arr.push(evaluateExpression(trimmed, scope, depth + 1));
+  }
+  return arr;
+}
 
 export function evaluateExpression(expr: string, scope: Scope, depth = 0): unknown {
   if (depth > MAX_DEPTH) return undefined;
@@ -361,5 +412,11 @@ export function evaluateExpression(expr: string, scope: Scope, depth = 0): unkno
   }
 
   // Fallback
+  if (t.startsWith("{") && t.endsWith("}")) {
+    return evaluateObjectLiteral(t, scope, next);
+  }
+  if (t.startsWith("[") && t.endsWith("]")) {
+    return evaluateArrayLiteral(t, scope, next);
+  }
   return resolveValue(t, scope);
 }

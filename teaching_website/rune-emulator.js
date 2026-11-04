@@ -22,7 +22,7 @@ function tokenize(source) {
       tokens.push({ kind: "Blank", raw: rawLine, indent, line: lineNum });
       continue;
     }
-    if (COMMENT_RE.test(trimmed)) {
+    if (COMMENT_RE.test(trimmed) && !SHEBANG_RE.test(trimmed)) {
       tokens.push({ kind: "Comment", raw: trimmed, indent, line: lineNum });
       continue;
     }
@@ -127,7 +127,6 @@ function parseRunSteps(lines, baseIndent) {
       const lhs = assignMatch[1].trim();
       let rhs = assignMatch[2].trim();
       if (/^[A-Za-z_][\w.\-[\]()]*$/.test(lhs) && !lhs.includes(" ")) {
-        // If rhs opens an object or array that isn't closed on this line, gather subsequent lines
         const countBraces = (s) => (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
         const countBrackets = (s) => (s.match(/\[/g) || []).length - (s.match(/\]/g) || []).length;
         let braceBalance = countBraces(rhs);
@@ -139,7 +138,6 @@ function parseRunSteps(lines, baseIndent) {
           bracketBalance += countBrackets(nextText);
           i++;
         }
-
         const rhsFirst = rhs.split(/\s+/)[0];
         if (BUILTIN_NAMES.has(rhsFirst)) {
           const builtinArgs = rhs.slice(rhsFirst.length).trim();
@@ -217,7 +215,7 @@ function parseBuiltinArgs(raw) {
     } else if (ch === "}" || ch === "]" || ch === ")") {
       if (depth > 0) depth--;
       current += ch;
-    } else if ((ch === " " || ch === "\t") && depth === 0) {
+    } else if ((ch === " " || ch === "	") && depth === 0) {
       if (current) {
         args.push(current);
         current = "";
@@ -294,10 +292,25 @@ function parseSections(source) {
       if (route) doc.routes.push(route);
     } else {
       const kvData = {};
+      let record = null;
       for (const tok of sectionTokens) {
-        if (tok.kind === "KeyValue") {
-          const [k, v] = parseKeyValue(tok.raw);
-          kvData[k] = v;
+        const startsRecord = tok.raw.startsWith("+ ");
+        const raw = startsRecord ? tok.raw.slice(2).trim() : tok.raw;
+        if (startsRecord) {
+          record = {};
+          kvData.record ?? (kvData.record = []);
+          kvData.record.push(record);
+        }
+        if (raw.includes("=") && (record || tok.kind === "KeyValue")) {
+          const [key2, value] = parseKeyValue(raw);
+          let parsed = value;
+          if (typeof value === "string") {
+            try {
+              parsed = JSON.parse(value);
+            } catch (_) {
+            }
+          }
+          (record ?? kvData)[key2] = parsed;
         }
       }
       const key = sectionSub ? `${sectionType}/${sectionSub}` : sectionType;
@@ -445,7 +458,7 @@ function valueToString(v) {
 }
 function normalizeLiteral(s) {
   const t = s.trim();
-  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+  if (t.startsWith('"') && t.endsWith('"') || t.startsWith("'") && t.endsWith("'")) {
     try {
       return JSON.parse(t);
     } catch (_) {
@@ -895,7 +908,7 @@ function executeBuiltin(name, args, ctx, assignTarget) {
     } catch (_) {
       try {
         parsed = JSON.parse(rawStr.replace(/\\"/g, '"'));
-      } catch (__) {
+      } catch (_2) {
         parsed = rawStr;
       }
     }
@@ -1021,21 +1034,21 @@ function executeBuiltin(name, args, ctx, assignTarget) {
   if (name === "to-string") {
     const raw = args.join(" ").trim();
     const val = evaluateExpression(raw, scope);
-    const result = val !== null && val !== undefined ? String(val) : "";
+    const result = val !== null && val !== void 0 ? String(val) : "";
     if (assignTarget) ctx.state[assignTarget] = result;
     return result;
   }
   if (name === "to-bool") {
     const raw = args.join(" ").trim();
     const val = evaluateExpression(raw, scope);
-    const result = typeof val === "string" ? (val.toLowerCase() === "true" || val === "1") : Boolean(val);
+    const result = typeof val === "string" ? val.toLowerCase() === "true" || val === "1" : Boolean(val);
     if (assignTarget) ctx.state[assignTarget] = result;
     return result;
   }
   if (name === "uuid.v4" || name === "uuid") {
     const result = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
       const r = Math.random() * 16 | 0;
-      const v = c === "x" ? r : (r & 0x3 | 0x8);
+      const v = c === "x" ? r : r & 3 | 8;
       return v.toString(16);
     });
     if (assignTarget) ctx.state[assignTarget] = result;
@@ -1043,8 +1056,8 @@ function executeBuiltin(name, args, ctx, assignTarget) {
   }
   if (name === "now") {
     const fmt = (args[0] ?? "").replace(/["']/g, "").toLowerCase();
-    const now = new Date();
-    const result = fmt === "millis" ? now.getTime() : fmt === "unix" || fmt === "seconds" ? Math.floor(now.getTime() / 1000) : now.toISOString();
+    const now = /* @__PURE__ */ new Date();
+    const result = fmt === "millis" ? now.getTime() : fmt === "unix" || fmt === "seconds" ? Math.floor(now.getTime() / 1e3) : now.toISOString();
     if (assignTarget) ctx.state[assignTarget] = result;
     return result;
   }

@@ -2,6 +2,35 @@ import { describe, it, expect } from 'vitest';
 import { createRequestContext } from '../src/engine/context';
 import { executeSteps } from '../src/engine/executor';
 import type { RunStep } from '../src/types';
+import { createApp, parse } from '../src/index';
+
+it('keeps the deployed emulator features when rebuilding from source', () => {
+  const app = createApp(parse(`#!RUNE
+@App
+type = REST
+@Route/GET /test
+run:
+    # Indented comments do not become execution steps.
+    number = to-number "42"
+    text = to-string number
+    active = to-bool "true"
+    id = uuid.v4
+    time = now millis
+    data = {
+        value: number,
+        tags: ["hello, world", "second"]
+    }
+    respond 200 { data: data, text: text, active: active, id: id, time: time }
+`));
+  const response = app.request({ method: 'GET', path: '/test' });
+  expect(response.status).toBe(200);
+  expect(response.body).toMatchObject({
+    data: { value: 42, tags: ['hello, world', 'second'] },
+    text: '42', active: true,
+    id: expect.stringMatching(/^[\da-f-]{36}$/),
+    time: expect.any(Number),
+  });
+});
 
 function makeCtx(body?: string, pathParams?: Record<string, string>) {
   return createRequestContext(

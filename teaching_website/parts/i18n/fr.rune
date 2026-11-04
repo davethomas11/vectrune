@@ -1,5 +1,7 @@
 @I18N/fr
 Common {
+    built_with = "Site entièrement créé avec Rune-Web"
+    site_source = "Voir le code du site sur GitHub (nouvel onglet)"
     app_name = "Vectrune"
     tagline = "Un chemin pratique de votre première API aux exemples réutilisables."
 }
@@ -109,6 +111,23 @@ Examples {
     tic_level = "Avancé"
     tic_title = "examples/tic_tac_toe/"
     tic_desc = "Un exemple Rune-Web divisé en parties UI, logique et style. Bon une fois que les bases vous semblent naturelles."
+    lab_eyebrow = "Exemples interactifs"
+    lab_title = "Laboratoire d’exemples"
+    lab_description = "Explorez de vrais exemples du dépôt : lisez le code, testez une API ou jouez avec une application Rune-Web."
+    run_label = "Code et exécution"
+    play_label = "Essayer et voir le code"
+    source_label = "Voir le code source"
+    live_preview = "Application Rune-Web en direct"
+    local_runtime = "Exécuter localement"
+    counter_title = "Compteur réactif"
+    counter_desc = "Une petite application web avec un véritable état réactif. Augmentez, diminuez et réinitialisez le compteur."
+    rest_hint = "Lancez l’application, choisissez un endpoint et envoyez une requête. Modifiez le code et relancez pour tester les changements."
+    users_hint = "Voici l’API utilisateurs du dépôt. Son CSV reste en mémoire dans le navigateur : créez un utilisateur avec POST, puis consultez avec GET. Relancez pour réinitialiser le fichier."
+    data_hint = "Modifiez les enregistrements et utilisez Run pour afficher le document en JSON. Show Document propose aussi YAML et XML."
+    graphql_hint = "Lisez les requêtes et mutations complètes. GraphQL nécessite le runtime Vectrune local ; l’émulateur du navigateur n’exécute pas ces resolvers. Depuis le dépôt, lancez :"
+    web_hint = "Cet aperçu est compilé à partir du véritable exemple Rune, avec ses styles et ses actions. Testez l’application, puis ouvrez le code source."
+    sandbox_title = "Lire, modifier, exécuter"
+    sandbox_hint = "L’éditeur contient le code de l’exemple. Run l’exécute dans le navigateur ; Show Document et Show AST permettent de l’inspecter."
 }
 WhatsNext {
     eyebrow = "Prochaines étapes"

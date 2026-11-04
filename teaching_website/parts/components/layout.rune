@@ -26,6 +26,9 @@ view:
                     h3 "Reference"
                     button .nav-link {.active when 'builtins'} click="navigate('builtins')" "Builtin Library"
                 div .nav-group:
+                    h3 "%i18n.Examples.lab_eyebrow%"
+                    button .nav-link {.active when 'examples'} click="openExample('app')" "%i18n.Examples.lab_title%"
+                div .nav-group:
                     h3 "GraphQL"
                     button .nav-link {.active when 'graphql'} click="navigate('graphql')" "Overview"
                 div .nav-group:
@@ -38,6 +41,7 @@ view:
             main .content-area:
                 match activePage:
                     "home"            -> HomeContent
+                    "examples"        -> ExampleLab
                     "builtins"        -> BuiltinReferencePage
                     "rest_get"        -> RestGetPage
                     "rest_post"       -> RestPostPage

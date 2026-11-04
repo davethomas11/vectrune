@@ -185,6 +185,17 @@ export function evaluateExpression(
   let trimmed = String(expr || '').trim();
   if (!trimmed) return undefined;
 
+  // Raw source props are JSON string literals. Decode them once, before
+  // interpreting any operators, quotes, or placeholders inside the source.
+  if (trimmed.startsWith('"')) {
+    try {
+      const literal = JSON.parse(trimmed);
+      if (typeof literal === 'string') return literal;
+    } catch (_) {
+      // A quoted operand may also be part of a larger expression.
+    }
+  }
+
   // --- @selector syntax ---
   if (trimmed.startsWith('@')) {
     let selector = '';

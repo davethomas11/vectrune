@@ -9,9 +9,6 @@ import type {
   SchemaSection,
   RouteSection,
   RunStep,
-  AssignmentStep,
-  BuiltinStep,
-  IfStep,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -31,7 +28,7 @@ const BUILTIN_NAMES = new Set([
   'is-set',
   'delete',
   'ws.id', 'ws.send', 'ws.broadcast', 'broadcast-websocket',
-  'stop',
+  'stop', 'to-number', 'to-string', 'to-bool', 'uuid.v4', 'uuid', 'now',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -47,20 +44,16 @@ interface IndentedLine {
 function parseRunSteps(lines: IndentedLine[], baseIndent: number): RunStep[] {
   const steps: RunStep[] = [];
   let i = 0;
-
   while (i < lines.length) {
     const { text, indent } = lines[i];
-
-    // Only process lines at the current nesting level
     if (indent < baseIndent) break;
-    if (indent > baseIndent) { i++; continue; } // orphaned deeper line, skip
-
+    if (indent > baseIndent) {
+      i++;
+      continue;
+    }
     i++;
-
-    // if block
-    if (text.startsWith('if ') && text.endsWith(':')) {
+    if (text.startsWith("if ") && text.endsWith(":")) {
       const condition = text.slice(3, -1).trim();
-      // Collect body lines (more indented than baseIndent)
       const bodyLines: IndentedLine[] = [];
       while (i < lines.length && lines[i].indent > baseIndent) {
         bodyLines.push(lines[i]);
@@ -68,60 +61,70 @@ function parseRunSteps(lines: IndentedLine[], baseIndent: number): RunStep[] {
       }
       const bodyIndent = bodyLines.length > 0 ? bodyLines[0].indent : baseIndent + 4;
       const body = parseRunSteps(bodyLines, bodyIndent);
-      const step: IfStep = { kind: 'if', condition, body };
+      const step: RunStep = { kind: "if", condition, body };
       steps.push(step);
       continue;
     }
-
-    // Try assignment: lhs = rhs  (exclude push syntax and comparison operators)
-    // Must not start with a known builtin name (those use space-separated syntax)
     const assignMatch = text.match(/^(.+?)(?<![!<>=])=(?!=)(.*)$/);
     if (assignMatch && !text.match(/^.+?\.push\(/)) {
       const lhs = assignMatch[1].trim();
-      const rhs = assignMatch[2].trim();
+      let rhs = assignMatch[2].trim();
+      if (/^[A-Za-z_][\w.\-[\]()]*$/.test(lhs) && !lhs.includes(" ")) {
+        // If rhs opens an object or array that isn't closed on this line, gather subsequent lines
+        const countBraces = (s: string) => (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
+        const countBrackets = (s: string) => (s.match(/\[/g) || []).length - (s.match(/\]/g) || []).length;
+        let braceBalance = countBraces(rhs);
+        let bracketBalance = countBrackets(rhs);
+        while (i < lines.length && (braceBalance > 0 || bracketBalance > 0)) {
+          const nextText = lines[i].text.trim();
+          rhs += " " + nextText;
+          braceBalance += countBraces(nextText);
+          bracketBalance += countBrackets(nextText);
+          i++;
+        }
 
-      // Make sure the lhs looks like a valid path, not part of a builtin
-      if (/^[A-Za-z_][\w.\-[\]()]*$/.test(lhs) && !lhs.includes(' ')) {
-        // Check if RHS starts with a builtin keyword
         const rhsFirst = rhs.split(/\s+/)[0];
         if (BUILTIN_NAMES.has(rhsFirst)) {
-          // e.g. "user = parse-json body" — treat as builtin on RHS, wrap as assignment
           const builtinArgs = rhs.slice(rhsFirst.length).trim();
-          const step: AssignmentStep = {
-            kind: 'assignment',
+          const step: RunStep = {
+            kind: "assignment",
             lhs,
-            rhs: builtinArgs ? `${rhsFirst} ${builtinArgs}` : rhsFirst,
+            rhs: builtinArgs ? `${rhsFirst} ${builtinArgs}` : rhsFirst
           };
           steps.push(step);
         } else {
-          const step: AssignmentStep = { kind: 'assignment', lhs, rhs };
+          const step: RunStep = { kind: "assignment", lhs, rhs };
           steps.push(step);
         }
         continue;
       }
     }
-
-    // Array push: path.push(expr)
     const pushMatch = text.match(/^(.+?)\.push\((.+)\)$/);
     if (pushMatch) {
-      steps.push({ kind: 'raw', text });
+      steps.push({ kind: "raw", text });
       continue;
     }
-
-    // Builtin call — first token is builtin name
     const firstToken = text.split(/\s+/)[0];
     if (BUILTIN_NAMES.has(firstToken)) {
-      const rest = text.slice(firstToken.length).trim();
+      let rest = text.slice(firstToken.length).trim();
+      const countBraces = (s: string) => (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
+      const countBrackets = (s: string) => (s.match(/\[/g) || []).length - (s.match(/\]/g) || []).length;
+      let braceBalance = countBraces(rest);
+      let bracketBalance = countBrackets(rest);
+      while (i < lines.length && (braceBalance > 0 || bracketBalance > 0)) {
+        const nextText = lines[i].text.trim();
+        rest += " " + nextText;
+        braceBalance += countBraces(nextText);
+        bracketBalance += countBrackets(nextText);
+        i++;
+      }
       const args = parseBuiltinArgs(rest);
-      const step: BuiltinStep = { kind: 'builtin', name: firstToken, args };
+      const step: RunStep = { kind: "builtin", name: firstToken, args };
       steps.push(step);
       continue;
     }
-
-    // Fallback: raw step
-    steps.push({ kind: 'raw', text });
+    steps.push({ kind: "raw", text });
   }
-
   return steps;
 }
 
@@ -129,33 +132,48 @@ function parseRunSteps(lines: IndentedLine[], baseIndent: number): RunStep[] {
 // Simple argument splitter respecting quoted strings
 // ---------------------------------------------------------------------------
 
-function parseBuiltinArgs(raw: string): string[] {
+export function parseBuiltinArgs(raw: string): string[] {
   if (!raw) return [];
-  const args: string[] = [];
-  let current = '';
+  const args = [];
+  let current = "";
   let inString = false;
-  let stringChar = '';
-
+  let stringChar = "";
+  let escaped = false;
+  let depth = 0;
   for (let i = 0; i < raw.length; i++) {
     const ch = raw[i];
-
     if (inString) {
-      current += ch;
-      if (ch === stringChar) inString = false;
+      if (escaped) {
+        current += ch;
+        escaped = false;
+      } else if (ch === "\\") {
+        current += ch;
+        escaped = true;
+      } else if (ch === stringChar) {
+        current += ch;
+        inString = false;
+      } else {
+        current += ch;
+      }
     } else if (ch === '"' || ch === "'") {
       inString = true;
       stringChar = ch;
       current += ch;
-    } else if (ch === ' ' || ch === '\t') {
+    } else if (ch === "{" || ch === "[" || ch === "(") {
+      depth++;
+      current += ch;
+    } else if (ch === "}" || ch === "]" || ch === ")") {
+      if (depth > 0) depth--;
+      current += ch;
+    } else if ((ch === " " || ch === "\t") && depth === 0) {
       if (current) {
         args.push(current);
-        current = '';
+        current = "";
       }
     } else {
       current += ch;
     }
   }
-
   if (current) args.push(current);
   return args;
 }
@@ -257,10 +275,22 @@ export function parseSections(source: string): RuneDocument {
     } else {
       // Generic section
       const kvData: Record<string, unknown> = {};
+      let record: Record<string, unknown> | null = null;
       for (const tok of sectionTokens) {
-        if (tok.kind === 'KeyValue') {
-          const [k, v] = parseKeyValue(tok.raw);
-          kvData[k] = v;
+        const startsRecord = tok.raw.startsWith('+ ');
+        const raw = startsRecord ? tok.raw.slice(2).trim() : tok.raw;
+        if (startsRecord) {
+          record = {};
+          (kvData.record ??= [] as unknown[]);
+          (kvData.record as unknown[]).push(record);
+        }
+        if (raw.includes('=') && (record || tok.kind === 'KeyValue')) {
+          const [key, value] = parseKeyValue(raw);
+          let parsed = value;
+          if (typeof value === 'string') {
+            try { parsed = JSON.parse(value); } catch (_) { /* Unquoted Rune string. */ }
+          }
+          (record ?? kvData)[key] = parsed;
         }
       }
       const key = sectionSub ? `${sectionType}/${sectionSub}` : sectionType;

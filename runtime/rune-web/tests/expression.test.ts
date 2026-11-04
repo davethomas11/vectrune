@@ -9,6 +9,13 @@ import {
 import { buildScope } from '../src/scope';
 import type { RuneApp } from '../src/types';
 
+it('preserves an embedded source literal without evaluating its code or placeholders', () => {
+  setupTestContext();
+  const source = 'Count: {count}\nclick="count = count + 1"\n# a user\'s code\\n';
+  expect(evaluateExpression(JSON.stringify(source), {})).toBe(source);
+  expect(evaluateExpression('"hello" + " world"', {})).toBe('hello world');
+});
+
 // Create a minimal context for testing
 function setupTestContext(
   state: Record<string, unknown> = {},

@@ -1,5 +1,7 @@
 @I18N/es
 Common {
+    built_with = "Sitio creado íntegramente con Rune-Web"
+    site_source = "Ver el código del sitio en GitHub (se abre en otra pestaña)"
     app_name = "Vectrune"
     tagline = "Un camino práctico desde tu primera API hasta ejemplos reutilizables."
 }
@@ -109,6 +111,23 @@ Examples {
     tic_level = "Avanzado"
     tic_title = "examples/tic_tac_toe/"
     tic_desc = "Un ejemplo de Rune-Web dividido en partes de UI, lógica y estilo. Bueno una vez que lo básico ya se siente natural."
+    lab_eyebrow = "Ejemplos interactivos"
+    lab_title = "Laboratorio de ejemplos"
+    lab_description = "Explora ejemplos reales del repositorio: lee el código, prueba una API o juega con una aplicación Rune-Web."
+    run_label = "Código y ejecución"
+    play_label = "Probar y ver código"
+    source_label = "Ver código fuente"
+    live_preview = "Aplicación Rune-Web en vivo"
+    local_runtime = "Ejecutar localmente"
+    counter_title = "Contador reactivo"
+    counter_desc = "Una pequeña aplicación web con estado reactivo real. Aumenta, disminuye y reinicia el contador."
+    rest_hint = "Ejecuta la aplicación, elige un endpoint y envía una petición. Edita el código y vuelve a ejecutarlo para probar los cambios."
+    users_hint = "Esta es la API de usuarios del repositorio. El archivo CSV vive en la memoria del navegador: crea un usuario con POST y consulta con GET. Ejecuta de nuevo para reiniciar el archivo."
+    data_hint = "Edita los registros y pulsa Run para ver el documento como JSON. Show Document también admite YAML y XML."
+    graphql_hint = "Lee las consultas y mutaciones completas. GraphQL requiere el runtime local de Vectrune; el emulador del navegador no ejecuta estos resolvers. Desde el repositorio, ejecuta:"
+    web_hint = "Esta vista se compila a partir del ejemplo Rune real, incluidos sus estilos y acciones. Prueba la aplicación y abre el código fuente."
+    sandbox_title = "Leer, editar, ejecutar"
+    sandbox_hint = "El editor contiene el código del ejemplo. Run lo ejecuta en el navegador; Show Document y Show AST permiten inspeccionarlo."
 }
 WhatsNext {
     eyebrow = "Qué sigue"

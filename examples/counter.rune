@@ -1,0 +1,48 @@
+#!RUNE
+
+@App
+name = Counter
+type = REST
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = counter
+
+@Page/counter
+title = Counter
+style = counter
+state:
+    clicks = 0
+view:
+    main .counter:
+        p "A little state goes a long way."
+        h1 "Count: {clicks}"
+        div .actions:
+            button click="decrement clicks by 1" "− Decrease"
+            button click="increment clicks by 1" "+ Increase"
+            button click="clicks = 0" "Reset"
+
+@Style/counter
+rules:
+    body:
+        margin = 0
+        font-family = system-ui, sans-serif
+        background = #eff6ff
+        color = #172033
+    .counter:
+        padding = 2rem 1rem
+        text-align = center
+    .actions:
+        display = flex
+        justify-content = center
+        flex-wrap = wrap
+        gap = 0.75rem
+    button:
+        padding = 0.75rem 1rem
+        border = 0
+        border-radius = 10px
+        background = #2563eb
+        color = white
+        font-size = 1rem
+        cursor = pointer

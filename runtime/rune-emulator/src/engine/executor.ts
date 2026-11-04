@@ -1,3 +1,4 @@
+import { parseBuiltinArgs } from '../parser/section-parser';
 // ============================================================================
 // Executor — run a sequence of RunStep[] against a RequestContext
 // ============================================================================
@@ -65,7 +66,7 @@ function executeAssignment(step: AssignmentStep, ctx: RequestContext): boolean {
   if (isBuiltin(firstToken)) {
     const restStr = rhs.slice(firstToken.length).trim();
     // Parse args from rest string
-    const args = restStr ? restStr.split(/\s+/) : [];
+    const args = parseBuiltinArgs(restStr);
     const result = executeBuiltin(firstToken, args, ctx, step.lhs);
     if (result === RESPONDED) return false;
     if (result !== undefined) {
@@ -142,7 +143,7 @@ function executeRawStep(text: string, ctx: RequestContext): boolean {
   const firstToken = text.split(/\s+/)[0];
   if (isBuiltin(firstToken)) {
     const restStr = text.slice(firstToken.length).trim();
-    const args = restStr ? restStr.split(/\s+/) : [];
+    const args = parseBuiltinArgs(restStr);
     const result = executeBuiltin(firstToken, args, ctx);
     return result !== RESPONDED;
   }

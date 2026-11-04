@@ -1,17 +1,20 @@
 @Component/SandboxSection
-props: [code?, show_output?]
+props: [code?, show_output?, mode?]
 view:
-    section #sandbox .card data-show-output="{show_output ?? false}":
+    section #sandbox .card data-show-output="{show_output ?? false}" data-sandbox-mode="{mode ?? 'api'}":
         div .section-heading:
             p .eyebrow "Interactive"
-            h2 "Try Vectrune in your browser"
-            p "Type some Rune code below and run it directly in this sandbox."
+            h2 "%i18n.Examples.sandbox_title%"
+            p "%i18n.Examples.sandbox_hint%"
         
         div .sandbox-container:
             div .editor-pane:
                 h3 "Code"
-                textarea #sandbox-editor spellcheck=false placeholder="Type your .rune code here...":
-                    "{code ?? '@App\nname = Sandbox\ntype = REST\n\n@Route/GET /\nrun:\n    log \"Initializing sandbox...\"\n    message = \"Hello from Vectrune Emulator!\"\n    respond 200 message'}"
+                div .code-editor:
+                    pre .editor-highlight aria-hidden=true:
+                        code .code-block .language-rune
+                    textarea #sandbox-editor spellcheck=false wrap=off aria-label="Vectrune source code" placeholder="Type your .rune code here...":
+                        "{code ?? '@App\nname = Sandbox\ntype = REST\n\n@Route/GET /\nrun:\n    log \"Initializing sandbox...\"\n    message = \"Hello from Vectrune Emulator!\"\n    respond 200 message'}"
                 div .editor-actions style="display:flex; gap:0.5rem; align-items:center;":
                     button #run-button .cta click="runSandbox(this)" "Run"
                     if {show_output}:

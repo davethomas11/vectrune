@@ -50,7 +50,8 @@ impl JsCodegen {
         let actions_json = serde_json::to_string(&self.logic.actions)
             .unwrap_or_else(|_| "{}".to_string());
         let page_json = serde_json::to_string(&self.page)
-            .unwrap_or_else(|_| "{}".to_string());
+            .unwrap_or_else(|_| "{}".to_string())
+            .replace('<', "\\u003c");
         let i18n_json = &self.i18n_json;
 
         let state_json = self.generate_state_json();
@@ -204,5 +205,20 @@ mod tests {
         assert_eq!(gen.parse_value("42"), serde_json::json!(42));
         assert_eq!(gen.parse_value("true"), serde_json::json!(true));
         assert_eq!(gen.parse_value("[1,2,3]"), serde_json::json!([1, 2, 3]));
+    }
+
+    #[test]
+    fn embedded_source_cannot_close_the_bootstrap_script() {
+        let logic = LogicDefinition {
+            state: HashMap::new(),
+            derived: HashMap::new(),
+            helpers: HashMap::new(),
+            actions: HashMap::new(),
+        };
+        let source = "</script><p>source code</p>";
+        let generator = JsCodegen::new(ViewNode::Text(source.into()), logic, "{}".into(), None, HashMap::new());
+        let generated = generator.generate();
+        assert!(!generated.contains(source));
+        assert!(generated.contains(r"\u003c/script>"));
     }
 }

@@ -470,11 +470,10 @@ fn render_view_node(node: &ast::ViewNode, data: &JsonMap<String, JsonValue>, loc
             // but do NOT appear in data-rune-scope (which is reserved for loop locals).
             let mut child_data = data.clone();
             for (key, value) in props {
+                let expression = value.strip_prefix('{').and_then(|value| value.strip_suffix('}')).unwrap_or(value);
                 child_data.insert(
                     key.clone(),
-                    serde_json::Value::String(
-                        interpolate_template(value, data, locals),
-                    ),
+                    resolve_expression_value(expression, data, locals).unwrap_or(JsonValue::Null),
                 );
             }
             render_view_node(body, &child_data, locals)
@@ -755,6 +754,12 @@ fn resolve_expression_value(
     let trimmed = expr.trim();
     if trimmed.is_empty() {
         return None;
+    }
+
+    if trimmed.starts_with('"') {
+        if let Ok(JsonValue::String(literal)) = serde_json::from_str::<JsonValue>(trimmed) {
+            return Some(JsonValue::String(literal));
+        }
     }
 
     if let Some((left, right)) = trimmed.split_once(" ?? ") {

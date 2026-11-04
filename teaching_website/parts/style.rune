@@ -88,6 +88,36 @@ rules:
 
     .site-shell:
         min-height = 100vh
+        padding-bottom = calc(5rem + env(safe-area-inset-bottom, 0px))
+
+    .built-with-tag:
+        position = fixed
+        right = max(1rem, env(safe-area-inset-right, 0px))
+        bottom = max(1rem, env(safe-area-inset-bottom, 0px))
+        z-index = 20
+        display = flex
+        align-items = center
+        gap = 0.65rem
+        max-width = calc(100% - 2rem)
+        min-height = 44px
+        padding = 0.65rem 0.9rem
+        border = 1px solid #334155
+        border-radius = 14px
+        background = {panel-strong}
+        color = #e2e8f0
+        box-shadow = 0 4px 18px rgba(15, 23, 42, 0.2)
+        font-size = 0.82rem
+        font-weight = 600
+        line-height = 1.35
+        text-decoration = none
+
+    .built-with-tag:hover:
+        background = {brand-dark}
+        color = white
+
+    .built-with-tag:focus-visible:
+        outline = 2px solid {brand}
+        outline-offset = 3px
 
     .dev-banner:
         display = flex
@@ -324,6 +354,9 @@ rules:
 
     .example-card:
         use = (sub-card)
+        display = flex
+        flex-direction = column
+        align-items = flex-start
 
     .next-card:
         use = (sub-card)
@@ -363,17 +396,76 @@ rules:
         display = flex
         flex-direction = column
 
-    #sandbox-editor:
-        width = 100%
+    .code-editor:
+        position = relative
         height = 300px
-        background = {panel-strong}
-        color = white
-        padding = 1rem
-        round = 12px
-        font-family = monospace
-        border = 1px solid rgba(148, 163, 184, 0.2)
+        min-height = 12rem
         resize = vertical
+        overflow = hidden
+        border = 1px solid rgba(148, 163, 184, 0.2)
+        border-radius = 12px
+        background = {panel-strong}
         margin-bottom = 1rem
+
+    #sandbox-editor:
+        position = absolute
+        inset = 0
+        width = 100%
+        height = 100%
+        background = transparent
+        color = white
+        caret-color = white
+        padding = 1rem
+        border = 0
+        border-radius = 0
+        resize = none
+        font-family = Consolas, "SFMono-Regular", Menlo, Monaco, monospace
+        font-size = 1rem
+        line-height = 1.6
+        tab-size = 4
+        white-space = pre
+        overflow = auto
+
+    .editor-highlight:
+        display = none
+        position = absolute
+        inset = 0
+        margin = 0
+        padding = 1rem
+        border = 0
+        border-radius = 0
+        overflow = hidden
+        pointer-events = none
+        background = transparent
+        color = #e2e8f0
+        font-family = Consolas, "SFMono-Regular", Menlo, Monaco, monospace
+        font-size = 1rem
+        line-height = 1.6
+        tab-size = 4
+        white-space = pre
+
+    .editor-highlight code:
+        font-family = inherit
+        font-size = inherit
+        line-height = inherit
+
+    .highlight-ready .editor-highlight:
+        display = block
+
+    .highlight-ready #sandbox-editor:
+        color = transparent
+        -webkit-text-fill-color = transparent
+
+    #sandbox-editor::placeholder:
+        color = {syntax-comment}
+        -webkit-text-fill-color = {syntax-comment}
+
+    #sandbox-editor::selection:
+        background = rgba(96, 165, 250, 0.35)
+
+    .code-editor:focus-within:
+        outline = 2px solid {brand}
+        outline-offset = 2px
 
     .terminal:
         background = #1e293b
@@ -552,6 +644,23 @@ rules:
     .code-block .token.interpolation:
         color = {syntax-interpolation}
         font-weight = 700
+
+    .code-block .token.tag:
+        color = {syntax-builtin}
+
+    .code-block .token.attribute:
+        color = {syntax-qualifier}
+
+    .code-block .token.selector:
+        color = {syntax-function}
+
+    .code-block .token.type:
+        color = {syntax-number}
+
+    .builtin-syntax-box code:
+        background = transparent
+        color = inherit
+        padding = 0
 
     .app-layout:
         display = flex
@@ -816,6 +925,55 @@ rules:
     .language-link, .site-nav a:
         display = inline-flex
         align-items = center
+
+    .example-picker:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.5rem
+        margin-bottom = 1.5rem
+
+    .example-card .secondary-cta:
+        margin-top = auto
+        font-family = inherit
+        font-size = 1rem
+
+    .example-preview:
+        display = block
+        width = 100%
+        height = 560px
+        border = 1px solid {border}
+        border-radius = 12px
+        background = {panel}
+
+    .example-source:
+        margin-top = 1.25rem
+
+    .example-source summary, .source-file summary:
+        min-height = 44px
+        padding = 0.65rem 0
+        cursor = pointer
+        color = {brand}
+        font-weight = 700
+
+    .example-code:
+        max-height = 32rem
+        overflow = auto
+
+    .api-request-row:
+        flex-wrap = wrap
+
+    .api-request-row select:
+        min-width = 0
+        max-width = 100%
+
+    .request-path:
+        width = 100%
+        margin-top = 0.75rem
+        padding = 0.6rem
+        border = 1px solid {border}
+        border-radius = 6px
+        font-family = monospace
+        font-size = 1rem
 
 # Responsive overrides are emitted after base rules, in the order below.
 responsive:

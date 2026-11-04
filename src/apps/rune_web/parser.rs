@@ -12,6 +12,45 @@ use std::cell::RefCell;
 
 thread_local! {
     static CURRENT_SOURCE_FILE: RefCell<Option<String>> = RefCell::new(None);
+    static PREVIEW_STACK: RefCell<Vec<std::path::PathBuf>> = RefCell::new(Vec::new());
+}
+
+/// Compile a local Rune-Web example into an isolated iframe URL at render time.
+/// Usage: iframe src="{preview ../examples/counter.rune}" sandbox=allow-scripts
+fn resolve_preview_attribute(value: &str) -> Result<String, ParseError> {
+    let Some(relative_path) = value.strip_prefix("{preview ").and_then(|s| s.strip_suffix('}')) else {
+        return Ok(value.to_string());
+    };
+    let source_file = CURRENT_SOURCE_FILE.with(|source| source.borrow().clone());
+    let base = source_file.as_deref().and_then(|source| std::path::Path::new(source).parent())
+        .unwrap_or_else(|| std::path::Path::new("."));
+    let path = base.join(relative_path.trim()).canonicalize()
+        .map_err(|error| ParseError(format!("Cannot load Rune preview '{}': {}", relative_path, error)))?;
+    if PREVIEW_STACK.with(|stack| stack.borrow().contains(&path)) {
+        return Err(ParseError(format!("Circular Rune preview: {}", path.display())));
+    }
+    PREVIEW_STACK.with(|stack| stack.borrow_mut().push(path.clone()));
+    let result = (|| {
+        let document = crate::rune_parser::load_rune_document_from_path(&path)
+            .map_err(|error| ParseError(format!("Cannot parse Rune preview: {}", error)))?;
+        let frontend_section = document.get_section("Frontend")
+            .ok_or_else(|| ParseError("Rune previews require an @Frontend section".into()))?;
+        if frontend_section.kv.get("type").and_then(|value| value.as_str()) != Some("rune-web") {
+            return Err(ParseError("Rune previews require @Frontend type = rune-web".into()));
+        }
+        let page = frontend_section.kv.get("page").and_then(|value| value.as_str()).unwrap_or("index");
+        let locale = frontend_section.kv.get("locale").and_then(|value| value.as_str());
+        let frontend = parse_rune_web_frontend(&document, page)?;
+        if !frontend.page_views.contains_key(page) {
+            return Err(ParseError(format!("Rune preview page '{}' does not exist", page)));
+        }
+        let html = super::render_frontend_shell(&frontend, page, locale, None, &serde_json::Map::new());
+        use base64::Engine;
+        Ok(format!("data:text/html;base64,{}", base64::engine::general_purpose::STANDARD.encode(html)))
+    })();
+    PREVIEW_STACK.with(|stack| stack.borrow_mut().pop());
+    CURRENT_SOURCE_FILE.with(|source| *source.borrow_mut() = source_file);
+    result
 }
 
 /// Parse error type for frontend parsing.
@@ -773,12 +812,12 @@ fn extract_element_parts(
 
                         if let Some(p) = resolved_path {
                             if let Ok(content) = std::fs::read_to_string(&p) {
-                                let escaped = content.replace('\\', "\\\\").replace('\n', "\\n").replace('\r', "").replace('\'', "\\'");
-                                final_value = format!("'{}'", escaped);
+                                let literal = content.replace('{', "\u{E000}").replace('}', "\u{E001}");
+                                final_value = serde_json::to_string(&literal).unwrap();
                             }
                         }
                     }
-                    attrs.insert(name.to_string(), final_value);
+                    attrs.insert(name.to_string(), resolve_preview_attribute(&final_value)?);
                 }
             }
         }
@@ -1477,6 +1516,40 @@ mod tests {
     use crate::rune_parser::parse_rune;
 
     #[test]
+    fn compiles_real_web_previews_and_rejects_preview_cycles() {
+        use base64::Engine;
+        let example = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("examples/tic_tac_toe/tic_tac_toe.rune");
+        let url = resolve_preview_attribute(&format!("{{preview {}}}", example.display())).unwrap();
+        let html = base64::engine::general_purpose::STANDARD
+            .decode(url.strip_prefix("data:text/html;base64,").unwrap()).unwrap();
+        let html = String::from_utf8(html).unwrap();
+        assert!(html.contains("Tic Tac Toe"));
+        assert!(html.contains("actionDefinitions:"));
+        assert!(html.contains("\"play\""));
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("cycle.rune");
+        std::fs::write(&path, "@Frontend\ntype = rune-web\npage = cycle\n\n@Page/cycle\nview:\n    iframe .preview:\n        src = {preview cycle.rune}\n").unwrap();
+        let result = resolve_preview_attribute(&format!("{{preview {}}}", path.display()));
+        assert!(matches!(result, Err(error) if error.0.contains("Circular Rune preview")));
+        assert!(PREVIEW_STACK.with(|stack| stack.borrow().is_empty()));
+    }
+
+    #[test]
+    fn raw_source_props_keep_quotes_newlines_and_placeholders_in_server_rendering() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = "@Page/demo\n# user's code\\n\nview:\n    h1 \"Count: {count}\"\n";
+        std::fs::write(dir.path().join("source.rune"), source).unwrap();
+        let host = dir.path().join("host.rune");
+        std::fs::write(&host, "@Page/demo\nview:\n    Source code=\"{raw source.rune}\"\n\n@Component/Source\nprops: [code]\nview:\n    pre \"{code}\"\n").unwrap();
+        let doc = crate::rune_parser::load_rune_document_from_path(&host).unwrap();
+        let frontend = parse_rune_web_frontend(&doc, "demo").unwrap();
+        let html = super::super::render_frontend_shell(&frontend, "demo", None, None, &serde_json::Map::new());
+        assert!(html.contains(&super::super::html_escape(source)));
+    }
+
+    #[test]
     fn parses_inline_element_loop_binding() {
         let doc = parse_rune(
             r#"#!RUNE
@@ -2050,12 +2123,12 @@ fn extract_indented_attributes(value: &Value) -> Result<(HashMap<String, String>
 
                                     if let Some(p) = resolved_path {
                                         if let Ok(content) = std::fs::read_to_string(&p) {
-                                            let escaped = content.replace('\\', "\\\\").replace('\n', "\\n").replace('\r', "").replace('\'', "\\'");
-                                            final_value = format!("'{}'", escaped);
+                                            let literal = content.replace('{', "\u{E000}").replace('}', "\u{E001}");
+                                            final_value = serde_json::to_string(&literal).unwrap();
                                         }
                                     }
                                 }
-                                attrs.insert(k, final_value);
+                                attrs.insert(k, resolve_preview_attribute(&final_value)?);
                             }
                             continue;
                         }

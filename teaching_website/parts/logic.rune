@@ -2,3 +2,8 @@
 action navigate(page):
     activePage = page
     navigationOpen = false
+
+action openExample(example):
+    selectedExample = example
+    activePage = "examples"
+    navigationOpen = false

@@ -187,10 +187,10 @@ function renderBuiltinCards() {
       </div>
       <p class="builtin-summary">${item.summary}</p>
       <div class="builtin-syntax-box">
-        <code>${escapeHtml(item.syntax)}</code>
+        <code class="code-block language-rune">${escapeHtml(item.syntax)}</code>
       </div>
       <div class="builtin-card-actions">
-        <button class="load-sandbox-btn" onclick="loadBuiltinIntoSandbox(${JSON.stringify(item.name)})">
+        <button class="load-sandbox-btn" data-builtin-name="${escapeHtml(item.name)}" onclick="loadBuiltinIntoSandbox(this.dataset.builtinName)">
           ▶ Load into Sandbox
         </button>
       </div>
@@ -292,6 +292,7 @@ function initBuiltinDemoSandbox() {
     const isBuiltinsPage = Boolean(document.getElementById('builtin-list'));
     if (isBuiltinsPage && (!editor.dataset.initialized || editor.value.includes('name: "Skateboard Deck"') || editor.value.includes('name = Sandbox'))) {
       editor.value = BUILTIN_DEMO_CODE;
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
       editor.dataset.initialized = 'true';
     }
   }

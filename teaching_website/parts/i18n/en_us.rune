@@ -1,5 +1,7 @@
 @I18N/en_us
 Common {
+    built_with = "Built entirely with Rune-Web"
+    site_source = "View the teaching site source on GitHub (opens in a new tab)"
     app_name = "Vectrune"
     tagline = "A practical path from first API to reusable examples."
 }
@@ -109,6 +111,23 @@ Examples {
     tic_level = "Advanced"
     tic_title = "examples/tic_tac_toe/"
     tic_desc = "A Rune-Web example split into UI, logic, and style parts. Good once the basics already feel natural."
+    lab_eyebrow = "Interactive examples"
+    lab_title = "Example Lab"
+    lab_description = "Start with real repository examples. Read the source, try an API, or play a Rune-Web app."
+    run_label = "Code & run"
+    play_label = "Play & view code"
+    source_label = "View source code"
+    live_preview = "Live Rune-Web app"
+    local_runtime = "Run locally"
+    counter_title = "Reactive counter"
+    counter_desc = "A small web app with real reactive state. Increase, decrease, and reset the count."
+    rest_hint = "Run the app, choose an endpoint, and send a request. Edit the source and run again to try your changes."
+    users_hint = "This is the repository User API. Its CSV file lives in browser memory: create a user with POST, then fetch the users with GET. Run again to reset the file."
+    data_hint = "Edit the records and use Run to inspect the document as JSON. Show Document also supports YAML and XML."
+    graphql_hint = "Read the complete queries and mutations below. GraphQL execution needs the local Vectrune runtime; the browser emulator does not run these resolvers. From your repository checkout, run:"
+    web_hint = "This preview is compiled from the actual Rune example, including its styles and actions. Interact with the app, then expand the source below."
+    sandbox_title = "Read, edit, run"
+    sandbox_hint = "The editor contains the example source. Run executes it in your browser; Show Document and Show AST help inspect it."
 }
 WhatsNext {
     eyebrow = "What next"

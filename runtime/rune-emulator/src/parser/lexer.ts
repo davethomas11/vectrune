@@ -42,72 +42,50 @@ function countLeadingSpaces(line: string): number {
 export function tokenize(source: string): Token[] {
   const lines = source.split(/\r?\n/);
   const tokens: Token[] = [];
-
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i];
     const lineNum = i + 1;
     const indent = countLeadingSpaces(rawLine);
     const trimmed = rawLine.slice(indent);
-
-    // Blank line
-    if (trimmed === '') {
-      tokens.push({ kind: 'Blank', raw: rawLine, indent, line: lineNum });
+    if (trimmed === "") {
+      tokens.push({ kind: "Blank", raw: rawLine, indent, line: lineNum });
       continue;
     }
-
-    // Top-level (indent === 0) special cases
+    if (COMMENT_RE.test(trimmed) && !SHEBANG_RE.test(trimmed)) {
+      tokens.push({ kind: "Comment", raw: trimmed, indent, line: lineNum });
+      continue;
+    }
     if (indent === 0) {
-      // Shebang
       if (SHEBANG_RE.test(trimmed)) {
-        tokens.push({ kind: 'Shebang', raw: trimmed, indent: 0, line: lineNum });
+        tokens.push({ kind: "Shebang", raw: trimmed, indent: 0, line: lineNum });
         continue;
       }
-
-      // Comment
-      if (COMMENT_RE.test(trimmed)) {
-        tokens.push({ kind: 'Comment', raw: trimmed, indent: 0, line: lineNum });
-        continue;
-      }
-
-      // Import
       const importMatch = trimmed.match(IMPORT_RE);
       if (importMatch) {
-        tokens.push({ kind: 'Import', raw: importMatch[1], indent: 0, line: lineNum });
+        tokens.push({ kind: "Import", raw: importMatch[1], indent: 0, line: lineNum });
         continue;
       }
-
-      // Section header (@...)
       const sectionMatch = trimmed.match(SECTION_RE);
       if (sectionMatch) {
-        tokens.push({ kind: 'Section', raw: trimmed, indent: 0, line: lineNum });
+        tokens.push({ kind: "Section", raw: trimmed, indent: 0, line: lineNum });
         continue;
       }
-
-      // Block header (e.g. run:, fields:)
       if (BLOCK_HEADER_RE.test(trimmed)) {
-        tokens.push({ kind: 'BlockHeader', raw: trimmed, indent: 0, line: lineNum });
+        tokens.push({ kind: "BlockHeader", raw: trimmed, indent: 0, line: lineNum });
         continue;
       }
-
-      // Top-level key = value
       if (KV_RE.test(trimmed)) {
-        tokens.push({ kind: 'KeyValue', raw: trimmed, indent: 0, line: lineNum });
+        tokens.push({ kind: "KeyValue", raw: trimmed, indent: 0, line: lineNum });
         continue;
       }
-
-      // Fallback — treat as block line at top level
-      tokens.push({ kind: 'BlockLine', raw: trimmed, indent: 0, line: lineNum });
+      tokens.push({ kind: "BlockLine", raw: trimmed, indent: 0, line: lineNum });
       continue;
     }
-
-    // Indented content — could be a block header or a block line
     if (BLOCK_HEADER_RE.test(trimmed)) {
-      tokens.push({ kind: 'BlockHeader', raw: trimmed, indent, line: lineNum });
+      tokens.push({ kind: "BlockHeader", raw: trimmed, indent, line: lineNum });
       continue;
     }
-
-    tokens.push({ kind: 'BlockLine', raw: trimmed, indent, line: lineNum });
+    tokens.push({ kind: "BlockLine", raw: trimmed, indent, line: lineNum });
   }
-
   return tokens;
 }

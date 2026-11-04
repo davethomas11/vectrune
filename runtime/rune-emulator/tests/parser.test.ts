@@ -1,6 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from '../src/parser/index';
 
+it('preserves data records and scalar types in generic sections', () => {
+  const doc = parse(`@Skateboarder
++ name = Tony Hawk
+  age = 53
+  active = true
++ name = "Nyjah Huston"
+  age = 26
+`);
+  expect(doc.rawSections.Skateboarder.record).toEqual([
+    { name: 'Tony Hawk', age: 53, active: true },
+    { name: 'Nyjah Huston', age: 26 },
+  ]);
+});
+
 // ---------------------------------------------------------------------------
 // @App parsing
 // ---------------------------------------------------------------------------

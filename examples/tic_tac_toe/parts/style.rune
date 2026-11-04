@@ -8,7 +8,7 @@ tokens:
     accent = #15803d
     accent-text = #f0fdf4
     gap = 12px
-    cell-size = 96px
+    cell-size = clamp(48px, 20vw, 96px)
     card-round = 16px
     pill = 999px
 
