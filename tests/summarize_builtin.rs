@@ -96,3 +96,36 @@ async fn accepts_json_requests_and_stops_on_invalid_values() {
         }
     }
 }
+
+#[tokio::test]
+async fn csv_medians_distinct_counts_and_first_last_work_through_native_routes() {
+    let app = report_app().await;
+    for (path, expected) in [
+        (
+            "/medians",
+            json!([{"group":"West","count":2,"median":75.0},{"group":"East","count":2,"median":50.0},{"group":"South","count":1,"median":30.0}]),
+        ),
+        (
+            "/customers",
+            json!([{"group":"West","count":2,"distinct":1},{"group":"East","count":2,"distinct":2},{"group":"South","count":1,"distinct":1}]),
+        ),
+        (
+            "/first-customers",
+            json!([{"group":"West","count":2,"first":"alice"},{"group":"East","count":2,"first":"bob"},{"group":"South","count":1,"first":"dave"}]),
+        ),
+        (
+            "/last-customers",
+            json!([{"group":"West","count":2,"last":"alice"},{"group":"East","count":2,"last":"carol"},{"group":"South","count":1,"last":"dave"}]),
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let actual: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(actual, expected, "{path}");
+    }
+}

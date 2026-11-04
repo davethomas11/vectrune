@@ -23,6 +23,30 @@ run:
     report = summarize sales by region
     respond 200 report
 
+@Route/GET /medians
+run:
+    sales = csv.read "sales_report.csv"
+    report = summarize sales by region median amount
+    respond 200 report
+
+@Route/GET /customers
+run:
+    sales = csv.read "sales_report.csv"
+    report = summarize sales by region distinct customer
+    respond 200 report
+
+@Route/GET /first-customers
+run:
+    sales = csv.read "sales_report.csv"
+    report = summarize sales by region first customer
+    respond 200 report
+
+@Route/GET /last-customers
+run:
+    sales = csv.read "sales_report.csv"
+    report = summarize sales by region last customer
+    respond 200 report
+
 @Route/POST /report
 run:
     parse-json

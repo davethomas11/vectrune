@@ -11,6 +11,6 @@ view:
         SidebarLayout
         TeachingFooter
         BuiltWithTag
-        script src="/assets/syntax-highlight.js?v=4"
-        script src="/assets/sandbox.js?v=11"
-        script src="/assets/builtin-reference.js?v=7"
+        script src="/assets/syntax-highlight.js?v=5"
+        script src="/assets/sandbox.js?v=12"
+        script src="/assets/builtin-reference.js?v=8"

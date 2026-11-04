@@ -307,7 +307,7 @@
     {
       "id": "example.rest.sales-report",
       "title": "One-line Sales Reports",
-      "summary": "Group CSV rows or a JSON request into totals, averages, and counts with summarize.",
+      "summary": "Group CSV or JSON records into totals, averages, counts, medians, distinct counts, and first/last values.",
       "source_path": "examples/sales_report.rune",
       "companion_files": null,
       "app_type": "REST",

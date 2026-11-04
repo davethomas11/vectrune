@@ -1,7 +1,6 @@
 // Same report semantics as src/builtins/builtin/summarize.rs.
-export const SUMMARIZE_USAGE = 'summarize: expected <records> by <group-path> [sum|avg|min|max <value-path>]';
+export const SUMMARIZE_USAGE = 'summarize: expected <records> by <group-path> [sum|avg|min|max|median|distinct|first|last <value-path>]';
 
-type Metric = 'sum' | 'avg' | 'min' | 'max';
 interface Group {
   group: unknown;
   count: number;
@@ -9,6 +8,9 @@ interface Group {
   total: number;
   min: number | null;
   max: number | null;
+  numbers: number[];
+  distinct: Set<unknown>;
+  selected: unknown;
 }
 
 function validPath(path: string): boolean {
@@ -34,7 +36,7 @@ function numeric(value: unknown): number | null {
 
 export function summarize(records: unknown, groupPath: string, operation?: string, valuePath?: string): unknown[] {
   if (!validPath(groupPath) || (operation !== undefined
-      && (!['sum', 'avg', 'min', 'max'].includes(operation) || !validPath(valuePath ?? '')))) {
+      && (!['sum', 'avg', 'min', 'max', 'median', 'distinct', 'first', 'last'].includes(operation) || !validPath(valuePath ?? '')))) {
     throw new Error(SUMMARIZE_USAGE);
   }
   if (!Array.isArray(records)) throw new Error('summarize: source must be a list of records');
@@ -51,16 +53,40 @@ export function summarize(records: unknown, groupPath: string, operation?: strin
     }
     let group = groups.get(key);
     if (!group) {
-      group = { group: key, count: 0, numericCount: 0, total: 0, min: null, max: null };
+      group = { group: key, count: 0, numericCount: 0, total: 0, min: null, max: null, numbers: [], distinct: new Set(), selected: null };
       groups.set(key, group);
     }
     group.count++;
     if (operation !== undefined) {
+      const cell = field(row, valuePath!) ?? null;
+      if (operation === 'first' || operation === 'last') {
+        if (operation === 'last' || group.count === 1) {
+          // Return independent JSON data, just like cloning a native Value.
+          group.selected = JSON.parse(JSON.stringify(cell, (_key, value) => {
+            if (typeof value === 'number' && !Number.isFinite(value)) {
+              throw new Error(`summarize: row ${index + 1} field '${valuePath}' must contain only finite JSON numbers`);
+            }
+            return value;
+          }));
+        }
+        return;
+      }
+      if (operation === 'distinct') {
+        if (cell !== null) {
+          if (!['string', 'number', 'boolean'].includes(typeof cell)
+              || (typeof cell === 'number' && !Number.isFinite(cell))) {
+            throw new Error(`summarize: row ${index + 1} field '${valuePath}' must be a scalar for distinct`);
+          }
+          group.distinct.add(cell);
+        }
+        return;
+      }
       let number: number | null;
-      try { number = numeric(field(row, valuePath!)); }
+      try { number = numeric(cell); }
       catch (_) { throw new Error(`summarize: row ${index + 1} field '${valuePath}' must be a finite number or numeric string`); }
       if (number !== null) {
         group.numericCount++;
+        if (operation === 'median') group.numbers.push(number);
         group.min = group.min === null ? number : Math.min(group.min, number);
         group.max = group.max === null ? number : Math.max(group.max, number);
         if (operation === 'sum' || operation === 'avg') {
@@ -73,13 +99,25 @@ export function summarize(records: unknown, groupPath: string, operation?: strin
   return [...groups.values()].map(group => {
     const result: Record<string, unknown> = { group: group.group, count: group.count };
     if (operation !== undefined) {
-      const values: Record<Metric, number | null> = {
-        sum: group.total,
-        avg: group.numericCount ? group.total / group.numericCount : null,
-        min: group.min,
-        max: group.max,
-      };
-      result[operation] = values[operation as Metric];
+      switch (operation) {
+        case 'sum': result.sum = group.total; break;
+        case 'avg': result.avg = group.numericCount ? group.total / group.numericCount : null; break;
+        case 'min': result.min = group.min; break;
+        case 'max': result.max = group.max; break;
+        case 'distinct': result.distinct = group.distinct.size; break;
+        case 'first': case 'last': result[operation] = group.selected; break;
+        case 'median': {
+          group.numbers.sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
+          const middle = Math.floor(group.numbers.length / 2);
+          if (!group.numbers.length) result.median = null;
+          else if (group.numbers.length % 2) result.median = group.numbers[middle];
+          else {
+            const lower = group.numbers[middle - 1], upper = group.numbers[middle];
+            result.median = (lower < 0) === (upper < 0) ? lower + (upper - lower) / 2 : (lower + upper) / 2;
+          }
+          break;
+        }
+      }
     }
     return result;
   });

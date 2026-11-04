@@ -361,7 +361,7 @@ Tutorial {
 }
 
 BuiltinSummary {
-    summarize = "Calculez des effectifs, sommes, moyennes, minimums ou maximums par groupe en une ligne."
+    summarize = "Regroupez effectifs, sommes, moyennes, médianes, valeurs distinctes et premières ou dernières valeurs en une ligne."
     log = "Journalise un message de diagnostic avec les valeurs interpolées."
     respond = "Envoie un statut HTTP et un corps de réponse."
     return = "Renvoie une valeur depuis un gestionnaire ou résolveur."

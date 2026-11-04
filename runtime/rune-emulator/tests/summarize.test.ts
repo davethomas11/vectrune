@@ -62,8 +62,34 @@ it('runs the complete CSV report example and parses a POST body', () => {
     { group: 'East', count: 2, avg: 50 },
     { group: 'South', count: 1, avg: 30 },
   ]);
+  for (const [path, metric, values] of [
+    ['/medians', 'median', [75, 50, 30]],
+    ['/customers', 'distinct', [1, 2, 1]],
+    ['/first-customers', 'first', ['alice', 'bob', 'dave']],
+    ['/last-customers', 'last', ['alice', 'carol', 'dave']],
+  ] as const) {
+    const result = app.request({ method: 'GET', path });
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual(['West', 'East', 'South'].map((group, index) => ({
+      group, count: index === 2 ? 1 : 2, [metric]: values[index],
+    })));
+  }
   const response = app.request({ method: 'POST', path: '/report', body: JSON.stringify([{ region: 'Online', amount: 20 }, { region: 'Online', amount: 5 }]) });
   expect(response.status).toBe(200);
   expect(response.body).toEqual([{ group: 'Online', count: 2, sum: 25 }]);
   expect(app.request({ method: 'POST', path: '/report', body: '[{"region":"A","amount":"bad"}]' }).status).toBe(500);
+});
+
+it.each(['first', 'last'])('%s returns independent JSON values', operation => {
+  const rows = [{ region: 'A', data: { items: [1, 2] } }];
+  const report = summarize(rows, 'region', operation, 'data') as Record<string, unknown>[];
+  (report[0][operation] as { items: number[] }).items.push(3);
+  expect(rows[0].data.items).toEqual([1, 2]);
+});
+
+it.each(['first', 'last'])('%s rejects non-finite JSON values', operation => {
+  for (const value of [NaN, Infinity, -Infinity, { nested: Infinity }]) {
+    expect(() => summarize([{ region: 'A', value }], 'region', operation, 'value'))
+      .toThrow('must contain only finite JSON numbers');
+  }
 });

@@ -3,9 +3,9 @@
 use crate::builtins::{BuiltinResult, Context, LAST_EXEC_RESULT};
 use crate::core::resolve_path;
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-const USAGE: &str = "summarize: expected <records> by <group-path> [sum|avg|min|max <value-path>]";
+const USAGE: &str = "summarize: expected <records> by <group-path> [sum|avg|min|max|median|distinct|first|last <value-path>]";
 
 #[derive(Hash, Eq, PartialEq)]
 enum GroupKey {
@@ -71,6 +71,9 @@ struct Group {
     total: f64,
     min: Option<f64>,
     max: Option<f64>,
+    numbers: Vec<f64>,
+    distinct: HashSet<GroupKey>,
+    selected: Value,
 }
 
 /// Missing group fields join the null group; absent numeric values are ignored.
@@ -82,7 +85,10 @@ pub fn summarize(
 ) -> Result<Value, String> {
     if !valid_path(group_path)
         || metric.is_some_and(|(name, path)| {
-            !matches!(name, "sum" | "avg" | "min" | "max") || !valid_path(path)
+            !matches!(
+                name,
+                "sum" | "avg" | "min" | "max" | "median" | "distinct" | "first" | "last"
+            ) || !valid_path(path)
         })
     {
         return Err(USAGE.into());
@@ -112,13 +118,39 @@ pub fn summarize(
                 total: 0.0,
                 min: None,
                 max: None,
+                numbers: Vec::new(),
+                distinct: HashSet::new(),
+                selected: Value::Null,
             });
             groups.len() - 1
         });
         let group = &mut groups[position];
         group.count += 1;
         if let Some((operation, path)) = metric {
-            let number = numeric(field(row, path)).map_err(|_| {
+            let cell = field(row, path).unwrap_or(&Value::Null);
+            match operation {
+                "first" | "last" => {
+                    if operation == "last" || group.count == 1 {
+                        group.selected = cell.clone();
+                    }
+                    continue;
+                }
+                "distinct" => {
+                    if !cell.is_null() {
+                        let key = group_key(cell).ok_or_else(|| {
+                            format!(
+                                "summarize: row {} field '{}' must be a scalar for distinct",
+                                index + 1,
+                                path
+                            )
+                        })?;
+                        group.distinct.insert(key);
+                    }
+                    continue;
+                }
+                _ => {}
+            }
+            let number = numeric(Some(cell)).map_err(|_| {
                 format!(
                     "summarize: row {} field '{}' must be a finite number or numeric string",
                     index + 1,
@@ -127,6 +159,9 @@ pub fn summarize(
             })?;
             if let Some(number) = number {
                 group.numeric_count += 1;
+                if operation == "median" {
+                    group.numbers.push(number);
+                }
                 group.min = Some(group.min.map_or(number, |value| value.min(number)));
                 group.max = Some(group.max.map_or(number, |value| value.max(number)));
                 if matches!(operation, "sum" | "avg") {
@@ -143,7 +178,7 @@ pub fn summarize(
     }
     let result = groups
         .into_iter()
-        .map(|group| {
+        .map(|mut group| {
             let mut result = json!({ "group": group.value, "count": group.count });
             if let Some((operation, _)) = metric {
                 result[operation] = match operation {
@@ -153,6 +188,26 @@ pub fn summarize(
                     }
                     "min" => json!(group.min),
                     "max" => json!(group.max),
+                    "median" if !group.numbers.is_empty() => {
+                        group.numbers.sort_by(f64::total_cmp);
+                        let middle = group.numbers.len() / 2;
+                        let upper = group.numbers[middle];
+                        let value = if group.numbers.len() % 2 == 1 {
+                            upper
+                        } else {
+                            let lower = group.numbers[middle - 1];
+                            // Avoid both overflow for large values and underflow
+                            // from halving two small, same-sign values separately.
+                            if (lower < 0.0) == (upper < 0.0) {
+                                lower + (upper - lower) / 2.0
+                            } else {
+                                (lower + upper) / 2.0
+                            }
+                        };
+                        json!(value)
+                    }
+                    "distinct" => json!(group.distinct.len()),
+                    "first" | "last" => group.selected,
                     _ => Value::Null,
                 };
             }

@@ -361,7 +361,7 @@ Tutorial {
 }
 
 BuiltinSummary {
-    summarize = "Build grouped counts, totals, averages, minimums, or maximums in one line."
+    summarize = "Group counts, totals, averages, medians, distinct counts, and first/last values in one line."
     log = "Log a diagnostic message with expanded placeholders."
     respond = "Send an HTTP status and response body."
     return = "Return a value from a handler or resolver."

@@ -4,8 +4,8 @@ const VECTRUNE_BUILTINS = [
   {
     name: "summarize",
     category: "data",
-    syntax: "report = summarize records by field [sum|avg|min|max value_field]",
-    snippet: "@App\nname = One-line Reports\ntype = REST\n\n@Route/GET /report\nrun:\n    sales = [\n        { region: \"West\", amount: 125 },\n        { region: \"East\", amount: 40 },\n        { region: \"West\", amount: 25 },\n        { region: \"East\", amount: 60 },\n        { region: \"South\", amount: 30 }\n    ]\n    report = summarize sales by region sum amount\n    respond 200 report"
+    syntax: "report = summarize records by field [sum|avg|min|max|median|distinct|first|last value_field]",
+    snippet: "@App\nname = One-line Reports\ntype = REST\n\n@Route/GET /report\nrun:\n    sales = [\n        { region: \"West\", amount: 125, customer: \"alice\" },\n        { region: \"East\", amount: 40, customer: \"bob\" },\n        { region: \"West\", amount: 25, customer: \"alice\" },\n        { region: \"East\", amount: 60, customer: \"carol\" },\n        { region: \"South\", amount: 30, customer: \"dave\" }\n    ]\n    # Try median amount, distinct customer, first customer, or last customer.\n    report = summarize sales by region sum amount\n    respond 200 report"
   },
   {
     name: "log",

@@ -167,7 +167,7 @@ builtins:
       - src/builtins/builtin/ws.rs
   - name: summarize
     category: data
-    summary: Group records into counts and optional sums, averages, minimums, or maximums.
+    summary: Group records into counts and optional sum, average, min, max, median, distinct, first, or last values.
     arguments:
       - name: records
       - name: by
@@ -178,11 +178,14 @@ builtins:
         optional: true
     behavior:
       notes:
-        - "Syntax: summarize <records> by <group-path> [sum|avg|min|max <value-path>]."
+        - "Syntax: summarize <records> by <group-path> [sum|avg|min|max|median|distinct|first|last <value-path>]."
         - Returns group/count records in first-seen order; an aggregate adds its named field.
         - Group keys are typed scalars; missing keys join the null group.
-        - Numeric strings are accepted; missing, null, and blank metric cells are ignored.
+        - Numeric operations accept numeric strings and ignore missing, null, and blank cells.
         - Count includes every row; average divides by numeric cells only.
+        - Median sorts numeric cells; even-length groups use the midpoint of the central pair.
+        - Distinct counts typed scalar values, ignoring missing and null fields.
+        - First and last preserve the selected JSON value in input order, including null, objects, and arrays.
         - Invalid data and sum/average overflow stop execution with a builtin error.
         - Source records are unchanged; assignments and last result update only on success.
         - Supported in native Rune run steps and the browser emulator.

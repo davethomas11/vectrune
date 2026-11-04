@@ -241,7 +241,7 @@ examples:
       - Compiles to executable statements rather than relying on probabilistic interpretation.
   - id: example.rest.sales-report
     title: One-line Sales Reports
-    summary: Group CSV rows or a JSON request into totals, averages, and counts with summarize.
+    summary: Group CSV or JSON records into totals, averages, counts, medians, distinct counts, and first/last values.
     source_path: examples/sales_report.rune
     app_type: REST
     concepts:
