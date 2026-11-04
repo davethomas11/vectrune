@@ -174,7 +174,7 @@
 		<key>builtin</key>
 		<dict>
 			<key>match</key>
-			<string>\b(respond|log|validate|parse-json|csv\.read|csv\.write|csv\.append)\b</string>
+			<string>\b(respond|log|validate|parse-json|summarize|csv\.read|csv\.write|csv\.append)\b</string>
 			<key>name</key>
 			<string>support.function.builtin.rune</string>
 		</dict>

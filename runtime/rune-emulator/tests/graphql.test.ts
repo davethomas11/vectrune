@@ -61,8 +61,8 @@ describe('GraphQL execution', () => {
     expect(app.request({ method: 'POST', path: '/graphql', body: '{broken' })).toMatchObject({ status: 400 });
   });
 
-  it('runs the existing @Type / @Query shorthand tutorial', () => {
-    const app = createApp(parse(readFileSync(new URL('../../../teaching_website/parts/pages/examples/graphql_example.rune', import.meta.url), 'utf8')));
+  it('supports @Type / @Query shorthand', () => {
+    const app = createApp(parse(readFileSync(new URL('./fixtures/graphql-shorthand.rune', import.meta.url), 'utf8')));
     expect(app.graphql({ query: '{ books { title author } }' })).toMatchObject({ status: 200, body: { data: { books: [
       { title: 'Designing Data-Intensive Applications', author: 'Martin Kleppmann' },
       { title: 'The Pragmatic Programmer', author: 'Andy Hunt & Dave Thomas' },

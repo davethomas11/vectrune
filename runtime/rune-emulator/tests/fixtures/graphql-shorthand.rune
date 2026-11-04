@@ -1,0 +1,16 @@
+@App
+name = GraphQL Book API
+type = GraphQL
+
+@Type/Book
+id = number
+title = string
+author = string
+
+@Query/books -> [Book]
+run:
+    books = [
+        { id: 1, title: "Designing Data-Intensive Applications", author: "Martin Kleppmann" },
+        { id: 2, title: "The Pragmatic Programmer", author: "Andy Hunt & Dave Thomas" }
+    ]
+    return books

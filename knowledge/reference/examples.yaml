@@ -239,6 +239,32 @@ examples:
     notes:
       - Demonstrates the first rule-based English language engine for `.vectrune`.
       - Compiles to executable statements rather than relying on probabilistic interpretation.
+  - id: example.rest.sales-report
+    title: One-line Sales Reports
+    summary: Group CSV or JSON records into totals, averages, counts, medians, distinct counts, and first/last values.
+    source_path: examples/sales_report.rune
+    app_type: REST
+    concepts:
+      - grouped aggregation
+      - CSV data
+      - JSON requests
+    builtins:
+      - csv.read
+      - summarize
+      - parse-json
+      - respond
+    runtime_context:
+      - body
+      - ___last_exec_result___
+    cli_workflows:
+      - vectrune examples/sales_report.rune
+    test_refs:
+      - tests/summarize_builtin.rs
+      - runtime/rune-emulator/tests/summarize.test.ts
+    related_knowledge:
+      - language.summarize
+      - language.core
+    status: recommended
 notes:
   - Prefer examples already backed by tests or central README workflows.
   - Add auth, datasource, and memory API examples once their reference pages are added.

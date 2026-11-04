@@ -2,6 +2,7 @@
 // Builtins — emulate server-side Vectrune built-in commands
 // ============================================================================
 
+import { summarize, SUMMARIZE_USAGE } from './summarize';
 import type { RequestContext } from './context';
 import { buildScopeFromContext } from './context';
 import { evaluateExpression, resolvePath, splitPathSegments, valueToString } from './evaluate';
@@ -430,6 +431,22 @@ export function executeBuiltin(
     return result;
   }
 
+  if (name === 'summarize') {
+    const tokens = args.map(arg => arg.startsWith('"') && arg.endsWith('"') ? arg.slice(1, -1) : arg);
+    try {
+      if (![3, 5].includes(tokens.length) || tokens[1] !== 'by') throw new Error(SUMMARIZE_USAGE);
+      const records = resolvePath(tokens[0], scope);
+      if (records === undefined) throw new Error(`summarize: source '${tokens[0]}' was not found`);
+      const result = summarize(records, tokens[2], tokens[3], tokens[4]);
+      if (assignTarget) ctx.state[assignTarget] = result;
+      ctx.state.___last_exec_result___ = result;
+      return result;
+    } catch (error) {
+      ctx.response = { status: 500, body: (error as Error).message, logs: ctx.logs };
+      return RESPONDED;
+    }
+  }
+
   // Unknown builtin — log a warning and continue
   ctx.logs.push(`[emulator] Unknown builtin: ${name}`);
   return undefined;
@@ -451,7 +468,7 @@ const KNOWN_BUILTINS = new Set([
   'load-rune',
   'is-set',
   'delete',
-  'stop', 'to-number', 'to-string', 'to-bool', 'uuid.v4', 'uuid', 'now',
+  'stop', 'to-number', 'to-string', 'to-bool', 'uuid.v4', 'uuid', 'now', 'summarize',
 ]);
 
 export function isBuiltin(name: string): boolean {

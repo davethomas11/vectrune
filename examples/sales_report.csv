@@ -1,0 +1,6 @@
+region,amount,customer
+West,125,alice
+East,40,bob
+West,25,alice
+East,60,carol
+South,30,dave

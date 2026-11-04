@@ -29,7 +29,7 @@ const BUILTIN_NAMES = new Set([
   'is-set',
   'delete',
   'ws.id', 'ws.send', 'ws.broadcast', 'broadcast-websocket',
-  'stop', 'to-number', 'to-string', 'to-bool', 'uuid.v4', 'uuid', 'now',
+  'stop', 'to-number', 'to-string', 'to-bool', 'uuid.v4', 'uuid', 'now', 'summarize',
 ]);
 
 // ---------------------------------------------------------------------------

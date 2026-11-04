@@ -1,0 +1,1466 @@
+[
+  {
+    "name": "counts in first-seen order",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2
+      },
+      {
+        "group": "East",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "sum values",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2,
+        "sum": 30.0
+      },
+      {
+        "group": "East",
+        "count": 1,
+        "sum": 8.0
+      }
+    ]
+  },
+  {
+    "name": "avg values",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "operation": "avg",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2,
+        "avg": 15.0
+      },
+      {
+        "group": "East",
+        "count": 1,
+        "avg": 8.0
+      }
+    ]
+  },
+  {
+    "name": "min values",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "operation": "min",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2,
+        "min": 12.0
+      },
+      {
+        "group": "East",
+        "count": 1,
+        "min": 8.0
+      }
+    ]
+  },
+  {
+    "name": "max values",
+    "rows": [
+      {
+        "region": "West",
+        "amount": 12
+      },
+      {
+        "region": "East",
+        "amount": 8
+      },
+      {
+        "region": "West",
+        "amount": 18
+      }
+    ],
+    "group": "region",
+    "operation": "max",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "West",
+        "count": 2,
+        "max": 18.0
+      },
+      {
+        "group": "East",
+        "count": 1,
+        "max": 8.0
+      }
+    ]
+  },
+  {
+    "name": "numeric CSV text, whitespace and missing cells",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "-2.5"
+      },
+      {
+        "region": "A",
+        "amount": " +3.5 "
+      },
+      {
+        "region": "A",
+        "amount": "1e2"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      },
+      {
+        "region": "A",
+        "amount": null
+      },
+      {
+        "region": "A"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 6,
+        "sum": 101.0
+      }
+    ]
+  },
+  {
+    "name": "average divides by numeric cells rather than rows",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 10
+      },
+      {
+        "region": "A",
+        "amount": null
+      },
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": "20"
+      }
+    ],
+    "group": "region",
+    "operation": "avg",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 4,
+        "avg": 15.0
+      }
+    ]
+  },
+  {
+    "name": "all missing sum",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "sum": 0.0
+      }
+    ]
+  },
+  {
+    "name": "all missing avg",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "avg",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "avg": null
+      }
+    ]
+  },
+  {
+    "name": "all missing min",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "min",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "min": null
+      }
+    ]
+  },
+  {
+    "name": "all missing max",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "max",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "max": null
+      }
+    ]
+  },
+  {
+    "name": "nested fields",
+    "rows": [
+      {
+        "customer": {
+          "region": "North"
+        },
+        "price": {
+          "net": 4
+        }
+      },
+      {
+        "customer": {
+          "region": "North"
+        },
+        "price": {
+          "net": "6"
+        }
+      },
+      {
+        "customer": null
+      }
+    ],
+    "group": "customer.region",
+    "operation": "sum",
+    "value": "price.net",
+    "expected": [
+      {
+        "group": "North",
+        "count": 2,
+        "sum": 10.0
+      },
+      {
+        "group": null,
+        "count": 1,
+        "sum": 0.0
+      }
+    ]
+  },
+  {
+    "name": "typed keys and normalized numeric groups",
+    "rows": [
+      {
+        "region": 1
+      },
+      {
+        "region": "1"
+      },
+      {
+        "region": true
+      },
+      {
+        "region": null
+      },
+      {},
+      {
+        "region": "null"
+      },
+      {
+        "region": 1.0
+      },
+      {
+        "region": "true"
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": 1,
+        "count": 2
+      },
+      {
+        "group": "1",
+        "count": 1
+      },
+      {
+        "group": true,
+        "count": 1
+      },
+      {
+        "group": null,
+        "count": 2
+      },
+      {
+        "group": "null",
+        "count": 1
+      },
+      {
+        "group": "true",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "prototype-like strings remain normal group names",
+    "rows": [
+      {
+        "region": "__proto__"
+      },
+      {
+        "region": "constructor"
+      },
+      {
+        "region": "__proto__"
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": "__proto__",
+        "count": 2
+      },
+      {
+        "group": "constructor",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "signed zero shares a group",
+    "rows": [
+      {
+        "region": 0
+      },
+      {
+        "region": -0.0
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": 0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "name": "count ignores nonnumeric metric fields",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "hello"
+      }
+    ],
+    "group": "region",
+    "expected": [
+      {
+        "group": "A",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "empty list",
+    "rows": [],
+    "group": "region",
+    "expected": []
+  },
+  {
+    "name": "empty sum",
+    "rows": [],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": []
+  },
+  {
+    "name": "negative and fractional values",
+    "rows": [
+      {
+        "region": "A",
+        "amount": -10
+      },
+      {
+        "region": "A",
+        "amount": 2.5
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "sum": -7.5
+      }
+    ]
+  },
+  {
+    "name": "decimal CSV variants",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "+.5"
+      },
+      {
+        "region": "A",
+        "amount": "1."
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "sum": 1.5
+      }
+    ]
+  },
+  {
+    "name": "source must be list",
+    "rows": {},
+    "group": "region",
+    "error": "summarize: source must be a list of records"
+  },
+  {
+    "name": "all rows must be records",
+    "rows": [
+      {
+        "region": "A"
+      },
+      12
+    ],
+    "group": "region",
+    "error": "summarize: row 2 must be a record"
+  },
+  {
+    "name": "group rejects list",
+    "rows": [
+      {
+        "region": []
+      }
+    ],
+    "group": "region",
+    "error": "summarize: row 1 group field 'region' must be a scalar"
+  },
+  {
+    "name": "group rejects dict",
+    "rows": [
+      {
+        "region": {}
+      }
+    ],
+    "group": "region",
+    "error": "summarize: row 1 group field 'region' must be a scalar"
+  },
+  {
+    "name": "metric rejects text",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "not a number"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects boolean",
+    "rows": [
+      {
+        "region": "A",
+        "amount": true
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects list",
+    "rows": [
+      {
+        "region": "A",
+        "amount": []
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects nan",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "NaN"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects infinity",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "Infinity"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "metric rejects hex",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "0x10"
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: row 1 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "sum overflow",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1e+308
+      },
+      {
+        "region": "A",
+        "amount": 1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "sum",
+    "value": "amount",
+    "error": "summarize: sum overflow for field 'amount'"
+  },
+  {
+    "name": "avg overflow",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1e+308
+      },
+      {
+        "region": "A",
+        "amount": 1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "avg",
+    "value": "amount",
+    "error": "summarize: avg overflow for field 'amount'"
+  },
+  {
+    "name": "max does not accumulate a sum",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1e+308
+      },
+      {
+        "region": "A",
+        "amount": 1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "max",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "max": 1e+308
+      }
+    ]
+  },
+  {
+    "name": "invalid metric",
+    "rows": [],
+    "group": "region",
+    "operation": "mode",
+    "value": "amount",
+    "error": "summarize: expected <records> by <group-path> [sum|avg|min|max|median|distinct|first|last <value-path>]"
+  },
+  {
+    "name": "empty group path",
+    "rows": [],
+    "group": "",
+    "error": "summarize: expected <records> by <group-path> [sum|avg|min|max|median|distinct|first|last <value-path>]"
+  },
+  {
+    "name": "empty metric path",
+    "rows": [],
+    "group": "region",
+    "operation": "sum",
+    "value": "",
+    "error": "summarize: expected <records> by <group-path> [sum|avg|min|max|median|distinct|first|last <value-path>]"
+  },
+  {
+    "name": "invalid nested path",
+    "rows": [],
+    "group": "customer..region",
+    "error": "summarize: expected <records> by <group-path> [sum|avg|min|max|median|distinct|first|last <value-path>]"
+  },
+  {
+    "name": "odd median",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 9
+      },
+      {
+        "region": "A",
+        "amount": 1
+      },
+      {
+        "region": "A",
+        "amount": 5
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 3,
+        "median": 5.0
+      }
+    ]
+  },
+  {
+    "name": "even median",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 8
+      },
+      {
+        "region": "A",
+        "amount": 2
+      },
+      {
+        "region": "A",
+        "amount": 6
+      },
+      {
+        "region": "A",
+        "amount": 4
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 4,
+        "median": 5.0
+      }
+    ]
+  },
+  {
+    "name": "CSV median",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "10"
+      },
+      {
+        "region": "A",
+        "amount": "2"
+      },
+      {
+        "region": "A",
+        "amount": "6"
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 3,
+        "median": 6.0
+      }
+    ]
+  },
+  {
+    "name": "median skips empty cells",
+    "rows": [
+      {
+        "region": "A",
+        "amount": null
+      },
+      {
+        "region": "A",
+        "amount": ""
+      },
+      {
+        "region": "A",
+        "amount": 8
+      },
+      {
+        "region": "A",
+        "amount": 2
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 4,
+        "median": 5.0
+      }
+    ]
+  },
+  {
+    "name": "large median",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1e+308
+      },
+      {
+        "region": "A",
+        "amount": 1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "median": 1e+308
+      }
+    ]
+  },
+  {
+    "name": "large negative median",
+    "rows": [
+      {
+        "region": "A",
+        "amount": -1e+308
+      },
+      {
+        "region": "A",
+        "amount": -1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "median": -1e+308
+      }
+    ]
+  },
+  {
+    "name": "opposite sign median",
+    "rows": [
+      {
+        "region": "A",
+        "amount": -1e+308
+      },
+      {
+        "region": "A",
+        "amount": 1e+308
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "median": 0.0
+      }
+    ]
+  },
+  {
+    "name": "subnormal median",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 5e-324
+      },
+      {
+        "region": "A",
+        "amount": 5e-324
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "median": 5e-324
+      }
+    ]
+  },
+  {
+    "name": "empty median",
+    "rows": [],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": []
+  },
+  {
+    "name": "all missing median",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": null
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "median": null
+      }
+    ]
+  },
+  {
+    "name": "median rejects invalid numbers",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 2
+      },
+      {
+        "region": "A",
+        "amount": "bad"
+      }
+    ],
+    "group": "region",
+    "operation": "median",
+    "value": "amount",
+    "error": "summarize: row 2 field 'amount' must be a finite number or numeric string"
+  },
+  {
+    "name": "typed distinct values",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1
+      },
+      {
+        "region": "A",
+        "amount": 1.0
+      },
+      {
+        "region": "A",
+        "amount": "1"
+      },
+      {
+        "region": "A",
+        "amount": true
+      },
+      {
+        "region": "A",
+        "amount": "true"
+      },
+      {
+        "region": "A",
+        "amount": null
+      },
+      {
+        "region": "A",
+        "amount": ""
+      },
+      {
+        "region": "A",
+        "amount": ""
+      },
+      {
+        "region": "A",
+        "amount": false
+      },
+      {
+        "region": "A"
+      }
+    ],
+    "group": "region",
+    "operation": "distinct",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 10,
+        "distinct": 6
+      }
+    ]
+  },
+  {
+    "name": "distinct prototype-like values",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "__proto__"
+      },
+      {
+        "region": "A",
+        "amount": "constructor"
+      },
+      {
+        "region": "A",
+        "amount": "__proto__"
+      }
+    ],
+    "group": "region",
+    "operation": "distinct",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 3,
+        "distinct": 2
+      }
+    ]
+  },
+  {
+    "name": "empty distinct",
+    "rows": [],
+    "group": "region",
+    "operation": "distinct",
+    "value": "amount",
+    "expected": []
+  },
+  {
+    "name": "distinct ignores null and absent values",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": null
+      }
+    ],
+    "group": "region",
+    "operation": "distinct",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "distinct": 0
+      }
+    ]
+  },
+  {
+    "name": "distinct uses nested paths",
+    "rows": [
+      {
+        "region": "A",
+        "user": {
+          "id": "one"
+        }
+      },
+      {
+        "region": "A",
+        "user": {
+          "id": "one"
+        }
+      },
+      {
+        "region": "A",
+        "user": {
+          "id": "two"
+        }
+      }
+    ],
+    "group": "region",
+    "operation": "distinct",
+    "value": "user.id",
+    "expected": [
+      {
+        "group": "A",
+        "count": 3,
+        "distinct": 2
+      }
+    ]
+  },
+  {
+    "name": "distinct rejects dict",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1
+      },
+      {
+        "region": "A",
+        "amount": {}
+      }
+    ],
+    "group": "region",
+    "operation": "distinct",
+    "value": "amount",
+    "error": "summarize: row 2 field 'amount' must be a scalar for distinct"
+  },
+  {
+    "name": "distinct rejects list",
+    "rows": [
+      {
+        "region": "A",
+        "amount": 1
+      },
+      {
+        "region": "A",
+        "amount": []
+      }
+    ],
+    "group": "region",
+    "operation": "distinct",
+    "value": "amount",
+    "error": "summarize: row 2 field 'amount' must be a scalar for distinct"
+  },
+  {
+    "name": "first preserves input order",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "start"
+      },
+      {
+        "region": "A",
+        "amount": "middle"
+      },
+      {
+        "region": "A",
+        "amount": "finish"
+      }
+    ],
+    "group": "region",
+    "operation": "first",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 3,
+        "first": "start"
+      }
+    ]
+  },
+  {
+    "name": "first returns objects and arrays",
+    "rows": [
+      {
+        "region": "A",
+        "amount": {
+          "status": "open"
+        }
+      },
+      {
+        "region": "A",
+        "amount": [
+          "closed",
+          {
+            "ok": true
+          }
+        ]
+      }
+    ],
+    "group": "region",
+    "operation": "first",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "first": {
+          "status": "open"
+        }
+      }
+    ]
+  },
+  {
+    "name": "empty first",
+    "rows": [],
+    "group": "region",
+    "operation": "first",
+    "value": "amount",
+    "expected": []
+  },
+  {
+    "name": "missing first",
+    "rows": [
+      {
+        "region": "A"
+      },
+      {
+        "region": "A",
+        "amount": "next"
+      }
+    ],
+    "group": "region",
+    "operation": "first",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "first": null
+      }
+    ]
+  },
+  {
+    "name": "first preserves false",
+    "rows": [
+      {
+        "region": "A",
+        "amount": false
+      }
+    ],
+    "group": "region",
+    "operation": "first",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 1,
+        "first": false
+      }
+    ]
+  },
+  {
+    "name": "first preserves blank string",
+    "rows": [
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "first",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 1,
+        "first": ""
+      }
+    ]
+  },
+  {
+    "name": "first returns nested values",
+    "rows": [
+      {
+        "region": "A",
+        "data": {
+          "payload": {
+            "ok": true
+          }
+        }
+      }
+    ],
+    "group": "region",
+    "operation": "first",
+    "value": "data.payload",
+    "expected": [
+      {
+        "group": "A",
+        "count": 1,
+        "first": {
+          "ok": true
+        }
+      }
+    ]
+  },
+  {
+    "name": "last preserves input order",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "start"
+      },
+      {
+        "region": "A",
+        "amount": "middle"
+      },
+      {
+        "region": "A",
+        "amount": "finish"
+      }
+    ],
+    "group": "region",
+    "operation": "last",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 3,
+        "last": "finish"
+      }
+    ]
+  },
+  {
+    "name": "last returns objects and arrays",
+    "rows": [
+      {
+        "region": "A",
+        "amount": {
+          "status": "open"
+        }
+      },
+      {
+        "region": "A",
+        "amount": [
+          "closed",
+          {
+            "ok": true
+          }
+        ]
+      }
+    ],
+    "group": "region",
+    "operation": "last",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "last": [
+          "closed",
+          {
+            "ok": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "empty last",
+    "rows": [],
+    "group": "region",
+    "operation": "last",
+    "value": "amount",
+    "expected": []
+  },
+  {
+    "name": "missing last",
+    "rows": [
+      {
+        "region": "A",
+        "amount": "previous"
+      },
+      {
+        "region": "A"
+      }
+    ],
+    "group": "region",
+    "operation": "last",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 2,
+        "last": null
+      }
+    ]
+  },
+  {
+    "name": "last preserves false",
+    "rows": [
+      {
+        "region": "A",
+        "amount": false
+      }
+    ],
+    "group": "region",
+    "operation": "last",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 1,
+        "last": false
+      }
+    ]
+  },
+  {
+    "name": "last preserves blank string",
+    "rows": [
+      {
+        "region": "A",
+        "amount": ""
+      }
+    ],
+    "group": "region",
+    "operation": "last",
+    "value": "amount",
+    "expected": [
+      {
+        "group": "A",
+        "count": 1,
+        "last": ""
+      }
+    ]
+  },
+  {
+    "name": "last returns nested values",
+    "rows": [
+      {
+        "region": "A",
+        "data": {
+          "payload": {
+            "ok": true
+          }
+        }
+      }
+    ],
+    "group": "region",
+    "operation": "last",
+    "value": "data.payload",
+    "expected": [
+      {
+        "group": "A",
+        "count": 1,
+        "last": {
+          "ok": true
+        }
+      }
+    ]
+  }
+]
