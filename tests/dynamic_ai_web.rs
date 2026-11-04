@@ -442,3 +442,94 @@ async fn real_ollama_adapter_uses_the_generate_protocol() {
     assert_eq!(payloads[1]["format"], "json");
     task.abort();
 }
+
+async fn html_request(router: Router, accept: &str) -> axum::response::Response {
+    router
+        .oneshot(
+            Request::builder()
+                .uri("/")
+                .header("Accept", accept)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn browser_gets_thinking_page_without_starting_duplicate_generation() {
+    let engine = Fake::new(&[HTML]);
+    let router = app(SITE, engine.clone());
+    let response = html_request(router.clone(), "text/html,application/xhtml+xml").await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()["x-vectrune-ai-cache"], "pending");
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    assert!(response.headers().contains_key("content-security-policy"));
+    let shell = text(response).await;
+    assert!(shell.contains("Vectrune is thinking"));
+    assert!(shell.contains("application/vnd.vectrune.generated-html"));
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 0);
+    let response = html_request(router.clone(), "application/vnd.vectrune.generated-html").await;
+    assert_eq!(response.headers()["x-vectrune-ai-cache"], "miss");
+    assert_eq!(text(response).await, HTML);
+    let response = html_request(router, "text/html").await;
+    assert_eq!(response.headers()["x-vectrune-ai-cache"], "hit");
+    assert_eq!(text(response).await, HTML);
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn raw_requests_keep_failure_statuses_and_do_not_loop_when_cache_is_disabled() {
+    let engine = Fake::new(&[HTML]);
+    let router = app(
+        &SITE.replace("cache_seconds = 60", "cache_seconds = 0"),
+        engine.clone(),
+    );
+    let response = html_request(router.clone(), "application/vnd.vectrune.generated-html").await;
+    assert_eq!(text(response).await, HTML);
+    let response = html_request(router.clone(), "application/vnd.vectrune.generated-html").await;
+    assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+    assert!(text(response).await.contains("ai_engine_failed"));
+    let response = html_request(router, "text/html").await;
+    assert_eq!(response.headers()["x-vectrune-ai-cache"], "pending");
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn explicitly_unacceptable_html_gets_direct_output() {
+    let engine = Fake::new(&[HTML]);
+    let response = html_request(app(SITE, engine.clone()), "text/html;q=0, */*").await;
+    assert_eq!(text(response).await, HTML);
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn all_engine_demo_files_define_valid_native_sites() {
+    for (source, expected_engine) in [
+        (include_str!("../examples/dynamic_ai_web.rune"), "ollama"),
+        (
+            include_str!("../examples/dynamic_ai_web_codex.rune"),
+            "codex",
+        ),
+        (
+            include_str!("../examples/dynamic_ai_web_copilot.rune"),
+            "copilot",
+        ),
+    ] {
+        let doc = parse_rune(source).unwrap();
+        assert_eq!(
+            doc.get_section("App").unwrap().kv.get("engine"),
+            Some(&rune_runtime::rune_ast::Value::String(
+                expected_engine.into()
+            ))
+        );
+        let response = request(
+            router_with_engine(&doc, Fake::new(&[HTML])).unwrap(),
+            "GET",
+            "/",
+            "",
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+}

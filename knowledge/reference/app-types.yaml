@@ -17,7 +17,9 @@ app_types:
       - "@App type = dynamic-ai-web selects the native AI HTTP server; engine defaults to ollama."
       - "@Site, @Content, and @Data describe public content; @Page declares HTML routes and @Route/METHOD /path declares JSON APIs."
       - "Requests supply path parameters, query and JSON body; headers, cookies, App settings and filesystem paths are not supplied to the model."
-      - "Successful pages have bounded, configurable caching; API responses are generated afresh."
+      - "Successful pages use the reusable native TtlCache module for bounded, configurable caching; API responses are generated afresh."
+      - "Browser cache misses show a Vectrune thinking page before fetching the generated document; raw requests preserve direct output and status codes."
+      - "Server Info logs report request IDs, route templates, generation timings and cache hits without request body or query values."
       - "Generation is bounded by timeout, request/output limits and concurrency; CLI adapters use generation-only options in temporary workspaces."
       - "Responses are generated data, without persistent mutations or transaction execution. JSON syntax is validated; semantic correctness is model-dependent."
     sources:

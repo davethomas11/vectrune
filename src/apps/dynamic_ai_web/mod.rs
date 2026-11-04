@@ -2,6 +2,7 @@
 pub mod engine;
 
 use crate::{
+    cache::TtlCache,
     core::AppState,
     rune_ast::{RuneDocument, Section, Value},
     util::{log, LogLevel},
@@ -9,7 +10,7 @@ use crate::{
 use axum::{
     body::Bytes,
     extract::{DefaultBodyLimit, Path, RawQuery},
-    http::{header, HeaderValue, Method, StatusCode},
+    http::{header, HeaderMap, HeaderValue, Method, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, MethodFilter},
     Json, Router,
@@ -18,7 +19,10 @@ use engine::{AiEngine, OutputKind, MAX_OUTPUT_BYTES};
 use serde_json::{json, Value as JsonValue};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 use tokio::sync::{Mutex, Semaphore};
@@ -231,17 +235,13 @@ fn routes(doc: &RuneDocument) -> Result<Vec<RouteSpec>, String> {
     Ok(result)
 }
 
-struct CachedPage {
-    expires: Instant,
-    html: String,
-}
 struct Runtime {
     config: Config,
     engine: Arc<dyn AiEngine>,
     brief: JsonValue,
     catalog: JsonValue,
     slots: Arc<Semaphore>,
-    cache: Mutex<HashMap<String, CachedPage>>,
+    cache: Mutex<TtlCache<String, String>>,
 }
 
 pub async fn build_dynamic_ai_web_router(state: AppState) -> Router {
@@ -301,13 +301,14 @@ fn router(doc: &RuneDocument, config: Config, engine: Arc<dyn AiEngine>) -> Resu
         return Err("AI site descriptions exceed the 128 KiB limit".into());
     }
     let slots = Arc::new(Semaphore::new(config.concurrency));
+    let cache = Mutex::new(TtlCache::new(config.cache_entries, config.cache_ttl));
     let runtime = Arc::new(Runtime {
         config,
         engine,
         brief,
         catalog,
         slots,
-        cache: Mutex::new(HashMap::new()),
+        cache,
     });
     let mut app = Router::new();
     for route in routes {
@@ -317,10 +318,11 @@ fn router(doc: &RuneDocument, config: Config, engine: Arc<dyn AiEngine>) -> Resu
         let handler = move |method: Method,
                             Path(params): Path<HashMap<String, String>>,
                             RawQuery(query): RawQuery,
+                            headers: HeaderMap,
                             body: Bytes| {
             let runtime = runtime.clone();
             let route = route.clone();
-            async move { serve(runtime, route, method, params, query, body).await }
+            async move { serve(runtime, route, method, params, query, headers, body).await }
         };
         let route = if method == Method::GET {
             get(handler)
@@ -364,6 +366,7 @@ fn generated(body: String, output: OutputKind, engine: &str, cache: &'static str
     );
     headers.insert("x-vectrune-ai-cache", HeaderValue::from_static(cache));
     if output == OutputKind::Html {
+        headers.insert(header::VARY, HeaderValue::from_static("Accept"));
         headers.insert(header::CONTENT_SECURITY_POLICY, HeaderValue::from_static("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"));
         headers.insert(
             header::REFERRER_POLICY,
@@ -402,18 +405,54 @@ fn clean_output(text: &str, output: OutputKind) -> Result<String, String> {
     }
 }
 
-impl Runtime {
-    async fn cached(&self, key: &str) -> Option<String> {
-        let mut cache = self.cache.lock().await;
-        if cache
-            .get(key)
-            .is_some_and(|page| page.expires > Instant::now())
-        {
-            return cache.get(key).map(|page| page.html.clone());
+static NEXT_REQUEST: AtomicU64 = AtomicU64::new(1);
+
+struct RequestLog {
+    id: u64,
+    label: String,
+    started: Instant,
+}
+impl RequestLog {
+    fn new(method: &Method, route: &RouteSpec, engine: &str) -> Self {
+        Self {
+            id: NEXT_REQUEST.fetch_add(1, Ordering::Relaxed),
+            // Use the template, never private query/body values or parameters.
+            label: format!("{} {} engine={}", method, route.path, engine),
+            started: Instant::now(),
         }
-        cache.remove(key);
-        None
     }
+    fn event(&self, level: LogLevel, message: &str) {
+        log(
+            level,
+            &format!(
+                "dynamic-ai-web request={} {} {} elapsed_ms={}",
+                self.id,
+                self.label,
+                message,
+                self.started.elapsed().as_millis()
+            ),
+        );
+    }
+}
+
+fn wants_thinking_page(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::ACCEPT)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| {
+            value.split(',').any(|item| {
+                let mut parts = item.trim().split(';');
+                parts
+                    .next()
+                    .is_some_and(|media| media.trim().eq_ignore_ascii_case("text/html"))
+                    && !parts.any(|part| {
+                        part.trim()
+                            .strip_prefix("q=")
+                            .and_then(|q| q.parse::<f32>().ok())
+                            == Some(0.0)
+                    })
+            })
+        })
 }
 
 async fn serve(
@@ -422,10 +461,14 @@ async fn serve(
     method: Method,
     params: HashMap<String, String>,
     query: Option<String>,
+    headers: HeaderMap,
     body: Bytes,
 ) -> Response {
+    let request_log = RequestLog::new(&method, &route, &runtime.config.engine);
+    request_log.event(LogLevel::Info, "Request received");
     // HEAD checks never spend an AI request.
     if method == Method::HEAD {
+        request_log.event(LogLevel::Info, "HEAD: generation skipped");
         return generated(
             String::new(),
             route.output,
@@ -439,11 +482,12 @@ async fn serve(
         match serde_json::from_slice::<JsonValue>(&body) {
             Ok(body) => body,
             Err(_) => {
+                request_log.event(LogLevel::Warn, "Rejected invalid JSON request");
                 return problem(
                     StatusCode::BAD_REQUEST,
                     "invalid_json",
                     "AI request bodies must be valid JSON",
-                )
+                );
             }
         }
     };
@@ -451,13 +495,31 @@ async fn serve(
     let page_cached = route.output == OutputKind::Html && !runtime.config.cache_ttl.is_zero();
     let cache_key = json!([route.path, params, query, body]).to_string();
     if page_cached {
-        if let Some(html) = runtime.cached(&cache_key).await {
+        if let Some(html) = runtime.cache.lock().await.get(&cache_key).cloned() {
+            request_log.event(LogLevel::Info, "Serving page from cache cache=hit");
             return generated(html, route.output, &runtime.config.engine, "hit");
         }
+    }
+    if route.output == OutputKind::Html && body == JsonValue::Null && wants_thinking_page(&headers)
+    {
+        request_log.event(
+            LogLevel::Info,
+            &format!(
+                "Showing thinking page; browser will request generation cache={}",
+                if page_cached { "miss" } else { "disabled" }
+            ),
+        );
+        return generated(
+            include_str!("thinking.html").into(),
+            OutputKind::Html,
+            &runtime.config.engine,
+            "pending",
+        );
     }
     let _permit = match runtime.slots.clone().try_acquire_owned() {
         Ok(permit) => permit,
         Err(_) => {
+            request_log.event(LogLevel::Warn, "Generation busy status=503");
             let mut response = problem(
                 StatusCode::SERVICE_UNAVAILABLE,
                 "ai_busy",
@@ -480,12 +542,24 @@ async fn serve(
         json!({ "method": method.as_str(), "path_template": route.path, "params": params, "query": query, "body": body })
     );
     if prompt.len() > MAX_PROMPT_BYTES {
+        request_log.event(LogLevel::Warn, "Prompt too large status=413");
         return problem(
             StatusCode::PAYLOAD_TOO_LARGE,
             "ai_prompt_too_large",
             "Combined site and request data exceed the prompt size limit",
         );
     }
+    let kind = if route.output == OutputKind::Html {
+        "page"
+    } else {
+        "API response"
+    };
+    let cache_status = if page_cached { "miss" } else { "disabled" };
+    request_log.event(
+        LogLevel::Info,
+        &format!("Generating {} cache={}", kind, cache_status),
+    );
+    let generation_started = Instant::now();
     let output = match tokio::time::timeout(
         runtime.config.timeout,
         runtime.engine.generate(&prompt, route.output),
@@ -493,39 +567,60 @@ async fn serve(
     .await
     {
         Err(_) => {
+            request_log.event(
+                LogLevel::Warn,
+                &format!(
+                    "Generation timed out status=504 generation_ms={}",
+                    generation_started.elapsed().as_millis()
+                ),
+            );
             return problem(
                 StatusCode::GATEWAY_TIMEOUT,
                 "ai_timeout",
                 "AI generation timed out",
-            )
+            );
         }
-        Ok(Err(error)) => return problem(StatusCode::BAD_GATEWAY, "ai_engine_failed", &error.0),
+        Ok(Err(error)) => {
+            request_log.event(
+                LogLevel::Error,
+                &format!(
+                    "Generation failed status=502 generation_ms={} reason={}",
+                    generation_started.elapsed().as_millis(),
+                    error.0
+                ),
+            );
+            return problem(StatusCode::BAD_GATEWAY, "ai_engine_failed", &error.0);
+        }
         Ok(Ok(output)) => output,
     };
     let output = match clean_output(&output, route.output) {
         Ok(output) => output,
-        Err(message) => return problem(StatusCode::BAD_GATEWAY, "invalid_ai_output", &message),
+        Err(message) => {
+            request_log.event(
+                LogLevel::Warn,
+                &format!(
+                    "Invalid generated output status=502 generation_ms={} reason={}",
+                    generation_started.elapsed().as_millis(),
+                    message
+                ),
+            );
+            return problem(StatusCode::BAD_GATEWAY, "invalid_ai_output", &message);
+        }
     };
     if page_cached {
-        let mut cache = runtime.cache.lock().await;
-        cache.retain(|_, page| page.expires > Instant::now());
-        if cache.len() >= runtime.config.cache_entries {
-            if let Some(key) = cache
-                .iter()
-                .min_by_key(|(_, page)| page.expires)
-                .map(|(key, _)| key.clone())
-            {
-                cache.remove(&key);
-            }
-        }
-        cache.insert(
-            cache_key,
-            CachedPage {
-                expires: Instant::now() + runtime.config.cache_ttl,
-                html: output.clone(),
-            },
-        );
+        runtime.cache.lock().await.insert(cache_key, output.clone());
     }
+    request_log.event(
+        LogLevel::Info,
+        &format!(
+            "Generated {} status=200 generation_ms={} bytes={} cached={}",
+            kind,
+            generation_started.elapsed().as_millis(),
+            output.len(),
+            page_cached
+        ),
+    );
+
     generated(
         output,
         route.output,

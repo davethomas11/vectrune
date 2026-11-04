@@ -21,3 +21,8 @@ view:
             pre:
                 code .code-block .language-bash "cargo run -- examples/dynamic_ai_web.rune --watch\n# http://127.0.0.1:3000/"
             p "%i18n.DynamicAi.behavior%"
+            p "%i18n.DynamicAi.progress%"
+            h3 "%i18n.DynamicAi.demos_title%"
+            p "%i18n.DynamicAi.demos_body%"
+            pre:
+                code .code-block .language-bash "cargo run -- examples/dynamic_ai_web_codex.rune --watch\n# or\ncargo run -- examples/dynamic_ai_web_copilot.rune --watch"

@@ -1,0 +1,61 @@
+#!RUNE
+# Requires an installed, authenticated codex CLI.
+# cargo run -- examples/dynamic_ai_web_codex.rune --watch
+
+@App
+name = The Little Rune Cafe — Codex
+type = dynamic-ai-web
+engine = codex
+timeout_seconds = 180
+cache_seconds = 60
+max_concurrent = 2
+
+@Site
+title = The Little Rune Cafe — Codex
+description = A welcoming neighborhood cafe where good coffee meets little ideas.
+style = Professional responsive design, deep teal, coral accents, soft gradients and a little glass shine. Use inline CSS and no remote assets.
+tone = Warm, concise, honest and helpful.
+navigation:
+    Home at /
+    Our menu at /menu
+
+@Content/Story
+headline = Small cups. Big ideas.
+about = We are a fictional cafe made from a descriptive Rune document. All menu information is supplied below.
+location = 42 Example Lane
+hours = Monday to Saturday, 8am to 5pm
+
+@Data/Menu
++ id = espresso
+  name = Espresso
+  price = 3
+  description = A small, bold coffee.
+  vegan = true
+
++ id = oat-latte
+  name = Oat Latte
+  price = 5
+  description = Espresso with smooth oat milk.
+  vegan = true
+
++ id = cocoa
+  name = Hot Cocoa
+  price = 4
+  description = A warm chocolate drink with dairy milk.
+  vegan = false
+
+@Page/home
+path = /
+description = Create a complete, beautiful cafe homepage using Content/Story and Data/Menu. Include navigation to /menu and a small recommendation form that POSTs JSON preferences to /api/recommend and displays the result. Explain that this is an AI-generated demo, not a real ordering service.
+
+@Page/menu
+path = /menu
+description = Show every item from Data/Menu as readable menu cards with exact names, prices, descriptions and vegan labels. Include navigation back to /. Do not invent menu items.
+
+@Route/GET /api/menu
+response = json
+description = Return a JSON object with an items array containing all the exact menu records in Data/Menu. Do not invent records.
+
+@Route/POST /api/recommend
+response = json
+description = Read preferences from the JSON request body. Choose one suitable item from Data/Menu and return item_id, name and reason as a JSON object. If preferences mention vegan or dairy-free, choose a vegan item. This suggests an item only; it does not place an order or persist changes.

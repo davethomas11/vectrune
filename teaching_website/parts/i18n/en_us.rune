@@ -387,6 +387,9 @@ BuiltinSummary {
 }
 
 DynamicAi {
+    progress = "While a page is being generated, Vectrune shows a thinking screen with rotating messages and elapsed time. Cached pages open immediately; failures show a manual retry button. The server logs generation timings and cache hits."
+    demos_title = "Try a CLI demo"
+    demos_body = "Install and sign in to the matching CLI, then run one example at a time. Each uses the CLI default model."
     nav = "Dynamic AI sites"
     eyebrow = "Experimental application type"
     title = "Dynamic AI sites"

@@ -1,6 +1,7 @@
 // src/main.rs
 #![cfg(not(target_arch = "wasm32"))]
 mod apps;
+mod cache;
 mod arithmetic;
 mod builtins;
 mod cli;

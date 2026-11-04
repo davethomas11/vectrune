@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vectrune is thinking…</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#071d29;color:#edfafa}
+*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 20% 15%,#12667866,transparent 65%),radial-gradient(ellipse at 90% 90%,#e7845b22,transparent 60%)}
+main{width:min(100%,520px);padding:clamp(24px,6vw,48px);border:1px solid #96e3e530;border-radius:24px;background:#ffffff09;box-shadow:0 24px 80px #0004;backdrop-filter:blur(16px)}
+.brand{color:#83d7dc;font-size:.8rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase}h1{font-size:clamp(1.7rem,6vw,2.4rem);line-height:1.15}p{line-height:1.6;color:#bdd8df}.pulse{display:inline-block;width:12px;height:12px;border-radius:50%;background:#f39b73;margin-right:10px;animation:glow 1.6s infinite alternate}#elapsed{font-variant-numeric:tabular-nums;font-size:.85rem}button{font:inherit;background:#83d7dc;color:#071d29;border:0;border-radius:10px;padding:12px 20px;cursor:pointer}button:focus-visible{outline:3px solid #f39b73;outline-offset:4px}[hidden]{display:none!important}@keyframes glow{to{opacity:.25;box-shadow:0 0 20px #f39b73}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}
+</style>
+</head>
+<body>
+<main aria-busy="true">
+<div class="brand">Vectrune · dynamic AI web</div>
+<h1>Simple Rune.<br>A little AI magic.</h1>
+<p id="status" role="status"><span class="pulse" aria-hidden="true"></span><span id="message">Turning your Rune into a website…</span></p>
+<p id="detail">Your AI engine is creating this page. First visits can take a couple of minutes.</p>
+<p id="elapsed" aria-hidden="true">Thinking · 0 seconds</p>
+<button id="retry" type="button" hidden>Try again</button>
+<noscript><p>JavaScript is needed to show generation progress. Request this URL with Accept: application/vnd.vectrune.generated-html to receive the generated HTML directly.</p></noscript>
+</main>
+<script>
+(() => {
+  const messages = [
+    'Turning your Rune into a website…',
+    'Giving your ideas a place on the web…',
+    'A few descriptions. A whole new page…',
+    'Your AI engine is putting the pieces together…'
+  ];
+  const started = Date.now();
+  const message = document.getElementById('message');
+  const elapsed = document.getElementById('elapsed');
+  let index = 0;
+  const rotation = setInterval(() => { message.textContent = messages[++index % messages.length]; }, 6500);
+  const clock = setInterval(() => { elapsed.textContent = `Thinking · ${Math.floor((Date.now()-started)/1000)} seconds`; }, 1000);
+  const stop = () => { clearInterval(rotation); clearInterval(clock); };
+  document.getElementById('retry').addEventListener('click', () => location.reload());
+  fetch(location.href, { headers: { Accept: 'application/vnd.vectrune.generated-html' }, cache: 'no-store', redirect: 'error' })
+    .then(async response => {
+      if (!response.ok) {
+        const error = new Error('generation failed');
+        error.status = response.status;
+        throw error;
+      }
+      if (!(response.headers.get('Content-Type') || '').startsWith('text/html')) throw new Error('invalid response');
+      const html = await response.text();
+      stop();
+      // A full document replacement runs the generated page's own inline UI.
+      document.open(); document.write(html); document.close();
+    })
+    .catch(error => {
+      stop();
+      document.querySelector('main').setAttribute('aria-busy', 'false');
+      document.querySelector('.pulse').hidden = true;
+      message.textContent = error.status === 503 ? 'Vectrune has its hands full.' : error.status === 504 ? 'This page needs a little more time.' : 'This page could not be generated.';
+      document.getElementById('detail').textContent = error.status === 503 ? 'The AI engine is busy. Wait a moment, then try again.' : 'Check the engine and server logs, then try again when you are ready.';
+      elapsed.textContent = `Waited ${Math.floor((Date.now()-started)/1000)} seconds`;
+      document.getElementById('retry').hidden = false;
+    });
+  window.addEventListener('pagehide', stop, { once: true });
+})();
+</script>
+</body>
+</html>

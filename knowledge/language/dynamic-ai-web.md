@@ -98,13 +98,31 @@ All fields belong to `@App`.
 
 A relative executable containing a directory component is resolved from the Rune source directory. A simple executable name is found through PATH. Executable configuration is trusted application configuration, not a request parameter.
 
+## Generation progress and server logs
+
+Browser HTML requests on a cache miss immediately receive a built-in Vectrune thinking page with rotating messages, elapsed seconds and reduced-motion support. It fetches the same URL once with `Accept: application/vnd.vectrune.generated-html`, then replaces itself with the generated document, including its inline scripts. Cached pages open directly. API routes never receive a thinking page.
+
+The generation fetch retains normal HTTP failure statuses. On a timeout, busy engine or generation error, the thinking page shows an error and a manual retry button; it does not repeatedly spend AI requests. JavaScript is required for this progress UI. For direct HTML without the UI, use the generated-HTML Accept header; clients without `Accept: text/html` (including ordinary curl requests) also receive direct output. GET requests with a JSON body receive direct output to preserve their request data.
+
+At Info level the native server logs each matched request, generation start, completion, cache hit and thinking-page delivery. Logs include a request ID, method, route template, engine, elapsed milliseconds, generation milliseconds and output bytes where relevant. Timeouts, busy capacity and invalid output are logged too. URL parameter values, query strings, request bodies and prompts are excluded. A browser's initial thinking-page request and its generation fetch have separate IDs.
+
+Example server messages:
+
+```text
+[INFO] dynamic-ai-web request=2 GET / engine=ollama Generating page cache=miss elapsed_ms=0
+[INFO] dynamic-ai-web request=2 GET / engine=ollama Generated page status=200 generation_ms=12500 bytes=4454 cached=true elapsed_ms=12501
+[INFO] dynamic-ai-web request=3 GET / engine=ollama Serving page from cache cache=hit elapsed_ms=0
+```
+
 ## Requests, caching, and output
 
 Nonempty request bodies must be JSON and are limited to 64 KiB. Combined site/route descriptions are limited to 128 KiB, and the full prompt is limited to 256 KiB. Generated responses are limited to 1 MiB.
 
+The cache is implemented by the reusable native [`TtlCache<K, V>` module](../../src/cache.rs), with synchronization supplied by each caller. It supports bounded entries and insertion-based expiration; zero capacity or TTL disables storage. It is a Rust runtime utility, not yet a Rune builtin or cross-process cache.
+
 Pages are cached by route, path parameters, query and JSON body. The cache expires entries and evicts the earliest-expiring entry at capacity. API responses are always generated anew. Concurrent misses can generate independently; the cache is process-local. `--watch` rebuilds the app and clears its cache when Rune sources change.
 
-Responses include `X-Vectrune-AI-Engine` and `X-Vectrune-AI-Cache` (`hit`, `miss`, or `disabled`). Browser/proxy caching is disabled with `Cache-Control: no-store`.
+Responses include `X-Vectrune-AI-Engine` and `X-Vectrune-AI-Cache` (`hit`, `miss`, `disabled`, or `pending` for the thinking page). Browser/proxy caching is disabled with `Cache-Control: no-store`.
 
 HTML output must be a complete document. Its content policy permits inline styles/scripts, data images, and same-origin API connections, while blocking remote assets, external scripts, framing and foreign form targets. Generated sites should use inline CSS rather than CDNs. JSON must parse successfully. A single surrounding markdown code fence is accepted; commentary or invalid output is rejected.
 
@@ -127,6 +145,15 @@ cargo run -- examples/dynamic_ai_web.rune --watch
 curl http://127.0.0.1:3000/api/menu
 curl -H 'Content-Type: application/json' -d '{"preferences":"vegan and creamy"}' http://127.0.0.1:3000/api/recommend
 ```
+
+Ready-to-run CLI variants (install and authenticate the corresponding CLI first):
+
+```sh
+cargo run -- examples/dynamic_ai_web_codex.rune --watch
+cargo run -- examples/dynamic_ai_web_copilot.rune --watch
+```
+
+Run one at a time, or pass different `--port` values. These variants use their CLI's default model rather than `phi4`.
 
 The [complete cafe](../../examples/dynamic_ai_web.rune) contains only descriptions and menu records. It generates a homepage, a menu page, and two AI-backed APIs. The existing `vectrune --ai` CLI shortcut is separate from this server mode.
 
