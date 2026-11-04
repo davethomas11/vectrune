@@ -387,6 +387,8 @@ BuiltinSummary {
 }
 
 DynamicAi {
+    saved = "Enregistrez une page avec ?generation=cafe-v1 et retrouvez cette URL après un redémarrage. Utilisez ?cache=off pour un nouvel aperçu sans modifier les versions enregistrées. Une nouvelle clé enregistre une autre version. Les API restent actives."
+    timing = "Définissez response_target_seconds dans @App pour recommander un délai à l’IA. L’écran d’attente affiche cet objectif indicatif ; timeout_seconds reste la limite stricte."
     progress = "Pendant la génération, Vectrune affiche un écran d’attente avec des messages et le temps écoulé. Les pages en cache s’ouvrent immédiatement ; les erreurs proposent un bouton pour réessayer. Le serveur journalise les durées et les accès au cache."
     demos_title = "Essayer une démo CLI"
     demos_body = "Installez la CLI correspondante et connectez-vous, puis lancez un exemple à la fois. Chacun utilise le modèle par défaut de sa CLI."

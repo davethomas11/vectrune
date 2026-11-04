@@ -21,6 +21,8 @@ app_types:
       - "Browser cache misses show a Vectrune thinking page before fetching the generated document; raw requests preserve direct output and status codes."
       - "Server Info logs report request IDs, route templates, generation timings and cache hits without request body or query values."
       - "Generation is bounded by timeout, request/output limits and concurrency; CLI adapters use generation-only options in temporary workspaces."
+      - "HTML query controls generation=key and cache=off provide immutable disk snapshots and fresh previews; API query parameters are unchanged."
+      - "response_target_seconds is advisory prompt guidance, while timeout_seconds enforces the generation deadline."
       - "Responses are generated data, without persistent mutations or transaction execution. JSON syntax is validated; semantic correctness is model-dependent."
     sources:
       - src/apps/dynamic_ai_web/

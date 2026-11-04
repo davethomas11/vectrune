@@ -387,6 +387,8 @@ BuiltinSummary {
 }
 
 DynamicAi {
+    saved = "Save a page with ?generation=cafe-v1 and revisit that URL after a restart. Use ?cache=off for a fresh preview without changing saved versions. Use a new key to save a different version. API responses remain live."
+    timing = "Set response_target_seconds in @App to recommend how quickly the AI should respond. The thinking screen shows this advisory target; timeout_seconds remains the hard deadline."
     progress = "While a page is being generated, Vectrune shows a thinking screen with rotating messages and elapsed time. Cached pages open immediately; failures show a manual retry button. The server logs generation timings and cache hits."
     demos_title = "Try a CLI demo"
     demos_body = "Install and sign in to the matching CLI, then run one example at a time. Each uses the CLI default model."

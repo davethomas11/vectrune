@@ -533,3 +533,244 @@ async fn all_engine_demo_files_define_valid_native_sites() {
         assert_eq!(response.status(), StatusCode::OK);
     }
 }
+
+fn snapshot_site(directory: &std::path::Path) -> String {
+    SITE.replace(
+        "cache_seconds = 60",
+        &format!(
+            "cache_seconds = 60\ngenerations_dir = {}",
+            directory.display()
+        ),
+    )
+}
+
+#[tokio::test]
+async fn named_generations_survive_router_restart_and_keep_the_original_engine() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = snapshot_site(directory.path());
+    let first = Fake::new(&[HTML]);
+    let response = request(
+        app(&source, first.clone()),
+        "GET",
+        "/?generation=demo-1&flavor=oat",
+        "",
+    )
+    .await;
+    assert_eq!(response.headers()["x-vectrune-ai-cache"], "stored");
+    assert_eq!(response.headers()["x-vectrune-ai-generation"], "demo-1");
+    assert_eq!(text(response).await, HTML);
+    let unavailable = Fake::new(&[]);
+    let restarted = app(
+        &source.replace("engine = ollama", "engine = codex"),
+        unavailable.clone(),
+    );
+    let response = request(restarted, "GET", "/?flavor=oat&generation=demo-1", "").await;
+    assert_eq!(response.headers()["x-vectrune-ai-cache"], "saved");
+    assert_eq!(response.headers()["x-vectrune-ai-engine"], "ollama");
+    assert_eq!(text(response).await, HTML);
+    assert_eq!(unavailable.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 1);
+    let prompt = &first.prompts.lock().await[0].0;
+    let data: Value =
+        serde_json::from_str(prompt.split("REQUEST DATA:\n").last().unwrap()).unwrap();
+    assert_eq!(data["query"], "flavor=oat");
+}
+
+#[tokio::test]
+async fn cache_off_bypasses_reads_and_writes_without_replacing_a_saved_page() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = snapshot_site(directory.path());
+    let second = "<!doctype html><html><body>Fresh preview</body></html>";
+    let third = "<!doctype html><html><body>Normal cache</body></html>";
+    let engine = Fake::new(&[HTML, second, third, second]);
+    let router = app(&source, engine.clone());
+    assert_eq!(
+        text(request(router.clone(), "GET", "/?generation=stable", "").await).await,
+        HTML
+    );
+    let response = request(router.clone(), "GET", "/?generation=stable&cache=off", "").await;
+    assert_eq!(response.headers()["x-vectrune-ai-cache"], "bypass");
+    assert_eq!(text(response).await, second);
+    assert_eq!(
+        text(request(router.clone(), "GET", "/?generation=stable", "").await).await,
+        HTML
+    );
+    assert_eq!(
+        text(request(router.clone(), "GET", "/", "").await).await,
+        third
+    );
+    assert_eq!(
+        text(request(router.clone(), "GET", "/?cache=off", "").await).await,
+        second
+    );
+    assert_eq!(text(request(router, "GET", "/", "").await).await, third);
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 4);
+    assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 1);
+}
+
+#[tokio::test]
+async fn saved_pages_are_scoped_by_key_route_parameters_query_and_body() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = snapshot_site(directory.path())
+        + "\n@Page/item\npath = /items/{id}\ndescription = An item page\n";
+    let engine = Fake::new(&[HTML, HTML, HTML, HTML, HTML, HTML, HTML]);
+    let router = app(&source, engine.clone());
+    for (url, body) in [
+        ("/?generation=one", ""),
+        ("/?generation=two", ""),
+        ("/about?generation=one", ""),
+        ("/?generation=one&flavor=oat", ""),
+        ("/?generation=one", "{\"a\":1}"),
+        ("/items/1?generation=one", ""),
+        ("/items/2?generation=one", ""),
+    ] {
+        assert_eq!(
+            request(router.clone(), "GET", url, body).await.status(),
+            StatusCode::OK
+        );
+    }
+    for (url, body) in [
+        ("/?generation=one", ""),
+        ("/?generation=two", ""),
+        ("/about?generation=one", ""),
+        ("/?generation=one&flavor=oat", ""),
+        ("/?generation=one", "{\"a\":1}"),
+        ("/items/1?generation=one", ""),
+        ("/items/2?generation=one", ""),
+    ] {
+        assert_eq!(
+            request(router.clone(), "GET", url, body).await.headers()["x-vectrune-ai-cache"],
+            "saved"
+        );
+    }
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 7);
+}
+
+#[tokio::test]
+async fn invalid_page_controls_are_rejected_but_api_queries_remain_application_data() {
+    let engine = Fake::new(&["{\"ok\":true}"]);
+    let router = app(SITE, engine.clone());
+    for query in [
+        "generation=",
+        "generation=../secret",
+        "generation=%2e%2e",
+        "generation=a&generation=b",
+        "cache=maybe",
+        "cache=off&cache=on",
+    ] {
+        assert_eq!(
+            request(router.clone(), "GET", &format!("/?{query}"), "")
+                .await
+                .status(),
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let query = format!("/?generation={}", "x".repeat(65));
+    assert_eq!(
+        request(router.clone(), "GET", &query, "").await.status(),
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 0);
+    let response = request(
+        router,
+        "POST",
+        "/api/recommend/tea?cache=whatever&generation=anything",
+        "{}",
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let prompts = engine.prompts.lock().await;
+    assert!(prompts[0].0.contains("cache=whatever&generation=anything"));
+}
+
+#[tokio::test]
+async fn snapshot_limits_and_corruption_fail_explicitly_without_overwriting_saved_pages() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = snapshot_site(directory.path()).replace(
+        "cache_seconds = 60",
+        "cache_seconds = 60\ngeneration_limit = 1",
+    );
+    let router = app(&source, Fake::new(&[HTML, HTML]));
+    assert_eq!(
+        request(router.clone(), "GET", "/?generation=first", "")
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let response = request(router.clone(), "GET", "/?generation=second", "").await;
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert!(text(response)
+        .await
+        .contains("Saved generation limit reached"));
+    assert_eq!(
+        request(router.clone(), "GET", "/?generation=first", "")
+            .await
+            .headers()["x-vectrune-ai-cache"],
+        "saved"
+    );
+    let file = std::fs::read_dir(directory.path())
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    std::fs::write(file, "broken snapshot").unwrap();
+    let response = request(router, "GET", "/?generation=first", "").await;
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert!(text(response).await.contains("generation_store_failed"));
+}
+
+#[tokio::test]
+async fn response_target_is_in_the_prompt_and_thinking_page_but_not_a_hard_deadline() {
+    let source = SITE.replace(
+        "model = test-model",
+        "model = test-model\nresponse_target_seconds = 12",
+    );
+    let engine = Fake::new(&[HTML]);
+    let router = app(&source, engine.clone());
+    let response = html_request(router.clone(), "text/html").await;
+    assert!(text(response)
+        .await
+        .contains("Aiming for around 12 seconds"));
+    assert_eq!(
+        request(router, "GET", "/", "").await.status(),
+        StatusCode::OK
+    );
+    assert!(engine.prompts.lock().await[0]
+        .0
+        .contains("approximately 12 seconds"));
+    for config in [
+        "response_target_seconds = 0",
+        "response_target_seconds = 121",
+        "response_target_seconds = 4.5",
+        "generation_limit = 0",
+        "generations_dir = \"\"",
+    ] {
+        let source = SITE.replace(
+            "model = test-model",
+            &format!("model = test-model\n{config}"),
+        );
+        assert!(
+            router_with_engine(&parse_rune(&source).unwrap(), Fake::new(&[])).is_err(),
+            "{config}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn failed_named_generations_are_not_saved_and_can_be_retried() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = snapshot_site(directory.path());
+    let engine = Fake::new(&["not a complete page", HTML]);
+    let router = app(&source, engine.clone());
+    assert_eq!(
+        request(router.clone(), "GET", "/?generation=retry", "")
+            .await
+            .status(),
+        StatusCode::BAD_GATEWAY
+    );
+    assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 0);
+    let response = request(router, "GET", "/?generation=retry", "").await;
+    assert_eq!(response.headers()["x-vectrune-ai-cache"], "stored");
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 2);
+}

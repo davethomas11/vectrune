@@ -61,6 +61,7 @@ pages:
       - human
     sources:
       - src/apps/dynamic_ai_web/
+      - src/apps/dynamic_ai_web/generations.rs
       - src/cache.rs
       - examples/dynamic_ai_web.rune
       - examples/dynamic_ai_web_codex.rune

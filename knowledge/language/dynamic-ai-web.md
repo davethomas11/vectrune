@@ -90,13 +90,47 @@ All fields belong to `@App`.
 | `model` | Environment, then `phi4` for Ollama or CLI default | Explicit model; `VECTRUNE_AI_MODEL` supplies the environment fallback |
 | `endpoint` | Environment, then local Ollama URL | Ollama generation endpoint |
 | `executable` | `codex` or `copilot` from PATH | Optional trusted CLI executable path; no extra arguments or shell expansion |
-| `timeout_seconds` | 120 | Generation deadline, 1–600 seconds |
+| `response_target_seconds` | 30, capped at timeout | Recommended response time in seconds, 1–600 and no greater than timeout; soft prompt guidance and thinking-screen text |
+| `timeout_seconds` | 120 | Hard generation deadline, 1–600 seconds |
+| `generations_dir` | `.vectrune/generations/<hash of App.name>` | Snapshot directory relative to the Rune source directory, or an absolute path; absent name uses a default namespace |
+| `generation_limit` | 128 | Maximum snapshots in this directory, 1–4096 |
 | `max_concurrent` | 2 | Concurrent generation limit, 1–32 |
 | `cache_seconds` | 60 | Server-side page cache lifetime, 0–86400; zero disables caching |
 | `cache_entries` | 32 | Maximum cached pages, 1–256 |
 | `host`, `port` | `127.0.0.1`, 3000 | Standard server settings, overridable with CLI flags |
 
 A relative executable containing a directory component is resolved from the Rune source directory. A simple executable name is found through PATH. Executable configuration is trusted application configuration, not a request parameter.
+
+## Saving and revisiting generations
+
+Use page URL controls to preserve a particular result:
+
+| URL | Behavior |
+| --- | --- |
+| `/?generation=cafe-v1` | Generate and save a named page on first visit; replay that exact HTML on later visits |
+| `/?cache=off` | Generate a fresh preview without reading or updating the memory cache or snapshot store |
+| `/?generation=cafe-v1&cache=off` | Fresh preview; the existing `cafe-v1` snapshot stays unchanged |
+| `/?generation=cafe-v2` | Save a different version under a new key |
+
+Keys contain 1–64 ASCII letters, digits, hyphens or underscores. Duplicate or invalid controls return 400. `cache=on` is also accepted. Controls apply to HTML pages only; API query strings pass through unchanged. The controls are removed from the page prompt and content identity.
+
+A snapshot is identified by its key plus the route, decoded path parameters, remaining query string and JSON body. A key can therefore be used on several distinct page URLs, each saved separately. Keep the rest of a bookmarked URL unchanged to replay its page. These are page snapshots, not a frozen bundle of all pages and API results: API calls from a saved page still run live.
+
+Snapshots are JSON records stored as `.snapshot` files, published atomically without overwriting an existing version. They include HTML, original engine and request identity. They survive process restarts, `--watch` reloads and edits to site descriptions. The extension avoids triggering the source watcher. The default store is isolated by source directory and `@App name`; keep the name stable or configure `generations_dir` explicitly. Local `.vectrune/` directories are gitignored. Clearing the transient cache does not delete snapshots; remove snapshot files to reclaim storage. Once `generation_limit` is reached, new saves return an explicit 500 without evicting existing snapshots. The count limit is enforced within a server process; sharing a directory between independent processes can race at the limit.
+
+First visits to different named keys generate independently, rather than copying an unrelated cached page. Concurrent misses for the same key may both use the engine, but both return the first successfully published snapshot. Engine or storage failures are reported rather than silently serving an unsaved page as saved. Invalid AI output is never saved.
+
+## Response timing
+
+```rune
+@App
+type = dynamic-ai-web
+engine = copilot
+response_target_seconds = 30
+timeout_seconds = 180
+```
+
+`response_target_seconds` asks the engine to aim for a complete response within that time and displays the target on the thinking screen. It is advisory: model speed, reasoning and cold starts vary. `timeout_seconds` remains the enforced deadline. If omitted, the target is 30 seconds or the shorter timeout. HTTP requests cannot override either setting.
 
 ## Generation progress and server logs
 
@@ -109,7 +143,7 @@ At Info level the native server logs each matched request, generation start, com
 Example server messages:
 
 ```text
-[INFO] dynamic-ai-web request=2 GET / engine=ollama Generating page cache=miss elapsed_ms=0
+[INFO] dynamic-ai-web request=2 GET / engine=ollama Generating page cache=miss response_target_seconds=30 elapsed_ms=0
 [INFO] dynamic-ai-web request=2 GET / engine=ollama Generated page status=200 generation_ms=12500 bytes=4454 cached=true elapsed_ms=12501
 [INFO] dynamic-ai-web request=3 GET / engine=ollama Serving page from cache cache=hit elapsed_ms=0
 ```
@@ -122,15 +156,15 @@ The cache is implemented by the reusable native [`TtlCache<K, V>` module](../../
 
 Pages are cached by route, path parameters, query and JSON body. The cache expires entries and evicts the earliest-expiring entry at capacity. API responses are always generated anew. Concurrent misses can generate independently; the cache is process-local. `--watch` rebuilds the app and clears its cache when Rune sources change.
 
-Responses include `X-Vectrune-AI-Engine` and `X-Vectrune-AI-Cache` (`hit`, `miss`, `disabled`, or `pending` for the thinking page). Browser/proxy caching is disabled with `Cache-Control: no-store`.
+Responses include `X-Vectrune-AI-Engine` and `X-Vectrune-AI-Cache` (`hit`, `miss`, `disabled`, `bypass`, `stored`, `saved`, or `pending` for the thinking page). Saved pages also include `X-Vectrune-AI-Generation` and retain the original engine header. Browser/proxy caching is disabled with `Cache-Control: no-store`.
 
 HTML output must be a complete document. Its content policy permits inline styles/scripts, data images, and same-origin API connections, while blocking remote assets, external scripts, framing and foreign form targets. Generated sites should use inline CSS rather than CDNs. JSON must parse successfully. A single surrounding markdown code fence is accepted; commentary or invalid output is rejected.
 
 | Status | Meaning |
 | --- | --- |
-| 400 | Request body is not valid JSON |
+| 400 | Request body is not valid JSON, or invalid page URL controls |
 | 413 | Request body or complete prompt is too large |
-| 500 | Invalid site configuration |
+| 500 | Invalid site configuration or snapshot storage failure/limit |
 | 502 | Engine failure, excessive output, or invalid generated HTML/JSON |
 | 503 | All generation slots are busy; includes `Retry-After: 1` |
 | 504 | Generation deadline exceeded |
@@ -160,6 +194,7 @@ The [complete cafe](../../examples/dynamic_ai_web.rune) contains only descriptio
 ## Sources and extension points
 
 - [Routing, limits, prompt construction and caching](../../src/apps/dynamic_ai_web/mod.rs)
+- [Immutable snapshot storage](../../src/apps/dynamic_ai_web/generations.rs)
 - [AiEngine trait and Ollama/Codex/Copilot adapters](../../src/apps/dynamic_ai_web/engine.rs)
 - [Deterministic HTTP/provider tests](../../tests/dynamic_ai_web.rs)
 - [CLI isolation, prompt piping and cancellation tests](../../tests/dynamic_ai_cli.rs)

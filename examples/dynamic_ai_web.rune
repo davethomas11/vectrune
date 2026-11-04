@@ -1,10 +1,14 @@
 #!RUNE
 
+# Save a page: /?generation=cafe-v1
+# Fresh preview: /?cache=off (does not change saved pages)
+
 @App
 name = The Little Rune Cafe
 type = dynamic-ai-web
 engine = ollama
 model = phi4
+response_target_seconds = 30
 timeout_seconds = 180
 cache_seconds = 60
 max_concurrent = 2
