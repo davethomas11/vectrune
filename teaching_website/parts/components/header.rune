@@ -8,11 +8,11 @@ view:
                 h1 "%i18n.Common.app_name%"
                 p .subtitle "%i18n.Common.tagline%"
         nav .site-nav:
-            a href=#quickstart "%i18n.Header.nav_quickstart%"
-            a href=#tour "%i18n.Header.nav_tour%"
-            a href=#walkthrough "%i18n.Header.nav_walkthrough%"
-            a href=#examples "%i18n.Header.nav_examples%"
-            a href=#next "%i18n.Header.nav_next%"
+            a href=#quickstart click="navigate('home')" "%i18n.Header.nav_quickstart%"
+            a href=#tour click="navigate('home')" "%i18n.Header.nav_tour%"
+            a href=#walkthrough click="navigate('home')" "%i18n.Header.nav_walkthrough%"
+            a href=#examples click="navigate('home')" "%i18n.Header.nav_examples%"
+            a href=#next click="navigate('home')" "%i18n.Header.nav_next%"
         div .header-actions:
             LanguageSelector
 

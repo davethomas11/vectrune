@@ -441,7 +441,7 @@ rules:
         flex-wrap = wrap
         gap = 0.65rem
 
-    .document-syntax-page section[id]:
+    .page section[id]:
         scroll-margin-top = 12rem
 
     .document-toc a:
@@ -1237,7 +1237,7 @@ rules:
 # Responsive overrides are emitted after base rules, in the order below.
 responsive:
     (max-width: 1000px):
-        .document-syntax-page section[id]:
+        .page section[id]:
             scroll-margin-top = 1rem
 
         .site-header:

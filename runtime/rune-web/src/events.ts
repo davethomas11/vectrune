@@ -54,6 +54,13 @@ export function bindEvent(eventName: string): void {
         ? (event.target as Element).closest(selector)
         : null;
     if (!element) return;
+    const linkClick = eventName === 'click' && element.tagName === 'A';
+    const mouse = event as MouseEvent;
+    // Let the browser handle opening links in another tab/window without
+    // changing the current page's state.
+    if (linkClick && (mouse.ctrlKey || mouse.metaKey || mouse.shiftKey || mouse.altKey
+      || mouse.button > 0 || element.getAttribute('target') === '_blank')) return;
+    const href = linkClick ? element.getAttribute('href') : null;
     const spec = parseHandlerSpec(
       element.getAttribute(`data-on-${eventName}`) || '',
     );
@@ -70,6 +77,16 @@ export function bindEvent(eventName: string): void {
       ctx().app.invokeAction(spec.name, args, locals);
     } else {
       executeStatement(spec.raw, locals);
+    }
+    if (href?.startsWith('#') && href.length > 1 && !event.defaultPrevented) {
+      // State changes render on the next frame. The native anchor jump runs
+      // before that, when the destination may still belong to another page.
+      // Keep native hash/history behavior, then scroll after the queued render.
+      requestAnimationFrame(() => {
+        let id = href.slice(1);
+        try { id = decodeURIComponent(id); } catch (_) { /* Literal fragment. */ }
+        document.getElementById(id)?.scrollIntoView();
+      });
     }
   });
 }
