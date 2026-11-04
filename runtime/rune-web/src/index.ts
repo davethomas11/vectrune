@@ -116,6 +116,7 @@ export function boot(config: RuneWebConfig): RuneApp {
   setupMemoryUpdateListener();
   bindEvent('click');
   bindEvent('change');
+  bindEvent('input');
 
   // Set up WebSocket if endpoint provided
   if (config.wsEndpoint) {

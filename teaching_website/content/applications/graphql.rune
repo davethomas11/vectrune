@@ -1,0 +1,18 @@
+#!RUNE
+@App
+name = Greeting GraphQL
+type = GraphQL
+port = 3000
+
+@Schema/Greeting
+message = string
+
+@GraphQL/Query/Greeting
+greeting:
+    result = { message: "Hello from Rune" }
+    return result
+
+@GraphQL/Mutation/Greeting
+greet(message: string):
+    result = { message: message }
+    return result

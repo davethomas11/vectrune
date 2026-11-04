@@ -6,6 +6,8 @@ Common {
     site_source = "Voir le code du site sur GitHub (nouvel onglet)"
     app_name = "Vectrune"
     tagline = "Un chemin pratique de votre première API aux exemples réutilisables."
+    translation_source = "Contribuer aux traductions sur GitHub ↗"
+    localization_guide = "Guide de localisation"
 }
 Header {
     kicker = "Le langage Vectrune"
@@ -128,11 +130,11 @@ Examples {
     counter_desc = "Une petite application web avec un véritable état réactif. Augmentez, diminuez et réinitialisez le compteur."
     rest_hint = "Lancez l’application, choisissez un endpoint et envoyez une requête. Modifiez le code et relancez pour tester les changements."
     users_hint = "Voici l’API utilisateurs du dépôt. Son CSV reste en mémoire dans le navigateur : créez un utilisateur avec POST, puis consultez avec GET. Relancez pour réinitialiser le fichier."
-    data_hint = "Modifiez les enregistrements et utilisez Run pour afficher le document en JSON. Show Document propose aussi YAML et XML."
+    data_hint = "Modifiez les enregistrements et exécutez pour examiner le document en JSON. Vous pouvez aussi exporter en YAML et XML."
     graphql_hint = "Lancez l’application pour tester de vraies requêtes et mutations. Choisissez une opération ou écrivez la vôtre. Les changements restent dans le navigateur ; Run réinitialise les données."
     web_hint = "Cet aperçu est compilé à partir du véritable exemple Rune, avec ses styles et ses actions. Testez l’application, puis ouvrez le code source."
     sandbox_title = "Lire, modifier, exécuter"
-    sandbox_hint = "L’éditeur contient le code de l’exemple. Run l’exécute dans le navigateur ; Show Document et Show AST permettent de l’inspecter."
+    sandbox_hint = "Modifiez le code et exécutez-le dans le navigateur. Exportez le document ou examinez l’AST avec les autres commandes."
     graphql_ready = "Choisissez une opération, modifiez la requête ou les variables, puis exécutez. Les mutations partagent la mémoire avec les requêtes suivantes."
     graphql_examples = "Exemple d’opération"
     graphql_query = "Requête ou mutation"
@@ -145,21 +147,47 @@ WhatsNext {
     eyebrow = "Prochaines étapes"
     headline = "Où va le site d'enseignement"
     coming_title = "Prochainement"
-    coming_1 = "Terrain de jeu exécutable soutenu par le CLI Vectrune"
+    coming_1 = "Plus de fonctionnalités pour le bac à sable"
     coming_2 = "Pages de visite du langage étape par étape"
     coming_3 = "Pages de référence des fonctions intégrées provenant de knowledge/"
     coming_4 = "Plus de procédures pas à pas guidées pour REST, GraphQL et Rune-Web"
     intent_title = "Intention actuelle"
-    intent_text = "Cette première version est intentionnellement légère. Elle existe pour réduire les frictions d'intégration, mettre en évidence les meilleurs exemples de démarrage et créer une base stable pour les futures fonctionnalités d'apprentissage interactif."
+    intent_text = "Le bac à sable utilise un émulateur JavaScript pour REST, les documents et GraphQL. Les aperçus Rune-Web sont compilés depuis les exemples du dépôt. Utilisez le CLI natif pour les serveurs et le système de fichiers."
 }
 Sandbox {
     edit_hint = "Modifiez le code, puis appuyez sur Exécuter pour appliquer les modifications."
     run = "Exécuter"
     run_changes = "Appliquer les modifications"
     pending_changes = "Modifications non appliquées. Appuyez sur Exécuter pour les appliquer."
+    interactive = "Interactif"
+    code = "Code"
+    output = "Résultat"
+    source_label = "Code source Vectrune"
+    placeholder = "Saisissez votre code .rune ici…"
+    show_document = "Voir le document"
+    show_ast = "Voir l’AST"
+    idle = "Appuyez sur Exécuter pour voir le résultat."
+    format = "Format de sortie"
+    status = "Statut"
+    logs = "Journaux"
+    response = "Réponse"
+    parsing = "Analyse…"
+    running = "Exécution…"
+    error = "Erreur"
+    ast_error = "Impossible d’analyser l’AST"
+    document_error = "Impossible d’analyser le document"
+    variables_error = "Les variables GraphQL doivent être un objet JSON."
+    request_body = "Corps de la requête (JSON)"
+    endpoint = "Point de terminaison"
+    request_path = "Chemin de requête"
+    send = "Envoyer la requête"
+    sending = "Envoi de la requête…"
+    request_ready = "Appuyez sur Envoyer la requête pour appeler le point de terminaison."
+    web_compile = "Compilez les applications Rune-Web pour les prévisualiser. Ouvrez Compteur ou Morpion dans les exemples pour essayer une application compilée."
+    native_only = "Exécutez cet exemple WebSocket avec le CLI natif ; le bac à sable n’exécute pas les hooks de sockets."
 }
 Footer {
-    copyright = "© 2026 Projet Vectrune - aperçu du site d'enseignement"
+    copyright = "© 2026 Projet Vectrune"
 }
 
 
@@ -193,10 +221,165 @@ DocumentSyntax {
     data_body = "Vous n’avez besoin ni de @App, ni de serveur, ni de bloc run: pour décrire des données. Les noms comme @Notebook et @Entry vous appartiennent. Les sections comme @Route ajoutent un comportement lors de la création d’une application."
     try_title = "Essayez un document"
     try_body = "Modifiez le titre, une valeur de réalisation ou ajoutez un enregistrement +. Appuyez sur Exécuter pour voir le résultat. L’éditeur signale les modifications non appliquées."
-    try_formats = "Choisissez JSON, YAML ou XML puis appuyez sur Exécuter ou Show Document pour exporter le code actuel. Show AST affiche la structure interne de l’analyseur."
+    try_formats = "Choisissez JSON, YAML ou XML, puis exécutez ou exportez le document. Le bouton AST affiche la structure interne de l’analyseur."
     export_title = "Utilisez la même syntaxe localement"
     export_body = "Enregistrez un document dans notes.rune, puis choisissez un format avec -o. Le CLI traite aussi les exemples de séries et de listes en ligne ci-dessus."
     next_link = "Explorez le document des skateboarders →"
     json_label = "Sortie JSON"
     tour_link = "Découvrez la syntaxe : sections, paires clé-valeur et enregistrements →"
+}
+
+Nav {
+    browse = "Parcourir la documentation"
+    aria = "Documentation"
+    intro = "Introduction"
+    overview = "Présentation"
+    get = "Requêtes GET"
+    post = "Requêtes POST"
+    validation = "Validation"
+    reference = "Référence"
+    builtins = "Fonctions intégrées"
+    websockets = "WebSockets"
+    applications = "Types d’applications"
+    rest = "API REST"
+    static = "Sites statiques"
+    rune_web = "Rune-Web"
+    localization = "Localisation"
+}
+
+Lab {
+    choose = "Choisissez un exemple"
+    first = "Première API"
+    document = "Document de données"
+    users = "API des utilisateurs"
+    counter = "Compteur"
+    tic = "Morpion"
+    first_title = "Votre première API"
+    document_title = "Un document, trois formats"
+    graphql_title = "API GraphQL de livres"
+    main_file = "Fichier .rune principal"
+}
+
+Reference {
+    eyebrow = "Bibliothèque standard"
+    title = "Référence des fonctions intégrées"
+    intro = "Explorez la syntaxe et les exemples des fonctions intégrées. Filtrez par catégorie ou recherchez, puis chargez un exemple dans le bac à sable."
+    search = "Rechercher des fonctions (log, csv, memory, validate)…"
+    all = "Toutes"
+    diagnostics = "Diagnostic"
+    http = "HTTP"
+    data = "Données et JSON"
+    schema = "Schémas"
+    memory = "Mémoire"
+    io = "E/S et CSV"
+    context = "Contexte"
+    websocket = "WebSockets"
+    playground = "Bac à sable"
+    try_title = "Testez les fonctions dans le navigateur"
+    try_body = "Chargez un exemple ci-dessus ou modifiez le code ci-dessous pour examiner le résultat."
+    empty = "Aucune fonction ne correspond."
+    reset = "Réinitialiser les filtres"
+    load = "Charger dans le bac à sable"
+}
+
+Guide {
+    syntax = "Lire la syntaxe"
+    run_locally = "Exécuter localement"
+}
+
+RestGuide {
+    title = "Applications REST"
+    intro = "Définissez des points de terminaison HTTP avec @Route et leurs étapes dans run:. Les applications REST peuvent aussi héberger des pages Rune-Web, des fichiers statiques et des hooks WebSocket."
+    syntax_1 = "@App sélectionne type = REST. port définit le port ; le CLI peut le remplacer avec --port."
+    syntax_2 = "@Route/GET /hello indique la méthode et le chemin. Utilisez POST, PUT, PATCH ou DELETE pour les autres points de terminaison."
+    syntax_3 = "run: contient des étapes ordonnées. respond 200 envoie un statut HTTP et des données ; @Schema et validate permettent de vérifier les données reçues."
+    run = "Enregistrez ce code dans rest.rune, démarrez le serveur, puis appelez /hello."
+    note = "Essayez cet exemple dans le navigateur ou suivez les tutoriels GET, POST et validation du menu."
+}
+
+GraphqlGuide {
+    title = "Applications GraphQL"
+    intro = "Décrivez les objets avec @Schema et exposez des requêtes ou mutations avec des sections @GraphQL. Le serveur natif accepte les opérations sur /graphql."
+    syntax_1 = "@App type = GraphQL démarre le serveur. @Schema/Greeting déclare les champs de l’objet Greeting."
+    syntax_2 = "@GraphQL/Query/Greeting déclare des requêtes renvoyant Greeting. Chaque nom se termine par : et ses étapes indentées renvoient des données."
+    syntax_3 = "@GraphQL/Mutation/Greeting déclare les mutations. Les arguments utilisent nom: type entre parenthèses et deviennent des variables du résolveur."
+    run = "Enregistrez le code dans graphql.rune. Ouvrez http://127.0.0.1:3000/ pour l’explorateur GraphQL ou envoyez les opérations en POST sur /graphql."
+    note = "Ce code utilise les formes natives @Schema et @GraphQL. Le bac à sable comprend aussi @Type, @Query et @Mutation ; utilisez les formes ci-dessus pour le serveur natif."
+    operation = "Syntaxe des requêtes et mutations"
+}
+
+StaticGuide {
+    title = "Applications statiques"
+    intro = "Servez un dossier de fichiers HTML, images, scripts et autres ressources. Une application statique sert les fichiers directement sans compiler les pages Rune-Web à chaque requête."
+    syntax_1 = "@App type = STATIC sélectionne le serveur de fichiers. port choisit le port HTTP."
+    syntax_2 = "root = public sert le dossier public relatif au répertoire de travail. Lancez la commande depuis le dossier du projet."
+    syntax_3 = "Une requête de dossier sert son index.html. Créez public/index.html avant de démarrer le serveur."
+    run = "Enregistrez la configuration dans static.rune à côté d’un dossier public contenant index.html, puis ouvrez http://127.0.0.1:3000/."
+    note = "Pour publier Rune-Web sous forme statique, exportez d’abord la page avec -o html et copiez les ressources référencées dans le dossier de sortie."
+}
+
+SocketGuide {
+    title = "WebSockets dans les applications REST"
+    intro = "WebSocket est une fonctionnalité des applications REST. Utilisez @Websocket pour une connexion persistante et pour traiter les événements de connexion et les messages."
+    syntax_1 = "Conservez @App type = REST. @Websocket/chat monte le point de terminaison WebSocket sur /chat."
+    syntax_2 = "on_connect:, on_message: et on_disconnect: contiennent les étapes de chaque événement. Le message reçu est disponible dans body."
+    syntax_3 = "ws.broadcast /chat body envoie le message à tous les clients connectés sur /chat. Utilisez ws.send pour une seule connexion."
+    run = "Enregistrez ce code dans websocket.rune et connectez un client à ws://127.0.0.1:3000/chat. Ouvrez deux clients pour tester la diffusion."
+    note = "Cet exemple nécessite le serveur natif. WebSocket n’est pas un type @App autonome et le bac à sable n’exécute pas les hooks de sockets natifs."
+}
+
+WebGuide {
+    title = "Applications Rune-Web"
+    intro = "Écrivez les vues HTML, l’état réactif, les actions et les styles en Rune. Rune-Web est un mode @Frontend hébergé par une application REST et peut être exporté en HTML statique."
+    syntax_1 = "@Frontend type = rune-web monte l’interface. path = %ROOT% la place sur / ; page = home sélectionne @Page/home."
+    syntax_2 = "@Logic/counter définit l’état et les actions. La page le sélectionne avec logic = counter ; click=increment() appelle l’action."
+    syntax_3 = "@Page/home contient un arbre view: où l’indentation imbrique les éléments. @Style/site fournit les règles ; les vues réutilisables utilisent @Component/Name."
+    run = "Enregistrez le fichier dans rune-web.rune. Démarrez le serveur ou exportez la page avec -o html."
+    note = "Le compteur ci-dessous est compilé depuis l’exemple du dépôt. Ouvrez son code pour voir une interface complète avec styles et actions."
+}
+
+Localization {
+    title = "Localisation dans Rune-Web"
+    intro = "Conservez les traductions dans des ensembles @I18N, puis référencez les mêmes clés dans chaque vue. Ce site utilise des ensembles anglais, espagnol et français écrits en Rune."
+    bundles_title = "Définir et utiliser les clés"
+    bundles = "Une section @I18N/langue contient des groupes comme Common. Utilisez %i18n.Common.hello% dans le texte ou les attributs, ou l’expression {i18n.Common.hello}. Conservez les mêmes groupes et clés partout ; les clés manquantes ne reviennent pas automatiquement à l’anglais."
+    select_title = "Choisir une langue"
+    select = "locale = en_us dans @Frontend définit l’ensemble par défaut. Sur le serveur natif, ?locale=es en sélectionne un autre pour cette requête. Les noms doivent correspondre exactement aux sections @I18N."
+    local_title = "Utiliser les mêmes liens en local et en production"
+    local = "locale_paths associe les ensembles à des chemins du serveur. Ici, /es/ et /fr/ fonctionnent lorsque l’application tourne en local. Pour un hébergement statique, exportez chaque chemin vers son index.html et copiez les ressources ; un hébergeur statique ne traite pas ?locale=."
+    contribute_title = "Contribuer à une traduction"
+    contribute = "Les traductions du site sont dans teaching_website/parts/i18n. Mettez à jour les clés correspondantes dans en_us.rune, es.rune et fr.rune. Conservez les mots-clés Rune, noms des fonctions, chemins et codes d’exemple."
+}
+
+Tutorial {
+    get_title = "Traiter les requêtes GET"
+    get_intro = "Déclarez une route GET et renvoyez des données avec respond. Choisissez un point de terminaison et envoyez une requête pour le tester."
+    post_title = "Traiter les requêtes POST"
+    post_intro = "Utilisez @Schema et expect pour décrire les champs reçus. Analysez le corps JSON, validez-le et répondez avec le statut 201."
+    validation_title = "Validation et schémas"
+    validation_intro = "Validez la structure du corps JSON avec @Schema, puis vérifiez les règles avec des expressions validate. Essayez un prix négatif pour voir une erreur."
+}
+
+BuiltinSummary {
+    log = "Journalise un message de diagnostic avec les valeurs interpolées."
+    respond = "Envoie un statut HTTP et un corps de réponse."
+    return = "Renvoie une valeur depuis un gestionnaire ou résolveur."
+    parse_json = "Convertit du texte JSON en objets ou listes."
+    validate = "Vérifie un schéma ou impose une condition."
+    memory_set = "Stocke une valeur dans la mémoire partagée."
+    memory_get = "Lit une valeur dans la mémoire partagée."
+    memory_clear = "Efface toutes les entrées de mémoire partagée."
+    memory_del = "Supprime une entrée de mémoire partagée."
+    csv_read = "Lit les lignes CSV sous forme de liste d’objets."
+    csv_append = "Ajoute un enregistrement dans un fichier CSV."
+    csv_write = "Écrit une liste d’enregistrements dans un fichier CSV."
+    is_set = "Vérifie l’existence d’une variable ou d’un chemin imbriqué."
+    delete = "Supprime une variable ou une propriété imbriquée."
+    ws_broadcast = "Envoie un message aux clients WebSocket d’un canal."
+    load_rune = "Charge un autre document Rune depuis un fichier ou dossier."
+    to_number = "Convertit une valeur en nombre."
+    to_string = "Convertit une valeur en texte."
+    to_bool = "Convertit une valeur en booléen."
+    uuid_v4 = "Génère un UUID aléatoire de version 4."
+    now = "Obtient l’heure UTC actuelle."
 }

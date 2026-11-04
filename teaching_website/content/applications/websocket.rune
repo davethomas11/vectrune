@@ -1,0 +1,13 @@
+#!RUNE
+@App
+name = Chat server
+type = REST
+port = 3000
+
+@Websocket/chat
+on_connect:
+    log "Client connected"
+on_message:
+    ws.broadcast /chat body
+on_disconnect:
+    log "Client disconnected"

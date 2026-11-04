@@ -1,9 +1,23 @@
 @Component/GraphqlOverviewPage
 view:
-    div .page:
-        div .section-heading:
-            p .eyebrow "GraphQL"
-            h2 "GraphQL API Overview"
-            p "Declare GraphQL types and query resolvers concisely without heavy framework overhead."
-            
-        GraphqlExample
+    div .page .application-guide:
+        section .card:
+            p .eyebrow "%i18n.Nav.applications%"
+            h2 "%i18n.GraphqlGuide.title%"
+            p .lead "%i18n.GraphqlGuide.intro%"
+            ExampleSource code="{raw ../../content/applications/graphql.rune}"
+            h3 "%i18n.Guide.syntax%"
+            ul:
+                li "%i18n.GraphqlGuide.syntax_1%"
+                li "%i18n.GraphqlGuide.syntax_2%"
+                li "%i18n.GraphqlGuide.syntax_3%"
+            h3 "%i18n.Guide.run_locally%"
+            p "%i18n.GraphqlGuide.run%"
+            pre:
+                code .code-block .language-bash "vectrune graphql.rune"
+            p .document-note "%i18n.GraphqlGuide.note%"
+        section .card:
+            h3 "%i18n.GraphqlGuide.operation%"
+            pre:
+                code .code-block .language-graphql "{raw ../../content/applications/operations.graphql}"
+        SandboxSection code="{raw ../../content/applications/graphql.rune}" show_output=true mode=graphql

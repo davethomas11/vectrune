@@ -1,0 +1,21 @@
+@Component/LocalizationPage
+view:
+    div .page .localization-guide:
+        section .card:
+            p .eyebrow "Rune-Web"
+            h2 "%i18n.Localization.title%"
+            p .lead "%i18n.Localization.intro%"
+            ExampleSource code="{raw ../../content/applications/localization.rune}"
+        section .card:
+            h3 "%i18n.Localization.bundles_title%"
+            p "%i18n.Localization.bundles%"
+            h3 "%i18n.Localization.select_title%"
+            p "%i18n.Localization.select%"
+            h3 "%i18n.Localization.local_title%"
+            p "%i18n.Localization.local%"
+            pre:
+                code .code-block .language-bash "vectrune localization.rune\nvectrune localization.rune --path /es/ -o html > spanish.html"
+        section .card:
+            h3 "%i18n.Localization.contribute_title%"
+            p "%i18n.Localization.contribute%"
+            a .secondary-cta href=https://github.com/davethomas11/vectrune/tree/main/teaching_website/parts/i18n target=_blank rel="noopener noreferrer" "%i18n.Common.translation_source%"

@@ -1,9 +1,18 @@
 @Component/WebsocketOverviewPage
 view:
-    div .page:
-        div .section-heading:
-            p .eyebrow "Web Sockets"
-            h2 "Web Sockets & Streaming"
-            p "Establish persistent full-duplex WebSocket connections with declarative event hooks and broadcasting."
-            
-        SandboxSection show_output=true
+    div .page .application-guide:
+        section .card:
+            p .eyebrow "%i18n.Nav.applications%"
+            h2 "%i18n.SocketGuide.title%"
+            p .lead "%i18n.SocketGuide.intro%"
+            ExampleSource code="{raw ../../content/applications/websocket.rune}"
+            h3 "%i18n.Guide.syntax%"
+            ul:
+                li "%i18n.SocketGuide.syntax_1%"
+                li "%i18n.SocketGuide.syntax_2%"
+                li "%i18n.SocketGuide.syntax_3%"
+            h3 "%i18n.Guide.run_locally%"
+            p "%i18n.SocketGuide.run%"
+            pre:
+                code .code-block .language-bash "vectrune websocket.rune"
+            p .document-note "%i18n.SocketGuide.note%"

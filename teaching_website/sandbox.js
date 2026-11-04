@@ -29,129 +29,14 @@ document.addEventListener('input', (event) => {
     if (event.target.matches('#sandbox-editor')) updateSandboxEditStatus(event.target);
 });
 
-const PAGE_SNIPPETS = {
-    rest_get: `@App
-name = GET Tutorial
-type = REST
-
-@Route/GET /users
-run:
-    users = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]
-    log "Returning users..."
-    respond 200 users`,
-
-    rest_post: `@App
-name = POST Tutorial
-type = REST
-
-@Schema/User
-name = string
-role = string
-
-@Route/POST /users
-expect = User
-run:
-    parse-json
-    validate body #User
-    log "Creating user: {body.name}"
-    created = { id: 42, name: body.name, role: body.role }
-    respond 201 created`,
-
-    rest_validation: `@App
-name = Validation Tutorial
-type = REST
-
-@Schema/Product
-title = string
-price = number
-
-@Route/POST /products
-run:
-    parse-json
-    validate body #Product
-    validate body.price > 0 "Price must be greater than zero"
-    log "Product valid: {body.title} at \${body.price}"
-    respond 200 "Product validated successfully"`,
-
-    graphql: `@App
-name = GraphQL Book API
-type = GraphQL
-
-@Type/Book
-id = number
-title = string
-author = string
-
-@Query/books -> [Book]
-run:
-    books = [
-        { id: 1, title: "Designing Data-Intensive Applications", author: "Martin Kleppmann" },
-        { id: 2, title: "The Pragmatic Programmer", author: "Andy Hunt & Dave Thomas" }
-    ]
-    return books`,
-
-    websocket: `@App
-name = WebSocket Chat
-type = WebSocket
-
-@Route/WS /chat
-run:
-    on connect:
-        log "Client connected to chat stream"
-        emit "Welcome to Vectrune real-time!"
-    on message:
-        log "Received message: {message}"
-        broadcast "User: {message}"`,
-
-    rune_web: `@Component/Counter
-state:
-    count = 0
-view:
-    div .counter-card:
-        h2 "Count: {count}"
-        button click="count = count + 1" "Increment"
-        button click="count = count - 1" "Decrement"`
-};
-
-function detectCurrentPage() {
-    const h2 = document.querySelector('.content-area .section-heading h2');
-    if (!h2) return 'home';
-    const heading = h2.textContent.trim().toLowerCase();
-    if (heading.includes('get requests')) return 'rest_get';
-    if (heading.includes('post requests')) return 'rest_post';
-    if (heading.includes('validation & schemas')) return 'rest_validation';
-    if (heading.includes('graphql')) return 'graphql';
-    if (heading.includes('web sockets')) return 'websocket';
-    if (heading.includes('declarative reactive frontend')) return 'rune_web';
-    if (document.getElementById('builtin-list')) return 'builtins';
-    return 'home';
-}
-
-function updateSandboxSnippet() {
-    const page = detectCurrentPage();
-    if (page === 'builtins' || page === 'home') return;
-    const editor = document.querySelector('#sandbox-editor');
-    if (!editor) return;
-    if (editor.closest('[data-sandbox-mode]')?.dataset.sandboxMode === 'graphql') return;
-
-    if (editor.dataset.currentPage !== page) {
-        if (PAGE_SNIPPETS[page]) {
-            editor.value = PAGE_SNIPPETS[page];
-            sandboxSources.set(editor, editor.value);
-            editor.dispatchEvent(new Event('input', { bubbles: true }));
-            editor.dataset.currentPage = page;
-            const output = document.querySelector('#sandbox-output');
-            if (output) {
-                output.textContent = "Click 'Run' to see output here...";
-            }
-        }
-    }
-}
+// UI copy comes from the same Rune @I18N bundle as the page.
+window.siteText = (path) => path.split('.').reduce((value, key) => value?.[key], window.runeWebApp?.state?.i18n) ?? path;
+const t = (key) => window.siteText('Sandbox.' + key);
 
 function getEmulatorUrl() {
     const script = document.querySelector('script[src*="sandbox.js"]');
-    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=9', location.href));
-    url.search = script ? new URL(script.src).search : '?v=9';
+    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=10', location.href));
+    url.search = script ? new URL(script.src).search : '?v=10';
     return url.href;
 }
 
@@ -169,12 +54,12 @@ function createCodeResult(source, format) {
 }
 
 function renderResponse(response, container) {
-    let outText = `Status: ${response.status}\n\n`;
+    let outText = `${t("status")}: ${response.status}\n\n`;
     if (response.logs && response.logs.length > 0) {
-        outText += `Logs:\n${response.logs.join('\n')}\n\n`;
+        outText += `${t("logs")}:\n${response.logs.join('\n')}\n\n`;
     }
     const bodyStr = serializeFn ? serializeFn(response.body, 'json') : JSON.stringify(response.body, null, 2);
-    outText += 'Response:\n';
+    outText += t('response') + ':\n';
     container.textContent = outText;
     container.appendChild(createCodeResult(bodyStr, 'json'));
 }
@@ -188,7 +73,7 @@ window.executeGraphql = (button) => {
     try {
         const variables = JSON.parse(consoleUI.querySelector('.graphql-variables').value || '{}');
         if (!variables || typeof variables !== 'object' || Array.isArray(variables)) {
-            throw new Error('GraphQL variables must be a JSON object.');
+            throw new Error(t('variables_error'));
         }
         const response = app.graphql({
             query: consoleUI.querySelector('.graphql-query').value,
@@ -238,7 +123,7 @@ window.showAst = async (btn) => {
     if (!editor || !output || !astFormat) return;
 
     const code = editor.value;
-    output.innerHTML = "<div>Parsing...</div>";
+    output.textContent = t('parsing');
     try {
         const { parse, serialize } = await loadEmulator();
         const doc = parse(code);
@@ -249,7 +134,7 @@ window.showAst = async (btn) => {
         output.innerHTML = '';
         output.appendChild(resultContainer);
     } catch (err) {
-        output.textContent = "Error parsing AST: " + err;
+        output.textContent = t('ast_error') + ': ' + err;
     }
 };
 
@@ -263,7 +148,7 @@ window.showDoc = async (btn) => {
     if (!editor || !output || !astFormat) return;
 
     const code = editor.value;
-    output.innerHTML = "<div>Parsing...</div>";
+    output.textContent = t('parsing');
     try {
         const { parse, serialize, toDocument } = await loadEmulator();
         const doc = parse(code);
@@ -275,7 +160,7 @@ window.showDoc = async (btn) => {
         output.innerHTML = '';
         output.appendChild(resultContainer);
     } catch (err) {
-        output.textContent = "Error parsing document: " + err;
+        output.textContent = t('document_error') + ': ' + err;
     }
 };
 
@@ -288,7 +173,7 @@ window.runSandbox = async (btn) => {
     if (!editor || !output) return;
 
     const code = editor.value;
-    output.innerHTML = "<div>Running...</div>";
+    output.textContent = t('running');
     const graphqlConsole = container.querySelector('.graphql-console');
     if (graphqlConsole) graphqlConsole.hidden = true;
     graphqlRuntimes.delete(container);
@@ -327,7 +212,7 @@ window.runSandbox = async (btn) => {
             topRow.style.alignItems = 'center';
 
             const routeSelect = document.createElement('select');
-            routeSelect.setAttribute('aria-label', 'Endpoint');
+            routeSelect.setAttribute('aria-label', t('endpoint'));
             routeSelect.style.flex = '1';
             routeSelect.style.padding = '0.5rem';
             routeSelect.style.borderRadius = '4px';
@@ -344,8 +229,8 @@ window.runSandbox = async (btn) => {
             });
 
             const bodyInput = document.createElement('textarea');
-            bodyInput.placeholder = 'Request body (JSON)';
-            bodyInput.setAttribute('aria-label', 'Request body');
+            bodyInput.placeholder = t('request_body');
+            bodyInput.setAttribute('aria-label', t('request_body'));
             bodyInput.style.display = 'none';
             bodyInput.style.width = '100%';
             bodyInput.style.marginTop = '0.75rem';
@@ -358,7 +243,7 @@ window.runSandbox = async (btn) => {
 
             const pathInput = document.createElement('input');
             pathInput.className = 'request-path';
-            pathInput.setAttribute('aria-label', 'Request path');
+            pathInput.setAttribute('aria-label', t('request_path'));
 
             const syncBodyDefault = () => {
                 const route = doc.routes[routeSelect.value];
@@ -393,7 +278,7 @@ window.runSandbox = async (btn) => {
             syncBodyDefault();
 
             const sendBtn = document.createElement('button');
-            sendBtn.textContent = 'Send Request';
+            sendBtn.textContent = t('send');
             sendBtn.className = 'cta';
             sendBtn.style.padding = '0.5rem 1rem';
             sendBtn.style.whiteSpace = 'nowrap';
@@ -416,13 +301,7 @@ window.runSandbox = async (btn) => {
                     body: bodyInput.style.display !== 'none' ? bodyInput.value : undefined
                 };
                 
-                resultContainer.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;"><div style="width:1rem;height:1rem;border:2px solid rgba(148,163,184,0.3);border-top-color:#38bdf8;border-radius:50%;animation:sandbox-spin 1s linear infinite;"></div><div>Sending request...</div></div>';
-                if (!document.getElementById('sandbox-spinner-style')) {
-                    const style = document.createElement('style');
-                    style.id = 'sandbox-spinner-style';
-                    style.textContent = '@keyframes sandbox-spin { to { transform: rotate(360deg); } }';
-                    document.head.appendChild(style);
-                }
+                resultContainer.textContent = t('sending');
 
                 setTimeout(() => {
                     const response = emulatorApp.request(req);
@@ -437,77 +316,19 @@ window.runSandbox = async (btn) => {
             output.appendChild(uiContainer);
             output.appendChild(resultContainer);
 
-            resultContainer.textContent = "Click 'Send Request' to execute the endpoint.";
+            resultContainer.textContent = t('request_ready');
         }
         // 2. GraphQL Application
         else if (appType === 'GRAPHQL' || doc.graphql.fields.length) {
             showGraphqlConsole(container, emulatorApp, output);
         }
-        // 3. WebSocket Application
-        else if (appType === 'WEBSOCKET' || code.includes('@Route/WS')) {
-            const wsContainer = document.createElement('div');
-            wsContainer.className = 'api-explorer';
-            wsContainer.style.marginBottom = '1rem';
-            wsContainer.style.padding = '1rem';
-            wsContainer.style.background = 'rgba(15, 23, 42, 0.4)';
-            wsContainer.style.borderRadius = '8px';
-            wsContainer.style.border = '1px solid rgba(148, 163, 184, 0.2)';
-
-            const title = document.createElement('div');
-            title.style.fontWeight = 'bold';
-            title.style.marginBottom = '0.5rem';
-            title.style.color = 'var(--syntax-builtin)';
-            title.textContent = 'WebSocket Real-Time Stream (ws://localhost:3000/chat)';
-
-            const msgRow = document.createElement('div');
-            msgRow.style.display = 'flex';
-            msgRow.style.gap = '0.5rem';
-
-            const msgInput = document.createElement('input');
-            msgInput.type = 'text';
-            msgInput.value = 'Hello Vectrune team!';
-            msgInput.style.flex = '1';
-            msgInput.style.padding = '0.5rem';
-            msgInput.style.borderRadius = '4px';
-            msgInput.style.background = 'var(--panel-strong)';
-            msgInput.style.color = '#fff';
-            msgInput.style.border = '1px solid rgba(148, 163, 184, 0.3)';
-
-            const sendWsBtn = document.createElement('button');
-            sendWsBtn.textContent = 'Send Frame';
-            sendWsBtn.className = 'cta';
-            sendWsBtn.style.padding = '0.5rem 1rem';
-
-            msgRow.appendChild(msgInput);
-            msgRow.appendChild(sendWsBtn);
-
-            const resultContainer = document.createElement('div');
-            resultContainer.className = 'terminal';
-            resultContainer.style.marginTop = '1rem';
-            resultContainer.style.minHeight = '150px';
-
-            const wsLogs = [
-                "[WS CONNECTED] Established full-duplex session with /chat",
-                "[WS INCOMING] Server: \"Welcome to Vectrune real-time!\""
-            ];
-            resultContainer.textContent = `Status: 101 Switching Protocols\n\nLogs:\n${wsLogs.join('\n')}\n\nStream Active. Type a frame above to broadcast.`;
-
-            sendWsBtn.addEventListener('click', () => {
-                const text = msgInput.value.trim() || 'ping';
-                wsLogs.push(`[WS CLIENT -> SERVER] "${text}"`);
-                wsLogs.push(`[WS SERVER LOG] Received message: ${text}`);
-                wsLogs.push(`[WS BROADCAST] "User: ${text}"`);
-                resultContainer.textContent = `Status: 101 Switching Protocols\n\nLogs:\n${wsLogs.join('\n')}\n\nStream Active.`;
-            });
-
-            wsContainer.appendChild(title);
-            wsContainer.appendChild(msgRow);
-            output.appendChild(wsContainer);
-            output.appendChild(resultContainer);
+        // WebSocket hooks need the native server, rather than a simulated stream.
+        else if (/@Websocket\//.test(code)) {
+            output.textContent = t('native_only');
         }
         // 4. Rune Web Component
         else if (code.includes('@Component')) {
-            output.textContent = 'Rune-Web apps need to be compiled before previewing. Open Counter or Tic Tac Toe in Example Lab for a live preview compiled from its actual Rune source.';
+            output.textContent = t('web_compile');
         }
         // 5. Default Fallback
         else {
@@ -519,20 +340,12 @@ window.runSandbox = async (btn) => {
         
         markSandboxApplied(editor, code);
     } catch (err) {
-        output.textContent = "Error: " + err;
+        output.textContent = t('error') + ': ' + err;
         console.error("Sandbox runtime error:", err);
     }
 };
 
-// Auto-sync snippet on page changes
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateSandboxSnippet);
-} else {
-    updateSandboxSnippet();
-}
-
 const pageObserver = new MutationObserver(() => {
-    updateSandboxSnippet();
     const editor = document.querySelector('#sandbox-editor');
     if (editor && !sandboxSources.has(editor)) updateSandboxEditStatus(editor);
 });

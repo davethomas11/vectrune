@@ -138,6 +138,32 @@ Current behavior:
 - the block `for` form compiles to the same loop AST/runtime behavior as the inline `<- ... in ...` form
 - loop collections are currently array-oriented in server rendering and browser runtime generation
 
+## Rune-Web localization
+
+Define translations in `@I18N/<locale>` sections with matching groups and keys:
+
+```rune
+@I18N/en_us
+Common {
+    hello = "Hello"
+}
+
+@I18N/es
+Common {
+    hello = "Hola"
+}
+```
+
+Use `%i18n.Common.hello%` in view text or attributes, or `{i18n.Common.hello}` in expressions and component props. `locale = en_us` on `@Frontend` selects the default bundle. The native server accepts `?locale=es` to select another defined bundle for a request. Missing keys do not fall back to another bundle.
+
+An optional `locale_paths` map on `@Frontend` mounts explicit locale URLs:
+
+```rune
+locale_paths = { "es": "/es/", "fr": "/fr/" }
+```
+
+Each map key must name a defined `@I18N` bundle. Paths are mounted on the native server and can be exported with `vectrune site.rune --path /es/ -o html`. Static hosting requires a generated HTML file at each locale path; it does not evaluate locale query parameters.
+
 ## Import declarations
 
 Rune files may declare top-level imports before sections and other top-level content:

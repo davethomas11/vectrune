@@ -1,12 +1,13 @@
+#!RUNE
 @App
-name = WebSocket Chat
-type = WebSocket
+name = Chat server
+type = REST
+port = 3000
 
-@Route/WS /chat
-run:
-    on connect:
-        log "Client connected to chat stream"
-        emit "Welcome to Vectrune real-time!"
-    on message:
-        log "Received message: {message}"
-        broadcast "User: {message}"
+@Websocket/chat
+on_connect:
+    log "Client connected"
+on_message:
+    ws.broadcast /chat body
+on_disconnect:
+    log "Client disconnected"

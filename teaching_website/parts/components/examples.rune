@@ -32,7 +32,7 @@ view:
                 a .secondary-cta href=#app click="openExample('tic')" "%i18n.Examples.play_label%"
 
             article .example-card:
-                span .tag .tag-beginner "Rune Web"
+                span .tag .tag-beginner "Rune-Web"
                 h3 "%i18n.Examples.counter_title%"
                 p "%i18n.Examples.counter_desc%"
                 a .secondary-cta href=#app click="openExample('counter')" "%i18n.Examples.play_label%"

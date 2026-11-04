@@ -1,12 +1,13 @@
 @Component/LanguageSelector
 view:
-    div .language-selector:
-        span .language-label "%i18n.Common.language_label%"
-        a .language-link href="/" aria-current="{i18n.Common.locale == 'en_us' ? 'page' : 'false'}" "English"
-        span .language-sep " / "
-        a .language-link href="/es/" aria-current="{i18n.Common.locale == 'es' ? 'page' : 'false'}" "Español"
-        span .language-sep " / "
-        a .language-link href="/fr/" aria-current="{i18n.Common.locale == 'fr' ? 'page' : 'false'}" "Français"
-
-
-
+    div .language-control:
+        div .language-selector:
+            span .language-label "%i18n.Common.language_label%"
+            a .language-link href="/" aria-current="{i18n.Common.locale == 'en_us' ? 'page' : 'false'}" "English"
+            span .language-sep " / "
+            a .language-link href="/es/" aria-current="{i18n.Common.locale == 'es' ? 'page' : 'false'}" "Español"
+            span .language-sep " / "
+            a .language-link href="/fr/" aria-current="{i18n.Common.locale == 'fr' ? 'page' : 'false'}" "Français"
+        div .language-help:
+            a .translation-source href=https://github.com/davethomas11/vectrune/tree/main/teaching_website/parts/i18n target=_blank rel="noopener noreferrer" "%i18n.Common.translation_source%"
+            a href=#app click="navigate('localization')" "%i18n.Common.localization_guide%"

@@ -11,10 +11,12 @@ use std::sync::Arc;
 async fn build_router_from_str(contents: &str) -> Router {
     let doc = parse_rune(contents).expect("parse_rune should succeed");
     let path = PathBuf::from("test_app.rune");
+    let schemas = Arc::new(extract_schemas(&doc));
+    let data_sources = Arc::new(extract_data_sources(&doc));
     let state = AppState {
         doc: Arc::new(doc),
-        schemas: Arc::new(extract_schemas(&parse_rune("").unwrap())),
-        data_sources: Arc::new(extract_data_sources(&parse_rune("").unwrap())),
+        schemas,
+        data_sources,
         path,
     };
     build_app_router(state).await
@@ -344,7 +346,9 @@ view:
 
     assert!(body.contains(">Vectrune</h2>"), "Expected prop 'name' interpolated");
     assert!(body.contains("Welcome to the teaching site"), "Expected prop 'place' interpolated");
-    assert!(!body.contains("{name}"), "Expected no unresolved template placeholders");
+    // Bootstrap scripts retain the template AST for later client renders.
+    let server_html = body.split("<script").next().unwrap();
+    assert!(!server_html.contains("{name}"), "Expected no unresolved placeholders in server HTML");
     assert!(!body.contains("<Greeting"), "Expected component tag not rendered literally");
 }
 
@@ -400,7 +404,9 @@ view:
     assert!(body.contains("Welcome to Vectrune"), "Expected headline translation");
     assert!(body.contains("Home"), "Expected nav home translation");
     assert!(body.contains("About Us"), "Expected nav about translation");
-    assert!(!body.contains("%i18n."), "Expected no unresolved %i18n. placeholders");
+    // Inspect rendered HTML, not the template AST in the bootstrap script.
+    let server_html = body.split("<script").next().unwrap();
+    assert!(!server_html.contains("%i18n."), "Expected translations resolved in server HTML");
 }
 
 #[tokio::test]
@@ -614,3 +620,87 @@ view:
     assert!(!body.contains("English Title"), "Expected default locale translation not to render when query override is present");
 }
 
+
+#[tokio::test]
+async fn rune_web_locale_paths_work_for_local_hosting_and_html_export() {
+    let source = r#"@App
+name = Locale Routes
+type = REST
+@Frontend
+type = rune-web
+page = home
+path = %ROOT%
+locale = en_us
+locale_paths = { "es": "/es/", "fr": "/fr/" }
+@I18N/en_us
+Common {
+    hello = "Hello"
+}
+@I18N/es
+Common {
+    hello = "Hola"
+}
+@I18N/fr
+Common {
+    hello = "Bonjour"
+}
+@Page/home
+view:
+    h1 "%i18n.Common.hello%"
+"#;
+    let app = build_router_from_str(source).await;
+    for (path, text, lang) in [("/", "Hello", "en-us"), ("/es/", "Hola", "es"), ("/fr/", "Bonjour", "fr"), ("/es/?locale=fr", "Bonjour", "fr"), ("/fr/?locale=missing", "Bonjour", "fr")] {
+        let response = app.clone().oneshot(Request::builder().uri(path).body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = String::from_utf8(body.to_vec()).unwrap();
+        assert!(body.contains(&format!("<h1>{text}</h1>")), "{path}");
+        assert!(body.contains(&format!("<html lang=\"{lang}\">")), "{path}");
+    }
+    let response = app.oneshot(Request::builder().uri("/missing/").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    let doc = parse_rune(source).unwrap();
+    let html = rune_runtime::apps::rune_web::render_html_for_path(&doc, "/es/").await.unwrap();
+    assert!(html.contains("<h1>Hola</h1>"));
+    assert!(html.contains("<html lang=\"es\">"));
+}
+
+#[tokio::test]
+async fn teaching_application_syntax_examples_run_on_native_routers() {
+    let rest = include_str!("../teaching_website/content/applications/rest.rune");
+    let response = build_router_from_str(rest).await.oneshot(Request::builder().uri("/hello").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let data: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(data["message"], "Hello from Rune");
+
+    let graphql = include_str!("../teaching_website/content/applications/graphql.rune");
+    let app = build_router_from_str(graphql).await;
+    for (query, field, expected) in [("{ greeting { message } }", "greeting", "Hello from Rune"), ("mutation { greet(message: \"Native test\") { message } }", "greet", "Native test")] {
+        let response = app.clone().oneshot(Request::builder().method("POST").uri("/graphql").header("content-type", "application/json").body(axum::body::Body::from(serde_json::json!({"query":query}).to_string())).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let data: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(data["data"][field]["message"], expected, "{data}");
+    }
+
+    let directory = tempfile::tempdir().unwrap();
+    std::fs::write(directory.path().join("index.html"), "<h1>Static sample</h1>").unwrap();
+    let source = include_str!("../teaching_website/content/applications/static.rune").replace("root = public", &format!("root = {}", directory.path().display()));
+    let response = build_router_from_str(&source).await.oneshot(Request::builder().uri("/").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    assert_eq!(body.as_ref(), b"<h1>Static sample</h1>");
+
+    let source = include_str!("../teaching_website/content/applications/rune-web.rune");
+    let doc = parse_rune(source).unwrap();
+    let html = rune_runtime::apps::rune_web::render_html_for_path(&doc, "/").await.unwrap();
+    assert!(html.contains("Count: 0"));
+    assert!(html.contains("data-on-click=\"increment()\""));
+
+    let source = include_str!("../teaching_website/content/applications/websocket.rune");
+    let response = build_router_from_str(source).await.oneshot(Request::builder().uri("/chat").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    // A plain HTTP request reaches the socket route but cannot upgrade.
+    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    assert_ne!(response.status(), StatusCode::OK);
+}

@@ -110,26 +110,45 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
             let default_locale = active_locale.clone();
             let ws_endpoint = ws_endpoint.clone();
 
-            Router::new().route(mount_path, get(move |Query(params): Query<HashMap<String, String>>| {
+            let mut mounts = vec![(mount_path.to_string(), default_locale)];
+            if let Some(crate::rune_ast::Value::Map(paths)) = frontend_section.and_then(|s| s.kv.get("locale_paths")) {
+                for (locale, path) in paths {
+                    if let Some(path) = path.as_str() {
+                        if path.starts_with('/') && !path.contains(['?', '#', '{', '}'])
+                            && path != mount_path && frontend.i18n_sections.contains_key(locale)
+                        {
+                            mounts.push((path.to_string(), Some(locale.clone())));
+                        }
+                    }
+                }
+            }
+            // Stable ordering makes duplicate path configuration deterministic.
+            mounts.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+            mounts.dedup_by(|a, b| a.0 == b.0);
+            let mut router = Router::new();
+            for (path, default_locale) in mounts {
                 let frontend = frontend.clone();
                 let page_name = page_name.clone();
-                let default_locale = default_locale.clone();
                 let ws_endpoint = ws_endpoint.clone();
-                async move {
-                    let request_locale = params
-                        .get("locale")
-                        .map(String::as_str)
-                        .filter(|locale| frontend.i18n_sections.contains_key(*locale));
-                    let html = render_page_html(
-                        &frontend,
-                        &page_name,
-                        request_locale,
-                        default_locale.as_deref(),
-                        ws_endpoint,
-                    ).await;
-                    Html(html)
-                }
-            }))
+                router = router.route(&path, get(move |Query(params): Query<HashMap<String, String>>| {
+                    let frontend = frontend.clone();
+                    let page_name = page_name.clone();
+                    let default_locale = default_locale.clone();
+                    let ws_endpoint = ws_endpoint.clone();
+                    async move {
+                        let request_locale = params
+                            .get("locale")
+                            .map(String::as_str)
+                            .filter(|locale| frontend.i18n_sections.contains_key(*locale));
+                        let html = render_page_html(
+                            &frontend, &page_name, request_locale,
+                            default_locale.as_deref(), ws_endpoint,
+                        ).await;
+                        Html(html)
+                    }
+                }));
+            }
+            router
         }
         Err(e) => {
             log(
@@ -184,7 +203,15 @@ pub async fn render_html_for_path(
             .unwrap_or("/"),
     );
 
-    if canonicalize_path(request_path) != canonicalize_path(mount_path) {
+    let path_locale = frontend_section.kv.get("locale_paths").and_then(|value| {
+        if let crate::rune_ast::Value::Map(paths) = value {
+            paths.iter().find_map(|(locale, path)| {
+                path.as_str().filter(|path| canonicalize_path(path) == canonicalize_path(request_path))
+                    .map(|_| locale.as_str())
+            })
+        } else { None }
+    });
+    if canonicalize_path(request_path) != canonicalize_path(mount_path) && path_locale.is_none() {
         return Err(anyhow::anyhow!(
             "Requested path '{}' is not mounted by @Frontend path '{}'",
             normalize_request_path(request_path),
@@ -227,7 +254,7 @@ pub async fn render_html_for_path(
         render_page_html(
             &frontend,
             page_name,
-            None,
+            path_locale,
             active_locale.as_deref(),
             ws_endpoint,
         )
@@ -317,6 +344,11 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, activ
             keys.first().and_then(|k| frontend.i18n_sections.get(*k).map(|s| ((*k).clone(), s)))
         });
 
+    let document_language = resolved_locale.as_ref()
+        .map(|(locale, _)| locale.replace('_', "-"))
+        .unwrap_or_else(|| "en".to_string());
+    let document_language = html_escape(&document_language);
+
     // Inject the active locale's translations as runtime_data["i18n"]
     let i18n_json = if let Some((_, i18n)) = resolved_locale {
         let mut i18n_obj = serde_json::Map::new();
@@ -346,7 +378,7 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, activ
 
     format!(
         r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="{document_language}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

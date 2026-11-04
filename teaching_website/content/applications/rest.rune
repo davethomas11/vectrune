@@ -1,0 +1,10 @@
+#!RUNE
+@App
+name = Greeting API
+type = REST
+port = 3000
+
+@Route/GET /hello
+run:
+    greeting = { message: "Hello from Rune" }
+    respond 200 greeting

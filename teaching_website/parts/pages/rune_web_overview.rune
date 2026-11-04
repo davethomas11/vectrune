@@ -1,9 +1,19 @@
 @Component/RuneWebOverviewPage
 view:
-    div .page:
-        div .section-heading:
-            p .eyebrow "Rune Web"
-            h2 "Declarative Reactive Frontend"
-            p "Build client-side applications with reactive state, two-way bindings, and scoped styles in pure Vectrune."
-            
+    div .page .application-guide:
+        section .card:
+            p .eyebrow "%i18n.Nav.applications%"
+            h2 "%i18n.WebGuide.title%"
+            p .lead "%i18n.WebGuide.intro%"
+            ExampleSource code="{raw ../../content/applications/rune-web.rune}"
+            h3 "%i18n.Guide.syntax%"
+            ul:
+                li "%i18n.WebGuide.syntax_1%"
+                li "%i18n.WebGuide.syntax_2%"
+                li "%i18n.WebGuide.syntax_3%"
+            h3 "%i18n.Guide.run_locally%"
+            p "%i18n.WebGuide.run%"
+            pre:
+                code .code-block .language-bash "vectrune rune-web.rune\nvectrune rune-web.rune -o html > index.html"
+            p .document-note "%i18n.WebGuide.note%"
         CounterExample

@@ -1,0 +1,2 @@
+query { greeting { message } }
+mutation { greet(message: "Hello") { message } }

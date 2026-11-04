@@ -1,0 +1,30 @@
+#!RUNE
+@App
+name = Counter site
+type = REST
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = home
+
+@Logic/counter
+state:
+    clicks = 0
+action increment():
+    clicks = clicks + 1
+
+@Style/site
+rules:
+    .counter:
+        padding = 2rem
+        color = #285f64
+
+@Page/home
+title = My counter
+logic = counter
+style = site
+view:
+    main .counter:
+        h1 "Count: {clicks}"
+        button click=increment() "Add one"

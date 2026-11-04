@@ -2,30 +2,30 @@
 view:
     div .page:
         div .section-heading:
-            p .eyebrow "Standard Library"
-            h2 "Builtin Reference"
-            p .section-copy "Interactive guide to all Vectrune runtime builtins. Filter by category or search by name to inspect syntax, descriptions, and execute examples directly in your browser."
+            p .eyebrow "%i18n.Reference.eyebrow%"
+            h2 "%i18n.Reference.title%"
+            p .section-copy "%i18n.Reference.intro%"
 
         div .reference-shell:
             div .reference-controls:
-                input #builtin-search .search-input placeholder="Filter builtins (e.g. log, csv, memory, validate)..." oninput="filterBuiltins()"
+                input #builtin-search .search-input placeholder="%i18n.Reference.search%" oninput="filterBuiltins()"
                 div .category-pills:
-                    button .pill .active onclick="selectCategory('all', this)" "All"
-                    button .pill onclick="selectCategory('diagnostics', this)" "Diagnostics"
-                    button .pill onclick="selectCategory('http', this)" "HTTP"
-                    button .pill onclick="selectCategory('data', this)" "Data & JSON"
-                    button .pill onclick="selectCategory('schema', this)" "Schema"
-                    button .pill onclick="selectCategory('memory', this)" "Memory"
-                    button .pill onclick="selectCategory('io', this)" "I/O & CSV"
-                    button .pill onclick="selectCategory('context', this)" "Context"
-                    button .pill onclick="selectCategory('websocket', this)" "WebSockets"
+                    button .pill .active onclick="selectCategory('all', this)" "%i18n.Reference.all%"
+                    button .pill onclick="selectCategory('diagnostics', this)" "%i18n.Reference.diagnostics%"
+                    button .pill onclick="selectCategory('http', this)" "%i18n.Reference.http%"
+                    button .pill onclick="selectCategory('data', this)" "%i18n.Reference.data%"
+                    button .pill onclick="selectCategory('schema', this)" "%i18n.Reference.schema%"
+                    button .pill onclick="selectCategory('memory', this)" "%i18n.Reference.memory%"
+                    button .pill onclick="selectCategory('io', this)" "%i18n.Reference.io%"
+                    button .pill onclick="selectCategory('context', this)" "%i18n.Reference.context%"
+                    button .pill onclick="selectCategory('websocket', this)" "%i18n.Reference.websocket%"
 
             div #builtin-list .builtin-cards-grid:
                 # Builtin cards dynamically populated & filterable via builtin-reference.js
 
             div .interactive-reference-sandbox:
                 div .section-heading:
-                    p .eyebrow "Playground"
-                    h3 "Test Builtins In-Browser"
-                    p "Select 'Load into Sandbox' on any builtin above, or write custom steps below to inspect output."
-                SandboxSection show_output=true
+                    p .eyebrow "%i18n.Reference.playground%"
+                    h3 "%i18n.Reference.try_title%"
+                    p "%i18n.Reference.try_body%"
+                SandboxSection code="{raw examples/builtin_reference_example.rune}" show_output=true

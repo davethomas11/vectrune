@@ -1,0 +1,32 @@
+#!RUNE
+@App
+name = Multilingual site
+type = REST
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = home
+locale = en_us
+locale_paths = { "es": "/es/", "fr": "/fr/" }
+
+@I18N/en_us
+Common {
+    hello = "Hello"
+}
+@I18N/es
+Common {
+    hello = "Hola"
+}
+@I18N/fr
+Common {
+    hello = "Bonjour"
+}
+
+@Page/home
+view:
+    main:
+        h1 "%i18n.Common.hello%"
+        a href=/ "English"
+        a href=/es/ "Español"
+        a href=/fr/ "Français"

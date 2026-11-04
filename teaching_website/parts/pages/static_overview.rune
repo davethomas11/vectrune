@@ -1,0 +1,18 @@
+@Component/StaticOverviewPage
+view:
+    div .page .application-guide:
+        section .card:
+            p .eyebrow "%i18n.Nav.applications%"
+            h2 "%i18n.StaticGuide.title%"
+            p .lead "%i18n.StaticGuide.intro%"
+            ExampleSource code="{raw ../../content/applications/static.rune}"
+            h3 "%i18n.Guide.syntax%"
+            ul:
+                li "%i18n.StaticGuide.syntax_1%"
+                li "%i18n.StaticGuide.syntax_2%"
+                li "%i18n.StaticGuide.syntax_3%"
+            h3 "%i18n.Guide.run_locally%"
+            p "%i18n.StaticGuide.run%"
+            pre:
+                code .code-block .language-bash "vectrune static.rune"
+            p .document-note "%i18n.StaticGuide.note%"

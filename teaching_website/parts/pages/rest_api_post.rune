@@ -2,8 +2,8 @@
 view:
     div .page:
         div .section-heading:
-            p .eyebrow "REST API"
-            h2 "Handling POST Requests"
-            p "Define incoming request expectations, inspect request bodies, and return custom status codes like 201 Created."
+            p .eyebrow "%i18n.Nav.rest%"
+            h2 "%i18n.Tutorial.post_title%"
+            p "%i18n.Tutorial.post_intro%"
             
-        SandboxSection show_output=true
+        SandboxSection code="{raw examples/rest_api_post_example.rune}" show_output=true

@@ -12,3 +12,4 @@ type = rune-web
 path = %ROOT%
 page = learn-vectrune
 locale = en_us
+locale_paths = { "es": "/es/", "fr": "/fr/" }

@@ -1,0 +1,6 @@
+#!RUNE
+@App
+name = My static site
+type = STATIC
+port = 3000
+root = public

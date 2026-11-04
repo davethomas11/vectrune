@@ -1,16 +1,18 @@
+#!RUNE
 @App
-name = GraphQL Book API
+name = Greeting GraphQL
 type = GraphQL
+port = 3000
 
-@Type/Book
-id = number
-title = string
-author = string
+@Schema/Greeting
+message = string
 
-@Query/books -> [Book]
-run:
-    books = [
-        { id: 1, title: "Designing Data-Intensive Applications", author: "Martin Kleppmann" },
-        { id: 2, title: "The Pragmatic Programmer", author: "Andy Hunt & Dave Thomas" }
-    ]
-    return books
+@GraphQL/Query/Greeting
+greeting:
+    result = { message: "Hello from Rune" }
+    return result
+
+@GraphQL/Mutation/Greeting
+greet(message: string):
+    result = { message: message }
+    return result

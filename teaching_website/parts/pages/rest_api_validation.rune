@@ -2,8 +2,8 @@
 view:
     div .page:
         div .section-heading:
-            p .eyebrow "REST API"
-            h2 "Validation & Schemas"
-            p "Enforce structural integrity using @Schema and validate custom business constraints directly in your routes."
+            p .eyebrow "%i18n.Nav.rest%"
+            h2 "%i18n.Tutorial.validation_title%"
+            p "%i18n.Tutorial.validation_intro%"
             
-        SandboxSection show_output=true
+        SandboxSection code="{raw examples/rest_api_validation_example.rune}" show_output=true
