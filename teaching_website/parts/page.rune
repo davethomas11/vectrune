@@ -12,5 +12,5 @@ view:
         TeachingFooter
         BuiltWithTag
         script src="/assets/syntax-highlight.js?v=5"
-        script src="/assets/sandbox.js?v=12"
+        script src="/assets/sandbox.js?v=13"
         script src="/assets/builtin-reference.js?v=8"

@@ -22,6 +22,7 @@ The current product direction favors:
 Common use cases in this repository include:
 - building REST APIs from `.rune` route definitions
 - serving GraphQL APIs
+- prototyping descriptive AI-generated sites and JSON endpoints with the experimental `dynamic-ai-web` mode
 - working with CSV and JSON-backed data flows
 - using schema validation in request handlers
 - packaging Vectrune apps for AWS Lambda

@@ -24,6 +24,7 @@ view:
                     button .nav-link {.active when 'rest'} click="navigate('rest')" "%i18n.Nav.rest%"
                     button .nav-link {.active when 'static'} click="navigate('static')" "%i18n.Nav.static%"
                     button .nav-link {.active when 'graphql'} click="navigate('graphql')" "GraphQL"
+                    button .nav-link {.active when 'dynamic_ai'} click="navigate('dynamic_ai')" "%i18n.DynamicAi.nav%"
                     button .nav-link {.active when 'rune_web'} click="navigate('rune_web')" "%i18n.Nav.rune_web%"
                     button .nav-link {.active when 'websocket'} click="navigate('websocket')" "%i18n.Nav.websockets%"
                 div .nav-group:
@@ -53,3 +54,4 @@ view:
                     "graphql"         -> GraphqlOverviewPage
                     "websocket"       -> WebsocketOverviewPage
                     "rune_web"        -> RuneWebOverviewPage
+                    "dynamic_ai"      -> DynamicAiWebPage

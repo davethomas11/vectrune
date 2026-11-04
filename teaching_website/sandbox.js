@@ -35,8 +35,8 @@ const t = (key) => window.siteText('Sandbox.' + key);
 
 function getEmulatorUrl() {
     const script = document.querySelector('script[src*="sandbox.js"]');
-    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=12', location.href));
-    url.search = script ? new URL(script.src).search : '?v=12';
+    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=13', location.href));
+    url.search = script ? new URL(script.src).search : '?v=13';
     return url.href;
 }
 
@@ -183,6 +183,11 @@ window.runSandbox = async (btn) => {
         serializeFn = serialize;
         
         const doc = parse(code);
+        if (doc.app?.type?.toLowerCase() === 'dynamic-ai-web') {
+            output.textContent = t('dynamic_ai_native');
+            markSandboxApplied(editor, code);
+            return;
+        }
         const emulatorApp = createApp(doc);
         const mode = btn.closest('[data-sandbox-mode]')?.dataset.sandboxMode;
         if (mode === 'data' || (!doc.app && !doc.routes.length && !doc.graphql.fields.length && !/@(?:Component|Page|Frontend)\b/.test(code))) {

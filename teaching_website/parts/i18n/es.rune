@@ -155,6 +155,7 @@ WhatsNext {
     intent_text = "El entorno del navegador usa un emulador JavaScript para REST, documentos y GraphQL. Las vistas Rune-Web se compilan desde los ejemplos del repositorio. Usa el CLI nativo para servidores y acceso al sistema de archivos."
 }
 Sandbox {
+    dynamic_ai_native = "Los sitios de IA dinámicos necesitan el servidor nativo y un motor de IA. Ejecuta cargo run -- examples/dynamic_ai_web.rune para probar el café."
     edit_hint = "Edita el código y pulsa Ejecutar para aplicar los cambios."
     run = "Ejecutar"
     run_changes = "Aplicar cambios"
@@ -383,4 +384,19 @@ BuiltinSummary {
     to_bool = "Convierte un valor en booleano."
     uuid_v4 = "Genera un UUID aleatorio de versión 4."
     now = "Obtiene la hora UTC actual."
+}
+
+DynamicAi {
+    nav = "Sitios de IA dinámicos"
+    eyebrow = "Tipo de aplicación experimental"
+    title = "Sitios de IA dinámicos"
+    intro = "Describe un sitio en Rune y deja que un motor de IA genere sus páginas HTML y API JSON. Usa Ollama localmente o una sesión autenticada de Codex o Copilot CLI."
+    syntax_1 = "@App type = dynamic-ai-web selecciona el servidor de IA. engine elige ollama, codex o copilot; model selecciona un modelo compatible."
+    syntax_2 = "@Site y @Content describen el sitio y @Data aporta los registros. @Page describe una página HTML completa generada en su ruta."
+    syntax_3 = "@Route/METHOD /ruta describe una respuesta JSON en lugar de un bloque run:. El motor recibe parámetros de ruta, consulta y cuerpo JSON junto con los datos públicos del sitio."
+    native_title = "Ejecutar con el CLI nativo"
+    native_body = "Los sitios de IA dinámicos necesitan un servidor y el motor elegido. El alojamiento estático y el entorno del navegador no ejecutan proveedores de IA. Los endpoints generan datos; la persistencia y las transacciones requieren lógica independiente."
+    engines_title = "Elige el motor"
+    engines_body = "Ollama usa su API local y phi4 de forma predeterminada. Codex y Copilot usan sus CLI autenticados en directorios temporales con controles de generación. Al cambiar de motor, elimina model = phi4 o elige un modelo compatible."
+    behavior = "Las páginas se almacenan brevemente en caché; las API se generan en cada solicitud. Configura cache_seconds, timeout_seconds y max_concurrent en @App. El HTML o JSON no válido produce un error. El contenido varía según el modelo."
 }

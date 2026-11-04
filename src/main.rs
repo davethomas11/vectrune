@@ -126,13 +126,13 @@ async fn main() -> anyhow::Result<()> {
                 .short('p')
                 .long("port")
                 .value_name("PORT")
-                .help("Override App.port when running REST/GraphQL servers")
+                .help("Override the application HTTP server port")
                 .value_parser(clap::value_parser!(u16)),
         )
         .arg(
             Arg::new("host")
                 .long("host")
-                .help("Override App.host when running REST/GraphQL servers (default: 127.0.0.1)")
+                .help("Override the application HTTP server host (default: 127.0.0.1)")
                 .value_name("HOST")
                 .num_args(1)
                 .default_value("127.0.0.1"),
