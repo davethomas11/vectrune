@@ -26,6 +26,7 @@ import { countCommand } from "./count";
 import { flattenCommand } from "./flatten";
 import { avgCommand } from "./avg";
 import { cloneCommand } from "./clone";
+import { startTimerCommand, stopTimerCommand } from "./timer";
 
 /** Register a builtin command */
 export function registerCommand(cmd: BuiltinCommand): void {
@@ -59,6 +60,8 @@ registerCommand(countCommand);
 registerCommand(flattenCommand);
 registerCommand(avgCommand);
 registerCommand(cloneCommand);
+registerCommand(startTimerCommand);
+registerCommand(stopTimerCommand);
 
 /**
  * Process conditional 'when' suffix.

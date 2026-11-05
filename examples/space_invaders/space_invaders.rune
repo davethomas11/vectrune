@@ -1,0 +1,60 @@
+#!RUNE
+
+import "parts"
+
+@App
+name = Space Invaders
+version = 1.0
+type = REST
+port = 3000
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = space-invaders
+
+@Page/space-invaders
+title = Space Invaders
+style = invaders
+logic = invaders
+view:
+    main .arcade-cabinet:
+        header .cabinet-header:
+            h1 .cabinet-title "SPACE INVADERS"
+            div .stats-bar:
+                span "SCORE: {score}"
+                span "LIVES: {lives}"
+                span "ALIENS: {alien_count}"
+
+        div .game-arena:
+            div .arena-grid
+
+            # Player Cannon
+            div .player style="left: {player.x}px;":
+                div .player-canon
+
+            # Player Lasers
+            div .bullet <- bullet in bullets:
+                style = "left: {bullet.x}px; top: {bullet.y}px;"
+
+            # Alien Lasers
+            div .alien-bullet <- ab in alien_bullets:
+                style = "left: {ab.x}px; top: {ab.y}px;"
+
+            # Invader Grid
+            div .alien .type-{alien.type} style="left: {alien.x}px; top: {alien.y}px; display: {alien.alive ? 'flex' : 'none'};" <- alien in aliens:
+                "👾"
+
+            # Game State Overlay
+            if status != "playing":
+                div .overlay:
+                    h2 .overlay-title "{game_message}"
+                    button .start-btn click=start "PLAY NOW"
+
+        # Arcade Controls for Touch and Mouse
+        div .arcade-controls:
+            button .ctrl-btn click=moveLeft "◀ LEFT"
+            button .ctrl-btn .fire-btn click=fire "⚡ FIRE"
+            button .ctrl-btn click=moveRight "RIGHT ▶"
+
+        p .controls-hint "KEYBOARD: [A / ◀] LEFT  •  [D / ▶] RIGHT  •  [SPACE] FIRE"

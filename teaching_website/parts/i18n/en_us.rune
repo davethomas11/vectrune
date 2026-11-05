@@ -246,6 +246,8 @@ Nav {
     static = "Static sites"
     rune_web = "Rune-Web"
     localization = "Localization"
+    games = "Games"
+    space_invaders = "Space Invaders"
 }
 
 Lab {
@@ -255,10 +257,30 @@ Lab {
     users = "User API"
     counter = "Counter"
     tic = "Tic Tac Toe"
+    invaders = "Space Invaders"
     first_title = "Your first API"
     document_title = "A document, three formats"
     graphql_title = "Book GraphQL API"
+    invaders_title = "Space Invaders Arcade"
     main_file = "Main .rune"
+}
+
+SpaceInvaders {
+    badge = "Rune-Web Game"
+    title = "Space Invaders in Pure Rune-Web"
+    description = "A complete arcade game showcasing Vectrune's declarative power: real-time game loop ticker, zero-boilerplate keyboard controls, and reusable 2D collision primitives in under 60 lines of logic."
+    play_label = "Play Arcade"
+    feature_loop_title = "Real-Time Game Loop"
+    feature_loop_desc = "timer: tick 40ms runs an automated 25fps game loop ticker directly into reactive state without manual setInterval or requestAnimationFrame boilerplate."
+    feature_keys_title = "Declarative Keybindings"
+    feature_keys_desc = "keys: maps keyboard events (ArrowLeft, ArrowRight, Space) directly to named actions with automatic browser scroll prevention."
+    feature_math_title = "2D Spatial Primitives"
+    feature_math_desc = "collide(bullet, alien, 22, 18) and clamp(x, min, max) provide reusable spatial game abilities with concise syntax."
+    feature_reactive_title = "Deep Reactive State"
+    feature_reactive_desc = "Mutating bullet positions or alien states triggers fast DOM frame updates with high-contrast retro neon CRT aesthetics."
+    instructions_title = "Controls"
+    instructions_keyboard = "A / ◀: Move Left • D / ▶: Move Right • Space: Fire Laser"
+    instructions_mobile = "Touch the on-screen arcade buttons to move and fire on any mobile device or tablet."
 }
 
 Reference {

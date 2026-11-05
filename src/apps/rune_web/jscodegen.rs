@@ -60,6 +60,12 @@ impl JsCodegen {
         } else {
             "null".to_string()
         };
+        let timer_json = match &self.logic.timer {
+            Some(t) => format!("'{}'", t),
+            None => "null".to_string(),
+        };
+        let keys_json = serde_json::to_string(&self.logic.keys)
+            .unwrap_or_else(|_| "{}".to_string());
 
         format!(
             r#"
@@ -71,7 +77,9 @@ __RuneWeb.boot({{
   actionDefinitions: {actions_json},
   i18nData: {i18n_json},
   stateJson: {state_json},
-  wsEndpoint: {ws_endpoint}
+  wsEndpoint: {ws_endpoint},
+  timer: {timer_json},
+  keys: {keys_json}
 }});
 "#,
             include_str!("../../../runtime/rune-web/dist/rune-runtime.js")
@@ -163,6 +171,8 @@ mod tests {
                     steps: vec![ActionStep::Statement("count = count + 1".to_string())],
                 },
             )]),
+            timer: None,
+            keys: HashMap::new(),
         };
         let page = ViewNode::Element {
             tag: "main".to_string(),
@@ -199,6 +209,8 @@ mod tests {
             derived: HashMap::new(),
             helpers: HashMap::new(),
             actions: HashMap::new(),
+            timer: None,
+            keys: HashMap::new(),
         };
         let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new());
         assert_eq!(gen.parse_value("\"hello\""), serde_json::Value::String("hello".to_string()));
@@ -214,6 +226,8 @@ mod tests {
             derived: HashMap::new(),
             helpers: HashMap::new(),
             actions: HashMap::new(),
+            timer: None,
+            keys: HashMap::new(),
         };
         let source = "</script><p>source code</p>";
         let generator = JsCodegen::new(ViewNode::Text(source.into()), logic, "{}".into(), None, HashMap::new());

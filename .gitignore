@@ -37,6 +37,7 @@ out/
 *.log
 
 dist/
+!runtime/rune-web/dist/
 node_modules/
 
 testdata/

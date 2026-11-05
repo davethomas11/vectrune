@@ -381,7 +381,48 @@ This is useful for:
 - Browser DevTools debugging
 - External JavaScript integration
 - Testing and automation
-- Server communication in future versions
+## Game Abilities & Real-Time Logic
+
+Rune-Web provides built-in game development primitives to author 2D games, animations, and arcade simulations with zero JavaScript boilerplate:
+
+### 1. Declarative Game Loop (`timer`)
+In `@Logic`, declare a periodic ticker:
+```rune
+@Logic/game
+timer = tick 40ms
+```
+When the app boots, it automatically starts a 25fps interval invoking `action tick()`.
+Actions can also control the timer dynamically:
+- `start-timer <action> <duration>ms`
+- `stop-timer` (supports conditional suffixes: `stop-timer when lives <= 0`)
+
+### 2. Declarative Keybindings (`keys:`)
+Bind keyboard events directly to actions:
+```rune
+@Logic/game
+keys:
+    ArrowLeft -> moveLeft
+    ArrowRight -> moveRight
+    Space -> fire
+    KeyA -> moveLeft
+    KeyD -> moveRight
+```
+The runtime automatically attaches keyboard listeners and prevents default browser scrolling for bound game keys.
+
+### 3. Spatial & Game Math Functions
+Available in expressions:
+- `collide(a, b, width, height)`: Checks 2D AABB bounding box collision between two objects with `x` and `y` coordinates.
+- `clamp(val, min, max)`: Keeps values bounded within a range (e.g. `player.x = clamp(player.x - 10, 0, 400)`).
+- `abs(val)`: Returns the absolute value of a number.
+- `random(min, max)`: Returns a random integer between min and max inclusive.
+- `min(a, b)` and `max(a, b)`: Numeric extremes.
+
+### 4. Mathematical & Comparison Operators
+The expression evaluator supports:
+- Arithmetic: `+`, `-`, `*`, `/`, `%`
+- Comparisons: `<`, `<=`, `>`, `>=`, `==`, `!=`
+- Logical: `and`, `or`, `!`
+- Conditionals: `? :`, `??`
 
 ## Current Implementation Status
 

@@ -246,6 +246,8 @@ Nav {
     static = "Sites statiques"
     rune_web = "Rune-Web"
     localization = "Localisation"
+    games = "Jeux"
+    space_invaders = "Space Invaders"
 }
 
 Lab {
@@ -255,10 +257,30 @@ Lab {
     users = "API des utilisateurs"
     counter = "Compteur"
     tic = "Morpion"
+    invaders = "Space Invaders"
     first_title = "Votre première API"
     document_title = "Un document, trois formats"
     graphql_title = "API GraphQL de livres"
+    invaders_title = "Arcade Space Invaders"
     main_file = "Fichier .rune principal"
+}
+
+SpaceInvaders {
+    badge = "Jeu Rune-Web"
+    title = "Space Invaders en pur Rune-Web"
+    description = "Un jeu d'arcade complet démontrant la puissance déclarative de Vectrune : boucle de jeu en temps réel, commandes clavier sans code superflu et primitives de collision 2D réutilisables en moins de 60 lignes de logique."
+    play_label = "Jouer à l'Arcade"
+    feature_loop_title = "Boucle de jeu temps réel"
+    feature_loop_desc = "timer = tick 40ms exécute une boucle à 25 fps directement dans l'état réactif sans nécessiter setInterval ou requestAnimationFrame."
+    feature_keys_title = "Liaison clavier déclarative"
+    feature_keys_desc = "keys: associe les touches (ArrowLeft, ArrowRight, Space) directement aux actions avec blocage automatique du défilement navigateur."
+    feature_math_title = "Primitives spatiales 2D"
+    feature_math_desc = "collide(bullet, alien, 22, 18) et clamp(x, min, max) offrent des capacités spatiales concises et réutilisables."
+    feature_reactive_title = "État réactif profond"
+    feature_reactive_desc = "La mise à jour des positions des tirs et aliens déclenche un rafraîchissement DOM instantané avec esthétique rétro néon CRT."
+    instructions_title = "Commandes"
+    instructions_keyboard = "A / ◀: Gauche • D / ▶: Droite • Espace: Tirer"
+    instructions_mobile = "Touchez les boutons d'arcade à l'écran pour vous déplacer et tirer sur mobile et tablette."
 }
 
 Reference {

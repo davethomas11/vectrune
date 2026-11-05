@@ -107,6 +107,8 @@ export interface RuneWebConfig {
   i18nData: Record<string, string>;
   stateJson: Record<string, unknown>;
   wsEndpoint?: string;
+  timer?: string | null;
+  keys?: Record<string, string>;
 }
 
 /** The application object exposed as window.runeWebApp. */
@@ -116,6 +118,8 @@ export interface RuneApp {
   computeDerived: () => void;
   render: () => void;
   invokeAction: (name: string, args: unknown[], locals?: Record<string, unknown>) => void;
+  startTimer?: (action: string, ms: number) => void;
+  stopTimer?: () => void;
 }
 
 /** A scope is just a flat object of key→value bindings. */

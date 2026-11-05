@@ -16,6 +16,7 @@ view:
             button .pill {.active when 'graphql'} click="openExample('graphql')" "GraphQL"
             button .pill {.active when 'counter'} click="openExample('counter')" "%i18n.Lab.counter%"
             button .pill {.active when 'tic'} click="openExample('tic')" "%i18n.Lab.tic%"
+            button .pill {.active when 'invaders'} click="openExample('invaders')" "%i18n.Lab.invaders%"
         match selectedExample:
             "app" -> FirstApiExample
             "skaters" -> DataDocumentExample
@@ -23,6 +24,7 @@ view:
             "graphql" -> GraphqlExample
             "counter" -> CounterExample
             "tic" -> TicTacToeExample
+            "invaders" -> SpaceInvadersExample
 
 @Component/FirstApiExample
 view:
@@ -59,6 +61,10 @@ view:
 @Component/TicTacToeExample
 view:
     WebExample title="{i18n.Lab.tic}" preview="{preview ../../../examples/tic_tac_toe/tic_tac_toe.rune}" source="{raw ../../../examples/tic_tac_toe/tic_tac_toe.rune}" logic_source="{raw ../../../examples/tic_tac_toe/parts/logic.rune}" style_source="{raw ../../../examples/tic_tac_toe/parts/style.rune}"
+
+@Component/SpaceInvadersExample
+view:
+    WebExample title="{i18n.Lab.invaders_title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" source="{raw ../../../examples/space_invaders/space_invaders.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}"
 
 @Component/WebExample
 props: [title, preview, source, logic_source?, style_source?]

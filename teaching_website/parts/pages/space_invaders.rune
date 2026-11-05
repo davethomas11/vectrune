@@ -1,0 +1,34 @@
+@Component/SpaceInvadersPage
+view:
+    div .page .application-guide .space-invaders-page:
+        section .card:
+            div .section-heading:
+                span .tag .tag-advanced "%i18n.SpaceInvaders.badge%"
+                h1 "%i18n.SpaceInvaders.title%"
+                p .lead "%i18n.SpaceInvaders.description%"
+            
+            div .features-grid:
+                article .feature-card:
+                    h3 "⏱️ %i18n.SpaceInvaders.feature_loop_title%"
+                    p "%i18n.SpaceInvaders.feature_loop_desc%"
+                article .feature-card:
+                    h3 "🎮 %i18n.SpaceInvaders.feature_keys_title%"
+                    p "%i18n.SpaceInvaders.feature_keys_desc%"
+                article .feature-card:
+                    h3 "💥 %i18n.SpaceInvaders.feature_math_title%"
+                    p "%i18n.SpaceInvaders.feature_math_desc%"
+                article .feature-card:
+                    h3 "⚡ %i18n.SpaceInvaders.feature_reactive_title%"
+                    p "%i18n.SpaceInvaders.feature_reactive_desc%"
+
+            h3 "%i18n.SpaceInvaders.instructions_title%"
+            p "⌨️ %i18n.SpaceInvaders.instructions_keyboard%"
+            p "📱 %i18n.SpaceInvaders.instructions_mobile%"
+
+        WebExample title="{i18n.SpaceInvaders.title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" source="{raw ../../../examples/space_invaders/space_invaders.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}"
+
+        section .card:
+            h3 "%i18n.Guide.run_locally%"
+            p "%i18n.WebGuide.run%"
+            pre:
+                code .code-block .language-bash "vectrune examples/space_invaders/space_invaders.rune\nvectrune examples/space_invaders/space_invaders.rune -o html > invaders.html"

@@ -246,6 +246,8 @@ Nav {
     static = "Sitios estáticos"
     rune_web = "Rune-Web"
     localization = "Localización"
+    games = "Juegos"
+    space_invaders = "Space Invaders"
 }
 
 Lab {
@@ -255,10 +257,30 @@ Lab {
     users = "API de usuarios"
     counter = "Contador"
     tic = "Tres en raya"
+    invaders = "Space Invaders"
     first_title = "Tu primera API"
     document_title = "Un documento, tres formatos"
     graphql_title = "API GraphQL de libros"
+    invaders_title = "Arcade Space Invaders"
     main_file = "Archivo .rune principal"
+}
+
+SpaceInvaders {
+    badge = "Juego Rune-Web"
+    title = "Space Invaders en Rune-Web puro"
+    description = "Un juego de arcade completo que demuestra el poder declarativo de Vectrune: bucle de juego en tiempo real, controles de teclado sin código repetitivo y primitivas de colisión 2D reutilizables en menos de 60 líneas de lógica."
+    play_label = "Jugar Arcade"
+    feature_loop_title = "Bucle de juego en tiempo real"
+    feature_loop_desc = "timer = tick 40ms ejecuta un bucle a 25 fps directamente sobre el estado reactivo sin necesidad de setInterval o requestAnimationFrame."
+    feature_keys_title = "Asignación de teclas declarativa"
+    feature_keys_desc = "keys: mapea teclas (ArrowLeft, ArrowRight, Space) directamente a acciones con prevención automática de desplazamiento."
+    feature_math_title = "Primitivas espaciales 2D"
+    feature_math_desc = "collide(bullet, alien, 22, 18) y clamp(x, min, max) proporcionan habilidades espaciales concisas y reutilizables."
+    feature_reactive_title = "Estado reactivo profundo"
+    feature_reactive_desc = "Modificar balas o extraterrestres actualiza el DOM de forma fluida con estética retro neón CRT."
+    instructions_title = "Controles"
+    instructions_keyboard = "A / ◀: Izquierda • D / ▶: Derecha • Espacio: Disparar"
+    instructions_mobile = "Toca los botones arcade en pantalla para moverte y disparar en móviles y tabletas."
 }
 
 Reference {

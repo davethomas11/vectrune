@@ -1,0 +1,1870 @@
+"use strict";
+var __RuneWeb = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // src/index.ts
+  var index_exports = {};
+  __export(index_exports, {
+    boot: () => boot
+  });
+
+  // src/context.ts
+  var _ctx = null;
+  function initContext(context) {
+    _ctx = context;
+  }
+  function ctx() {
+    if (!_ctx) throw new Error("RuneWeb context not initialized \u2014 call boot() first");
+    return _ctx;
+  }
+
+  // src/globals.ts
+  function getWindowProp(key) {
+    return window[key];
+  }
+  function setWindowProp(key, value) {
+    window[key] = value;
+  }
+
+  // src/scope.ts
+  function splitPathSegments(expr) {
+    const str = String(expr || "").replace(/\[\]([a-zA-Z_$][\w$]*)/g, "[].(it.$1 == $1)");
+    const segments = [];
+    let current = "";
+    let inBrackets = false;
+    let inParens = 0;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      if (ch === "(") inParens++;
+      if (ch === ")") inParens = Math.max(0, inParens - 1);
+      if (inParens > 0 && !(ch === "(" && str.slice(i - 3, i + 1) === "[].(")) {
+        current += ch;
+        continue;
+      }
+      if (ch === "." && !inBrackets) {
+        if (current.trim()) segments.push(current.trim());
+        current = "";
+        continue;
+      }
+      if (ch === "[") {
+        if (str.slice(i, i + 4) === "[].(") {
+          if (current.trim()) segments.push(current.trim());
+          current = "[].(";
+          i += 3;
+          inParens++;
+          continue;
+        }
+        if (current.trim()) segments.push(current.trim());
+        current = "[";
+        inBrackets = true;
+        continue;
+      }
+      if (ch === "]") {
+        if (inBrackets) {
+          current += "]";
+          segments.push(current.trim());
+          current = "";
+          inBrackets = false;
+          continue;
+        }
+      }
+      current += ch;
+    }
+    if (current.trim()) segments.push(current.trim());
+    return segments;
+  }
+  function buildScope(locals) {
+    const c = ctx();
+    return Object.assign({}, c.app.state, c.app.derived, locals || {});
+  }
+  function makeReactive(obj) {
+    if (obj === null || typeof obj !== "object") return obj;
+    if (obj.__isProxy) return obj;
+    const context = ctx();
+    return new Proxy(obj, {
+      get(target, prop) {
+        if (prop === "__isProxy") return true;
+        if (getWindowProp("__renderingComponent") && typeof prop === "string" && !prop.startsWith("__")) {
+          if (!(context.memorySubscriptions[prop] instanceof Set)) {
+            context.memorySubscriptions[prop] = /* @__PURE__ */ new Set();
+          }
+          context.memorySubscriptions[prop].add(
+            getWindowProp("__renderingComponent")
+          );
+        }
+        const val = target[prop];
+        if (val !== null && typeof val === "object" && !val.__isProxy) {
+          return makeReactive(val);
+        }
+        return val;
+      },
+      set(target, prop, value) {
+        if (target[prop] === value) return true;
+        target[prop] = value;
+        if (!context.isRendering && context.app.render) {
+          requestAnimationFrame(context.app.render.bind(context.app));
+        }
+        return true;
+      },
+      deleteProperty(target, prop) {
+        delete target[prop];
+        if (!context.isRendering && context.app.render) {
+          requestAnimationFrame(context.app.render.bind(context.app));
+        }
+        return true;
+      }
+    });
+  }
+
+  // src/utils.ts
+  function escapeHtml(value) {
+    return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function includesTopLevel(input, delimiter) {
+    let depth = 0;
+    let inQuotes = false;
+    let quoteChar = "";
+    for (let i = 0; i < input.length; i += 1) {
+      const ch = input[i];
+      if ((ch === '"' || ch === "'") && input[i - 1] !== "\\") {
+        if (inQuotes && ch === quoteChar) {
+          inQuotes = false;
+          quoteChar = "";
+        } else if (!inQuotes) {
+          inQuotes = true;
+          quoteChar = ch;
+        }
+        continue;
+      }
+      if (!inQuotes) {
+        if (ch === "(" || ch === "[" || ch === "{") depth += 1;
+        if (ch === ")" || ch === "]" || ch === "}") depth -= 1;
+        if (depth === 0 && input.slice(i, i + delimiter.length) === delimiter) return true;
+      }
+    }
+    return false;
+  }
+  function splitTopLevel(input, delimiter) {
+    const parts = [];
+    let current = "";
+    let depth = 0;
+    let inQuotes = false;
+    let quoteChar = "";
+    for (let i = 0; i < input.length; i += 1) {
+      const ch = input[i];
+      if ((ch === '"' || ch === "'") && input[i - 1] !== "\\") {
+        if (inQuotes && ch === quoteChar) {
+          inQuotes = false;
+          quoteChar = "";
+        } else if (!inQuotes) {
+          inQuotes = true;
+          quoteChar = ch;
+        }
+        current += ch;
+        continue;
+      }
+      if (!inQuotes) {
+        if (ch === "[" || ch === "{" || ch === "(") depth += 1;
+        if (ch === "]" || ch === "}" || ch === ")") depth -= 1;
+        if (depth === 0 && input.slice(i, i + delimiter.length) === delimiter) {
+          parts.push(current.trim());
+          current = "";
+          i += delimiter.length - 1;
+          continue;
+        }
+      }
+      current += ch;
+    }
+    if (current.trim().length > 0) {
+      parts.push(current.trim());
+    }
+    return parts;
+  }
+  function normalizeLiteral(value) {
+    const trimmed = String(value || "").trim();
+    if (trimmed.length >= 2 && (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      return trimmed.slice(1, -1);
+    }
+    return trimmed;
+  }
+  function valueToString(value) {
+    if (value === null || value === void 0) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    try {
+      return JSON.stringify(value);
+    } catch (_err) {
+      return "";
+    }
+  }
+  function decodeEscapes(value) {
+    const OPEN = "\uE000";
+    const CLOSE = "\uE001";
+    const input = String(value || "");
+    let output = "";
+    for (let i = 0; i < input.length; i += 1) {
+      const ch = input[i];
+      if (ch === "\\" && i + 1 < input.length) {
+        i += 1;
+        const next = input[i];
+        if (next === "n") output += "\n";
+        else if (next === "r") output += "\r";
+        else if (next === "t") output += "	";
+        else if (next === '"') output += '"';
+        else if (next === "'") output += "'";
+        else if (next === "\\") output += "\\";
+        else if (next === "{") output += OPEN;
+        else if (next === "}") output += CLOSE;
+        else output += next;
+        continue;
+      }
+      output += ch;
+    }
+    return output;
+  }
+  function expandPercentI18n(value) {
+    const input = String(value || "");
+    let output = "";
+    for (let i = 0; i < input.length; i += 1) {
+      const ch = input[i];
+      if (ch !== "%") {
+        output += ch;
+        continue;
+      }
+      let inner = "";
+      let closed = false;
+      for (i += 1; i < input.length; i += 1) {
+        if (input[i] === "%") {
+          closed = true;
+          break;
+        }
+        inner += input[i];
+      }
+      if (closed && inner.startsWith("i18n.")) {
+        output += `{${inner}}`;
+      } else {
+        output += `%${inner}`;
+        if (closed) output += "%";
+      }
+    }
+    return output;
+  }
+
+  // src/expression.ts
+  var MAX_DEPTH = 64;
+  function tryParseLiteral(expr, scope) {
+    const trimmed = String(expr || "").trim();
+    if (trimmed === "") return void 0;
+    if (trimmed === "true") return true;
+    if (trimmed === "false") return false;
+    if (trimmed === "null") return null;
+    if (!Number.isNaN(Number(trimmed)) && /^-?\d+(\.\d+)?$/.test(trimmed))
+      return Number(trimmed);
+    if (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
+      return normalizeLiteral(trimmed);
+    }
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        const keys = scope ? Object.keys(scope).filter(
+          (k) => k !== "this" && /^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(k)
+        ) : [];
+        const vals = keys.map((k) => scope[k]);
+        return new Function(...keys, `return (${trimmed});`)(...vals);
+      } catch (_err) {
+        return void 0;
+      }
+    }
+    return void 0;
+  }
+  function resolvePath(expr, scope) {
+    const segments = splitPathSegments(expr);
+    if (!segments.length) return void 0;
+    let current = scope[segments[0]];
+    if (current === void 0) return void 0;
+    for (let i = 1; i < segments.length; i += 1) {
+      const segment = segments[i];
+      if (current === null || current === void 0) return void 0;
+      if (Array.isArray(current) && segment === "length") {
+        current = current.length;
+      } else if (Array.isArray(current) && segment.startsWith("[].(") && segment.endsWith(")")) {
+        const condition = segment.slice(4, -1);
+        const match = current.find((item) => {
+          const innerScope = Object.assign({}, scope, { it: item });
+          return Boolean(evaluateExpression(condition, innerScope, 0));
+        });
+        if (match !== void 0) current = match;
+        else return void 0;
+      } else if (segment.startsWith("[") && segment.endsWith("]")) {
+        const innerExpr = segment.slice(1, -1);
+        const lookup = evaluateExpression(innerExpr, scope, 0);
+        current = current[valueToString(lookup)];
+      } else {
+        current = current[segment];
+      }
+    }
+    return current;
+  }
+  function resolveValue(expr, scope) {
+    const literal = tryParseLiteral(expr, scope);
+    if (literal !== void 0) return literal;
+    const pathValue = resolvePath(expr, scope);
+    if (pathValue !== void 0) return pathValue;
+    return normalizeLiteral(expr);
+  }
+  function parseHelperCall(expr) {
+    const trimmed = String(expr || "").trim();
+    if (!trimmed) return null;
+    const { helperDefinitions } = ctx();
+    const parenMatch = trimmed.match(/^([A-Za-z_][\w-]*)\((.*)?\)$/);
+    if (parenMatch && helperDefinitions[parenMatch[1]]) {
+      return {
+        name: parenMatch[1],
+        args: parenMatch[2] ? splitTopLevel(parenMatch[2], ",") : []
+      };
+    }
+    const firstSpace = trimmed.indexOf(" ");
+    if (firstSpace > 0) {
+      const name = trimmed.slice(0, firstSpace);
+      if (helperDefinitions[name]) {
+        return {
+          name,
+          args: trimmed.slice(firstSpace + 1).split(/\s+/).filter(Boolean)
+        };
+      }
+    }
+    if (helperDefinitions[trimmed]) {
+      return { name: trimmed, args: [] };
+    }
+    return null;
+  }
+  function callHelper(name, args, scope, depth) {
+    const { helperDefinitions } = ctx();
+    const helper = helperDefinitions[name];
+    if (!helper) return void 0;
+    const helperLocals = Object.assign({}, scope || {});
+    (helper.params || []).forEach((param, index) => {
+      helperLocals[param] = args[index];
+    });
+    for (const line of helper.body || []) {
+      const trimmed = String(line || "").trim();
+      if (trimmed.startsWith("return ")) {
+        return evaluateExpression(
+          trimmed.slice(7),
+          buildScope(helperLocals),
+          depth
+        );
+      }
+    }
+    return void 0;
+  }
+  function evaluateExpression(expr, scope, depth) {
+    if ((depth || 0) > MAX_DEPTH) return void 0;
+    const nextDepth = (depth || 0) + 1;
+    let trimmed = String(expr || "").trim();
+    if (!trimmed) return void 0;
+    if (trimmed.startsWith('"')) {
+      try {
+        const literal = JSON.parse(trimmed);
+        if (typeof literal === "string") return literal;
+      } catch (_) {
+      }
+    }
+    if (trimmed.startsWith("@")) {
+      let selector = "";
+      let rest = "";
+      if (trimmed.startsWith("@[")) {
+        const closeIdx = trimmed.indexOf("]");
+        if (closeIdx > 1) {
+          selector = trimmed.slice(2, closeIdx);
+          rest = trimmed.slice(closeIdx + 1);
+        }
+      } else {
+        const match = trimmed.match(/^@([\w-]+)(.*)$/);
+        if (match) {
+          selector = "." + match[1];
+          rest = match[2];
+        }
+      }
+      if (selector && typeof document !== "undefined") {
+        const el = document.querySelector(selector);
+        if (el) {
+          if (!rest) return el;
+          if (rest.startsWith(".")) {
+            return resolvePath(rest.slice(1), el);
+          }
+        }
+        return void 0;
+      }
+    }
+    while (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+      let d = 0;
+      let matched = true;
+      for (let i = 0; i < trimmed.length - 1; i += 1) {
+        if (trimmed[i] === "(") d += 1;
+        if (trimmed[i] === ")") d -= 1;
+        if (d === 0) {
+          matched = false;
+          break;
+        }
+      }
+      if (!matched) break;
+      trimmed = trimmed.slice(1, -1).trim();
+    }
+    if (trimmed.startsWith("!")) {
+      return !Boolean(
+        evaluateExpression(trimmed.slice(1).trim(), scope, nextDepth)
+      );
+    }
+    if (trimmed.startsWith("collide(") && trimmed.endsWith(")")) {
+      const argsStr = trimmed.slice(8, -1);
+      const parts = splitTopLevel(argsStr, ",");
+      if (parts.length >= 2) {
+        const a = evaluateExpression(parts[0], scope, nextDepth);
+        const b = evaluateExpression(parts[1], scope, nextDepth);
+        const w = parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : 20;
+        const h = parts.length >= 4 ? Number(evaluateExpression(parts[3], scope, nextDepth)) : w;
+        if (a && b && typeof a === "object" && typeof b === "object" && a.x !== void 0 && a.y !== void 0 && b.x !== void 0 && b.y !== void 0) {
+          return Math.abs(Number(a.x) - Number(b.x)) < w && Math.abs(Number(a.y) - Number(b.y)) < h;
+        }
+      }
+      return false;
+    }
+    if (trimmed.startsWith("clamp(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(6, -1), ",");
+      if (parts.length === 3) {
+        const v = Number(evaluateExpression(parts[0], scope, nextDepth));
+        const min = Number(evaluateExpression(parts[1], scope, nextDepth));
+        const max = Number(evaluateExpression(parts[2], scope, nextDepth));
+        return Math.min(Math.max(v, min), max);
+      }
+    }
+    if (trimmed.startsWith("abs(") && trimmed.endsWith(")")) {
+      const val = Number(evaluateExpression(trimmed.slice(4, -1), scope, nextDepth));
+      return Math.abs(val);
+    }
+    if (trimmed.startsWith("random(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(7, -1), ",");
+      if (parts.length >= 2) {
+        const min = Number(evaluateExpression(parts[0], scope, nextDepth));
+        const max = Number(evaluateExpression(parts[1], scope, nextDepth));
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+    }
+    if (trimmed.startsWith("min(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(4, -1), ",");
+      const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
+      return Math.min(...nums);
+    }
+    if (trimmed.startsWith("max(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(4, -1), ",");
+      const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
+      return Math.max(...nums);
+    }
+    const helperCall = parseHelperCall(trimmed);
+    if (helperCall) {
+      return callHelper(
+        helperCall.name,
+        helperCall.args.map((arg) => evaluateExpression(arg, scope, nextDepth)),
+        scope,
+        nextDepth
+      );
+    }
+    const methodMatch = trimmed.match(
+      /^(.+?)\.(any|mask|filter|find|max)(?:\((.*)\)|\s+(.+?))(?:\.(length))?$/
+    );
+    if (methodMatch) {
+      const [, receiver, method, parenArgs, spaceArgs, trailingProp] = methodMatch;
+      const argsStr = (parenArgs !== void 0 ? parenArgs : spaceArgs).trim();
+      const collection = evaluateExpression(receiver, scope, nextDepth);
+      let result = void 0;
+      if (method === "mask" && Array.isArray(collection)) {
+        const player = valueToString(
+          evaluateExpression(argsStr, scope, nextDepth)
+        );
+        result = collection.reduce(
+          (acc, cell, i) => {
+            return valueToString(cell) === player ? acc | 1 << i : acc;
+          },
+          0
+        );
+      } else if ((method === "any" || method === "find" || method === "filter" || method === "max") && Array.isArray(collection)) {
+        const arrowMatch = argsStr.match(/^(\w+)\s*=>\s*(.+)$/);
+        const [paramName, predExpr] = arrowMatch ? [arrowMatch[1], arrowMatch[2]] : ["it", argsStr];
+        if (method === "any") {
+          result = collection.some((item) => {
+            const innerScope = Object.assign({}, scope, {
+              [paramName]: item
+            });
+            return Boolean(
+              evaluateExpression(predExpr, innerScope, nextDepth)
+            );
+          });
+        } else if (method === "filter") {
+          result = collection.filter((item) => {
+            const innerScope = Object.assign({}, scope, {
+              [paramName]: item
+            });
+            return Boolean(
+              evaluateExpression(predExpr, innerScope, nextDepth)
+            );
+          });
+        } else if (method === "find") {
+          result = collection.find((item) => {
+            const innerScope = Object.assign({}, scope, {
+              [paramName]: item
+            });
+            return Boolean(
+              evaluateExpression(predExpr, innerScope, nextDepth)
+            );
+          });
+        } else if (method === "max") {
+          result = collection.reduce(
+            (max, item) => {
+              const innerScope = Object.assign({}, scope, {
+                [paramName]: item
+              });
+              const val = evaluateExpression(predExpr, innerScope, nextDepth);
+              return max === void 0 || val > max ? val : max;
+            },
+            void 0
+          );
+        }
+      }
+      if (trailingProp === "length" && result !== void 0 && result.length !== void 0) {
+        return result.length;
+      }
+      return result;
+    }
+    if (includesTopLevel(trimmed, " ? ")) {
+      const parts = splitTopLevel(trimmed, " ? ");
+      const condition = parts[0];
+      const rest = parts.slice(1).join(" ? ");
+      if (includesTopLevel(rest, " : ")) {
+        const colonParts = splitTopLevel(rest, " : ");
+        const trueExpr = colonParts[0];
+        const falseExpr = colonParts.slice(1).join(" : ");
+        return Boolean(evaluateExpression(condition, scope, nextDepth)) ? evaluateExpression(trueExpr, scope, nextDepth) : evaluateExpression(falseExpr, scope, nextDepth);
+      }
+    }
+    if (includesTopLevel(trimmed, " ?? ")) {
+      const parts = splitTopLevel(trimmed, " ?? ");
+      const leftRaw = parts[0].trim();
+      let left = evaluateExpression(leftRaw, scope, nextDepth);
+      if (typeof left === "string" && left === leftRaw && resolvePath(leftRaw, scope) === void 0 && tryParseLiteral(leftRaw, scope) === void 0) {
+        left = void 0;
+      }
+      if (left !== void 0 && left !== null && left !== "") {
+        return left;
+      }
+      return evaluateExpression(parts.slice(1).join(" ?? "), scope, nextDepth);
+    }
+    if (includesTopLevel(trimmed, " or ")) {
+      return splitTopLevel(trimmed, " or ").some(
+        (part) => Boolean(evaluateExpression(part, scope, nextDepth))
+      );
+    }
+    if (includesTopLevel(trimmed, " and ")) {
+      return splitTopLevel(trimmed, " and ").every(
+        (part) => Boolean(evaluateExpression(part, scope, nextDepth))
+      );
+    }
+    if (includesTopLevel(trimmed, " != ")) {
+      const [left, right] = splitTopLevel(trimmed, " != ");
+      return valueToString(evaluateExpression(left, scope, nextDepth)) !== valueToString(evaluateExpression(right, scope, nextDepth));
+    }
+    if (includesTopLevel(trimmed, " == ")) {
+      const [left, right] = splitTopLevel(trimmed, " == ");
+      return valueToString(evaluateExpression(left, scope, nextDepth)) === valueToString(evaluateExpression(right, scope, nextDepth));
+    }
+    if (includesTopLevel(trimmed, " >= ")) {
+      const [left, right] = splitTopLevel(trimmed, " >= ");
+      return evaluateExpression(left, scope, nextDepth) >= evaluateExpression(right, scope, nextDepth);
+    }
+    if (includesTopLevel(trimmed, " <= ")) {
+      const [left, right] = splitTopLevel(trimmed, " <= ");
+      return evaluateExpression(left, scope, nextDepth) <= evaluateExpression(right, scope, nextDepth);
+    }
+    if (includesTopLevel(trimmed, " > ")) {
+      const [left, right] = splitTopLevel(trimmed, " > ");
+      return evaluateExpression(left, scope, nextDepth) > evaluateExpression(right, scope, nextDepth);
+    }
+    if (includesTopLevel(trimmed, " < ")) {
+      const [left, right] = splitTopLevel(trimmed, " < ");
+      return evaluateExpression(left, scope, nextDepth) < evaluateExpression(right, scope, nextDepth);
+    }
+    if (includesTopLevel(trimmed, " + ")) {
+      return splitTopLevel(trimmed, " + ").reduce(
+        (acc, part, index) => {
+          const value = evaluateExpression(part, scope, nextDepth);
+          if (index === 0) return value;
+          if (typeof acc === "number" && typeof value === "number")
+            return acc + value;
+          return `${valueToString(acc)}${valueToString(value)}`;
+        },
+        void 0
+      );
+    }
+    if (includesTopLevel(trimmed, " - ")) {
+      const parts = splitTopLevel(trimmed, " - ");
+      const first = Number(evaluateExpression(parts[0], scope, nextDepth));
+      return parts.slice(1).reduce((acc, part) => {
+        return acc - Number(evaluateExpression(part, scope, nextDepth));
+      }, first);
+    }
+    if (includesTopLevel(trimmed, " * ")) {
+      return splitTopLevel(trimmed, " * ").reduce(
+        (acc, part, idx) => {
+          const val = Number(evaluateExpression(part, scope, nextDepth));
+          return idx === 0 ? val : acc * val;
+        },
+        1
+      );
+    }
+    if (includesTopLevel(trimmed, " / ")) {
+      const parts = splitTopLevel(trimmed, " / ");
+      const first = Number(evaluateExpression(parts[0], scope, nextDepth));
+      return parts.slice(1).reduce((acc, part) => {
+        return acc / Number(evaluateExpression(part, scope, nextDepth));
+      }, first);
+    }
+    if (includesTopLevel(trimmed, " % ")) {
+      const parts = splitTopLevel(trimmed, " % ");
+      const first = Number(evaluateExpression(parts[0], scope, nextDepth));
+      return parts.slice(1).reduce((acc, part) => {
+        return acc % Number(evaluateExpression(part, scope, nextDepth));
+      }, first);
+    }
+    if (trimmed.startsWith("swap ")) {
+      const tokens = trimmed.split(/\s+/);
+      const current = valueToString(
+        evaluateExpression(tokens[1], scope, nextDepth)
+      );
+      const left = valueToString(
+        evaluateExpression(tokens[2], scope, nextDepth)
+      );
+      const right = valueToString(
+        evaluateExpression(tokens[3], scope, nextDepth)
+      );
+      return current === left ? right : left;
+    }
+    if (trimmed.startsWith("full ")) {
+      const collection = evaluateExpression(
+        trimmed.slice(5),
+        scope,
+        nextDepth
+      );
+      return Array.isArray(collection) && collection.every((item) => valueToString(item) !== "");
+    }
+    if (includesTopLevel(trimmed, " & ")) {
+      const parts = splitTopLevel(trimmed, " & ");
+      if (parts.length === 2) {
+        return evaluateExpression(parts[0], scope, nextDepth) & evaluateExpression(parts[1], scope, nextDepth);
+      }
+    }
+    return resolveValue(trimmed, scope);
+  }
+
+  // src/interpolation.ts
+  function interpolate(template, scope) {
+    const OPEN = "\uE000";
+    const CLOSE = "\uE001";
+    return expandPercentI18n(decodeEscapes(String(template || ""))).replace(/\{([^}]+)\}/g, function(_match, expr) {
+      const resolved = valueToString(evaluateExpression(expr, scope));
+      return resolved.includes("{") && resolved.includes("}") ? interpolate(resolved, scope) : resolved;
+    }).replace(new RegExp(OPEN, "g"), "{").replace(new RegExp(CLOSE, "g"), "}");
+  }
+
+  // src/rendering.ts
+  function renderNode(node, locals) {
+    if (node.Element) {
+      const element = node.Element;
+      if (element.for_each) {
+        const collection = evaluateExpression(
+          element.for_each.collection,
+          buildScope(locals)
+        );
+        if (!Array.isArray(collection)) return "";
+        return collection.map((item, index) => {
+          const childLocals = Object.assign(
+            {},
+            locals || {}
+          );
+          childLocals[element.for_each.item_name] = item;
+          if (element.for_each.index_name)
+            childLocals[element.for_each.index_name] = index;
+          return renderElement(element, childLocals);
+        }).join("");
+      }
+      return renderElement(element, locals);
+    }
+    if (node.Loop) {
+      const loop = node.Loop;
+      const collection = evaluateExpression(
+        loop.collection,
+        buildScope(locals)
+      );
+      if (!Array.isArray(collection)) return "";
+      return collection.map((item, index) => {
+        const childLocals = Object.assign(
+          {},
+          locals || {}
+        );
+        childLocals[loop.item_name] = item;
+        if (loop.index_name) childLocals[loop.index_name] = index;
+        return (loop.body || []).map((child) => renderNode(child, childLocals)).join("");
+      }).join("");
+    }
+    if (node.Conditional) {
+      const conditional = node.Conditional;
+      if (Boolean(
+        evaluateExpression(
+          conditional.condition,
+          buildScope(locals)
+        )
+      )) {
+        return (conditional.body || []).map((child) => renderNode(child, locals)).join("");
+      }
+      return "";
+    }
+    if (node.Match) {
+      const match = node.Match;
+      const value = String(evaluateExpression(match.expression, buildScope(locals)));
+      for (const caseDef of match.cases) {
+        let matcher = normalizeLiteral(caseDef.matcher);
+        if (matcher === "_" || matcher === value) {
+          return (caseDef.body || []).map((child) => renderNode(child, locals)).join("");
+        }
+      }
+      return "";
+    }
+    if (node.ComponentScope) {
+      const scope = node.ComponentScope;
+      const childLocals = Object.assign(
+        {},
+        locals || {}
+      );
+      for (const [key, value] of Object.entries(scope.props || {})) {
+        let exprStr = String(value).trim();
+        if (exprStr.startsWith("{") && exprStr.endsWith("}")) {
+          exprStr = exprStr.slice(1, -1).trim();
+        }
+        childLocals[key] = evaluateExpression(
+          exprStr,
+          buildScope(locals)
+        );
+      }
+      return renderNode(scope.body, childLocals);
+    }
+    if (node.MemoryBinding) {
+      const binding = node.MemoryBinding;
+      const memValue = ctx().app.state[binding.key];
+      const childLocals = Object.assign(
+        {},
+        locals || {},
+        { [binding.var]: memValue }
+      );
+      return (binding.body || []).map((child) => renderNode(child, childLocals)).join("");
+    }
+    if (node.Text !== void 0) {
+      return escapeHtml(interpolate(node.Text, buildScope(locals)));
+    }
+    if (node.Comment !== void 0) {
+      return `<!--${interpolate(node.Comment, buildScope(locals))}-->`;
+    }
+    return "";
+  }
+  function renderElement(element, locals) {
+    const scope = buildScope(locals);
+    let attrs = "";
+    if (element.id)
+      attrs += ` id="${escapeHtml(interpolate(element.id, scope))}"`;
+    if (element.classes && element.classes.length) {
+      const renderedClasses = element.classes.map((c) => interpolate(c, scope)).filter((c) => c.length > 0);
+      if (renderedClasses.length)
+        attrs += ` class="${renderedClasses.join(" ")}"`;
+    }
+    for (const [key, value] of Object.entries(element.attrs || {})) {
+      const renderedValue = interpolate(value, scope);
+      if (renderedValue === "false" || renderedValue === "undefined" || renderedValue === "null") {
+        const boolAttrs = [
+          "checked",
+          "disabled",
+          "readonly",
+          "selected",
+          "hidden",
+          "required",
+          "multiple",
+          "autofocus"
+        ];
+        if (boolAttrs.includes(key)) continue;
+      }
+      attrs += ` ${key}="${escapeHtml(renderedValue)}"`;
+    }
+    if (locals && Object.keys(locals).length) {
+      attrs += ` data-rune-scope="${escapeHtml(JSON.stringify(locals))}"`;
+    }
+    for (const [eventName, handler] of Object.entries(
+      element.events || {}
+    )) {
+      attrs += ` data-on-${eventName}="${escapeHtml(interpolate(handler, scope))}"`;
+    }
+    const text = element.text ? escapeHtml(interpolate(element.text, scope)) : "";
+    const children = (element.children || []).map((child) => renderNode(child, locals)).join("");
+    return `<${element.tag}${attrs}>${text}${children}</${element.tag}>`;
+  }
+
+  // src/builtins/command.ts
+  var STOP = "stop";
+  var NO_ACTION = "do_not_action";
+
+  // src/builtins/log.ts
+  function handleLog(statement, locals) {
+    if (!statement.startsWith("log ")) return void 0;
+    const msg = interpolate(statement.slice(4), buildScope(locals));
+    console.log(msg);
+    return msg;
+  }
+  var logCommand = {
+    prefix: ["log"],
+    signature: "log <expression>",
+    description: "Logs the interpolated expression to the console",
+    handler: handleLog
+  };
+
+  // src/builtins/delete.ts
+  function handleDelete(statement, locals) {
+    if (!statement.startsWith("delete ")) return void 0;
+    const path = statement.slice(7).trim();
+    deletePath(path, locals);
+    return true;
+  }
+  var deleteCommand = {
+    prefix: ["delete", "del", "rm", "remove", "rmv", "destroy"],
+    signature: "delete <path>",
+    description: "Deletes a value at the given path from locals",
+    handler: handleDelete
+  };
+
+  // src/builtins/invert.ts
+  function handleInvert(statement, locals) {
+    if (!statement.startsWith("invert ")) return void 0;
+    const path = statement.slice(7).trim();
+    const current = Boolean(evaluateExpression(path, buildScope(locals)));
+    assignPath(path, !current, locals);
+    return !current;
+  }
+  var invertCommand = {
+    prefix: ["invert"],
+    signature: "invert <path>",
+    description: "Inverts a boolean value at the given path",
+    handler: handleInvert
+  };
+
+  // src/builtins/increment.ts
+  function handleIncrement(statement, locals) {
+    if (statement.startsWith("increment") || statement.startsWith("inc")) {
+      const trimmed = statement.replace("increment ", "").replace("inc ", "");
+      const tokens = trimmed.split(" ");
+      if (tokens.length != 3) return void 0;
+      if (tokens[1] != "by") return void 0;
+      const path2 = tokens[0];
+      const valueExpression = tokens[2];
+      const value = evaluateExpression(valueExpression, buildScope(locals));
+      return incrementBy(path2, Number(value), locals);
+    }
+    if (!statement.endsWith("++")) return void 0;
+    const path = statement.slice(0, -2).trim();
+    return incrementBy(path, 1, locals);
+  }
+  function incrementBy(path, value, locals) {
+    let evaled = evaluateExpression(path, buildScope(locals));
+    if (evaled === path) evaled = 0;
+    let current = Number(evaled);
+    if (isNaN(current)) current = 0;
+    const newValue = current + value;
+    assignPath(path, newValue, locals);
+    return newValue;
+  }
+  var incrementCommand = {
+    prefix: ["increment", "inc"],
+    postfix: ["++"],
+    signature: "<path>++ | increment <path> by <number> | inc <path> by <number>",
+    description: "Increments a numeric value at the given path",
+    handler: handleIncrement
+  };
+
+  // src/builtins/decrement.ts
+  function handleDecrement(statement, locals) {
+    if (statement.startsWith("decrement") || statement.startsWith("dec")) {
+      const trimmed = statement.replace("decrement ", "").replace("dec ", "");
+      const tokens = trimmed.split(" ");
+      if (tokens.length != 3) return void 0;
+      if (tokens[1] != "by") return void 0;
+      const path2 = tokens[0];
+      const valueExpression = tokens[2];
+      const value = evaluateExpression(valueExpression, buildScope(locals));
+      return decrementBy(path2, Number(value), locals);
+    }
+    if (!statement.endsWith("--")) return void 0;
+    const path = statement.slice(0, -2).trim();
+    return decrementBy(path, 1, locals);
+  }
+  function decrementBy(path, value, locals) {
+    let evaled = evaluateExpression(path, buildScope(locals));
+    if (evaled === path) evaled = 0;
+    let current = Number(evaled);
+    if (isNaN(current)) current = 0;
+    const newValue = current - value;
+    assignPath(path, newValue, locals);
+    return newValue;
+  }
+  var decrementCommand = {
+    postfix: ["--"],
+    prefix: ["decrement", "dec"],
+    signature: "<path>-- or decrement <path> by <value> or dec <path> by <value>",
+    description: "Decrements a numeric value at the given path",
+    handler: handleDecrement
+  };
+
+  // src/builtins/swap.ts
+  function handleSwap(statement, locals) {
+    if (!statement.startsWith("swap ")) return void 0;
+    const tokens = statement.split(/\s+/);
+    if (tokens.length < 3) return void 0;
+    const targetPath = tokens[1];
+    if (tokens.length === 3) {
+      const val = evaluateExpression(tokens[2], buildScope(locals));
+      assignPath(targetPath, val, locals);
+      return true;
+    }
+    const aExpr = tokens[2];
+    const bExpr = tokens[3];
+    const aValue = evaluateExpression(aExpr, buildScope(locals));
+    const bValue = evaluateExpression(bExpr, buildScope(locals));
+    const current = evaluateExpression(targetPath, buildScope(locals));
+    if (current === aValue) {
+      assignPath(targetPath, bValue, locals);
+    } else {
+      assignPath(targetPath, aValue, locals);
+    }
+    return true;
+  }
+  var swapCommand = {
+    prefix: ["swap"],
+    signature: "swap <path> <A> <B>",
+    description: "Swaps the values of A and B at path",
+    handler: handleSwap
+  };
+
+  // src/builtins/stop.ts
+  function handleStop(statement, locals) {
+    if (statement.trim() !== STOP) return void 0;
+    return STOP;
+  }
+  var stopCommand = {
+    prefix: [STOP],
+    signature: STOP,
+    description: "Stops execution of the current script",
+    handler: handleStop
+  };
+
+  // src/builtins/push.ts
+  function handlePush(statement, locals) {
+    if (!statement.startsWith("push ")) return void 0;
+    const tokens = statement.split(/\s+/);
+    if (tokens.length < 3) return void 0;
+    const targetPath = tokens[1];
+    const valueExpr = tokens.slice(2).join(" ");
+    const collection = evaluateExpression(targetPath, buildScope(locals));
+    if (!Array.isArray(collection)) return void 0;
+    const value = evaluateExpression(valueExpr, buildScope(locals));
+    collection.push(value);
+    assignPath(targetPath, collection, locals);
+    return true;
+  }
+  var pushCommand = {
+    prefix: ["push"],
+    signature: "push <path> <valueExpression>",
+    description: "Pushes a value onto the array at the given path",
+    handler: handlePush
+  };
+
+  // src/builtins/max.ts
+  function handleMax(statement, locals) {
+    if (!statement.startsWith("max ")) return void 0;
+    const rest = statement.slice(4).trim();
+    const [pathPart, varPart] = rest.split(/\s+as\s+/);
+    if (!pathPart) return void 0;
+    const arr = evaluateExpression(pathPart, buildScope(locals));
+    if (!Array.isArray(arr) || arr.length === 0) return void 0;
+    const maxVal = Math.max(...arr.map((v) => Number(v)));
+    if (varPart) {
+      assignPath(varPart, maxVal, locals);
+    }
+    return maxVal;
+  }
+  var maxCommand = {
+    prefix: ["max"],
+    signature: "max <arrayPath> as <var>",
+    description: "Finds maximum numeric value in an array",
+    handler: handleMax
+  };
+
+  // src/builtins/min.ts
+  function handleMin(statement, locals) {
+    if (!statement.startsWith("min ")) return void 0;
+    const rest = statement.slice(4).trim();
+    const [pathPart, varPart] = rest.split(/\s+as\s+/);
+    if (!pathPart) return void 0;
+    const arr = evaluateExpression(pathPart, buildScope(locals));
+    if (!Array.isArray(arr) || arr.length === 0) return void 0;
+    const minVal = Math.min(...arr.map((v) => Number(v)));
+    if (varPart) {
+      assignPath(varPart, minVal, locals);
+    }
+    return minVal;
+  }
+  var minCommand = {
+    prefix: ["min"],
+    signature: "min <arrayPath> as <var>",
+    description: "Finds minimum numeric value in an array",
+    handler: handleMin
+  };
+
+  // src/builtins/delay.ts
+  function handleDelay(statement, locals) {
+    if (!statement.startsWith("delay ")) return void 0;
+    const rest = statement.slice(6).trim();
+    const msMatch = rest.match(/^([0-9]*\.?[0-9]+)\s*(ms|s)?$/i);
+    if (!msMatch) return void 0;
+    let ms = Number(msMatch[1]);
+    const unit = msMatch[2] ? msMatch[2].toLowerCase() : "ms";
+    if (unit === "s") ms *= 1e3;
+    const start = Date.now();
+    while (Date.now() - start < ms) {
+    }
+    return true;
+  }
+  var delayCommand = {
+    prefix: ["delay"],
+    signature: "delay <duration>ms",
+    description: "Pauses execution for a given number of milliseconds",
+    handler: handleDelay
+  };
+
+  // src/builtins/unique.ts
+  function handleUnique(statement, locals) {
+    if (!statement.startsWith("unique ")) return void 0;
+    const rest = statement.slice(7).trim();
+    const [pathPart, varPart] = rest.split(/\s+as\s+/);
+    if (!pathPart) return void 0;
+    const arr = evaluateExpression(pathPart, buildScope(locals));
+    if (!Array.isArray(arr)) return void 0;
+    const uniq = Array.from(new Set(arr));
+    if (varPart) {
+      assignPath(varPart, uniq, locals);
+    }
+    return uniq;
+  }
+  var uniqueCommand = {
+    prefix: ["unique"],
+    signature: "unique <arrayPath> as <var>",
+    description: "Removes duplicate entries from an array",
+    handler: handleUnique
+  };
+
+  // src/builtins/sum.ts
+  function handleSum(statement, locals) {
+    if (!statement.startsWith("sum ")) return void 0;
+    const rest = statement.slice(4).trim();
+    const [pathPart, varPart] = rest.split(/\s+as\s+/);
+    if (!pathPart) return void 0;
+    const arr = evaluateExpression(pathPart, buildScope(locals));
+    if (!Array.isArray(arr)) return void 0;
+    const total = arr.reduce((acc, cur) => acc + Number(cur), 0);
+    if (varPart) {
+      assignPath(varPart, total, locals);
+    }
+    return total;
+  }
+  var sumCommand = {
+    prefix: ["sum"],
+    signature: "sum <arrayPath> as <var>",
+    description: "Sums numeric values in an array and stores the result",
+    handler: handleSum
+  };
+
+  // src/builtins/randomize.ts
+  function handleRandomize(statement, locals) {
+    if (!statement.startsWith("randomize ")) return void 0;
+    const rest = statement.slice(9).trim();
+    const parts = rest.split(/\s+/);
+    if (parts.length >= 2 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1]))) {
+      const min = Number(parts[0]);
+      const max = Number(parts[1]);
+      let varName;
+      if (parts.length > 3 && parts[2] === "as") {
+        varName = parts[3];
+      }
+      const rand = Math.floor(Math.random() * (max - min + 1)) + min;
+      if (varName) {
+        assignPath(varName, rand, locals);
+      }
+      return rand;
+    }
+    const asIndex = parts.indexOf("as");
+    if (parts.length >= 1) {
+      const pathExpr = parts.slice(0, asIndex).join(" ");
+      const varName = parts[asIndex + 1];
+      const arr = evaluateExpression(pathExpr, buildScope(locals));
+      if (!Array.isArray(arr)) return void 0;
+      const shuffled = arr.slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      if (varName) {
+        assignPath(varName, shuffled, locals);
+      }
+      return shuffled;
+    }
+    return void 0;
+  }
+  var randomizeCommand = {
+    prefix: ["randomize"],
+    signature: "randomize <min> <max> as <var> | randomize <arrayPath> as <var>",
+    description: "Generates a random number in a range or shuffles an array",
+    handler: handleRandomize
+  };
+
+  // src/builtins/count.ts
+  function handleCount(statement, locals) {
+    if (!statement.startsWith("count ")) return void 0;
+    const rest = statement.slice(6).trim();
+    const [pathPart, varPart] = rest.split(/\s+as\s+/);
+    if (!pathPart) return void 0;
+    const value = evaluateExpression(pathPart, buildScope(locals));
+    let count;
+    if (Array.isArray(value)) {
+      count = value.length;
+    } else if (value && typeof value === "object") {
+      count = Object.keys(value).length;
+    } else {
+      count = 0;
+    }
+    if (varPart) {
+      assignPath(varPart, count, locals);
+    }
+    return count;
+  }
+  var countCommand = {
+    prefix: ["count"],
+    signature: "count <path> as <var>",
+    description: "Stores the length of an array or object keys count into a variable",
+    handler: handleCount
+  };
+
+  // src/builtins/flatten.ts
+  function handleFlatten(statement, locals) {
+    if (!statement.startsWith("flatten ")) return void 0;
+    const rest = statement.slice(8).trim();
+    const [pathPart, varPart] = rest.split(/\s+as\s+/);
+    if (!pathPart) return void 0;
+    const value = evaluateExpression(pathPart, buildScope(locals));
+    if (!Array.isArray(value)) return void 0;
+    const flatten = (arr) => {
+      const out = [];
+      for (const item of arr) {
+        if (Array.isArray(item)) {
+          out.push(...flatten(item));
+        } else {
+          out.push(item);
+        }
+      }
+      return out;
+    };
+    const flat = flatten(value);
+    if (varPart) {
+      assignPath(varPart, flat, locals);
+    }
+    return flat;
+  }
+  var flattenCommand = {
+    prefix: ["flatten"],
+    signature: "flatten <arrayPath> as <var>",
+    description: "Flattens a nested array into a one\u2011dimensional array",
+    handler: handleFlatten
+  };
+
+  // src/builtins/avg.ts
+  function handleAvg(statement, locals) {
+    if (!statement.startsWith("avg ")) return void 0;
+    const rest = statement.slice(4).trim();
+    const [pathPart, varPart] = rest.split(/\s+as\s+/);
+    if (!pathPart) return void 0;
+    const arr = evaluateExpression(pathPart, buildScope(locals));
+    if (!Array.isArray(arr) || arr.length === 0) return void 0;
+    const total = arr.reduce((acc, cur) => acc + Number(cur), 0);
+    const avg = total / arr.length;
+    if (varPart) {
+      assignPath(varPart, avg, locals);
+    }
+    return avg;
+  }
+  var avgCommand = {
+    prefix: ["avg"],
+    signature: "avg <arrayPath> as <var>",
+    description: "Computes average of numeric array values",
+    handler: handleAvg
+  };
+
+  // src/builtins/clone.ts
+  function handleClone(statement, locals) {
+    if (!statement.startsWith("clone ")) return void 0;
+    const rest = statement.slice(6).trim();
+    const match = rest.match(/^(.*?)\s+to\s+(.*)$/);
+    let src;
+    let dest = null;
+    if (!match) {
+      src = rest;
+    } else {
+      src = match[1].trim();
+      dest = match[2].trim();
+    }
+    if (!src) return void 0;
+    const value = evaluateExpression(src, buildScope(locals));
+    const copy = JSON.parse(JSON.stringify(value));
+    if (dest) {
+      assignPath(dest, copy, locals);
+    }
+    return copy;
+  }
+  var cloneCommand = {
+    prefix: ["clone"],
+    signature: "clone <srcPath> to <destPath>",
+    description: "Deep\u2011copies a value from source to destination",
+    handler: handleClone
+  };
+
+  // src/builtins/timer.ts
+  function handleStartTimer(statement, _locals) {
+    if (!statement.startsWith("start-timer ") && !statement.startsWith("interval ")) return void 0;
+    const rest = statement.startsWith("start-timer ") ? statement.slice(12).trim() : statement.slice(9).trim();
+    const match = rest.match(/^([A-Za-z_][\w-]*)\s*([0-9]*\.?[0-9]+)\s*(ms|s)?$/i);
+    if (!match) return void 0;
+    const action = match[1];
+    let ms = Number(match[2]);
+    if (match[3]?.toLowerCase() === "s") ms *= 1e3;
+    const app = ctx().app;
+    if (app.startTimer) {
+      app.startTimer(action, ms);
+    }
+    return true;
+  }
+  function handleStopTimer(statement, _locals) {
+    const trimmed = statement.trim();
+    if (trimmed !== "stop-timer" && trimmed !== "clear-timer" && trimmed !== "clear-interval") return void 0;
+    const app = ctx().app;
+    if (app.stopTimer) {
+      app.stopTimer();
+    }
+    return true;
+  }
+  var startTimerCommand = {
+    prefix: ["start-timer", "interval"],
+    signature: "start-timer <action> <duration>ms",
+    description: "Starts a periodic timer calling the named action",
+    handler: handleStartTimer
+  };
+  var stopTimerCommand = {
+    prefix: ["stop-timer", "clear-timer", "clear-interval"],
+    signature: "stop-timer",
+    description: "Stops the active periodic timer",
+    handler: handleStopTimer
+  };
+
+  // src/builtins/index.ts
+  var postfixMap = {};
+  var prefixMap = {};
+  var infixMap = {};
+  function registerCommand(cmd) {
+    for (const name of cmd.prefix || []) {
+      prefixMap[name] = cmd;
+    }
+    for (const name of cmd.postfix || []) {
+      postfixMap[name] = cmd;
+    }
+    for (const name of cmd.infix || []) {
+      infixMap[name] = cmd;
+    }
+  }
+  registerCommand(logCommand);
+  registerCommand(deleteCommand);
+  registerCommand(invertCommand);
+  registerCommand(incrementCommand);
+  registerCommand(decrementCommand);
+  registerCommand(swapCommand);
+  registerCommand(stopCommand);
+  registerCommand(pushCommand);
+  registerCommand(maxCommand);
+  registerCommand(minCommand);
+  registerCommand(delayCommand);
+  registerCommand(uniqueCommand);
+  registerCommand(sumCommand);
+  registerCommand(randomizeCommand);
+  registerCommand(countCommand);
+  registerCommand(flattenCommand);
+  registerCommand(avgCommand);
+  registerCommand(cloneCommand);
+  registerCommand(startTimerCommand);
+  registerCommand(stopTimerCommand);
+  function handleWhen(statement, locals) {
+    const whenIndex = statement.lastIndexOf(" when ");
+    if (whenIndex === -1) return statement;
+    const conditionExpr = statement.slice(whenIndex + 6).trim();
+    const commandPart = statement.slice(0, whenIndex).trim();
+    const condResult = Boolean(evaluateExpression(conditionExpr, buildScope(locals)));
+    return condResult ? commandPart : null;
+  }
+  function handleBuiltin(statement, locals) {
+    const cmd = getPrefixCmd(statement, locals) || getInfixCmd(statement, locals) || getPostfixCmd(statement, locals);
+    if (!cmd) return void 0;
+    const processed = handleWhen(statement, locals);
+    if (processed === null) return NO_ACTION;
+    const result = cmd.handler(processed, locals);
+    return result !== void 0 ? result : false;
+  }
+  function getPrefixCmd(statement, locals) {
+    const trimmed = statement.trim();
+    const firstSpace = trimmed.indexOf(" ");
+    const cmdName = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
+    return prefixMap[cmdName];
+  }
+  function getInfixCmd(statement, locals) {
+    const whenIdx = statement.lastIndexOf(" when ");
+    const everythingBeforeWhen = whenIdx !== -1 ? statement.slice(0, whenIdx) : statement;
+    const parts = everythingBeforeWhen.split(" ");
+    for (const part of parts) {
+      if (infixMap[part]) {
+        return infixMap[part];
+      }
+    }
+    return void 0;
+  }
+  function getPostfixCmd(statement, locals) {
+    const whenIdx = statement.lastIndexOf(" when ");
+    const everythingBeforeWhen = whenIdx !== -1 ? statement.slice(0, whenIdx).trim() : statement.trim();
+    for (const cmd of Object.values(postfixMap)) {
+      if (cmd.postfix?.some((cmd2) => everythingBeforeWhen.endsWith(cmd2))) {
+        return cmd;
+      }
+    }
+    return void 0;
+  }
+
+  // src/statement.ts
+  function assignPath(pathExpr, value, locals) {
+    const segments = splitPathSegments(pathExpr);
+    if (!segments.length) return;
+    const baseKey = segments[0];
+    let current;
+    if (locals && Object.prototype.hasOwnProperty.call(locals, baseKey)) {
+      current = locals[baseKey];
+      if (segments.length === 1) {
+        locals[baseKey] = value;
+        return;
+      }
+    } else {
+      current = ctx().app.state[baseKey];
+      if (segments.length === 1) {
+        ctx().app.state[baseKey] = value;
+        return;
+      }
+    }
+    for (let i = 1; i < segments.length - 1; i += 1) {
+      const segment = segments[i];
+      const scopeValue2 = buildScope(locals);
+      if (Array.isArray(current) && segment.startsWith("[].(") && segment.endsWith(")")) {
+        const condition = segment.slice(4, -1);
+        const match = current.find((item) => {
+          const innerScope = Object.assign({}, scopeValue2, { it: item });
+          return Boolean(evaluateExpression(condition, innerScope, 0));
+        });
+        if (match !== void 0) {
+          current = match;
+          continue;
+        } else return;
+      } else if (segment.startsWith("[") && segment.endsWith("]")) {
+        const innerExpr = segment.slice(1, -1);
+        const lookup = evaluateExpression(innerExpr, scopeValue2, 0);
+        const key = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+        if (current[key] === void 0) {
+          current[key] = {};
+        }
+        current = current[key];
+      } else {
+        const key = segment;
+        if (current[key] === void 0) {
+          current[key] = {};
+        }
+        current = current[key];
+      }
+    }
+    const finalRawKey = segments[segments.length - 1];
+    const scopeValue = buildScope(locals);
+    if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
+      const condition = finalRawKey.slice(4, -1);
+      const index = current.findIndex((item) => {
+        const innerScope = Object.assign({}, scopeValue, { it: item });
+        return Boolean(evaluateExpression(condition, innerScope, 0));
+      });
+      if (index !== -1) {
+        current[index] = value;
+      }
+      return;
+    } else if (finalRawKey.startsWith("[") && finalRawKey.endsWith("]")) {
+      const innerExpr = finalRawKey.slice(1, -1);
+      const lookup = evaluateExpression(innerExpr, scopeValue, 0);
+      const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+      current[finalKey] = value;
+    } else {
+      current[finalRawKey] = value;
+    }
+  }
+  function deletePath(pathExpr, locals) {
+    const segments = splitPathSegments(pathExpr);
+    if (!segments.length) return;
+    const baseKey = segments[0];
+    let current;
+    if (locals && Object.prototype.hasOwnProperty.call(locals, baseKey)) {
+      current = locals[baseKey];
+      if (segments.length === 1) {
+        delete locals[baseKey];
+        return;
+      }
+    } else {
+      current = ctx().app.state[baseKey];
+      if (segments.length === 1) {
+        delete ctx().app.state[baseKey];
+        return;
+      }
+    }
+    for (let i = 1; i < segments.length - 1; i += 1) {
+      const segment = segments[i];
+      const scopeValue2 = buildScope(locals);
+      if (Array.isArray(current) && segment.startsWith("[].(") && segment.endsWith(")")) {
+        const condition = segment.slice(4, -1);
+        const match = current.find((item) => {
+          const innerScope = Object.assign({}, scopeValue2, { it: item });
+          return Boolean(evaluateExpression(condition, innerScope, 0));
+        });
+        if (match !== void 0) {
+          current = match;
+          continue;
+        } else return;
+      } else if (segment.startsWith("[") && segment.endsWith("]")) {
+        const innerExpr = segment.slice(1, -1);
+        const lookup = evaluateExpression(innerExpr, scopeValue2, 0);
+        const key = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+        if (current[key] === void 0) return;
+        current = current[key];
+      } else {
+        const key = segment;
+        if (current[key] === void 0) return;
+        current = current[key];
+      }
+    }
+    const finalRawKey = segments[segments.length - 1];
+    const scopeValue = buildScope(locals);
+    if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
+      const condition = finalRawKey.slice(4, -1);
+      const index = current.findIndex((item) => {
+        const innerScope = Object.assign({}, scopeValue, { it: item });
+        return Boolean(evaluateExpression(condition, innerScope, 0));
+      });
+      if (index !== -1) {
+        current.splice(index, 1);
+      }
+    } else if (finalRawKey.startsWith("[") && finalRawKey.endsWith("]")) {
+      const innerExpr = finalRawKey.slice(1, -1);
+      const lookup = evaluateExpression(innerExpr, scopeValue, 0);
+      const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+      if (Array.isArray(current) && typeof finalKey === "number") {
+        current.splice(finalKey, 1);
+      } else {
+        delete current[finalKey];
+      }
+    } else {
+      if (Array.isArray(current) && !isNaN(Number(finalRawKey))) {
+        current.splice(Number(finalRawKey), 1);
+      } else {
+        delete current[finalRawKey];
+      }
+    }
+  }
+  function executeStatement(statement, locals) {
+    const trimmed = String(statement || "").trim();
+    if (!trimmed) return true;
+    if (trimmed.includes("=") && !trimmed.match(/^.+?\.push\(/)) {
+      const assignmentMatch = trimmed.match(/^(.*?)(?<![!<>=])=(?!=)(.*)$/);
+      if (assignmentMatch) {
+        const left = assignmentMatch[1].trim();
+        const right = assignmentMatch[2].trim();
+        const builtinVal = handleBuiltin(right, locals);
+        if (builtinVal == STOP) {
+          return false;
+        }
+        if (builtinVal == NO_ACTION) {
+          return true;
+        }
+        const value = builtinVal !== void 0 ? builtinVal : evaluateExpression(right, buildScope(locals));
+        assignPath(left, value, locals);
+        return true;
+      }
+    }
+    const cmdResult = handleBuiltin(trimmed, locals);
+    if (cmdResult) {
+      if (cmdResult == STOP) {
+        return false;
+      }
+      return true;
+    }
+    const pushMatch = trimmed.match(/^(.+?)\.push\((.+)\)$/);
+    if (pushMatch) {
+      const path = pushMatch[1].trim();
+      const arg = pushMatch[2].trim();
+      const collection = evaluateExpression(path, buildScope(locals));
+      if (Array.isArray(collection)) {
+        const val = evaluateExpression(arg, buildScope(locals));
+        collection.push(val);
+        assignPath(path, collection, locals);
+      }
+      return true;
+    }
+    if (trimmed.includes("(") && trimmed.endsWith(")")) {
+      const parenIndex = trimmed.indexOf("(");
+      const funcName = trimmed.slice(0, parenIndex).trim();
+      const argsStr = trimmed.slice(parenIndex + 1, -1);
+      if (funcName === "window.__runeWebEmit") {
+        const args = argsStr ? splitTopLevel(argsStr, ",").map(
+          (arg) => evaluateExpression(arg, buildScope(locals))
+        ) : [];
+        const emitFn = getWindowProp("__runeWebEmit");
+        if (emitFn && typeof emitFn === "function") {
+          emitFn.apply(null, args);
+        }
+        return true;
+      }
+    }
+    return true;
+  }
+  function executeSteps(steps, locals) {
+    for (const step of steps) {
+      if (Object.prototype.hasOwnProperty.call(step, "Statement")) {
+        if (!executeStatement(step.Statement, locals)) return false;
+        continue;
+      }
+      if (Object.prototype.hasOwnProperty.call(step, "Conditional")) {
+        const conditional = step.Conditional;
+        if (Boolean(
+          evaluateExpression(
+            conditional.condition,
+            buildScope(locals)
+          )
+        )) {
+          if (!executeSteps(conditional.steps || [], locals)) return false;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(step, "ForLoop")) {
+        const loop = step.ForLoop;
+        const collection = evaluateExpression(
+          loop.collection,
+          buildScope(locals)
+        );
+        if (Array.isArray(collection)) {
+          for (let i = 0; i < collection.length; i++) {
+            const item = collection[i];
+            const childLocals = Object.assign(
+              {},
+              locals || {}
+            );
+            childLocals[loop.item_name] = item;
+            if (loop.index_name) {
+              childLocals[loop.index_name] = i;
+            }
+            if (!executeSteps(loop.steps || [], childLocals)) {
+              break;
+            }
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  // src/events.ts
+  function parseHandlerSpec(spec) {
+    const trimmed = String(spec || "").trim();
+    if (!trimmed) return null;
+    const match = trimmed.match(/^([A-Za-z_][\w-]*)(?:\((.*)\))?$/);
+    if (match) {
+      const args = match[2] ? splitTopLevel(match[2], ",") : [];
+      return { name: match[1], args, raw: trimmed };
+    }
+    return { name: "", args: [], raw: trimmed };
+  }
+  function readScope(element) {
+    const raw = element.getAttribute("data-rune-scope");
+    if (!raw) return {};
+    try {
+      return JSON.parse(raw);
+    } catch (_err) {
+      return {};
+    }
+  }
+  function bindEvent(eventName) {
+    document.addEventListener(eventName, function(event) {
+      const selector = `[data-on-${eventName}]`;
+      const element = event.target && event.target.closest ? event.target.closest(selector) : null;
+      if (!element) return;
+      const linkClick = eventName === "click" && element.tagName === "A";
+      const mouse = event;
+      if (linkClick && (mouse.ctrlKey || mouse.metaKey || mouse.shiftKey || mouse.altKey || mouse.button > 0 || element.getAttribute("target") === "_blank")) return;
+      const href = linkClick ? element.getAttribute("href") : null;
+      const spec = parseHandlerSpec(
+        element.getAttribute(`data-on-${eventName}`) || ""
+      );
+      if (!spec) return;
+      const locals = readScope(element);
+      if (spec.name) {
+        const scope = buildScope(
+          Object.assign({}, locals, { this: element })
+        );
+        const args = spec.args.map(
+          (arg) => evaluateExpression(arg, scope)
+        );
+        ctx().app.invokeAction(spec.name, args, locals);
+      } else {
+        executeStatement(spec.raw, locals);
+      }
+      if (href?.startsWith("#") && href.length > 1 && !event.defaultPrevented) {
+        requestAnimationFrame(() => {
+          let id = href.slice(1);
+          try {
+            id = decodeURIComponent(id);
+          } catch (_) {
+          }
+          document.getElementById(id)?.scrollIntoView();
+        });
+      }
+    });
+  }
+  function createComponentRender(componentId) {
+    return function() {
+      const context = ctx();
+      setWindowProp("__renderingComponent", componentId);
+      context.app.computeDerived();
+      const elem = document.getElementById(componentId);
+      if (elem) {
+        const newHtml = renderNode(context.pageTree, {});
+        elem.innerHTML = newHtml;
+      }
+      setWindowProp("__renderingComponent", null);
+    };
+  }
+  function setupMemoryUpdateListener() {
+    const context = ctx();
+    const ws = getWindowProp("__ws");
+    if (ws && ws.addEventListener) {
+      ws.addEventListener("message", function(event) {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "memory_update" && data.key) {
+            context.app.state[data.key] = data.value;
+            if (context.memorySubscriptions[data.key]) {
+              context.memorySubscriptions[data.key].forEach(
+                (componentId) => {
+                  if (componentId === "app") {
+                    requestAnimationFrame(
+                      context.app.render.bind(context.app)
+                    );
+                  } else {
+                    const componentRender = createComponentRender(componentId);
+                    requestAnimationFrame(componentRender);
+                  }
+                }
+              );
+            } else {
+              requestAnimationFrame(context.app.render.bind(context.app));
+            }
+          }
+        } catch (_err) {
+        }
+      });
+    }
+  }
+
+  // src/index.ts
+  function boot(config) {
+    const app = {
+      state: {},
+      derived: {},
+      computeDerived() {
+        const context = ctx();
+        const baseScope = buildScope({});
+        for (const [name, def] of Object.entries(
+          context.derivedDefinitions
+        )) {
+          const sourceValue = resolveValue(def.source, baseScope);
+          const sourceKey = valueToString(sourceValue);
+          let resolved = void 0;
+          for (const currentCase of def.cases || []) {
+            const matcher = normalizeLiteral(currentCase.matcher);
+            if (matcher === "_" || matcher === sourceKey) {
+              resolved = evaluateExpression(
+                currentCase.value,
+                buildScope({})
+              );
+              break;
+            }
+          }
+          this.derived[name] = resolved;
+        }
+      },
+      render() {
+        const context = ctx();
+        if (context.isRendering) return;
+        context.isRendering = true;
+        try {
+          this.computeDerived();
+          const root = document.getElementById("app");
+          if (!root) return;
+          root.innerHTML = renderNode(context.pageTree, {});
+        } finally {
+          context.isRendering = false;
+        }
+      },
+      invokeAction(name, args, locals) {
+        const context = ctx();
+        const def = context.actionDefinitions[name];
+        if (!def) {
+          if (typeof window !== "undefined" && typeof window[name] === "function") {
+            window[name](...args);
+          }
+          return;
+        }
+        const scopedLocals = Object.assign(
+          {},
+          locals || {}
+        );
+        (def.params || []).forEach((param, index) => {
+          scopedLocals[param] = args[index];
+        });
+        executeSteps(def.steps || [], scopedLocals);
+      }
+    };
+    initContext({
+      pageTree: config.pageTree,
+      derivedDefinitions: config.derivedDefinitions,
+      helperDefinitions: config.helperDefinitions,
+      actionDefinitions: config.actionDefinitions,
+      i18nData: config.i18nData,
+      app,
+      isRendering: false,
+      memorySubscriptions: {}
+    });
+    app.state = makeReactive(
+      Object.assign({}, config.stateJson, { i18n: config.i18nData })
+    );
+    const originalRender = app.render;
+    app.render = function() {
+      setWindowProp("__renderingComponent", "app");
+      originalRender.call(this);
+      setWindowProp("__renderingComponent", null);
+    };
+    let activeTimerId = null;
+    app.startTimer = function(action, ms) {
+      if (activeTimerId !== null) clearInterval(activeTimerId);
+      activeTimerId = setInterval(() => {
+        app.invokeAction(action, []);
+      }, ms);
+    };
+    app.stopTimer = function() {
+      if (activeTimerId !== null) {
+        clearInterval(activeTimerId);
+        activeTimerId = null;
+      }
+    };
+    setupMemoryUpdateListener();
+    bindEvent("click");
+    bindEvent("change");
+    bindEvent("input");
+    if (config.keys && typeof window !== "undefined") {
+      window.addEventListener("keydown", (event) => {
+        const keyMap = config.keys;
+        const action = keyMap[event.code] || keyMap[event.key] || keyMap[event.key.toLowerCase()] || keyMap[event.code.toLowerCase()];
+        if (action) {
+          event.preventDefault();
+          app.invokeAction(action, []);
+        }
+      });
+    }
+    if (config.timer) {
+      const match = String(config.timer).trim().match(/^([A-Za-z_][\w-]*)\s*([0-9]*\.?[0-9]+)\s*(ms|s)?$/i);
+      if (match) {
+        const action = match[1];
+        let ms = Number(match[2]);
+        if (match[3]?.toLowerCase() === "s") ms *= 1e3;
+        app.startTimer(action, ms);
+      }
+    }
+    if (config.wsEndpoint) {
+      setupWebSocket(config.wsEndpoint, app);
+    }
+    setWindowProp("runeWebApp", app);
+    app.render();
+    return app;
+  }
+  function setupWebSocket(endpoint, app) {
+    setWindowProp("__runeWebEmit", function(eventName, payload) {
+      const ws2 = getWindowProp("__runeWebSocket");
+      if (!ws2 || ws2.readyState !== WebSocket.OPEN) {
+        console.warn("WebSocket not connected");
+        return;
+      }
+      ws2.send(JSON.stringify({ type: eventName, payload: payload || {} }));
+    });
+    const ws = new WebSocket(endpoint);
+    setWindowProp("__runeWebSocket", ws);
+    ws.onmessage = function(event) {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === "memory_update") {
+          app.state[message.key] = message.value;
+          app.render();
+        }
+      } catch (_err) {
+      }
+    };
+    ws.onerror = function(error) {
+      console.error("WebSocket error:", error);
+    };
+  }
+  return __toCommonJS(index_exports);
+})();

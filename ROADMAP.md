@@ -158,3 +158,19 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
 - [ ] **Shareable Playgrounds & Multi-File Tabs in Browser Emulator**:
   - Add URL hash encoding or GitHub Gist export to the browser sandbox for sharing runnable snippets.
   - Add multi-file tabs (`app.rune`, `schemas.rune`, `data.csv`) to test multi-file imports (`import "..."`) in-browser.
+
+---
+
+### Track 8: Game Development Abilities & Interactive Applications
+
+- [x] **Rune-Web Game Abilities & Space Invaders**:
+  - Implemented real-time game loop ticker (`timer = tick 40ms` in `@Logic` and builtins `start-timer` / `stop-timer`).
+  - Implemented zero-boilerplate declarative keybindings (`keys:` in `@Logic` mapping `ArrowLeft`, `ArrowRight`, `Space`, etc.).
+  - Added 2D spatial and game math primitives to expression engine: `collide(a, b, w, h)`, `clamp(val, min, max)`, `abs(val)`, `random(min, max)`, `min(a, b)`, `max(a, b)`.
+  - Added comprehensive arithmetic (`-`, `*`, `/`, `%`) and numeric comparison (`<`, `<=`, `>=`, `>`) operators to expression engine.
+  - Built complete retro arcade Space Invaders example in pure Rune-Web under `examples/space_invaders/`.
+  - Added dedicated "Games" section and interactive playable Space Invaders showcase to [vectrune.com](https://vectrune.com). *(Release: `v0.2.8` - 2026-11-04)*
+- [ ] **2D Particle System & Sound Effects**:
+  - Add declarative particle emitters for arcade explosions and thruster trails.
+  - Add Web Audio API synthesis primitives (`sound.play "laser"`, `sound.play "explosion"`, `sound.play "retro_beep"`) in Rune-Web.
+

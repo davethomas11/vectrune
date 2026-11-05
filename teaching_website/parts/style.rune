@@ -1379,6 +1379,35 @@ responsive:
         .hero, .sandbox-container:
             gap = 1rem
 
+        .space-invaders-page .example-preview:
+            min-height = 640px
+            border = 2px solid #00ff88
+            border-radius = 12px
+            box-shadow = 0 0 25px rgba(0, 255, 136, 0.2)
+
+        .features-grid:
+            display = grid
+            grid-template-columns = repeat(auto-fit, minmax(220px, 1fr))
+            gap = 1rem
+            margin = 1.25rem 0 1.5rem 0
+
+        .feature-card:
+            background = {panel-strong}
+            border = 1px solid rgba(0, 255, 136, 0.2)
+            border-radius = 8px
+            padding = 1rem
+
+        .feature-card h3:
+            font-size = 1.05rem
+            color = #00ff88
+            margin = 0 0 0.5rem 0
+
+        .feature-card p:
+            font-size = 0.88rem
+            color = {text-soft}
+            margin = 0
+            line-height = 1.5
+
         .hero h2:
             font-size = clamp(2rem, 7vw, 2.6rem)
 

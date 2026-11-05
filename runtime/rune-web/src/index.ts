@@ -112,11 +112,49 @@ export function boot(config: RuneWebConfig): RuneApp {
     setWindowProp('__renderingComponent', null);
   };
 
+  // Timer management
+  let activeTimerId: ReturnType<typeof setInterval> | null = null;
+  app.startTimer = function (action: string, ms: number) {
+    if (activeTimerId !== null) clearInterval(activeTimerId);
+    activeTimerId = setInterval(() => {
+      app.invokeAction(action, []);
+    }, ms);
+  };
+  app.stopTimer = function () {
+    if (activeTimerId !== null) {
+      clearInterval(activeTimerId);
+      activeTimerId = null;
+    }
+  };
+
   // Wire up events
   setupMemoryUpdateListener();
   bindEvent('click');
   bindEvent('change');
   bindEvent('input');
+
+  // Keybindings for games and interactive apps
+  if (config.keys && typeof window !== 'undefined') {
+    window.addEventListener('keydown', (event: KeyboardEvent) => {
+      const keyMap = config.keys!;
+      const action = keyMap[event.code] || keyMap[event.key] || keyMap[event.key.toLowerCase()] || keyMap[event.code.toLowerCase()];
+      if (action) {
+        event.preventDefault();
+        app.invokeAction(action, []);
+      }
+    });
+  }
+
+  // Set up periodic timer / game loop if configured in @Logic
+  if (config.timer) {
+    const match = String(config.timer).trim().match(/^([A-Za-z_][\w-]*)\s*([0-9]*\.?[0-9]+)\s*(ms|s)?$/i);
+    if (match) {
+      const action = match[1];
+      let ms = Number(match[2]);
+      if (match[3]?.toLowerCase() === 's') ms *= 1000;
+      app.startTimer(action, ms);
+    }
+  }
 
   // Set up WebSocket if endpoint provided
   if (config.wsEndpoint) {

@@ -191,4 +191,38 @@ describe('evaluateExpression', () => {
   it('handles depth limit', () => {
     expect(evaluateExpression('count', buildScope({}), 100)).toBe(undefined);
   });
+
+  it('evaluates subtraction, multiplication, division, and modulo', () => {
+    expect(evaluateExpression('100 - 30', buildScope({}))).toBe(70);
+    expect(evaluateExpression('6 * 7', buildScope({}))).toBe(42);
+    expect(evaluateExpression('100 / 4', buildScope({}))).toBe(25);
+    expect(evaluateExpression('17 % 5', buildScope({}))).toBe(2);
+  });
+
+  it('evaluates numeric comparisons <, <=, >, >=', () => {
+    expect(evaluateExpression('10 < 20', buildScope({}))).toBe(true);
+    expect(evaluateExpression('20 < 10', buildScope({}))).toBe(false);
+    expect(evaluateExpression('10 <= 10', buildScope({}))).toBe(true);
+    expect(evaluateExpression('15 >= 15', buildScope({}))).toBe(true);
+    expect(evaluateExpression('25 > 10', buildScope({}))).toBe(true);
+  });
+
+  it('evaluates spatial collide, clamp, abs, random, min, max', () => {
+    const scope = buildScope({
+      bullet: { x: 100, y: 150 },
+      alien: { x: 105, y: 152 },
+      farAlien: { x: 200, y: 300 },
+    });
+    expect(evaluateExpression('collide(bullet, alien, 20, 20)', scope)).toBe(true);
+    expect(evaluateExpression('collide(bullet, farAlien, 20, 20)', scope)).toBe(false);
+    expect(evaluateExpression('clamp(500, 10, 400)', scope)).toBe(400);
+    expect(evaluateExpression('clamp(0, 10, 400)', scope)).toBe(10);
+    expect(evaluateExpression('clamp(150, 10, 400)', scope)).toBe(150);
+    expect(evaluateExpression('abs(0 - 25)', scope)).toBe(25);
+    const rnd = evaluateExpression('random(5, 10)', scope) as number;
+    expect(rnd).toBeGreaterThanOrEqual(5);
+    expect(rnd).toBeLessThanOrEqual(10);
+    expect(evaluateExpression('min(10, 5, 20)', scope)).toBe(5);
+    expect(evaluateExpression('max(10, 5, 20)', scope)).toBe(20);
+  });
 });

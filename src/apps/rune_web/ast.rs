@@ -195,6 +195,12 @@ pub struct LogicDefinition {
 
     /// Named action handlers (event handlers, lifecycle)
     pub actions: HashMap<String, ActionDefinition>,
+
+    /// Periodic timer ticker (e.g., "tick 40ms")
+    pub timer: Option<String>,
+
+    /// Key bindings mapping key name or code to action name (e.g. "ArrowLeft" -> "moveLeft")
+    pub keys: HashMap<String, String>,
 }
 
 /// A single action handler.

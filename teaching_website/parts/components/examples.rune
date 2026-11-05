@@ -36,3 +36,9 @@ view:
                 h3 "%i18n.Examples.counter_title%"
                 p "%i18n.Examples.counter_desc%"
                 a .secondary-cta href=#app click="openExample('counter')" "%i18n.Examples.play_label%"
+
+            article .example-card:
+                span .tag .tag-advanced "%i18n.SpaceInvaders.badge%"
+                h3 "%i18n.Examples.invaders_title%"
+                p "%i18n.Examples.invaders_desc%"
+                a .secondary-cta href=#app click="navigate('space_invaders')" "%i18n.SpaceInvaders.play_label%"

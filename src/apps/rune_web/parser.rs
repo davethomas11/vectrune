@@ -170,6 +170,8 @@ pub fn parse_rune_web_frontend(
             derived: HashMap::new(),
             helpers: HashMap::new(),
             actions: HashMap::new(),
+            timer: None,
+            keys: HashMap::new(),
         });
 
         for (k, v) in &page_def.state {
@@ -1329,11 +1331,53 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
         }
     }
 
+    // Parse timer/interval
+    let timer = section.kv.get("timer")
+        .or_else(|| section.kv.get("interval"))
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+        .or_else(|| {
+            section.series.get("timer").or_else(|| section.series.get("interval"))
+                .and_then(|items| items.first())
+                .and_then(|v| match v {
+                    Value::String(s) => Some(s.clone()),
+                    _ => None,
+                })
+        });
+
+    // Parse keys mapping
+    let mut keys = HashMap::new();
+    if let Some(key_items) = section.series.get("keys") {
+        for item in key_items {
+            match item {
+                Value::String(s) => {
+                    let trimmed = s.trim();
+                    if let Some((k, v)) = trimmed.split_once("->") {
+                        keys.insert(k.trim().to_string(), v.trim().to_string());
+                    } else if let Some((k, v)) = trimmed.split_once('=') {
+                        keys.insert(k.trim().to_string(), v.trim().to_string());
+                    }
+                }
+                Value::Map(map) => {
+                    for (k, v) in map {
+                        let val_str = match v {
+                            Value::String(s) => s.clone(),
+                            _ => format!("{:?}", v),
+                        };
+                        keys.insert(k.trim().to_string(), val_str.trim().to_string());
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
     Ok(LogicDefinition {
         state,
         derived,
         helpers,
         actions,
+        timer,
+        keys,
     })
 }
 

@@ -1035,5 +1035,7 @@ fn create_websocket_logic_block(_ws_endpoint: &str) -> ast::LogicDefinition {
         derived: HashMap::new(),
         helpers: HashMap::new(),
         actions,
+        timer: None,
+        keys: HashMap::new(),
     }
 }

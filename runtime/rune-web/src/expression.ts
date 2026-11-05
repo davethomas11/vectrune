@@ -249,6 +249,58 @@ export function evaluateExpression(
     );
   }
 
+  // --- Spatial & Game functions ---
+  if (trimmed.startsWith('collide(') && trimmed.endsWith(')')) {
+    const argsStr = trimmed.slice(8, -1);
+    const parts = splitTopLevel(argsStr, ',');
+    if (parts.length >= 2) {
+      const a = evaluateExpression(parts[0], scope, nextDepth) as any;
+      const b = evaluateExpression(parts[1], scope, nextDepth) as any;
+      const w = parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : 20;
+      const h = parts.length >= 4 ? Number(evaluateExpression(parts[3], scope, nextDepth)) : w;
+      if (a && b && typeof a === 'object' && typeof b === 'object' && a.x !== undefined && a.y !== undefined && b.x !== undefined && b.y !== undefined) {
+        return Math.abs(Number(a.x) - Number(b.x)) < w && Math.abs(Number(a.y) - Number(b.y)) < h;
+      }
+    }
+    return false;
+  }
+
+  if (trimmed.startsWith('clamp(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(6, -1), ',');
+    if (parts.length === 3) {
+      const v = Number(evaluateExpression(parts[0], scope, nextDepth));
+      const min = Number(evaluateExpression(parts[1], scope, nextDepth));
+      const max = Number(evaluateExpression(parts[2], scope, nextDepth));
+      return Math.min(Math.max(v, min), max);
+    }
+  }
+
+  if (trimmed.startsWith('abs(') && trimmed.endsWith(')')) {
+    const val = Number(evaluateExpression(trimmed.slice(4, -1), scope, nextDepth));
+    return Math.abs(val);
+  }
+
+  if (trimmed.startsWith('random(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(7, -1), ',');
+    if (parts.length >= 2) {
+      const min = Number(evaluateExpression(parts[0], scope, nextDepth));
+      const max = Number(evaluateExpression(parts[1], scope, nextDepth));
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+  }
+
+  if (trimmed.startsWith('min(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(4, -1), ',');
+    const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
+    return Math.min(...nums);
+  }
+
+  if (trimmed.startsWith('max(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(4, -1), ',');
+    const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
+    return Math.max(...nums);
+  }
+
   // --- Helper call ---
   const helperCall = parseHelperCall(trimmed);
   if (helperCall) {
@@ -405,6 +457,36 @@ export function evaluateExpression(
     );
   }
 
+  // --- Comparison operators (>= <= > <) ---
+  if (includesTopLevel(trimmed, ' >= ')) {
+    const [left, right] = splitTopLevel(trimmed, ' >= ');
+    return (
+      (evaluateExpression(left, scope, nextDepth) as number) >=
+      (evaluateExpression(right, scope, nextDepth) as number)
+    );
+  }
+  if (includesTopLevel(trimmed, ' <= ')) {
+    const [left, right] = splitTopLevel(trimmed, ' <= ');
+    return (
+      (evaluateExpression(left, scope, nextDepth) as number) <=
+      (evaluateExpression(right, scope, nextDepth) as number)
+    );
+  }
+  if (includesTopLevel(trimmed, ' > ')) {
+    const [left, right] = splitTopLevel(trimmed, ' > ');
+    return (
+      (evaluateExpression(left, scope, nextDepth) as number) >
+      (evaluateExpression(right, scope, nextDepth) as number)
+    );
+  }
+  if (includesTopLevel(trimmed, ' < ')) {
+    const [left, right] = splitTopLevel(trimmed, ' < ');
+    return (
+      (evaluateExpression(left, scope, nextDepth) as number) <
+      (evaluateExpression(right, scope, nextDepth) as number)
+    );
+  }
+
   // --- Addition / concatenation ---
   if (includesTopLevel(trimmed, ' + ')) {
     return splitTopLevel(trimmed, ' + ').reduce(
@@ -419,13 +501,42 @@ export function evaluateExpression(
     );
   }
 
-  // --- Comparison operators (> < >= <=) ---
-  if (includesTopLevel(trimmed, ' > ')) {
-    const [left, right] = splitTopLevel(trimmed, ' > ');
-    return (
-      (evaluateExpression(left, scope, nextDepth) as number) >
-      (evaluateExpression(right, scope, nextDepth) as number)
+  // --- Subtraction ---
+  if (includesTopLevel(trimmed, ' - ')) {
+    const parts = splitTopLevel(trimmed, ' - ');
+    const first = Number(evaluateExpression(parts[0], scope, nextDepth));
+    return parts.slice(1).reduce((acc: number, part: string) => {
+      return acc - Number(evaluateExpression(part, scope, nextDepth));
+    }, first);
+  }
+
+  // --- Multiplication ---
+  if (includesTopLevel(trimmed, ' * ')) {
+    return splitTopLevel(trimmed, ' * ').reduce(
+      (acc: number, part: string, idx: number) => {
+        const val = Number(evaluateExpression(part, scope, nextDepth));
+        return idx === 0 ? val : acc * val;
+      },
+      1,
     );
+  }
+
+  // --- Division ---
+  if (includesTopLevel(trimmed, ' / ')) {
+    const parts = splitTopLevel(trimmed, ' / ');
+    const first = Number(evaluateExpression(parts[0], scope, nextDepth));
+    return parts.slice(1).reduce((acc: number, part: string) => {
+      return acc / Number(evaluateExpression(part, scope, nextDepth));
+    }, first);
+  }
+
+  // --- Modulo ---
+  if (includesTopLevel(trimmed, ' % ')) {
+    const parts = splitTopLevel(trimmed, ' % ');
+    const first = Number(evaluateExpression(parts[0], scope, nextDepth));
+    return parts.slice(1).reduce((acc: number, part: string) => {
+      return acc % Number(evaluateExpression(part, scope, nextDepth));
+    }, first);
   }
 
   // --- Swap ---

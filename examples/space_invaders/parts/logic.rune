@@ -1,0 +1,133 @@
+@Logic/invaders
+timer = tick 40ms
+
+keys:
+    ArrowLeft -> moveLeft
+    ArrowRight -> moveRight
+    Space -> fire
+    KeyA -> moveLeft
+    KeyD -> moveRight
+
+state:
+    player = { "x": 220, "y": 420 }
+    bullets = []
+    alien_bullets = []
+    aliens = [
+        { "x": 50, "y": 40, "start_x": 50, "start_y": 40, "type": 1, "alive": true },
+        { "x": 115, "y": 40, "start_x": 115, "start_y": 40, "type": 1, "alive": true },
+        { "x": 180, "y": 40, "start_x": 180, "start_y": 40, "type": 1, "alive": true },
+        { "x": 245, "y": 40, "start_x": 245, "start_y": 40, "type": 1, "alive": true },
+        { "x": 310, "y": 40, "start_x": 310, "start_y": 40, "type": 1, "alive": true },
+        { "x": 375, "y": 40, "start_x": 375, "start_y": 40, "type": 1, "alive": true },
+        { "x": 50, "y": 80, "start_x": 50, "start_y": 80, "type": 2, "alive": true },
+        { "x": 115, "y": 80, "start_x": 115, "start_y": 80, "type": 2, "alive": true },
+        { "x": 180, "y": 80, "start_x": 180, "start_y": 80, "type": 2, "alive": true },
+        { "x": 245, "y": 80, "start_x": 245, "start_y": 80, "type": 2, "alive": true },
+        { "x": 310, "y": 80, "start_x": 310, "start_y": 80, "type": 2, "alive": true },
+        { "x": 375, "y": 80, "start_x": 375, "start_y": 80, "type": 2, "alive": true },
+        { "x": 50, "y": 120, "start_x": 50, "start_y": 120, "type": 3, "alive": true },
+        { "x": 115, "y": 120, "start_x": 115, "start_y": 120, "type": 3, "alive": true },
+        { "x": 180, "y": 120, "start_x": 180, "start_y": 120, "type": 3, "alive": true },
+        { "x": 245, "y": 120, "start_x": 245, "start_y": 120, "type": 3, "alive": true },
+        { "x": 310, "y": 120, "start_x": 310, "start_y": 120, "type": 3, "alive": true },
+        { "x": 375, "y": 120, "start_x": 375, "start_y": 120, "type": 3, "alive": true }
+    ]
+    alien_dir = 1
+    alien_speed = 3
+    score = 0
+    lives = 3
+    status = ready
+    game_message = "SPACE INVADERS"
+
+derive:
+    alien_count from aliens:
+        _ then "aliens.filter it.alive.length"
+
+action moveLeft:
+    stop when status != "playing"
+    player.x = clamp(player.x - 18, 10, 434)
+
+action moveRight:
+    stop when status != "playing"
+    player.x = clamp(player.x + 18, 10, 434)
+
+action fire:
+    stop when status != "playing"
+    stop when bullets.length >= 3
+    bullets.push({ "x": player.x + 16, "y": 405, "alive": true })
+
+action start:
+    score = 0
+    lives = 3
+    alien_dir = 1
+    player.x = 220
+    bullets = []
+    alien_bullets = []
+    for a in aliens:
+        a.alive = true
+        a.x = a.start_x
+        a.y = a.start_y
+    status = playing
+    game_message = ""
+
+action tick:
+    stop when status != "playing"
+
+    # 1. Update player bullets
+    for b in bullets:
+        b.y = b.y - 12
+    bullets = bullets.filter it.y > 0 and it.alive
+
+    # 2. Update alien bullets
+    for ab in alien_bullets:
+        ab.y = ab.y + 7
+    alien_bullets = alien_bullets.filter it.y < 460 and it.alive
+
+    # 3. Check alien bullet collision with player
+    for ab in alien_bullets:
+        if collide(ab, player, 20, 16):
+            ab.alive = false
+            lives = lives - 1
+            if lives <= 0:
+                status = game_over
+                game_message = "GAME OVER"
+                stop
+
+    # 4. Move aliens and detect boundary reversal
+    change_dir = false
+    for a in aliens:
+        if a.alive:
+            a.x = a.x + (alien_dir * alien_speed)
+            if a.x > 430 or a.x < 20:
+                change_dir = true
+            if a.y > 400:
+                status = game_over
+                game_message = "INVASION COMPLETE! GAME OVER"
+                stop
+
+    if change_dir:
+        alien_dir = 0 - alien_dir
+        for a in aliens:
+            a.y = a.y + 16
+
+    # 5. Check player bullet collisions with aliens
+    for b in bullets:
+        for a in aliens:
+            if a.alive and b.alive:
+                if collide(b, a, 22, 18):
+                    a.alive = false
+                    b.alive = false
+                    score = score + 20
+
+    # 6. Occasional alien return fire
+    if random(1, 22) == 1:
+        for a in aliens:
+            if a.alive and random(1, 5) == 1:
+                alien_bullets.push({ "x": a.x + 12, "y": a.y + 16, "alive": true })
+                stop
+
+    # 7. Check victory condition
+    if aliens.filter it.alive.length == 0:
+        status = victory
+        game_message = "EARTH DEFENDED! YOU WIN!"
+        stop
