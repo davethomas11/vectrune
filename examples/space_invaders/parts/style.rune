@@ -48,12 +48,26 @@ rules:
     .stat-label:
         color = #8892b0
 
-    .game-arena:
+    .arena-viewport:
         position = relative
         width = 480px
         max-width = 100%
-        height = 460px
+        aspect-ratio = 480 / 460
         margin = 0 auto
+        overflow = hidden
+        display = flex
+        justify-content = center
+        align-items = flex-start
+
+    .game-arena:
+        position = absolute
+        top = 0
+        left = 50%
+        width = 480px
+        height = 460px
+        min-width = 480px
+        transform-origin = top center
+        transform = translateX(-50%)
         background = #04060d
         border = 2px solid #233554
         border-radius = 8px
@@ -251,7 +265,7 @@ rules:
 responsive:
     (max-width: 520px):
         .arcade-cabinet:
-            padding = 0.6rem
+            padding = 0.5rem
             margin = 0.5rem auto
             border-width = 2px
             border-radius = 12px
@@ -261,10 +275,11 @@ responsive:
         .stats-bar:
             font-size = 0.8rem
             letter-spacing = 1px
+        .arena-viewport:
+            width = calc(100vw - 2rem)
+            max-width = 100%
         .game-arena:
-            transform-origin = top center
-            transform = scale(calc((100vw - 2.5rem) / 480))
-            margin-bottom = calc(460px * (calc((100vw - 2.5rem) / 480) - 1))
+            transform = translateX(-50%) scale(calc((100vw - 2rem) / 480))
         .arcade-controls:
             gap = 0.4rem
             margin-top = 0.6rem

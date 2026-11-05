@@ -26,30 +26,31 @@ view:
                 span "LIVES: {lives}"
                 span "ALIENS: {alien_count}"
 
-        div .game-arena:
-            div .arena-grid
+        div .arena-viewport:
+            div .game-arena:
+                div .arena-grid
 
-            # Player Cannon
-            div .player style="left: {player.x}px;":
-                div .player-canon
+                # Player Cannon
+                div .player style="left: {player.x}px;":
+                    div .player-canon
 
-            # Player Lasers
-            div .bullet <- bullet in bullets:
-                style = "left: {bullet.x}px; top: {bullet.y}px;"
+                # Player Lasers
+                div .bullet <- bullet in bullets:
+                    style = "left: {bullet.x}px; top: {bullet.y}px;"
 
-            # Alien Lasers
-            div .alien-bullet <- ab in alien_bullets:
-                style = "left: {ab.x}px; top: {ab.y}px;"
+                # Alien Lasers
+                div .alien-bullet <- ab in alien_bullets:
+                    style = "left: {ab.x}px; top: {ab.y}px;"
 
-            # Invader Grid
-            div .alien .type-{alien.type} style="left: {alien.x}px; top: {alien.y}px; display: {alien.alive ? 'flex' : 'none'};" <- alien in aliens:
-                "👾"
+                # Invader Grid
+                div .alien .type-{alien.type} style="left: {alien.x}px; top: {alien.y}px; display: {alien.alive ? 'flex' : 'none'};" <- alien in aliens:
+                    "👾"
 
-            # Game State Overlay
-            if status != "playing":
-                div .overlay:
-                    h2 .overlay-title "{game_message}"
-                    button .start-btn click=start on_pointerdown=start "PLAY NOW"
+                # Game State Overlay
+                if status != "playing":
+                    div .overlay:
+                        h2 .overlay-title "{game_message}"
+                        button .start-btn click=start on_pointerdown=start "PLAY NOW"
 
         # Arcade Controls for Touch and Mouse
         div .arcade-controls:
