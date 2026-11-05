@@ -1,3 +1,6 @@
+@Navigator
+url bound to activePage
+
 @Component/SidebarLayout
 state:
     activePage = "home"

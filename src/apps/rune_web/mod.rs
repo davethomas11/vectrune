@@ -374,7 +374,7 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, activ
         .unwrap_or_else(|| String::from("<p>Page not found</p>"));
 
     let style_html = render_styles(frontend, page.and_then(|p| p.style_ref.clone()));
-    let logic_html = render_logic(page, logic.cloned(), &i18n_json, ws_endpoint, pre_fetched_memory);
+    let logic_html = render_logic(page, logic.cloned(), &i18n_json, ws_endpoint, pre_fetched_memory, frontend.navigator.clone());
 
     format!(
         r#"<!DOCTYPE html>
@@ -999,12 +999,19 @@ fn render_styles(frontend: &ast::RuneWebFrontend, style_ref: Option<String>) -> 
 
 /// Render JavaScript setup for client-side logic.
 /// Uses the JavaScript code generator to create functional handler code.
-fn render_logic(page: Option<&ast::PageDefinition>, logic: Option<ast::LogicDefinition>, i18n_json: &str, ws_endpoint: Option<String>, pre_fetched_memory: &JsonMap<String, JsonValue>) -> String {
+fn render_logic(
+    page: Option<&ast::PageDefinition>,
+    logic: Option<ast::LogicDefinition>,
+    i18n_json: &str,
+    ws_endpoint: Option<String>,
+    pre_fetched_memory: &JsonMap<String, JsonValue>,
+    navigator: Option<ast::NavigatorDefinition>,
+) -> String {
     match (page, logic) {
         (Some(page), Some(logic)) => {
             let memory_seed: std::collections::HashMap<String, serde_json::Value> =
                 pre_fetched_memory.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-            let codegen = jscodegen::JsCodegen::new(page.view_tree.clone(), logic, i18n_json.to_string(), ws_endpoint, memory_seed);
+            let codegen = jscodegen::JsCodegen::new(page.view_tree.clone(), logic, i18n_json.to_string(), ws_endpoint, memory_seed, navigator);
             let js_code = codegen.generate();
             format!("<script>\n{}</script>", js_code)
         }

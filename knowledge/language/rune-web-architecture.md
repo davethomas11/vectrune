@@ -37,15 +37,16 @@ derive:
 
 ### 1. Parsing Layer (`parser.rs`)
 
-**Responsibility**: Extract and normalize `@Page`, `@Component`, `@Style`, and `@Logic` sections into internal AST structures.
+**Responsibility**: Extract and normalize `@Page`, `@Component`, `@Style`, `@Logic`, and `@Navigator` sections into internal AST structures.
 
 **Key Components**:
 - `parse_rune_web_frontend()` - Main entry point, orchestrates extraction of all frontend section types
 - `parse_style_properties()` - **Recursive** parser for nested CSS rules
 - `extract_indented_attributes()` - Detects indented KV pairs (e.g. `type = text`) at the start of view elements
 - `parse_logic_section()` - Normalizes state, derived values, and action definitions
+- `@Navigator` extraction - Extracts two-way URL state bindings (`url bound to <var>`)
 
-**Output**: `RuneWebFrontend` AST with typed page/component/style/logic/i18n maps
+**Output**: `RuneWebFrontend` AST with typed page/component/style/logic/i18n maps and optional navigator configuration
 
 ### 2. AST Layer (`ast.rs`)
 
@@ -53,6 +54,7 @@ derive:
 
 **Key Types**:
 - `RuneWebFrontend` - Root container for all frontend definitions
+- `NavigatorDefinition` - Two-way URL navigation state binding (`bind`, `mode`, `param`)
 - `PageDefinition` - Represents a single page with title, style/logic refs, and view tree
 - `ComponentDefinition` - Represents a reusable view tree that can be expanded into pages or other components
 - `ViewNode` - Recursive enum for elements, loops, conditionals, text, and element-level `for_each` bindings

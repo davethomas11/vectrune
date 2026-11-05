@@ -33,6 +33,7 @@ mod memory_hooks_integration_tests {
             kv,
             series: HashMap::new(),
             records: Vec::new(),
+            source_file: None,
         }
     }
 
@@ -193,6 +194,7 @@ mod memory_hooks_integration_tests {
             kv,
             series: HashMap::new(),
             records: Vec::new(),
+            source_file: None,
         });
 
         let doc = RuneDocument { sections };

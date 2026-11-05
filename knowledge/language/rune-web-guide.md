@@ -41,7 +41,26 @@ bindings:
     .active <-> tab
 ```
 
-A button with `{.active when 'schedule'}` receives a conditional `active` class and a click assignment to `tab`. `match tab:` selects the summary or schedule component. The demo uses native navigation buttons; it does not implement a complete ARIA tab widget, browser-history router or URL-based navigation system.
+A button with `{.active when 'schedule'}` receives a conditional `active` class and a click assignment to `tab`. `match tab:` selects the summary or schedule component.
+
+## URL Navigation State Synchronization (`@Navigator`)
+
+Rune-Web supports two-way browser URL synchronization using the `@Navigator` section:
+
+```rune
+@Navigator
+url bound to activePage
+```
+
+Options:
+- `bind`: Name of the reactive state variable bound to the URL (e.g. `activePage`).
+- `mode`: Navigation mode — `"auto"` (default, query with hash fallback), `"query"`, or `"hash"`.
+- `param`: Query parameter or hash prefix name (defaults to `"page"`).
+
+Features:
+- **Direct Link & Refresh**: When opening `https://vectrune.com/?page=documents` or hitting refresh, `activePage` is initialized directly from the URL.
+- **Browser History**: Mutating `activePage` (or clicking links with `navigate('target')`) updates the URL using `history.pushState`.
+- **Back / Forward Support**: Clicking browser Back or Forward automatically triggers `popstate` to update reactive state and re-render the view.
 
 ## Styles and responsive layout
 

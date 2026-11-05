@@ -13,6 +13,7 @@ import { normalizeLiteral, valueToString } from './utils';
 import { renderNode } from './rendering';
 import { executeSteps } from './statement';
 import { bindEvent, setupMemoryUpdateListener } from './events';
+import { setupNavigator } from './navigator';
 import type { RuneWebConfig, RuneApp } from './types';
 
 /**
@@ -97,12 +98,18 @@ export function boot(config: RuneWebConfig): RuneApp {
     app,
     isRendering: false,
     memorySubscriptions: {},
+    navigator: config.navigator || null,
   });
 
   // Create reactive state (must happen after context init since makeReactive uses ctx())
   app.state = makeReactive(
     Object.assign({}, config.stateJson, { i18n: config.i18nData }),
   );
+
+  // Set up URL navigation state synchronization if configured (@Navigator)
+  if (config.navigator) {
+    setupNavigator(config.navigator, app);
+  }
 
   // Wrap render to track rendering component
   const originalRender = app.render;

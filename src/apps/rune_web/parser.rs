@@ -185,12 +185,58 @@ pub fn parse_rune_web_frontend(
         }
     }
 
+    // Extract @Navigator sections
+    let mut navigator = None;
+    for section in &doc.sections {
+        if !section.path.is_empty() && section.path[0] == "Navigator" {
+            let bind = section.kv.get("bind")
+                .or_else(|| section.kv.get("url"))
+                .or_else(|| section.kv.get("bound"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("activePage")
+                .to_string();
+            let mode = section.kv.get("mode")
+                .and_then(|v| v.as_str())
+                .unwrap_or("auto")
+                .to_string();
+            let param = section.kv.get("param")
+                .and_then(|v| v.as_str())
+                .unwrap_or("page")
+                .to_string();
+            navigator = Some(NavigatorDefinition { bind, mode, param });
+        }
+    }
+
+    // Also check if any component, page, or other section declares a `navigator:` block
+    if navigator.is_none() {
+        for section in &doc.sections {
+            if let Some(items) = section.series.get("navigator") {
+                for item in items {
+                    if let Value::String(s) = item {
+                        let s = s.trim();
+                        if let Some(target) = s.strip_prefix("url bound to ")
+                            .or_else(|| s.strip_prefix("bound to "))
+                        {
+                            navigator = Some(NavigatorDefinition {
+                                bind: target.trim().to_string(),
+                                mode: "auto".to_string(),
+                                param: "page".to_string(),
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Ok(RuneWebFrontend {
         page_views,
         component_definitions: resolved_components,
         style_definitions,
         logic_definitions,
         i18n_sections,
+        navigator,
     })
 }
 

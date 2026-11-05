@@ -605,6 +605,22 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                 current_records.push(rec);
             }
 
+            // Handle `url bound to <var>` or `bound to <var>` syntax (e.g. in @Navigator)
+            let trimmed_nav = line.trim();
+            if let Some(target) = trimmed_nav.strip_prefix("url bound to ")
+                .or_else(|| trimmed_nav.strip_prefix("bound to "))
+            {
+                let target = target.trim().to_string();
+                if let Some(last) = current_records.last_mut() {
+                    last.kv.insert("bind".to_string(), Value::String(target.clone()));
+                    last.kv.insert("url".to_string(), Value::String(target));
+                } else {
+                    sec.kv.insert("bind".to_string(), Value::String(target.clone()));
+                    sec.kv.insert("url".to_string(), Value::String(target));
+                }
+                continue;
+            }
+
             if line.contains('=') && !is_indented_in_series {
                 // Remove '+' from start if present
                 let pline = if line.starts_with('+') {

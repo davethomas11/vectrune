@@ -24,7 +24,7 @@ mod emit_function_test {
 
         // Auto-inject websocket logic (simulating what the runtime does)
         if let Some(page_def) = frontend.page_views.get(page_name) {
-            if page_def.logic_ref.is_none() {
+            if page_def.logic_ref.is_none() || page_def.logic_ref.as_deref() == Some(&format!("{}_logic", page_name)) {
                 let ws_endpoint = "/ws";
                 let mut actions = std::collections::HashMap::new();
 
@@ -44,6 +44,8 @@ mod emit_function_test {
                     derived: std::collections::HashMap::new(),
                     helpers: std::collections::HashMap::new(),
                     actions,
+                    timer: None,
+                    keys: std::collections::HashMap::new(),
                 };
 
                 frontend.logic_definitions.insert("_auto_websocket".to_string(), auto_logic);
@@ -145,6 +147,8 @@ mod emit_function_test {
             derived: std::collections::HashMap::new(),
             helpers: std::collections::HashMap::new(),
             actions,
+            timer: None,
+            keys: std::collections::HashMap::new(),
         };
 
         frontend.logic_definitions.insert("_auto_websocket".to_string(), auto_logic);
@@ -167,6 +171,7 @@ mod emit_function_test {
             "{}".to_string(),
             Some("/ws".to_string()),
             HashMap::new(),
+            None,
         );
 
         let generated_code = codegen.generate();

@@ -8,6 +8,7 @@ import type {
   DerivedDefinition,
   HelperDefinition,
   ActionDefinition,
+  NavigatorConfig,
 } from './types';
 
 /** Holds all shared state for the runtime. */
@@ -20,6 +21,7 @@ export interface RuneContext {
   app: RuneApp;
   isRendering: boolean;
   memorySubscriptions: Record<string, Set<string>>;
+  navigator?: NavigatorConfig | null;
 }
 
 let _ctx: RuneContext | null = null;

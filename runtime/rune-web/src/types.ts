@@ -98,6 +98,13 @@ export interface ActionDefinition {
   steps: ActionStep[];
 }
 
+/** Navigator configuration for URL state synchronization. */
+export interface NavigatorConfig {
+  bind: string;
+  mode?: 'auto' | 'query' | 'hash' | 'path';
+  param?: string;
+}
+
 /** Configuration passed to boot(). */
 export interface RuneWebConfig {
   pageTree: ViewNode;
@@ -109,6 +116,7 @@ export interface RuneWebConfig {
   wsEndpoint?: string;
   timer?: string | null;
   keys?: Record<string, string>;
+  navigator?: NavigatorConfig | null;
 }
 
 /** The application object exposed as window.runeWebApp. */

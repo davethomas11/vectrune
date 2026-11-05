@@ -42,6 +42,137 @@ var __RuneWeb = (() => {
     window[key] = value;
   }
 
+  // src/navigator.ts
+  var isNavigatingFromUrl = false;
+  var lastKnownRoute = null;
+  function readNavigatorUrl(config) {
+    if (typeof window === "undefined" || !window.location) return null;
+    const param = config.param || "page";
+    const mode = config.mode || "auto";
+    if (mode === "query" || mode === "auto") {
+      try {
+        const url = new URL(window.location.href);
+        const val = url.searchParams.get(param) || url.searchParams.get("p") || url.searchParams.get(config.bind);
+        if (val && val.trim()) {
+          return val.trim();
+        }
+      } catch (_err) {
+      }
+    }
+    if (mode === "hash" || mode === "auto") {
+      const rawHash = window.location.hash || "";
+      if (rawHash) {
+        let slug = "";
+        if (rawHash.startsWith("#/")) {
+          slug = rawHash.slice(2);
+        } else if (rawHash.startsWith("#!/")) {
+          slug = rawHash.slice(3);
+        } else if (rawHash.startsWith("#!") || rawHash.startsWith("#?")) {
+          slug = rawHash.slice(2);
+        } else if (rawHash.startsWith("#") && rawHash !== "#app" && rawHash !== "#") {
+          slug = rawHash.slice(1);
+        }
+        slug = decodeURIComponent(slug.trim());
+        if (slug && slug !== "app") {
+          return slug;
+        }
+      }
+    }
+    return null;
+  }
+  function updateNavigatorUrl(route, replace = false) {
+    if (typeof window === "undefined" || isNavigatingFromUrl) return;
+    const context = ctx();
+    const config = context.navigator;
+    if (!config) return;
+    const cleanRoute = String(route || "").trim();
+    if (cleanRoute === lastKnownRoute) return;
+    lastKnownRoute = cleanRoute;
+    const mode = config.mode || "auto";
+    const param = config.param || "page";
+    if (mode === "hash") {
+      const targetHash = cleanRoute ? "#/" + encodeURIComponent(cleanRoute) : "";
+      if (window.location.hash !== targetHash) {
+        if (replace) {
+          window.location.replace(targetHash || "#/");
+        } else {
+          window.location.hash = targetHash || "#/";
+        }
+      }
+      return;
+    }
+    try {
+      const url = new URL(window.location.href);
+      if (!cleanRoute || cleanRoute === "home") {
+        url.searchParams.delete(param);
+      } else {
+        url.searchParams.set(param, cleanRoute);
+      }
+      if (url.hash === "#app") {
+        url.hash = "";
+      }
+      const newUrl = url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : "");
+      const stateObj = { [config.bind]: cleanRoute };
+      if (replace) {
+        window.history.replaceState(stateObj, "", newUrl);
+      } else {
+        window.history.pushState(stateObj, "", newUrl);
+      }
+    } catch (_err) {
+    }
+  }
+  function handleNavigatorStateChange(prop, value) {
+    if (isNavigatingFromUrl) return;
+    const context = ctx();
+    const config = context.navigator;
+    if (!config || prop !== config.bind) return;
+    updateNavigatorUrl(String(value ?? ""));
+  }
+  function setupNavigator(config, app) {
+    if (typeof window === "undefined") return;
+    const boundVar = config.bind;
+    if (!boundVar) return;
+    const initialUrlRoute = readNavigatorUrl(config);
+    if (initialUrlRoute) {
+      app.state[boundVar] = initialUrlRoute;
+      lastKnownRoute = initialUrlRoute;
+    } else {
+      lastKnownRoute = String(app.state[boundVar] || "home");
+    }
+    window.navigate = function(target) {
+      if (typeof app.state[boundVar] !== "undefined") {
+        app.state[boundVar] = target;
+        if (app.render) app.render();
+      }
+    };
+    window.addEventListener("popstate", (_event) => {
+      const currentRoute = readNavigatorUrl(config) || "home";
+      if (currentRoute !== app.state[boundVar]) {
+        isNavigatingFromUrl = true;
+        try {
+          lastKnownRoute = currentRoute;
+          app.state[boundVar] = currentRoute;
+          if (app.render) app.render();
+        } finally {
+          isNavigatingFromUrl = false;
+        }
+      }
+    });
+    window.addEventListener("hashchange", (_event) => {
+      const currentRoute = readNavigatorUrl(config);
+      if (currentRoute && currentRoute !== app.state[boundVar]) {
+        isNavigatingFromUrl = true;
+        try {
+          lastKnownRoute = currentRoute;
+          app.state[boundVar] = currentRoute;
+          if (app.render) app.render();
+        } finally {
+          isNavigatingFromUrl = false;
+        }
+      }
+    });
+  }
+
   // src/scope.ts
   function splitPathSegments(expr) {
     const str = String(expr || "").replace(/\[\]([a-zA-Z_$][\w$]*)/g, "[].(it.$1 == $1)");
@@ -117,6 +248,9 @@ var __RuneWeb = (() => {
       set(target, prop, value) {
         if (target[prop] === value) return true;
         target[prop] = value;
+        if (typeof prop === "string" && context.navigator && prop === context.navigator.bind) {
+          handleNavigatorStateChange(prop, value);
+        }
         if (!context.isRendering && context.app.render) {
           requestAnimationFrame(context.app.render.bind(context.app));
         }
@@ -1787,11 +1921,15 @@ var __RuneWeb = (() => {
       i18nData: config.i18nData,
       app,
       isRendering: false,
-      memorySubscriptions: {}
+      memorySubscriptions: {},
+      navigator: config.navigator || null
     });
     app.state = makeReactive(
       Object.assign({}, config.stateJson, { i18n: config.i18nData })
     );
+    if (config.navigator) {
+      setupNavigator(config.navigator, app);
+    }
     const originalRender = app.render;
     app.render = function() {
       setWindowProp("__renderingComponent", "app");

@@ -23,6 +23,20 @@ pub struct RuneWebFrontend {
 
     /// All i18n locale bundles, keyed by locale code (e.g., "en_us")
     pub i18n_sections: HashMap<String, I18nSection>,
+
+    /// URL Navigation state synchronization (from `@Navigator`)
+    pub navigator: Option<NavigatorDefinition>,
+}
+
+/// A navigator definition for URL state synchronization (from `@Navigator`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NavigatorDefinition {
+    /// The reactive state property bound to URL (e.g. "activePage")
+    pub bind: String,
+    /// Navigation mode: "auto", "query", "hash", or "path" (defaults to "auto")
+    pub mode: String,
+    /// Parameter name in query string or hash prefix (e.g. "page", defaults to "page")
+    pub param: String,
 }
 
 /// An i18n locale bundle from `@I18N/<locale>`.

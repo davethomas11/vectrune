@@ -4,6 +4,7 @@
 
 import { ctx } from './context';
 import { getWindowProp, setWindowProp } from './globals';
+import { handleNavigatorStateChange } from './navigator';
 import type { Scope } from './types';
 
 /**
@@ -107,6 +108,9 @@ export function makeReactive(obj: Record<string, unknown>): Record<string, unkno
     set(target: Record<string, unknown>, prop: string | symbol, value: unknown) {
       if (target[prop as string] === value) return true;
       target[prop as string] = value;
+      if (typeof prop === 'string' && context.navigator && prop === context.navigator.bind) {
+        handleNavigatorStateChange(prop, value);
+      }
       if (!context.isRendering && context.app.render) {
         requestAnimationFrame(context.app.render.bind(context.app));
       }
