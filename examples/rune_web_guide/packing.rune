@@ -1,0 +1,48 @@
+#!RUNE
+# Named actions update an array; the view repeats and handles empty state.
+import "parts/style.rune"
+@App
+name = Weekend packing list
+type = REST
+@Frontend
+type = rune-web
+path = %ROOT%
+page = packing
+@Logic/packing
+state:
+    draft = ""
+    nextId = 3
+    items = [{ "id": 1, "name": "Water bottle", "packed": false }, { "id": 2, "name": "Rain jacket", "packed": false }]
+action setDraft(value):
+    draft = value
+action addItem():
+    if draft != "":
+        items.push({ "id": nextId, "name": draft, "packed": false })
+        nextId = nextId + 1
+        draft = ""
+action toggleItem(id):
+    for item in items:
+        if item.id == id:
+            item.packed = !item.packed
+action removeItem(id):
+    items = items.filter it.id != id
+@Page/packing
+title = Weekend packing list
+style = guide
+logic = packing
+view:
+    main:
+        h1 "Pack for the weekend"
+        label for=new-item "Item to bring"
+        input #new-item type=text value="{draft}" change="setDraft(this.value)"
+        button click=addItem() "Add item"
+        p "Items: {items.length}"
+        if items.length == 0:
+            p .panel "Your list is empty. Add something for your trip."
+        for item in items:
+            article .panel:
+                h2 .{item.packed ? 'done' : ''} "{item.name}"
+                p "{item.packed ? 'Packed' : 'Still to pack'}"
+                div .choices:
+                    button click="toggleItem({item.id})" "{item.packed ? 'Unpack' : 'Pack'}"
+                    button click="removeItem({item.id})" "Remove {item.name}"

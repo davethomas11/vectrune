@@ -1,0 +1,64 @@
+@Style/guide
+tokens:
+    brand = #166b73
+    ink = #143841
+    surface = #ffffff
+    space = 1rem
+presets:
+    panel:
+        background = {surface}
+        border = 1px solid #c7e2e4
+        border-radius = 16px
+        padding = {space}
+rules:
+    body:
+        margin = 0
+        font-family = system-ui, sans-serif
+        color = {ink}
+        background = #edf7f7
+    main:
+        max-width = 900px
+        margin = 0 auto
+        padding = 1rem
+    .grid:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(min(100%, 220px), 1fr))
+        gap = {space}
+    .panel:
+        use = (panel)
+        margin-bottom = 1rem
+    .choices:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.5rem
+        margin-bottom = 1rem
+    button:
+        padding = 0.75rem 1rem
+        background = {brand}
+        color = white
+        border = 0
+        border-radius = 8px
+        cursor = pointer
+        font = inherit
+    button:focus-visible:
+        outline = 3px solid #d56c45
+        outline-offset = 3px
+    button.active:
+        background = #a94022
+    input, select:
+        display = block
+        box-sizing = border-box
+        width = 100%
+        padding = 0.75rem
+        margin = 0.5rem 0 1rem
+        font = inherit
+        border = 1px solid #8baeb3
+        border-radius = 8px
+    .muted:
+        color = #44646b
+    .done:
+        text-decoration = line-through
+    h1:
+        font-size = clamp(1.5rem, 5vw, 2.2rem)
+    p, li:
+        line-height = 1.6

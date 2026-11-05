@@ -1,0 +1,27 @@
+#!RUNE
+# Inspect parts/style.rune for tokens, presets, selector rules and a fluid grid.
+import "parts/style.rune"
+@App
+name = Responsive reading shelf
+type = REST
+@Frontend
+type = rune-web
+path = %ROOT%
+page = shelf
+@Page/shelf
+title = Responsive reading shelf
+style = guide
+view:
+    main:
+        h1 "A little reading shelf"
+        p "Resize the preview: these cards flow into the space available."
+        div .grid:
+            article .panel:
+                h2 "Discover"
+                p "Start with a small Rune document."
+            article .panel:
+                h2 "Build"
+                p "Compose a page from reusable pieces."
+            article .panel:
+                h2 "Share"
+                p "Export your page and let someone try it."
