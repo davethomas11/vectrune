@@ -44,7 +44,7 @@ view:
                     button .nav-link {.active when 'builtins'} click="navigate('builtins')" "%i18n.Nav.builtins%"
                 div .nav-group:
                     h3 "%i18n.Nav.games%"
-                    button .nav-link {.active when 'space_invaders'} click="navigate('space_invaders')" "Space Invaders"
+                    button .nav-link {.active when 'games'} click="navigate('games')" "%i18n.Nav.vectraiders%"
                 div .nav-group:
                     h3 "%i18n.Examples.lab_eyebrow%"
                     button .nav-link {.active when 'examples'} click="openExample('app')" "%i18n.Examples.lab_title%"
@@ -56,6 +56,8 @@ view:
                     "localization"    -> LocalizationPage
                     "rest"            -> RestOverviewPage
                     "static"          -> StaticOverviewPage
+                    "games"           -> SpaceInvadersPage
+                    "vectraiders"     -> SpaceInvadersPage
                     "space_invaders"  -> SpaceInvadersPage
                     "examples"        -> ExampleLab
                     "builtins"        -> BuiltinReferencePage

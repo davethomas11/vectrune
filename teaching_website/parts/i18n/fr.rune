@@ -128,6 +128,8 @@ Examples {
     local_runtime = "Exécuter localement"
     counter_title = "Compteur réactif"
     counter_desc = "Une petite application web avec un véritable état réactif. Augmentez, diminuez et réinitialisez le compteur."
+    invaders_title = "VectRaiders"
+    invaders_desc = "Jeu rétro d'arcade conçu en pur Rune-Web déclaratif : boucle à 25 fps, collisions 2D et contrôles tactiles."
     rest_hint = "Lancez l’application, choisissez un endpoint et envoyez une requête. Modifiez le code et relancez pour tester les changements."
     users_hint = "Voici l’API utilisateurs du dépôt. Son CSV reste en mémoire dans le navigateur : créez un utilisateur avec POST, puis consultez avec GET. Relancez pour réinitialiser le fichier."
     data_hint = "Modifiez les enregistrements et exécutez pour examiner le document en JSON. Vous pouvez aussi exporter en YAML et XML."
@@ -247,7 +249,8 @@ Nav {
     rune_web = "Rune-Web"
     localization = "Localisation"
     games = "Jeux"
-    space_invaders = "Space Invaders"
+    space_invaders = "VectRaiders"
+    vectraiders = "VectRaiders"
 }
 
 Lab {
@@ -257,19 +260,19 @@ Lab {
     users = "API des utilisateurs"
     counter = "Compteur"
     tic = "Morpion"
-    invaders = "Space Invaders"
+    invaders = "VectRaiders"
     first_title = "Votre première API"
     document_title = "Un document, trois formats"
     graphql_title = "API GraphQL de livres"
-    invaders_title = "Arcade Space Invaders"
+    invaders_title = "Arcade VectRaiders"
     main_file = "Fichier .rune principal"
 }
 
 SpaceInvaders {
-    badge = "Jeu Rune-Web"
-    title = "Space Invaders en pur Rune-Web"
-    description = "Un jeu d'arcade complet démontrant la puissance déclarative de Vectrune : boucle de jeu en temps réel, commandes clavier sans code superflu et primitives de collision 2D réutilisables en moins de 60 lignes de logique."
-    play_label = "Jouer à l'Arcade"
+    badge = "Jeu Rétro Arcade"
+    title = "VectRaiders : Défendez la Grille Vectorielle"
+    description = "Un jeu d'arcade rétro complet démontrant la puissance déclarative de Vectrune : boucle de jeu en temps réel, commandes clavier et tactiles sans code superflu et primitives de collision 2D réutilisables en moins de 60 lignes de logique."
+    play_label = "Jouer à VectRaiders"
     feature_loop_title = "Boucle de jeu temps réel"
     feature_loop_desc = "timer = tick 40ms exécute une boucle à 25 fps directement dans l'état réactif sans nécessiter setInterval ou requestAnimationFrame."
     feature_keys_title = "Liaison clavier déclarative"
@@ -280,7 +283,7 @@ SpaceInvaders {
     feature_reactive_desc = "La mise à jour des positions des tirs et aliens déclenche un rafraîchissement DOM instantané avec esthétique rétro néon CRT."
     instructions_title = "Commandes"
     instructions_keyboard = "A / ◀: Gauche • D / ▶: Droite • Espace: Tirer"
-    instructions_mobile = "Touchez les boutons d'arcade à l'écran pour vous déplacer et tirer sur mobile et tablette."
+    instructions_mobile = "Touchez et maintenez les boutons d'arcade à l'écran pour glisser et tirer sur mobile et tablette."
 }
 
 Reference {

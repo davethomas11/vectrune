@@ -3,7 +3,7 @@
 import "parts"
 
 @App
-name = Space Invaders
+name = VectRaiders
 version = 1.0
 type = REST
 port = 3000
@@ -14,13 +14,13 @@ path = %ROOT%
 page = space-invaders
 
 @Page/space-invaders
-title = Space Invaders
+title = VectRaiders
 style = invaders
 logic = invaders
 view:
     main .arcade-cabinet:
         header .cabinet-header:
-            h1 .cabinet-title "SPACE INVADERS"
+            h1 .cabinet-title "VECTRAIDERS"
             div .stats-bar:
                 span "SCORE: {score}"
                 span "LIVES: {lives}"

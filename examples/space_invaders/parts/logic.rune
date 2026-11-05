@@ -39,7 +39,7 @@ state:
     score = 0
     lives = 3
     status = "ready"
-    game_message = "SPACE INVADERS"
+    game_message = "VECTRAIDERS"
 
 action startLeft:
     stop when status != "playing"
@@ -121,7 +121,7 @@ action tick:
                 change_dir = true
             if a.y > 400:
                 status = "game_over"
-                game_message = "INVASION COMPLETE! GAME OVER"
+                game_message = "GRID BREACHED! GAME OVER"
                 stop
 
     if change_dir:
@@ -149,5 +149,5 @@ action tick:
     # 7. Check victory condition
     if alien_count <= 0:
         status = "victory"
-        game_message = "EARTH DEFENDED! YOU WIN!"
+        game_message = "VECTOR GRID SAVED! YOU WIN!"
         stop

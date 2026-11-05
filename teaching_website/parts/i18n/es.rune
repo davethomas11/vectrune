@@ -128,6 +128,8 @@ Examples {
     local_runtime = "Ejecutar localmente"
     counter_title = "Contador reactivo"
     counter_desc = "Una pequeña aplicación web con estado reactivo real. Aumenta, disminuye y reinicia el contador."
+    invaders_title = "VectRaiders"
+    invaders_desc = "Juego arcade retro creado con Rune-Web declarativo puro: bucle a 25 fps, colisiones 2D y controles táctiles."
     rest_hint = "Ejecuta la aplicación, elige un endpoint y envía una petición. Edita el código y vuelve a ejecutarlo para probar los cambios."
     users_hint = "Esta es la API de usuarios del repositorio. El archivo CSV vive en la memoria del navegador: crea un usuario con POST y consulta con GET. Ejecuta de nuevo para reiniciar el archivo."
     data_hint = "Edita los registros y ejecuta para ver el documento en JSON. También puedes exportar YAML y XML."
@@ -247,7 +249,8 @@ Nav {
     rune_web = "Rune-Web"
     localization = "Localización"
     games = "Juegos"
-    space_invaders = "Space Invaders"
+    space_invaders = "VectRaiders"
+    vectraiders = "VectRaiders"
 }
 
 Lab {
@@ -257,19 +260,19 @@ Lab {
     users = "API de usuarios"
     counter = "Contador"
     tic = "Tres en raya"
-    invaders = "Space Invaders"
+    invaders = "VectRaiders"
     first_title = "Tu primera API"
     document_title = "Un documento, tres formatos"
     graphql_title = "API GraphQL de libros"
-    invaders_title = "Arcade Space Invaders"
+    invaders_title = "Arcade VectRaiders"
     main_file = "Archivo .rune principal"
 }
 
 SpaceInvaders {
-    badge = "Juego Rune-Web"
-    title = "Space Invaders en Rune-Web puro"
-    description = "Un juego de arcade completo que demuestra el poder declarativo de Vectrune: bucle de juego en tiempo real, controles de teclado sin código repetitivo y primitivas de colisión 2D reutilizables en menos de 60 líneas de lógica."
-    play_label = "Jugar Arcade"
+    badge = "Juego Retro Arcade"
+    title = "VectRaiders: Defiende la Cuadrícula Vectorial"
+    description = "Un juego de arcade retro completo que demuestra el poder declarativo de Vectrune: bucle de juego en tiempo real, controles de teclado y táctiles sin código repetitivo y primitivas de colisión 2D reutilizables en menos de 60 líneas de lógica."
+    play_label = "Jugar VectRaiders"
     feature_loop_title = "Bucle de juego en tiempo real"
     feature_loop_desc = "timer = tick 40ms ejecuta un bucle a 25 fps directamente sobre el estado reactivo sin necesidad de setInterval o requestAnimationFrame."
     feature_keys_title = "Asignación de teclas declarativa"
@@ -280,7 +283,7 @@ SpaceInvaders {
     feature_reactive_desc = "Modificar balas o extraterrestres actualiza el DOM de forma fluida con estética retro neón CRT."
     instructions_title = "Controles"
     instructions_keyboard = "A / ◀: Izquierda • D / ▶: Derecha • Espacio: Disparar"
-    instructions_mobile = "Toca los botones arcade en pantalla para moverte y disparar en móviles y tabletas."
+    instructions_mobile = "Toca y mantén los botones arcade en pantalla para desplazarte y disparar en móviles y tabletas."
 }
 
 Reference {

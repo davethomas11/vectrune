@@ -128,6 +128,8 @@ Examples {
     local_runtime = "Run locally"
     counter_title = "Reactive counter"
     counter_desc = "A small web app with real reactive state. Increase, decrease, and reset the count."
+    invaders_title = "VectRaiders"
+    invaders_desc = "Retro arcade game built in pure declarative Rune-Web: 25fps ticker, 2D collisions, and touch controls."
     rest_hint = "Run the app, choose an endpoint, and send a request. Edit the source and run again to try your changes."
     users_hint = "This is the repository User API. Its CSV file lives in browser memory: create a user with POST, then fetch the users with GET. Run again to reset the file."
     data_hint = "Edit the records and run to inspect the document as JSON. You can also export YAML and XML."
@@ -247,7 +249,8 @@ Nav {
     rune_web = "Rune-Web"
     localization = "Localization"
     games = "Games"
-    space_invaders = "Space Invaders"
+    space_invaders = "VectRaiders"
+    vectraiders = "VectRaiders"
 }
 
 Lab {
@@ -257,19 +260,19 @@ Lab {
     users = "User API"
     counter = "Counter"
     tic = "Tic Tac Toe"
-    invaders = "Space Invaders"
+    invaders = "VectRaiders"
     first_title = "Your first API"
     document_title = "A document, three formats"
     graphql_title = "Book GraphQL API"
-    invaders_title = "Space Invaders Arcade"
+    invaders_title = "VectRaiders Arcade"
     main_file = "Main .rune"
 }
 
 SpaceInvaders {
-    badge = "Rune-Web Game"
-    title = "Space Invaders in Pure Rune-Web"
-    description = "A complete arcade game showcasing Vectrune's declarative power: real-time game loop ticker, zero-boilerplate keyboard controls, and reusable 2D collision primitives in under 60 lines of logic."
-    play_label = "Play Arcade"
+    badge = "Retro Arcade Game"
+    title = "VectRaiders: Defend the Vector Grid"
+    description = "A complete retro arcade game showcasing Vectrune's declarative power: real-time game loop ticker, zero-boilerplate keyboard and touch controls, and reusable 2D collision primitives in under 60 lines of logic."
+    play_label = "Play VectRaiders"
     feature_loop_title = "Real-Time Game Loop"
     feature_loop_desc = "timer: tick 40ms runs an automated 25fps game loop ticker directly into reactive state without manual setInterval or requestAnimationFrame boilerplate."
     feature_keys_title = "Declarative Keybindings"
@@ -280,7 +283,7 @@ SpaceInvaders {
     feature_reactive_desc = "Mutating bullet positions or alien states triggers fast DOM frame updates with high-contrast retro neon CRT aesthetics."
     instructions_title = "Controls"
     instructions_keyboard = "A / ◀: Move Left • D / ▶: Move Right • Space: Fire Laser"
-    instructions_mobile = "Touch the on-screen arcade buttons to move and fire on any mobile device or tablet."
+    instructions_mobile = "Touch and hold the on-screen arcade buttons to glide and fire on any mobile device or tablet."
 }
 
 Reference {
