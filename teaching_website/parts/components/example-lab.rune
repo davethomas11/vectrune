@@ -64,7 +64,8 @@ view:
 
 @Component/SpaceInvadersExample
 view:
-    WebExample title="{i18n.Lab.invaders_title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" source="{raw ../../../examples/space_invaders/space_invaders.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}"
+    div .space-invaders-page:
+        WebExample title="{i18n.Lab.invaders_title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" source="{raw ../../../examples/space_invaders/space_invaders.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}"
 
 @Component/WebExample
 props: [title, preview, source, logic_source?, style_source?]

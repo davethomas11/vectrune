@@ -31,19 +31,19 @@ view:
                 div .arena-grid
 
                 # Player Cannon
-                div .player style="left: {player.x}px;":
+                div .player style="left: calc({player.x} * 100% / 480);":
                     div .player-canon
 
                 # Player Lasers
                 div .bullet <- bullet in bullets:
-                    style = "left: {bullet.x}px; top: {bullet.y}px;"
+                    style = "left: calc({bullet.x} * 100% / 480); top: calc({bullet.y} * 100% / 460);"
 
                 # Alien Lasers
                 div .alien-bullet <- ab in alien_bullets:
-                    style = "left: {ab.x}px; top: {ab.y}px;"
+                    style = "left: calc({ab.x} * 100% / 480); top: calc({ab.y} * 100% / 460);"
 
                 # Invader Grid
-                div .alien .type-{alien.type} style="left: {alien.x}px; top: {alien.y}px; display: {alien.alive ? 'flex' : 'none'};" <- alien in aliens:
+                div .alien .type-{alien.type} style="left: calc({alien.x} * 100% / 480); top: calc({alien.y} * 100% / 460); display: {alien.alive ? 'flex' : 'none'};" <- alien in aliens:
                     "👾"
 
                 # Game State Overlay

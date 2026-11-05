@@ -1082,6 +1082,10 @@ rules:
         border-radius = 12px
         background = {panel}
 
+    .space-invaders-page .example-preview:
+        height = clamp(400px, 85svh, 720px)
+        box-sizing = border-box
+
     .example-source:
         margin-top = 1.25rem
 
@@ -1380,7 +1384,6 @@ responsive:
             gap = 1rem
 
         .space-invaders-page .example-preview:
-            min-height = 640px
             border = 2px solid #00ff88
             border-radius = 12px
             box-shadow = 0 0 25px rgba(0, 255, 136, 0.2)

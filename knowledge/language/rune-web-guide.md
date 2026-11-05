@@ -68,6 +68,14 @@ Features:
 
 The shared grid adapts its column count to the available width; focus-visible rules preserve visible keyboard focus. Styling declarations are separate from reactive application state. The complete main file and imported style file are visible alongside each live preview.
 
+## Fitting a game board
+
+The [VectRaiders arcade](../../examples/space_invaders/space_invaders.rune) keeps game logic in a fixed 480 by 460 coordinate system. The HTML view maps logical coordinates to percentage positions, with proportional player, invader and shot sizes inside a fluid arena. Physics coordinates remain unchanged; container-relative font sizing keeps alien symbols proportional. The arena uses border-box sizing so its borders fit inside the visible rectangle. This avoids clipping a fixed-size board inside a smaller mobile container.
+
+Cabinet width also respects available viewport height, leaving space for its header and controls. Short landscape views use compact labels and keep touch controls at least 44 pixels high. Both the Games page and Example Lab use the same bounded preview height. The teaching document can scroll normally; the game iframe fits its entire cabinet without an internal scrollbar.
+
+Run `python3 tests/browser/space_invaders.py` to verify both placements in three locales at six viewport sizes. Use `--browser webkit` to check Safari-style rendering, and `--url https://vectrune.com` for a deployed-site check. It verifies arena and entity bounds, iframe overflow, touch targets, movement, firing and keyboard input.
+
 ## Run and verify
 
 ```sh

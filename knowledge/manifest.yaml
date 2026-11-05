@@ -80,8 +80,10 @@ pages:
       - runtime/rune-web/src/events.ts
       - runtime/rune-web/src/statement.ts
       - examples/rune_web_guide/
+      - examples/space_invaders/
       - teaching_website/parts/pages/rune_web_guide.rune
       - tests/browser/rune_web_guide.py
+      - tests/browser/space_invaders.py
   - id: language.rune-web-architecture
     path: language/rune-web-architecture.md
     kind: page

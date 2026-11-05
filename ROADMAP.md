@@ -170,6 +170,7 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
   - Added comprehensive arithmetic (`-`, `*`, `/`, `%`) and numeric comparison (`<`, `<=`, `>=`, `>`) operators to expression engine.
   - Built complete retro arcade Space Invaders example in pure Rune-Web under `examples/space_invaders/`.
   - Added dedicated "Games" section and interactive playable Space Invaders showcase to [vectrune.com](https://vectrune.com). *(Release: `v0.2.8` - 2026-11-04)*
+  - Fixed complete-board scaling on mobile and cabinet height on desktop/landscape; added a browser regression for both game previews, all locales, and touch/keyboard controls. *(2026-11-05)*
 - [ ] **2D Particle System & Sound Effects**:
   - Add declarative particle emitters for arcade explosions and thruster trails.
   - Add Web Audio API synthesis primitives (`sound.play "laser"`, `sound.play "explosion"`, `sound.play "retro_beep"`) in Rune-Web.

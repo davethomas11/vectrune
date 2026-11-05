@@ -50,3 +50,6 @@ testdata/
 
 # Local runtime generations
 .vectrune/
+
+# Python browser checks
+__pycache__/
