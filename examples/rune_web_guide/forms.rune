@@ -1,0 +1,36 @@
+#!RUNE
+# Explicit change events update state and the reservation preview.
+import "parts/style.rune"
+@App
+name = Workshop RSVP
+type = REST
+@Frontend
+type = rune-web
+path = %ROOT%
+page = rsvp
+@Logic/rsvp
+state:
+    guest = "Guest"
+    session = "Online"
+action setGuest(value):
+    guest = value
+action setSession(value):
+    session = value
+@Page/rsvp
+title = Workshop RSVP
+style = guide
+logic = rsvp
+view:
+    main:
+        h1 "Your workshop pass"
+        p "Edit your name, then leave the field to update the pass."
+        label for=guest-name "Your name"
+        input #guest-name type=text value="{guest}" change="setGuest(this.value)"
+        label for=session "Session"
+        select #session change="setSession(this.value)":
+            option value=Online selected="{session == 'Online'}" "Online"
+            option value=Studio selected="{session == 'Studio'}" "Studio"
+        section .panel aria-live=polite:
+            h2 "Welcome, {guest}"
+            p "Session: {session}"
+            p .muted "This is a local preview, not a booking service."

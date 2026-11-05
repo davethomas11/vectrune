@@ -326,6 +326,101 @@ examples:
       - language.dynamic-ai-web
     status: experimental
 
+  - id: example.rune-web.guide-components
+    title: Workshop Cards
+    summary: Rune-Web teaching example for components and props.
+    source_path: examples/rune_web_guide/components.rune
+    app_type: REST
+    concepts:
+      - components and props
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune examples/rune_web_guide/components.rune
+      - vectrune examples/rune_web_guide/components.rune -o html
+    test_refs:
+      - tests/browser/rune_web_guide.py
+    related_knowledge:
+      - language.rune-web-guide
+      - language.rune-web-architecture
+    status: recommended
+
+  - id: example.rune-web.guide-forms
+    title: Workshop RSVP
+    summary: Rune-Web teaching example for state and explicit form events.
+    source_path: examples/rune_web_guide/forms.rune
+    app_type: REST
+    concepts:
+      - state and explicit form events
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune examples/rune_web_guide/forms.rune
+      - vectrune examples/rune_web_guide/forms.rune -o html
+    test_refs:
+      - tests/browser/rune_web_guide.py
+    related_knowledge:
+      - language.rune-web-guide
+      - language.rune-web-architecture
+    status: recommended
+
+  - id: example.rune-web.guide-packing
+    title: Weekend Packing List
+    summary: Rune-Web teaching example for actions, repeated views and empty states.
+    source_path: examples/rune_web_guide/packing.rune
+    app_type: REST
+    concepts:
+      - actions, repeated views and empty states
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune examples/rune_web_guide/packing.rune
+      - vectrune examples/rune_web_guide/packing.rune -o html
+    test_refs:
+      - tests/browser/rune_web_guide.py
+    related_knowledge:
+      - language.rune-web-guide
+      - language.rune-web-architecture
+    status: recommended
+
+  - id: example.rune-web.guide-navigation
+    title: Trip Planner
+    summary: Rune-Web teaching example for selection bindings and match views.
+    source_path: examples/rune_web_guide/navigation.rune
+    app_type: REST
+    concepts:
+      - selection bindings and match views
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune examples/rune_web_guide/navigation.rune
+      - vectrune examples/rune_web_guide/navigation.rune -o html
+    test_refs:
+      - tests/browser/rune_web_guide.py
+    related_knowledge:
+      - language.rune-web-guide
+      - language.rune-web-architecture
+    status: recommended
+
+  - id: example.rune-web.guide-styling
+    title: Responsive Reading Shelf
+    summary: Rune-Web teaching example for style tokens, presets and responsive layout.
+    source_path: examples/rune_web_guide/styling.rune
+    app_type: REST
+    concepts:
+      - style tokens, presets and responsive layout
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune examples/rune_web_guide/styling.rune
+      - vectrune examples/rune_web_guide/styling.rune -o html
+    test_refs:
+      - tests/browser/rune_web_guide.py
+    related_knowledge:
+      - language.rune-web-guide
+      - language.rune-web-architecture
+    status: recommended
+
 notes:
   - Prefer examples already backed by tests or central README workflows.
   - Add auth, datasource, and memory API examples once their reference pages are added.

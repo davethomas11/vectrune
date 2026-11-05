@@ -33,6 +33,13 @@ view:
                     button .nav-link {.active when 'rest_post'} click="navigate('rest_post')" "%i18n.Nav.post%"
                     button .nav-link {.active when 'rest_validation'} click="navigate('rest_validation')" "%i18n.Nav.validation%"
                 div .nav-group:
+                    h3 "%i18n.RuneWebGuide.group%"
+                    button .nav-link {.active when 'web_components'} click="navigate('web_components')" "%i18n.RuneWebGuide.components_title%"
+                    button .nav-link {.active when 'web_forms'} click="navigate('web_forms')" "%i18n.RuneWebGuide.forms_title%"
+                    button .nav-link {.active when 'web_actions'} click="navigate('web_actions')" "%i18n.RuneWebGuide.actions_title%"
+                    button .nav-link {.active when 'web_views'} click="navigate('web_views')" "%i18n.RuneWebGuide.views_title%"
+                    button .nav-link {.active when 'web_styles'} click="navigate('web_styles')" "%i18n.RuneWebGuide.styles_title%"
+                div .nav-group:
                     h3 "%i18n.Nav.reference%"
                     button .nav-link {.active when 'builtins'} click="navigate('builtins')" "%i18n.Nav.builtins%"
                 div .nav-group:
@@ -55,3 +62,8 @@ view:
                     "websocket"       -> WebsocketOverviewPage
                     "rune_web"        -> RuneWebOverviewPage
                     "dynamic_ai"      -> DynamicAiWebPage
+                    "web_components" -> RuneWebComponentsGuide
+                    "web_forms" -> RuneWebFormsGuide
+                    "web_actions" -> RuneWebActionsGuide
+                    "web_views" -> RuneWebViewsGuide
+                    "web_styles" -> RuneWebStylesGuide

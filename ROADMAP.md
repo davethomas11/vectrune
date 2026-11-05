@@ -46,9 +46,10 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
 - [ ] **WebSocket Interactive Overview Page**:
   - Build real-time channel demonstration with mock incoming/outgoing message feed in the sandbox output.
   - Add interactive snippets for `ws.send`, `ws.broadcast`, and `ws.id`.
-- [ ] **Rune-Web UI Framework Guide**:
-  - Document reactive state binding (`<->`), `@Component`, and event handlers.
-  - Provide an interactive counter or todo-list demo inside the sandbox.
+- [x] **Rune-Web UI Framework Guide**:
+  - Added five localized guide pages below the REST API tutorials: components/props, state/forms, actions/lists, selection/view switching, and styles/layout.
+  - Added real Rune-Web previews with a workshop RSVP, packing checklist, trip planner and responsive cards, plus complete source and imported styles. Preserved the existing application overview and counter.
+  - Added `tests/browser/rune_web_guide.py` covering all locales, live interactions, source fidelity, mobile layouts and existing-page regressions. See `knowledge/language/rune-web-guide.md`. *(2026-11-04)*
 - [ ] **Builtin Reference Expansion**:
   - Add runnable sandbox snippets and test cases for remaining builtins: `csv.read`, `csv.write`, `csv.append`, `json.read`, `json.write`, `memory.clear`, `memory.del`, and `delete`.
 

@@ -68,6 +68,20 @@ pages:
       - examples/dynamic_ai_web_copilot.rune
       - tests/dynamic_ai_web.rs
       - tests/dynamic_ai_cli.rs
+  - id: language.rune-web-guide
+    path: language/rune-web-guide.md
+    kind: page
+    title: Rune-Web UI Framework Guide
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/rune_web/parser.rs
+      - runtime/rune-web/src/events.ts
+      - runtime/rune-web/src/statement.ts
+      - examples/rune_web_guide/
+      - teaching_website/parts/pages/rune_web_guide.rune
+      - tests/browser/rune_web_guide.py
   - id: language.rune-web-architecture
     path: language/rune-web-architecture.md
     kind: page

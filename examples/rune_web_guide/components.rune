@@ -1,0 +1,26 @@
+#!RUNE
+# Reuse one component with different props. No client state is needed.
+import "parts/style.rune"
+@App
+name = Workshop cards
+type = REST
+@Frontend
+type = rune-web
+path = %ROOT%
+page = workshops
+@Component/WorkshopCard
+props: [title, level, note?]
+view:
+    article .panel:
+        h2 "{title}"
+        p "Level: {level}"
+        p .muted "{note ?? 'Bring your curiosity.'}"
+@Page/workshops
+title = Workshop cards
+style = guide
+view:
+    main:
+        h1 "Make something together"
+        div .grid:
+            WorkshopCard title="First Rune app" level="Beginner"
+            WorkshopCard title="Interface studio" level="Intermediate" note="Bring a small project."

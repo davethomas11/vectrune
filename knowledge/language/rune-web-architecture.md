@@ -1,5 +1,7 @@
 # Rune-Web: Frontend Architecture & Design
 
+See the [UI framework guide](rune-web-guide.md) for focused runnable lessons on props, state, events, selection bindings, repeated views and styles.
+
 ## Overview
 
 Rune-Web is an integrated frontend authoring system that allows developers to define HTML, CSS, and client-side logic directly in `.rune` files alongside server-side application code. It bridges the declarative Rune language with compiled client-side web interfaces.

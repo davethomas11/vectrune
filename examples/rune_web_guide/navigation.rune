@@ -1,0 +1,38 @@
+#!RUNE
+# A selection binding supplies both the active class and click assignment.
+import "parts/style.rune"
+@App
+name = Trip planner
+type = REST
+@Frontend
+type = rune-web
+path = %ROOT%
+page = trip
+@Component/TripSummary
+view:
+    section .panel:
+        h2 "A weekend by the coast"
+        p "Walk the shore, visit the market, and leave time for coffee."
+@Component/TripSchedule
+view:
+    section .panel:
+        h2 "A simple itinerary"
+        ul:
+            li "Saturday: harbor walk and market"
+            li "Sunday: lighthouse trail and lunch"
+@Page/trip
+title = Trip planner
+style = guide
+state:
+    tab = "summary"
+bindings:
+    .active <-> tab
+view:
+    main:
+        h1 "Plan a small adventure"
+        nav .choices aria-label="Trip sections":
+            button {.active when 'summary'} "Summary"
+            button {.active when 'schedule'} "Schedule"
+        match tab:
+            "summary" -> TripSummary
+            "schedule" -> TripSchedule
