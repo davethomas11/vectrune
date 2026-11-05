@@ -34,14 +34,11 @@ state:
     ]
     alien_dir = 1
     alien_speed = 3
+    alien_count = 18
     score = 0
     lives = 3
-    status = ready
+    status = "ready"
     game_message = "SPACE INVADERS"
-
-derive:
-    alien_count from aliens:
-        _ then "aliens.filter it.alive.length"
 
 action moveLeft:
     stop when status != "playing"
@@ -59,6 +56,7 @@ action fire:
 action start:
     score = 0
     lives = 3
+    alien_count = 18
     alien_dir = 1
     player.x = 220
     bullets = []
@@ -67,7 +65,7 @@ action start:
         a.alive = true
         a.x = a.start_x
         a.y = a.start_y
-    status = playing
+    status = "playing"
     game_message = ""
 
 action tick:
@@ -89,7 +87,7 @@ action tick:
             ab.alive = false
             lives = lives - 1
             if lives <= 0:
-                status = game_over
+                status = "game_over"
                 game_message = "GAME OVER"
                 stop
 
@@ -101,7 +99,7 @@ action tick:
             if a.x > 430 or a.x < 20:
                 change_dir = true
             if a.y > 400:
-                status = game_over
+                status = "game_over"
                 game_message = "INVASION COMPLETE! GAME OVER"
                 stop
 
@@ -118,6 +116,7 @@ action tick:
                     a.alive = false
                     b.alive = false
                     score = score + 20
+                    alien_count = alien_count - 1
 
     # 6. Occasional alien return fire
     if random(1, 22) == 1:
@@ -127,7 +126,7 @@ action tick:
                 stop
 
     # 7. Check victory condition
-    if aliens.filter it.alive.length == 0:
-        status = victory
+    if alien_count <= 0:
+        status = "victory"
         game_message = "EARTH DEFENDED! YOU WIN!"
         stop

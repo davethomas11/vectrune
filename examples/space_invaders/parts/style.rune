@@ -10,7 +10,9 @@ tokens:
 rules:
     .arcade-cabinet:
         max-width = 540px
-        margin = 1.5rem auto
+        width = 100%
+        box-sizing = border-box
+        margin = 1.25rem auto
         background = #0d1124
         border = 3px solid #00ff88
         border-radius = 16px
@@ -19,12 +21,13 @@ rules:
         font-family = "Courier New", monospace, sans-serif
         color = #ffffff
         user-select = none
+        touch-action = manipulation
 
     .cabinet-header:
         text-align = center
-        margin-bottom = 1rem
+        margin-bottom = 0.75rem
         border-bottom = 2px solid rgba(0, 255, 136, 0.3)
-        padding-bottom = 0.75rem
+        padding-bottom = 0.6rem
 
     .cabinet-title:
         font-size = 1.75rem
@@ -37,7 +40,7 @@ rules:
     .stats-bar:
         display = flex
         justify-content = space-between
-        font-size = 1rem
+        font-size = 0.95rem
         font-weight = bold
         letter-spacing = 2px
         color = #00e5ff
@@ -48,6 +51,7 @@ rules:
     .game-arena:
         position = relative
         width = 480px
+        max-width = 100%
         height = 460px
         margin = 0 auto
         background = #04060d
@@ -55,6 +59,7 @@ rules:
         border-radius = 8px
         overflow = hidden
         box-shadow = inset 0 0 40px rgba(0, 0, 0, 0.9)
+        touch-action = manipulation
 
     .arena-grid:
         position = absolute
@@ -149,39 +154,54 @@ rules:
         text-align = center
         color = #ffd000
         text-shadow = 0 0 15px #ffd000
+        padding = 0 1rem
 
     .start-btn:
         background = #00ff88
         color = #04060d
         border = none
-        padding = 0.75rem 2rem
-        font-size = 1.1rem
+        padding = 0.85rem 2.25rem
+        font-size = 1.15rem
         font-weight = bold
         letter-spacing = 2px
-        border-radius = 6px
+        border-radius = 8px
         cursor = pointer
         box-shadow = 0 0 20px rgba(0, 255, 136, 0.6)
+        touch-action = manipulation
+        transition = all 0.15s ease
 
     .start-btn:hover:
         background = #33ffa3
         box-shadow = 0 0 30px rgba(0, 255, 136, 0.9)
+        transform = scale(1.05)
+
+    .start-btn:active:
+        transform = scale(0.97)
 
     .arcade-controls:
         display = flex
-        justify-content = center
-        gap = 1rem
-        margin-top = 1.25rem
+        justify-content = space-between
+        width = 100%
+        gap = 0.75rem
+        margin-top = 1.1rem
+        box-sizing = border-box
 
     .ctrl-btn:
+        flex = 1
+        min-height = 52px
         background = #1a233a
         color = #00ff88
         border = 2px solid #233554
-        padding = 0.75rem 1.25rem
-        font-size = 1rem
+        padding = 0.75rem 0.5rem
+        font-size = 1.05rem
         font-weight = bold
         border-radius = 8px
         cursor = pointer
         transition = all 0.1s ease
+        touch-action = manipulation
+        display = flex
+        align-items = center
+        justify-content = center
 
     .ctrl-btn:hover:
         border-color = #00ff88
@@ -190,18 +210,23 @@ rules:
     .ctrl-btn:active:
         background = #00ff88
         color = #04060d
+        transform = scale(0.96)
 
     .ctrl-btn.fire-btn:
+        flex = 1.4
         background = #ff2a85
         color = #ffffff
         border-color = #ff2a85
         box-shadow = 0 0 15px rgba(255, 42, 133, 0.4)
-        padding-left = 1.75rem
-        padding-right = 1.75rem
+        font-size = 1.2rem
 
     .ctrl-btn.fire-btn:hover:
         background = #ff4d99
         box-shadow = 0 0 25px rgba(255, 42, 133, 0.7)
+
+    .ctrl-btn.fire-btn:active:
+        background = #ff1a75
+        transform = scale(0.96)
 
     .controls-hint:
         text-align = center
@@ -209,3 +234,33 @@ rules:
         font-size = 0.8rem
         color = #64748b
         letter-spacing = 1px
+
+responsive:
+    (max-width: 520px):
+        .arcade-cabinet:
+            padding = 0.6rem
+            margin = 0.5rem auto
+            border-width = 2px
+            border-radius = 12px
+        .cabinet-title:
+            font-size = 1.35rem
+            letter-spacing = 2px
+        .stats-bar:
+            font-size = 0.8rem
+            letter-spacing = 1px
+        .game-arena:
+            transform-origin = top center
+            transform = scale(calc((100vw - 2.5rem) / 480))
+            margin-bottom = calc(460px * (calc((100vw - 2.5rem) / 480) - 1))
+        .arcade-controls:
+            gap = 0.4rem
+            margin-top = 0.6rem
+        .ctrl-btn:
+            min-height = 54px
+            font-size = 1rem
+            padding = 0.75rem 0.25rem
+        .ctrl-btn.fire-btn:
+            flex = 1.3
+            font-size = 1.15rem
+        .controls-hint:
+            font-size = 0.7rem
