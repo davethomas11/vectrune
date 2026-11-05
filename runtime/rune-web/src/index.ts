@@ -132,6 +132,12 @@ export function boot(config: RuneWebConfig): RuneApp {
   bindEvent('click');
   bindEvent('change');
   bindEvent('input');
+  bindEvent('pointerdown');
+  bindEvent('pointerup');
+  bindEvent('pointerleave');
+  bindEvent('pointercancel');
+  bindEvent('touchstart');
+  bindEvent('touchend');
 
   // Keybindings for games and interactive apps
   if (config.keys && typeof window !== 'undefined') {

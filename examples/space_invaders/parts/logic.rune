@@ -35,18 +35,32 @@ state:
     alien_dir = 1
     alien_speed = 3
     alien_count = 18
+    move_dir = 0
     score = 0
     lives = 3
     status = "ready"
     game_message = "SPACE INVADERS"
 
+action startLeft:
+    stop when status != "playing"
+    move_dir = 0 - 1
+    player.x = clamp(player.x - 18, 10, 434)
+
+action startRight:
+    stop when status != "playing"
+    move_dir = 1
+    player.x = clamp(player.x + 18, 10, 434)
+
+action stopMove:
+    move_dir = 0
+
 action moveLeft:
     stop when status != "playing"
-    player.x = clamp(player.x - 18, 10, 434)
+    player.x = clamp(player.x - 20, 10, 434)
 
 action moveRight:
     stop when status != "playing"
-    player.x = clamp(player.x + 18, 10, 434)
+    player.x = clamp(player.x + 20, 10, 434)
 
 action fire:
     stop when status != "playing"
@@ -58,6 +72,7 @@ action start:
     lives = 3
     alien_count = 18
     alien_dir = 1
+    move_dir = 0
     player.x = 220
     bullets = []
     alien_bullets = []
@@ -70,6 +85,12 @@ action start:
 
 action tick:
     stop when status != "playing"
+
+    # Smooth continuous movement when on-screen buttons are pressed
+    if move_dir < 0:
+        player.x = clamp(player.x - 12, 10, 434)
+    if move_dir > 0:
+        player.x = clamp(player.x + 12, 10, 434)
 
     # 1. Update player bullets
     for b in bullets:

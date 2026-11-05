@@ -1815,6 +1815,12 @@ var __RuneWeb = (() => {
     bindEvent("click");
     bindEvent("change");
     bindEvent("input");
+    bindEvent("pointerdown");
+    bindEvent("pointerup");
+    bindEvent("pointerleave");
+    bindEvent("pointercancel");
+    bindEvent("touchstart");
+    bindEvent("touchend");
     if (config.keys && typeof window !== "undefined") {
       window.addEventListener("keydown", (event) => {
         const keyMap = config.keys;
