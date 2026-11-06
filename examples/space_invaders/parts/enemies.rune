@@ -1,8 +1,10 @@
 # Enemy formations and fleet configuration for VectRaiders
 @Logic/invaders
 state:
+    local alien_batch = { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65
     aliens = [
-        { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65 with { "y": 40, "start_y": 40, "type": 1, "alive": true },
-        { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65 with { "y": 80, "start_y": 80, "type": 2, "alive": true },
-        { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65 with { "y": 120, "start_y": 120, "type": 3, "alive": true }
-    ]
+        alien with { "y": 40, "start_y": 40, "type": 1 },
+        alien with { "y": 80, "start_y": 80, "type": 2 },
+        alien with { "y": 120, "start_y": 120, "type": 3 }
+    ] all { "alive": true }
+

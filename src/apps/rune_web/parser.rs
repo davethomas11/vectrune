@@ -114,7 +114,31 @@ pub fn parse_rune_web_frontend(
         if section.path.len() == 2 && section.path[0] == "Logic" {
             let logic_name = &section.path[1];
             let logic_def = parse_logic_section(section)?;
-            logic_definitions.insert(logic_name.clone(), logic_def);
+            if let Some(existing) = logic_definitions.get_mut(logic_name) {
+                for (k, v) in logic_def.state {
+                    existing.state.insert(k, v);
+                }
+                for (k, v) in logic_def.locals {
+                    existing.locals.insert(k, v);
+                }
+                for (k, v) in logic_def.derived {
+                    existing.derived.insert(k, v);
+                }
+                for (k, v) in logic_def.helpers {
+                    existing.helpers.insert(k, v);
+                }
+                for (k, v) in logic_def.actions {
+                    existing.actions.insert(k, v);
+                }
+                for (k, v) in logic_def.keys {
+                    existing.keys.insert(k, v);
+                }
+                if logic_def.timer.is_some() {
+                    existing.timer = logic_def.timer;
+                }
+            } else {
+                logic_definitions.insert(logic_name.clone(), logic_def);
+            }
         }
     }
 
@@ -167,6 +191,7 @@ pub fn parse_rune_web_frontend(
 
         let logic = logic_definitions.entry(logic_name).or_insert_with(|| LogicDefinition {
             state: HashMap::new(),
+            locals: HashMap::new(),
             derived: HashMap::new(),
             helpers: HashMap::new(),
             actions: HashMap::new(),
@@ -1256,6 +1281,7 @@ fn parse_style_properties(body: &Value) -> Result<HashMap<String, String>, Parse
 /// Parse a `@Logic/<name>` section.
 fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefinition, ParseError> {
     let mut state = HashMap::new();
+    let mut locals = HashMap::new();
     let mut derived = HashMap::new();
     let mut helpers = HashMap::new();
     let mut actions = HashMap::new();
@@ -1274,7 +1300,19 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
                     }
                     // Check if this line starts a key = value assignment
                     if let Some(eq_idx) = trimmed.find('=') {
-                        let key = trimmed[..eq_idx].trim().to_string();
+                        let raw_key = trimmed[..eq_idx].trim();
+                        let is_local = raw_key.starts_with("local ") || raw_key.starts_with("let ");
+                        let key = if is_local {
+                            if let Some(stripped) = raw_key.strip_prefix("local ") {
+                                stripped.trim().to_string()
+                            } else if let Some(stripped) = raw_key.strip_prefix("let ") {
+                                stripped.trim().to_string()
+                            } else {
+                                raw_key.to_string()
+                            }
+                        } else {
+                            raw_key.to_string()
+                        };
                         let val_start = trimmed[eq_idx + 1..].trim();
 
                         // Collect all lines until the next key assignment or end
@@ -1308,7 +1346,11 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
                         }
 
                         let full_value = value_lines.join("\n");
-                        state.insert(key, full_value);
+                        if is_local {
+                            locals.insert(key, full_value);
+                        } else {
+                            state.insert(key, full_value);
+                        }
                         continue;
                     }
                     i += 1;
@@ -1422,6 +1464,7 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
 
     Ok(LogicDefinition {
         state,
+        locals,
         derived,
         helpers,
         actions,

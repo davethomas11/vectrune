@@ -99,8 +99,12 @@ __RuneWeb.boot({{
 
     fn generate_state_json(&self) -> String {
         let mut normalized = serde_json::Map::new();
+        let mut evaluated_locals: HashMap<String, serde_json::Value> = HashMap::new();
+        for (key, val) in &self.logic.locals {
+            evaluated_locals.insert(key.clone(), self.parse_value_with_locals(val, &evaluated_locals));
+        }
         for (key, val) in &self.logic.state {
-            normalized.insert(key.clone(), self.parse_value(val));
+            normalized.insert(key.clone(), self.parse_value_with_locals(val, &evaluated_locals));
         }
         for (key, val) in &self.memory_seed {
             normalized.insert(key.clone(), val.clone());
@@ -108,18 +112,28 @@ __RuneWeb.boot({{
         serde_json::Value::Object(normalized).to_string()
     }
 
-    fn parse_value(&self, val: &str) -> serde_json::Value {
+    pub fn parse_value(&self, val: &str) -> serde_json::Value {
+        self.parse_value_with_locals(val, &HashMap::new())
+    }
+
+    pub fn parse_value_with_locals(&self, val: &str, locals: &HashMap<String, serde_json::Value>) -> serde_json::Value {
         let trimmed = val.trim();
+        if trimmed.starts_with('[') {
+            if let Some(arr) = self.parse_relaxed_array_with_locals(trimmed, locals) {
+                return arr;
+            }
+        }
+        if let Some(res) = parse_var_with_object(trimmed, locals) {
+            return res;
+        }
+        if let Some(local_val) = locals.get(trimmed) {
+            return local_val.clone();
+        }
         if let Some(grid) = parse_grid_generator(trimmed) {
             return grid;
         }
         if let Some(gen) = parse_1d_generator(trimmed) {
             return gen;
-        }
-        if trimmed.starts_with('[') && trimmed.ends_with(']') {
-            if let Some(arr) = self.parse_relaxed_array(trimmed) {
-                return arr;
-            }
         }
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) {
             return value;
@@ -146,33 +160,143 @@ __RuneWeb.boot({{
     }
 
     fn parse_relaxed_array(&self, s: &str) -> Option<serde_json::Value> {
+        self.parse_relaxed_array_with_locals(s, &HashMap::new())
+    }
+
+    fn parse_relaxed_array_with_locals(&self, s: &str, locals: &HashMap<String, serde_json::Value>) -> Option<serde_json::Value> {
         let trimmed = s.trim();
-        if !trimmed.starts_with('[') || !trimmed.ends_with(']') {
+        if !trimmed.starts_with('[') {
             return None;
         }
-        let inner = trimmed[1..trimmed.len() - 1].trim();
-        if inner.is_empty() {
-            return Some(serde_json::Value::Array(vec![]));
-        }
 
-        let parts = split_top_level(inner, ',');
-        let mut items = Vec::new();
+        let mut depth = 0;
+        let mut close_idx = None;
+        let mut in_quote = None;
 
-        for part in parts {
-            let part_trimmed = part.trim();
-            if part_trimmed.is_empty() {
+        for (idx, c) in trimmed.char_indices() {
+            if let Some(q) = in_quote {
+                if c == q {
+                    in_quote = None;
+                }
                 continue;
             }
-            if let Some(serde_json::Value::Array(gen_items)) = parse_1d_generator(part_trimmed) {
-                items.extend(gen_items);
-            } else if let Some(serde_json::Value::Array(grid_items)) = parse_grid_generator(part_trimmed) {
-                items.extend(grid_items);
+            match c {
+                '"' | '\'' => in_quote = Some(c),
+                '[' => depth += 1,
+                ']' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        close_idx = Some(idx);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let close_idx = close_idx?;
+        let inner = trimmed[1..close_idx].trim();
+        let after = trimmed[close_idx + 1..].trim();
+
+        let mut items = Vec::new();
+        if !inner.is_empty() {
+            let parts = split_top_level(inner, ',');
+            for part in parts {
+                let part_trimmed = part.trim();
+                if part_trimmed.is_empty() {
+                    continue;
+                }
+                if let Some(var_res) = parse_var_with_object(part_trimmed, locals) {
+                    if let serde_json::Value::Array(gen_items) = var_res {
+                        items.extend(gen_items);
+                    } else {
+                        items.push(var_res);
+                    }
+                } else if let Some(serde_json::Value::Array(gen_items)) = parse_1d_generator(part_trimmed) {
+                    items.extend(gen_items);
+                } else if let Some(serde_json::Value::Array(grid_items)) = parse_grid_generator(part_trimmed) {
+                    items.extend(grid_items);
+                } else if let Some(local_val) = locals.get(part_trimmed) {
+                    if let serde_json::Value::Array(local_items) = local_val {
+                        items.extend(local_items.clone());
+                    } else {
+                        items.push(local_val.clone());
+                    }
+                } else {
+                    items.push(self.parse_value_with_locals(part_trimmed, locals));
+                }
+            }
+        }
+
+        // Handle array post-modifier `all { ... }` or `with { ... }`
+        if after.starts_with("all") || after.starts_with("with") {
+            let mod_body = if let Some(stripped) = after.strip_prefix("all") {
+                stripped.trim()
+            } else if let Some(stripped) = after.strip_prefix("with") {
+                stripped.trim()
             } else {
-                items.push(self.parse_value(part_trimmed));
+                ""
+            };
+            if mod_body.starts_with('{') && mod_body.ends_with('}') {
+                let empty_vars = HashMap::new();
+                if let Some(mod_map) = parse_relaxed_object(mod_body, &empty_vars) {
+                    for item in &mut items {
+                        if let Some(obj) = item.as_object_mut() {
+                            for (k, v) in &mod_map {
+                                obj.insert(k.clone(), v.clone());
+                            }
+                        }
+                    }
+                }
             }
         }
 
         Some(serde_json::Value::Array(items))
+    }
+}
+
+fn parse_var_with_object(s: &str, locals: &HashMap<String, serde_json::Value>) -> Option<serde_json::Value> {
+    let trimmed = s.trim();
+    let with_idx = trimmed.find(" with")?;
+    let var_part = trimmed[..with_idx].trim();
+    let with_part = trimmed[with_idx + 5..].trim();
+    if !with_part.starts_with('{') || !with_part.ends_with('}') {
+        return None;
+    }
+
+    let local_val = locals.get(var_part).or_else(|| {
+        locals.iter().find_map(|(k, v)| {
+            if k.starts_with(var_part) || var_part.starts_with(k) {
+                Some(v)
+            } else {
+                None
+            }
+        })
+    })?;
+
+    let empty_vars = HashMap::new();
+    let with_map = parse_relaxed_object(with_part, &empty_vars)?;
+
+    match local_val {
+        serde_json::Value::Array(items) => {
+            let mut updated_items = Vec::new();
+            for item in items {
+                let mut item_obj = item.as_object().cloned().unwrap_or_default();
+                for (k, v) in &with_map {
+                    item_obj.insert(k.clone(), v.clone());
+                }
+                updated_items.push(serde_json::Value::Object(item_obj));
+            }
+            Some(serde_json::Value::Array(updated_items))
+        }
+        serde_json::Value::Object(obj) => {
+            let mut updated_obj = obj.clone();
+            for (k, v) in with_map {
+                updated_obj.insert(k, v);
+            }
+            Some(serde_json::Value::Object(updated_obj))
+        }
+        _ => None,
     }
 }
 
@@ -551,6 +675,7 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect(),
+            locals: HashMap::new(),
             derived: HashMap::from([(
                 "label".to_string(),
                 DerivedDefinition {
@@ -610,6 +735,7 @@ mod tests {
     fn parses_value_literals_to_json() {
         let logic = LogicDefinition {
             state: HashMap::new(),
+            locals: HashMap::new(),
             derived: HashMap::new(),
             helpers: HashMap::new(),
             actions: HashMap::new(),
@@ -627,6 +753,7 @@ mod tests {
     fn parses_1d_generator_and_relaxed_arrays() {
         let logic = LogicDefinition {
             state: HashMap::new(),
+            locals: HashMap::new(),
             derived: HashMap::new(),
             helpers: HashMap::new(),
             actions: HashMap::new(),
@@ -683,9 +810,70 @@ mod tests {
     }
 
     #[test]
+    fn parses_local_templates_and_array_all_modifier() {
+        let logic = LogicDefinition {
+            state: HashMap::from([(
+                "aliens".to_string(),
+                r#"[
+                    alien with { "y": 40, "start_y": 40, "type": 1 },
+                    alien with { "y": 80, "start_y": 80, "type": 2 },
+                    alien with { "y": 120, "start_y": 120, "type": 3 }
+                ] all { "alive": true }"#.to_string(),
+            )]),
+            locals: HashMap::from([(
+                "alien_batch".to_string(),
+                r#"{ "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65"#.to_string(),
+            )]),
+            derived: HashMap::new(),
+            helpers: HashMap::new(),
+            actions: HashMap::new(),
+            timer: None,
+            keys: HashMap::new(),
+        };
+        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new(), None);
+        let state_json_str = gen.generate_state_json();
+        let state_val: serde_json::Value = serde_json::from_str(&state_json_str).expect("Valid JSON");
+        
+        // Assert alien_batch is NOT in stateJson (it's local)
+        assert!(state_val.get("alien_batch").is_none());
+
+        // Assert aliens has exactly 18 items
+        let aliens = state_val.get("aliens").expect("aliens exists").as_array().expect("aliens is array");
+        assert_eq!(aliens.len(), 18);
+
+        // Row 1
+        assert_eq!(aliens[0]["x"], 50);
+        assert_eq!(aliens[0]["start_x"], 50);
+        assert_eq!(aliens[0]["y"], 40);
+        assert_eq!(aliens[0]["start_y"], 40);
+        assert_eq!(aliens[0]["type"], 1);
+        assert_eq!(aliens[0]["alive"], true);
+
+        assert_eq!(aliens[5]["x"], 375);
+        assert_eq!(aliens[5]["start_x"], 375);
+        assert_eq!(aliens[5]["y"], 40);
+        assert_eq!(aliens[5]["start_y"], 40);
+        assert_eq!(aliens[5]["type"], 1);
+        assert_eq!(aliens[5]["alive"], true);
+
+        // Row 2
+        assert_eq!(aliens[6]["x"], 50);
+        assert_eq!(aliens[6]["y"], 80);
+        assert_eq!(aliens[6]["type"], 2);
+        assert_eq!(aliens[6]["alive"], true);
+
+        // Row 3
+        assert_eq!(aliens[12]["x"], 50);
+        assert_eq!(aliens[12]["y"], 120);
+        assert_eq!(aliens[12]["type"], 3);
+        assert_eq!(aliens[12]["alive"], true);
+    }
+
+    #[test]
     fn embedded_source_cannot_close_the_bootstrap_script() {
         let logic = LogicDefinition {
             state: HashMap::new(),
+            locals: HashMap::new(),
             derived: HashMap::new(),
             helpers: HashMap::new(),
             actions: HashMap::new(),

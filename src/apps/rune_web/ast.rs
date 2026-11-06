@@ -201,6 +201,10 @@ pub struct LogicDefinition {
     /// Local state variables with initial values
     pub state: HashMap<String, String>,
 
+    /// Template locals / constants (not exported to public stateJson)
+    #[serde(default)]
+    pub locals: HashMap<String, String>,
+
     /// Derived values computed from state
     pub derived: HashMap<String, DerivedDefinition>,
 

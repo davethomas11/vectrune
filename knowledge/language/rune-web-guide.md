@@ -66,16 +66,21 @@ Features:
 
 State declarations support concise object generation syntax to eliminate repetitive collections (such as game enemy formations, board grids, or table rows):
 
-### 1D Object Replication:
+### 1D Object Replication & Local Templates:
 ```rune
-aliens = [
-    { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65 with { "y": 40, "start_y": 40, "type": 1, "alive": true },
-    { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65 with { "y": 80, "start_y": 80, "type": 2, "alive": true }
-]
+state:
+    local alien_batch = { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65
+    aliens = [
+        alien with { "y": 40, "start_y": 40, "type": 1 },
+        alien with { "y": 80, "start_y": 80, "type": 2 },
+        alien with { "y": 120, "start_y": 120, "type": 3 }
+    ] all { "alive": true }
 ```
-- `{ template } * N`: Replicates a template object N times.
+- `local <name> = <expr>`: Declares a local template or generator in `state:` without exposing it in the public reactive state.
+- `<batch_ref> with { ... }`: Maps over a local batch, cloning each element and merging the designated properties.
+- `[ ... ] all { ... }`: Post-modifier applying shared properties across all flattened elements in the resulting collection.
+- `{ template } * N`: Standalone replication of a template object N times.
 - `inc (props) by STEP`: Increments numeric properties across items (`value = base + i * STEP`).
-- `with { ... }`: Merges static or calculated properties into every generated item.
 
 ### 2D Grid Generator:
 ```rune
