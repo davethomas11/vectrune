@@ -1279,6 +1279,7 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
 
                         // Collect all lines until the next key assignment or end
                         let mut value_lines = vec![val_start.to_string()];
+                        let mut bracket_depth: i32 = val_start.chars().map(|c| match c { '[' | '{' => 1, ']' | '}' => -1, _ => 0 }).sum();
                         i += 1;
 
                         while i < state_items.len() {
@@ -1291,10 +1292,12 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
                                         continue;
                                     }
                                     
-                                    // Stop if we hit another key = value
-                                    if next_trimmed.contains('=') && !next_trimmed.starts_with('{') && !next_trimmed.starts_with('[') {
+                                    // Stop if we hit another key = value while not inside brackets
+                                    if bracket_depth <= 0 && next_trimmed.contains('=') && !next_trimmed.starts_with('{') && !next_trimmed.starts_with('[') {
                                         break;
                                     }
+                                    let delta: i32 = next_trimmed.chars().map(|c| match c { '[' | '{' => 1, ']' | '}' => -1, _ => 0 }).sum();
+                                    bracket_depth += delta;
                                     value_lines.push(next_s.clone());
                                     i += 1;
                                 }

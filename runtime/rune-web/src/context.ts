@@ -22,6 +22,7 @@ export interface RuneContext {
   isRendering: boolean;
   memorySubscriptions: Record<string, Set<string>>;
   navigator?: NavigatorConfig | null;
+  initialState?: Record<string, unknown>;
 }
 
 let _ctx: RuneContext | null = null;

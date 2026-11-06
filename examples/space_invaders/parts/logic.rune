@@ -12,26 +12,6 @@ state:
     player = { "x": 220, "y": 420 }
     bullets = []
     alien_bullets = []
-    aliens = [
-        { "x": 50, "y": 40, "start_x": 50, "start_y": 40, "type": 1, "alive": true },
-        { "x": 115, "y": 40, "start_x": 115, "start_y": 40, "type": 1, "alive": true },
-        { "x": 180, "y": 40, "start_x": 180, "start_y": 40, "type": 1, "alive": true },
-        { "x": 245, "y": 40, "start_x": 245, "start_y": 40, "type": 1, "alive": true },
-        { "x": 310, "y": 40, "start_x": 310, "start_y": 40, "type": 1, "alive": true },
-        { "x": 375, "y": 40, "start_x": 375, "start_y": 40, "type": 1, "alive": true },
-        { "x": 50, "y": 80, "start_x": 50, "start_y": 80, "type": 2, "alive": true },
-        { "x": 115, "y": 80, "start_x": 115, "start_y": 80, "type": 2, "alive": true },
-        { "x": 180, "y": 80, "start_x": 180, "start_y": 80, "type": 2, "alive": true },
-        { "x": 245, "y": 80, "start_x": 245, "start_y": 80, "type": 2, "alive": true },
-        { "x": 310, "y": 80, "start_x": 310, "start_y": 80, "type": 2, "alive": true },
-        { "x": 375, "y": 80, "start_x": 375, "start_y": 80, "type": 2, "alive": true },
-        { "x": 50, "y": 120, "start_x": 50, "start_y": 120, "type": 3, "alive": true },
-        { "x": 115, "y": 120, "start_x": 115, "start_y": 120, "type": 3, "alive": true },
-        { "x": 180, "y": 120, "start_x": 180, "start_y": 120, "type": 3, "alive": true },
-        { "x": 245, "y": 120, "start_x": 245, "start_y": 120, "type": 3, "alive": true },
-        { "x": 310, "y": 120, "start_x": 310, "start_y": 120, "type": 3, "alive": true },
-        { "x": 375, "y": 120, "start_x": 375, "start_y": 120, "type": 3, "alive": true }
-    ]
     alien_dir = 1
     alien_speed = 3
     alien_count = 18
@@ -43,7 +23,7 @@ state:
 
 action startLeft:
     stop when status != "playing"
-    move_dir = 0 - 1
+    move_dir = -1
     player.x = clamp(player.x - 18, 10, 434)
 
 action startRight:
@@ -76,10 +56,7 @@ action start:
     player.x = 220
     bullets = []
     alien_bullets = []
-    for a in aliens:
-        a.alive = true
-        a.x = a.start_x
-        a.y = a.start_y
+    restore aliens
     status = "playing"
     game_message = ""
 
@@ -94,19 +71,19 @@ action tick:
 
     # 1. Update player bullets
     for b in bullets:
-        b.y = b.y - 12
+        b.y -= 12
     bullets = bullets.filter it.y > 0 and it.alive
 
     # 2. Update alien bullets
     for ab in alien_bullets:
-        ab.y = ab.y + 7
+        ab.y += 7
     alien_bullets = alien_bullets.filter it.y < 460 and it.alive
 
     # 3. Check alien bullet collision with player
     for ab in alien_bullets:
         if collide(ab, player, 20, 16):
             ab.alive = false
-            lives = lives - 1
+            lives -= 1
             if lives <= 0:
                 status = "game_over"
                 game_message = "GAME OVER"
@@ -116,7 +93,7 @@ action tick:
     change_dir = false
     for a in aliens:
         if a.alive:
-            a.x = a.x + (alien_dir * alien_speed)
+            a.x += alien_dir * alien_speed
             if a.x > 430 or a.x < 20:
                 change_dir = true
             if a.y > 400:
@@ -125,9 +102,9 @@ action tick:
                 stop
 
     if change_dir:
-        alien_dir = 0 - alien_dir
+        alien_dir = -alien_dir
         for a in aliens:
-            a.y = a.y + 16
+            a.y += 16
 
     # 5. Check player bullet collisions with aliens
     for b in bullets:
@@ -136,8 +113,8 @@ action tick:
                 if collide(b, a, 22, 18):
                     a.alive = false
                     b.alive = false
-                    score = score + 20
-                    alien_count = alien_count - 1
+                    score += 20
+                    alien_count -= 1
 
     # 6. Occasional alien return fire
     if random(1, 22) == 1:

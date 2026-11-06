@@ -811,6 +811,19 @@ var __RuneWeb = (() => {
         return evaluateExpression(parts[0], scope, nextDepth) & evaluateExpression(parts[1], scope, nextDepth);
       }
     }
+    if (trimmed.startsWith("-") && !trimmed.startsWith("--")) {
+      const operand = trimmed.slice(1).trim();
+      if (operand) {
+        const val = evaluateExpression(operand, scope, nextDepth);
+        if (typeof val === "number") {
+          return -val;
+        }
+        const num = Number(val);
+        if (!Number.isNaN(num)) {
+          return -num;
+        }
+      }
+    }
     return resolveValue(trimmed, scope);
   }
 
@@ -1655,6 +1668,70 @@ var __RuneWeb = (() => {
   function executeStatement(statement, locals) {
     const trimmed = String(statement || "").trim();
     if (!trimmed) return true;
+    const restoreMatch = trimmed.match(/^(?:restore|reset)\s+([a-zA-Z0-9_.[\]'"]+)$/) || trimmed.match(/^([a-zA-Z0-9_.[\]'"]+)\.(?:restore|reset)\(\)$/);
+    if (restoreMatch) {
+      const targetPath = restoreMatch[1].trim();
+      const initial = ctx().initialState;
+      if (initial && Object.prototype.hasOwnProperty.call(initial, targetPath)) {
+        assignPath(targetPath, JSON.parse(JSON.stringify(initial[targetPath])), locals);
+        return true;
+      }
+      const targetVal = evaluateExpression(targetPath, buildScope(locals));
+      if (Array.isArray(targetVal)) {
+        for (const item of targetVal) {
+          if (item && typeof item === "object") {
+            for (const key of Object.keys(item)) {
+              if (key.startsWith("start_")) {
+                const baseProp = key.slice(6);
+                item[baseProp] = item[key];
+              }
+            }
+            if ("alive" in item) {
+              item.alive = true;
+            }
+          }
+        }
+        assignPath(targetPath, targetVal, locals);
+        return true;
+      } else if (targetVal && typeof targetVal === "object") {
+        const item = targetVal;
+        for (const key of Object.keys(item)) {
+          if (key.startsWith("start_")) {
+            item[key.slice(6)] = item[key];
+          }
+        }
+        if ("alive" in item) {
+          item.alive = true;
+        }
+        assignPath(targetPath, item, locals);
+        return true;
+      }
+      return true;
+    }
+    const compoundMatch = trimmed.match(/^([a-zA-Z0-9_.[\]'"]+)\s*(\+|\-|\*|\/)=\s*(.+)$/);
+    if (compoundMatch) {
+      const left = compoundMatch[1].trim();
+      const op = compoundMatch[2];
+      const right = compoundMatch[3].trim();
+      const rightVal = evaluateExpression(right, buildScope(locals));
+      const leftVal = evaluateExpression(left, buildScope(locals));
+      let newVal;
+      if (op === "+") {
+        if (typeof leftVal === "number" && typeof rightVal === "number") {
+          newVal = leftVal + rightVal;
+        } else {
+          newVal = `${valueToString(leftVal)}${valueToString(rightVal)}`;
+        }
+      } else if (op === "-") {
+        newVal = Number(leftVal) - Number(rightVal);
+      } else if (op === "*") {
+        newVal = Number(leftVal) * Number(rightVal);
+      } else if (op === "/") {
+        newVal = Number(leftVal) / Number(rightVal);
+      }
+      assignPath(left, newVal, locals);
+      return true;
+    }
     if (trimmed.includes("=") && !trimmed.match(/^.+?\.push\(/)) {
       const assignmentMatch = trimmed.match(/^(.*?)(?<![!<>=])=(?!=)(.*)$/);
       if (assignmentMatch) {
@@ -1922,7 +1999,8 @@ var __RuneWeb = (() => {
       app,
       isRendering: false,
       memorySubscriptions: {},
-      navigator: config.navigator || null
+      navigator: config.navigator || null,
+      initialState: JSON.parse(JSON.stringify(config.stateJson || {}))
     });
     app.state = makeReactive(
       Object.assign({}, config.stateJson, { i18n: config.i18nData })

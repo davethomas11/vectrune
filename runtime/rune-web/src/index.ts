@@ -99,6 +99,7 @@ export function boot(config: RuneWebConfig): RuneApp {
     isRendering: false,
     memorySubscriptions: {},
     navigator: config.navigator || null,
+    initialState: JSON.parse(JSON.stringify(config.stateJson || {})),
   });
 
   // Create reactive state (must happen after context init since makeReactive uses ctx())

@@ -112,6 +112,14 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
         "banned"  -> respond 403 "Access denied"
         _         -> respond 400 "Invalid status"
     ```
+- [x] **Rune-Web State Generators & Logic Compressions**:
+  - Implemented 1D object replication syntax: `{ template } * N inc (props) by STEP with { ... }`.
+  - Implemented 2D grid generation syntax: `grid COLS x ROWS at (X, Y) step (DX, DY) with { ... }`.
+  - Nested generator expansion inside array declarations (`[ { ... } * N ..., ... ]`).
+  - Added compound assignment operators to Rune-Web actions: `+=`, `-=`, `*=`, `/=`.
+  - Added unary negation operator: `-var`, `-1`.
+  - Added entity collection restore shorthand: `restore aliens` or `aliens.restore()` resetting entities to initial state or restoring `start_*` coordinates.
+  - Compressed Space Invaders fleet state (`enemies.rune`) and game actions (`logic.rune`). *(Release: `v0.2.10` - 2026-11-06)*
 - [x] **Rune-Web CSS Enhancements: Multi-Presets, Shorthands, Nesting & Token Opacity**:
   - Implemented multi-preset composition: `use = (preset-a, preset-b)`
   - Added smart layout shorthands: `center = xy/x/y/true`, `abs = inset/0 0`, `fixed = inset/0 0`, `size = W H`, `aspect = W / H`, `round`/`radius`

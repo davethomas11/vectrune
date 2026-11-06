@@ -115,4 +115,41 @@ describe('executeStatement', () => {
     executeStatement('delete todos[].(it.id == id)', { id: 1 });
     expect((app.state.todos as unknown[]).length).toBe(1);
   });
+
+  it('handles compound assignments', () => {
+    const app = setupTestContext({ score: 10, lives: 3, speed: 2, energy: 100 });
+    executeStatement('score += 20', {});
+    expect(app.state.score).toBe(30);
+
+    executeStatement('lives -= 1', {});
+    expect(app.state.lives).toBe(2);
+
+    executeStatement('speed *= 3', {});
+    expect(app.state.speed).toBe(6);
+
+    executeStatement('energy /= 2', {});
+    expect(app.state.energy).toBe(50);
+  });
+
+  it('handles restore / reset shorthand', () => {
+    const app = setupTestContext({
+      aliens: [
+        { x: 100, y: 80, start_x: 50, start_y: 40, alive: false },
+        { x: 150, y: 90, start_x: 115, start_y: 40, alive: false },
+      ],
+    });
+    executeStatement('restore aliens', {});
+    const aliens = app.state.aliens as any[];
+    expect(aliens[0].x).toBe(50);
+    expect(aliens[0].y).toBe(40);
+    expect(aliens[0].alive).toBe(true);
+    expect(aliens[1].x).toBe(115);
+    expect(aliens[1].y).toBe(40);
+    expect(aliens[1].alive).toBe(true);
+
+    // Also test dot method call aliens.restore()
+    aliens[0].x = 999;
+    executeStatement('aliens.restore()', {});
+    expect(aliens[0].x).toBe(50);
+  });
 });

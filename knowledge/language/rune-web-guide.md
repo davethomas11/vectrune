@@ -62,6 +62,39 @@ Features:
 - **Browser History**: Mutating `activePage` (or clicking links with `navigate('target')`) updates the URL using `history.pushState`.
 - **Back / Forward Support**: Clicking browser Back or Forward automatically triggers `popstate` to update reactive state and re-render the view.
 
+## State Replication & Grid Generators
+
+State declarations support concise object generation syntax to eliminate repetitive collections (such as game enemy formations, board grids, or table rows):
+
+### 1D Object Replication:
+```rune
+aliens = [
+    { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65 with { "y": 40, "start_y": 40, "type": 1, "alive": true },
+    { "x": 50, "start_x": 50 } * 6 inc (x, start_x) by 65 with { "y": 80, "start_y": 80, "type": 2, "alive": true }
+]
+```
+- `{ template } * N`: Replicates a template object N times.
+- `inc (props) by STEP`: Increments numeric properties across items (`value = base + i * STEP`).
+- `with { ... }`: Merges static or calculated properties into every generated item.
+
+### 2D Grid Generator:
+```rune
+aliens = grid 6 x 3 at (50, 40) step (65, 40) with { type: row + 1, alive: true }
+```
+- `grid COLS x ROWS`: Generates a `COLS * ROWS` grid.
+- `at (X, Y)` or `from (X, Y)`: Origin coordinates.
+- `step (DX, DY)`: Spacing between cells.
+- Sets `x`, `y`, `start_x`, `start_y`, `col`, `row`.
+- `with { ... }` supports expressions referencing `row`, `col`, or `i`.
+
+## Compressed Action Logic
+
+Rune-Web actions support concise expression and assignment forms:
+- **Compound assignments**: `score += 20`, `lives -= 1`, `speed *= 2`, `energy /= 2`.
+- **Unary negation**: `alien_dir = -alien_dir`, `move_dir = -1`.
+- **Collection restore**: `restore aliens` or `aliens.restore()` resets an entity array to initial coordinates or restores fields prefixed with `start_` (e.g. `x = start_x`, `y = start_y`, `alive = true`).
+- **Spatial collisions**: `collide(bullet, alien, width, height)` evaluates bounding box overlap.
+
 ## Styles and responsive layout
 
 [Reading shelf](../../examples/rune_web_guide/styling.rune) and the other lessons import [parts/style.rune](../../examples/rune_web_guide/parts/style.rune). `@Style/guide` defines shared `tokens:`, reusable `presets:` and selector `rules:`. A rule uses a preset with `use = (panel)`, references tokens with `{brand}`, and attaches to a page through `style = guide`.

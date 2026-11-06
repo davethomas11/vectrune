@@ -225,4 +225,14 @@ describe('evaluateExpression', () => {
     expect(evaluateExpression('min(10, 5, 20)', scope)).toBe(5);
     expect(evaluateExpression('max(10, 5, 20)', scope)).toBe(20);
   });
+
+  it('evaluates unary negation on variables and expressions', () => {
+    const scope = buildScope({
+      dir: 1,
+      speed: 5,
+    });
+    expect(evaluateExpression('-dir', scope)).toBe(-1);
+    expect(evaluateExpression('-1', scope)).toBe(-1);
+    expect(evaluateExpression('-speed', scope)).toBe(-5);
+  });
 });

@@ -578,6 +578,21 @@ export function evaluateExpression(
     }
   }
 
+  // --- Unary Negation ---
+  if (trimmed.startsWith('-') && !trimmed.startsWith('--')) {
+    const operand = trimmed.slice(1).trim();
+    if (operand) {
+      const val = evaluateExpression(operand, scope, nextDepth);
+      if (typeof val === 'number') {
+        return -val;
+      }
+      const num = Number(val);
+      if (!Number.isNaN(num)) {
+        return -num;
+      }
+    }
+  }
+
   // --- Fallback: resolve as a value ---
   return resolveValue(trimmed, scope);
 }
