@@ -112,6 +112,13 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
         "banned"  -> respond 403 "Access denied"
         _         -> respond 400 "Invalid status"
     ```
+- [x] **Rune-Web CSS Enhancements: Multi-Presets, Shorthands, Nesting & Token Opacity**:
+  - Implemented multi-preset composition: `use = (preset-a, preset-b)`
+  - Added smart layout shorthands: `center = xy/x/y/true`, `abs = inset/0 0`, `fixed = inset/0 0`, `size = W H`, `aspect = W / H`, `round`/`radius`
+  - Added glow shorthands: `glow = {token} 15px`, `text-glow = {token} 10px 20px`, `glow = inset {token} 20px`
+  - Added token color opacity & alpha functions: `{token / 25%}` and `alpha({token}, 0.25)` compiling to standard `color-mix(in srgb, var(--token) 25%, transparent)`
+  - Added indented pseudo-class and state nesting: `:hover:`, `:active:`, `&:hover:`, `&.modifier:`
+  - Tuned up `examples/space_invaders/parts/style.rune` and `teaching_website/parts/style.rune` eliminating repetitive rules and hardcoded colors. *(Release: `v0.2.9` - 2026-11-06)*
 - [x] **Type Coercion Builtins**:
   - Added explicit casting builtins: `to-number(val)`, `to-bool(val)`, and `to-string(val)` across Rust runtime and browser emulator.
   - Enabled direct coercion of path parameters, query strings, and booleans in expression pipelines. *(Release: `v0.2.6` - 2026-11-02)*

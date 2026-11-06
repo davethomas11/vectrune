@@ -28,22 +28,74 @@ impl CssCompiler {
         }
     }
 
-    /// Resolve a token reference like `{token-name}` to its CSS variable form.
+    /// Resolve a token reference like `{token-name}` or `{token-name / 25%}` to its CSS variable form.
     pub fn resolve_token(&self, token_ref: &str) -> String {
         if token_ref.starts_with('{') && token_ref.ends_with('}') {
-            let token_name = &token_ref[1..token_ref.len() - 1];
-            format!("var(--{})", token_name.trim())
+            let inner = token_ref[1..token_ref.len() - 1].trim();
+            if let Some((name, alpha)) = inner.split_once('/') {
+                let name = name.trim();
+                let alpha = alpha.trim();
+                let percentage = if alpha.ends_with('%') {
+                    alpha.to_string()
+                } else if let Ok(val) = alpha.parse::<f64>() {
+                    format!("{}%", (val * 100.0).round())
+                } else {
+                    alpha.to_string()
+                };
+                return format!("color-mix(in srgb, var(--{}) {}, transparent)", name, percentage);
+            }
+            format!("var(--{})", inner)
         } else {
             token_ref.to_string()
         }
     }
 
     fn expand_property_value(&self, val: &str) -> String {
-        if val.starts_with('(') && val.ends_with(')') {
+        let expanded = if val.starts_with('(') && val.ends_with(')') {
             val.to_string()
         } else {
             self.expand_tokens_in_string(val)
+        };
+        self.expand_alpha_calls(&expanded)
+    }
+
+    fn expand_alpha_calls(&self, input: &str) -> String {
+        let mut result = input.to_string();
+        while let Some(start) = result.find("alpha(") {
+            let rest = &result[start + 6..];
+            let mut depth = 1;
+            let mut end_idx = None;
+            for (i, c) in rest.char_indices() {
+                if c == '(' {
+                    depth += 1;
+                } else if c == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        end_idx = Some(i);
+                        break;
+                    }
+                }
+            }
+            if let Some(end) = end_idx {
+                let args = &rest[..end];
+                if let Some((color, opacity)) = args.split_once(',') {
+                    let color = color.trim();
+                    let opacity = opacity.trim();
+                    let pct = if opacity.ends_with('%') {
+                        opacity.to_string()
+                    } else if let Ok(val) = opacity.parse::<f64>() {
+                        format!("{}%", (val * 100.0).round() as i64)
+                    } else {
+                        opacity.to_string()
+                    };
+                    let replacement = format!("color-mix(in srgb, {} {}, transparent)", color, pct);
+                    result.replace_range(start..start + 6 + end + 1, &replacement);
+                    continue;
+                }
+            }
+            break;
         }
+        result
     }
 
     fn expand_tokens_in_string(&self, input: &str) -> String {
@@ -81,16 +133,19 @@ impl CssCompiler {
         match prop {
             "bg" => vec![("background".to_string(), expanded)],
             "pad" => vec![("padding".to_string(), expanded)],
-            "round" => vec![("border-radius".to_string(), expanded)],
+            "round" | "radius" => vec![("border-radius".to_string(), expanded)],
             "font" => vec![("font-family".to_string(), expanded)],
             "weight" => vec![("font-weight".to_string(), expanded)],
             "text-size" => vec![("font-size".to_string(), expanded)],
-            "size" => vec![
-                ("width".to_string(), expanded.clone()),
-                ("height".to_string(), expanded),
-            ],
+            "size" => self.expand_size_value(&expanded),
             "stack" => self.expand_stack_value(&expanded),
             "inline" => self.expand_inline_value(&expanded),
+            "center" => self.expand_center_value(&expanded),
+            "abs" => self.expand_position_shorthand("absolute", &expanded),
+            "fixed" => self.expand_position_shorthand("fixed", &expanded),
+            "glow" => vec![("box-shadow".to_string(), self.expand_glow_value(&expanded, false))],
+            "text-glow" => vec![("text-shadow".to_string(), self.expand_glow_value(&expanded, true))],
+            "aspect" => vec![("aspect-ratio".to_string(), expanded)],
             "columns" => vec![(
                 "grid-template-columns".to_string(),
                 self.expand_columns_value(&expanded),
@@ -105,6 +160,142 @@ impl CssCompiler {
             )],
             _ => vec![(prop.to_string(), expanded)],
         }
+    }
+
+    fn expand_size_value(&self, value: &str) -> Vec<(String, String)> {
+        let trimmed = value.trim();
+        if let Some((w, h)) = trimmed.split_once(' ') {
+            vec![
+                ("width".to_string(), w.trim().to_string()),
+                ("height".to_string(), h.trim().to_string()),
+            ]
+        } else {
+            vec![
+                ("width".to_string(), trimmed.to_string()),
+                ("height".to_string(), trimmed.to_string()),
+            ]
+        }
+    }
+
+    fn expand_center_value(&self, value: &str) -> Vec<(String, String)> {
+        let mut decls = vec![("display".to_string(), "flex".to_string())];
+        match value.trim() {
+            "x" => {
+                decls.push(("justify-content".to_string(), "center".to_string()));
+            }
+            "y" => {
+                decls.push(("align-items".to_string(), "center".to_string()));
+            }
+            _ => {
+                decls.push(("align-items".to_string(), "center".to_string()));
+                decls.push(("justify-content".to_string(), "center".to_string()));
+            }
+        }
+        decls
+    }
+
+    fn expand_position_shorthand(&self, position_type: &str, value: &str) -> Vec<(String, String)> {
+        let mut decls = vec![("position".to_string(), position_type.to_string())];
+        let trimmed = value.trim();
+        match trimmed {
+            "true" | "yes" | "" => {}
+            "inset" | "full" => {
+                decls.push(("inset".to_string(), "0".to_string()));
+            }
+            "center" => {
+                decls.push(("top".to_string(), "50%".to_string()));
+                decls.push(("left".to_string(), "50%".to_string()));
+                decls.push(("transform".to_string(), "translate(-50%, -50%)".to_string()));
+            }
+            other => {
+                let parts: Vec<&str> = other.split_whitespace().collect();
+                match parts.len() {
+                    1 => {
+                        decls.push(("inset".to_string(), parts[0].to_string()));
+                    }
+                    2 => {
+                        decls.push(("top".to_string(), parts[0].to_string()));
+                        decls.push(("left".to_string(), parts[1].to_string()));
+                    }
+                    4 => {
+                        decls.push(("top".to_string(), parts[0].to_string()));
+                        decls.push(("right".to_string(), parts[1].to_string()));
+                        decls.push(("bottom".to_string(), parts[2].to_string()));
+                        decls.push(("left".to_string(), parts[3].to_string()));
+                    }
+                    _ => {}
+                }
+            }
+        }
+        decls
+    }
+
+    fn expand_glow_value(&self, value: &str, is_text: bool) -> String {
+        let trimmed = value.trim();
+        if trimmed == "none" {
+            return "none".to_string();
+        }
+        let is_inset = trimmed.starts_with("inset ");
+        let without_inset = if is_inset {
+            trimmed["inset ".len()..].trim()
+        } else {
+            trimmed
+        };
+
+        let (color, rest_sizes) = if without_inset.starts_with("color-mix(")
+            || without_inset.starts_with("var(")
+            || without_inset.starts_with("rgba(")
+            || without_inset.starts_with("rgb(")
+            || without_inset.starts_with("hsl(")
+        {
+            let mut depth = 0;
+            let mut close_idx = None;
+            for (i, c) in without_inset.char_indices() {
+                if c == '(' {
+                    depth += 1;
+                } else if c == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        close_idx = Some(i);
+                        break;
+                    }
+                }
+            }
+            if let Some(close) = close_idx {
+                (without_inset[..=close].trim(), without_inset[close + 1..].trim())
+            } else if let Some(space_idx) = without_inset.find(' ') {
+                (without_inset[..space_idx].trim(), without_inset[space_idx + 1..].trim())
+            } else {
+                (without_inset, "")
+            }
+        } else if let Some((first, rest)) = without_inset.split_once(' ') {
+            (first.trim(), rest.trim())
+        } else {
+            (without_inset, "")
+        };
+
+        let sizes: Vec<&str> = rest_sizes.split_whitespace().collect();
+        if sizes.is_empty() {
+            if is_text {
+                return format!("0 0 10px {}", color);
+            } else if is_inset {
+                return format!("inset 0 0 10px {}", color);
+            } else {
+                return format!("0 0 10px {}", color);
+            }
+        }
+
+        let mut shadows = Vec::new();
+        for size in sizes {
+            if is_text {
+                shadows.push(format!("0 0 {} {}", size, color));
+            } else if is_inset {
+                shadows.push(format!("inset 0 0 {} {}", size, color));
+            } else {
+                shadows.push(format!("0 0 {} {}", size, color));
+            }
+        }
+        shadows.join(", ")
     }
 
     fn expand_stack_value(&self, value: &str) -> Vec<(String, String)> {
@@ -169,10 +360,16 @@ impl CssCompiler {
         let mut result = HashMap::new();
         for (key, val) in preset {
             if key == "use" {
-                let parent_preset = val.trim_matches(|c| c == '(' || c == ')').trim();
-                let parent_props = self.flatten_preset(parent_preset)?;
-                for (pk, pv) in parent_props {
-                    result.insert(pk, pv);
+                let unparenthesized = val.trim_matches(|c| c == '(' || c == ')');
+                for parent_preset in unparenthesized.split(',') {
+                    let parent_preset = parent_preset.trim();
+                    if parent_preset.is_empty() {
+                        continue;
+                    }
+                    let parent_props = self.flatten_preset(parent_preset)?;
+                    for (pk, pv) in parent_props {
+                        result.insert(pk, pv);
+                    }
                 }
             } else {
                 result.insert(key, self.expand_property_value(&val));
@@ -181,6 +378,38 @@ impl CssCompiler {
 
         self.preset_chain.pop();
         Ok(result)
+    }
+
+    /// Combine parent and child selectors with support for `&`, pseudo-classes `:`, and descendant selectors.
+    pub fn combine_selectors(parent: &str, child: &str) -> String {
+        if parent.is_empty() {
+            return child.to_string();
+        }
+        let parents: Vec<&str> = parent
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        let children: Vec<&str> = child
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        let mut results = Vec::new();
+
+        for p in &parents {
+            for c in &children {
+                if c.starts_with('&') {
+                    results.push(format!("{}{}", p, &c[1..]));
+                } else if c.starts_with(':') {
+                    results.push(format!("{}{}", p, c));
+                } else {
+                    results.push(format!("{} {}", p, c));
+                }
+            }
+        }
+
+        results.join(", ")
     }
 
     /// Generate complete CSS text including tokens, presets, and rules.
@@ -208,32 +437,36 @@ impl CssCompiler {
     }
 
     fn compile_rules(&mut self, css: &mut String, parent_selector: &str, rules: &HashMap<String, HashMap<String, String>>) {
-        // First pass: Resolve all properties and nested rules for this level
         let mut selector_to_props: HashMap<String, Vec<(String, String)>> = HashMap::new();
         let mut selector_to_nested: HashMap<String, HashMap<String, HashMap<String, String>>> = HashMap::new();
+        let mut ordered_selectors: Vec<String> = Vec::new();
 
         for (selector, props) in rules {
-            let full_selector = if selector.starts_with('&') {
-                format!("{}{}", parent_selector, &selector[1..]).trim().to_string()
-            } else if !parent_selector.is_empty() {
-                format!("{} {}", parent_selector, selector).trim().to_string()
-            } else {
-                selector.clone()
-            };
+            let full_selector = Self::combine_selectors(parent_selector, selector);
+
+            if !ordered_selectors.contains(&full_selector) {
+                ordered_selectors.push(full_selector.clone());
+            }
 
             let props_entry = selector_to_props.entry(full_selector.clone()).or_insert_with(Vec::new);
             let nested_entry = selector_to_nested.entry(full_selector.clone()).or_insert_with(HashMap::new);
 
             for (key, val) in props {
                 if key == "use" {
-                    let preset_name = val.trim_matches(|c| c == '(' || c == ')').trim();
-                    match self.flatten_preset(preset_name) {
-                        Ok(preset_props) => {
-                            for (pk, pv) in preset_props {
-                                props_entry.extend(self.normalize_declarations(&pk, &pv));
-                            }
+                    let unparenthesized = val.trim_matches(|c| c == '(' || c == ')');
+                    for preset_name in unparenthesized.split(',') {
+                        let preset_name = preset_name.trim();
+                        if preset_name.is_empty() {
+                            continue;
                         }
-                        Err(e) => css.push_str(&format!("/* Error: {} */\n", e)),
+                        match self.flatten_preset(preset_name) {
+                            Ok(preset_props) => {
+                                for (pk, pv) in preset_props {
+                                    props_entry.extend(self.normalize_declarations(&pk, &pv));
+                                }
+                            }
+                            Err(e) => css.push_str(&format!("/* Error: {} */\n", e)),
+                        }
                     }
                 } else if key.starts_with("nested:") {
                     let nested_selector = &key[7..];
@@ -254,7 +487,6 @@ impl CssCompiler {
                                 }
                             }
                         } else {
-                            // Standard nested rule: merge into existing nested rules for this selector
                             let sub_entry = nested_entry.entry(nested_selector.to_string()).or_insert_with(HashMap::new);
                             for (nk, nv) in nested_body {
                                 sub_entry.insert(nk, nv);
@@ -267,14 +499,16 @@ impl CssCompiler {
             }
         }
 
-        // Second pass: Output CSS and recurse
-        for (selector, resolved_props) in selector_to_props {
-            if !resolved_props.is_empty() {
-                css.push_str(&format!("{} {{\n", selector));
-                for (key, val) in resolved_props {
-                    css.push_str(&format!("  {}: {};\n", key, val));
+        // Output rules and recurse on nested
+        for selector in ordered_selectors {
+            if let Some(resolved_props) = selector_to_props.get(&selector) {
+                if !resolved_props.is_empty() {
+                    css.push_str(&format!("{} {{\n", selector));
+                    for (key, val) in resolved_props {
+                        css.push_str(&format!("  {}: {};\n", key, val));
+                    }
+                    css.push_str("}\n");
                 }
-                css.push_str("}\n");
             }
 
             if let Some(nested) = selector_to_nested.get(&selector) {
@@ -492,6 +726,105 @@ responsive:
         assert!(css.contains("flex-wrap: wrap;"));
         assert!(css.contains("width: 96px;"));
         assert!(css.contains("height: 96px;"));
+    }
+
+    #[test]
+    fn test_multi_presets_and_new_shorthands() {
+        let style = StyleDefinition {
+            responsive: Vec::new(),
+            tokens: [
+                ("neon".to_string(), "#00ff88".to_string()),
+                ("pink".to_string(), "#ff2a85".to_string()),
+            ]
+            .into_iter()
+            .collect(),
+            presets: [
+                (
+                    "entity".to_string(),
+                    [("abs".to_string(), "true".to_string())].into_iter().collect(),
+                ),
+                (
+                    "centered".to_string(),
+                    [("center".to_string(), "xy".to_string())].into_iter().collect(),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            rules: [
+                (
+                    ".player".to_string(),
+                    [
+                        ("use".to_string(), "entity, centered".to_string()),
+                        ("size".to_string(), "32px 48px".to_string()),
+                        ("glow".to_string(), "{neon} 15px".to_string()),
+                        ("bg".to_string(), "{neon / 25%}".to_string()),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+                (
+                    ".title".to_string(),
+                    [
+                        ("text-glow".to_string(), "{pink} 10px 20px".to_string()),
+                        ("aspect".to_string(), "16 / 9".to_string()),
+                        ("color".to_string(), "alpha({pink}, 0.5)".to_string()),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        };
+
+        let mut compiler = CssCompiler::new(&style);
+        let css = compiler.compile(&style.rules);
+
+        assert!(css.contains("position: absolute;"));
+        assert!(css.contains("display: flex;"));
+        assert!(css.contains("align-items: center;"));
+        assert!(css.contains("justify-content: center;"));
+        assert!(css.contains("width: 32px;"));
+        assert!(css.contains("height: 48px;"));
+        assert!(css.contains("box-shadow: 0 0 15px var(--neon);"));
+        assert!(css.contains("background: color-mix(in srgb, var(--neon) 25%, transparent);"));
+        assert!(css.contains("text-shadow: 0 0 10px var(--pink), 0 0 20px var(--pink);"));
+        assert!(css.contains("aspect-ratio: 16 / 9;"));
+        assert!(css.contains("color: color-mix(in srgb, var(--pink) 50%, transparent);"));
+    }
+
+    #[test]
+    fn test_pseudo_and_modifier_nesting_in_document() {
+        let doc = crate::rune_parser::parse_rune(r#"
+@Page/buttons
+view:
+    div .btn "Click"
+
+@Style/buttons
+tokens:
+    accent = #ff2a85
+rules:
+    .btn:
+        size = 120px 40px
+        center = true
+        &:hover:
+            glow = {accent} 10px
+        :active:
+            glow = none
+"#).expect("parsed doc");
+
+        let frontend = super::super::parser::parse_rune_web_frontend(&doc, "buttons").expect("parsed frontend");
+        let style = &frontend.style_definitions["buttons"];
+        let mut compiler = CssCompiler::new(style);
+        let css = compiler.compile(&style.rules);
+
+        assert!(css.contains(".btn {\n"));
+        assert!(css.contains("width: 120px;"));
+        assert!(css.contains("height: 40px;"));
+        assert!(css.contains(".btn:hover {\n"));
+        assert!(css.contains("box-shadow: 0 0 10px var(--accent);"));
+        assert!(css.contains(".btn:active {\n"));
+        assert!(css.contains("box-shadow: none;"));
     }
 }
 

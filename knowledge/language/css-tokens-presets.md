@@ -211,45 +211,122 @@ presets:
 Circular preset reference detected: preset-a -> preset-b -> preset-a
 ```
 
-## Property Name Normalization
+### Token Opacity & Alpha Expressions
 
-Rune-Web supports shorthand CSS property names that are normalized during compilation:
-
-| Rune Shorthand | Standard CSS |
-|---|---|
-| `bg` | `background-color` |
-| `pad` | `padding` |
-| `margin` | `margin` |
-| `gap` | `gap` |
-| `round` | `border-radius` |
-| `size` | `width` and `height` |
-| `weight` | `font-weight` |
-| `text-size` | `font-size` |
-| `border` | `border` |
-
-### Example
+Tokens can be rendered with translucency without defining duplicate alpha tokens. Rune-Web compiles token opacity using CSS `color-mix`:
 
 ```rune
-presets:
-    card:
-        bg = white
-        pad = 16px
-        round = 8px
-        text-size = 14px
-        weight = 500
+rules:
+    .overlay:
+        bg = {arena_bg / 88%}                     # 88% opacity
+    .card:
+        border = 1px solid {neon_green / 30%}     # 30% opacity
+    .badge:
+        color = alpha({accent}, 0.5)              # Functional syntax
 ```
 
 Compiles to:
 
 ```css
+.overlay {
+  background: color-mix(in srgb, var(--arena_bg) 88%, transparent);
+}
 .card {
-  background-color: white;
-  padding: 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--neon_green) 30%, transparent);
+}
+.badge {
+  color: color-mix(in srgb, var(--accent) 50%, transparent);
 }
 ```
+
+### Multi-Preset Composition
+
+A rule or preset can compose multiple presets simultaneously using a comma-separated list in `use`:
+
+```rune
+presets:
+    entity:
+        abs = true
+        pointer-events = none
+
+    interactive:
+        cursor = pointer
+        touch-action = manipulation
+        user-select = none
+
+rules:
+    .game-button:
+        use = (entity, interactive)
+        bg = {neon_green}
+```
+
+### Indented Pseudo & State Nesting
+
+Rune-Web supports intuitive CSS nesting. Pseudo-classes (`:hover:`, `:active:`) and modifier classes (`&.primary:`) can be indented directly beneath the parent selector:
+
+```rune
+rules:
+    .btn:
+        size = 140px 44px
+        center = xy
+        round = 8px
+        bg = {neon_green}
+        glow = {neon_green / 40%} 15px
+        transition = all 0.15s ease
+        &:hover:
+            background = #33ffa3
+            glow = {neon_green / 80%} 25px
+            transform = scale(1.04)
+        :active:
+            transform = scale(0.97)
+```
+
+Compiles cleanly to:
+
+```css
+.btn {
+  width: 140px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--neon_green);
+  box-shadow: 0 0 15px color-mix(in srgb, var(--neon_green) 40%, transparent);
+  transition: all 0.15s ease;
+}
+.btn:hover {
+  background: #33ffa3;
+  box-shadow: 0 0 25px color-mix(in srgb, var(--neon_green) 80%, transparent);
+  transform: scale(1.04);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+```
+
+## Property Name Normalization & Shorthands
+
+Rune-Web supports shorthand CSS property names that are normalized during compilation:
+
+| Rune Shorthand | Standard CSS | Example / Expansion |
+|---|---|---|
+| `bg` | `background` | `bg = {cabinet_bg}` |
+| `pad` | `padding` | `pad = 16px` |
+| `round` / `radius` | `border-radius` | `round = 12px` |
+| `size` | `width` and `height` | `size = 32px 48px` -> `width: 32px; height: 48px;` |
+| `weight` | `font-weight` | `weight = 900` |
+| `text-size` | `font-size` | `text-size = 14px` |
+| `center` | `display: flex; align-items / justify-content` | `center = xy` or `center = x` or `center = y` |
+| `abs` | `position: absolute` | `abs = inset` or `abs = 0 0` or `abs = true` |
+| `fixed` | `position: fixed` | `fixed = inset` or `fixed = 0 0` |
+| `glow` | `box-shadow: 0 0 <size> <color>` | `glow = {neon} 15px` or `glow = inset {neon} 20px` |
+| `text-glow` | `text-shadow: 0 0 <size> <color>` | `text-glow = {neon} 10px 20px` |
+| `aspect` | `aspect-ratio` | `aspect = 480 / 460` |
+| `stack` | flex column | `stack = center` |
+| `inline` | flex row | `inline = center` |
+| `wrap` | `flex-wrap` | `wrap = yes` |
+| `columns` | `grid-template-columns` | `columns = 3 x 1fr` |
 
 ## Best Practices
 

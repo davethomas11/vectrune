@@ -6,6 +6,25 @@ tokens:
     neon_yellow = #ffd000
     cabinet_bg = #0a0d1a
     arena_bg = #04060d
+    card_bg = #0d1124
+    grid_border = #233554
+    text_muted = #8892b0
+    btn_bg = #1a233a
+
+presets:
+    game-entity:
+        abs = true
+        pointer-events = none
+
+    arcade-btn:
+        position = relative
+        pointer-events = auto
+        cursor = pointer
+        touch-action = manipulation
+        user-select = none
+        weight = bold
+        center = xy
+        transition = all 0.1s ease
 
 rules:
     body:
@@ -19,11 +38,11 @@ rules:
         width = 100%
         box-sizing = border-box
         margin = 0 auto
-        background = #0d1124
-        border = 3px solid #00ff88
-        border-radius = 16px
+        background = {card_bg}
+        border = 3px solid {neon_green}
+        round = 16px
         padding = 0.75rem
-        box-shadow = 0 0 35px rgba(0, 255, 136, 0.25), inset 0 0 20px rgba(0, 0, 0, 0.8)
+        box-shadow = 0 0 35px {neon_green / 25%}, inset 0 0 20px rgba(0, 0, 0, 0.8)
         font-family = "Courier New", monospace, sans-serif
         color = #ffffff
         user-select = none
@@ -32,27 +51,27 @@ rules:
     .cabinet-header:
         text-align = center
         margin-bottom = 0.75rem
-        border-bottom = 2px solid rgba(0, 255, 136, 0.3)
+        border-bottom = 2px solid {neon_green / 30%}
         padding-bottom = 0.6rem
 
     .cabinet-title:
         font-size = 1.75rem
-        font-weight = 900
+        weight = 900
         letter-spacing = 4px
-        color = #00ff88
-        text-shadow = 0 0 10px #00ff88, 0 0 20px #00ff88
+        color = {neon_green}
+        text-glow = {neon_green} 10px 20px
         margin = 0 0 0.5rem 0
 
     .stats-bar:
         display = flex
         justify-content = space-between
         font-size = 0.95rem
-        font-weight = bold
+        weight = bold
         letter-spacing = 2px
-        color = #00e5ff
+        color = {neon_cyan}
 
     .stat-label:
-        color = #8892b0
+        color = {text_muted}
 
     # Rendering maps the 480 by 460 game coordinates into this fluid rectangle.
     .arena-viewport:
@@ -61,145 +80,119 @@ rules:
         display = block
         width = 100%
         height = auto
-        aspect-ratio = 480 / 460
+        aspect = 480 / 460
         margin = 0 auto
         overflow = hidden
 
     .game-arena:
-        position = absolute
-        inset = 0
-        width = 100%
-        height = 100%
+        abs = inset
+        size = 100%
         box-sizing = border-box
-        background = #04060d
-        border = 2px solid #233554
-        border-radius = 8px
+        background = {arena_bg}
+        border = 2px solid {grid_border}
+        round = 8px
         overflow = hidden
         box-shadow = inset 0 0 40px rgba(0, 0, 0, 0.9)
         pointer-events = none
 
     .arena-grid:
-        position = absolute
-        top = 0
-        left = 0
-        width = 100%
-        height = 100%
-        background-image = linear-gradient(rgba(0, 255, 136, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136, 0.04) 1px, transparent 1px)
+        use = (game-entity)
+        abs = 0 0
+        size = 100%
+        background-image = linear-gradient({neon_green / 4%} 1px, transparent 1px), linear-gradient(90deg, {neon_green / 4%} 1px, transparent 1px)
         background-size = 5% 5.217391%
-        pointer-events = none
 
     .player:
-        position = absolute
+        use = (game-entity)
         bottom = 3.478261%
-        width = 7.5%
-        height = 4.347826%
-        background = #00ff88
-        border-radius = 4px 4px 1px 1px
-        box-shadow = 0 0 15px #00ff88
+        size = 7.5% 4.347826%
+        background = {neon_green}
+        round = 4px 4px 1px 1px
+        glow = {neon_green} 15px
         transition = left 0.04s ease-out
-        pointer-events = none
 
     .player-canon:
         position = absolute
         top = -30%
         left = 41.666667%
-        width = 16.666667%
-        height = 40%
+        size = 16.666667% 40%
         background = #ffffff
-        border-radius = 2px
+        round = 2px
 
     .alien:
-        position = absolute
-        width = 5.833333%
-        height = 4.782609%
-        border-radius = 4px
-        display = flex
-        align-items = center
-        justify-content = center
+        use = (game-entity)
+        size = 5.833333% 4.782609%
+        round = 4px
+        center = xy
         font-size = clamp(6px, 2.916667cqw, 14px)
-        font-weight = bold
+        weight = bold
         transition = top 0.1s linear, left 0.1s linear
-        pointer-events = none
 
     .alien.type-1:
-        background = #ff2a85
-        box-shadow = 0 0 10px #ff2a85
+        background = {neon_pink}
+        glow = {neon_pink} 10px
         color = #ffffff
 
     .alien.type-2:
-        background = #00e5ff
-        box-shadow = 0 0 10px #00e5ff
-        color = #04060d
+        background = {neon_cyan}
+        glow = {neon_cyan} 10px
+        color = {arena_bg}
 
     .alien.type-3:
-        background = #ffd000
-        box-shadow = 0 0 10px #ffd000
-        color = #04060d
+        background = {neon_yellow}
+        glow = {neon_yellow} 10px
+        color = {arena_bg}
 
     .bullet:
-        position = absolute
-        width = 0.833333%
-        height = 2.608696%
+        use = (game-entity)
+        size = 0.833333% 2.608696%
         background = #ffffff
-        border-radius = 2px
-        box-shadow = 0 0 8px #00e5ff, 0 0 14px #ffffff
-        pointer-events = none
+        round = 2px
+        box-shadow = 0 0 8px {neon_cyan}, 0 0 14px #ffffff
 
     .alien-bullet:
-        position = absolute
-        width = 0.833333%
-        height = 2.173913%
-        background = #ff2a85
-        border-radius = 2px
-        box-shadow = 0 0 8px #ff2a85
-        pointer-events = none
+        use = (game-entity)
+        size = 0.833333% 2.173913%
+        background = {neon_pink}
+        round = 2px
+        glow = {neon_pink} 8px
 
     .overlay:
-        position = absolute
-        top = 0
-        left = 0
-        width = 100%
-        height = 100%
-        background = rgba(4, 6, 13, 0.88)
-        display = flex
+        abs = inset
+        size = 100%
+        background = {arena_bg / 88%}
+        center = xy
         flex-direction = column
-        align-items = center
-        justify-content = center
         z-index = 20
         pointer-events = auto
 
     .overlay-title:
         font-size = 1.6rem
-        font-weight = 900
+        weight = 900
         letter-spacing = 3px
         margin-bottom = 1rem
         text-align = center
-        color = #ffd000
-        text-shadow = 0 0 15px #ffd000
+        color = {neon_yellow}
+        text-glow = {neon_yellow} 15px
         padding = 0 1rem
 
     .start-btn:
-        background = #00ff88
-        color = #04060d
+        use = (arcade-btn)
+        background = {neon_green}
+        color = {arena_bg}
         border = none
         padding = 0.85rem 2.25rem
         font-size = 1.15rem
-        font-weight = bold
         letter-spacing = 2px
-        border-radius = 8px
-        cursor = pointer
-        box-shadow = 0 0 20px rgba(0, 255, 136, 0.6)
-        touch-action = manipulation
-        pointer-events = auto
+        round = 8px
+        glow = {neon_green / 60%} 20px
         transition = all 0.15s ease
-
-    .start-btn:hover:
-        background = #33ffa3
-        box-shadow = 0 0 30px rgba(0, 255, 136, 0.9)
-        transform = scale(1.05)
-
-    .start-btn:active:
-        transform = scale(0.97)
+        &:hover:
+            background = #33ffa3
+            glow = {neon_green / 90%} 30px
+            transform = scale(1.05)
+        &:active:
+            transform = scale(0.97)
 
     .arcade-controls:
         position = relative
@@ -213,50 +206,35 @@ rules:
         pointer-events = auto
 
     .ctrl-btn:
-        position = relative
-        z-index = 101
-        pointer-events = auto
+        use = (arcade-btn)
         flex = 1
         min-height = 54px
-        background = #1a233a
-        color = #00ff88
-        border = 2px solid #233554
+        background = {btn_bg}
+        color = {neon_green}
+        border = 2px solid {grid_border}
         padding = 0.75rem 0.5rem
         font-size = 1.05rem
-        font-weight = bold
-        border-radius = 8px
-        cursor = pointer
-        transition = all 0.1s ease
-        touch-action = manipulation
-        user-select = none
-        display = flex
-        align-items = center
-        justify-content = center
-
-    .ctrl-btn:hover:
-        border-color = #00ff88
-        box-shadow = 0 0 12px rgba(0, 255, 136, 0.3)
-
-    .ctrl-btn:active:
-        background = #00ff88
-        color = #04060d
-        transform = scale(0.95)
-
-    .ctrl-btn.fire-btn:
-        flex = 1.4
-        background = #ff2a85
-        color = #ffffff
-        border-color = #ff2a85
-        box-shadow = 0 0 15px rgba(255, 42, 133, 0.4)
-        font-size = 1.2rem
-
-    .ctrl-btn.fire-btn:hover:
-        background = #ff4d99
-        box-shadow = 0 0 25px rgba(255, 42, 133, 0.7)
-
-    .ctrl-btn.fire-btn:active:
-        background = #ff1a75
-        transform = scale(0.95)
+        round = 8px
+        &:hover:
+            border-color = {neon_green}
+            glow = {neon_green / 30%} 12px
+        &:active:
+            background = {neon_green}
+            color = {arena_bg}
+            transform = scale(0.95)
+        &.fire-btn:
+            flex = 1.4
+            background = {neon_pink}
+            color = #ffffff
+            border-color = {neon_pink}
+            glow = {neon_pink / 40%} 15px
+            font-size = 1.2rem
+            &:hover:
+                background = #ff4d99
+                glow = {neon_pink / 70%} 25px
+            &:active:
+                background = #ff1a75
+                transform = scale(0.95)
 
     .controls-hint:
         text-align = center
