@@ -73,6 +73,12 @@ jobs:
           done
           git checkout -- teaching.rune
 
+          # Pre-render SEO route pages for direct link sharing & iMessage previews
+          for route in games vectraiders vectworms documents localization rest static graphql dynamic_ai rune_web websocket examples builtins; do
+            mkdir -p "$OUT/$route"
+            "$BIN" teaching.rune -o html --path "/$route" > "$OUT/$route/index.html"
+          done
+
           # Rewrite paths if hosted on subpath instead of custom domain root
           if [ "$BASE" != "/" ]; then
             find "$OUT" -name index.html -exec sed -i \
@@ -82,8 +88,10 @@ jobs:
               -e "s#\(src\|href\)=\"/assets/#\1=\"${BASE}assets/#g" {} +
           fi
 
-          # Static assets referenced as /assets/*
-          cp *.js *.css *.png "$OUT/assets/"
+          # Static assets referenced as /assets/* and root favicons
+          cp *.js *.css *.png *.ico "$OUT/assets/" 2>/dev/null || true
+          [ -f favicon.ico ] && cp favicon.ico "$OUT/" || true
+          [ -f favicon.png ] && cp favicon.png "$OUT/" || true
           [ -d pkg ] && cp -r pkg "$OUT/assets/pkg" || true
 
           if [ -n "${PAGES_CNAME:-}" ]; then echo "$PAGES_CNAME" > "$OUT/CNAME"; fi

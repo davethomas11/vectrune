@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { readNavigatorUrl, updateNavigatorUrl, setupNavigator } from '../src/navigator';
+import { readNavigatorUrl, updateNavigatorUrl, setupNavigator, updateSeoMetadata } from '../src/navigator';
 import { initContext } from '../src/context';
-import type { NavigatorConfig, RuneApp } from '../src/types';
+import type { NavigatorConfig, RuneApp, SeoConfig } from '../src/types';
 
 describe('Rune-Web Navigator', () => {
   let mockWindow: any;
@@ -109,5 +109,87 @@ describe('Rune-Web Navigator', () => {
     setupNavigator(config, mockApp);
     expect(mockApp.state.activePage).toBe('rest_post');
     expect(typeof (mockWindow as any).navigate).toBe('function');
+  });
+
+  it('updates document.title and meta tags dynamically based on SEO configuration', () => {
+    const metaElements: Record<string, any> = {};
+    const mockDocument: any = {
+      title: 'Initial Title',
+      querySelector: vi.fn((sel: string) => {
+        return metaElements[sel] || null;
+      }),
+      createElement: vi.fn((_tag: string) => {
+        const el: any = {
+          attrs: {},
+          setAttribute(k: string, v: string) {
+            this.attrs[k] = v;
+          },
+        };
+        return el;
+      }),
+      head: {
+        appendChild: vi.fn((el: any) => {
+          const key = el.attrs.name
+            ? `meta[name="${el.attrs.name}"]`
+            : `meta[property="${el.attrs.property}"]`;
+          metaElements[key] = el;
+        }),
+      },
+    };
+    vi.stubGlobal('document', mockDocument);
+
+    const seo: SeoConfig = {
+      title: 'Learn Vectrune',
+      description: 'Declarative language',
+      image: '/assets/rune-logo.png',
+      routes: {
+        games: {
+          title: 'VectRaiders Arcade',
+          description: 'Defend the vector grid in pure retro arcade action',
+        },
+        vectworms: {
+          title: 'VectWorms Arcade',
+          description: 'Purge the mushroom grid',
+        },
+      },
+    };
+
+    const mockApp: RuneApp = {
+      state: { activePage: 'home' },
+      derived: {},
+      computeDerived: vi.fn(),
+      render: vi.fn(),
+      invokeAction: vi.fn(),
+    };
+
+    initContext({
+      pageTree: {},
+      derivedDefinitions: {},
+      helperDefinitions: {},
+      actionDefinitions: {},
+      i18nData: {},
+      app: mockApp,
+      isRendering: false,
+      memorySubscriptions: {},
+      seo,
+    });
+
+    updateSeoMetadata('games');
+    expect(mockDocument.title).toBe('VectRaiders Arcade');
+    expect(metaElements['meta[name="description"]']?.attrs.content).toBe(
+      'Defend the vector grid in pure retro arcade action'
+    );
+    expect(metaElements['meta[property="og:title"]']?.attrs.content).toBe(
+      'VectRaiders Arcade'
+    );
+    expect(metaElements['meta[name="twitter:description"]']?.attrs.content).toBe(
+      'Defend the vector grid in pure retro arcade action'
+    );
+
+    updateSeoMetadata('vectworms');
+    expect(mockDocument.title).toBe('VectWorms Arcade');
+    expect(metaElements['meta[name="description"]']?.attrs.content).toBe(
+      'Purge the mushroom grid'
+    );
   });
 });

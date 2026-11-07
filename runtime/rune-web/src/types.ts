@@ -123,6 +123,21 @@ export interface EmitterConfig {
   color?: string;
 }
 
+/** SEO configuration for a specific route. */
+export interface SeoRouteConfig {
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+/** Global SEO configuration from `@SEO`. */
+export interface SeoConfig {
+  title?: string;
+  description?: string;
+  image?: string;
+  routes?: Record<string, SeoRouteConfig>;
+}
+
 /** Configuration passed to boot(). */
 export interface RuneWebConfig {
   pageTree: ViewNode;
@@ -136,6 +151,7 @@ export interface RuneWebConfig {
   keys?: Record<string, string>;
   navigator?: NavigatorConfig | null;
   emitters?: Record<string, EmitterConfig>;
+  seo?: SeoConfig | null;
 }
 
 /** The application object exposed as window.runeWebApp. */

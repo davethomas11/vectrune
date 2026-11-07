@@ -140,9 +140,14 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
                             .get("locale")
                             .map(String::as_str)
                             .filter(|locale| frontend.i18n_sections.contains_key(*locale));
+                        let target_route = params.get("page").map(String::as_str);
                         let html = render_page_html(
-                            &frontend, &page_name, request_locale,
-                            default_locale.as_deref(), ws_endpoint,
+                            &frontend,
+                            &page_name,
+                            request_locale,
+                            default_locale.as_deref(),
+                            ws_endpoint,
+                            target_route,
                         ).await;
                         Html(html)
                     }
@@ -211,14 +216,6 @@ pub async fn render_html_for_path(
             })
         } else { None }
     });
-    if canonicalize_path(request_path) != canonicalize_path(mount_path) && path_locale.is_none() {
-        return Err(anyhow::anyhow!(
-            "Requested path '{}' is not mounted by @Frontend path '{}'",
-            normalize_request_path(request_path),
-            mount_path
-        ));
-    }
-
     let reactivity_mode = frontend_section
         .kv
         .get("reactivity")
@@ -233,6 +230,22 @@ pub async fn render_html_for_path(
 
     let mut frontend = parser::parse_rune_web_frontend(doc, page_name)
         .map_err(|e| anyhow::anyhow!("Rune-Web parse error: {}", e))?;
+
+    let trimmed_route = request_path.trim_matches('/').to_lowercase();
+    let is_subpath_or_route = canonicalize_path(request_path) == canonicalize_path(mount_path)
+        || path_locale.is_some()
+        || ((mount_path == "/" || normalize_request_path(request_path).starts_with(mount_path))
+            && (frontend.navigator.is_some()
+                || frontend.page_views.contains_key(&trimmed_route)
+                || frontend.seo.as_ref().map_or(false, |s| s.routes.contains_key(&trimmed_route))));
+
+    if !is_subpath_or_route {
+        return Err(anyhow::anyhow!(
+            "Requested path '{}' is not mounted by @Frontend path '{}'",
+            normalize_request_path(request_path),
+            mount_path
+        ));
+    }
 
     if reactivity_mode.as_deref() == Some("websocket") {
         if let Some(page_def) = frontend.page_views.get(page_name) {
@@ -250,6 +263,15 @@ pub async fn render_html_for_path(
         }
     }
 
+    let target_route = {
+        let trimmed = request_path.trim_matches('/');
+        if trimmed.is_empty() || trimmed == "es" || trimmed == "fr" {
+            None
+        } else {
+            Some(trimmed)
+        }
+    };
+
     Ok(
         render_page_html(
             &frontend,
@@ -257,6 +279,7 @@ pub async fn render_html_for_path(
             path_locale,
             active_locale.as_deref(),
             ws_endpoint,
+            target_route,
         )
         .await,
     )
@@ -268,6 +291,7 @@ async fn render_page_html(
     request_locale: Option<&str>,
     default_locale: Option<&str>,
     ws_endpoint: Option<String>,
+    target_route: Option<&str>,
 ) -> String {
     let memory_keys = frontend
         .page_views
@@ -287,6 +311,7 @@ async fn render_page_html(
         request_locale.or(default_locale),
         ws_endpoint,
         &pre_fetched_memory,
+        target_route,
     )
 }
 
@@ -318,12 +343,15 @@ fn canonicalize_path(path: &str) -> String {
     }
 }
 
-fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, active_locale: Option<&str>, ws_endpoint: Option<String>, pre_fetched_memory: &JsonMap<String, JsonValue>) -> String {
+fn render_frontend_shell(
+    frontend: &ast::RuneWebFrontend,
+    page_name: &str,
+    active_locale: Option<&str>,
+    ws_endpoint: Option<String>,
+    pre_fetched_memory: &JsonMap<String, JsonValue>,
+    target_route: Option<&str>,
+) -> String {
     let page = frontend.page_views.get(page_name);
-    let title = page
-        .map(|page| page.title.as_str())
-        .filter(|title| !title.is_empty())
-        .unwrap_or("Vectrune Rune-Web");
 
     let logic = page
         .and_then(|p| p.logic_ref.as_ref())
@@ -334,6 +362,41 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, activ
     for (key, value) in pre_fetched_memory {
         runtime_data.insert(key.clone(), value.clone());
     }
+
+    // Resolve initial active route for SEO
+    let initial_seo_route = target_route
+        .map(|r| r.trim_matches('/').to_lowercase())
+        .filter(|r| !r.is_empty())
+        .or_else(|| {
+            frontend.navigator.as_ref().and_then(|nav| {
+                runtime_data.get(&nav.bind).and_then(|v| v.as_str()).map(|s| s.to_string())
+            })
+        });
+
+    let default_seo = frontend.seo.as_ref();
+    let route_seo = initial_seo_route.as_deref().and_then(|r| {
+        default_seo.and_then(|s| s.routes.get(r))
+    });
+
+    let title_str = route_seo
+        .and_then(|r| r.title.as_deref())
+        .or_else(|| default_seo.and_then(|s| s.title.as_deref()))
+        .or_else(|| page.map(|page| page.title.as_str()).filter(|title| !title.is_empty()))
+        .unwrap_or("Vectrune");
+    let title = html_escape(title_str);
+
+    let description_str = route_seo
+        .and_then(|r| r.description.as_deref())
+        .or_else(|| default_seo.and_then(|s| s.description.as_deref()))
+        .or_else(|| page.and_then(|p| p.description.as_deref()))
+        .unwrap_or("Vectrune — Declarative Full-Stack Language and Reactive Web Framework");
+    let description = html_escape(description_str);
+
+    let image_str = route_seo
+        .and_then(|r| r.image.as_deref())
+        .or_else(|| default_seo.and_then(|s| s.image.as_deref()))
+        .unwrap_or("/assets/rune-logo.png");
+    let image = html_escape(image_str);
 
     // Resolve active locale: explicit `locale = xx` on @Frontend, else first defined.
     let resolved_locale = active_locale
@@ -374,7 +437,15 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, activ
         .unwrap_or_else(|| String::from("<p>Page not found</p>"));
 
     let style_html = render_styles(frontend, page.and_then(|p| p.style_ref.clone()));
-    let logic_html = render_logic(page, logic.cloned(), &i18n_json, ws_endpoint, pre_fetched_memory, frontend.navigator.clone());
+    let logic_html = render_logic(
+        page,
+        logic.cloned(),
+        &i18n_json,
+        ws_endpoint,
+        pre_fetched_memory,
+        frontend.navigator.clone(),
+        frontend.seo.clone(),
+    );
 
     format!(
         r#"<!DOCTYPE html>
@@ -382,15 +453,33 @@ fn render_frontend_shell(frontend: &ast::RuneWebFrontend, page_name: &str, activ
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{}</title>
-    {}
+    <title>{title}</title>
+    <meta name="description" content="{description}">
+
+    <!-- OpenGraph / Social Media Link Previews -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{title}">
+    <meta property="og:description" content="{description}">
+    <meta property="og:image" content="{image}">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{title}">
+    <meta name="twitter:description" content="{description}">
+    <meta name="twitter:image" content="{image}">
+
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">
+    <link rel="apple-touch-icon" href="/assets/favicon.png">
+
+    {style_html}
 </head>
 <body>
-    <div id="app">{}</div>
-    {}
+    <div id="app">{page_html}</div>
+    {logic_html}
 </body>
 </html>"#,
-        title, style_html, page_html, logic_html
     )
 }
 
@@ -1006,12 +1095,21 @@ fn render_logic(
     ws_endpoint: Option<String>,
     pre_fetched_memory: &JsonMap<String, JsonValue>,
     navigator: Option<ast::NavigatorDefinition>,
+    seo: Option<ast::SeoDefinition>,
 ) -> String {
     match (page, logic) {
         (Some(page), Some(logic)) => {
             let memory_seed: std::collections::HashMap<String, serde_json::Value> =
                 pre_fetched_memory.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-            let codegen = jscodegen::JsCodegen::new(page.view_tree.clone(), logic, i18n_json.to_string(), ws_endpoint, memory_seed, navigator);
+            let codegen = jscodegen::JsCodegen::new(
+                page.view_tree.clone(),
+                logic,
+                i18n_json.to_string(),
+                ws_endpoint,
+                memory_seed,
+                navigator,
+                seo,
+            );
             let js_code = codegen.generate();
             format!("<script>\n{}</script>", js_code)
         }

@@ -1,6 +1,7 @@
 import "components"
 import "i18n"
 import "pages"
+import "seo"
 
 @Page/learn-vectrune
 title = Learn Vectrune

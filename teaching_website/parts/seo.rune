@@ -1,0 +1,79 @@
+@SEO
+title = Learn Vectrune — Declarative Full-Stack Language & Reactive Web
+description = Master Vectrune: A single unified language for type-safe microservices, reactive Rune-Web frontends, retro arcade games, and dynamic AI workflows.
+image = /assets/rune-logo.png
+
+@SEO/home
+title = Learn Vectrune — Declarative Full-Stack Language & Reactive Web
+description = Master Vectrune: A single unified language for type-safe microservices, reactive Rune-Web frontends, retro arcade games, and dynamic AI workflows.
+image = /assets/rune-logo.png
+
+@SEO/games
+title = VectRaiders Arcade — Built with Vectrune & Rune-Web
+description = Defend the vector grid in pure retro arcade action built entirely with declarative Rune-Web — featuring a 25fps game loop ticker, 2D collisions, real-time sound synthesizer, and touch controls.
+image = /assets/rune-logo.png
+
+@SEO/vectraiders
+title = VectRaiders Arcade — Built with Vectrune & Rune-Web
+description = Defend the vector grid in pure retro arcade action built entirely with declarative Rune-Web — featuring a 25fps game loop ticker, 2D collisions, real-time sound synthesizer, and touch controls.
+image = /assets/rune-logo.png
+
+@SEO/space_invaders
+title = VectRaiders Arcade — Built with Vectrune & Rune-Web
+description = Defend the vector grid in pure retro arcade action built entirely with declarative Rune-Web — featuring a 25fps game loop ticker, 2D collisions, real-time sound synthesizer, and touch controls.
+image = /assets/rune-logo.png
+
+@SEO/vectworms
+title = VectWorms Arcade — Built with Vectrune & Rune-Web
+description = Purge the mushroom grid in this high-velocity retro Centipede reimagining built with declarative Rune-Web — dynamic splitting worms, particle bursts, and Web Audio fx.
+image = /assets/rune-logo.png
+
+@SEO/documents
+title = Vectrune Documents — Syntax & Grammar Guide
+description = Master Vectrune document syntax: structured data schemas, type definitions, records, series, and clean declarative data modeling.
+image = /assets/rune-logo.png
+
+@SEO/localization
+title = Vectrune Localization — Declarative i18n
+description = Build multilingual web apps with native @I18N translation bundles, zero runtime overhead, and automatic route prefixing.
+image = /assets/rune-logo.png
+
+@SEO/rest
+title = REST APIs in Vectrune — Declarative Backend Routing
+description = Build typed REST endpoints, input validations, JSON serialization, and data pipelines effortlessly in Vectrune.
+image = /assets/rune-logo.png
+
+@SEO/static
+title = Static Web in Vectrune — High-Performance SSR
+description = Serve lightning-fast static sites, assets, and pre-rendered HTML with zero JavaScript overhead.
+image = /assets/rune-logo.png
+
+@SEO/graphql
+title = GraphQL in Vectrune — Declarative Resolvers & Schemas
+description = Define GraphQL schemas, queries, and mutations with native Vectrune type safety and zero boilerplate.
+image = /assets/rune-logo.png
+
+@SEO/dynamic_ai
+title = Dynamic AI with Vectrune — LLM Prompt Chaining & Agents
+description = Seamlessly integrate AI models, structured prompts, automated reasoning, and caching into Vectrune applications.
+image = /assets/rune-logo.png
+
+@SEO/rune_web
+title = Rune-Web Framework — Reactive Frontend Without JS Fatigue
+description = Declarative UI components, two-way state bindings, Web Audio synthesizers, particle systems, and zero-build web architecture.
+image = /assets/rune-logo.png
+
+@SEO/websocket
+title = WebSockets in Vectrune — Real-Time State Streaming
+description = Full-duplex WebSocket communication, live event subscriptions, and synchronized client-server state.
+image = /assets/rune-logo.png
+
+@SEO/examples
+title = Interactive Example Lab — Vectrune Code Playground
+description = Run, inspect, and experiment with live Vectrune examples and real-time execution in the browser.
+image = /assets/rune-logo.png
+
+@SEO/builtins
+title = Vectrune Built-ins & Reference Manual
+description = Comprehensive standard library reference for Vectrune types, functions, collections, math, and system capabilities.
+image = /assets/rune-logo.png

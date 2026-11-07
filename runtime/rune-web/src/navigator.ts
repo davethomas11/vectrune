@@ -8,7 +8,8 @@
 // ============================================================================
 
 import { ctx } from './context';
-import type { NavigatorConfig, RuneApp } from './types';
+import { interpolate } from './interpolation';
+import type { NavigatorConfig, RuneApp, Scope } from './types';
 
 let isNavigatingFromUrl = false;
 let lastKnownRoute: string | null = null;
@@ -63,13 +64,83 @@ export function readNavigatorUrl(config: NavigatorConfig): string | null {
 }
 
 /**
+ * Helper to update or create a `<meta>` element.
+ */
+function setMetaTag(attr: 'name' | 'property', key: string, content: string): void {
+  if (typeof document === 'undefined') return;
+  let el = document.querySelector(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', content);
+}
+
+/**
+ * Synchronize document title, meta description, OpenGraph, and Twitter tags
+ * based on current route and @SEO configuration.
+ */
+export function updateSeoMetadata(route: string): void {
+  if (typeof document === 'undefined') return;
+  let context: ReturnType<typeof ctx>;
+  try {
+    context = ctx();
+  } catch (_err) {
+    return;
+  }
+  const seo = context.seo;
+  if (!seo) return;
+
+  const rawRoute = (route || '').trim();
+  const cleanRoute = rawRoute.toLowerCase();
+  const routeConfig =
+    seo.routes?.[rawRoute] ||
+    seo.routes?.[cleanRoute] ||
+    seo.routes?.[cleanRoute.replace(/[-_]/g, '')];
+
+  const rawTitle = routeConfig?.title || (cleanRoute && cleanRoute !== 'home' ? `${rawRoute.charAt(0).toUpperCase() + rawRoute.slice(1)} — ${seo.title || 'Vectrune'}` : seo.title);
+  const rawDescription = routeConfig?.description || seo.description;
+  const rawImage = routeConfig?.image || seo.image;
+
+  const scope: Scope = { i18n: context.i18nData || {} };
+
+  if (rawTitle) {
+    const title = interpolate(rawTitle, scope);
+    document.title = title;
+    setMetaTag('property', 'og:title', title);
+    setMetaTag('name', 'twitter:title', title);
+  }
+
+  if (rawDescription) {
+    const description = interpolate(rawDescription, scope);
+    setMetaTag('name', 'description', description);
+    setMetaTag('property', 'og:description', description);
+    setMetaTag('name', 'twitter:description', description);
+  }
+
+  if (rawImage) {
+    const image = interpolate(rawImage, scope);
+    setMetaTag('property', 'og:image', image);
+    setMetaTag('name', 'twitter:image', image);
+  }
+
+  if (typeof window !== 'undefined' && window.location) {
+    setMetaTag('property', 'og:url', window.location.href);
+  }
+}
+
+/**
  * Update the browser URL to reflect the new state value.
  */
 export function updateNavigatorUrl(route: string, replace = false): void {
   if (typeof window === 'undefined' || isNavigatingFromUrl) return;
   const context = ctx();
   const config = context.navigator;
-  if (!config) return;
+  if (!config) {
+    updateSeoMetadata(route);
+    return;
+  }
 
   const cleanRoute = String(route || '').trim();
   if (cleanRoute === lastKnownRoute) return;
@@ -87,6 +158,7 @@ export function updateNavigatorUrl(route: string, replace = false): void {
         window.location.hash = targetHash || '#/';
       }
     }
+    updateSeoMetadata(cleanRoute);
     return;
   }
 
@@ -115,6 +187,8 @@ export function updateNavigatorUrl(route: string, replace = false): void {
   } catch (_err) {
     // History API fallback
   }
+
+  updateSeoMetadata(cleanRoute);
 }
 
 /**
@@ -146,12 +220,14 @@ export function setupNavigator(config: NavigatorConfig, app: RuneApp): void {
   } else {
     lastKnownRoute = String(app.state[boundVar] || 'home');
   }
+  updateSeoMetadata(lastKnownRoute);
 
   // 2. Global helper `navigate(target)` fallback if not defined in @Logic
   (window as any).navigate = function (target: string) {
     if (typeof (app.state as any)[boundVar] !== 'undefined') {
       app.state[boundVar] = target;
       if (app.render) app.render();
+      updateSeoMetadata(target);
     }
   };
 
@@ -164,6 +240,7 @@ export function setupNavigator(config: NavigatorConfig, app: RuneApp): void {
         lastKnownRoute = currentRoute;
         app.state[boundVar] = currentRoute;
         if (app.render) app.render();
+        updateSeoMetadata(currentRoute);
       } finally {
         isNavigatingFromUrl = false;
       }
@@ -178,6 +255,7 @@ export function setupNavigator(config: NavigatorConfig, app: RuneApp): void {
         lastKnownRoute = currentRoute;
         app.state[boundVar] = currentRoute;
         if (app.render) app.render();
+        updateSeoMetadata(currentRoute);
       } finally {
         isNavigatingFromUrl = false;
       }

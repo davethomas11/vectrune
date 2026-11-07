@@ -170,6 +170,15 @@ fn parse_import_path(line: &str, source_name: &str) -> Result<String, LoadError>
 }
 
 fn canonicalize_for_tracking(path: &Path) -> Result<PathBuf, LoadError> {
+    if !path.exists() && path.extension().is_none() {
+        let with_rune = path.with_extension("rune");
+        if with_rune.exists() {
+            return with_rune.canonicalize().map_err(|source| LoadError::Io {
+                path: with_rune.display().to_string(),
+                source,
+            });
+        }
+    }
     path.canonicalize().map_err(|source| LoadError::Io {
         path: path.display().to_string(),
         source,

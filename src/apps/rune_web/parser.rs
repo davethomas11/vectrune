@@ -44,7 +44,7 @@ fn resolve_preview_attribute(value: &str) -> Result<String, ParseError> {
         if !frontend.page_views.contains_key(page) {
             return Err(ParseError(format!("Rune preview page '{}' does not exist", page)));
         }
-        let html = super::render_frontend_shell(&frontend, page, locale, None, &serde_json::Map::new());
+        let html = super::render_frontend_shell(&frontend, page, locale, None, &serde_json::Map::new(), None);
         use base64::Engine;
         Ok(format!("data:text/html;base64,{}", base64::engine::general_purpose::STANDARD.encode(html)))
     })();
@@ -255,6 +255,79 @@ pub fn parse_rune_web_frontend(
         }
     }
 
+    // Extract @SEO and @SEO/<route> sections
+    let mut seo: Option<SeoDefinition> = None;
+    for section in &doc.sections {
+        if !section.path.is_empty() && section.path[0].eq_ignore_ascii_case("SEO") {
+            let seo_def = seo.get_or_insert_with(SeoDefinition::default);
+            if section.path.len() == 1 {
+                // Top-level @SEO
+                if let Some(t) = section.kv.get("title").and_then(|v| v.as_str()) {
+                    seo_def.title = Some(t.to_string());
+                }
+                if let Some(d) = section.kv.get("description").and_then(|v| v.as_str()) {
+                    seo_def.description = Some(d.to_string());
+                }
+                if let Some(img) = section.kv.get("image").and_then(|v| v.as_str()) {
+                    seo_def.image = Some(img.to_string());
+                }
+
+                // Parse nested routes from series: routes:
+                if let Some(route_items) = section.series.get("routes") {
+                    for item in route_items {
+                        if let Value::Map(m) = item {
+                            for (r_name, r_val) in m {
+                                let route_cfg = seo_def.routes.entry(r_name.to_lowercase()).or_default();
+                                if let Value::List(lines) = r_val {
+                                    for line_val in lines {
+                                        if let Value::String(s) = line_val {
+                                            if let Some((k, v)) = s.split_once('=') {
+                                                let k = k.trim();
+                                                let v = v.trim().trim_matches('"').trim_matches('\'').to_string();
+                                                match k {
+                                                    "title" => route_cfg.title = Some(v),
+                                                    "description" => route_cfg.description = Some(v),
+                                                    "image" => route_cfg.image = Some(v),
+                                                    _ => {}
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Route-specific @SEO/<route>
+                let route_name = section.path[1..].join("/").to_lowercase();
+                let route_cfg = seo_def.routes.entry(route_name).or_default();
+                if let Some(t) = section.kv.get("title").and_then(|v| v.as_str()) {
+                    route_cfg.title = Some(t.to_string());
+                }
+                if let Some(d) = section.kv.get("description").and_then(|v| v.as_str()) {
+                    route_cfg.description = Some(d.to_string());
+                }
+                if let Some(img) = section.kv.get("image").and_then(|v| v.as_str()) {
+                    route_cfg.image = Some(img.to_string());
+                }
+            }
+        }
+    }
+
+    // Auto-populate routes in seo from page_views if page declares title or description
+    if let Some(seo_def) = seo.as_mut() {
+        for (page_name, page_def) in &page_views {
+            let entry = seo_def.routes.entry(page_name.to_lowercase()).or_default();
+            if entry.title.is_none() && !page_def.title.is_empty() {
+                entry.title = Some(page_def.title.clone());
+            }
+            if entry.description.is_none() && page_def.description.is_some() {
+                entry.description = page_def.description.clone();
+            }
+        }
+    }
+
     Ok(RuneWebFrontend {
         page_views,
         component_definitions: resolved_components,
@@ -262,6 +335,7 @@ pub fn parse_rune_web_frontend(
         logic_definitions,
         i18n_sections,
         navigator,
+        seo,
     })
 }
 
@@ -307,6 +381,12 @@ fn parse_page_section(section: &crate::rune_ast::Section) -> Result<PageDefiniti
         .unwrap_or("Untitled")
         .to_string();
 
+    let description = section
+        .kv
+        .get("description")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
     let style_ref = section
         .kv
         .get("style")
@@ -332,6 +412,7 @@ fn parse_page_section(section: &crate::rune_ast::Section) -> Result<PageDefiniti
 
     Ok(PageDefinition {
         title,
+        description,
         style_ref,
         logic_ref,
         state: parse_state_block(section),
@@ -1681,7 +1762,7 @@ mod tests {
         std::fs::write(&host, "@Page/demo\nview:\n    Source code=\"{raw source.rune}\"\n\n@Component/Source\nprops: [code]\nview:\n    pre \"{code}\"\n").unwrap();
         let doc = crate::rune_parser::load_rune_document_from_path(&host).unwrap();
         let frontend = parse_rune_web_frontend(&doc, "demo").unwrap();
-        let html = super::super::render_frontend_shell(&frontend, "demo", None, None, &serde_json::Map::new());
+        let html = super::super::render_frontend_shell(&frontend, "demo", None, None, &serde_json::Map::new(), None);
         assert!(html.contains(&super::super::html_escape(source)));
     }
 
@@ -2181,6 +2262,55 @@ view:
             },
             _ => panic!("expected root element"),
         }
+    }
+
+    #[test]
+    fn parses_seo_sections_and_renders_meta_tags() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@SEO
+title = Vectrune Framework
+description = Declarative full-stack language
+image = /assets/logo.png
+
+@SEO/games
+title = VectRaiders Arcade
+description = Defend the vector grid in retro arcade style
+image = /assets/games.png
+
+@Page/home
+view:
+    h1 "Welcome"
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let seo = frontend.seo.as_ref().expect("SEO section must be parsed");
+        assert_eq!(seo.title.as_deref(), Some("Vectrune Framework"));
+        assert_eq!(seo.description.as_deref(), Some("Declarative full-stack language"));
+        assert_eq!(seo.image.as_deref(), Some("/assets/logo.png"));
+
+        let games_route = seo.routes.get("games").expect("games route must exist");
+        assert_eq!(games_route.title.as_deref(), Some("VectRaiders Arcade"));
+        assert_eq!(games_route.description.as_deref(), Some("Defend the vector grid in retro arcade style"));
+        assert_eq!(games_route.image.as_deref(), Some("/assets/games.png"));
+
+        // Render shell with default SEO
+        let default_html = super::super::render_frontend_shell(&frontend, "home", None, None, &serde_json::Map::new(), None);
+        assert!(default_html.contains("<title>Vectrune Framework</title>"));
+        assert!(default_html.contains(r#"<meta name="description" content="Declarative full-stack language">"#));
+        assert!(default_html.contains(r#"<meta property="og:title" content="Vectrune Framework">"#));
+        assert!(default_html.contains(r#"<link rel="icon" type="image/x-icon" href="/favicon.ico">"#));
+        assert!(default_html.contains(r#"<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">"#));
+
+        // Render shell with route-specific SEO (games)
+        let games_html = super::super::render_frontend_shell(&frontend, "home", None, None, &serde_json::Map::new(), Some("games"));
+        assert!(games_html.contains("<title>VectRaiders Arcade</title>"));
+        assert!(games_html.contains(r#"<meta name="description" content="Defend the vector grid in retro arcade style">"#));
+        assert!(games_html.contains(r#"<meta property="og:title" content="VectRaiders Arcade">"#));
+        assert!(games_html.contains(r#"<meta property="og:image" content="/assets/games.png">"#));
     }
 }
 

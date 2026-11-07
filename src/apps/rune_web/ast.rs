@@ -26,6 +26,33 @@ pub struct RuneWebFrontend {
 
     /// URL Navigation state synchronization (from `@Navigator`)
     pub navigator: Option<NavigatorDefinition>,
+
+    /// SEO configuration and route metadata (from `@SEO` and `@SEO/<route>`)
+    pub seo: Option<SeoDefinition>,
+}
+
+/// SEO configuration for an individual route or page.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct SeoRouteConfig {
+    /// Page title displayed in browser tab and social link previews
+    pub title: Option<String>,
+    /// Meta description for search engines and social card previews
+    pub description: Option<String>,
+    /// OpenGraph and Twitter card preview image URL
+    pub image: Option<String>,
+}
+
+/// Global SEO definition from `@SEO` and `@SEO/<route>`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct SeoDefinition {
+    /// Default application title
+    pub title: Option<String>,
+    /// Default meta description
+    pub description: Option<String>,
+    /// Default social preview image URL
+    pub image: Option<String>,
+    /// Route-specific SEO overrides, keyed by route name (e.g. "games", "vectworms")
+    pub routes: HashMap<String, SeoRouteConfig>,
 }
 
 /// A navigator definition for URL state synchronization (from `@Navigator`).
@@ -63,6 +90,9 @@ pub struct I18nSection {
 pub struct PageDefinition {
     /// Human-readable page title
     pub title: String,
+
+    /// Meta description for SEO and social previews
+    pub description: Option<String>,
 
     /// Reference to the style definition to apply
     pub style_ref: Option<String>,

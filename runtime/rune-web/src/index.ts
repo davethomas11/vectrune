@@ -13,7 +13,7 @@ import { normalizeLiteral, valueToString } from './utils';
 import { renderNode } from './rendering';
 import { executeSteps } from './statement';
 import { bindEvent, setupMemoryUpdateListener } from './events';
-import { setupNavigator } from './navigator';
+import { setupNavigator, updateSeoMetadata } from './navigator';
 import { playSound } from './audio';
 import type { RuneWebConfig, RuneApp } from './types';
 
@@ -104,6 +104,7 @@ export function boot(config: RuneWebConfig): RuneApp {
     navigator: config.navigator || null,
     initialState: JSON.parse(JSON.stringify(config.stateJson || {})),
     emitters: config.emitters || {},
+    seo: config.seo || null,
   });
 
   // Create reactive state (must happen after context init since makeReactive uses ctx())
@@ -114,6 +115,8 @@ export function boot(config: RuneWebConfig): RuneApp {
   // Set up URL navigation state synchronization if configured (@Navigator)
   if (config.navigator) {
     setupNavigator(config.navigator, app);
+  } else if (config.seo) {
+    updateSeoMetadata('home');
   }
 
   // Wrap render to track rendering component

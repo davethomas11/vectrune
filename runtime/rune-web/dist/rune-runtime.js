@@ -43,246 +43,6 @@ var __RuneWeb = (() => {
     window[key] = value;
   }
 
-  // src/navigator.ts
-  var isNavigatingFromUrl = false;
-  var lastKnownRoute = null;
-  function readNavigatorUrl(config) {
-    if (typeof window === "undefined" || !window.location) return null;
-    const param = config.param || "page";
-    const mode = config.mode || "auto";
-    if (mode === "query" || mode === "auto") {
-      try {
-        const url = new URL(window.location.href);
-        const val = url.searchParams.get(param) || url.searchParams.get("p") || url.searchParams.get(config.bind);
-        if (val && val.trim()) {
-          return val.trim();
-        }
-      } catch (_err) {
-      }
-    }
-    if (mode === "hash" || mode === "auto") {
-      const rawHash = window.location.hash || "";
-      if (rawHash) {
-        let slug = "";
-        if (rawHash.startsWith("#/")) {
-          slug = rawHash.slice(2);
-        } else if (rawHash.startsWith("#!/")) {
-          slug = rawHash.slice(3);
-        } else if (rawHash.startsWith("#!") || rawHash.startsWith("#?")) {
-          slug = rawHash.slice(2);
-        } else if (mode === "hash" && rawHash.startsWith("#") && rawHash !== "#app" && rawHash !== "#") {
-          slug = rawHash.slice(1);
-        }
-        slug = decodeURIComponent(slug.trim());
-        if (slug && slug !== "app") {
-          return slug;
-        }
-      }
-    }
-    return null;
-  }
-  function updateNavigatorUrl(route, replace = false) {
-    if (typeof window === "undefined" || isNavigatingFromUrl) return;
-    const context = ctx();
-    const config = context.navigator;
-    if (!config) return;
-    const cleanRoute = String(route || "").trim();
-    if (cleanRoute === lastKnownRoute) return;
-    lastKnownRoute = cleanRoute;
-    const mode = config.mode || "auto";
-    const param = config.param || "page";
-    if (mode === "hash") {
-      const targetHash = cleanRoute ? "#/" + encodeURIComponent(cleanRoute) : "";
-      if (window.location.hash !== targetHash) {
-        if (replace) {
-          window.location.replace(targetHash || "#/");
-        } else {
-          window.location.hash = targetHash || "#/";
-        }
-      }
-      return;
-    }
-    try {
-      const url = new URL(window.location.href);
-      if (!cleanRoute || cleanRoute === "home") {
-        url.searchParams.delete(param);
-      } else {
-        url.searchParams.set(param, cleanRoute);
-      }
-      if (url.hash && !url.hash.startsWith("#/")) {
-        url.hash = "";
-      }
-      const newUrl = url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : "");
-      const stateObj = { [config.bind]: cleanRoute };
-      if (replace) {
-        window.history.replaceState(stateObj, "", newUrl);
-      } else {
-        window.history.pushState(stateObj, "", newUrl);
-      }
-    } catch (_err) {
-    }
-  }
-  function handleNavigatorStateChange(prop, value) {
-    if (isNavigatingFromUrl) return;
-    const context = ctx();
-    const config = context.navigator;
-    if (!config || prop !== config.bind) return;
-    updateNavigatorUrl(String(value ?? ""));
-  }
-  function setupNavigator(config, app) {
-    if (typeof window === "undefined") return;
-    const boundVar = config.bind;
-    if (!boundVar) return;
-    const initialUrlRoute = readNavigatorUrl(config);
-    if (initialUrlRoute) {
-      app.state[boundVar] = initialUrlRoute;
-      lastKnownRoute = initialUrlRoute;
-    } else {
-      lastKnownRoute = String(app.state[boundVar] || "home");
-    }
-    window.navigate = function(target) {
-      if (typeof app.state[boundVar] !== "undefined") {
-        app.state[boundVar] = target;
-        if (app.render) app.render();
-      }
-    };
-    window.addEventListener("popstate", (_event) => {
-      const currentRoute = readNavigatorUrl(config) || "home";
-      if (currentRoute !== app.state[boundVar]) {
-        isNavigatingFromUrl = true;
-        try {
-          lastKnownRoute = currentRoute;
-          app.state[boundVar] = currentRoute;
-          if (app.render) app.render();
-        } finally {
-          isNavigatingFromUrl = false;
-        }
-      }
-    });
-    window.addEventListener("hashchange", (_event) => {
-      const currentRoute = readNavigatorUrl(config);
-      if (currentRoute && currentRoute !== app.state[boundVar]) {
-        isNavigatingFromUrl = true;
-        try {
-          lastKnownRoute = currentRoute;
-          app.state[boundVar] = currentRoute;
-          if (app.render) app.render();
-        } finally {
-          isNavigatingFromUrl = false;
-        }
-      }
-    });
-  }
-
-  // src/scope.ts
-  function splitPathSegments(expr) {
-    const str = String(expr || "").replace(/\[\]([a-zA-Z_$][\w$]*)/g, "[].(it.$1 == $1)");
-    const segments = [];
-    let current = "";
-    let inBrackets = false;
-    let inParens = 0;
-    for (let i = 0; i < str.length; i++) {
-      const ch = str[i];
-      if (ch === "(") inParens++;
-      if (ch === ")") inParens = Math.max(0, inParens - 1);
-      if (inParens > 0 && !(ch === "(" && str.slice(i - 3, i + 1) === "[].(")) {
-        current += ch;
-        continue;
-      }
-      if (ch === "." && !inBrackets) {
-        if (current.trim()) segments.push(current.trim());
-        current = "";
-        continue;
-      }
-      if (ch === "[") {
-        if (str.slice(i, i + 4) === "[].(") {
-          if (current.trim()) segments.push(current.trim());
-          current = "[].(";
-          i += 3;
-          inParens++;
-          continue;
-        }
-        if (current.trim()) segments.push(current.trim());
-        current = "[";
-        inBrackets = true;
-        continue;
-      }
-      if (ch === "]") {
-        if (inBrackets) {
-          current += "]";
-          segments.push(current.trim());
-          current = "";
-          inBrackets = false;
-          continue;
-        }
-      }
-      current += ch;
-    }
-    if (current.trim()) segments.push(current.trim());
-    return segments;
-  }
-  function buildScope(locals) {
-    const c = ctx();
-    return Object.assign({}, c.app.state, c.app.derived, locals || {});
-  }
-  var proxyCache = /* @__PURE__ */ new WeakMap();
-  var renderQueued = false;
-  function scheduleRender() {
-    const context = ctx();
-    if (context.isRendering || !context.app.render || renderQueued) return;
-    renderQueued = true;
-    requestAnimationFrame(() => {
-      renderQueued = false;
-      const currentCtx = ctx();
-      if (!currentCtx.isRendering && currentCtx.app.render) {
-        currentCtx.app.render();
-      }
-    });
-  }
-  function makeReactive(obj) {
-    if (obj === null || typeof obj !== "object") return obj;
-    if (obj.__isProxy) return obj;
-    const cached = proxyCache.get(obj);
-    if (cached) return cached;
-    const context = ctx();
-    const proxy = new Proxy(obj, {
-      get(target, prop) {
-        if (prop === "__isProxy") return true;
-        if (prop === "__raw") return target;
-        if (getWindowProp("__renderingComponent") && typeof prop === "string" && !prop.startsWith("__")) {
-          if (!(context.memorySubscriptions[prop] instanceof Set)) {
-            context.memorySubscriptions[prop] = /* @__PURE__ */ new Set();
-          }
-          context.memorySubscriptions[prop].add(
-            getWindowProp("__renderingComponent")
-          );
-        }
-        const val = target[prop];
-        if (val !== null && typeof val === "object" && !val.__isProxy) {
-          return makeReactive(val);
-        }
-        return val;
-      },
-      set(target, prop, value) {
-        const rawValue = value !== null && typeof value === "object" && value.__raw ? value.__raw : value;
-        if (target[prop] === rawValue) return true;
-        target[prop] = rawValue;
-        if (typeof prop === "string" && context.navigator && prop === context.navigator.bind) {
-          handleNavigatorStateChange(prop, rawValue);
-        }
-        scheduleRender();
-        return true;
-      },
-      deleteProperty(target, prop) {
-        delete target[prop];
-        scheduleRender();
-        return true;
-      }
-    });
-    proxyCache.set(obj, proxy);
-    return proxy;
-  }
-
   // src/utils.ts
   function escapeHtml(value) {
     return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -415,6 +175,313 @@ var __RuneWeb = (() => {
       }
     }
     return output;
+  }
+
+  // src/interpolation.ts
+  function interpolate(template, scope) {
+    const OPEN = "\uE000";
+    const CLOSE = "\uE001";
+    return expandPercentI18n(decodeEscapes(String(template || ""))).replace(/\{([^}]+)\}/g, function(_match, expr) {
+      const resolved = valueToString(evaluateExpression(expr, scope));
+      return resolved.includes("{") && resolved.includes("}") ? interpolate(resolved, scope) : resolved;
+    }).replace(new RegExp(OPEN, "g"), "{").replace(new RegExp(CLOSE, "g"), "}");
+  }
+
+  // src/navigator.ts
+  var isNavigatingFromUrl = false;
+  var lastKnownRoute = null;
+  function readNavigatorUrl(config) {
+    if (typeof window === "undefined" || !window.location) return null;
+    const param = config.param || "page";
+    const mode = config.mode || "auto";
+    if (mode === "query" || mode === "auto") {
+      try {
+        const url = new URL(window.location.href);
+        const val = url.searchParams.get(param) || url.searchParams.get("p") || url.searchParams.get(config.bind);
+        if (val && val.trim()) {
+          return val.trim();
+        }
+      } catch (_err) {
+      }
+    }
+    if (mode === "hash" || mode === "auto") {
+      const rawHash = window.location.hash || "";
+      if (rawHash) {
+        let slug = "";
+        if (rawHash.startsWith("#/")) {
+          slug = rawHash.slice(2);
+        } else if (rawHash.startsWith("#!/")) {
+          slug = rawHash.slice(3);
+        } else if (rawHash.startsWith("#!") || rawHash.startsWith("#?")) {
+          slug = rawHash.slice(2);
+        } else if (mode === "hash" && rawHash.startsWith("#") && rawHash !== "#app" && rawHash !== "#") {
+          slug = rawHash.slice(1);
+        }
+        slug = decodeURIComponent(slug.trim());
+        if (slug && slug !== "app") {
+          return slug;
+        }
+      }
+    }
+    return null;
+  }
+  function setMetaTag(attr, key, content) {
+    if (typeof document === "undefined") return;
+    let el = document.querySelector(`meta[${attr}="${key}"]`);
+    if (!el) {
+      el = document.createElement("meta");
+      el.setAttribute(attr, key);
+      document.head.appendChild(el);
+    }
+    el.setAttribute("content", content);
+  }
+  function updateSeoMetadata(route) {
+    if (typeof document === "undefined") return;
+    let context;
+    try {
+      context = ctx();
+    } catch (_err) {
+      return;
+    }
+    const seo = context.seo;
+    if (!seo) return;
+    const rawRoute = (route || "").trim();
+    const cleanRoute = rawRoute.toLowerCase();
+    const routeConfig = seo.routes?.[rawRoute] || seo.routes?.[cleanRoute] || seo.routes?.[cleanRoute.replace(/[-_]/g, "")];
+    const rawTitle = routeConfig?.title || (cleanRoute && cleanRoute !== "home" ? `${rawRoute.charAt(0).toUpperCase() + rawRoute.slice(1)} \u2014 ${seo.title || "Vectrune"}` : seo.title);
+    const rawDescription = routeConfig?.description || seo.description;
+    const rawImage = routeConfig?.image || seo.image;
+    const scope = { i18n: context.i18nData || {} };
+    if (rawTitle) {
+      const title = interpolate(rawTitle, scope);
+      document.title = title;
+      setMetaTag("property", "og:title", title);
+      setMetaTag("name", "twitter:title", title);
+    }
+    if (rawDescription) {
+      const description = interpolate(rawDescription, scope);
+      setMetaTag("name", "description", description);
+      setMetaTag("property", "og:description", description);
+      setMetaTag("name", "twitter:description", description);
+    }
+    if (rawImage) {
+      const image = interpolate(rawImage, scope);
+      setMetaTag("property", "og:image", image);
+      setMetaTag("name", "twitter:image", image);
+    }
+    if (typeof window !== "undefined" && window.location) {
+      setMetaTag("property", "og:url", window.location.href);
+    }
+  }
+  function updateNavigatorUrl(route, replace = false) {
+    if (typeof window === "undefined" || isNavigatingFromUrl) return;
+    const context = ctx();
+    const config = context.navigator;
+    if (!config) {
+      updateSeoMetadata(route);
+      return;
+    }
+    const cleanRoute = String(route || "").trim();
+    if (cleanRoute === lastKnownRoute) return;
+    lastKnownRoute = cleanRoute;
+    const mode = config.mode || "auto";
+    const param = config.param || "page";
+    if (mode === "hash") {
+      const targetHash = cleanRoute ? "#/" + encodeURIComponent(cleanRoute) : "";
+      if (window.location.hash !== targetHash) {
+        if (replace) {
+          window.location.replace(targetHash || "#/");
+        } else {
+          window.location.hash = targetHash || "#/";
+        }
+      }
+      updateSeoMetadata(cleanRoute);
+      return;
+    }
+    try {
+      const url = new URL(window.location.href);
+      if (!cleanRoute || cleanRoute === "home") {
+        url.searchParams.delete(param);
+      } else {
+        url.searchParams.set(param, cleanRoute);
+      }
+      if (url.hash && !url.hash.startsWith("#/")) {
+        url.hash = "";
+      }
+      const newUrl = url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : "");
+      const stateObj = { [config.bind]: cleanRoute };
+      if (replace) {
+        window.history.replaceState(stateObj, "", newUrl);
+      } else {
+        window.history.pushState(stateObj, "", newUrl);
+      }
+    } catch (_err) {
+    }
+    updateSeoMetadata(cleanRoute);
+  }
+  function handleNavigatorStateChange(prop, value) {
+    if (isNavigatingFromUrl) return;
+    const context = ctx();
+    const config = context.navigator;
+    if (!config || prop !== config.bind) return;
+    updateNavigatorUrl(String(value ?? ""));
+  }
+  function setupNavigator(config, app) {
+    if (typeof window === "undefined") return;
+    const boundVar = config.bind;
+    if (!boundVar) return;
+    const initialUrlRoute = readNavigatorUrl(config);
+    if (initialUrlRoute) {
+      app.state[boundVar] = initialUrlRoute;
+      lastKnownRoute = initialUrlRoute;
+    } else {
+      lastKnownRoute = String(app.state[boundVar] || "home");
+    }
+    updateSeoMetadata(lastKnownRoute);
+    window.navigate = function(target) {
+      if (typeof app.state[boundVar] !== "undefined") {
+        app.state[boundVar] = target;
+        if (app.render) app.render();
+        updateSeoMetadata(target);
+      }
+    };
+    window.addEventListener("popstate", (_event) => {
+      const currentRoute = readNavigatorUrl(config) || "home";
+      if (currentRoute !== app.state[boundVar]) {
+        isNavigatingFromUrl = true;
+        try {
+          lastKnownRoute = currentRoute;
+          app.state[boundVar] = currentRoute;
+          if (app.render) app.render();
+          updateSeoMetadata(currentRoute);
+        } finally {
+          isNavigatingFromUrl = false;
+        }
+      }
+    });
+    window.addEventListener("hashchange", (_event) => {
+      const currentRoute = readNavigatorUrl(config);
+      if (currentRoute && currentRoute !== app.state[boundVar]) {
+        isNavigatingFromUrl = true;
+        try {
+          lastKnownRoute = currentRoute;
+          app.state[boundVar] = currentRoute;
+          if (app.render) app.render();
+          updateSeoMetadata(currentRoute);
+        } finally {
+          isNavigatingFromUrl = false;
+        }
+      }
+    });
+  }
+
+  // src/scope.ts
+  function splitPathSegments(expr) {
+    const str = String(expr || "").replace(/\[\]([a-zA-Z_$][\w$]*)/g, "[].(it.$1 == $1)");
+    const segments = [];
+    let current = "";
+    let inBrackets = false;
+    let inParens = 0;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      if (ch === "(") inParens++;
+      if (ch === ")") inParens = Math.max(0, inParens - 1);
+      if (inParens > 0 && !(ch === "(" && str.slice(i - 3, i + 1) === "[].(")) {
+        current += ch;
+        continue;
+      }
+      if (ch === "." && !inBrackets) {
+        if (current.trim()) segments.push(current.trim());
+        current = "";
+        continue;
+      }
+      if (ch === "[") {
+        if (str.slice(i, i + 4) === "[].(") {
+          if (current.trim()) segments.push(current.trim());
+          current = "[].(";
+          i += 3;
+          inParens++;
+          continue;
+        }
+        if (current.trim()) segments.push(current.trim());
+        current = "[";
+        inBrackets = true;
+        continue;
+      }
+      if (ch === "]") {
+        if (inBrackets) {
+          current += "]";
+          segments.push(current.trim());
+          current = "";
+          inBrackets = false;
+          continue;
+        }
+      }
+      current += ch;
+    }
+    if (current.trim()) segments.push(current.trim());
+    return segments;
+  }
+  function buildScope(locals) {
+    const c = ctx();
+    return Object.assign({}, c.app.state, c.app.derived, locals || {});
+  }
+  var proxyCache = /* @__PURE__ */ new WeakMap();
+  var renderQueued = false;
+  function scheduleRender() {
+    const context = ctx();
+    if (context.isRendering || !context.app.render || renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      const currentCtx = ctx();
+      if (!currentCtx.isRendering && currentCtx.app.render) {
+        currentCtx.app.render();
+      }
+    });
+  }
+  function makeReactive(obj) {
+    if (obj === null || typeof obj !== "object") return obj;
+    if (obj.__isProxy) return obj;
+    const cached = proxyCache.get(obj);
+    if (cached) return cached;
+    const context = ctx();
+    const proxy = new Proxy(obj, {
+      get(target, prop) {
+        if (prop === "__isProxy") return true;
+        if (prop === "__raw") return target;
+        if (getWindowProp("__renderingComponent") && typeof prop === "string" && !prop.startsWith("__")) {
+          if (!(context.memorySubscriptions[prop] instanceof Set)) {
+            context.memorySubscriptions[prop] = /* @__PURE__ */ new Set();
+          }
+          context.memorySubscriptions[prop].add(
+            getWindowProp("__renderingComponent")
+          );
+        }
+        const val = target[prop];
+        if (val !== null && typeof val === "object" && !val.__isProxy) {
+          return makeReactive(val);
+        }
+        return val;
+      },
+      set(target, prop, value) {
+        const rawValue = value !== null && typeof value === "object" && value.__raw ? value.__raw : value;
+        if (target[prop] === rawValue) return true;
+        target[prop] = rawValue;
+        if (typeof prop === "string" && context.navigator && prop === context.navigator.bind) {
+          handleNavigatorStateChange(prop, rawValue);
+        }
+        scheduleRender();
+        return true;
+      },
+      deleteProperty(target, prop) {
+        delete target[prop];
+        scheduleRender();
+        return true;
+      }
+    });
+    proxyCache.set(obj, proxy);
+    return proxy;
   }
 
   // src/expression.ts
@@ -842,16 +909,6 @@ var __RuneWeb = (() => {
       }
     }
     return resolveValue(trimmed, scope);
-  }
-
-  // src/interpolation.ts
-  function interpolate(template, scope) {
-    const OPEN = "\uE000";
-    const CLOSE = "\uE001";
-    return expandPercentI18n(decodeEscapes(String(template || ""))).replace(/\{([^}]+)\}/g, function(_match, expr) {
-      const resolved = valueToString(evaluateExpression(expr, scope));
-      return resolved.includes("{") && resolved.includes("}") ? interpolate(resolved, scope) : resolved;
-    }).replace(new RegExp(OPEN, "g"), "{").replace(new RegExp(CLOSE, "g"), "}");
   }
 
   // src/rendering.ts
@@ -2273,13 +2330,16 @@ var __RuneWeb = (() => {
       memorySubscriptions: {},
       navigator: config.navigator || null,
       initialState: JSON.parse(JSON.stringify(config.stateJson || {})),
-      emitters: config.emitters || {}
+      emitters: config.emitters || {},
+      seo: config.seo || null
     });
     app.state = makeReactive(
       Object.assign({}, config.stateJson, { i18n: config.i18nData })
     );
     if (config.navigator) {
       setupNavigator(config.navigator, app);
+    } else if (config.seo) {
+      updateSeoMetadata("home");
     }
     const originalRender = app.render;
     app.render = function() {
