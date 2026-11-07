@@ -31,6 +31,30 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
 
 ---
 
+## Strategic Architecture: Language Parity & Multi-Target Convergence
+
+A dedicated, comprehensive architectural blueprint and multi-phase roadmap has been established in [LANGUAGE_PARITY_ROADMAP.md](LANGUAGE_PARITY_ROADMAP.md).
+
+### Vision & High-Level Summary
+As Vectrune has rapidly evolved, various language processors and dialects developed target-specific features:
+- **Rune-Web client runtime & compiler**: Gained state generators (`* N inc`, `grid`), `local` templates, `all` modifiers, compound assignments (`+=`, `-=`), ternary (`? :`), nullish (`??`), unary negation (`-x`), spatial primitives, and audio/emitter support.
+- **Backend `run:` engine (Rust)**: Powers HTTP, data sources, and memory hooks, but lacks recent expression innovations (ternary, nullish, collection filter/find methods) in its step evaluator.
+- **`.vect` Scripts**: Features interactive I/O (`stdio ->`, `<- stdio`) and while loops, but operates on an isolated IR without multi-file imports or collections.
+- **Vectrune Natural Language Engine**: Compiles English/French intent models to execution IR via ad-hoc rules.
+- **In-Browser Emulator**: Re-implements document parsing and step execution in TypeScript with subtle dialect divergences.
+- **REPL**: Awaiting a unified line-by-line expression parser and executor.
+
+### Parity & Architecture Roadmap Highlights ([Full Details](LANGUAGE_PARITY_ROADMAP.md))
+1. **Phase 1: Shared Specification & Cross-Engine Conformance Suite ("The Oracle")**: Formal token/precedence grammar (`docs/SPECIFICATION.md`) and cross-engine JSON conformance fixtures.
+2. **Phase 2: Modernize Rust Core Parser & Pratt Expression Engine**: Eliminate unsafe raw pointer traversals in `src/rune_parser.rs`; introduce pre-compiled typed AST expressions in backend `run:` steps (bringing ternary, nullish, compound operators, and collection methods to the backend).
+3. **Phase 3: High-Performance TypeScript AST Runtime**: Pre-compile expressions in `runtime/rune-web` to eliminate per-frame regex string re-parsing during 60fps animations; unify emulator core.
+4. **Phase 4: REPL Modernization & `.vect` Script Alignment**: Connect `vectrune repl` and `.vect` scripts directly to the unified expression and collection engine.
+5. **Phase 5: Ahead-Of-Time (AOT) Compiler Architecture (`rune compiler`)**: Define bytecode/IR for compiling `.rune` into standalone native executables and WASM.
+6. **Phase 6: Rune Mobile & Native UI Architecture (`rune mobile`)**: Decouple reactive engine into a headless core (`@vectrune/core`) and build mobile presentation adapters (canvas/native UI bridge).
+7. **Phase 7: Converge Vectrune Natural-Language Intent Compiler**: Modernize the natural language compiler to emit the unified Rune AST / IR directly.
+
+---
+
 ## Active Priorities
 
 ### Track 1: Teaching Site & Interactive Learning ([vectrune.com](https://vectrune.com))
