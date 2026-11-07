@@ -44,11 +44,13 @@ describe('Rune-Web Navigator', () => {
     expect(route).toBe('vectraiders');
   });
 
-  it('ignores #app anchor in readNavigatorUrl', () => {
+  it('ignores #app and in-page section anchors (#quickstart) in auto mode', () => {
     mockWindow.location = new URL('https://vectrune.com/#app');
     const config: NavigatorConfig = { bind: 'activePage', mode: 'auto', param: 'page' };
-    const route = readNavigatorUrl(config);
-    expect(route).toBeNull();
+    expect(readNavigatorUrl(config)).toBeNull();
+
+    mockWindow.location = new URL('https://vectrune.com/#quickstart');
+    expect(readNavigatorUrl(config)).toBeNull();
   });
 
   it('updates URL with pushState when route changes', () => {

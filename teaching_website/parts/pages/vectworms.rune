@@ -1,0 +1,35 @@
+@Component/VectWormsPage
+view:
+    div .page .application-guide .space-invaders-page:
+        section .card:
+            div .section-heading:
+                span .tag .tag-advanced "%i18n.VectWorms.badge%"
+                h1 "%i18n.VectWorms.title%"
+                p .lead "%i18n.VectWorms.description%"
+
+            div .features-grid:
+                article .feature-card:
+                    h3 "🐛 %i18n.VectWorms.feature_split_title%"
+                    p "%i18n.VectWorms.feature_split_desc%"
+                article .feature-card:
+                    h3 "🍄 %i18n.VectWorms.feature_field_title%"
+                    p "%i18n.VectWorms.feature_field_desc%"
+                article .feature-card:
+                    h3 "🔊 %i18n.VectWorms.feature_fx_title%"
+                    p "%i18n.VectWorms.feature_fx_desc%"
+                article .feature-card:
+                    h3 "🕹️ %i18n.VectWorms.feature_controls_title%"
+                    p "%i18n.VectWorms.feature_controls_desc%"
+
+            h3 "%i18n.VectWorms.instructions_title%"
+            p "⌨️ %i18n.VectWorms.instructions_keyboard%"
+            p "📱 %i18n.VectWorms.instructions_mobile%"
+
+        WebExample title="{i18n.VectWorms.title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" main_file="vectworms.rune" source="{raw ../../../examples/vectworms/vectworms.rune}" extra_file="parts/field.rune" extra_source="{raw ../../../examples/vectworms/parts/field.rune}" logic_source="{raw ../../../examples/vectworms/parts/logic.rune}" style_source="{raw ../../../examples/vectworms/parts/style.rune}"
+
+        section .card:
+            h3 "%i18n.Guide.run_locally%"
+            p "%i18n.WebGuide.run%"
+            pre:
+                code .code-block .language-bash "vectrune examples/vectworms/vectworms.rune\nvectrune examples/vectworms/vectworms.rune -o html > vectworms.html"
+

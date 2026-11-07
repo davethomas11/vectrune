@@ -130,6 +130,8 @@ Examples {
     counter_desc = "Una pequeña aplicación web con estado reactivo real. Aumenta, disminuye y reinicia el contador."
     invaders_title = "VectRaiders"
     invaders_desc = "Juego arcade retro creado con Rune-Web declarativo puro: bucle a 25 fps, colisiones 2D y controles táctiles."
+    worms_title = "VectWorms"
+    worms_desc = "Arcade estilo ciempiés en Rune-Web puro: cadenas que se dividen, campo de hongos destructibles, partículas y audio sintetizado."
     rest_hint = "Ejecuta la aplicación, elige un endpoint y envía una petición. Edita el código y vuelve a ejecutarlo para probar los cambios."
     users_hint = "Esta es la API de usuarios del repositorio. El archivo CSV vive en la memoria del navegador: crea un usuario con POST y consulta con GET. Ejecuta de nuevo para reiniciar el archivo."
     data_hint = "Edita los registros y ejecuta para ver el documento en JSON. También puedes exportar YAML y XML."
@@ -251,6 +253,7 @@ Nav {
     games = "Juegos"
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
+    vectworms = "VectWorms"
 }
 
 Lab {
@@ -261,10 +264,12 @@ Lab {
     counter = "Contador"
     tic = "Tres en raya"
     invaders = "VectRaiders"
+    worms = "VectWorms"
     first_title = "Tu primera API"
     document_title = "Un documento, tres formatos"
     graphql_title = "API GraphQL de libros"
     invaders_title = "Arcade VectRaiders"
+    worms_title = "Arcade VectWorms"
     main_file = "Archivo .rune principal"
 }
 
@@ -284,6 +289,24 @@ SpaceInvaders {
     instructions_title = "Controles"
     instructions_keyboard = "A / ◀: Izquierda • D / ▶: Derecha • Espacio: Disparar"
     instructions_mobile = "Toca y mantén los botones arcade en pantalla para desplazarte y disparar en móviles y tabletas."
+}
+
+VectWorms {
+    badge = "Juego Retro Arcade"
+    title = "VectWorms: Purga el Campo de Hongos"
+    description = "Un rápido arcade estilo ciempiés en Rune-Web declarativo: segmentos que se dividen, hongos destructibles, emisores de partículas y efectos de sonido sintetizados."
+    play_label = "Jugar VectWorms"
+    feature_split_title = "División de Cadenas"
+    feature_split_desc = "Destruir un segmento genera un nuevo hongo y convierte al segmento siguiente en una nueva cabeza independiente."
+    feature_field_title = "Generadores de Estado"
+    feature_field_desc = "Las filas de hongos y los 10 segmentos se generan declarativamente usando plantillas locales, inc y modificadores all."
+    feature_fx_title = "Partículas y Audio Sintetizado"
+    feature_fx_desc = "Las declaraciones emitter y acciones sound activan explosiones de partículas y efectos Web Audio en tiempo real."
+    feature_controls_title = "Zona 2D y Cruceta Arcade"
+    feature_controls_desc = "Movimiento en 4 direcciones dentro de la zona del jugador con teclado WASD/Flechas o cruceta táctil en pantalla."
+    instructions_title = "Controles"
+    instructions_keyboard = "WASD / Flechas: Mover en 4 direcciones • Espacio: Disparar"
+    instructions_mobile = "Usa la cruceta táctil y el botón de disparo en móviles o tabletas."
 }
 
 Reference {

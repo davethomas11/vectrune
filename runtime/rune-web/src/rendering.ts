@@ -178,12 +178,11 @@ export function renderElement(
     }
     attrs += ` ${key}="${escapeHtml(renderedValue)}"`;
   }
-  if (locals && Object.keys(locals).length) {
+  const eventEntries = Object.entries(element.events || {});
+  if (eventEntries.length > 0 && locals && Object.keys(locals).length) {
     attrs += ` data-rune-scope="${escapeHtml(JSON.stringify(locals))}"`;
   }
-  for (const [eventName, handler] of Object.entries(
-    element.events || {},
-  )) {
+  for (const [eventName, handler] of eventEntries) {
     attrs += ` data-on-${eventName}="${escapeHtml(interpolate(handler, scope))}"`;
   }
 

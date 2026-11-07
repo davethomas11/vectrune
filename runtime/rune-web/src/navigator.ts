@@ -47,8 +47,9 @@ export function readNavigatorUrl(config: NavigatorConfig): string | null {
         slug = rawHash.slice(3);
       } else if (rawHash.startsWith('#!') || rawHash.startsWith('#?')) {
         slug = rawHash.slice(2);
-      } else if (rawHash.startsWith('#') && rawHash !== '#app' && rawHash !== '#') {
-        // Only treat single hash as a route if it's not a generic in-page anchor
+      } else if (mode === 'hash' && rawHash.startsWith('#') && rawHash !== '#app' && rawHash !== '#') {
+        // Only treat bare single hash as a route when explicitly in hash mode;
+        // in auto mode, bare #anchor hashes (e.g. #quickstart, #tour) are in-page section anchors.
         slug = rawHash.slice(1);
       }
       slug = decodeURIComponent(slug.trim());
@@ -98,8 +99,8 @@ export function updateNavigatorUrl(route: string, replace = false): void {
       url.searchParams.set(param, cleanRoute);
     }
 
-    // Clean up temporary in-page anchor hash #app if present
-    if (url.hash === '#app') {
+    // Clean up temporary in-page anchor hash (e.g. #app, #quickstart) when navigating
+    if (url.hash && !url.hash.startsWith('#/')) {
       url.hash = '';
     }
 

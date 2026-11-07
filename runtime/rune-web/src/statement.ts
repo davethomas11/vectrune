@@ -263,17 +263,25 @@ export function executeStatement(
     const current = Array.isArray(existing) ? (existing as Array<Record<string, unknown>>) : [];
 
     if (method === 'step') {
+      if (current.length === 0) return true;
       const friction = cfg.friction ?? 0.92;
       const gravity = cfg.gravity ?? 0;
       const surviving: Array<Record<string, unknown>> = [];
-      for (const p of current) {
-        if (!p || typeof p !== 'object') continue;
-        p.x = Number(p.x || 0) + Number(p.vx || 0);
-        p.y = Number(p.y || 0) + Number(p.vy || 0);
-        p.vx = Number(p.vx || 0) * friction;
-        p.vy = Number(p.vy || 0) * friction + gravity;
-        p.life = Number(p.life || 0) - 1;
-        if (Number(p.life) > 0) surviving.push(p);
+      const rawCurrent = ((current as unknown as Record<string, unknown>).__raw as Array<Record<string, unknown>>) || current;
+      for (let i = 0; i < rawCurrent.length; i += 1) {
+        const item = rawCurrent[i];
+        if (!item || typeof item !== 'object') continue;
+        const p = ((item as Record<string, unknown>).__raw as Record<string, unknown>) || item;
+        const life = Number(p.life || 0) - 1;
+        if (life <= 0) continue;
+        const vx = Number(p.vx || 0) * friction;
+        const vy = Number(p.vy || 0) * friction + gravity;
+        p.x = Math.round((Number(p.x || 0) + Number(p.vx || 0)) * 10) / 10;
+        p.y = Math.round((Number(p.y || 0) + Number(p.vy || 0)) * 10) / 10;
+        p.vx = vx;
+        p.vy = vy;
+        p.life = life;
+        surviving.push(p);
       }
       assignPath(name, surviving, locals);
       return true;
@@ -285,16 +293,18 @@ export function executeStatement(
       return true;
     }
     const arg = (i: number) => (parts.length > i ? evaluateExpression(parts[i], scope) : undefined);
-    const xVal = Number(arg(0) || 0);
-    const yVal = Number(arg(1) || 0);
+    const xVal = Math.round(Number(arg(0) || 0) * 10) / 10;
+    const yVal = Math.round(Number(arg(1) || 0) * 10) / 10;
     const countVal = Number(arg(2) ?? cfg.count ?? 8);
     const colorVal = arg(3) !== undefined ? valueToString(arg(3)) : (cfg.color ?? '#ffffff');
     const speedVal = Number(arg(4) ?? cfg.speed ?? 7);
     const life = cfg.life ?? 14;
+    const maxParticles = (cfg as Record<string, unknown>).max !== undefined ? Number((cfg as Record<string, unknown>).max) : 36;
     const [minSize, maxSize] = Array.isArray(cfg.size)
       ? cfg.size
       : [cfg.size ?? 3, cfg.size ?? 5];
 
+    const rawCurrent = ((current as unknown as Record<string, unknown>).__raw as Array<Record<string, unknown>>) || current;
     const newParticles: Array<Record<string, unknown>> = [];
     for (let i = 0; i < countVal; i += 1) {
       const angle = Math.random() * Math.PI * 2;
@@ -310,7 +320,9 @@ export function executeStatement(
         size: minSize + Math.floor(Math.random() * (maxSize - minSize + 1)),
       });
     }
-    assignPath(name, current.concat(newParticles), locals);
+    const combined = rawCurrent.concat(newParticles);
+    const capped = combined.length > maxParticles ? combined.slice(combined.length - maxParticles) : combined;
+    assignPath(name, capped, locals);
     return true;
   }
 

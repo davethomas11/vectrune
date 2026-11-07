@@ -130,6 +130,8 @@ Examples {
     counter_desc = "Une petite application web avec un véritable état réactif. Augmentez, diminuez et réinitialisez le compteur."
     invaders_title = "VectRaiders"
     invaders_desc = "Jeu rétro d'arcade conçu en pur Rune-Web déclaratif : boucle à 25 fps, collisions 2D et contrôles tactiles."
+    worms_title = "VectWorms"
+    worms_desc = "Jeu d'arcade mille-pattes en pur Rune-Web : segments divisibles, champignons destructibles, particules et audio synthétisé."
     rest_hint = "Lancez l’application, choisissez un endpoint et envoyez une requête. Modifiez le code et relancez pour tester les changements."
     users_hint = "Voici l’API utilisateurs du dépôt. Son CSV reste en mémoire dans le navigateur : créez un utilisateur avec POST, puis consultez avec GET. Relancez pour réinitialiser le fichier."
     data_hint = "Modifiez les enregistrements et exécutez pour examiner le document en JSON. Vous pouvez aussi exporter en YAML et XML."
@@ -251,6 +253,7 @@ Nav {
     games = "Jeux"
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
+    vectworms = "VectWorms"
 }
 
 Lab {
@@ -261,10 +264,12 @@ Lab {
     counter = "Compteur"
     tic = "Morpion"
     invaders = "VectRaiders"
+    worms = "VectWorms"
     first_title = "Votre première API"
     document_title = "Un document, trois formats"
     graphql_title = "API GraphQL de livres"
     invaders_title = "Arcade VectRaiders"
+    worms_title = "Arcade VectWorms"
     main_file = "Fichier .rune principal"
 }
 
@@ -284,6 +289,24 @@ SpaceInvaders {
     instructions_title = "Commandes"
     instructions_keyboard = "A / ◀: Gauche • D / ▶: Droite • Espace: Tirer"
     instructions_mobile = "Touchez et maintenez les boutons d'arcade à l'écran pour glisser et tirer sur mobile et tablette."
+}
+
+VectWorms {
+    badge = "Jeu Rétro Arcade"
+    title = "VectWorms : Purgez la Grille de Champignons"
+    description = "Un jeu d'arcade mille-pattes rapide en Rune-Web déclaratif : segments qui se divisent, champignons destructibles, émetteurs de particules et effets sonores Web Audio."
+    play_label = "Jouer à VectWorms"
+    feature_split_title = "Division des Segments"
+    feature_split_desc = "Détruire un segment fait apparaître un champignon et transforme le segment suivant en nouvelle tête indépendante."
+    feature_field_title = "Générateurs d'État"
+    feature_field_desc = "Les rangées de champignons et les 10 segments sont générés de façon déclarative avec des modèles locaux, inc et all."
+    feature_fx_title = "Particules et Synthétiseur Audio"
+    feature_fx_desc = "Les déclarations emitter et actions sound déclenchent des explosions de particules et des sons rétro Web Audio."
+    feature_controls_title = "Zone Joueur 2D et Croix Directionnelle"
+    feature_controls_desc = "Déplacement dans les 4 directions avec les touches WASD/Flèches ou la croix directionnelle tactile."
+    instructions_title = "Commandes"
+    instructions_keyboard = "WASD / Flèches : Déplacer (4 directions) • Espace : Tirer"
+    instructions_mobile = "Utilisez la croix directionnelle et le bouton de tir sur mobile ou tablette."
 }
 
 Reference {

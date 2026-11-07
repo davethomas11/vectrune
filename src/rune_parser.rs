@@ -461,8 +461,10 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                         }
                         if let Some(list) = maybe_list {
                             let mut assignment = line.trim().to_string();
-                            while !assignment.trim_end().ends_with('}') {
+                            let mut depth: i32 = assignment.chars().map(|c| match c { '{' => 1, '}' => -1, _ => 0 }).sum();
+                            while depth > 0 {
                                 if let Some(next_line) = lines.next() {
+                                    depth += next_line.chars().map(|c| match c { '{' => 1, '}' => -1, _ => 0 }).sum::<i32>();
                                     assignment.push_str("\n");
                                     assignment.push_str(next_line.trim_end());
                                 } else {
@@ -575,8 +577,10 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                         // Robust handling: object assignment at any point in series
                         if is_object_assignment_line(line) {
                             let mut assignment = line.trim().to_string();
-                            while !assignment.trim_end().ends_with('}') {
+                            let mut depth: i32 = assignment.chars().map(|c| match c { '{' => 1, '}' => -1, _ => 0 }).sum();
+                            while depth > 0 {
                                 if let Some(next_line) = lines.next() {
+                                    depth += next_line.chars().map(|c| match c { '{' => 1, '}' => -1, _ => 0 }).sum::<i32>();
                                     assignment.push_str("\n");
                                     assignment.push_str(next_line.trim_end());
                                 } else {
@@ -635,8 +639,10 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                 // Handle multiline or inline object literal { ... }
                 if looks_like_object_literal_start(&value_raw) {
                     let mut assignment = value_raw;
-                    while !assignment.trim_end().ends_with('}') {
+                    let mut depth: i32 = assignment.chars().map(|c| match c { '{' => 1, '}' => -1, _ => 0 }).sum();
+                    while depth > 0 {
                         if let Some(next_line) = lines.next() {
+                            depth += next_line.chars().map(|c| match c { '{' => 1, '}' => -1, _ => 0 }).sum::<i32>();
                             assignment.push_str("\n");
                             assignment.push_str(next_line.trim_end());
                         } else {

@@ -195,10 +195,6 @@ __RuneWeb.boot({{
         serde_json::Value::String(normalize_literal(trimmed))
     }
 
-    fn parse_relaxed_array(&self, s: &str) -> Option<serde_json::Value> {
-        self.parse_relaxed_array_with_locals(s, &HashMap::new())
-    }
-
     fn parse_relaxed_array_with_locals(&self, s: &str, locals: &HashMap<String, serde_json::Value>) -> Option<serde_json::Value> {
         let trimmed = s.trim();
         if !trimmed.starts_with('[') {
@@ -943,5 +939,39 @@ mod tests {
         let generated = generator.generate();
         assert!(generated.contains(r#""sparks":[]"#) || generated.contains(r#""sparks": []"#));
         assert!(generated.contains(r#""sparks":{"friction":0.92,"life":14,"size":[3,5]}"#));
+    }
+
+    #[test]
+    fn test_space_invaders_parse() {
+        let doc = crate::rune_parser::load_rune_document_from_path(std::path::Path::new("examples/space_invaders/space_invaders.rune")).unwrap();
+        let frontend = crate::apps::rune_web::parser::parse_rune_web_frontend(&doc, "space-invaders").unwrap();
+        let logic = frontend.logic_definitions.get("invaders").unwrap();
+        assert!(logic.state.contains_key("aliens"));
+    }
+
+    #[test]
+    fn test_vectworms_parse() {
+        let doc = crate::rune_parser::load_rune_document_from_path(std::path::Path::new("examples/vectworms/vectworms.rune")).unwrap();
+        let frontend = crate::apps::rune_web::parser::parse_rune_web_frontend(&doc, "vectworms").unwrap();
+        let logic = frontend.logic_definitions.get("vectworms").unwrap().clone();
+        assert!(logic.state.contains_key("mushrooms"));
+        assert!(logic.state.contains_key("worms"));
+
+        let generator = JsCodegen::new(ViewNode::Text("test".into()), logic, "{}".into(), None, HashMap::new(), None);
+        let state_val: serde_json::Value = serde_json::from_str(&generator.generate_state_json()).unwrap();
+        let worms = state_val.get("worms").unwrap().as_array().unwrap();
+        assert_eq!(worms.len(), 10);
+        assert_eq!(worms[0]["id"], 0);
+        assert_eq!(worms[0]["is_head"], true);
+        assert_eq!(worms[0]["x"], 220);
+        assert_eq!(worms[1]["id"], 1);
+        assert_eq!(worms[1]["is_head"], false);
+        assert_eq!(worms[1]["x"], 200);
+        assert_eq!(worms[9]["id"], 9);
+        assert_eq!(worms[9]["x"], 40);
+        let mushrooms = state_val.get("mushrooms").unwrap().as_array().unwrap();
+        assert_eq!(mushrooms.len(), 30);
+        assert_eq!(mushrooms[0]["hp"], 3);
+        assert_eq!(mushrooms[0]["alive"], true);
     }
 }

@@ -48,7 +48,7 @@ view:
 
                 # Explosions & Particles
                 div .particle <- p in particles:
-                    style = "left: calc({p.x} * 100% / 480); top: calc({p.y} * 100% / 460); opacity: calc({p.life} / {p.max_life}); width: {p.size}px; height: {p.size}px; background: {p.color}; box-shadow: 0 0 6px {p.color};"
+                    style = "left: calc({p.x} * 100% / 480); top: calc({p.y} * 100% / 460); opacity: calc({p.life} / {p.max_life}); width: {p.size}px; height: {p.size}px; background: {p.color};"
 
                 # Game State Overlay
                 if status != "playing":

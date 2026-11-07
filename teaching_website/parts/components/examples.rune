@@ -42,3 +42,9 @@ view:
                 h3 "%i18n.Examples.invaders_title%"
                 p "%i18n.Examples.invaders_desc%"
                 a .secondary-cta href=#app click="navigate('games')" "%i18n.SpaceInvaders.play_label%"
+
+            article .example-card:
+                span .tag .tag-advanced "%i18n.VectWorms.badge%"
+                h3 "%i18n.Examples.worms_title%"
+                p "%i18n.Examples.worms_desc%"
+                a .secondary-cta href=#app click="navigate('vectworms')" "%i18n.VectWorms.play_label%"

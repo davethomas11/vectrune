@@ -1,0 +1,72 @@
+#!RUNE
+
+import "parts"
+
+@App
+name = VectWorms
+version = 1.0
+type = REST
+port = 3000
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = vectworms
+
+@Page/vectworms
+title = VectWorms
+style = vectworms
+logic = vectworms
+view:
+    main .arcade-cabinet:
+        header .cabinet-header:
+            h1 .cabinet-title "VECTWORMS"
+            div .stats-bar:
+                span "SCORE: {score}"
+                span "LIVES: {lives}"
+                span "WORMS: {worm_count}"
+
+        div .arena-viewport:
+            div .game-arena:
+                div .arena-grid
+                div .player-zone
+
+                # Mushroom field
+                div .mushroom style="left: calc({m.x} * 100% / 480); top: calc({m.y} * 100% / 480); display: {m.alive ? 'flex' : 'none'}; opacity: calc({m.hp} / 3);" <- m in mushrooms:
+                    "🍄"
+
+                # Worm segments
+                div .worm style="left: calc({w.x} * 100% / 480); top: calc({w.y} * 100% / 480); display: {w.alive ? 'flex' : 'none'}; background: {w.is_head ? '#ff007f' : '#39ff14'};" <- w in worms:
+                    "{w.is_head ? '👀' : '🟢'}"
+
+                # Player Blaster
+                div .player style="left: calc({player.x} * 100% / 480); top: calc({player.y} * 100% / 480);":
+                    div .player-cannon
+
+                # Player Lasers
+                div .bullet <- bullet in bullets:
+                    style = "left: calc({bullet.x} * 100% / 480); top: calc({bullet.y} * 100% / 480);"
+
+                # Explosions & Particles
+                div .particle <- p in particles:
+                    style = "left: calc({p.x} * 100% / 480); top: calc({p.y} * 100% / 480); opacity: calc({p.life} / {p.max_life}); width: {p.size}px; height: {p.size}px; background: {p.color};"
+
+                # Game State Overlay
+                if status != "playing":
+                    div .overlay:
+                        h2 .overlay-title "{game_message}"
+                        button .start-btn click=start on_pointerdown=start "PLAY NOW"
+
+        # Arcade Controls for Touch and Mouse
+        div .arcade-controls:
+            div .dpad-grid:
+                div
+                button .ctrl-btn on_pointerdown=startUp on_pointerup=stopMoveY on_pointerleave=stopMoveY click=moveUp "▲"
+                div
+                button .ctrl-btn on_pointerdown=startLeft on_pointerup=stopMoveX on_pointerleave=stopMoveX click=moveLeft "◀"
+                button .ctrl-btn on_pointerdown=startDown on_pointerup=stopMoveY on_pointerleave=stopMoveY click=moveDown "▼"
+                button .ctrl-btn on_pointerdown=startRight on_pointerup=stopMoveX on_pointerleave=stopMoveX click=moveRight "▶"
+
+            button .ctrl-btn .fire-btn on_pointerdown=fire click=fire "⚡ FIRE"
+
+        p .controls-hint "KEYBOARD: [WASD / ARROWS] MOVE  •  [SPACE] FIRE"

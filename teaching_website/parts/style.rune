@@ -1089,12 +1089,26 @@ rules:
     .example-source:
         margin-top = 1.25rem
 
+    .source-file:
+        margin-top = 0.5rem
+        border = 1px solid {border}
+        border-radius = 12px
+        padding = 0 1rem
+        background = rgba(255, 255, 255, 0.72)
+
+    .source-file[open]:
+        padding-bottom = 0.75rem
+
     .example-source summary, .source-file summary:
         min-height = 44px
         padding = 0.65rem 0
         cursor = pointer
         color = {brand}
         font-weight = 700
+
+    .source-file summary:
+        font-family = ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace
+        font-size = 0.92rem
 
     .example-code:
         max-height = 32rem

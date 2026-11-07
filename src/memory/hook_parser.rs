@@ -230,7 +230,7 @@ pub async fn register_hooks(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rune_ast::{Record, Section, Value};
+    use crate::rune_ast::{Section, Value};
 
     fn create_test_hook_section() -> Section {
         let mut kv = HashMap::new();

@@ -70,7 +70,7 @@ var __RuneWeb = (() => {
           slug = rawHash.slice(3);
         } else if (rawHash.startsWith("#!") || rawHash.startsWith("#?")) {
           slug = rawHash.slice(2);
-        } else if (rawHash.startsWith("#") && rawHash !== "#app" && rawHash !== "#") {
+        } else if (mode === "hash" && rawHash.startsWith("#") && rawHash !== "#app" && rawHash !== "#") {
           slug = rawHash.slice(1);
         }
         slug = decodeURIComponent(slug.trim());
@@ -109,7 +109,7 @@ var __RuneWeb = (() => {
       } else {
         url.searchParams.set(param, cleanRoute);
       }
-      if (url.hash === "#app") {
+      if (url.hash && !url.hash.startsWith("#/")) {
         url.hash = "";
       }
       const newUrl = url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : "");
@@ -225,13 +225,30 @@ var __RuneWeb = (() => {
     const c = ctx();
     return Object.assign({}, c.app.state, c.app.derived, locals || {});
   }
+  var proxyCache = /* @__PURE__ */ new WeakMap();
+  var renderQueued = false;
+  function scheduleRender() {
+    const context = ctx();
+    if (context.isRendering || !context.app.render || renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      const currentCtx = ctx();
+      if (!currentCtx.isRendering && currentCtx.app.render) {
+        currentCtx.app.render();
+      }
+    });
+  }
   function makeReactive(obj) {
     if (obj === null || typeof obj !== "object") return obj;
     if (obj.__isProxy) return obj;
+    const cached = proxyCache.get(obj);
+    if (cached) return cached;
     const context = ctx();
-    return new Proxy(obj, {
+    const proxy = new Proxy(obj, {
       get(target, prop) {
         if (prop === "__isProxy") return true;
+        if (prop === "__raw") return target;
         if (getWindowProp("__renderingComponent") && typeof prop === "string" && !prop.startsWith("__")) {
           if (!(context.memorySubscriptions[prop] instanceof Set)) {
             context.memorySubscriptions[prop] = /* @__PURE__ */ new Set();
@@ -247,24 +264,23 @@ var __RuneWeb = (() => {
         return val;
       },
       set(target, prop, value) {
-        if (target[prop] === value) return true;
-        target[prop] = value;
+        const rawValue = value !== null && typeof value === "object" && value.__raw ? value.__raw : value;
+        if (target[prop] === rawValue) return true;
+        target[prop] = rawValue;
         if (typeof prop === "string" && context.navigator && prop === context.navigator.bind) {
-          handleNavigatorStateChange(prop, value);
+          handleNavigatorStateChange(prop, rawValue);
         }
-        if (!context.isRendering && context.app.render) {
-          requestAnimationFrame(context.app.render.bind(context.app));
-        }
+        scheduleRender();
         return true;
       },
       deleteProperty(target, prop) {
         delete target[prop];
-        if (!context.isRendering && context.app.render) {
-          requestAnimationFrame(context.app.render.bind(context.app));
-        }
+        scheduleRender();
         return true;
       }
     });
+    proxyCache.set(obj, proxy);
+    return proxy;
   }
 
   // src/utils.ts
@@ -964,12 +980,11 @@ var __RuneWeb = (() => {
       }
       attrs += ` ${key}="${escapeHtml(renderedValue)}"`;
     }
-    if (locals && Object.keys(locals).length) {
+    const eventEntries = Object.entries(element.events || {});
+    if (eventEntries.length > 0 && locals && Object.keys(locals).length) {
       attrs += ` data-rune-scope="${escapeHtml(JSON.stringify(locals))}"`;
     }
-    for (const [eventName, handler] of Object.entries(
-      element.events || {}
-    )) {
+    for (const [eventName, handler] of eventEntries) {
       attrs += ` data-on-${eventName}="${escapeHtml(interpolate(handler, scope))}"`;
     }
     const text = element.text ? escapeHtml(interpolate(element.text, scope)) : "";
@@ -1867,17 +1882,25 @@ var __RuneWeb = (() => {
       const existing = evaluateExpression(name, scope);
       const current = Array.isArray(existing) ? existing : [];
       if (method === "step") {
+        if (current.length === 0) return true;
         const friction = cfg.friction ?? 0.92;
         const gravity = cfg.gravity ?? 0;
         const surviving = [];
-        for (const p of current) {
-          if (!p || typeof p !== "object") continue;
-          p.x = Number(p.x || 0) + Number(p.vx || 0);
-          p.y = Number(p.y || 0) + Number(p.vy || 0);
-          p.vx = Number(p.vx || 0) * friction;
-          p.vy = Number(p.vy || 0) * friction + gravity;
-          p.life = Number(p.life || 0) - 1;
-          if (Number(p.life) > 0) surviving.push(p);
+        const rawCurrent2 = current.__raw || current;
+        for (let i = 0; i < rawCurrent2.length; i += 1) {
+          const item = rawCurrent2[i];
+          if (!item || typeof item !== "object") continue;
+          const p = item.__raw || item;
+          const life2 = Number(p.life || 0) - 1;
+          if (life2 <= 0) continue;
+          const vx = Number(p.vx || 0) * friction;
+          const vy = Number(p.vy || 0) * friction + gravity;
+          p.x = Math.round((Number(p.x || 0) + Number(p.vx || 0)) * 10) / 10;
+          p.y = Math.round((Number(p.y || 0) + Number(p.vy || 0)) * 10) / 10;
+          p.vx = vx;
+          p.vy = vy;
+          p.life = life2;
+          surviving.push(p);
         }
         assignPath(name, surviving, locals);
         return true;
@@ -1888,13 +1911,15 @@ var __RuneWeb = (() => {
         return true;
       }
       const arg = (i) => parts.length > i ? evaluateExpression(parts[i], scope) : void 0;
-      const xVal = Number(arg(0) || 0);
-      const yVal = Number(arg(1) || 0);
+      const xVal = Math.round(Number(arg(0) || 0) * 10) / 10;
+      const yVal = Math.round(Number(arg(1) || 0) * 10) / 10;
       const countVal = Number(arg(2) ?? cfg.count ?? 8);
       const colorVal = arg(3) !== void 0 ? valueToString(arg(3)) : cfg.color ?? "#ffffff";
       const speedVal = Number(arg(4) ?? cfg.speed ?? 7);
       const life = cfg.life ?? 14;
+      const maxParticles = cfg.max !== void 0 ? Number(cfg.max) : 36;
       const [minSize, maxSize] = Array.isArray(cfg.size) ? cfg.size : [cfg.size ?? 3, cfg.size ?? 5];
+      const rawCurrent = current.__raw || current;
       const newParticles = [];
       for (let i = 0; i < countVal; i += 1) {
         const angle = Math.random() * Math.PI * 2;
@@ -1910,7 +1935,9 @@ var __RuneWeb = (() => {
           size: minSize + Math.floor(Math.random() * (maxSize - minSize + 1))
         });
       }
-      assignPath(name, current.concat(newParticles), locals);
+      const combined = rawCurrent.concat(newParticles);
+      const capped = combined.length > maxParticles ? combined.slice(combined.length - maxParticles) : combined;
+      assignPath(name, capped, locals);
       return true;
     }
     const restoreMatch = trimmed.match(/^(?:restore|reset)\s+([a-zA-Z0-9_.[\]'"]+)$/) || trimmed.match(/^([a-zA-Z0-9_.[\]'"]+)\.(?:restore|reset)\(\)$/);

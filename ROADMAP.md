@@ -186,7 +186,8 @@ When picking up work autonomously (via `/schedule`, `/goal`, or recurring cron):
   - Built complete retro arcade Space Invaders example in pure Rune-Web under `examples/space_invaders/`.
   - Added dedicated "Games" section and interactive playable Space Invaders showcase to [vectrune.com](https://vectrune.com). *(Release: `v0.2.8` - 2026-11-04)*
   - Fixed complete-board scaling on mobile and cabinet height on desktop/landscape; added a browser regression for both game previews, all locales, and touch/keyboard controls. *(2026-11-05)*
-- [ ] **2D Particle System & Sound Effects**:
-  - Add declarative particle emitters for arcade explosions and thruster trails.
-  - Add Web Audio API synthesis primitives (`sound.play "laser"`, `sound.play "explosion"`, `sound.play "retro_beep"`) in Rune-Web.
+- [x] **2D Particle System, Sound Effects & VectWorms**:
+  - Added declarative particle emitters (`emitter { ... }`, `.burst(...)`, `.step()`) for arcade explosions and debris.
+  - Added Web Audio API synthesis primitives (`sound "laser"`, `sound "explosion"`, `sound "hit"`, `sound "step"`, `sound "victory"`, `sound "gameover"`) in Rune-Web.
+  - Built complete retro arcade Centipede shooter (**VectWorms**) in pure Rune-Web under `examples/vectworms/` using local state templates, 1D generators, and `all` modifiers, and added it to the teaching site's Games and Example Lab sections. *(Release: `v0.2.11` - 2026-11-06)*
 

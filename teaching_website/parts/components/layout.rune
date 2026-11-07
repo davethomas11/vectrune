@@ -48,6 +48,7 @@ view:
                 div .nav-group:
                     h3 "%i18n.Nav.games%"
                     button .nav-link {.active when 'games'} click="navigate('games')" "%i18n.Nav.vectraiders%"
+                    button .nav-link {.active when 'vectworms'} click="navigate('vectworms')" "%i18n.Nav.vectworms%"
                 div .nav-group:
                     h3 "%i18n.Examples.lab_eyebrow%"
                     button .nav-link {.active when 'examples'} click="openExample('app')" "%i18n.Examples.lab_title%"
@@ -62,6 +63,7 @@ view:
                     "games"           -> SpaceInvadersPage
                     "vectraiders"     -> SpaceInvadersPage
                     "space_invaders"  -> SpaceInvadersPage
+                    "vectworms"       -> VectWormsPage
                     "examples"        -> ExampleLab
                     "builtins"        -> BuiltinReferencePage
                     "rest_get"        -> RestGetPage

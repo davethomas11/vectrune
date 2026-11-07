@@ -130,6 +130,8 @@ Examples {
     counter_desc = "A small web app with real reactive state. Increase, decrease, and reset the count."
     invaders_title = "VectRaiders"
     invaders_desc = "Retro arcade game built in pure declarative Rune-Web: 25fps ticker, 2D collisions, and touch controls."
+    worms_title = "VectWorms"
+    worms_desc = "Arcade centipede shooter in pure Rune-Web: splitting worm chains, destructible mushroom fields, particles, and synth audio."
     rest_hint = "Run the app, choose an endpoint, and send a request. Edit the source and run again to try your changes."
     users_hint = "This is the repository User API. Its CSV file lives in browser memory: create a user with POST, then fetch the users with GET. Run again to reset the file."
     data_hint = "Edit the records and run to inspect the document as JSON. You can also export YAML and XML."
@@ -251,6 +253,7 @@ Nav {
     games = "Games"
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
+    vectworms = "VectWorms"
 }
 
 Lab {
@@ -261,10 +264,12 @@ Lab {
     counter = "Counter"
     tic = "Tic Tac Toe"
     invaders = "VectRaiders"
+    worms = "VectWorms"
     first_title = "Your first API"
     document_title = "A document, three formats"
     graphql_title = "Book GraphQL API"
     invaders_title = "VectRaiders Arcade"
+    worms_title = "VectWorms Arcade"
     main_file = "Main .rune"
 }
 
@@ -284,6 +289,24 @@ SpaceInvaders {
     instructions_title = "Controls"
     instructions_keyboard = "A / ◀: Move Left • D / ▶: Move Right • Space: Fire Laser"
     instructions_mobile = "Touch and hold the on-screen arcade buttons to glide and fire on any mobile device or tablet."
+}
+
+VectWorms {
+    badge = "Retro Arcade Game"
+    title = "VectWorms: Purge the Mushroom Grid"
+    description = "A fast-paced centipede arcade shooter in declarative Rune-Web: splitting worm segments, destructible mushroom obstacles, particle emitters, and Web Audio synthesizer effects."
+    play_label = "Play VectWorms"
+    feature_split_title = "Splitting Worm Chains"
+    feature_split_desc = "Blasting any body segment spawns a new mushroom obstacle and promotes the trailing segment into an independent head."
+    feature_field_title = "State Generators & Templates"
+    feature_field_desc = "Staggered mushroom rows and 10-segment worm chains are generated declaratively using local templates, inc steps, and all modifiers."
+    feature_fx_title = "Particle Emitters & Synth Audio"
+    feature_fx_desc = "emitter state declarations and sound actions trigger real-time particle bursts and Web Audio retro sound effects."
+    feature_controls_title = "2D Player Zone & D-Pad"
+    feature_controls_desc = "Full 4-way movement within the player blaster zone using WASD/Arrow keys or the responsive on-screen arcade D-pad."
+    instructions_title = "Controls"
+    instructions_keyboard = "WASD / Arrows: Move Blaster (4-Way) • Space: Fire Laser"
+    instructions_mobile = "Use the on-screen D-pad and Fire button on mobile or tablet."
 }
 
 Reference {

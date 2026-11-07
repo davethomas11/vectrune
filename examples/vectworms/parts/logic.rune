@@ -1,0 +1,188 @@
+@Logic/vectworms
+timer = tick 35ms
+
+keys:
+    ArrowLeft -> moveLeft
+    ArrowRight -> moveRight
+    ArrowUp -> moveUp
+    ArrowDown -> moveDown
+    Space -> fire
+    KeyA -> moveLeft
+    KeyD -> moveRight
+    KeyW -> moveUp
+    KeyS -> moveDown
+
+state:
+    player = { "x": 220, "y": 440 }
+    bullets = []
+    particles = emitter { "life": 16, "friction": 0.90, "size": [3, 6] }
+    worm_speed = 4
+    worm_count = 10
+    move_dir_x = 0
+    move_dir_y = 0
+    score = 0
+    lives = 3
+    status = "ready"
+    game_message = "VECTWORMS"
+
+action startLeft:
+    stop when status != "playing"
+    move_dir_x = -1
+    player.x = clamp(player.x - 16, 10, 450)
+
+action startRight:
+    stop when status != "playing"
+    move_dir_x = 1
+    player.x = clamp(player.x + 16, 10, 450)
+
+action startUp:
+    stop when status != "playing"
+    move_dir_y = -1
+    player.y = clamp(player.y - 14, 360, 455)
+
+action startDown:
+    stop when status != "playing"
+    move_dir_y = 1
+    player.y = clamp(player.y + 14, 360, 455)
+
+action stopMoveX:
+    move_dir_x = 0
+
+action stopMoveY:
+    move_dir_y = 0
+
+action moveLeft:
+    stop when status != "playing"
+    player.x = clamp(player.x - 18, 10, 450)
+
+action moveRight:
+    stop when status != "playing"
+    player.x = clamp(player.x + 18, 10, 450)
+
+action moveUp:
+    stop when status != "playing"
+    player.y = clamp(player.y - 16, 360, 455)
+
+action moveDown:
+    stop when status != "playing"
+    player.y = clamp(player.y + 16, 360, 455)
+
+action fire:
+    stop when status != "playing"
+    stop when bullets.length >= 4
+    bullets.push({ "x": player.x, "y": player.y - 12, "alive": true })
+    sound "laser"
+
+action start:
+    score = 0
+    lives = 3
+    worm_count = 10
+    move_dir_x = 0
+    move_dir_y = 0
+    player.x = 220
+    player.y = 440
+    bullets = []
+    particles = []
+    restore worms
+    restore mushrooms
+    status = "playing"
+    game_message = ""
+
+action tick:
+    particles.step()
+    stop when status != "playing"
+
+    # 1. Smooth player motion
+    if move_dir_x < 0:
+        player.x = clamp(player.x - 10, 10, 450)
+    if move_dir_x > 0:
+        player.x = clamp(player.x + 10, 10, 450)
+    if move_dir_y < 0:
+        player.y = clamp(player.y - 10, 360, 455)
+    if move_dir_y > 0:
+        player.y = clamp(player.y + 10, 360, 455)
+
+    # 2. Update player bullets
+    for b in bullets:
+        b.y -= 14
+    bullets = bullets.filter it.y > 0 and it.alive
+
+    # 3. Bullets hit mushrooms
+    for b in bullets:
+        for m in mushrooms:
+            if b.alive and m.alive:
+                if collide(b, m, 18, 18):
+                    b.alive = false
+                    m.hp -= 1
+                    sound "hit"
+                    if m.hp <= 0:
+                        m.alive = false
+                        score += 5
+                        particles.burst(m.x, m.y, 8, "#00ff88", 6)
+
+    # 4. Move worm segments
+    for w in worms:
+        if w.alive:
+            next_x = w.x + w.dir_x * worm_speed
+            hit_obstacle = false
+
+            # Check screen boundaries
+            if next_x > 450 or next_x < 10:
+                hit_obstacle = true
+
+            # Check mushroom collisions
+            for m in mushrooms:
+                if m.alive and collide({ "x": next_x, "y": w.y }, m, 18, 18):
+                    hit_obstacle = true
+
+            if hit_obstacle:
+                w.y += 20
+                w.dir_x = -w.dir_x
+                if w.y >= 460:
+                    w.y = 360
+            if !hit_obstacle:
+                w.x = next_x
+
+    # 5. Check bullet collisions with worm segments
+    for b in bullets:
+        for w in worms:
+            if b.alive and w.alive:
+                if collide(b, w, 20, 20):
+                    b.alive = false
+                    w.alive = false
+                    score += 100
+                    worm_count -= 1
+                    sound "explosion"
+                    particles.burst(w.x, w.y, 12, "#39ff14", 8)
+                    mushrooms.push({ "x": w.x, "y": w.y, "hp": 3, "alive": true })
+                    # Splitting: trailing segment becomes a new independent head
+                    for s in worms:
+                        if s.alive and s.id == w.id + 1:
+                            s.is_head = true
+
+    # 6. Check worm collision with player
+    for w in worms:
+        if w.alive:
+            if collide(player, w, 22, 20):
+                lives -= 1
+                sound "hit"
+                particles.burst(player.x, player.y, 16, "#00e5ff", 9)
+                player.x = 220
+                player.y = 440
+                for seg in worms:
+                    if seg.alive:
+                        seg.x = seg.start_x
+                        seg.y = seg.start_y
+                        seg.dir_x = 1
+                if lives <= 0:
+                    sound "gameover"
+                    status = "game_over"
+                    game_message = "GRID OVERRUN! GAME OVER"
+                    stop
+
+    # 7. Check victory condition
+    if worm_count <= 0:
+        sound "victory"
+        status = "victory"
+        game_message = "SECTOR PURGED! YOU WIN!"
+        stop

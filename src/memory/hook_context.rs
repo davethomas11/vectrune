@@ -94,7 +94,7 @@ impl Default for HookContextManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rune_ast::{Record, Section, Value};
+    use crate::rune_ast::{Section, Value};
     use std::collections::HashMap;
 
     fn create_test_document_with_hook() -> RuneDocument {

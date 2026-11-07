@@ -74,6 +74,22 @@ export function buildScope(locals: Record<string, unknown>): Scope {
   return Object.assign({}, c.app.state, c.app.derived, locals || {});
 }
 
+const proxyCache = new WeakMap<object, Record<string, unknown>>();
+let renderQueued = false;
+
+function scheduleRender(): void {
+  const context = ctx();
+  if (context.isRendering || !context.app.render || renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    const currentCtx = ctx();
+    if (!currentCtx.isRendering && currentCtx.app.render) {
+      currentCtx.app.render();
+    }
+  });
+}
+
 /**
  * Wrap an object in a Proxy that triggers re-renders on mutation
  * and tracks memory subscriptions for granular updates.
@@ -82,11 +98,15 @@ export function makeReactive(obj: Record<string, unknown>): Record<string, unkno
   if (obj === null || typeof obj !== 'object') return obj;
   if ((obj as Record<string, unknown>).__isProxy) return obj;
 
+  const cached = proxyCache.get(obj);
+  if (cached) return cached;
+
   const context = ctx();
 
-  return new Proxy(obj, {
+  const proxy = new Proxy(obj, {
     get(target: Record<string, unknown>, prop: string | symbol) {
       if (prop === '__isProxy') return true;
+      if (prop === '__raw') return target;
       if (
         getWindowProp('__renderingComponent') &&
         typeof prop === 'string' &&
@@ -106,22 +126,25 @@ export function makeReactive(obj: Record<string, unknown>): Record<string, unkno
       return val;
     },
     set(target: Record<string, unknown>, prop: string | symbol, value: unknown) {
-      if (target[prop as string] === value) return true;
-      target[prop as string] = value;
+      const rawValue =
+        value !== null && typeof value === 'object' && (value as Record<string, unknown>).__raw
+          ? (value as Record<string, unknown>).__raw
+          : value;
+      if (target[prop as string] === rawValue) return true;
+      target[prop as string] = rawValue;
       if (typeof prop === 'string' && context.navigator && prop === context.navigator.bind) {
-        handleNavigatorStateChange(prop, value);
+        handleNavigatorStateChange(prop, rawValue);
       }
-      if (!context.isRendering && context.app.render) {
-        requestAnimationFrame(context.app.render.bind(context.app));
-      }
+      scheduleRender();
       return true;
     },
     deleteProperty(target: Record<string, unknown>, prop: string | symbol) {
       delete target[prop as string];
-      if (!context.isRendering && context.app.render) {
-        requestAnimationFrame(context.app.render.bind(context.app));
-      }
+      scheduleRender();
       return true;
     },
   });
+
+  proxyCache.set(obj, proxy);
+  return proxy;
 }

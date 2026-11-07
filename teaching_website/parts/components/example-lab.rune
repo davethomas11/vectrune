@@ -17,6 +17,7 @@ view:
             button .pill {.active when 'counter'} click="openExample('counter')" "%i18n.Lab.counter%"
             button .pill {.active when 'tic'} click="openExample('tic')" "%i18n.Lab.tic%"
             button .pill {.active when 'invaders'} click="openExample('invaders')" "%i18n.Lab.invaders%"
+            button .pill {.active when 'worms'} click="openExample('worms')" "%i18n.Lab.worms%"
         match selectedExample:
             "app" -> FirstApiExample
             "skaters" -> DataDocumentExample
@@ -25,6 +26,7 @@ view:
             "counter" -> CounterExample
             "tic" -> TicTacToeExample
             "invaders" -> SpaceInvadersExample
+            "worms" -> VectWormsExample
 
 @Component/FirstApiExample
 view:
@@ -56,19 +58,24 @@ view:
 
 @Component/CounterExample
 view:
-    WebExample title="{i18n.Lab.counter}" preview="{preview ../../../examples/counter.rune}" source="{raw ../../../examples/counter.rune}"
+    WebExample title="{i18n.Lab.counter}" preview="{preview ../../../examples/counter.rune}" main_file="counter.rune" source="{raw ../../../examples/counter.rune}"
 
 @Component/TicTacToeExample
 view:
-    WebExample title="{i18n.Lab.tic}" preview="{preview ../../../examples/tic_tac_toe/tic_tac_toe.rune}" source="{raw ../../../examples/tic_tac_toe/tic_tac_toe.rune}" logic_source="{raw ../../../examples/tic_tac_toe/parts/logic.rune}" style_source="{raw ../../../examples/tic_tac_toe/parts/style.rune}"
+    WebExample title="{i18n.Lab.tic}" preview="{preview ../../../examples/tic_tac_toe/tic_tac_toe.rune}" main_file="tic_tac_toe.rune" source="{raw ../../../examples/tic_tac_toe/tic_tac_toe.rune}" logic_source="{raw ../../../examples/tic_tac_toe/parts/logic.rune}" style_source="{raw ../../../examples/tic_tac_toe/parts/style.rune}"
 
 @Component/SpaceInvadersExample
 view:
     div .space-invaders-page:
-        WebExample title="{i18n.Lab.invaders_title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" source="{raw ../../../examples/space_invaders/space_invaders.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}"
+        WebExample title="{i18n.Lab.invaders_title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" main_file="space_invaders.rune" source="{raw ../../../examples/space_invaders/space_invaders.rune}" extra_file="parts/enemies.rune" extra_source="{raw ../../../examples/space_invaders/parts/enemies.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}"
+
+@Component/VectWormsExample
+view:
+    div .space-invaders-page:
+        WebExample title="{i18n.Lab.worms_title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" main_file="vectworms.rune" source="{raw ../../../examples/vectworms/vectworms.rune}" extra_file="parts/field.rune" extra_source="{raw ../../../examples/vectworms/parts/field.rune}" logic_source="{raw ../../../examples/vectworms/parts/logic.rune}" style_source="{raw ../../../examples/vectworms/parts/style.rune}"
 
 @Component/WebExample
-props: [title, preview, source, logic_source?, style_source?]
+props: [title, preview, source, main_file?, extra_file?, extra_source?, logic_source?, style_source?]
 view:
     section .card .web-example:
         div .section-heading:
@@ -76,10 +83,15 @@ view:
             h2 "{title}"
             p "%i18n.Examples.web_hint%"
         iframe .example-preview src="{preview}" title="{title}" sandbox=allow-scripts
-        details .example-source:
+        details .example-source open=true:
             summary "%i18n.Examples.source_label%"
-            h3 "%i18n.Lab.main_file%"
-            ExampleSource code="{source}"
+            details .source-file:
+                summary "{main_file ?? i18n.Lab.main_file}"
+                ExampleSource code="{source}"
+            if extra_source ?? false:
+                details .source-file:
+                    summary "{extra_file}"
+                    ExampleSource code="{extra_source}"
             if logic_source ?? false:
                 details .source-file:
                     summary "parts/logic.rune"

@@ -1,0 +1,25 @@
+# Initial mushroom field and worm segment configuration for VectWorms
+@Logic/vectworms
+state:
+    # Mushrooms placed in a tactical staggered arcade pattern
+    local row_a = { "x": 60 } * 4 inc x by 110
+    local row_b = { "x": 100 } * 4 inc x by 105
+    local row_c = { "x": 80 } * 3 inc x by 140
+    mushrooms = [
+        row_a with { "y": 60 },
+        row_b with { "y": 100 },
+        row_c with { "y": 140 },
+        row_a with { "y": 180 },
+        row_b with { "y": 220 },
+        row_c with { "y": 260 },
+        row_a with { "y": 300 },
+        row_b with { "y": 340 }
+    ] all { "hp": 3, "alive": true }
+
+    # Initial 10-segment centipede starting at the top row
+    # Segment 0 is the head, followed by 9 body segments spaced 20px apart
+    worms = [
+        { "id": 0, "is_head": true, "x": 220, "start_x": 220 },
+        { "id": i + 1, "is_head": false, "x": 200, "start_x": 200 } * 9 inc (x, start_x) by -20
+    ] all { "y": 20, "start_y": 20, "dir_x": 1, "dir_y": 1, "alive": true }
+

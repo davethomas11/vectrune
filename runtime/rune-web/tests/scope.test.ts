@@ -106,4 +106,29 @@ describe('makeReactive', () => {
     delete proxy.a;
     expect(app.render).toHaveBeenCalled();
   });
+
+  it('caches nested proxies and coalesces multiple synchronous mutations into a single rAF render', () => {
+    const rafCallbacks: Function[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: Function) => {
+      rafCallbacks.push(cb);
+      return rafCallbacks.length;
+    });
+    const app = setupTestContext();
+    const proxy = makeReactive({ nested: { x: 0, y: 0 }, count: 0 });
+
+    // Repeated reads of nested objects return the exact same Proxy instance
+    expect(proxy.nested).toBe(proxy.nested);
+
+    // Perform multiple mutations before the animation frame fires
+    (proxy.nested as any).x = 10;
+    (proxy.nested as any).y = 20;
+    proxy.count = 1;
+    proxy.count = 2;
+
+    expect(rafCallbacks.length).toBe(1);
+    expect(app.render).not.toHaveBeenCalled();
+
+    rafCallbacks[0]();
+    expect(app.render).toHaveBeenCalledTimes(1);
+  });
 });
