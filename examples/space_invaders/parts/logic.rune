@@ -12,6 +12,7 @@ state:
     player = { "x": 220, "y": 420 }
     bullets = []
     alien_bullets = []
+    particles = emitter { "life": 14, "friction": 0.92, "size": [3, 5] }
     alien_dir = 1
     alien_speed = 3
     alien_count = 18
@@ -46,6 +47,7 @@ action fire:
     stop when status != "playing"
     stop when bullets.length >= 3
     bullets.push({ "x": player.x + 16, "y": 405, "alive": true })
+    sound "laser"
 
 action start:
     score = 0
@@ -56,11 +58,13 @@ action start:
     player.x = 220
     bullets = []
     alien_bullets = []
+    particles = []
     restore aliens
     status = "playing"
     game_message = ""
 
 action tick:
+    particles.step()
     stop when status != "playing"
 
     # Smooth continuous movement when on-screen buttons are pressed
@@ -84,7 +88,10 @@ action tick:
         if collide(ab, player, 20, 16):
             ab.alive = false
             lives -= 1
+            sound "hit"
+            particles.burst(player.x + 16, player.y + 10, 14, "#00e5ff", 8)
             if lives <= 0:
+                sound "gameover"
                 status = "game_over"
                 game_message = "GAME OVER"
                 stop
@@ -97,12 +104,14 @@ action tick:
             if a.x > 430 or a.x < 20:
                 change_dir = true
             if a.y > 400:
+                sound "gameover"
                 status = "game_over"
                 game_message = "GRID BREACHED! GAME OVER"
                 stop
 
     if change_dir:
         alien_dir = -alien_dir
+        sound "step"
         for a in aliens:
             a.y += 16
 
@@ -115,6 +124,8 @@ action tick:
                     b.alive = false
                     score += 20
                     alien_count -= 1
+                    sound "explosion"
+                    particles.burst(a.x + 12, a.y + 10, 10, "#ff2a85", 7)
 
     # 6. Occasional alien return fire
     if random(1, 22) == 1:
@@ -125,6 +136,7 @@ action tick:
 
     # 7. Check victory condition
     if alien_count <= 0:
+        sound "victory"
         status = "victory"
         game_message = "VECTOR GRID SAVED! YOU WIN!"
         stop

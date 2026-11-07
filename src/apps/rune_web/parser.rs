@@ -77,7 +77,7 @@ pub fn parse_rune_web_frontend(
     let mut page_views = HashMap::new();
     let mut component_definitions = HashMap::new();
     let mut style_definitions = HashMap::new();
-    let mut logic_definitions = HashMap::new();
+    let mut logic_definitions: HashMap<String, LogicDefinition> = HashMap::new();
     let mut i18n_sections = HashMap::new();
 
     // Extract @Page sections

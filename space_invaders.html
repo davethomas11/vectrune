@@ -6,349 +6,358 @@
     <title>VectRaiders</title>
     <style>
 :root {
-  --cabinet_bg: #0a0d1a;
-  --btn_bg: #1a233a;
-  --neon_yellow: #ffd000;
-  --arena_bg: #04060d;
-  --card_bg: #0d1124;
   --neon_pink: #ff2a85;
-  --neon_green: #00ff88;
-  --grid_border: #233554;
+  --arena_bg: #04060d;
+  --btn_bg: #1a233a;
   --neon_cyan: #00e5ff;
+  --neon_yellow: #ffd000;
+  --cabinet_bg: #0a0d1a;
+  --card_bg: #0d1124;
+  --grid_border: #233554;
   --text_muted: #8892b0;
-}
-.player-canon {
-  background: #ffffff;
-  top: -30%;
-  left: 41.666667%;
-  width: 16.666667%;
-  height: 40%;
-  position: absolute;
-  border-radius: 2px;
-}
-.stat-label {
-  color: var(--text_muted);
-}
-.overlay {
-  z-index: 20;
-  flex-direction: column;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  position: absolute;
-  inset: 0;
-  background: color-mix(in srgb, var(--arena_bg) 88%, transparent);
-  width: 100%;
-  height: 100%;
-}
-.arcade-cabinet {
-  width: 100%;
-  max-width: min(540px, calc((100svh - 272px) * 480 / 460 + 32px));
-  padding: 0.75rem;
-  border-radius: 16px;
-  margin: 0 auto;
-  box-shadow: 0 0 35px color-mix(in srgb, var(--neon_green) 25%, transparent), inset 0 0 20px rgba(0, 0, 0, 0.8);
-  user-select: none;
-  background: var(--card_bg);
-  touch-action: manipulation;
-  border: 3px solid var(--neon_green);
-  box-sizing: border-box;
-  font-family: "Courier New", monospace, sans-serif;
-  color: #ffffff;
-}
-.cabinet-header {
-  border-bottom: 2px solid color-mix(in srgb, var(--neon_green) 30%, transparent);
-  padding-bottom: 0.6rem;
-  text-align: center;
-  margin-bottom: 0.75rem;
-}
-.player {
-  bottom: 3.478261%;
-  box-shadow: 0 0 15px var(--neon_green);
-  width: 7.5%;
-  height: 4.347826%;
-  pointer-events: none;
-  position: absolute;
-  background: var(--neon_green);
-  border-radius: 4px 4px 1px 1px;
-  transition: left 0.04s ease-out;
-}
-.alien.type-3 {
-  color: var(--arena_bg);
-  background: var(--neon_yellow);
-  box-shadow: 0 0 10px var(--neon_yellow);
+  --neon_green: #00ff88;
 }
 .arena-grid {
   position: absolute;
   pointer-events: none;
+  width: 100%;
+  height: 100%;
   background-image: linear-gradient(color-mix(in srgb, var(--neon_green) 4%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--neon_green) 4%, transparent) 1px, transparent 1px);
-  background-size: 5% 5.217391%;
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  background-size: 5% 5.217391%;
 }
 .start-btn {
-  letter-spacing: 2px;
-  background: var(--neon_green);
-  color: var(--arena_bg);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--neon_green) 60%, transparent);
+  border-radius: 8px;
   transition: all 0.15s ease;
+  touch-action: manipulation;
+  cursor: pointer;
+  position: relative;
+  pointer-events: auto;
+  user-select: none;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.1s ease;
-  pointer-events: auto;
-  user-select: none;
-  position: relative;
-  touch-action: manipulation;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 1.15rem;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--neon_green) 60%, transparent);
+  background: var(--neon_green);
   padding: 0.85rem 2.25rem;
   border: none;
-  border-radius: 8px;
-}
-.start-btn:hover {
-  transform: scale(1.05);
-  background: #33ffa3;
-  box-shadow: 0 0 30px color-mix(in srgb, var(--neon_green) 90%, transparent);
+  font-size: 1.15rem;
+  letter-spacing: 2px;
+  color: var(--arena_bg);
 }
 .start-btn:active {
   transform: scale(0.97);
 }
-.overlay-title {
-  font-size: 1.6rem;
-  text-shadow: 0 0 15px var(--neon_yellow);
-  letter-spacing: 3px;
-  text-align: center;
-  padding: 0 1rem;
-  color: var(--neon_yellow);
-  font-weight: 900;
-  margin-bottom: 1rem;
-}
-.arcade-controls {
-  pointer-events: auto;
-  box-sizing: border-box;
-  gap: 0.75rem;
-  width: 100%;
-  display: flex;
-  z-index: 100;
-  margin-top: 1.1rem;
-  justify-content: space-between;
-  position: relative;
-}
-.controls-hint {
-  color: #64748b;
-  text-align: center;
-  margin-top: 0.75rem;
-  letter-spacing: 1px;
-  font-size: 0.8rem;
-}
-body {
-  padding: 8px;
-  box-sizing: border-box;
-  margin: 0;
-  background: var(--cabinet_bg);
-}
-.ctrl-btn {
-  min-height: 54px;
-  color: var(--neon_green);
-  border: 2px solid var(--grid_border);
-  background: var(--btn_bg);
-  padding: 0.75rem 0.5rem;
-  font-size: 1.05rem;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.1s ease;
-  touch-action: manipulation;
-  font-weight: bold;
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  border-radius: 8px;
-  flex: 1;
-}
-.ctrl-btn:hover {
-  border-color: var(--neon_green);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--neon_green) 30%, transparent);
-}
-.ctrl-btn:active {
-  background: var(--neon_green);
-  transform: scale(0.95);
-  color: var(--arena_bg);
-}
-.ctrl-btn.fire-btn {
-  color: #ffffff;
-  box-shadow: 0 0 15px color-mix(in srgb, var(--neon_pink) 40%, transparent);
-  background: var(--neon_pink);
-  flex: 1.4;
-  border-color: var(--neon_pink);
-  font-size: 1.2rem;
-}
-.ctrl-btn.fire-btn:active {
-  transform: scale(0.95);
-  background: #ff1a75;
-}
-.ctrl-btn.fire-btn:hover {
-  box-shadow: 0 0 25px color-mix(in srgb, var(--neon_pink) 70%, transparent);
-  background: #ff4d99;
-}
-.alien-bullet {
-  pointer-events: none;
-  position: absolute;
-  width: 0.833333%;
-  height: 2.173913%;
-  border-radius: 2px;
-  box-shadow: 0 0 8px var(--neon_pink);
-  background: var(--neon_pink);
-}
-.cabinet-title {
-  letter-spacing: 4px;
-  font-weight: 900;
-  margin: 0 0 0.5rem 0;
-  color: var(--neon_green);
-  font-size: 1.75rem;
-  text-shadow: 0 0 10px var(--neon_green), 0 0 20px var(--neon_green);
-}
-.bullet {
-  width: 0.833333%;
-  height: 2.608696%;
-  border-radius: 2px;
-  box-shadow: 0 0 8px var(--neon_cyan), 0 0 14px #ffffff;
-  background: #ffffff;
-  pointer-events: none;
-  position: absolute;
-}
-.stats-bar {
-  font-weight: bold;
-  display: flex;
-  letter-spacing: 2px;
-  font-size: 0.95rem;
-  justify-content: space-between;
-  color: var(--neon_cyan);
-}
-.alien.type-2 {
-  background: var(--neon_cyan);
-  color: var(--arena_bg);
-  box-shadow: 0 0 10px var(--neon_cyan);
-}
-.game-arena {
-  box-sizing: border-box;
-  background: var(--arena_bg);
-  border-radius: 8px;
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--grid_border);
-  width: 100%;
-  height: 100%;
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
-  overflow: hidden;
-  pointer-events: none;
-}
-.alien {
-  pointer-events: none;
-  position: absolute;
-  width: 5.833333%;
-  height: 4.782609%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  transition: top 0.1s linear, left 0.1s linear;
-  font-size: clamp(6px, 2.916667cqw, 14px);
-  border-radius: 4px;
+.start-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--neon_green) 90%, transparent);
+  background: #33ffa3;
 }
 .alien.type-1 {
   box-shadow: 0 0 10px var(--neon_pink);
   color: #ffffff;
   background: var(--neon_pink);
 }
-.arena-viewport {
-  margin: 0 auto;
-  container-type: inline-size;
-  position: relative;
-  aspect-ratio: 480 / 460;
-  width: 100%;
-  display: block;
-  overflow: hidden;
-  height: auto;
-}
-@media (max-width: 520px) {
-.ctrl-btn.fire-btn {
-  flex: 1.3;
-  font-size: 1.15rem;
-}
-.cabinet-title {
-  font-size: 1.35rem;
-  letter-spacing: 2px;
-}
-.arcade-controls {
-  position: relative;
-  margin-top: 0.6rem;
-  gap: 0.4rem;
-  z-index: 100;
-}
 .controls-hint {
-  font-size: 0.7rem;
+  text-align: center;
+  color: #64748b;
+  letter-spacing: 1px;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+}
+.overlay-title {
+  margin-bottom: 1rem;
+  font-weight: 900;
+  padding: 0 1rem;
+  text-shadow: 0 0 15px var(--neon_yellow);
+  color: var(--neon_yellow);
+  letter-spacing: 3px;
+  text-align: center;
+  font-size: 1.6rem;
+}
+.alien-bullet {
+  width: 0.833333%;
+  height: 2.173913%;
+  pointer-events: none;
+  position: absolute;
+  box-shadow: 0 0 8px var(--neon_pink);
+  background: var(--neon_pink);
+  border-radius: 2px;
+}
+.stat-label {
+  color: var(--text_muted);
 }
 .ctrl-btn {
-  font-size: 1rem;
-  padding: 0.75rem 0.25rem;
+  flex: 1;
+  border-radius: 8px;
+  border: 2px solid var(--grid_border);
+  padding: 0.75rem 0.5rem;
+  color: var(--neon_green);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-weight: bold;
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  position: relative;
   min-height: 54px;
+  font-size: 1.05rem;
+  background: var(--btn_bg);
+}
+.ctrl-btn:active {
+  color: var(--arena_bg);
+  background: var(--neon_green);
+  transform: scale(0.95);
+}
+.ctrl-btn:hover {
+  border-color: var(--neon_green);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--neon_green) 30%, transparent);
+}
+.ctrl-btn.fire-btn {
+  box-shadow: 0 0 15px color-mix(in srgb, var(--neon_pink) 40%, transparent);
+  color: #ffffff;
+  font-size: 1.2rem;
+  flex: 1.4;
+  background: var(--neon_pink);
+  border-color: var(--neon_pink);
+}
+.ctrl-btn.fire-btn:active {
+  transform: scale(0.95);
+  background: #ff1a75;
+}
+.ctrl-btn.fire-btn:hover {
+  background: #ff4d99;
+  box-shadow: 0 0 25px color-mix(in srgb, var(--neon_pink) 70%, transparent);
+}
+.alien.type-2 {
+  color: var(--arena_bg);
+  background: var(--neon_cyan);
+  box-shadow: 0 0 10px var(--neon_cyan);
+}
+.stats-bar {
+  color: var(--neon_cyan);
+  display: flex;
+  letter-spacing: 2px;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  font-weight: bold;
+}
+.cabinet-header {
+  margin-bottom: 0.75rem;
+  text-align: center;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid color-mix(in srgb, var(--neon_green) 30%, transparent);
+}
+.particle {
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  will-change: transform, opacity;
+  z-index: 15;
+  border-radius: 50%;
+}
+.bullet {
+  width: 0.833333%;
+  height: 2.608696%;
+  border-radius: 2px;
+  pointer-events: none;
+  position: absolute;
+  background: #ffffff;
+  box-shadow: 0 0 8px var(--neon_cyan), 0 0 14px #ffffff;
+}
+.arena-viewport {
+  display: block;
+  height: auto;
+  aspect-ratio: 480 / 460;
+  position: relative;
+  container-type: inline-size;
+  overflow: hidden;
+  margin: 0 auto;
+  width: 100%;
+}
+.arcade-cabinet {
+  background: var(--card_bg);
+  border: 3px solid var(--neon_green);
+  font-family: "Courier New", monospace, sans-serif;
+  border-radius: 16px;
+  padding: 0.75rem;
+  touch-action: manipulation;
+  box-sizing: border-box;
+  width: 100%;
+  user-select: none;
+  max-width: min(540px, calc((100svh - 272px) * 480 / 460 + 32px));
+  box-shadow: 0 0 35px color-mix(in srgb, var(--neon_green) 25%, transparent), inset 0 0 20px rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  margin: 0 auto;
+}
+.alien.type-3 {
+  box-shadow: 0 0 10px var(--neon_yellow);
+  background: var(--neon_yellow);
+  color: var(--arena_bg);
+}
+.overlay {
+  flex-direction: column;
+  background: color-mix(in srgb, var(--arena_bg) 88%, transparent);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: auto;
+}
+.arcade-controls {
+  width: 100%;
+  z-index: 100;
+  gap: 0.75rem;
+  justify-content: space-between;
+  box-sizing: border-box;
+  display: flex;
+  pointer-events: auto;
+  position: relative;
+  margin-top: 1.1rem;
+}
+body {
+  margin: 0;
+  box-sizing: border-box;
+  background: var(--cabinet_bg);
+  padding: 8px;
+}
+.player-canon {
+  top: -30%;
+  position: absolute;
+  border-radius: 2px;
+  left: 41.666667%;
+  background: #ffffff;
+  width: 16.666667%;
+  height: 40%;
+}
+.cabinet-title {
+  font-size: 1.75rem;
+  letter-spacing: 4px;
+  text-shadow: 0 0 10px var(--neon_green), 0 0 20px var(--neon_green);
+  color: var(--neon_green);
+  margin: 0 0 0.5rem 0;
+  font-weight: 900;
+}
+.alien {
+  pointer-events: none;
+  position: absolute;
+  width: 5.833333%;
+  height: 4.782609%;
+  font-weight: bold;
+  transition: top 0.1s linear, left 0.1s linear;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: clamp(6px, 2.916667cqw, 14px);
+}
+.player {
+  bottom: 3.478261%;
+  box-shadow: 0 0 15px var(--neon_green);
+  background: var(--neon_green);
+  border-radius: 4px 4px 1px 1px;
+  position: absolute;
+  pointer-events: none;
+  transition: left 0.04s ease-out;
+  width: 7.5%;
+  height: 4.347826%;
+}
+.game-arena {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--arena_bg);
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
+  border: 2px solid var(--grid_border);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 520px) {
+.cabinet-title {
+  letter-spacing: 2px;
+  font-size: 1.35rem;
 }
 .stats-bar {
   font-size: 0.8rem;
   letter-spacing: 1px;
 }
+.arcade-controls {
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  z-index: 100;
+  position: relative;
+}
+.ctrl-btn {
+  font-size: 1rem;
+  min-height: 54px;
+  padding: 0.75rem 0.25rem;
+}
+.controls-hint {
+  font-size: 0.7rem;
+}
 .arcade-cabinet {
-  padding: 0.5rem;
   margin: 0 auto;
-  border-width: 2px;
+  padding: 0.5rem;
   border-radius: 12px;
+  border-width: 2px;
+}
+.ctrl-btn.fire-btn {
+  font-size: 1.15rem;
+  flex: 1.3;
 }
 }
 @media (max-height: 480px) {
-.ctrl-btn.fire-btn {
-  font-size: 0.75rem;
+.ctrl-btn {
+  padding: 0.5rem 0.1rem;
+  min-height: 44px;
+  font-size: 0.7rem;
 }
 .controls-hint {
   display: none;
 }
-.arcade-controls {
-  gap: 0.25rem;
-  margin-top: 0.5rem;
-}
-.ctrl-btn {
-  min-height: 44px;
-  font-size: 0.7rem;
-  padding: 0.5rem 0.1rem;
-}
 .cabinet-header {
-  padding-bottom: 0.4rem;
   margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem;
+}
+.ctrl-btn.fire-btn {
+  font-size: 0.75rem;
 }
 .arcade-cabinet {
   max-width: min(420px, calc((100svh - 175px) * 480 / 460 + 24px));
   padding: 0.5rem;
 }
-.stats-bar {
-  font-size: 0.65rem;
-  letter-spacing: 0;
-}
 .cabinet-title {
   margin-bottom: 0.25rem;
   font-size: 1rem;
+}
+.stats-bar {
+  letter-spacing: 0;
+  font-size: 0.65rem;
+}
+.arcade-controls {
+  margin-top: 0.5rem;
+  gap: 0.25rem;
 }
 }
 </style>
 </head>
 <body>
-    <div id="app"><main class="arcade-cabinet"><header class="cabinet-header"><h1 class="cabinet-title">VECTRAIDERS</h1><div class="stats-bar"><span>SCORE: 0.0</span><span>LIVES: 3.0</span><span>ALIENS: 18.0</span></div></header><div class="arena-viewport"><div class="game-arena"><div class="arena-grid"></div><!-- Player Cannon --><div class="player" style="left: calc(220 * 100% / 480);"><div class="player-canon"></div></div><!-- Player Lasers --><!-- Alien Lasers --><!-- Invader Grid --><div class="alien type-1" style="left: calc(50 * 100% / 480); top: calc(40 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:50,&quot;start_y&quot;:40,&quot;type&quot;:1,&quot;x&quot;:50,&quot;y&quot;:40}}">👾</div><div class="alien type-1" style="left: calc(115 * 100% / 480); top: calc(40 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:115,&quot;start_y&quot;:40,&quot;type&quot;:1,&quot;x&quot;:115,&quot;y&quot;:40}}">👾</div><div class="alien type-1" style="left: calc(180 * 100% / 480); top: calc(40 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:180,&quot;start_y&quot;:40,&quot;type&quot;:1,&quot;x&quot;:180,&quot;y&quot;:40}}">👾</div><div class="alien type-1" style="left: calc(245 * 100% / 480); top: calc(40 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:245,&quot;start_y&quot;:40,&quot;type&quot;:1,&quot;x&quot;:245,&quot;y&quot;:40}}">👾</div><div class="alien type-1" style="left: calc(310 * 100% / 480); top: calc(40 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:310,&quot;start_y&quot;:40,&quot;type&quot;:1,&quot;x&quot;:310,&quot;y&quot;:40}}">👾</div><div class="alien type-1" style="left: calc(375 * 100% / 480); top: calc(40 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:375,&quot;start_y&quot;:40,&quot;type&quot;:1,&quot;x&quot;:375,&quot;y&quot;:40}}">👾</div><div class="alien type-2" style="left: calc(50 * 100% / 480); top: calc(80 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:50,&quot;start_y&quot;:80,&quot;type&quot;:2,&quot;x&quot;:50,&quot;y&quot;:80}}">👾</div><div class="alien type-2" style="left: calc(115 * 100% / 480); top: calc(80 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:115,&quot;start_y&quot;:80,&quot;type&quot;:2,&quot;x&quot;:115,&quot;y&quot;:80}}">👾</div><div class="alien type-2" style="left: calc(180 * 100% / 480); top: calc(80 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:180,&quot;start_y&quot;:80,&quot;type&quot;:2,&quot;x&quot;:180,&quot;y&quot;:80}}">👾</div><div class="alien type-2" style="left: calc(245 * 100% / 480); top: calc(80 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:245,&quot;start_y&quot;:80,&quot;type&quot;:2,&quot;x&quot;:245,&quot;y&quot;:80}}">👾</div><div class="alien type-2" style="left: calc(310 * 100% / 480); top: calc(80 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:310,&quot;start_y&quot;:80,&quot;type&quot;:2,&quot;x&quot;:310,&quot;y&quot;:80}}">👾</div><div class="alien type-2" style="left: calc(375 * 100% / 480); top: calc(80 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:375,&quot;start_y&quot;:80,&quot;type&quot;:2,&quot;x&quot;:375,&quot;y&quot;:80}}">👾</div><div class="alien type-3" style="left: calc(50 * 100% / 480); top: calc(120 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:50,&quot;start_y&quot;:120,&quot;type&quot;:3,&quot;x&quot;:50,&quot;y&quot;:120}}">👾</div><div class="alien type-3" style="left: calc(115 * 100% / 480); top: calc(120 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:115,&quot;start_y&quot;:120,&quot;type&quot;:3,&quot;x&quot;:115,&quot;y&quot;:120}}">👾</div><div class="alien type-3" style="left: calc(180 * 100% / 480); top: calc(120 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:180,&quot;start_y&quot;:120,&quot;type&quot;:3,&quot;x&quot;:180,&quot;y&quot;:120}}">👾</div><div class="alien type-3" style="left: calc(245 * 100% / 480); top: calc(120 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:245,&quot;start_y&quot;:120,&quot;type&quot;:3,&quot;x&quot;:245,&quot;y&quot;:120}}">👾</div><div class="alien type-3" style="left: calc(310 * 100% / 480); top: calc(120 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:310,&quot;start_y&quot;:120,&quot;type&quot;:3,&quot;x&quot;:310,&quot;y&quot;:120}}">👾</div><div class="alien type-3" style="left: calc(375 * 100% / 480); top: calc(120 * 100% / 460); display: flex;" data-rune-scope="{&quot;alien&quot;:{&quot;alive&quot;:true,&quot;start_x&quot;:375,&quot;start_y&quot;:120,&quot;type&quot;:3,&quot;x&quot;:375,&quot;y&quot;:120}}">👾</div><!-- Game State Overlay --><div class="overlay"><h2 class="overlay-title">VECTRAIDERS</h2><button class="start-btn" data-on-click="start" data-on-pointerdown="start">PLAY NOW</button></div></div></div><!-- Arcade Controls for Touch and Mouse --><div class="arcade-controls"><button class="ctrl-btn" data-on-pointerdown="startLeft" data-on-click="moveLeft" data-on-pointerleave="stopMove" data-on-pointerup="stopMove">◀ LEFT</button><button class="ctrl-btn fire-btn" data-on-click="fire" data-on-pointerdown="fire">⚡ FIRE</button><button class="ctrl-btn" data-on-pointerdown="startRight" data-on-pointerup="stopMove" data-on-click="moveRight" data-on-pointerleave="stopMove">RIGHT ▶</button></div><p class="controls-hint">KEYBOARD: [A / ◀] LEFT  •  [D / ▶] RIGHT  •  [SPACE] FIRE</p></main></div>
+    <div id="app"><main class="arcade-cabinet"><header class="cabinet-header"><h1 class="cabinet-title">VECTRAIDERS</h1><div class="stats-bar"><span>SCORE: 0.0</span><span>LIVES: 3.0</span><span>ALIENS: 18.0</span></div></header><div class="arena-viewport"><div class="game-arena"><div class="arena-grid"></div><!-- Player Cannon --><div class="player" style="left: calc(220 * 100% / 480);"><div class="player-canon"></div></div><!-- Player Lasers --><!-- Alien Lasers --><!-- Invader Grid --><!-- Explosions & Particles --><!-- Game State Overlay --><div class="overlay"><h2 class="overlay-title">VECTRAIDERS</h2><button class="start-btn" data-on-pointerdown="start" data-on-click="start">PLAY NOW</button></div></div></div><!-- Arcade Controls for Touch and Mouse --><div class="arcade-controls"><button class="ctrl-btn" data-on-pointerup="stopMove" data-on-click="moveLeft" data-on-pointerdown="startLeft" data-on-pointerleave="stopMove">◀ LEFT</button><button class="ctrl-btn fire-btn" data-on-pointerdown="fire" data-on-click="fire">⚡ FIRE</button><button class="ctrl-btn" data-on-pointerleave="stopMove" data-on-pointerdown="startRight" data-on-click="moveRight" data-on-pointerup="stopMove">RIGHT ▶</button></div><p class="controls-hint">KEYBOARD: [A / ◀] LEFT  •  [D / ▶] RIGHT  •  [SPACE] FIRE</p></main></div>
     <script>
 
 "use strict";
@@ -374,7 +383,8 @@ var __RuneWeb = (() => {
   // src/index.ts
   var index_exports = {};
   __export(index_exports, {
-    boot: () => boot
+    boot: () => boot,
+    playSound: () => playSound
   });
 
   // src/context.ts
@@ -1164,6 +1174,19 @@ var __RuneWeb = (() => {
         return evaluateExpression(parts[0], scope, nextDepth) & evaluateExpression(parts[1], scope, nextDepth);
       }
     }
+    if (trimmed.startsWith("-") && !trimmed.startsWith("--")) {
+      const operand = trimmed.slice(1).trim();
+      if (operand) {
+        const val = evaluateExpression(operand, scope, nextDepth);
+        if (typeof val === "number") {
+          return -val;
+        }
+        const num = Number(val);
+        if (!Number.isNaN(num)) {
+          return -num;
+        }
+      }
+    }
     return resolveValue(trimmed, scope);
   }
 
@@ -1865,6 +1888,167 @@ var __RuneWeb = (() => {
     return void 0;
   }
 
+  // src/audio.ts
+  var audioCtx = null;
+  var stepIndex = 0;
+  function getAudioContext() {
+    if (typeof window === "undefined") return null;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!audioCtx) {
+      audioCtx = new AudioCtx();
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+  function playSound(type, arg) {
+    const ctx2 = getAudioContext();
+    if (!ctx2) return;
+    const now = ctx2.currentTime;
+    const soundName = String(type || "").trim().toLowerCase();
+    switch (soundName) {
+      case "laser":
+      case "pew":
+      case "fire": {
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.12);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.13);
+        break;
+      }
+      case "hit":
+      case "damage": {
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.09);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+        break;
+      }
+      case "explosion":
+      case "boom": {
+        const bufferSize = Math.floor(ctx2.sampleRate * 0.35);
+        const buffer = ctx2.createBuffer(1, bufferSize, ctx2.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i += 1) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = ctx2.createBufferSource();
+        noise.buffer = buffer;
+        const filter = ctx2.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(800, now);
+        filter.frequency.exponentialRampToValueAtTime(60, now + 0.35);
+        const gain = ctx2.createGain();
+        gain.gain.setValueAtTime(0.45, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx2.destination);
+        noise.start(now);
+        noise.stop(now + 0.36);
+        break;
+      }
+      case "step":
+      case "move": {
+        const steps = [110, 98, 87, 82];
+        const freq = steps[stepIndex % steps.length];
+        stepIndex += 1;
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.09);
+        break;
+      }
+      case "coin":
+      case "powerup": {
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.setValueAtTime(880, now + 0.08);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.29);
+        break;
+      }
+      case "gameover": {
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(330, now);
+        osc.frequency.linearRampToValueAtTime(293, now + 0.15);
+        osc.frequency.linearRampToValueAtTime(261, now + 0.3);
+        osc.frequency.linearRampToValueAtTime(196, now + 0.55);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.62);
+        break;
+      }
+      case "victory":
+      case "win": {
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, idx) => {
+          const start = now + idx * 0.12;
+          const osc = ctx2.createOscillator();
+          const gain = ctx2.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.25, start);
+          gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
+          osc.connect(gain);
+          gain.connect(ctx2.destination);
+          osc.start(start);
+          osc.stop(start + 0.16);
+        });
+        break;
+      }
+      case "tone": {
+        const freq = typeof arg === "number" ? arg : 440;
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
   // src/statement.ts
   function assignPath(pathExpr, value, locals) {
     const segments = splitPathSegments(pathExpr);
@@ -2008,6 +2192,153 @@ var __RuneWeb = (() => {
   function executeStatement(statement, locals) {
     const trimmed = String(statement || "").trim();
     if (!trimmed) return true;
+    if (trimmed.startsWith("sound ") || trimmed.startsWith("sound.") || trimmed.startsWith("play_sound(")) {
+      let soundName = "";
+      let argVal = void 0;
+      if (trimmed.startsWith("sound.play(") && trimmed.endsWith(")")) {
+        const inner = trimmed.slice(11, -1);
+        const parts = splitTopLevel(inner, ",");
+        soundName = String(evaluateExpression(parts[0], buildScope(locals)) || "");
+        if (parts.length > 1) {
+          argVal = evaluateExpression(parts[1], buildScope(locals));
+        }
+      } else if (trimmed.startsWith("play_sound(") && trimmed.endsWith(")")) {
+        const inner = trimmed.slice(11, -1);
+        const parts = splitTopLevel(inner, ",");
+        soundName = String(evaluateExpression(parts[0], buildScope(locals)) || "");
+        if (parts.length > 1) {
+          argVal = evaluateExpression(parts[1], buildScope(locals));
+        }
+      } else if (trimmed.startsWith("sound.play ")) {
+        soundName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || "");
+      } else if (trimmed.startsWith("sound.")) {
+        soundName = trimmed.slice(6).trim();
+      } else {
+        soundName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || "");
+      }
+      soundName = normalizeLiteral(soundName);
+      playSound(soundName, argVal);
+      return true;
+    }
+    const emitterMatch = trimmed.match(/^([A-Za-z_][\w]*)\.(burst|step)\((.*)\)$/);
+    if (emitterMatch && ctx().emitters && Object.prototype.hasOwnProperty.call(ctx().emitters, emitterMatch[1])) {
+      const name = emitterMatch[1];
+      const method = emitterMatch[2];
+      const cfg = ctx().emitters[name] || {};
+      const scope = buildScope(locals);
+      const existing = evaluateExpression(name, scope);
+      const current = Array.isArray(existing) ? existing : [];
+      if (method === "step") {
+        const friction = cfg.friction ?? 0.92;
+        const gravity = cfg.gravity ?? 0;
+        const surviving = [];
+        for (const p of current) {
+          if (!p || typeof p !== "object") continue;
+          p.x = Number(p.x || 0) + Number(p.vx || 0);
+          p.y = Number(p.y || 0) + Number(p.vy || 0);
+          p.vx = Number(p.vx || 0) * friction;
+          p.vy = Number(p.vy || 0) * friction + gravity;
+          p.life = Number(p.life || 0) - 1;
+          if (Number(p.life) > 0) surviving.push(p);
+        }
+        assignPath(name, surviving, locals);
+        return true;
+      }
+      const parts = emitterMatch[3].trim() ? splitTopLevel(emitterMatch[3], ",") : [];
+      if (parts.length < 2) {
+        console.warn(`[rune-web] ${name}.burst(x, y, [count, color, speed]) needs at least x and y`);
+        return true;
+      }
+      const arg = (i) => parts.length > i ? evaluateExpression(parts[i], scope) : void 0;
+      const xVal = Number(arg(0) || 0);
+      const yVal = Number(arg(1) || 0);
+      const countVal = Number(arg(2) ?? cfg.count ?? 8);
+      const colorVal = arg(3) !== void 0 ? valueToString(arg(3)) : cfg.color ?? "#ffffff";
+      const speedVal = Number(arg(4) ?? cfg.speed ?? 7);
+      const life = cfg.life ?? 14;
+      const [minSize, maxSize] = Array.isArray(cfg.size) ? cfg.size : [cfg.size ?? 3, cfg.size ?? 5];
+      const newParticles = [];
+      for (let i = 0; i < countVal; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = (Math.random() * 0.7 + 0.3) * speedVal;
+        newParticles.push({
+          x: xVal,
+          y: yVal,
+          vx: Math.cos(angle) * velocity,
+          vy: Math.sin(angle) * velocity,
+          life,
+          max_life: life,
+          color: colorVal,
+          size: minSize + Math.floor(Math.random() * (maxSize - minSize + 1))
+        });
+      }
+      assignPath(name, current.concat(newParticles), locals);
+      return true;
+    }
+    const restoreMatch = trimmed.match(/^(?:restore|reset)\s+([a-zA-Z0-9_.[\]'"]+)$/) || trimmed.match(/^([a-zA-Z0-9_.[\]'"]+)\.(?:restore|reset)\(\)$/);
+    if (restoreMatch) {
+      const targetPath = restoreMatch[1].trim();
+      const initial = ctx().initialState;
+      if (initial && Object.prototype.hasOwnProperty.call(initial, targetPath)) {
+        assignPath(targetPath, JSON.parse(JSON.stringify(initial[targetPath])), locals);
+        return true;
+      }
+      const targetVal = evaluateExpression(targetPath, buildScope(locals));
+      if (Array.isArray(targetVal)) {
+        for (const item of targetVal) {
+          if (item && typeof item === "object") {
+            for (const key of Object.keys(item)) {
+              if (key.startsWith("start_")) {
+                const baseProp = key.slice(6);
+                item[baseProp] = item[key];
+              }
+            }
+            if ("alive" in item) {
+              item.alive = true;
+            }
+          }
+        }
+        assignPath(targetPath, targetVal, locals);
+        return true;
+      } else if (targetVal && typeof targetVal === "object") {
+        const item = targetVal;
+        for (const key of Object.keys(item)) {
+          if (key.startsWith("start_")) {
+            item[key.slice(6)] = item[key];
+          }
+        }
+        if ("alive" in item) {
+          item.alive = true;
+        }
+        assignPath(targetPath, item, locals);
+        return true;
+      }
+      return true;
+    }
+    const compoundMatch = trimmed.match(/^([a-zA-Z0-9_.[\]'"]+)\s*(\+|\-|\*|\/)=\s*(.+)$/);
+    if (compoundMatch) {
+      const left = compoundMatch[1].trim();
+      const op = compoundMatch[2];
+      const right = compoundMatch[3].trim();
+      const rightVal = evaluateExpression(right, buildScope(locals));
+      const leftVal = evaluateExpression(left, buildScope(locals));
+      let newVal;
+      if (op === "+") {
+        if (typeof leftVal === "number" && typeof rightVal === "number") {
+          newVal = leftVal + rightVal;
+        } else {
+          newVal = `${valueToString(leftVal)}${valueToString(rightVal)}`;
+        }
+      } else if (op === "-") {
+        newVal = Number(leftVal) - Number(rightVal);
+      } else if (op === "*") {
+        newVal = Number(leftVal) * Number(rightVal);
+      } else if (op === "/") {
+        newVal = Number(leftVal) / Number(rightVal);
+      }
+      assignPath(left, newVal, locals);
+      return true;
+    }
     if (trimmed.includes("=") && !trimmed.match(/^.+?\.push\(/)) {
       const assignmentMatch = trimmed.match(/^(.*?)(?<![!<>=])=(?!=)(.*)$/);
       if (assignmentMatch) {
@@ -2275,7 +2606,9 @@ var __RuneWeb = (() => {
       app,
       isRendering: false,
       memorySubscriptions: {},
-      navigator: config.navigator || null
+      navigator: config.navigator || null,
+      initialState: JSON.parse(JSON.stringify(config.stateJson || {})),
+      emitters: config.emitters || {}
     });
     app.state = makeReactive(
       Object.assign({}, config.stateJson, { i18n: config.i18nData })
@@ -2335,6 +2668,7 @@ var __RuneWeb = (() => {
       setupWebSocket(config.wsEndpoint, app);
     }
     setWindowProp("runeWebApp", app);
+    setWindowProp("playSound", playSound);
     app.render();
     return app;
   }
@@ -2367,16 +2701,17 @@ var __RuneWeb = (() => {
 })();
 
 __RuneWeb.boot({
-  pageTree: {"Element":{"tag":"main","classes":["arcade-cabinet"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"header","classes":["cabinet-header"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"h1","classes":["cabinet-title"],"id":null,"attrs":{},"events":{},"text":"VECTRAIDERS","for_each":null,"children":[]}},{"Element":{"tag":"div","classes":["stats-bar"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"span","classes":[],"id":null,"attrs":{},"events":{},"text":"SCORE: {score}","for_each":null,"children":[]}},{"Element":{"tag":"span","classes":[],"id":null,"attrs":{},"events":{},"text":"LIVES: {lives}","for_each":null,"children":[]}},{"Element":{"tag":"span","classes":[],"id":null,"attrs":{},"events":{},"text":"ALIENS: {alien_count}","for_each":null,"children":[]}}]}}]}},{"Element":{"tag":"div","classes":["arena-viewport"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"div","classes":["game-arena"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"div","classes":["arena-grid"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[]}},{"Comment":"Player Cannon"},{"Element":{"tag":"div","classes":["player"],"id":null,"attrs":{"style":"left: calc({player.x} * 100% / 480);"},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"div","classes":["player-canon"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[]}}]}},{"Comment":"Player Lasers"},{"Element":{"tag":"div","classes":["bullet"],"id":null,"attrs":{"style":"left: calc({bullet.x} * 100% / 480); top: calc({bullet.y} * 100% / 460);"},"events":{},"text":null,"for_each":{"item_name":"bullet","index_name":null,"collection":"bullets"},"children":[]}},{"Comment":"Alien Lasers"},{"Element":{"tag":"div","classes":["alien-bullet"],"id":null,"attrs":{"style":"left: calc({ab.x} * 100% / 480); top: calc({ab.y} * 100% / 460);"},"events":{},"text":null,"for_each":{"item_name":"ab","index_name":null,"collection":"alien_bullets"},"children":[]}},{"Comment":"Invader Grid"},{"Element":{"tag":"div","classes":["alien","type-{alien.type}"],"id":null,"attrs":{"style":"left: calc({alien.x} * 100% / 480); top: calc({alien.y} * 100% / 460); display: {alien.alive ? 'flex' : 'none'};"},"events":{},"text":null,"for_each":{"item_name":"alien","index_name":null,"collection":"aliens"},"children":[{"Text":"👾"}]}},{"Comment":"Game State Overlay"},{"Conditional":{"condition":"status != \"playing\"","body":[{"Element":{"tag":"div","classes":["overlay"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"h2","classes":["overlay-title"],"id":null,"attrs":{},"events":{},"text":"{game_message}","for_each":null,"children":[]}},{"Element":{"tag":"button","classes":["start-btn"],"id":null,"attrs":{},"events":{"click":"start","pointerdown":"start"},"text":"PLAY NOW","for_each":null,"children":[]}}]}}]}}]}}]}},{"Comment":"Arcade Controls for Touch and Mouse"},{"Element":{"tag":"div","classes":["arcade-controls"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"button","classes":["ctrl-btn"],"id":null,"attrs":{},"events":{"pointerdown":"startLeft","click":"moveLeft","pointerleave":"stopMove","pointerup":"stopMove"},"text":"◀ LEFT","for_each":null,"children":[]}},{"Element":{"tag":"button","classes":["ctrl-btn","fire-btn"],"id":null,"attrs":{},"events":{"click":"fire","pointerdown":"fire"},"text":"⚡ FIRE","for_each":null,"children":[]}},{"Element":{"tag":"button","classes":["ctrl-btn"],"id":null,"attrs":{},"events":{"pointerdown":"startRight","pointerup":"stopMove","click":"moveRight","pointerleave":"stopMove"},"text":"RIGHT ▶","for_each":null,"children":[]}}]}},{"Element":{"tag":"p","classes":["controls-hint"],"id":null,"attrs":{},"events":{},"text":"KEYBOARD: [A / ◀] LEFT  •  [D / ▶] RIGHT  •  [SPACE] FIRE","for_each":null,"children":[]}}]}},
+  pageTree: {"Element":{"tag":"main","classes":["arcade-cabinet"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"header","classes":["cabinet-header"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"h1","classes":["cabinet-title"],"id":null,"attrs":{},"events":{},"text":"VECTRAIDERS","for_each":null,"children":[]}},{"Element":{"tag":"div","classes":["stats-bar"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"span","classes":[],"id":null,"attrs":{},"events":{},"text":"SCORE: {score}","for_each":null,"children":[]}},{"Element":{"tag":"span","classes":[],"id":null,"attrs":{},"events":{},"text":"LIVES: {lives}","for_each":null,"children":[]}},{"Element":{"tag":"span","classes":[],"id":null,"attrs":{},"events":{},"text":"ALIENS: {alien_count}","for_each":null,"children":[]}}]}}]}},{"Element":{"tag":"div","classes":["arena-viewport"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"div","classes":["game-arena"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"div","classes":["arena-grid"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[]}},{"Comment":"Player Cannon"},{"Element":{"tag":"div","classes":["player"],"id":null,"attrs":{"style":"left: calc({player.x} * 100% / 480);"},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"div","classes":["player-canon"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[]}}]}},{"Comment":"Player Lasers"},{"Element":{"tag":"div","classes":["bullet"],"id":null,"attrs":{"style":"left: calc({bullet.x} * 100% / 480); top: calc({bullet.y} * 100% / 460);"},"events":{},"text":null,"for_each":{"item_name":"bullet","index_name":null,"collection":"bullets"},"children":[]}},{"Comment":"Alien Lasers"},{"Element":{"tag":"div","classes":["alien-bullet"],"id":null,"attrs":{"style":"left: calc({ab.x} * 100% / 480); top: calc({ab.y} * 100% / 460);"},"events":{},"text":null,"for_each":{"item_name":"ab","index_name":null,"collection":"alien_bullets"},"children":[]}},{"Comment":"Invader Grid"},{"Element":{"tag":"div","classes":["alien","type-{alien.type}"],"id":null,"attrs":{"style":"left: calc({alien.x} * 100% / 480); top: calc({alien.y} * 100% / 460); display: {alien.alive ? 'flex' : 'none'};"},"events":{},"text":null,"for_each":{"item_name":"alien","index_name":null,"collection":"aliens"},"children":[{"Text":"👾"}]}},{"Comment":"Explosions & Particles"},{"Element":{"tag":"div","classes":["particle"],"id":null,"attrs":{"style":"left: calc({p.x} * 100% / 480); top: calc({p.y} * 100% / 460); opacity: calc({p.life} / {p.max_life}); width: {p.size}px; height: {p.size}px; background: {p.color}; box-shadow: 0 0 6px {p.color};"},"events":{},"text":null,"for_each":{"item_name":"p","index_name":null,"collection":"particles"},"children":[]}},{"Comment":"Game State Overlay"},{"Conditional":{"condition":"status != \"playing\"","body":[{"Element":{"tag":"div","classes":["overlay"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"h2","classes":["overlay-title"],"id":null,"attrs":{},"events":{},"text":"{game_message}","for_each":null,"children":[]}},{"Element":{"tag":"button","classes":["start-btn"],"id":null,"attrs":{},"events":{"pointerdown":"start","click":"start"},"text":"PLAY NOW","for_each":null,"children":[]}}]}}]}}]}}]}},{"Comment":"Arcade Controls for Touch and Mouse"},{"Element":{"tag":"div","classes":["arcade-controls"],"id":null,"attrs":{},"events":{},"text":null,"for_each":null,"children":[{"Element":{"tag":"button","classes":["ctrl-btn"],"id":null,"attrs":{},"events":{"pointerup":"stopMove","click":"moveLeft","pointerdown":"startLeft","pointerleave":"stopMove"},"text":"◀ LEFT","for_each":null,"children":[]}},{"Element":{"tag":"button","classes":["ctrl-btn","fire-btn"],"id":null,"attrs":{},"events":{"pointerdown":"fire","click":"fire"},"text":"⚡ FIRE","for_each":null,"children":[]}},{"Element":{"tag":"button","classes":["ctrl-btn"],"id":null,"attrs":{},"events":{"pointerleave":"stopMove","pointerdown":"startRight","click":"moveRight","pointerup":"stopMove"},"text":"RIGHT ▶","for_each":null,"children":[]}}]}},{"Element":{"tag":"p","classes":["controls-hint"],"id":null,"attrs":{},"events":{},"text":"KEYBOARD: [A / ◀] LEFT  •  [D / ▶] RIGHT  •  [SPACE] FIRE","for_each":null,"children":[]}}]}},
   derivedDefinitions: {},
   helperDefinitions: {},
-  actionDefinitions: {"fire":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"stop when bullets.length >= 3"},{"Statement":"bullets.push({ \"x\": player.x + 16, \"y\": 405, \"alive\": true })"}]},"moveRight":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"player.x = clamp(player.x + 20, 10, 434)"}]},"tick":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"# Smooth continuous movement when on-screen buttons are pressed"},{"Conditional":{"condition":"move_dir < 0","steps":[{"Statement":"player.x = clamp(player.x - 12, 10, 434)"}]}},{"Conditional":{"condition":"move_dir > 0","steps":[{"Statement":"player.x = clamp(player.x + 12, 10, 434)"}]}},{"Statement":"# 1. Update player bullets"},{"ForLoop":{"item_name":"b","index_name":null,"collection":"bullets","steps":[{"Statement":"b.y = b.y - 12"}]}},{"Statement":"bullets = bullets.filter it.y > 0 and it.alive"},{"Statement":"# 2. Update alien bullets"},{"ForLoop":{"item_name":"ab","index_name":null,"collection":"alien_bullets","steps":[{"Statement":"ab.y = ab.y + 7"}]}},{"Statement":"alien_bullets = alien_bullets.filter it.y < 460 and it.alive"},{"Statement":"# 3. Check alien bullet collision with player"},{"ForLoop":{"item_name":"ab","index_name":null,"collection":"alien_bullets","steps":[{"Conditional":{"condition":"collide(ab, player, 20, 16)","steps":[{"Statement":"ab.alive = false"},{"Statement":"lives = lives - 1"},{"Conditional":{"condition":"lives <= 0","steps":[{"Statement":"status = \"game_over\""},{"Statement":"game_message = \"GAME OVER\""},{"Statement":"stop"}]}}]}}]}},{"Statement":"# 4. Move aliens and detect boundary reversal"},{"Statement":"change_dir = false"},{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Conditional":{"condition":"a.alive","steps":[{"Statement":"a.x = a.x + (alien_dir * alien_speed)"},{"Conditional":{"condition":"a.x > 430 or a.x < 20","steps":[{"Statement":"change_dir = true"}]}},{"Conditional":{"condition":"a.y > 400","steps":[{"Statement":"status = \"game_over\""},{"Statement":"game_message = \"GRID BREACHED! GAME OVER\""},{"Statement":"stop"}]}}]}}]}},{"Conditional":{"condition":"change_dir","steps":[{"Statement":"alien_dir = 0 - alien_dir"},{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Statement":"a.y = a.y + 16"}]}}]}},{"Statement":"# 5. Check player bullet collisions with aliens"},{"ForLoop":{"item_name":"b","index_name":null,"collection":"bullets","steps":[{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Conditional":{"condition":"a.alive and b.alive","steps":[{"Conditional":{"condition":"collide(b, a, 22, 18)","steps":[{"Statement":"a.alive = false"},{"Statement":"b.alive = false"},{"Statement":"score = score + 20"},{"Statement":"alien_count = alien_count - 1"}]}}]}}]}}]}},{"Statement":"# 6. Occasional alien return fire"},{"Conditional":{"condition":"random(1, 22) == 1","steps":[{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Conditional":{"condition":"a.alive and random(1, 5) == 1","steps":[{"Statement":"alien_bullets.push({ \"x\": a.x + 12, \"y\": a.y + 16, \"alive\": true })"},{"Statement":"stop"}]}}]}}]}},{"Statement":"# 7. Check victory condition"},{"Conditional":{"condition":"alien_count <= 0","steps":[{"Statement":"status = \"victory\""},{"Statement":"game_message = \"VECTOR GRID SAVED! YOU WIN!\""},{"Statement":"stop"}]}}]},"moveLeft":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"player.x = clamp(player.x - 20, 10, 434)"}]},"startLeft":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"move_dir = 0 - 1"},{"Statement":"player.x = clamp(player.x - 18, 10, 434)"}]},"stopMove":{"params":[],"steps":[{"Statement":"move_dir = 0"}]},"start":{"params":[],"steps":[{"Statement":"score = 0"},{"Statement":"lives = 3"},{"Statement":"alien_count = 18"},{"Statement":"alien_dir = 1"},{"Statement":"move_dir = 0"},{"Statement":"player.x = 220"},{"Statement":"bullets = []"},{"Statement":"alien_bullets = []"},{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Statement":"a.alive = true"},{"Statement":"a.x = a.start_x"},{"Statement":"a.y = a.start_y"}]}},{"Statement":"status = \"playing\""},{"Statement":"game_message = \"\""}]},"startRight":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"move_dir = 1"},{"Statement":"player.x = clamp(player.x + 18, 10, 434)"}]}},
+  actionDefinitions: {"fire":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"stop when bullets.length >= 3"},{"Statement":"bullets.push({ \"x\": player.x + 16, \"y\": 405, \"alive\": true })"},{"Statement":"sound \"laser\""}]},"tick":{"params":[],"steps":[{"Statement":"particles.step()"},{"Statement":"stop when status != \"playing\""},{"Statement":"# Smooth continuous movement when on-screen buttons are pressed"},{"Conditional":{"condition":"move_dir < 0","steps":[{"Statement":"player.x = clamp(player.x - 12, 10, 434)"}]}},{"Conditional":{"condition":"move_dir > 0","steps":[{"Statement":"player.x = clamp(player.x + 12, 10, 434)"}]}},{"Statement":"# 1. Update player bullets"},{"ForLoop":{"item_name":"b","index_name":null,"collection":"bullets","steps":[{"Statement":"b.y -= 12"}]}},{"Statement":"bullets = bullets.filter it.y > 0 and it.alive"},{"Statement":"# 2. Update alien bullets"},{"ForLoop":{"item_name":"ab","index_name":null,"collection":"alien_bullets","steps":[{"Statement":"ab.y += 7"}]}},{"Statement":"alien_bullets = alien_bullets.filter it.y < 460 and it.alive"},{"Statement":"# 3. Check alien bullet collision with player"},{"ForLoop":{"item_name":"ab","index_name":null,"collection":"alien_bullets","steps":[{"Conditional":{"condition":"collide(ab, player, 20, 16)","steps":[{"Statement":"ab.alive = false"},{"Statement":"lives -= 1"},{"Statement":"sound \"hit\""},{"Statement":"particles.burst(player.x + 16, player.y + 10, 14, \"#00e5ff\", 8)"},{"Conditional":{"condition":"lives <= 0","steps":[{"Statement":"sound \"gameover\""},{"Statement":"status = \"game_over\""},{"Statement":"game_message = \"GAME OVER\""},{"Statement":"stop"}]}}]}}]}},{"Statement":"# 4. Move aliens and detect boundary reversal"},{"Statement":"change_dir = false"},{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Conditional":{"condition":"a.alive","steps":[{"Statement":"a.x += alien_dir * alien_speed"},{"Conditional":{"condition":"a.x > 430 or a.x < 20","steps":[{"Statement":"change_dir = true"}]}},{"Conditional":{"condition":"a.y > 400","steps":[{"Statement":"sound \"gameover\""},{"Statement":"status = \"game_over\""},{"Statement":"game_message = \"GRID BREACHED! GAME OVER\""},{"Statement":"stop"}]}}]}}]}},{"Conditional":{"condition":"change_dir","steps":[{"Statement":"alien_dir = -alien_dir"},{"Statement":"sound \"step\""},{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Statement":"a.y += 16"}]}}]}},{"Statement":"# 5. Check player bullet collisions with aliens"},{"ForLoop":{"item_name":"b","index_name":null,"collection":"bullets","steps":[{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Conditional":{"condition":"a.alive and b.alive","steps":[{"Conditional":{"condition":"collide(b, a, 22, 18)","steps":[{"Statement":"a.alive = false"},{"Statement":"b.alive = false"},{"Statement":"score += 20"},{"Statement":"alien_count -= 1"},{"Statement":"sound \"explosion\""},{"Statement":"particles.burst(a.x + 12, a.y + 10, 10, \"#ff2a85\", 7)"}]}}]}}]}}]}},{"Statement":"# 6. Occasional alien return fire"},{"Conditional":{"condition":"random(1, 22) == 1","steps":[{"ForLoop":{"item_name":"a","index_name":null,"collection":"aliens","steps":[{"Conditional":{"condition":"a.alive and random(1, 5) == 1","steps":[{"Statement":"alien_bullets.push({ \"x\": a.x + 12, \"y\": a.y + 16, \"alive\": true })"},{"Statement":"stop"}]}}]}}]}},{"Statement":"# 7. Check victory condition"},{"Conditional":{"condition":"alien_count <= 0","steps":[{"Statement":"sound \"victory\""},{"Statement":"status = \"victory\""},{"Statement":"game_message = \"VECTOR GRID SAVED! YOU WIN!\""},{"Statement":"stop"}]}}]},"startLeft":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"move_dir = -1"},{"Statement":"player.x = clamp(player.x - 18, 10, 434)"}]},"stopMove":{"params":[],"steps":[{"Statement":"move_dir = 0"}]},"startRight":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"move_dir = 1"},{"Statement":"player.x = clamp(player.x + 18, 10, 434)"}]},"start":{"params":[],"steps":[{"Statement":"score = 0"},{"Statement":"lives = 3"},{"Statement":"alien_count = 18"},{"Statement":"alien_dir = 1"},{"Statement":"move_dir = 0"},{"Statement":"player.x = 220"},{"Statement":"bullets = []"},{"Statement":"alien_bullets = []"},{"Statement":"particles = []"},{"Statement":"restore aliens"},{"Statement":"status = \"playing\""},{"Statement":"game_message = \"\""}]},"moveLeft":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"player.x = clamp(player.x - 20, 10, 434)"}]},"moveRight":{"params":[],"steps":[{"Statement":"stop when status != \"playing\""},{"Statement":"player.x = clamp(player.x + 20, 10, 434)"}]}},
   i18nData: {},
-  stateJson: {"alien_bullets":[],"alien_count":18,"alien_dir":1,"alien_speed":3,"aliens":[{"alive":true,"start_x":50,"start_y":40,"type":1,"x":50,"y":40},{"alive":true,"start_x":115,"start_y":40,"type":1,"x":115,"y":40},{"alive":true,"start_x":180,"start_y":40,"type":1,"x":180,"y":40},{"alive":true,"start_x":245,"start_y":40,"type":1,"x":245,"y":40},{"alive":true,"start_x":310,"start_y":40,"type":1,"x":310,"y":40},{"alive":true,"start_x":375,"start_y":40,"type":1,"x":375,"y":40},{"alive":true,"start_x":50,"start_y":80,"type":2,"x":50,"y":80},{"alive":true,"start_x":115,"start_y":80,"type":2,"x":115,"y":80},{"alive":true,"start_x":180,"start_y":80,"type":2,"x":180,"y":80},{"alive":true,"start_x":245,"start_y":80,"type":2,"x":245,"y":80},{"alive":true,"start_x":310,"start_y":80,"type":2,"x":310,"y":80},{"alive":true,"start_x":375,"start_y":80,"type":2,"x":375,"y":80},{"alive":true,"start_x":50,"start_y":120,"type":3,"x":50,"y":120},{"alive":true,"start_x":115,"start_y":120,"type":3,"x":115,"y":120},{"alive":true,"start_x":180,"start_y":120,"type":3,"x":180,"y":120},{"alive":true,"start_x":245,"start_y":120,"type":3,"x":245,"y":120},{"alive":true,"start_x":310,"start_y":120,"type":3,"x":310,"y":120},{"alive":true,"start_x":375,"start_y":120,"type":3,"x":375,"y":120}],"bullets":[],"game_message":"VECTRAIDERS","lives":3,"move_dir":0,"player":{"x":220,"y":420},"score":0,"status":"ready"},
+  stateJson: {"alien_bullets":[],"alien_count":18,"alien_dir":1,"alien_speed":3,"bullets":[],"game_message":"VECTRAIDERS","lives":3,"move_dir":0,"particles":[],"player":{"x":220,"y":420},"score":0,"status":"ready"},
   wsEndpoint: null,
   timer: 'tick 40ms',
-  keys: {"ArrowLeft":"moveLeft","KeyD":"moveRight","ArrowRight":"moveRight","KeyA":"moveLeft","Space":"fire"},
-  navigator: null
+  keys: {"KeyA":"moveLeft","ArrowRight":"moveRight","Space":"fire","KeyD":"moveRight","ArrowLeft":"moveLeft"},
+  navigator: null,
+  emitters: {"particles":{"friction":0.92,"life":14,"size":[3,5]}}
 });
 </script>
 </body>

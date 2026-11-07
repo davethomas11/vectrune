@@ -9,6 +9,7 @@ import type {
   HelperDefinition,
   ActionDefinition,
   NavigatorConfig,
+  EmitterConfig,
 } from './types';
 
 /** Holds all shared state for the runtime. */
@@ -23,6 +24,8 @@ export interface RuneContext {
   memorySubscriptions: Record<string, Set<string>>;
   navigator?: NavigatorConfig | null;
   initialState?: Record<string, unknown>;
+  /** Particle emitters keyed by state name (declared via `emitter { ... }`). */
+  emitters?: Record<string, EmitterConfig>;
 }
 
 let _ctx: RuneContext | null = null;

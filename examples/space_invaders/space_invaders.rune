@@ -46,6 +46,10 @@ view:
                 div .alien .type-{alien.type} style="left: calc({alien.x} * 100% / 480); top: calc({alien.y} * 100% / 460); display: {alien.alive ? 'flex' : 'none'};" <- alien in aliens:
                     "👾"
 
+                # Explosions & Particles
+                div .particle <- p in particles:
+                    style = "left: calc({p.x} * 100% / 480); top: calc({p.y} * 100% / 460); opacity: calc({p.life} / {p.max_life}); width: {p.size}px; height: {p.size}px; background: {p.color}; box-shadow: 0 0 6px {p.color};"
+
                 # Game State Overlay
                 if status != "playing":
                     div .overlay:

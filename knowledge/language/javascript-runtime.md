@@ -424,6 +424,42 @@ The expression evaluator supports:
 - Logical: `and`, `or`, `!`
 - Conditionals: `? :`, `??`
 
+### 5. Retro Sound Effects (`sound`)
+Zero-asset 8-bit sounds synthesized with the Web Audio API (`runtime/rune-web/src/audio.ts`):
+```rune
+sound "laser"            # also: sound.play("laser"), play_sound("laser")
+```
+Built-in names: `laser`/`pew`/`fire`, `hit`/`damage`, `explosion`, `step` (4-note march),
+`coin`, `gameover`, `victory`. The AudioContext is created/resumed lazily on the first sound
+(browsers require a prior user gesture, e.g. clicking PLAY or pressing a bound key).
+Also exposed as `window.playSound(name)`. Silently no-ops when audio is unavailable.
+
+### 6. Particle Emitters (`emitter`, `.burst()`, `.step()`)
+Particle emitters are declared in state and backed by ordinary reactive arrays rendered with normal view loops (zero canvas dependencies):
+```rune
+state:
+    particles = emitter { "life": 14, "friction": 0.92, "size": [3, 5] }
+
+action tick:
+    particles.step()                                    # moves, applies friction, decays life, drops dead particles
+    particles.burst(a.x + 12, a.y + 10, 10, "#ff2a85", 7) # x, y, [count, color, speed]
+```
+Emitter configuration keys (all optional with sensible defaults):
+- `life`: Ticks each particle lives (default `14`)
+- `friction`: Velocity decay factor per step (default `0.92`)
+- `gravity`: Added to `vy` each step (default `0`)
+- `size`: Pixel diameter as a single number or `[min, max]` range (default `[3, 5]`)
+- `speed`: Default burst velocity (default `7`)
+- `count`: Default particles per burst (default `8`)
+- `color`: Default particle color (default `"#ffffff"`)
+
+Each spawned particle object has `{ x, y, vx, vy, life, max_life, color, size }`. Render example:
+```rune
+div .particle <- p in particles:
+    style = "left: calc({p.x} * 100% / 480); top: calc({p.y} * 100% / 460); opacity: calc({p.life} / {p.max_life}); width: {p.size}px; height: {p.size}px; background: {p.color};"
+```
+Calling `particles.step()` or `particles.burst()` is isolated to declared emitters — regular arrays are unaffected. See `examples/space_invaders/` (VectRaiders) for a full example.
+
 ## Current Implementation Status
 
 ### ✅ Implemented

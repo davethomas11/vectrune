@@ -14,7 +14,10 @@ import { renderNode } from './rendering';
 import { executeSteps } from './statement';
 import { bindEvent, setupMemoryUpdateListener } from './events';
 import { setupNavigator } from './navigator';
+import { playSound } from './audio';
 import type { RuneWebConfig, RuneApp } from './types';
+
+export { playSound };
 
 /**
  * Boot the Rune-Web application.
@@ -100,6 +103,7 @@ export function boot(config: RuneWebConfig): RuneApp {
     memorySubscriptions: {},
     navigator: config.navigator || null,
     initialState: JSON.parse(JSON.stringify(config.stateJson || {})),
+    emitters: config.emitters || {},
   });
 
   // Create reactive state (must happen after context init since makeReactive uses ctx())
@@ -177,6 +181,7 @@ export function boot(config: RuneWebConfig): RuneApp {
 
   // Expose globally and do initial render
   setWindowProp('runeWebApp', app);
+  setWindowProp('playSound', playSound);
   app.render();
 
   return app;

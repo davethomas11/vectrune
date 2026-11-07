@@ -21,7 +21,8 @@ var __RuneWeb = (() => {
   // src/index.ts
   var index_exports = {};
   __export(index_exports, {
-    boot: () => boot
+    boot: () => boot,
+    playSound: () => playSound
   });
 
   // src/context.ts
@@ -1525,6 +1526,167 @@ var __RuneWeb = (() => {
     return void 0;
   }
 
+  // src/audio.ts
+  var audioCtx = null;
+  var stepIndex = 0;
+  function getAudioContext() {
+    if (typeof window === "undefined") return null;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!audioCtx) {
+      audioCtx = new AudioCtx();
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+  function playSound(type, arg) {
+    const ctx2 = getAudioContext();
+    if (!ctx2) return;
+    const now = ctx2.currentTime;
+    const soundName = String(type || "").trim().toLowerCase();
+    switch (soundName) {
+      case "laser":
+      case "pew":
+      case "fire": {
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.12);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.13);
+        break;
+      }
+      case "hit":
+      case "damage": {
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.09);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+        break;
+      }
+      case "explosion":
+      case "boom": {
+        const bufferSize = Math.floor(ctx2.sampleRate * 0.35);
+        const buffer = ctx2.createBuffer(1, bufferSize, ctx2.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i += 1) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = ctx2.createBufferSource();
+        noise.buffer = buffer;
+        const filter = ctx2.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(800, now);
+        filter.frequency.exponentialRampToValueAtTime(60, now + 0.35);
+        const gain = ctx2.createGain();
+        gain.gain.setValueAtTime(0.45, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx2.destination);
+        noise.start(now);
+        noise.stop(now + 0.36);
+        break;
+      }
+      case "step":
+      case "move": {
+        const steps = [110, 98, 87, 82];
+        const freq = steps[stepIndex % steps.length];
+        stepIndex += 1;
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.09);
+        break;
+      }
+      case "coin":
+      case "powerup": {
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.setValueAtTime(880, now + 0.08);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.29);
+        break;
+      }
+      case "gameover": {
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(330, now);
+        osc.frequency.linearRampToValueAtTime(293, now + 0.15);
+        osc.frequency.linearRampToValueAtTime(261, now + 0.3);
+        osc.frequency.linearRampToValueAtTime(196, now + 0.55);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.62);
+        break;
+      }
+      case "victory":
+      case "win": {
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, idx) => {
+          const start = now + idx * 0.12;
+          const osc = ctx2.createOscillator();
+          const gain = ctx2.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.25, start);
+          gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
+          osc.connect(gain);
+          gain.connect(ctx2.destination);
+          osc.start(start);
+          osc.stop(start + 0.16);
+        });
+        break;
+      }
+      case "tone": {
+        const freq = typeof arg === "number" ? arg : 440;
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx2.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
   // src/statement.ts
   function assignPath(pathExpr, value, locals) {
     const segments = splitPathSegments(pathExpr);
@@ -1668,6 +1830,89 @@ var __RuneWeb = (() => {
   function executeStatement(statement, locals) {
     const trimmed = String(statement || "").trim();
     if (!trimmed) return true;
+    if (trimmed.startsWith("sound ") || trimmed.startsWith("sound.") || trimmed.startsWith("play_sound(")) {
+      let soundName = "";
+      let argVal = void 0;
+      if (trimmed.startsWith("sound.play(") && trimmed.endsWith(")")) {
+        const inner = trimmed.slice(11, -1);
+        const parts = splitTopLevel(inner, ",");
+        soundName = String(evaluateExpression(parts[0], buildScope(locals)) || "");
+        if (parts.length > 1) {
+          argVal = evaluateExpression(parts[1], buildScope(locals));
+        }
+      } else if (trimmed.startsWith("play_sound(") && trimmed.endsWith(")")) {
+        const inner = trimmed.slice(11, -1);
+        const parts = splitTopLevel(inner, ",");
+        soundName = String(evaluateExpression(parts[0], buildScope(locals)) || "");
+        if (parts.length > 1) {
+          argVal = evaluateExpression(parts[1], buildScope(locals));
+        }
+      } else if (trimmed.startsWith("sound.play ")) {
+        soundName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || "");
+      } else if (trimmed.startsWith("sound.")) {
+        soundName = trimmed.slice(6).trim();
+      } else {
+        soundName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || "");
+      }
+      soundName = normalizeLiteral(soundName);
+      playSound(soundName, argVal);
+      return true;
+    }
+    const emitterMatch = trimmed.match(/^([A-Za-z_][\w]*)\.(burst|step)\((.*)\)$/);
+    if (emitterMatch && ctx().emitters && Object.prototype.hasOwnProperty.call(ctx().emitters, emitterMatch[1])) {
+      const name = emitterMatch[1];
+      const method = emitterMatch[2];
+      const cfg = ctx().emitters[name] || {};
+      const scope = buildScope(locals);
+      const existing = evaluateExpression(name, scope);
+      const current = Array.isArray(existing) ? existing : [];
+      if (method === "step") {
+        const friction = cfg.friction ?? 0.92;
+        const gravity = cfg.gravity ?? 0;
+        const surviving = [];
+        for (const p of current) {
+          if (!p || typeof p !== "object") continue;
+          p.x = Number(p.x || 0) + Number(p.vx || 0);
+          p.y = Number(p.y || 0) + Number(p.vy || 0);
+          p.vx = Number(p.vx || 0) * friction;
+          p.vy = Number(p.vy || 0) * friction + gravity;
+          p.life = Number(p.life || 0) - 1;
+          if (Number(p.life) > 0) surviving.push(p);
+        }
+        assignPath(name, surviving, locals);
+        return true;
+      }
+      const parts = emitterMatch[3].trim() ? splitTopLevel(emitterMatch[3], ",") : [];
+      if (parts.length < 2) {
+        console.warn(`[rune-web] ${name}.burst(x, y, [count, color, speed]) needs at least x and y`);
+        return true;
+      }
+      const arg = (i) => parts.length > i ? evaluateExpression(parts[i], scope) : void 0;
+      const xVal = Number(arg(0) || 0);
+      const yVal = Number(arg(1) || 0);
+      const countVal = Number(arg(2) ?? cfg.count ?? 8);
+      const colorVal = arg(3) !== void 0 ? valueToString(arg(3)) : cfg.color ?? "#ffffff";
+      const speedVal = Number(arg(4) ?? cfg.speed ?? 7);
+      const life = cfg.life ?? 14;
+      const [minSize, maxSize] = Array.isArray(cfg.size) ? cfg.size : [cfg.size ?? 3, cfg.size ?? 5];
+      const newParticles = [];
+      for (let i = 0; i < countVal; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = (Math.random() * 0.7 + 0.3) * speedVal;
+        newParticles.push({
+          x: xVal,
+          y: yVal,
+          vx: Math.cos(angle) * velocity,
+          vy: Math.sin(angle) * velocity,
+          life,
+          max_life: life,
+          color: colorVal,
+          size: minSize + Math.floor(Math.random() * (maxSize - minSize + 1))
+        });
+      }
+      assignPath(name, current.concat(newParticles), locals);
+      return true;
+    }
     const restoreMatch = trimmed.match(/^(?:restore|reset)\s+([a-zA-Z0-9_.[\]'"]+)$/) || trimmed.match(/^([a-zA-Z0-9_.[\]'"]+)\.(?:restore|reset)\(\)$/);
     if (restoreMatch) {
       const targetPath = restoreMatch[1].trim();
@@ -2000,7 +2245,8 @@ var __RuneWeb = (() => {
       isRendering: false,
       memorySubscriptions: {},
       navigator: config.navigator || null,
-      initialState: JSON.parse(JSON.stringify(config.stateJson || {}))
+      initialState: JSON.parse(JSON.stringify(config.stateJson || {})),
+      emitters: config.emitters || {}
     });
     app.state = makeReactive(
       Object.assign({}, config.stateJson, { i18n: config.i18nData })
@@ -2060,6 +2306,7 @@ var __RuneWeb = (() => {
       setupWebSocket(config.wsEndpoint, app);
     }
     setWindowProp("runeWebApp", app);
+    setWindowProp("playSound", playSound);
     app.render();
     return app;
   }

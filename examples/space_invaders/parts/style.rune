@@ -157,6 +157,14 @@ rules:
         round = 2px
         glow = {neon_pink} 8px
 
+    .particle:
+        use = (game-entity)
+        round = 50%
+        transform = translate(-50%, -50%)
+        pointer-events = none
+        z-index = 15
+        will-change = transform, opacity
+
     .overlay:
         abs = inset
         size = 100%

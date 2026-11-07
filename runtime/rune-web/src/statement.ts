@@ -8,7 +8,8 @@ import { getWindowProp } from './globals';
 import { interpolate } from './interpolation';
 import { splitPathSegments, buildScope } from './scope';
 import { handleBuiltin } from "./builtins";
-import { splitTopLevel, valueToString } from './utils';
+import { splitTopLevel, valueToString, normalizeLiteral } from './utils';
+import { playSound } from './audio';
 import type { ActionStep, Scope } from './types';
 import { NO_ACTION, STOP } from './builtins/command';
 
@@ -218,6 +219,100 @@ export function executeStatement(
 ): boolean {
   const trimmed = String(statement || '').trim();
   if (!trimmed) return true;
+
+  // Retro audio playback: sound "laser", sound.play("laser"), sound.explosion
+  if (trimmed.startsWith('sound ') || trimmed.startsWith('sound.') || trimmed.startsWith('play_sound(')) {
+    let soundName = '';
+    let argVal: unknown = undefined;
+    if (trimmed.startsWith('sound.play(') && trimmed.endsWith(')')) {
+      const inner = trimmed.slice(11, -1);
+      const parts = splitTopLevel(inner, ',');
+      soundName = String(evaluateExpression(parts[0], buildScope(locals)) || '');
+      if (parts.length > 1) {
+        argVal = evaluateExpression(parts[1], buildScope(locals));
+      }
+    } else if (trimmed.startsWith('play_sound(') && trimmed.endsWith(')')) {
+      const inner = trimmed.slice(11, -1);
+      const parts = splitTopLevel(inner, ',');
+      soundName = String(evaluateExpression(parts[0], buildScope(locals)) || '');
+      if (parts.length > 1) {
+        argVal = evaluateExpression(parts[1], buildScope(locals));
+      }
+    } else if (trimmed.startsWith('sound.play ')) {
+      soundName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || '');
+    } else if (trimmed.startsWith('sound.')) {
+      soundName = trimmed.slice(6).trim();
+    } else {
+      soundName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || '');
+    }
+    soundName = normalizeLiteral(soundName);
+    playSound(soundName, argVal);
+    return true;
+  }
+
+  // Particle emitters (declared in state as `name = emitter { ... }`):
+  //   <emitter>.burst(x, y, [count, color, speed])
+  //   <emitter>.step()
+  const emitterMatch = trimmed.match(/^([A-Za-z_][\w]*)\.(burst|step)\((.*)\)$/);
+  if (emitterMatch && ctx().emitters && Object.prototype.hasOwnProperty.call(ctx().emitters, emitterMatch[1])) {
+    const name = emitterMatch[1];
+    const method = emitterMatch[2];
+    const cfg = ctx().emitters![name] || {};
+    const scope = buildScope(locals);
+    const existing = evaluateExpression(name, scope);
+    const current = Array.isArray(existing) ? (existing as Array<Record<string, unknown>>) : [];
+
+    if (method === 'step') {
+      const friction = cfg.friction ?? 0.92;
+      const gravity = cfg.gravity ?? 0;
+      const surviving: Array<Record<string, unknown>> = [];
+      for (const p of current) {
+        if (!p || typeof p !== 'object') continue;
+        p.x = Number(p.x || 0) + Number(p.vx || 0);
+        p.y = Number(p.y || 0) + Number(p.vy || 0);
+        p.vx = Number(p.vx || 0) * friction;
+        p.vy = Number(p.vy || 0) * friction + gravity;
+        p.life = Number(p.life || 0) - 1;
+        if (Number(p.life) > 0) surviving.push(p);
+      }
+      assignPath(name, surviving, locals);
+      return true;
+    }
+
+    const parts = emitterMatch[3].trim() ? splitTopLevel(emitterMatch[3], ',') : [];
+    if (parts.length < 2) {
+      console.warn(`[rune-web] ${name}.burst(x, y, [count, color, speed]) needs at least x and y`);
+      return true;
+    }
+    const arg = (i: number) => (parts.length > i ? evaluateExpression(parts[i], scope) : undefined);
+    const xVal = Number(arg(0) || 0);
+    const yVal = Number(arg(1) || 0);
+    const countVal = Number(arg(2) ?? cfg.count ?? 8);
+    const colorVal = arg(3) !== undefined ? valueToString(arg(3)) : (cfg.color ?? '#ffffff');
+    const speedVal = Number(arg(4) ?? cfg.speed ?? 7);
+    const life = cfg.life ?? 14;
+    const [minSize, maxSize] = Array.isArray(cfg.size)
+      ? cfg.size
+      : [cfg.size ?? 3, cfg.size ?? 5];
+
+    const newParticles: Array<Record<string, unknown>> = [];
+    for (let i = 0; i < countVal; i += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = (Math.random() * 0.7 + 0.3) * speedVal;
+      newParticles.push({
+        x: xVal,
+        y: yVal,
+        vx: Math.cos(angle) * velocity,
+        vy: Math.sin(angle) * velocity,
+        life,
+        max_life: life,
+        color: colorVal,
+        size: minSize + Math.floor(Math.random() * (maxSize - minSize + 1)),
+      });
+    }
+    assignPath(name, current.concat(newParticles), locals);
+    return true;
+  }
 
   // Entity / collection restore shorthand: restore <path>, reset <path>, <path>.restore(), <path>.reset()
   const restoreMatch = trimmed.match(/^(?:restore|reset)\s+([a-zA-Z0-9_.[\]'"]+)$/) ||

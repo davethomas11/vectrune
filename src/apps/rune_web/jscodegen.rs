@@ -76,6 +76,7 @@ impl JsCodegen {
             .unwrap_or_else(|_| "{}".to_string());
         let navigator_json = serde_json::to_string(&self.navigator)
             .unwrap_or_else(|_| "null".to_string());
+        let emitters_json = self.generate_emitters_json();
 
         format!(
             r#"
@@ -90,7 +91,8 @@ __RuneWeb.boot({{
   wsEndpoint: {ws_endpoint},
   timer: {timer_json},
   keys: {keys_json},
-  navigator: {navigator_json}
+  navigator: {navigator_json},
+  emitters: {emitters_json}
 }});
 "#,
             include_str!("../../../runtime/rune-web/dist/rune-runtime.js")
@@ -104,12 +106,46 @@ __RuneWeb.boot({{
             evaluated_locals.insert(key.clone(), self.parse_value_with_locals(val, &evaluated_locals));
         }
         for (key, val) in &self.logic.state {
+            if Self::emitter_config_src(val).is_some() {
+                // Emitters start as an empty particle list; their settings go to `emitters`.
+                normalized.insert(key.clone(), serde_json::Value::Array(vec![]));
+                continue;
+            }
             normalized.insert(key.clone(), self.parse_value_with_locals(val, &evaluated_locals));
         }
         for (key, val) in &self.memory_seed {
             normalized.insert(key.clone(), val.clone());
         }
         serde_json::Value::Object(normalized).to_string()
+    }
+
+    /// If a state value is `emitter` or `emitter { ... }`, return the config source
+    /// (`"{}"` when omitted). Otherwise `None`.
+    fn emitter_config_src(val: &str) -> Option<String> {
+        let trimmed = val.trim();
+        let rest = trimmed.strip_prefix("emitter")?;
+        let rest = rest.trim();
+        if rest.is_empty() {
+            return Some("{}".to_string());
+        }
+        if rest.starts_with('{') {
+            return Some(rest.to_string());
+        }
+        None
+    }
+
+    /// Collect particle emitter settings declared in state as `name = emitter { ... }`.
+    fn generate_emitters_json(&self) -> String {
+        let mut emitters = serde_json::Map::new();
+        let empty_locals: HashMap<String, serde_json::Value> = HashMap::new();
+        for (key, val) in &self.logic.state {
+            if let Some(src) = Self::emitter_config_src(val) {
+                let cfg = self.parse_value_with_locals(&src, &empty_locals);
+                let cfg = if cfg.is_object() { cfg } else { serde_json::json!({}) };
+                emitters.insert(key.clone(), cfg);
+            }
+        }
+        serde_json::Value::Object(emitters).to_string()
     }
 
     pub fn parse_value(&self, val: &str) -> serde_json::Value {
@@ -885,5 +921,27 @@ mod tests {
         let generated = generator.generate();
         assert!(!generated.contains(source));
         assert!(generated.contains(r"\u003c/script>"));
+    }
+
+    #[test]
+    fn emitter_state_codegen() {
+        let mut state = HashMap::new();
+        state.insert(
+            "sparks".to_string(),
+            r#"emitter { "life": 14, "friction": 0.92, "size": [3, 5] }"#.to_string(),
+        );
+        let logic = LogicDefinition {
+            state,
+            locals: HashMap::new(),
+            derived: HashMap::new(),
+            helpers: HashMap::new(),
+            actions: HashMap::new(),
+            timer: None,
+            keys: HashMap::new(),
+        };
+        let generator = JsCodegen::new(ViewNode::Text("test".into()), logic, "{}".into(), None, HashMap::new(), None);
+        let generated = generator.generate();
+        assert!(generated.contains(r#""sparks":[]"#) || generated.contains(r#""sparks": []"#));
+        assert!(generated.contains(r#""sparks":{"friction":0.92,"life":14,"size":[3,5]}"#));
     }
 }

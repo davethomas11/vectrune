@@ -105,6 +105,24 @@ export interface NavigatorConfig {
   param?: string;
 }
 
+/** Particle emitter settings declared with `name = emitter { ... }` in state. */
+export interface EmitterConfig {
+  /** Ticks each particle lives (default 14). */
+  life?: number;
+  /** Velocity multiplier applied every step (default 0.92). */
+  friction?: number;
+  /** Added to vy every step (default 0). */
+  gravity?: number;
+  /** Particle size in px: a number or [min, max] (default [3, 5]). */
+  size?: number | [number, number];
+  /** Default burst speed (default 7). */
+  speed?: number;
+  /** Default particles per burst (default 8). */
+  count?: number;
+  /** Default particle color (default "#ffffff"). */
+  color?: string;
+}
+
 /** Configuration passed to boot(). */
 export interface RuneWebConfig {
   pageTree: ViewNode;
@@ -117,6 +135,7 @@ export interface RuneWebConfig {
   timer?: string | null;
   keys?: Record<string, string>;
   navigator?: NavigatorConfig | null;
+  emitters?: Record<string, EmitterConfig>;
 }
 
 /** The application object exposed as window.runeWebApp. */

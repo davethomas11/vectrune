@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { initContext } from '../src/context';
 import { assignPath, deletePath, executeStatement } from '../src/statement';
-import type { RuneApp } from '../src/types';
+import type { RuneApp, EmitterConfig } from '../src/types';
 
-function setupTestContext(state: Record<string, unknown> = {}) {
+function setupTestContext(
+  state: Record<string, unknown> = {},
+  emitters: Record<string, EmitterConfig> = {},
+) {
   const app: RuneApp = {
     state: { ...state },
     derived: {},
@@ -20,6 +23,7 @@ function setupTestContext(state: Record<string, unknown> = {}) {
     app,
     isRendering: false,
     memorySubscriptions: {},
+    emitters,
   });
   return app;
 }
@@ -151,5 +155,61 @@ describe('executeStatement', () => {
     aliens[0].x = 999;
     executeStatement('aliens.restore()', {});
     expect(aliens[0].x).toBe(50);
+  });
+
+  it('handles particle burst on declared emitter', () => {
+    const app = setupTestContext(
+      { particles: [] },
+      { particles: { life: 10, friction: 0.9, size: [2, 4] } },
+    );
+    executeStatement('particles.burst(100, 50, 6, "#ff2a85", 5)', {});
+    const ps = app.state.particles as any[];
+    expect(ps.length).toBe(6);
+    expect(ps[0].x).toBe(100);
+    expect(ps[0].y).toBe(50);
+    expect(ps[0].color).toBe('#ff2a85');
+    expect(ps[0].life).toBe(10);
+    expect(ps[0].max_life).toBe(10);
+    expect(ps[0].size).toBeGreaterThanOrEqual(2);
+    expect(ps[0].size).toBeLessThanOrEqual(4);
+
+    // Bursts accumulate
+    executeStatement('particles.burst(10, 10)', {});
+    expect((app.state.particles as any[]).length).toBe(14);
+  });
+
+  it('handles particle step: moves, applies friction, decays and removes dead particles', () => {
+    const app = setupTestContext(
+      {
+        particles: [
+          { x: 0, y: 0, vx: 10, vy: -5, life: 5, max_life: 5 },
+          { x: 0, y: 0, vx: 1, vy: 1, life: 1, max_life: 5 },
+        ],
+      },
+      { particles: { friction: 0.92 } },
+    );
+    executeStatement('particles.step()', {});
+    const ps = app.state.particles as any[];
+    expect(ps.length).toBe(1);
+    expect(ps[0].x).toBe(10);
+    expect(ps[0].y).toBe(-5);
+    expect(ps[0].life).toBe(4);
+    expect(ps[0].vx).toBeCloseTo(9.2);
+  });
+
+  it('does not treat regular arrays without emitter config as particle emitters', () => {
+    const app = setupTestContext({
+      enemies: [{ id: 1, life: 1 }],
+    });
+    // Calling step() or burst() on non-emitter should not run particle logic
+    executeStatement('enemies.step()', {});
+    expect((app.state.enemies as any[]).length).toBe(1);
+  });
+
+  it('handles sound statements without throwing when audio is unavailable', () => {
+    setupTestContext({});
+    expect(() => executeStatement('sound "laser"', {})).not.toThrow();
+    expect(() => executeStatement('sound.play("explosion")', {})).not.toThrow();
+    expect(() => executeStatement('play_sound("hit")', {})).not.toThrow();
   });
 });
