@@ -212,4 +212,15 @@ describe('executeStatement', () => {
     expect(() => executeStatement('sound.play("explosion")', {})).not.toThrow();
     expect(() => executeStatement('play_sound("hit")', {})).not.toThrow();
   });
+
+  it('handles music statements without throwing when audio is unavailable', () => {
+    setupTestContext({});
+    expect(() => executeStatement('music "chiptune"', {})).not.toThrow();
+    expect(() => executeStatement('music.play("arcade")', {})).not.toThrow();
+    expect(() => executeStatement('music.pause', {})).not.toThrow();
+    expect(() => executeStatement('music.resume', {})).not.toThrow();
+    expect(() => executeStatement('music.tempo = 150', {})).not.toThrow();
+    expect(() => executeStatement('music.volume = 0.25', {})).not.toThrow();
+    expect(() => executeStatement('music.stop', {})).not.toThrow();
+  });
 });

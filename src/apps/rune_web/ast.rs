@@ -32,6 +32,63 @@ pub struct RuneWebFrontend {
 
     /// Optimizer configuration for code splitting and on-demand XHR loading (from `@Optimizer`)
     pub optimizer: Option<OptimizerDefinition>,
+
+    /// Programmable sound effect definitions, keyed by name (from `@Sound` and `@Sound/<name>`)
+    pub sounds: HashMap<String, SoundDefinition>,
+
+    /// Background chiptune music definitions, keyed by name (from `@Music` and `@Music/<name>`)
+    pub music: HashMap<String, MusicDefinition>,
+}
+
+/// Sound filter definition for noise and synth shaping.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct SoundFilterDefinition {
+    /// "lowpass", "highpass", "bandpass"
+    pub filter_type: String,
+    pub start_freq: f64,
+    pub end_freq: f64,
+}
+
+/// Sound definition from `@Sound` or `@Sound/<name>`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct SoundDefinition {
+    /// Waveform: "sawtooth", "square", "triangle", "sine", "noise"
+    pub wave: String,
+    /// Starting frequency in Hz
+    pub freq_start: Option<f64>,
+    /// Ending frequency in Hz (for sweeps)
+    pub freq_end: Option<f64>,
+    /// Duration in seconds (e.g. 0.12)
+    pub duration: f64,
+    /// Volume gain (0.0 to 1.0)
+    pub volume: f64,
+    /// Pitch sweep curve: "exponential" or "linear"
+    pub curve: String,
+    /// Optional filter configuration (for noise explosions, wind, etc.)
+    pub filter: Option<SoundFilterDefinition>,
+    /// Optional rotating pitch list (e.g. for footstep sequences)
+    pub notes: Vec<f64>,
+    /// Optional sequence note pairs with durations [(freq, duration_sec)]
+    pub sequence: Vec<(f64, f64)>,
+}
+
+/// Background music definition from `@Music` or `@Music/<name>`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct MusicDefinition {
+    /// Sound chip style: "8bit", "chiptune", "synth"
+    pub music_type: String,
+    /// Tempo in BPM (e.g. 140)
+    pub tempo: f64,
+    /// Whether track loops indefinitely
+    pub loop_track: bool,
+    /// Master track volume (0.0 to 1.0)
+    pub volume: f64,
+    /// Lead melody track (notes string e.g. "C4:8 D4:8 E4:4")
+    pub lead: Option<String>,
+    /// Bass track
+    pub bass: Option<String>,
+    /// Percussion track (e.g. "kick:4 snare:4")
+    pub drums: Option<String>,
 }
 
 /// Optimizer configuration from `@Optimizer`.

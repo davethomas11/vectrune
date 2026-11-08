@@ -87,6 +87,7 @@ action start:
     restore mushrooms
     status = "playing"
     game_message = ""
+    music.play "vectworms"
 
 action tick:
     particles.step()
@@ -176,6 +177,7 @@ action tick:
                         seg.dir_x = 1
                 if lives <= 0:
                     sound "gameover"
+                    music.stop
                     status = "game_over"
                     game_message = "GRID OVERRUN! GAME OVER"
                     stop
@@ -183,6 +185,7 @@ action tick:
     # 7. Check victory condition
     if worm_count <= 0:
         sound "victory"
+        music.stop
         status = "victory"
         game_message = "SECTOR PURGED! YOU WIN!"
         stop

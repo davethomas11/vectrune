@@ -1,0 +1,48 @@
+# VectRaiders Arcade Sound & Chiptune Music Engine
+
+@Sound/laser
+wave = sawtooth
+freq = 880 -> 110
+duration = 120ms
+volume = 0.25
+curve = exponential
+
+@Sound/hit
+wave = square
+freq = 180 -> 40
+duration = 90ms
+volume = 0.35
+
+@Sound/explosion
+wave = noise
+filter = lowpass 800 -> 60
+duration = 350ms
+volume = 0.45
+
+@Sound/step
+wave = square
+notes = 110, 98, 87, 82
+duration = 80ms
+volume = 0.2
+
+@Sound/gameover
+wave = sawtooth
+sequence = E4:150ms, D4:150ms, C4:250ms, G3:450ms
+duration = 600ms
+volume = 0.3
+
+@Sound/victory
+wave = triangle
+sequence = C5:120ms, E5:120ms, G5:120ms, C6:240ms
+duration = 600ms
+volume = 0.3
+
+@Music/vectraiders
+type = 8bit
+tempo = 144
+loop = true
+volume = 0.18
+lead = E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | C4:8 D4:8 E4:8 G4:8 A4:4 G4:4 | E4:8 D4:8 C4:8 B3:8 A3:2
+bass = A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4 | C3:4 G2:4 C3:4 G2:4 | F2:4 C2:4 E2:4 G#2:4
+drums = kick:4 snare:4 kick:4 snare:4 | kick:4 snare:4 kick:4 snare:4 | kick:8 hihat:8 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:4 snare:4
+

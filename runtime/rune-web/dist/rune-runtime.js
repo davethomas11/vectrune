@@ -22,7 +22,15 @@ var __RuneWeb = (() => {
   var index_exports = {};
   __export(index_exports, {
     boot: () => boot,
-    playSound: () => playSound
+    pauseMusic: () => pauseMusic,
+    playMusic: () => playMusic,
+    playSound: () => playSound,
+    registerMusic: () => registerMusic,
+    registerSounds: () => registerSounds,
+    resumeMusic: () => resumeMusic,
+    setMusicTempo: () => setMusicTempo,
+    setMusicVolume: () => setMusicVolume,
+    stopMusic: () => stopMusic
   });
 
   // src/context.ts
@@ -1669,6 +1677,20 @@ var __RuneWeb = (() => {
   // src/audio.ts
   var audioCtx = null;
   var stepIndex = 0;
+  var registeredSounds = {};
+  var registeredMusic = {};
+  function registerSounds(definitions) {
+    if (!definitions) return;
+    for (const [key, val] of Object.entries(definitions)) {
+      registeredSounds[key.toLowerCase()] = val;
+    }
+  }
+  function registerMusic(definitions) {
+    if (!definitions) return;
+    for (const [key, val] of Object.entries(definitions)) {
+      registeredMusic[key.toLowerCase()] = val;
+    }
+  }
   function getAudioContext() {
     if (typeof window === "undefined") return null;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1681,11 +1703,38 @@ var __RuneWeb = (() => {
     }
     return audioCtx;
   }
+  var NOTE_OFFSETS = {
+    C: 0,
+    D: 2,
+    E: 4,
+    F: 5,
+    G: 7,
+    A: 9,
+    B: 11
+  };
+  function parseNoteToFreq(noteStr) {
+    const trimmed = noteStr.trim();
+    const num = Number(trimmed);
+    if (!isNaN(num) && num > 0) return num;
+    const match = trimmed.toUpperCase().match(/^([A-G])([#B]?)([0-8])$/);
+    if (!match) return 440;
+    const [, letter, accidental, octaveStr] = match;
+    let semitone = NOTE_OFFSETS[letter] || 0;
+    if (accidental === "#") semitone += 1;
+    else if (accidental === "B") semitone -= 1;
+    const octave = parseInt(octaveStr, 10);
+    const midi = (octave + 1) * 12 + semitone;
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
   function playSound(type, arg) {
     const ctx2 = getAudioContext();
     if (!ctx2) return;
     const now = ctx2.currentTime;
     const soundName = String(type || "").trim().toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(registeredSounds, soundName)) {
+      playCustomSound(ctx2, registeredSounds[soundName], now, arg);
+      return;
+    }
     switch (soundName) {
       case "laser":
       case "pew":
@@ -1720,26 +1769,7 @@ var __RuneWeb = (() => {
       }
       case "explosion":
       case "boom": {
-        const bufferSize = Math.floor(ctx2.sampleRate * 0.35);
-        const buffer = ctx2.createBuffer(1, bufferSize, ctx2.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i += 1) {
-          data[i] = Math.random() * 2 - 1;
-        }
-        const noise = ctx2.createBufferSource();
-        noise.buffer = buffer;
-        const filter = ctx2.createBiquadFilter();
-        filter.type = "lowpass";
-        filter.frequency.setValueAtTime(800, now);
-        filter.frequency.exponentialRampToValueAtTime(60, now + 0.35);
-        const gain = ctx2.createGain();
-        gain.gain.setValueAtTime(0.45, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-        noise.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx2.destination);
-        noise.start(now);
-        noise.stop(now + 0.36);
+        playNoiseBurst(ctx2, now, 0.35, 800, 60, 0.45);
         break;
       }
       case "step":
@@ -1825,6 +1855,280 @@ var __RuneWeb = (() => {
       default:
         break;
     }
+  }
+  function playNoiseBurst(ctx2, now, duration, filterStart, filterEnd, volume, filterType = "lowpass") {
+    const bufferSize = Math.max(1, Math.floor(ctx2.sampleRate * duration));
+    const buffer = ctx2.createBuffer(1, bufferSize, ctx2.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i += 1) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = ctx2.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx2.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(20, filterEnd), now + duration);
+    const gain = ctx2.createGain();
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx2.destination);
+    noise.start(now);
+    noise.stop(now + duration + 0.01);
+  }
+  function playCustomSound(ctx2, def, now, arg) {
+    const duration = def.duration || 0.12;
+    const volume = def.volume !== void 0 ? def.volume : 0.25;
+    const wave = (def.wave || "square").toLowerCase();
+    if (wave === "noise") {
+      const fStart = def.filter?.start_freq || 800;
+      const fEnd = def.filter?.end_freq || 60;
+      const fType = def.filter?.filter_type || "lowpass";
+      playNoiseBurst(ctx2, now, duration, fStart, fEnd, volume, fType);
+      return;
+    }
+    if (def.sequence && def.sequence.length > 0) {
+      let offset = 0;
+      for (const [freq, noteDur] of def.sequence) {
+        const start = now + offset;
+        const osc2 = ctx2.createOscillator();
+        const gain2 = ctx2.createGain();
+        osc2.type = wave || "square";
+        osc2.frequency.setValueAtTime(freq, start);
+        gain2.gain.setValueAtTime(volume, start);
+        gain2.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
+        osc2.connect(gain2);
+        gain2.connect(ctx2.destination);
+        osc2.start(start);
+        osc2.stop(start + noteDur + 0.01);
+        offset += noteDur;
+      }
+      return;
+    }
+    let startFreq = def.freq_start || 440;
+    if (def.notes && def.notes.length > 0) {
+      startFreq = def.notes[stepIndex % def.notes.length];
+      stepIndex += 1;
+    } else if (typeof arg === "number") {
+      startFreq = arg;
+    }
+    const endFreq = def.freq_end !== null && def.freq_end !== void 0 ? def.freq_end : startFreq;
+    const osc = ctx2.createOscillator();
+    const gain = ctx2.createGain();
+    osc.type = wave || "square";
+    osc.frequency.setValueAtTime(Math.max(1, startFreq), now);
+    if (endFreq !== startFreq) {
+      if (def.curve === "linear") {
+        osc.frequency.linearRampToValueAtTime(Math.max(1, endFreq), now + duration);
+      } else {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), now + duration);
+      }
+    }
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
+    osc.connect(gain);
+    gain.connect(ctx2.destination);
+    osc.start(now);
+    osc.stop(now + duration + 0.01);
+  }
+  var activeMusicTrackName = null;
+  var musicSchedulerTimer = null;
+  var musicMasterGain = null;
+  var musicVolume = 0.2;
+  var musicTempoBpm = 128;
+  var musicLoop = true;
+  var isMusicPaused = false;
+  var musicStartTime = 0;
+  var nextScheduleTime = 0;
+  var tracksState = {};
+  function parseTrackPattern(patternStr) {
+    const events = [];
+    const tokens = patternStr.replace(/\|/g, " ").split(/\s+/).filter(Boolean);
+    for (const token of tokens) {
+      const parts = token.split(":");
+      const noteToken = parts[0].trim();
+      const durationNum = parts.length > 1 ? Number(parts[1].trim()) : 8;
+      const beats = durationNum > 0 ? 4 / durationNum : 0.5;
+      if (noteToken === "-" || noteToken.toUpperCase() === "R" || noteToken === "_") {
+        events.push({ pitch: 0, beats, isRest: true, isDrum: false });
+      } else if (noteToken.toLowerCase() === "kick" || noteToken.toLowerCase() === "snare" || noteToken.toLowerCase() === "hihat") {
+        events.push({ pitch: noteToken.toLowerCase(), beats, isRest: false, isDrum: true });
+      } else {
+        events.push({ pitch: parseNoteToFreq(noteToken), beats, isRest: false, isDrum: false });
+      }
+    }
+    return events;
+  }
+  function playMusic(trackName) {
+    const ctx2 = getAudioContext();
+    if (!ctx2) return;
+    const key = String(trackName || "").trim().toLowerCase();
+    const def = registeredMusic[key];
+    if (!def) {
+      return;
+    }
+    stopMusic();
+    activeMusicTrackName = key;
+    musicTempoBpm = def.tempo || 128;
+    musicLoop = def.loop_track !== false;
+    musicVolume = def.volume !== void 0 ? def.volume : 0.2;
+    isMusicPaused = false;
+    musicMasterGain = ctx2.createGain();
+    musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
+    musicMasterGain.connect(ctx2.destination);
+    tracksState = {};
+    if (def.lead) {
+      tracksState.lead = { events: parseTrackPattern(def.lead), index: 0, nextBeat: 0 };
+    }
+    if (def.bass) {
+      tracksState.bass = { events: parseTrackPattern(def.bass), index: 0, nextBeat: 0 };
+    }
+    if (def.drums) {
+      tracksState.drums = { events: parseTrackPattern(def.drums), index: 0, nextBeat: 0 };
+    }
+    musicStartTime = ctx2.currentTime + 0.05;
+    nextScheduleTime = musicStartTime;
+    scheduleMusicTicks();
+    musicSchedulerTimer = setInterval(scheduleMusicTicks, 35);
+  }
+  function stopMusic() {
+    if (musicSchedulerTimer) {
+      clearInterval(musicSchedulerTimer);
+      musicSchedulerTimer = null;
+    }
+    activeMusicTrackName = null;
+    tracksState = {};
+    if (musicMasterGain) {
+      try {
+        musicMasterGain.disconnect();
+      } catch {
+      }
+      musicMasterGain = null;
+    }
+  }
+  function pauseMusic() {
+    isMusicPaused = true;
+  }
+  function resumeMusic() {
+    isMusicPaused = false;
+  }
+  function setMusicTempo(bpm) {
+    if (bpm > 20 && bpm < 400) {
+      musicTempoBpm = bpm;
+    }
+  }
+  function setMusicVolume(vol) {
+    musicVolume = Math.max(0, Math.min(1, vol));
+    if (musicMasterGain && audioCtx) {
+      musicMasterGain.gain.setValueAtTime(musicVolume, audioCtx.currentTime);
+    }
+  }
+  function scheduleMusicTicks() {
+    const ctx2 = getAudioContext();
+    if (!ctx2 || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
+    const secondsPerBeat = 60 / musicTempoBpm;
+    const lookaheadWindow = ctx2.currentTime + 0.25;
+    const trackKeys = ["lead", "bass", "drums"];
+    let allFinished = true;
+    for (const trackKey of trackKeys) {
+      const track = tracksState[trackKey];
+      if (!track || !track.events.length) continue;
+      while (musicStartTime + track.nextBeat * secondsPerBeat < lookaheadWindow) {
+        if (track.index >= track.events.length) {
+          if (musicLoop) {
+            track.index = 0;
+          } else {
+            break;
+          }
+        }
+        const event = track.events[track.index];
+        const eventTime = musicStartTime + track.nextBeat * secondsPerBeat;
+        const eventDurationSec = event.beats * secondsPerBeat;
+        if (!event.isRest && eventTime >= ctx2.currentTime - 0.05) {
+          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, musicMasterGain);
+        }
+        track.nextBeat += event.beats;
+        track.index += 1;
+      }
+      if (track.index < track.events.length || musicLoop) {
+        allFinished = false;
+      }
+    }
+    if (allFinished && !musicLoop) {
+      stopMusic();
+    }
+  }
+  function scheduleTrackNote(ctx2, channel, event, time, durationSec, destination) {
+    if (channel === "drums" || event.isDrum) {
+      const drumType = String(event.pitch).toLowerCase();
+      if (drumType === "kick") {
+        const osc2 = ctx2.createOscillator();
+        const gain2 = ctx2.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(130, time);
+        osc2.frequency.exponentialRampToValueAtTime(32, time + Math.min(durationSec, 0.08));
+        gain2.gain.setValueAtTime(0.4, time);
+        gain2.gain.exponentialRampToValueAtTime(1e-3, time + Math.min(durationSec, 0.08));
+        osc2.connect(gain2);
+        gain2.connect(destination);
+        osc2.start(time);
+        osc2.stop(time + Math.min(durationSec, 0.09));
+      } else if (drumType === "snare") {
+        playNoiseBurstToDestination(ctx2, time, Math.min(durationSec, 0.09), 1600, 300, 0.3, destination, "bandpass");
+      } else if (drumType === "hihat") {
+        playNoiseBurstToDestination(ctx2, time, Math.min(durationSec, 0.04), 7e3, 5e3, 0.15, destination, "highpass");
+      }
+      return;
+    }
+    const freq = typeof event.pitch === "number" ? event.pitch : parseNoteToFreq(event.pitch);
+    if (freq <= 0) return;
+    const osc = ctx2.createOscillator();
+    const gain = ctx2.createGain();
+    if (channel === "lead") {
+      osc.type = "square";
+      osc.frequency.setValueAtTime(freq, time);
+      const noteSoundLen = Math.min(durationSec * 0.85, 0.35);
+      gain.gain.setValueAtTime(0.2, time);
+      gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+      osc.connect(gain);
+      gain.connect(destination);
+      osc.start(time);
+      osc.stop(time + noteSoundLen + 0.01);
+    } else if (channel === "bass") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, time);
+      const noteSoundLen = Math.min(durationSec * 0.9, 0.45);
+      gain.gain.setValueAtTime(0.28, time);
+      gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+      osc.connect(gain);
+      gain.connect(destination);
+      osc.start(time);
+      osc.stop(time + noteSoundLen + 0.01);
+    }
+  }
+  function playNoiseBurstToDestination(ctx2, now, duration, filterStart, filterEnd, volume, destination, filterType = "lowpass") {
+    const bufferSize = Math.max(1, Math.floor(ctx2.sampleRate * duration));
+    const buffer = ctx2.createBuffer(1, bufferSize, ctx2.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i += 1) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = ctx2.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx2.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(20, filterEnd), now + duration);
+    const gain = ctx2.createGain();
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(destination);
+    noise.start(now);
+    noise.stop(now + duration + 0.01);
   }
 
   // src/statement.ts
@@ -1996,6 +2300,45 @@ var __RuneWeb = (() => {
       }
       soundName = normalizeLiteral(soundName);
       playSound(soundName, argVal);
+      return true;
+    }
+    if (trimmed.startsWith("music ") || trimmed.startsWith("music.") || trimmed.startsWith("play_music(")) {
+      if (trimmed === "music.stop" || trimmed === "music.stop()" || trimmed === "stop_music()") {
+        stopMusic();
+        return true;
+      }
+      if (trimmed === "music.pause" || trimmed === "music.pause()" || trimmed === "pause_music()") {
+        pauseMusic();
+        return true;
+      }
+      if (trimmed === "music.resume" || trimmed === "music.resume()" || trimmed === "resume_music()") {
+        resumeMusic();
+        return true;
+      }
+      if (trimmed.startsWith("music.tempo =") || trimmed.startsWith("music.tempo=")) {
+        const expr = trimmed.slice(trimmed.indexOf("=") + 1).trim();
+        const val = Number(evaluateExpression(expr, buildScope(locals)));
+        if (!isNaN(val)) setMusicTempo(val);
+        return true;
+      }
+      if (trimmed.startsWith("music.volume =") || trimmed.startsWith("music.volume=")) {
+        const expr = trimmed.slice(trimmed.indexOf("=") + 1).trim();
+        const val = Number(evaluateExpression(expr, buildScope(locals)));
+        if (!isNaN(val)) setMusicVolume(val);
+        return true;
+      }
+      let trackName = "";
+      if (trimmed.startsWith("music.play(") && trimmed.endsWith(")")) {
+        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
+      } else if (trimmed.startsWith("play_music(") && trimmed.endsWith(")")) {
+        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
+      } else if (trimmed.startsWith("music.play ")) {
+        trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || "");
+      } else {
+        trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || "");
+      }
+      trackName = normalizeLiteral(trackName);
+      playMusic(trackName);
       return true;
     }
     const emitterMatch = trimmed.match(/^([A-Za-z_][\w]*)\.(burst|step)\((.*)\)$/);
@@ -2330,9 +2673,16 @@ var __RuneWeb = (() => {
 
   // src/index.ts
   function boot(config) {
+    registerSounds(config.sounds);
+    registerMusic(config.music);
     const app = {
       state: {},
       derived: {},
+      playSound,
+      playMusic,
+      stopMusic,
+      pauseMusic,
+      resumeMusic,
       computeDerived() {
         const context = ctx();
         const baseScope = buildScope({});
@@ -2534,6 +2884,10 @@ var __RuneWeb = (() => {
     }
     setWindowProp("runeWebApp", app);
     setWindowProp("playSound", playSound);
+    setWindowProp("playMusic", playMusic);
+    setWindowProp("stopMusic", stopMusic);
+    setWindowProp("pauseMusic", pauseMusic);
+    setWindowProp("resumeMusic", resumeMusic);
     app.render();
     return app;
   }

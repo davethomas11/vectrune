@@ -67,15 +67,15 @@ view:
 @Component/SpaceInvadersExample
 view:
     div .space-invaders-page:
-        WebExample title="{i18n.Lab.invaders_title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" main_file="space_invaders.rune" source="{raw ../../../examples/space_invaders/space_invaders.rune}" extra_file="parts/enemies.rune" extra_source="{raw ../../../examples/space_invaders/parts/enemies.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}"
+        WebExample title="{i18n.Lab.invaders_title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" main_file="space_invaders.rune" source="{raw ../../../examples/space_invaders/space_invaders.rune}" extra_file="parts/enemies.rune" extra_source="{raw ../../../examples/space_invaders/parts/enemies.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}" sound_source="{raw ../../../examples/space_invaders/parts/sound.rune}"
 
 @Component/VectWormsExample
 view:
     div .space-invaders-page:
-        WebExample title="{i18n.Lab.worms_title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" main_file="vectworms.rune" source="{raw ../../../examples/vectworms/vectworms.rune}" extra_file="parts/field.rune" extra_source="{raw ../../../examples/vectworms/parts/field.rune}" logic_source="{raw ../../../examples/vectworms/parts/logic.rune}" style_source="{raw ../../../examples/vectworms/parts/style.rune}"
+        WebExample title="{i18n.Lab.worms_title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" main_file="vectworms.rune" source="{raw ../../../examples/vectworms/vectworms.rune}" extra_file="parts/field.rune" extra_source="{raw ../../../examples/vectworms/parts/field.rune}" logic_source="{raw ../../../examples/vectworms/parts/logic.rune}" style_source="{raw ../../../examples/vectworms/parts/style.rune}" sound_source="{raw ../../../examples/vectworms/parts/sound.rune}"
 
 @Component/WebExample
-props: [title, preview, source, main_file?, extra_file?, extra_source?, logic_source?, style_source?]
+props: [title, preview, source, main_file?, extra_file?, extra_source?, logic_source?, style_source?, sound_source?]
 view:
     section .card .web-example:
         div .section-heading:
@@ -96,6 +96,10 @@ view:
                 details .source-file:
                     summary "parts/logic.rune"
                     ExampleSource code="{logic_source}"
+            if sound_source ?? false:
+                details .source-file:
+                    summary "parts/sound.rune"
+                    ExampleSource code="{sound_source}"
             if style_source ?? false:
                 details .source-file:
                     summary "parts/style.rune"

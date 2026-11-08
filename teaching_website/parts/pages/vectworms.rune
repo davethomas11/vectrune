@@ -25,7 +25,7 @@ view:
             p "⌨️ %i18n.VectWorms.instructions_keyboard%"
             p "📱 %i18n.VectWorms.instructions_mobile%"
 
-        WebExample title="{i18n.VectWorms.title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" main_file="vectworms.rune" source="{raw ../../../examples/vectworms/vectworms.rune}" extra_file="parts/field.rune" extra_source="{raw ../../../examples/vectworms/parts/field.rune}" logic_source="{raw ../../../examples/vectworms/parts/logic.rune}" style_source="{raw ../../../examples/vectworms/parts/style.rune}"
+        WebExample title="{i18n.VectWorms.title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" main_file="vectworms.rune" source="{raw ../../../examples/vectworms/vectworms.rune}" extra_file="parts/field.rune" extra_source="{raw ../../../examples/vectworms/parts/field.rune}" logic_source="{raw ../../../examples/vectworms/parts/logic.rune}" style_source="{raw ../../../examples/vectworms/parts/style.rune}" sound_source="{raw ../../../examples/vectworms/parts/sound.rune}"
 
         section .card:
             h3 "%i18n.Guide.run_locally%"

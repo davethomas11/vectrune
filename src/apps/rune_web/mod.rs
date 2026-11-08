@@ -457,6 +457,8 @@ fn render_frontend_shell(
         frontend.navigator.clone(),
         frontend.seo.clone(),
         frontend.optimizer.clone(),
+        frontend.sounds.clone(),
+        frontend.music.clone(),
     );
 
     format!(
@@ -1119,6 +1121,8 @@ fn render_logic(
     navigator: Option<ast::NavigatorDefinition>,
     seo: Option<ast::SeoDefinition>,
     optimizer: Option<ast::OptimizerDefinition>,
+    sounds: std::collections::HashMap<String, ast::SoundDefinition>,
+    music: std::collections::HashMap<String, ast::MusicDefinition>,
 ) -> String {
     match (view_tree, logic) {
         (Some(tree), Some(logic)) => {
@@ -1133,6 +1137,8 @@ fn render_logic(
                 navigator,
                 seo,
                 optimizer,
+                sounds,
+                music,
             );
             let js_code = codegen.generate();
             format!("<script>\n{}</script>", js_code)

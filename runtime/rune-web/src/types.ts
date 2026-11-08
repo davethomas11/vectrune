@@ -153,6 +153,37 @@ export interface OptimizerConfig {
   chunk_path?: string;
 }
 
+/** Filter definition for sound effects. */
+export interface SoundFilterConfig {
+  filter_type: 'lowpass' | 'highpass' | 'bandpass' | string;
+  start_freq: number;
+  end_freq: number;
+}
+
+/** Programmable sound definition from `@Sound`. */
+export interface SoundDefinition {
+  wave?: 'sawtooth' | 'square' | 'triangle' | 'sine' | 'noise' | string;
+  freq_start?: number | null;
+  freq_end?: number | null;
+  duration?: number;
+  volume?: number;
+  curve?: 'exponential' | 'linear' | string;
+  filter?: SoundFilterConfig | null;
+  notes?: number[];
+  sequence?: [number, number][];
+}
+
+/** Background music definition from `@Music`. */
+export interface MusicDefinition {
+  music_type?: '8bit' | 'chiptune' | 'synth' | string;
+  tempo?: number;
+  loop_track?: boolean;
+  volume?: number;
+  lead?: string | null;
+  bass?: string | null;
+  drums?: string | null;
+}
+
 /** Configuration passed to boot(). */
 export interface RuneWebConfig {
   pageTree: ViewNode;
@@ -168,6 +199,8 @@ export interface RuneWebConfig {
   emitters?: Record<string, EmitterConfig>;
   seo?: SeoConfig | null;
   optimizer?: OptimizerConfig | null;
+  sounds?: Record<string, SoundDefinition>;
+  music?: Record<string, MusicDefinition>;
 }
 
 /** The application object exposed as window.runeWebApp. */
@@ -182,6 +215,11 @@ export interface RuneApp {
   invokeAction: (name: string, args: unknown[], locals?: Record<string, unknown>) => void;
   startTimer?: (action: string, ms: number) => void;
   stopTimer?: () => void;
+  playSound?: (type: string, arg?: unknown) => void;
+  playMusic?: (track: string) => void;
+  stopMusic?: () => void;
+  pauseMusic?: () => void;
+  resumeMusic?: () => void;
 }
 
 /** A scope is just a flat object of key→value bindings. */

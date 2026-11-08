@@ -363,6 +363,36 @@ pub fn parse_rune_web_frontend(
         }
     }
 
+    // Extract @Sound sections (@Sound/<name> or @Sound with name = ...)
+    let mut sounds = HashMap::new();
+    for section in &doc.sections {
+        if !section.path.is_empty() && section.path[0].eq_ignore_ascii_case("Sound") {
+            let sound_name = if section.path.len() > 1 {
+                section.path[1..].join("/").to_lowercase()
+            } else if let Some(n) = section.kv.get("name").and_then(|v| v.as_str()) {
+                n.to_lowercase()
+            } else {
+                continue;
+            };
+            sounds.insert(sound_name, parse_sound_section(section));
+        }
+    }
+
+    // Extract @Music sections (@Music/<name> or @Music with name = ...)
+    let mut music = HashMap::new();
+    for section in &doc.sections {
+        if !section.path.is_empty() && section.path[0].eq_ignore_ascii_case("Music") {
+            let music_name = if section.path.len() > 1 {
+                section.path[1..].join("/").to_lowercase()
+            } else if let Some(n) = section.kv.get("name").and_then(|v| v.as_str()) {
+                n.to_lowercase()
+            } else {
+                continue;
+            };
+            music.insert(music_name, parse_music_section(section));
+        }
+    }
+
     Ok(RuneWebFrontend {
         page_views,
         component_definitions: resolved_components,
@@ -372,7 +402,227 @@ pub fn parse_rune_web_frontend(
         navigator,
         seo,
         optimizer,
+        sounds,
+        music,
     })
+}
+
+fn parse_duration_sec(s: &str) -> f64 {
+    let s = s.trim().to_lowercase();
+    if let Some(rest) = s.strip_suffix("ms") {
+        rest.trim().parse::<f64>().unwrap_or(0.0) / 1000.0
+    } else if let Some(rest) = s.strip_suffix("s") {
+        rest.trim().parse::<f64>().unwrap_or(0.0)
+    } else {
+        s.parse::<f64>().unwrap_or(0.0)
+    }
+}
+
+fn parse_note_or_freq(s: &str) -> Option<f64> {
+    let s = s.trim();
+    if let Ok(num) = s.parse::<f64>() {
+        return Some(num);
+    }
+    let upper = s.to_ascii_uppercase();
+    let bytes = upper.as_bytes();
+    if bytes.is_empty() {
+        return None;
+    }
+    let letter = bytes[0] as char;
+    let semitone_base = match letter {
+        'C' => 0,
+        'D' => 2,
+        'E' => 4,
+        'F' => 5,
+        'G' => 7,
+        'A' => 9,
+        'B' => 11,
+        _ => return None,
+    };
+    let rest = &upper[1..];
+    let (accidental, octave_str) = if rest.starts_with('#') {
+        (1, &rest[1..])
+    } else if rest.starts_with('B') || rest.starts_with('b') {
+        (-1, &rest[1..])
+    } else {
+        (0, rest)
+    };
+    let octave: i32 = octave_str.trim().parse().ok()?;
+    let midi = (octave + 1) * 12 + semitone_base + accidental;
+    Some(440.0 * 2.0_f64.powf((midi as f64 - 69.0) / 12.0))
+}
+
+fn parse_sound_section(section: &crate::rune_ast::Section) -> SoundDefinition {
+    let wave = section.kv.get("wave")
+        .or_else(|| section.kv.get("waveform"))
+        .or_else(|| section.kv.get("type"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("square")
+        .to_lowercase();
+
+    let mut freq_start = None;
+    let mut freq_end = None;
+
+    if let Some(freq_str) = section.kv.get("freq")
+        .or_else(|| section.kv.get("frequency"))
+        .and_then(|v| v.as_str())
+    {
+        if let Some((start_s, end_s)) = freq_str.split_once("->") {
+            freq_start = parse_note_or_freq(start_s);
+            freq_end = parse_note_or_freq(end_s);
+        } else {
+            freq_start = parse_note_or_freq(freq_str);
+        }
+    }
+
+    if let Some(start_val) = section.kv.get("freq_start")
+        .or_else(|| section.kv.get("from"))
+        .and_then(|v| v.as_str())
+    {
+        freq_start = parse_note_or_freq(start_val);
+    }
+
+    if let Some(end_val) = section.kv.get("freq_end")
+        .or_else(|| section.kv.get("to"))
+        .and_then(|v| v.as_str())
+    {
+        freq_end = parse_note_or_freq(end_val);
+    }
+
+    let duration = section.kv.get("duration")
+        .or_else(|| section.kv.get("decay"))
+        .and_then(|v| v.as_str())
+        .map(parse_duration_sec)
+        .unwrap_or(0.12);
+
+    let volume = section.kv.get("volume")
+        .or_else(|| section.kv.get("gain"))
+        .and_then(|v| match v {
+            Value::Number(n) => Some(*n),
+            Value::String(s) => s.parse::<f64>().ok(),
+            _ => None,
+        })
+        .unwrap_or(0.25);
+
+    let curve = section.kv.get("curve")
+        .and_then(|v| v.as_str())
+        .map(|s| if s.eq_ignore_ascii_case("linear") { "linear" } else { "exponential" })
+        .unwrap_or("exponential")
+        .to_string();
+
+    let filter = if let Some(filter_str) = section.kv.get("filter").and_then(|v| v.as_str()) {
+        let parts: Vec<&str> = filter_str.split_whitespace().collect();
+        let filter_type = parts.first().copied().unwrap_or("lowpass").to_lowercase();
+        let remaining = parts[1..].join(" ");
+        let (f_start, f_end) = if let Some((s1, s2)) = remaining.split_once("->") {
+            (parse_note_or_freq(s1).unwrap_or(800.0), parse_note_or_freq(s2).unwrap_or(60.0))
+        } else if let Some(f) = parse_note_or_freq(&remaining) {
+            (f, f)
+        } else {
+            (800.0, 60.0)
+        };
+        Some(SoundFilterDefinition {
+            filter_type,
+            start_freq: f_start,
+            end_freq: f_end,
+        })
+    } else {
+        None
+    };
+
+    let mut notes = Vec::new();
+    if let Some(notes_str) = section.kv.get("notes").and_then(|v| v.as_str()) {
+        for n in notes_str.split(',') {
+            if let Some(f) = parse_note_or_freq(n) {
+                notes.push(f);
+            }
+        }
+    }
+
+    let mut sequence = Vec::new();
+    if let Some(seq_str) = section.kv.get("sequence").and_then(|v| v.as_str()) {
+        for item in seq_str.split(',') {
+            let item = item.trim();
+            if let Some((n_str, d_str)) = item.split_once(':') {
+                if let Some(f) = parse_note_or_freq(n_str) {
+                    let d = parse_duration_sec(d_str);
+                    sequence.push((f, d));
+                }
+            } else if let Some(f) = parse_note_or_freq(item) {
+                sequence.push((f, 0.1));
+            }
+        }
+    }
+
+    SoundDefinition {
+        wave,
+        freq_start,
+        freq_end,
+        duration,
+        volume,
+        curve,
+        filter,
+        notes,
+        sequence,
+    }
+}
+
+fn parse_music_section(section: &crate::rune_ast::Section) -> MusicDefinition {
+    let music_type = section.kv.get("type")
+        .or_else(|| section.kv.get("style"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("8bit")
+        .to_lowercase();
+
+    let tempo = section.kv.get("tempo")
+        .or_else(|| section.kv.get("bpm"))
+        .and_then(|v| match v {
+            Value::Number(n) => Some(*n),
+            Value::String(s) => s.parse::<f64>().ok(),
+            _ => None,
+        })
+        .unwrap_or(128.0);
+
+    let loop_track = section.kv.get("loop")
+        .or_else(|| section.kv.get("loop_track"))
+        .and_then(|v| match v {
+            Value::Bool(b) => Some(*b),
+            Value::String(s) => Some(!s.eq_ignore_ascii_case("false") && !s.eq_ignore_ascii_case("off")),
+            _ => None,
+        })
+        .unwrap_or(true);
+
+    let volume = section.kv.get("volume")
+        .and_then(|v| match v {
+            Value::Number(n) => Some(*n),
+            Value::String(s) => s.parse::<f64>().ok(),
+            _ => None,
+        })
+        .unwrap_or(0.2);
+
+    let lead = section.kv.get("lead")
+        .or_else(|| section.kv.get("melody"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string());
+
+    let bass = section.kv.get("bass")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string());
+
+    let drums = section.kv.get("drums")
+        .or_else(|| section.kv.get("percussion"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string());
+
+    MusicDefinition {
+        music_type,
+        tempo,
+        loop_track,
+        volume,
+        lead,
+        bass,
+        drums,
+    }
 }
 
 fn parse_state_block(section: &crate::rune_ast::Section) -> HashMap<String, String> {
@@ -2113,6 +2363,67 @@ view:
             },
             _ => panic!("expected root main element"),
         }
+    }
+
+    #[test]
+    fn parses_sound_and_music_sections() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Page/home
+view:
+    main:
+        p "Game"
+
+@Sound/laser
+wave = sawtooth
+freq = 880 -> 110
+duration = 120ms
+volume = 0.25
+
+@Sound/explosion
+wave = noise
+filter = lowpass 800 -> 60
+duration = 350ms
+volume = 0.45
+
+@Music/chiptune
+type = 8bit
+tempo = 144
+loop = true
+volume = 0.18
+lead = E4:8 D#4:8 E4:8 B3:8
+bass = A2:4 E2:4
+drums = kick:4 snare:4
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        
+        let laser = frontend.sounds.get("laser").expect("laser sound exists");
+        assert_eq!(laser.wave, "sawtooth");
+        assert_eq!(laser.freq_start, Some(880.0));
+        assert_eq!(laser.freq_end, Some(110.0));
+        assert_eq!(laser.duration, 0.12);
+        assert_eq!(laser.volume, 0.25);
+
+        let explosion = frontend.sounds.get("explosion").expect("explosion sound exists");
+        assert_eq!(explosion.wave, "noise");
+        assert_eq!(explosion.duration, 0.35);
+        let filter = explosion.filter.as_ref().expect("filter exists");
+        assert_eq!(filter.filter_type, "lowpass");
+        assert_eq!(filter.start_freq, 800.0);
+        assert_eq!(filter.end_freq, 60.0);
+
+        let music = frontend.music.get("chiptune").expect("chiptune music exists");
+        assert_eq!(music.music_type, "8bit");
+        assert_eq!(music.tempo, 144.0);
+        assert_eq!(music.loop_track, true);
+        assert_eq!(music.volume, 0.18);
+        assert_eq!(music.lead.as_deref(), Some("E4:8 D#4:8 E4:8 B3:8"));
+        assert_eq!(music.bass.as_deref(), Some("A2:4 E2:4"));
+        assert_eq!(music.drums.as_deref(), Some("kick:4 snare:4"));
     }
 
     #[test]

@@ -9,7 +9,7 @@ import { interpolate } from './interpolation';
 import { splitPathSegments, buildScope } from './scope';
 import { handleBuiltin } from "./builtins";
 import { splitTopLevel, valueToString, normalizeLiteral } from './utils';
-import { playSound } from './audio';
+import { playSound, playMusic, stopMusic, pauseMusic, resumeMusic, setMusicTempo, setMusicVolume } from './audio';
 import type { ActionStep, Scope } from './types';
 import { NO_ACTION, STOP } from './builtins/command';
 
@@ -247,6 +247,48 @@ export function executeStatement(
     }
     soundName = normalizeLiteral(soundName);
     playSound(soundName, argVal);
+    return true;
+  }
+
+  // Retro chiptune music playback:
+  // music "vectraiders", music.play("vectraiders"), music.stop, music.pause, music.resume, music.tempo = 150
+  if (trimmed.startsWith('music ') || trimmed.startsWith('music.') || trimmed.startsWith('play_music(')) {
+    if (trimmed === 'music.stop' || trimmed === 'music.stop()' || trimmed === 'stop_music()') {
+      stopMusic();
+      return true;
+    }
+    if (trimmed === 'music.pause' || trimmed === 'music.pause()' || trimmed === 'pause_music()') {
+      pauseMusic();
+      return true;
+    }
+    if (trimmed === 'music.resume' || trimmed === 'music.resume()' || trimmed === 'resume_music()') {
+      resumeMusic();
+      return true;
+    }
+    if (trimmed.startsWith('music.tempo =') || trimmed.startsWith('music.tempo=')) {
+      const expr = trimmed.slice(trimmed.indexOf('=') + 1).trim();
+      const val = Number(evaluateExpression(expr, buildScope(locals)));
+      if (!isNaN(val)) setMusicTempo(val);
+      return true;
+    }
+    if (trimmed.startsWith('music.volume =') || trimmed.startsWith('music.volume=')) {
+      const expr = trimmed.slice(trimmed.indexOf('=') + 1).trim();
+      const val = Number(evaluateExpression(expr, buildScope(locals)));
+      if (!isNaN(val)) setMusicVolume(val);
+      return true;
+    }
+    let trackName = '';
+    if (trimmed.startsWith('music.play(') && trimmed.endsWith(')')) {
+      trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
+    } else if (trimmed.startsWith('play_music(') && trimmed.endsWith(')')) {
+      trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
+    } else if (trimmed.startsWith('music.play ')) {
+      trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || '');
+    } else {
+      trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || '');
+    }
+    trackName = normalizeLiteral(trackName);
+    playMusic(trackName);
     return true;
   }
 

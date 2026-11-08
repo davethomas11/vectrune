@@ -14,10 +14,30 @@ import { renderNode } from './rendering';
 import { executeSteps } from './statement';
 import { bindEvent, setupMemoryUpdateListener } from './events';
 import { setupNavigator, updateSeoMetadata } from './navigator';
-import { playSound } from './audio';
+import {
+  registerSounds,
+  registerMusic,
+  playSound,
+  playMusic,
+  stopMusic,
+  pauseMusic,
+  resumeMusic,
+  setMusicTempo,
+  setMusicVolume,
+} from './audio';
 import type { RuneWebConfig, RuneApp } from './types';
 
-export { playSound };
+export {
+  registerSounds,
+  registerMusic,
+  playSound,
+  playMusic,
+  stopMusic,
+  pauseMusic,
+  resumeMusic,
+  setMusicTempo,
+  setMusicVolume,
+};
 
 /**
  * Boot the Rune-Web application.
@@ -26,10 +46,19 @@ export { playSound };
  * (page tree, state, actions, derived definitions, etc).
  */
 export function boot(config: RuneWebConfig): RuneApp {
+  // Register programmable audio definitions from @Sound and @Music
+  registerSounds(config.sounds);
+  registerMusic(config.music);
+
   // Build the app object first (render will be set after context init)
   const app: RuneApp = {
     state: {} as Record<string, unknown>,
     derived: {},
+    playSound,
+    playMusic,
+    stopMusic,
+    pauseMusic,
+    resumeMusic,
     computeDerived() {
       const context = ctx();
       const baseScope = buildScope({});
@@ -273,6 +302,10 @@ export function boot(config: RuneWebConfig): RuneApp {
   // Expose globally and do initial render
   setWindowProp('runeWebApp', app);
   setWindowProp('playSound', playSound);
+  setWindowProp('playMusic', playMusic);
+  setWindowProp('stopMusic', stopMusic);
+  setWindowProp('pauseMusic', pauseMusic);
+  setWindowProp('resumeMusic', resumeMusic);
   app.render();
 
   return app;
