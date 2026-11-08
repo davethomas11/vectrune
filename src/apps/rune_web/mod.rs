@@ -19,6 +19,7 @@ pub mod ast;
 pub mod parser;
 pub mod css;
 pub mod jscodegen;
+pub mod optimizer;
 
 use crate::core::AppState;
 use crate::util::{log, LogLevel};
@@ -432,19 +433,30 @@ fn render_frontend_shell(
 
     let locals = JsonMap::new();
 
-    let page_html = page
-        .map(|p| render_view_node(&p.view_tree, &runtime_data, &locals))
+    let optimized = if let (Some(opt), Some(p)) = (&frontend.optimizer, page) {
+        let bound_var = frontend.navigator.as_ref().map(|n| n.bind.as_str());
+        let opt_res = optimizer::extract_route_chunks(&p.view_tree, initial_seo_route.as_deref(), opt, bound_var);
+        Some(opt_res)
+    } else {
+        None
+    };
+
+    let page_tree = optimized.as_ref().map(|o| &o.view_tree).or_else(|| page.map(|p| &p.view_tree));
+
+    let page_html = page_tree
+        .map(|tree| render_view_node(tree, &runtime_data, &locals))
         .unwrap_or_else(|| String::from("<p>Page not found</p>"));
 
     let style_html = render_styles(frontend, page.and_then(|p| p.style_ref.clone()));
     let logic_html = render_logic(
-        page,
+        page_tree,
         logic.cloned(),
         &i18n_json,
         ws_endpoint,
         pre_fetched_memory,
         frontend.navigator.clone(),
         frontend.seo.clone(),
+        frontend.optimizer.clone(),
     );
 
     format!(
@@ -609,6 +621,16 @@ fn render_view_node(node: &ast::ViewNode, data: &JsonMap<String, JsonValue>, loc
                 .collect::<Vec<_>>()
                 .join("")
         }
+        ast::ViewNode::LazyRoute { route, chunk_url, fallback } => {
+            if !fallback.is_empty() {
+                fallback.iter()
+                    .map(|child| render_view_node(child, data, locals))
+                    .collect::<Vec<_>>()
+                    .join("")
+            } else {
+                format!(r#"<div class="rune-lazy-placeholder" data-route="{}" data-chunk="{}"></div>"#, html_escape(route), html_escape(chunk_url))
+            }
+        }
     }
 }
 
@@ -716,7 +738,7 @@ fn collect_memory_keys_inner(node: &ast::ViewNode, keys: &mut Vec<String>) {
         ast::ViewNode::ComponentScope { body, .. } => {
             collect_memory_keys_inner(body, keys);
         }
-        ast::ViewNode::Text(_) | ast::ViewNode::Comment(_) => {}
+        ast::ViewNode::Text(_) | ast::ViewNode::Comment(_) | ast::ViewNode::LazyRoute { .. } => {}
     }
 }
 
@@ -1089,32 +1111,64 @@ fn render_styles(frontend: &ast::RuneWebFrontend, style_ref: Option<String>) -> 
 /// Render JavaScript setup for client-side logic.
 /// Uses the JavaScript code generator to create functional handler code.
 fn render_logic(
-    page: Option<&ast::PageDefinition>,
+    view_tree: Option<&ast::ViewNode>,
     logic: Option<ast::LogicDefinition>,
     i18n_json: &str,
     ws_endpoint: Option<String>,
     pre_fetched_memory: &JsonMap<String, JsonValue>,
     navigator: Option<ast::NavigatorDefinition>,
     seo: Option<ast::SeoDefinition>,
+    optimizer: Option<ast::OptimizerDefinition>,
 ) -> String {
-    match (page, logic) {
-        (Some(page), Some(logic)) => {
+    match (view_tree, logic) {
+        (Some(tree), Some(logic)) => {
             let memory_seed: std::collections::HashMap<String, serde_json::Value> =
                 pre_fetched_memory.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
             let codegen = jscodegen::JsCodegen::new(
-                page.view_tree.clone(),
+                tree.clone(),
                 logic,
                 i18n_json.to_string(),
                 ws_endpoint,
                 memory_seed,
                 navigator,
                 seo,
+                optimizer,
             );
             let js_code = codegen.generate();
             format!("<script>\n{}</script>", js_code)
         }
         _ => String::new(),
     }
+}
+
+/// Export pre-split route chunks to static JSON files for `@Optimizer dynamic_xhr = on/auto`.
+pub fn export_optimizer_chunks(
+    doc: &crate::rune_ast::RuneDocument,
+    page_name: &str,
+    out_dir: &std::path::Path,
+) -> anyhow::Result<usize> {
+    let frontend = parser::parse_rune_web_frontend(doc, page_name)
+        .map_err(|e| anyhow::anyhow!("Rune-Web parse error: {}", e))?;
+    let optimizer = match &frontend.optimizer {
+        Some(opt) if opt.is_active() => opt,
+        _ => return Ok(0),
+    };
+    let page = frontend.page_views.get(page_name)
+        .ok_or_else(|| anyhow::anyhow!("Page '{}' not found", page_name))?;
+
+    let bound_var = frontend.navigator.as_ref().map(|n| n.bind.as_str());
+    // Prune with active_route = None so all named route branches are extracted as chunks
+    let opt_res = optimizer::extract_route_chunks(&page.view_tree, None, optimizer, bound_var);
+
+    std::fs::create_dir_all(out_dir)?;
+    let mut count = 0;
+    for (route, chunk_body) in opt_res.chunks {
+        let chunk_json = serde_json::to_string_pretty(&chunk_body)?;
+        let dest = out_dir.join(format!("{}.json", route));
+        std::fs::write(&dest, chunk_json)?;
+        count += 1;
+    }
+    Ok(count)
 }
 
 fn create_websocket_logic_block(_ws_endpoint: &str) -> ast::LogicDefinition {

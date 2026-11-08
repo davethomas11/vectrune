@@ -11,6 +11,7 @@ import type {
   NavigatorConfig,
   EmitterConfig,
   SeoConfig,
+  OptimizerConfig,
 } from './types';
 
 /** Holds all shared state for the runtime. */
@@ -28,6 +29,9 @@ export interface RuneContext {
   /** Particle emitters keyed by state name (declared via `emitter { ... }`). */
   emitters?: Record<string, EmitterConfig>;
   seo?: SeoConfig | null;
+  optimizer?: OptimizerConfig | null;
+  loadedChunks: Record<string, ViewNode[] | ViewNode>;
+  loadingChunks: Record<string, Promise<unknown>>;
 }
 
 let _ctx: RuneContext | null = null;

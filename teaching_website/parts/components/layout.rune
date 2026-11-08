@@ -1,5 +1,6 @@
 @Navigator
 url bound to activePage
+mode = path
 
 @Component/SidebarLayout
 state:

@@ -3,6 +3,11 @@ import "i18n"
 import "pages"
 import "seo"
 
+@Optimizer
+dynamic_xhr = on
+pre_load = true
+chunk_path = /assets/routes
+
 @Page/learn-vectrune
 title = Learn Vectrune
 style = teaching-site

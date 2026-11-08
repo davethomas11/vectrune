@@ -194,7 +194,24 @@ var __RuneWeb = (() => {
     if (typeof window === "undefined" || !window.location) return null;
     const param = config.param || "page";
     const mode = config.mode || "auto";
-    if (mode === "query" || mode === "auto") {
+    if (mode === "path" || mode === "auto") {
+      try {
+        const url = new URL(window.location.href);
+        const cleanPath = url.pathname.replace(/^\/+|\/+$/g, "");
+        const parts = cleanPath.split("/").filter(Boolean);
+        if (parts.length > 0) {
+          let route = parts[parts.length - 1];
+          if (parts.length > 1 && (parts[0] === "es" || parts[0] === "fr")) {
+            route = parts[1];
+          }
+          if (route && route !== "index.html") {
+            return route;
+          }
+        }
+      } catch (_err) {
+      }
+    }
+    if (mode === "query" || mode === "auto" || mode === "path") {
       try {
         const url = new URL(window.location.href);
         const val = url.searchParams.get(param) || url.searchParams.get("p") || url.searchParams.get(config.bind);
@@ -294,6 +311,37 @@ var __RuneWeb = (() => {
         } else {
           window.location.hash = targetHash || "#/";
         }
+      }
+      updateSeoMetadata(cleanRoute);
+      return;
+    }
+    if (mode === "path") {
+      try {
+        const url = new URL(window.location.href);
+        const pathname = url.pathname;
+        let prefix = "";
+        if (pathname.startsWith("/es/") || pathname === "/es") prefix = "/es";
+        if (pathname.startsWith("/fr/") || pathname === "/fr") prefix = "/fr";
+        let newPath = "";
+        if (!cleanRoute || cleanRoute === "home") {
+          newPath = prefix ? `${prefix}/` : "/";
+        } else {
+          newPath = prefix ? `${prefix}/${encodeURIComponent(cleanRoute)}` : `/${encodeURIComponent(cleanRoute)}`;
+        }
+        url.searchParams.delete(param);
+        url.searchParams.delete("p");
+        url.searchParams.delete(config.bind);
+        if (url.hash && !url.hash.startsWith("#/")) {
+          url.hash = "";
+        }
+        const finalUrl = newPath + (url.search ? url.search : "") + (url.hash ? url.hash : "");
+        const stateObj = { [config.bind]: cleanRoute };
+        if (replace) {
+          window.history.replaceState(stateObj, "", finalUrl);
+        } else {
+          window.history.pushState(stateObj, "", finalUrl);
+        }
+      } catch (_err) {
       }
       updateSeoMetadata(cleanRoute);
       return;
@@ -1007,6 +1055,26 @@ var __RuneWeb = (() => {
     }
     if (node.Comment !== void 0) {
       return `<!--${interpolate(node.Comment, buildScope(locals))}-->`;
+    }
+    if (node.LazyRoute) {
+      const lazy = node.LazyRoute;
+      const context = ctx();
+      const app = context.app;
+      const cleanRoute = lazy.route.toLowerCase();
+      if (context.loadedChunks && context.loadedChunks[cleanRoute]) {
+        const chunk = context.loadedChunks[cleanRoute];
+        if (Array.isArray(chunk)) {
+          return chunk.map((c) => renderNode(c, locals)).join("");
+        }
+        return renderNode(chunk, locals);
+      }
+      if (app && app.loadChunk) {
+        app.loadChunk(cleanRoute, lazy.chunk_url);
+      }
+      if (lazy.fallback && lazy.fallback.length > 0) {
+        return lazy.fallback.map((c) => renderNode(c, locals)).join("");
+      }
+      return `<div class="rune-lazy-placeholder" data-route="${escapeHtml(lazy.route)}"></div>`;
     }
     return "";
   }
@@ -2319,6 +2387,72 @@ var __RuneWeb = (() => {
         executeSteps(def.steps || [], scopedLocals);
       }
     };
+    const loadedChunks = {};
+    const loadingChunks = {};
+    app.loadedChunks = loadedChunks;
+    app.loadChunk = function(route, chunkUrl) {
+      const cleanRoute = route.toLowerCase();
+      if (loadedChunks[cleanRoute]) {
+        return Promise.resolve(loadedChunks[cleanRoute]);
+      }
+      if (loadingChunks[cleanRoute]) {
+        return loadingChunks[cleanRoute];
+      }
+      if (typeof fetch === "undefined") {
+        return Promise.resolve(null);
+      }
+      const promise = fetch(chunkUrl).then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status} fetching route chunk ${chunkUrl}`);
+        return res.json();
+      }).then((data) => {
+        loadedChunks[cleanRoute] = data;
+        delete loadingChunks[cleanRoute];
+        app.render();
+        return data;
+      }).catch((err) => {
+        delete loadingChunks[cleanRoute];
+        console.warn(`[RuneWeb] Failed to load route chunk '${route}':`, err);
+        return null;
+      });
+      loadingChunks[cleanRoute] = promise;
+      return promise;
+    };
+    app.preloadChunks = function() {
+      if (typeof window === "undefined" || typeof fetch === "undefined") return;
+      const context = ctx();
+      const opt = context.optimizer;
+      if (!opt || !opt.pre_load) return;
+      const chunksToPreload = [];
+      function collectLazy(n) {
+        if (!n) return;
+        if (n.LazyRoute) {
+          chunksToPreload.push({ route: n.LazyRoute.route, chunk_url: n.LazyRoute.chunk_url });
+        }
+        if (n.Element?.children) n.Element.children.forEach(collectLazy);
+        if (n.Loop?.body) n.Loop.body.forEach(collectLazy);
+        if (n.Conditional?.body) n.Conditional.body.forEach(collectLazy);
+        if (n.Match?.cases) n.Match.cases.forEach((c) => (c.body || []).forEach(collectLazy));
+        if (n.ComponentScope?.body) collectLazy(n.ComponentScope.body);
+        if (n.MemoryBinding?.body) n.MemoryBinding.body.forEach(collectLazy);
+      }
+      collectLazy(context.pageTree);
+      const runPreload = () => {
+        chunksToPreload.forEach(({ route, chunk_url }) => {
+          const cleanRoute = route.toLowerCase();
+          if (!loadedChunks[cleanRoute] && !loadingChunks[cleanRoute]) {
+            fetch(chunk_url).then((r) => r.json()).then((data) => {
+              loadedChunks[cleanRoute] = data;
+            }).catch(() => {
+            });
+          }
+        });
+      };
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(runPreload, { timeout: 2e3 });
+      } else {
+        setTimeout(runPreload, 300);
+      }
+    };
     initContext({
       pageTree: config.pageTree,
       derivedDefinitions: config.derivedDefinitions,
@@ -2331,7 +2465,10 @@ var __RuneWeb = (() => {
       navigator: config.navigator || null,
       initialState: JSON.parse(JSON.stringify(config.stateJson || {})),
       emitters: config.emitters || {},
-      seo: config.seo || null
+      seo: config.seo || null,
+      optimizer: config.optimizer || null,
+      loadedChunks,
+      loadingChunks
     });
     app.state = makeReactive(
       Object.assign({}, config.stateJson, { i18n: config.i18nData })
@@ -2340,6 +2477,9 @@ var __RuneWeb = (() => {
       setupNavigator(config.navigator, app);
     } else if (config.seo) {
       updateSeoMetadata("home");
+    }
+    if (config.optimizer?.pre_load && app.preloadChunks) {
+      app.preloadChunks();
     }
     const originalRender = app.render;
     app.render = function() {

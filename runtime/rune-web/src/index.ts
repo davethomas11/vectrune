@@ -92,6 +92,86 @@ export function boot(config: RuneWebConfig): RuneApp {
   };
 
   // Initialize the context singleton
+  const loadedChunks: Record<string, import('./types').ViewNode[] | import('./types').ViewNode> = {};
+  const loadingChunks: Record<string, Promise<unknown>> = {};
+
+  app.loadedChunks = loadedChunks;
+
+  app.loadChunk = function (route: string, chunkUrl: string): Promise<unknown> {
+    const cleanRoute = route.toLowerCase();
+    if (loadedChunks[cleanRoute]) {
+      return Promise.resolve(loadedChunks[cleanRoute]);
+    }
+    if (loadingChunks[cleanRoute]) {
+      return loadingChunks[cleanRoute];
+    }
+    if (typeof fetch === 'undefined') {
+      return Promise.resolve(null);
+    }
+
+    const promise = fetch(chunkUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status} fetching route chunk ${chunkUrl}`);
+        return res.json();
+      })
+      .then((data: import('./types').ViewNode[] | import('./types').ViewNode) => {
+        loadedChunks[cleanRoute] = data;
+        delete loadingChunks[cleanRoute];
+        app.render();
+        return data;
+      })
+      .catch((err) => {
+        delete loadingChunks[cleanRoute];
+        console.warn(`[RuneWeb] Failed to load route chunk '${route}':`, err);
+        return null;
+      });
+
+    loadingChunks[cleanRoute] = promise;
+    return promise;
+  };
+
+  app.preloadChunks = function (): void {
+    if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
+    const context = ctx();
+    const opt = context.optimizer;
+    if (!opt || !opt.pre_load) return;
+
+    const chunksToPreload: Array<{ route: string; chunk_url: string }> = [];
+    function collectLazy(n: import('./types').ViewNode) {
+      if (!n) return;
+      if (n.LazyRoute) {
+        chunksToPreload.push({ route: n.LazyRoute.route, chunk_url: n.LazyRoute.chunk_url });
+      }
+      if (n.Element?.children) n.Element.children.forEach(collectLazy);
+      if (n.Loop?.body) n.Loop.body.forEach(collectLazy);
+      if (n.Conditional?.body) n.Conditional.body.forEach(collectLazy);
+      if (n.Match?.cases) n.Match.cases.forEach((c) => (c.body || []).forEach(collectLazy));
+      if (n.ComponentScope?.body) collectLazy(n.ComponentScope.body);
+      if (n.MemoryBinding?.body) n.MemoryBinding.body.forEach(collectLazy);
+    }
+    collectLazy(context.pageTree);
+
+    const runPreload = () => {
+      chunksToPreload.forEach(({ route, chunk_url }) => {
+        const cleanRoute = route.toLowerCase();
+        if (!loadedChunks[cleanRoute] && !loadingChunks[cleanRoute]) {
+          fetch(chunk_url)
+            .then((r) => r.json())
+            .then((data) => {
+              loadedChunks[cleanRoute] = data;
+            })
+            .catch(() => {});
+        }
+      });
+    };
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(runPreload, { timeout: 2000 });
+    } else {
+      setTimeout(runPreload, 300);
+    }
+  };
+
   initContext({
     pageTree: config.pageTree,
     derivedDefinitions: config.derivedDefinitions,
@@ -105,6 +185,9 @@ export function boot(config: RuneWebConfig): RuneApp {
     initialState: JSON.parse(JSON.stringify(config.stateJson || {})),
     emitters: config.emitters || {},
     seo: config.seo || null,
+    optimizer: config.optimizer || null,
+    loadedChunks,
+    loadingChunks,
   });
 
   // Create reactive state (must happen after context init since makeReactive uses ctx())
@@ -117,6 +200,11 @@ export function boot(config: RuneWebConfig): RuneApp {
     setupNavigator(config.navigator, app);
   } else if (config.seo) {
     updateSeoMetadata('home');
+  }
+
+  // Background preload route chunks if pre_load is enabled (@Optimizer)
+  if (config.optimizer?.pre_load && app.preloadChunks) {
+    app.preloadChunks();
   }
 
   // Wrap render to track rendering component

@@ -134,6 +134,33 @@ export function renderNode(
     return `<!--${interpolate(node.Comment, buildScope(locals))}-->`;
   }
 
+  if (node.LazyRoute) {
+    const lazy = node.LazyRoute;
+    const context = ctx();
+    const app = context.app;
+    const cleanRoute = lazy.route.toLowerCase();
+
+    // 1. If chunk is already loaded in memory, render it
+    if (context.loadedChunks && context.loadedChunks[cleanRoute]) {
+      const chunk = context.loadedChunks[cleanRoute];
+      if (Array.isArray(chunk)) {
+        return chunk.map((c: ViewNode) => renderNode(c, locals)).join('');
+      }
+      return renderNode(chunk as ViewNode, locals);
+    }
+
+    // 2. Trigger on-demand XHR/fetch load
+    if (app && app.loadChunk) {
+      app.loadChunk(cleanRoute, lazy.chunk_url);
+    }
+
+    // 3. Render fallback if provided, or subtle placeholder
+    if (lazy.fallback && lazy.fallback.length > 0) {
+      return lazy.fallback.map((c: ViewNode) => renderNode(c, locals)).join('');
+    }
+    return `<div class="rune-lazy-placeholder" data-route="${escapeHtml(lazy.route)}"></div>`;
+  }
+
   return '';
 }
 

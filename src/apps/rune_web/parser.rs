@@ -328,6 +328,41 @@ pub fn parse_rune_web_frontend(
         }
     }
 
+    // Extract @Optimizer section
+    let mut optimizer = None;
+    for section in &doc.sections {
+        if !section.path.is_empty() && section.path[0].eq_ignore_ascii_case("Optimizer") {
+            let dynamic_xhr = section.kv.get("dynamic_xhr")
+                .or_else(|| section.kv.get("dynamic-xhr"))
+                .or_else(|| section.kv.get("xhr"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("off")
+                .to_lowercase();
+            let pre_load = section.kv.get("pre_load")
+                .or_else(|| section.kv.get("preload"))
+                .or_else(|| section.kv.get("pre-load"))
+                .and_then(|v| match v {
+                    Value::Bool(b) => Some(*b),
+                    Value::String(s) => Some(s.eq_ignore_ascii_case("true") || s.eq_ignore_ascii_case("on") || s.eq_ignore_ascii_case("yes")),
+                    _ => None,
+                })
+                .unwrap_or(false);
+            let chunk_path = section.kv.get("chunk_path")
+                .or_else(|| section.kv.get("chunk-path"))
+                .or_else(|| section.kv.get("routes_path"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("/assets/routes")
+                .to_string();
+
+            optimizer = Some(OptimizerDefinition {
+                dynamic_xhr,
+                pre_load,
+                chunk_path,
+            });
+            break;
+        }
+    }
+
     Ok(RuneWebFrontend {
         page_views,
         component_definitions: resolved_components,
@@ -336,6 +371,7 @@ pub fn parse_rune_web_frontend(
         i18n_sections,
         navigator,
         seo,
+        optimizer,
     })
 }
 
@@ -690,6 +726,11 @@ fn expand_component_refs_in_node(
                 body: expanded_body,
             })
         }
+        ViewNode::LazyRoute { route, chunk_url, fallback } => Ok(ViewNode::LazyRoute {
+            route: route.clone(),
+            chunk_url: chunk_url.clone(),
+            fallback: fallback.clone(),
+        }),
     }
 }
 
@@ -2311,6 +2352,63 @@ view:
         assert!(games_html.contains(r#"<meta name="description" content="Defend the vector grid in retro arcade style">"#));
         assert!(games_html.contains(r#"<meta property="og:title" content="VectRaiders Arcade">"#));
         assert!(games_html.contains(r#"<meta property="og:image" content="/assets/games.png">"#));
+    }
+
+    #[test]
+    fn parses_optimizer_section_and_extracts_chunks() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Optimizer
+dynamic_xhr = on
+pre_load = true
+chunk_path = /assets/routes
+
+@Navigator
+url bound to activePage
+mode = path
+
+@Page/home
+state:
+    activePage = "home"
+view:
+    div .shell:
+        match activePage:
+            "home" -> h1 "Welcome Home"
+            "docs" -> p "Documentation Content"
+            "games" -> p "Arcade Games"
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let optimizer = frontend.optimizer.as_ref().expect("optimizer must be parsed");
+        assert_eq!(optimizer.dynamic_xhr, "on");
+        assert!(optimizer.pre_load);
+        assert_eq!(optimizer.chunk_path, "/assets/routes");
+
+        let nav = frontend.navigator.as_ref().expect("navigator must be parsed");
+        assert_eq!(nav.mode, "path");
+        assert_eq!(nav.bind, "activePage");
+
+        let page = frontend.page_views.get("home").expect("page must exist");
+        let opt_res = super::super::optimizer::extract_route_chunks(
+            &page.view_tree,
+            Some("home"),
+            optimizer,
+            Some("activePage"),
+        );
+
+        // "docs" and "games" extracted to chunks, "home" kept inlined
+        assert_eq!(opt_res.chunks.len(), 2);
+        assert!(opt_res.chunks.contains_key("docs"));
+        assert!(opt_res.chunks.contains_key("games"));
+
+        // Rendered shell with dynamic_xhr enabled should produce lazy route nodes for non-home
+        let shell_html = super::super::render_frontend_shell(&frontend, "home", None, None, &serde_json::Map::new(), None);
+        assert!(shell_html.contains("Welcome Home"));
+        assert!(shell_html.contains(r#"/assets/routes/docs.json"#));
+        assert!(shell_html.contains(r#"LazyRoute"#));
     }
 }
 

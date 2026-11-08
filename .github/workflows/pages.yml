@@ -65,11 +65,12 @@ jobs:
           cd teaching_website
 
           # Render one static page per locale: / (en_us), /es/, /fr/
+          mkdir -p "$OUT/assets/routes"
           for loc in en_us es fr; do
             if [ "$loc" = "en_us" ]; then dest="$OUT"; else dest="$OUT/$loc"; fi
             mkdir -p "$dest"
             sed -i "s/^locale = .*/locale = $loc/" teaching.rune
-            "$BIN" teaching.rune -o html > "$dest/index.html"
+            "$BIN" teaching.rune -o html --chunks-dir "$OUT/assets/routes" > "$dest/index.html"
           done
           git checkout -- teaching.rune
 
@@ -78,6 +79,9 @@ jobs:
             mkdir -p "$OUT/$route"
             "$BIN" teaching.rune -o html --path "/$route" > "$OUT/$route/index.html"
           done
+
+          # GitHub Pages SPA fallback: 404 loads root SPA
+          cp "$OUT/index.html" "$OUT/404.html"
 
           # Rewrite paths if hosted on subpath instead of custom domain root
           if [ "$BASE" != "/" ]; then

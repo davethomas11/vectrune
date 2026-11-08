@@ -192,4 +192,47 @@ describe('Rune-Web Navigator', () => {
       'Purge the mushroom grid'
     );
   });
+
+  it('handles clean path navigation (mode = path)', () => {
+    mockWindow.location = new URL('https://vectrune.com/games');
+    const config: NavigatorConfig = { bind: 'activePage', mode: 'path' };
+    const route = readNavigatorUrl(config);
+    expect(route).toBe('games');
+
+    const mockApp: RuneApp = {
+      state: { activePage: 'games' },
+      derived: {},
+      computeDerived: vi.fn(),
+      render: vi.fn(),
+      invokeAction: vi.fn(),
+    };
+
+    initContext({
+      pageTree: {},
+      derivedDefinitions: {},
+      helperDefinitions: {},
+      actionDefinitions: {},
+      i18nData: {},
+      app: mockApp,
+      isRendering: false,
+      memorySubscriptions: {},
+      navigator: config,
+      loadedChunks: {},
+      loadingChunks: {},
+    });
+
+    updateNavigatorUrl('vectworms');
+    expect(mockWindow.history.pushState).toHaveBeenCalledWith(
+      { activePage: 'vectworms' },
+      '',
+      '/vectworms'
+    );
+
+    updateNavigatorUrl('home');
+    expect(mockWindow.history.pushState).toHaveBeenCalledWith(
+      { activePage: 'home' },
+      '',
+      '/'
+    );
+  });
 });

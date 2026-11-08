@@ -24,8 +24,26 @@ export function readNavigatorUrl(config: NavigatorConfig): string | null {
   const param = config.param || 'page';
   const mode = config.mode || 'auto';
 
-  // 1. Query parameter check (preferred for query / auto modes)
-  if (mode === 'query' || mode === 'auto') {
+  // 1. Path check (for path mode, or auto mode when pathname is non-root)
+  if (mode === 'path' || mode === 'auto') {
+    try {
+      const url = new URL(window.location.href);
+      const cleanPath = url.pathname.replace(/^\/+|\/+$/g, '');
+      const parts = cleanPath.split('/').filter(Boolean);
+      if (parts.length > 0) {
+        let route = parts[parts.length - 1];
+        if (parts.length > 1 && (parts[0] === 'es' || parts[0] === 'fr')) {
+          route = parts[1];
+        }
+        if (route && route !== 'index.html') {
+          return route;
+        }
+      }
+    } catch (_err) {}
+  }
+
+  // 2. Query parameter check (preferred for query, fallback for auto / path)
+  if (mode === 'query' || mode === 'auto' || mode === 'path') {
     try {
       const url = new URL(window.location.href);
       const val = url.searchParams.get(param) || url.searchParams.get('p') || url.searchParams.get(config.bind);
@@ -158,6 +176,45 @@ export function updateNavigatorUrl(route: string, replace = false): void {
         window.location.hash = targetHash || '#/';
       }
     }
+    updateSeoMetadata(cleanRoute);
+    return;
+  }
+
+  if (mode === 'path') {
+    try {
+      const url = new URL(window.location.href);
+      const pathname = url.pathname;
+      let prefix = '';
+      if (pathname.startsWith('/es/') || pathname === '/es') prefix = '/es';
+      if (pathname.startsWith('/fr/') || pathname === '/fr') prefix = '/fr';
+
+      let newPath = '';
+      if (!cleanRoute || cleanRoute === 'home') {
+        newPath = prefix ? `${prefix}/` : '/';
+      } else {
+        newPath = prefix ? `${prefix}/${encodeURIComponent(cleanRoute)}` : `/${encodeURIComponent(cleanRoute)}`;
+      }
+
+      url.searchParams.delete(param);
+      url.searchParams.delete('p');
+      url.searchParams.delete(config.bind);
+
+      if (url.hash && !url.hash.startsWith('#/')) {
+        url.hash = '';
+      }
+
+      const finalUrl = newPath + (url.search ? url.search : '') + (url.hash ? url.hash : '');
+      const stateObj = { [config.bind]: cleanRoute };
+
+      if (replace) {
+        window.history.replaceState(stateObj, '', finalUrl);
+      } else {
+        window.history.pushState(stateObj, '', finalUrl);
+      }
+    } catch (_err) {
+      // History API fallback
+    }
+
     updateSeoMetadata(cleanRoute);
     return;
   }

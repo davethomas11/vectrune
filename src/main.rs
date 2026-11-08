@@ -73,6 +73,13 @@ async fn main() -> anyhow::Result<()> {
                 .default_value("/"),
         )
         .arg(
+            Arg::new("chunks-dir")
+                .long("chunks-dir")
+                .help("Directory to export dynamic XHR chunks for @Optimizer (e.g. _site/assets/routes)")
+                .value_name("CHUNKS_DIR")
+                .num_args(1),
+        )
+        .arg(
             Arg::new("filter")
                 .long("filter")
                 .help("Filter output to only include sections matching a path, e.g. '@Memory' or '@Page'")
@@ -532,8 +539,19 @@ async fn main() -> anyhow::Result<()> {
         let app_type = get_app_type(&doc);
 
         if output_format == Some("html") {
+            let chunks_dir = matches.get_one::<String>("chunks-dir").map(|s| s.as_str());
             match get_frontend_type(&doc) {
                 Some("rune-web") => {
+                    if let Some(dir) = chunks_dir {
+                        let page_name = doc
+                            .sections
+                            .iter()
+                            .find(|s| s.path.first().map(|p| p.as_str()) == Some("Frontend"))
+                            .and_then(|s| s.kv.get("page"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("index");
+                        let _ = crate::apps::rune_web::export_optimizer_chunks(&doc, page_name, std::path::Path::new(dir));
+                    }
                     let html = crate::apps::rune_web::render_html_for_path(&doc, render_path).await?;
                     println!("{}", html);
                     break;

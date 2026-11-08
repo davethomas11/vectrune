@@ -12,6 +12,14 @@ export interface ViewNode {
   Match?: MatchNode;
   Text?: string;
   Comment?: string;
+  LazyRoute?: LazyRouteNode;
+}
+
+/** Lazy route node loaded on-demand via network request. */
+export interface LazyRouteNode {
+  route: string;
+  chunk_url: string;
+  fallback?: ViewNode[];
 }
 
 export interface ElementNode {
@@ -138,6 +146,13 @@ export interface SeoConfig {
   routes?: Record<string, SeoRouteConfig>;
 }
 
+/** Optimizer configuration from `@Optimizer`. */
+export interface OptimizerConfig {
+  dynamic_xhr?: 'on' | 'auto' | 'lazy' | 'off' | string;
+  pre_load?: boolean;
+  chunk_path?: string;
+}
+
 /** Configuration passed to boot(). */
 export interface RuneWebConfig {
   pageTree: ViewNode;
@@ -152,12 +167,16 @@ export interface RuneWebConfig {
   navigator?: NavigatorConfig | null;
   emitters?: Record<string, EmitterConfig>;
   seo?: SeoConfig | null;
+  optimizer?: OptimizerConfig | null;
 }
 
 /** The application object exposed as window.runeWebApp. */
 export interface RuneApp {
   state: Record<string, unknown>;
   derived: Record<string, unknown>;
+  loadedChunks?: Record<string, ViewNode[] | ViewNode>;
+  loadChunk?: (route: string, chunkUrl: string) => Promise<unknown>;
+  preloadChunks?: () => void;
   computeDerived: () => void;
   render: () => void;
   invokeAction: (name: string, args: unknown[], locals?: Record<string, unknown>) => void;

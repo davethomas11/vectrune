@@ -20,6 +20,7 @@ pub struct JsCodegen {
     memory_seed: HashMap<String, serde_json::Value>,
     navigator: Option<super::ast::NavigatorDefinition>,
     seo: Option<super::ast::SeoDefinition>,
+    optimizer: Option<super::ast::OptimizerDefinition>,
 }
 
 impl JsCodegen {
@@ -32,8 +33,9 @@ impl JsCodegen {
         memory_seed: HashMap<String, serde_json::Value>,
         navigator: Option<super::ast::NavigatorDefinition>,
         seo: Option<super::ast::SeoDefinition>,
+        optimizer: Option<super::ast::OptimizerDefinition>,
     ) -> Self {
-        JsCodegen { page, logic, i18n_json, ws_endpoint, memory_seed, navigator, seo }
+        JsCodegen { page, logic, i18n_json, ws_endpoint, memory_seed, navigator, seo, optimizer }
     }
 
     /// Generate complete JavaScript application code.
@@ -81,6 +83,8 @@ impl JsCodegen {
         let emitters_json = self.generate_emitters_json();
         let seo_json = serde_json::to_string(&self.seo)
             .unwrap_or_else(|_| "null".to_string());
+        let optimizer_json = serde_json::to_string(&self.optimizer)
+            .unwrap_or_else(|_| "null".to_string());
 
         format!(
             r#"
@@ -97,7 +101,8 @@ __RuneWeb.boot({{
   keys: {keys_json},
   navigator: {navigator_json},
   emitters: {emitters_json},
-  seo: {seo_json}
+  seo: {seo_json},
+  optimizer: {optimizer_json}
 }});
 "#,
             include_str!("../../../runtime/rune-web/dist/rune-runtime.js")
@@ -761,7 +766,7 @@ mod tests {
             }],
         };
 
-        let gen = JsCodegen::new(page, logic, "{}".to_string(), None, HashMap::new(), None, None);
+        let gen = JsCodegen::new(page, logic, "{}".to_string(), None, HashMap::new(), None, None, None);
         let code = gen.generate();
         assert!(code.contains("__RuneWeb.boot({"));
         assert!(code.contains("pageTree:"));
@@ -780,7 +785,7 @@ mod tests {
             timer: None,
             keys: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new(), None, None);
+        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new(), None, None, None);
         assert_eq!(gen.parse_value("\"hello\""), serde_json::Value::String("hello".to_string()));
         assert_eq!(gen.parse_value("42"), serde_json::json!(42));
         assert_eq!(gen.parse_value("true"), serde_json::json!(true));
@@ -798,7 +803,7 @@ mod tests {
             timer: None,
             keys: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new(), None, None);
+        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new(), None, None, None);
         
         // 1D Generator standalone
         let val1 = gen.parse_value("{ \"x\": 50, \"start_x\": 50 } * 3 inc (x, start_x) by 65 with { \"y\": 40, \"type\": 1, \"alive\": true }");
@@ -868,7 +873,7 @@ mod tests {
             timer: None,
             keys: HashMap::new(),
         };
-        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new(), None, None);
+        let gen = JsCodegen::new(ViewNode::Text("hi".to_string()), logic, "{}".to_string(), None, HashMap::new(), None, None, None);
         let state_json_str = gen.generate_state_json();
         let state_val: serde_json::Value = serde_json::from_str(&state_json_str).expect("Valid JSON");
         
@@ -919,7 +924,7 @@ mod tests {
             keys: HashMap::new(),
         };
         let source = "</script><p>source code</p>";
-        let generator = JsCodegen::new(ViewNode::Text(source.into()), logic, "{}".into(), None, HashMap::new(), None, None);
+        let generator = JsCodegen::new(ViewNode::Text(source.into()), logic, "{}".into(), None, HashMap::new(), None, None, None);
         let generated = generator.generate();
         assert!(!generated.contains(source));
         assert!(generated.contains(r"\u003c/script>"));
@@ -941,7 +946,7 @@ mod tests {
             timer: None,
             keys: HashMap::new(),
         };
-        let generator = JsCodegen::new(ViewNode::Text("test".into()), logic, "{}".into(), None, HashMap::new(), None, None);
+        let generator = JsCodegen::new(ViewNode::Text("test".into()), logic, "{}".into(), None, HashMap::new(), None, None, None);
         let generated = generator.generate();
         assert!(generated.contains(r#""sparks":[]"#) || generated.contains(r#""sparks": []"#));
         assert!(generated.contains(r#""sparks":{"friction":0.92,"life":14,"size":[3,5]}"#));
@@ -963,7 +968,7 @@ mod tests {
         assert!(logic.state.contains_key("mushrooms"));
         assert!(logic.state.contains_key("worms"));
 
-        let generator = JsCodegen::new(ViewNode::Text("test".into()), logic, "{}".into(), None, HashMap::new(), None, None);
+        let generator = JsCodegen::new(ViewNode::Text("test".into()), logic, "{}".into(), None, HashMap::new(), None, None, None);
         let state_val: serde_json::Value = serde_json::from_str(&generator.generate_state_json()).unwrap();
         let worms = state_val.get("worms").unwrap().as_array().unwrap();
         assert_eq!(worms.len(), 10);

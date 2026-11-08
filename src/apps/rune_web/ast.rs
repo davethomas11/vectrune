@@ -29,6 +29,30 @@ pub struct RuneWebFrontend {
 
     /// SEO configuration and route metadata (from `@SEO` and `@SEO/<route>`)
     pub seo: Option<SeoDefinition>,
+
+    /// Optimizer configuration for code splitting and on-demand XHR loading (from `@Optimizer`)
+    pub optimizer: Option<OptimizerDefinition>,
+}
+
+/// Optimizer configuration from `@Optimizer`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct OptimizerDefinition {
+    /// "on", "auto", "lazy", or "off"
+    pub dynamic_xhr: String,
+    /// Whether to background pre-load all route chunks while on the main page
+    pub pre_load: bool,
+    /// Base URL path for route chunks (defaults to "/assets/routes")
+    pub chunk_path: String,
+}
+
+impl OptimizerDefinition {
+    pub fn is_active(&self) -> bool {
+        self.dynamic_xhr == "on" || self.dynamic_xhr == "auto" || self.dynamic_xhr == "lazy"
+    }
+
+    pub fn is_automatic(&self) -> bool {
+        self.dynamic_xhr == "on" || self.dynamic_xhr == "auto"
+    }
 }
 
 /// SEO configuration for an individual route or page.
@@ -196,6 +220,13 @@ pub enum ViewNode {
 
     /// Raw text content
     Text(String),
+
+    /// A lazy route chunk loaded on-demand via network request (from `@Optimizer dynamic_xhr = on/auto`)
+    LazyRoute {
+        route: String,
+        chunk_url: String,
+        fallback: Vec<ViewNode>,
+    },
 }
 
 /// A style definition from `@Style/<name>`.
