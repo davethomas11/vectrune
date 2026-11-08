@@ -58,6 +58,19 @@ describe('Web Audio Synthesizer & Music Sequencer', () => {
     expect(events[6].beats).toBe(1);
   });
 
+  it('parses multi-line bars with inline comments', () => {
+    const pattern = `
+      C4:8 D4:8 E4:8 G4:8 # Bar 1: Intro
+      A4:8 G4:8 E4:8 D4:8 # Bar 2: Response
+      C4:2 -:2            # Bar 3: Resolution
+    `;
+    const events = parseTrackPattern(pattern);
+    expect(events.length).toBe(10);
+    expect(events[0].pitch).toBeCloseTo(261.63, 1);
+    expect(events[4].pitch).toBe(440);
+    expect(events[9].isRest).toBe(true);
+  });
+
   it('registers custom @Sound definitions and plays without throwing', () => {
     registerSounds({
       laser_canon: {

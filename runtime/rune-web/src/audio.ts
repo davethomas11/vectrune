@@ -375,8 +375,9 @@ let tracksState: {
 
 export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
   const events: ParsedNoteEvent[] = [];
-  // Tokenize ignoring measure bars '|'
-  const tokens = patternStr.replace(/\|/g, ' ').split(/\s+/).filter(Boolean);
+  // Strip inline comments (\s+#... or ^#...) without breaking sharp notes like D#4 or C#5
+  const clean = patternStr.replace(/^\s*#.*$/gm, '').replace(/\s+#.*$/gm, '').replace(/\|/g, ' ');
+  const tokens = clean.split(/\s+/).filter(Boolean);
 
   for (const token of tokens) {
     const parts = token.split(':');

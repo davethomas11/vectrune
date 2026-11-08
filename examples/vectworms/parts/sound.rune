@@ -36,7 +36,21 @@ type = 8bit
 tempo = 136
 loop = true
 volume = 0.18
-lead = C4:8 E4:8 G4:8 A4:8 G4:8 E4:8 C4:8 D4:8 | E4:8 G4:8 A4:8 C5:8 B4:4 G4:4 | A4:8 G4:8 E4:8 C4:8 D4:8 E4:8 D4:4 | C4:2 -:2
-bass = C2:4 G2:4 C2:4 G2:4 | E2:4 B2:4 E2:4 B2:4 | F2:4 C3:4 G2:4 D3:4 | C2:4 G2:4 C2:2
-drums = kick:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 kick:2
 
+lead:
+    C4:8 E4:8 G4:8 A4:8 G4:8 E4:8 C4:8 D4:8       # Bar 1: Bouncy opening
+    E4:8 G4:8 A4:8 C5:8 B4:4 G4:4                 # Bar 2: Peak melody
+    A4:8 G4:8 E4:8 C4:8 D4:8 E4:8 D4:4           # Bar 3: Playful turn
+    C4:2 -:2                                      # Bar 4: Rest & resolve
+
+bass:
+    C2:4 G2:4 C2:4 G2:4                           # Bar 1: Walking groove
+    E2:4 B2:4 E2:4 B2:4                           # Bar 2
+    F2:4 C3:4 G2:4 D3:4                           # Bar 3
+    C2:4 G2:4 C2:2 -:4                            # Bar 4
+
+drums:
+    kick:4 snare:4 kick:8 kick:8 snare:4          # Bar 1: Syncopated beat
+    kick:4 snare:4 kick:8 hihat:8 snare:4         # Bar 2
+    kick:4 snare:4 kick:8 kick:8 snare:4          # Bar 3
+    kick:4 snare:4 kick:2                         # Bar 4

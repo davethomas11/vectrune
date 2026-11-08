@@ -600,19 +600,46 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> MusicDefinition {
         })
         .unwrap_or(0.2);
 
-    let lead = section.kv.get("lead")
-        .or_else(|| section.kv.get("melody"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.trim().to_string());
+    let extract_track = |name: &str, alt_name: Option<&str>| -> Option<String> {
+        let from_kv = section.kv.get(name)
+            .or_else(|| alt_name.and_then(|alt| section.kv.get(alt)))
+            .and_then(|v| v.as_str())
+            .map(|s| s.trim().to_string());
+        if from_kv.is_some() {
+            return from_kv;
+        }
 
-    let bass = section.kv.get("bass")
-        .and_then(|v| v.as_str())
-        .map(|s| s.trim().to_string());
+        let from_series = section.series.get(name)
+            .or_else(|| alt_name.and_then(|alt| section.series.get(alt)))
+            .map(|items| {
+                items.iter().filter_map(|v| match v {
+                    Value::String(s) => {
+                        let trimmed = s.trim();
+                        let clean = if trimmed.starts_with('#') {
+                            ""
+                        } else if let Some(idx) = s.find(" #") {
+                            s[..idx].trim()
+                        } else if let Some(idx) = s.find("\t#") {
+                            s[..idx].trim()
+                        } else {
+                            trimmed
+                        };
+                        if clean.is_empty() {
+                            None
+                        } else {
+                            Some(clean)
+                        }
+                    }
+                    _ => None,
+                }).collect::<Vec<_>>().join(" | ")
+            });
 
-    let drums = section.kv.get("drums")
-        .or_else(|| section.kv.get("percussion"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.trim().to_string());
+        from_series.filter(|s| !s.trim().is_empty())
+    };
+
+    let lead = extract_track("lead", Some("melody"));
+    let bass = extract_track("bass", None);
+    let drums = extract_track("drums", Some("percussion"));
 
     MusicDefinition {
         music_type,
@@ -2424,6 +2451,41 @@ drums = kick:4 snare:4
         assert_eq!(music.lead.as_deref(), Some("E4:8 D#4:8 E4:8 B3:8"));
         assert_eq!(music.bass.as_deref(), Some("A2:4 E2:4"));
         assert_eq!(music.drums.as_deref(), Some("kick:4 snare:4"));
+    }
+
+    #[test]
+    fn parses_music_with_multiline_bars_and_comments() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Page/home
+view:
+    main:
+        p "Score"
+
+@Music/boss
+tempo = 150
+lead:
+    E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4   # Bar 1: Intro hook
+    E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4   # Bar 2: Repeat
+bass:
+    A2:4 E2:4 A2:4 E2:4                   # Bar 1
+    A2:4 E2:4 A2:4 E2:4                   # Bar 2
+drums:
+    kick:4 snare:4 kick:4 snare:4         # Bar 1
+    kick:8 hihat:8 snare:4 kick:4 snare:4 # Bar 2
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let boss = frontend.music.get("boss").expect("boss music exists");
+        assert_eq!(boss.tempo, 150.0);
+        assert_eq!(
+            boss.lead.as_deref(),
+            Some("E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4")
+        );
+        assert_eq!(boss.bass.as_deref(), Some("A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4"));
     }
 
     #[test]

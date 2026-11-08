@@ -42,7 +42,21 @@ type = 8bit
 tempo = 144
 loop = true
 volume = 0.18
-lead = E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | C4:8 D4:8 E4:8 G4:8 A4:4 G4:4 | E4:8 D4:8 C4:8 B3:8 A3:2
-bass = A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4 | C3:4 G2:4 C3:4 G2:4 | F2:4 C2:4 E2:4 G#2:4
-drums = kick:4 snare:4 kick:4 snare:4 | kick:4 snare:4 kick:4 snare:4 | kick:8 hihat:8 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:4 snare:4
 
+lead:
+    E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4           # Bar 1: Alien theme
+    E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4           # Bar 2: Theme reprise
+    C4:8 D4:8 E4:8 G4:8 A4:4 G4:4                 # Bar 3: Ascending run
+    E4:8 D4:8 C4:8 B3:8 A3:2                      # Bar 4: Minor cadence
+
+bass:
+    A2:4 E2:4 A2:4 E2:4                           # Bar 1: Driving pulse
+    A2:4 E2:4 A2:4 E2:4                           # Bar 2
+    C3:4 G2:4 C3:4 G2:4                           # Bar 3
+    F2:4 C2:4 E2:4 G#2:4                          # Bar 4
+
+drums:
+    kick:4 snare:4 kick:4 snare:4                 # Bar 1
+    kick:4 snare:4 kick:4 snare:4                 # Bar 2
+    kick:8 hihat:8 snare:4 kick:8 hihat:8 snare:4 # Bar 3: Roll
+    kick:4 snare:4 kick:4 snare:4                 # Bar 4

@@ -1945,7 +1945,8 @@ var __RuneWeb = (() => {
   var tracksState = {};
   function parseTrackPattern(patternStr) {
     const events = [];
-    const tokens = patternStr.replace(/\|/g, " ").split(/\s+/).filter(Boolean);
+    const clean = patternStr.replace(/^\s*#.*$/gm, "").replace(/\s+#.*$/gm, "").replace(/\|/g, " ");
+    const tokens = clean.split(/\s+/).filter(Boolean);
     for (const token of tokens) {
       const parts = token.split(":");
       const noteToken = parts[0].trim();
