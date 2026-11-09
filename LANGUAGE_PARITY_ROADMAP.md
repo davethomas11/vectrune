@@ -181,6 +181,7 @@ Over successive releases, features were added to specific targets to solve immed
   - Separate WebView prototype (2026-11-09): [`runtime/rune-mobile-web`](runtime/rune-mobile-web/README.md) packages build-time Rune-Web exports in Android/iOS Capacitor shells with an offline touch demo.
   - Documents declare `@Frontend type = rune-mobile-web`. The CLI supports `vectrune <file-or-directory> --build android|ios` and `--prepare-only`. Android produces a debug APK; iOS produces an unsigned Simulator app. Native SDK builds and device profiling require platform tools.
   - This target does not complete the full native `rune-mobile` runtime or renderer.
+  - `--export android|ios` hands off editable Gradle/Xcode projects for IDE signing and distribution; exports include dependency/setup instructions and are protected from regeneration over native edits.
 
 ---
 

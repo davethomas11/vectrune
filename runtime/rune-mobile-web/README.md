@@ -69,6 +69,45 @@ Build directories are generated projects: template files are replaced on each
 build. Nonempty directories without the generation marker are rejected to
 protect existing projects. Use a separate directory for manual native edits.
 
+## Export for signing in a mobile IDE
+
+```sh
+vectrune ./examples/rune_mobile_web --export android --build-dir ./mobile-android
+vectrune ./examples/rune_mobile_web --export ios --build-dir ./mobile-ios
+```
+
+`--export` generates editable native projects and bundled HTML without running
+npm, Gradle or Xcode. It can export either platform on any host. Each export
+includes `MOBILE_IDE.md` with setup and signing steps; the CLI also prints them.
+
+From the exported directory, on the development machine:
+
+```sh
+npm ci --include=dev
+npx cap sync android   # use ios for Xcode
+npx cap open android   # use ios for Xcode
+```
+
+Open `android/` as a Gradle project in Android Studio, or
+`ios/App/App.xcodeproj` in Xcode on macOS. Keep the entire export together:
+the native project uses the root Node dependencies, config and `www/` assets.
+It is an editable project rather than a signed app package.
+
+For Android, set the application ID and use Android Studio's
+[Generate Signed App Bundle or APK workflow](https://developer.android.com/studio/publish/app-signing)
+to select/create your keystore. For iOS, configure your bundle identifier and
+team under Signing & Capabilities, then archive for distribution using
+[Xcode's signing workflow](https://developer.apple.com/documentation/xcode/preparing-your-app-for-distribution).
+Signing credentials stay in your native development environment.
+
+Exports require an empty destination. Once exported, all generation modes
+refuse to replace that project's templates, protecting native edits and signing
+settings. Use another `--build-dir` for a fresh export. To update only the Rune
+page, export `vectrune <source> -o html` into the project's `www/index.html`,
+retain `viewport-fit=cover` in its viewport meta tag, and run `npx cap sync`.
+`--build <platform> --prepare-only` remains the regenerable, SDK-free build
+preparation workflow; prefer `--export` for the final IDE handoff.
+
 For development of the checked-in Capacitor shells, the existing npm/IDE
 workflow is also available:
 

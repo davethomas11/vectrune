@@ -9,13 +9,16 @@ use std::process::Command;
 mod templates;
 
 const MARKER: &str = ".rune-mobile-web-project";
+const IDE_MARKER: &str = ".rune-mobile-web-ide";
 
-pub async fn build(
-    source: &Path,
-    target: &str,
-    output: Option<&Path>,
-    prepare_only: bool,
-) -> Result<()> {
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Mode {
+    Build,
+    Prepare,
+    Export,
+}
+
+pub async fn build(source: &Path, target: &str, output: Option<&Path>, mode: Mode) -> Result<()> {
     ensure!(
         matches!(target, "android" | "ios"),
         "Unsupported mobile platform: {target}"
@@ -29,12 +32,6 @@ pub async fn build(
         .context("--build requires @Frontend type = rune-mobile-web")?;
     ensure!(frontend.kv.get("type").and_then(|value| value.as_str()) == Some("rune-mobile-web"),
         "--build requires @Frontend type = rune-mobile-web; rune-mobile is reserved for the future native runtime");
-    if !prepare_only && target == "ios" {
-        ensure!(
-            cfg!(target_os = "macos"),
-            "iOS builds require macOS with Xcode 26+; use --prepare-only to export elsewhere"
-        );
-    }
     let route = frontend
         .kv
         .get("path")
@@ -54,10 +51,33 @@ pub async fn build(
     let output = output
         .map(Path::to_path_buf)
         .unwrap_or_else(|| base.join(".vectrune/rune-mobile-web"));
+    ensure!(!output.join(IDE_MARKER).exists(),
+        "Refusing to replace an editable IDE export at {}; choose a new --build-dir to preserve native edits and signing settings", output.display());
+    if mode == Mode::Export && output.exists() && fs::read_dir(&output)?.next().is_some() {
+        bail!("Refusing to replace an existing IDE project at {}; choose a new --build-dir to preserve native edits and signing settings", output.display());
+    }
+    if mode == Mode::Build && target == "ios" {
+        ensure!(
+            cfg!(target_os = "macos"),
+            "iOS builds require macOS with Xcode 26+; use --export ios or --prepare-only to export elsewhere"
+        );
+    }
     prepare_project(&output, &html)?;
     let output = output.canonicalize()?;
     println!("Prepared Rune Mobile Web project: {}", output.display());
-    if prepare_only {
+    if mode != Mode::Build {
+        let instructions = ide_instructions(target);
+        fs::write(output.join("MOBILE_IDE.md"), &instructions)?;
+        if mode == Mode::Export {
+            fs::write(
+                output.join(IDE_MARKER),
+                "Editable IDE project; do not regenerate native templates.\n",
+            )?;
+        }
+        println!(
+            "IDE setup instructions: {}\n{instructions}",
+            output.join("MOBILE_IDE.md").display()
+        );
         return Ok(());
     }
 
@@ -135,6 +155,51 @@ pub async fn build(
         artifact.display()
     );
     Ok(())
+}
+
+fn ide_instructions(target: &str) -> String {
+    let (ide, project, signing) = if target == "android" {
+        (
+            "Android Studio",
+            "android/",
+            "In Android Studio, set your application ID in app/build.gradle, then use Build > Generate Signed App Bundle or APK to select/create a keystore and produce a signed AAB or APK.\nhttps://developer.android.com/studio/publish/app-signing",
+        )
+    } else {
+        (
+            "Xcode (on macOS)",
+            "ios/App/App.xcodeproj",
+            "In Xcode, select the App target, set your bundle identifier and development team under Signing & Capabilities, then build for a device or use Product > Archive for distribution.\nhttps://developer.apple.com/documentation/xcode/preparing-your-app-for-distribution",
+        )
+    };
+    format!(
+        r#"# Finish in {ide}
+
+From this exported directory, install Node.js 22+ and run:
+
+```sh
+npm ci --include=dev
+npx cap sync {target}
+npx cap open {target}
+```
+
+IDE project: {project}
+
+{signing}
+
+The native IDE and platform SDKs are required on the machine that builds/signs
+the app. This export does not contain signing credentials.
+
+Keep the entire exported directory together, including package.json,
+package-lock.json, capacitor.config.json and www/. The native projects depend
+on these files and installed Node packages.
+
+Treat this export as your editable native project. Generation commands refuse
+to replace this export. To update Rune UI without replacing native settings,
+export HTML with vectrune <source> -o html into www/index.html, then run
+npx cap sync {target}. Keep viewport-fit=cover in the viewport meta tag when
+updating HTML for safe areas.
+"#
+    )
 }
 
 fn prepare_project(output: &Path, html: &str) -> Result<()> {

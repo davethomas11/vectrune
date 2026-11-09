@@ -76,7 +76,7 @@ fn installed_binary_prepares_both_platforms_without_checkout_or_tools() {
         .assert()
         .success();
     assert!(source
-            .join(".vectrune/rune-mobile-web/www/index.html")
+        .join(".vectrune/rune-mobile-web/www/index.html")
         .exists());
 }
 
@@ -128,6 +128,77 @@ fn build_requires_mobile_web_type_and_rejects_conflicting_modes() {
         .args(["--build", "android", "--prepare-only"])
         .assert()
         .failure();
+}
+
+#[test]
+fn export_hands_off_both_ide_projects_and_preserves_native_edits() {
+    let temp = tempdir().unwrap();
+    for platform in ["android", "ios"] {
+        let project = temp.path().join(format!("editable {platform}"));
+        let result = cli()
+            .arg(sample())
+            .args(["--export", platform, "--build-dir"])
+            .arg(&project)
+            .assert()
+            .success();
+        let instructions = fs::read_to_string(project.join("MOBILE_IDE.md")).unwrap();
+        assert!(instructions.contains(&format!("npx cap sync {platform}")));
+        assert!(instructions.contains(&format!("npx cap open {platform}")));
+        assert!(String::from_utf8_lossy(&result.get_output().stdout).contains("MOBILE_IDE.md"));
+        assert!(String::from_utf8_lossy(&result.get_output().stdout).contains(&instructions));
+        assert!(project.join("www/index.html").exists());
+        assert!(!project.join("node_modules").exists());
+        let native_file = if platform == "android" {
+            project.join("android/app/build.gradle")
+        } else {
+            project.join("ios/App/App.xcodeproj/project.pbxproj")
+        };
+        assert!(native_file.exists());
+        fs::write(&native_file, "custom signing and native settings").unwrap();
+        for args in [
+            vec!["--export", platform],
+            vec!["--build", platform],
+            vec!["--build", platform, "--prepare-only"],
+        ] {
+            let result = cli()
+                .arg(sample())
+                .args(args)
+                .arg("--build-dir")
+                .arg(&project)
+                .assert()
+                .failure();
+            assert!(String::from_utf8_lossy(&result.get_output().stderr)
+                .contains("editable IDE export"));
+            assert_eq!(
+                fs::read_to_string(&native_file).unwrap(),
+                "custom signing and native settings"
+            );
+        }
+    }
+}
+
+#[test]
+fn export_rejects_existing_directories_and_conflicting_modes() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("keep.txt"), "user file").unwrap();
+    cli()
+        .arg(sample())
+        .args(["--export", "android", "--build-dir"])
+        .arg(temp.path())
+        .assert()
+        .failure();
+    assert_eq!(
+        fs::read_to_string(temp.path().join("keep.txt")).unwrap(),
+        "user file"
+    );
+    for args in [
+        vec!["--export", "android", "--build", "android"],
+        vec!["--export", "ios", "--prepare-only"],
+        vec!["--export", "ios", "-o", "html"],
+    ] {
+        cli().arg(sample()).args(args).assert().failure();
+    }
+    cli().args(["--export", "ios"]).assert().failure();
 }
 
 #[cfg(unix)]

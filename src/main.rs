@@ -73,10 +73,19 @@ async fn main() -> anyhow::Result<()> {
                 .help("Build a rune-mobile-web app: Android debug APK or unsigned iOS Simulator app"),
         )
         .arg(
+            Arg::new("export")
+                .long("export")
+                .value_parser(["android", "ios"])
+                .requires("SCRIPT")
+                .conflicts_with_all(["build", "prepare-only", "output", "input", "calculate", "transform", "merge-with", "filter", "watch", "chunks-dir", "ai"])
+                .help("Export a Gradle or Xcode project for IDE signing and distribution; no SDKs required"),
+        )
+        .group(clap::ArgGroup::new("mobile-target").args(["build", "export"]))
+        .arg(
             Arg::new("build-dir")
                 .long("build-dir")
                 .value_name("DIRECTORY")
-                .requires("build")
+                .requires("mobile-target")
                 .help("Generated mobile project directory (default: <source>/.vectrune/rune-mobile-web)"),
         )
         .arg(
@@ -419,14 +428,21 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    if let Some(target) = matches.get_one::<String>("build") {
+    if let Some(target) = matches.get_one::<String>("build").or_else(|| matches.get_one::<String>("export")) {
         anyhow::ensure!(script_paths.len() == 1 && script_paths[0] != "-",
-            "--build requires exactly one Rune file or directory");
+            "--build/--export requires exactly one Rune file or directory");
+        let mode = if matches.contains_id("export") {
+            cli::mobile_web::Mode::Export
+        } else if matches.get_flag("prepare-only") {
+            cli::mobile_web::Mode::Prepare
+        } else {
+            cli::mobile_web::Mode::Build
+        };
         cli::mobile_web::build(
             std::path::Path::new(script_paths[0]),
             target,
             matches.get_one::<String>("build-dir").map(std::path::Path::new),
-            matches.get_flag("prepare-only"),
+            mode,
         ).await?;
         return Ok(());
     }

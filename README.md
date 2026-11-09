@@ -104,6 +104,8 @@ Build the WebView mobile example with `vectrune ./examples/rune_mobile_web --bui
 for a debug APK, or `--build ios` for an unsigned iOS Simulator app (macOS/Xcode).
 Requires this branch's CLI (0.2.19), Node/npm and the platform SDKs. The future
 `rune-mobile` target is reserved for full native execution and UI.
+Use `--export android|ios --build-dir ./mobile-project` to generate an editable
+Gradle/Xcode project for signing and distribution in the native IDE.
 
 ## Installation
 
