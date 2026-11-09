@@ -114,9 +114,9 @@ Over successive releases, features were added to specific targets to solve immed
 ### Phase 2: Modernize Rust Core Parser & Expression Engine (`src/core/`)
 > *Target: Clean, Safe, Fast Rust Core*
 
-- [ ] **2.1 Safe AST Builder in `src/rune_parser.rs`**:
-  - Eliminate all `unsafe { *mut Vec<Value> }` blocks in `src/rune_parser.rs`.
-  - Implement a clean stack-based or arena-based document builder.
+- [x] **2.1 Safe AST Builder in `src/rune_parser.rs`**: *(Completed in v0.2.16 - Commit `007aae3`)*
+  - Eliminated all raw pointer `unsafe { *mut Vec<Value> }` blocks in `src/rune_parser.rs`.
+  - Implemented safe, recursive path resolver `resolve_series_path_mut` for arbitrary series and map nesting.
 - [ ] **2.2 Unified Expression Parser in Rust (`src/core/expr.rs`)**:
   - Implement a fast Pratt parser producing an `Expr` enum (`Literal`, `Ident`, `Unary`, `Binary`, `Call`, `Member`, `Ternary`, `Coalesce`).
   - Pre-parse expressions in `run:` steps at document load time.
