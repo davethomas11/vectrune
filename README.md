@@ -98,6 +98,14 @@ Start with one of these depending on what you want to learn first:
 - `examples/dynamic_ai_web.rune` — [descriptive AI sites](knowledge/language/dynamic-ai-web.md) with Ollama, Codex CLI, or Copilot CLI
 - `examples/sales_report.rune` — one-line grouped CSV reports with [`summarize`](knowledge/language/summarize.md)
 - `examples/tic_tac_toe/` — multi-file Rune-Web example with UI, logic, and style parts
+- `examples/rune_mobile_web/` — offline Android/iOS prototype; see [Rune Mobile Web setup and runtime design](runtime/rune-mobile-web/README.md)
+
+Build the WebView mobile example with `vectrune ./examples/rune_mobile_web --build android`
+for a debug APK, or `--build ios` for an unsigned iOS Simulator app (macOS/Xcode).
+Requires this branch's CLI (0.2.19), Node/npm and the platform SDKs. The future
+`rune-mobile` target is reserved for full native execution and UI.
+Use `--export android|ios --build-dir ./mobile-project` to generate an editable
+Gradle/Xcode project for signing and distribution in the native IDE.
 
 ## Installation
 

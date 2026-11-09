@@ -182,9 +182,9 @@ pub async fn render_html_for_path(
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("@Frontend type is required for -o html"))?;
 
-    if frontend_type != "rune-web" {
+    if !matches!(frontend_type, "rune-web" | "rune-mobile-web") {
         return Err(anyhow::anyhow!(
-            "-o html expected @Frontend type = rune-web but found '{}'",
+            "-o html expected @Frontend type = rune-web or rune-mobile-web but found '{}'",
             frontend_type
         ));
     }

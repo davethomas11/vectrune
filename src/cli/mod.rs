@@ -8,6 +8,7 @@ pub mod repl;
 pub mod vect;
 pub mod vectrune;
 pub mod watch;
+pub mod mobile_web;
 #[allow(dead_code)]
 pub mod hooks_commands;
 
