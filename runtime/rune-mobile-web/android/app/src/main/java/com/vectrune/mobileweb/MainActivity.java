@@ -1,4 +1,4 @@
-package com.vectrune.mobile;
+package com.vectrune.mobileweb;
 
 import com.getcapacitor.BridgeActivity;
 

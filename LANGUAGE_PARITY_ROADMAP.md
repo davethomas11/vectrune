@@ -172,10 +172,15 @@ Over successive releases, features were added to specific targets to solve immed
 
 - [ ] **6.1 Headless Core & Platform Presentation Decoupling**:
   - Isolate the reactive state container, game loop, timers, spatial math, and audio into an architecture-agnostic headless core (`@vectrune/core`).
-- [ ] **6.2 Rune Mobile Presentation Layer**:
-  - Support native mobile presentation adapters (e.g. Flutter / React Native bridge / Android & iOS canvas/web view surface).
+- [ ] **6.2 Rune Mobile Native Presentation Layer**:
+  - Reserve `rune-mobile` for a fully native runtime and UI, without a WebView dependency.
+  - Support native mobile presentation adapters using the shared execution core.
   - Enable building mobile games and applications from the same `.rune` logic, style, and state definitions.
-  - Prototype started (2026-11-09): [`runtime/rune-mobile`](runtime/rune-mobile/README.md) packages a build-time Rune-Web export in Android/iOS Capacitor shells, with an offline touch demo. Headless-core extraction and native UI rendering remain open; performance work should begin with compiled expressions and device profiling.
+
+- [-] **6.3 Rune Mobile Web Compatibility Target**:
+  - Separate WebView prototype (2026-11-09): [`runtime/rune-mobile-web`](runtime/rune-mobile-web/README.md) packages build-time Rune-Web exports in Android/iOS Capacitor shells with an offline touch demo.
+  - Documents declare `@Frontend type = rune-mobile-web`. The CLI supports `vectrune <file-or-directory> --build android|ios` and `--prepare-only`. Android produces a debug APK; iOS produces an unsigned Simulator app. Native SDK builds and device profiling require platform tools.
+  - This target does not complete the full native `rune-mobile` runtime or renderer.
 
 ---
 

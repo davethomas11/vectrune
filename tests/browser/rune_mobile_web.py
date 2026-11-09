@@ -1,7 +1,7 @@
 """Exercise the bundled mobile demo in Chromium and WebKit.
 
-From runtime/rune-mobile: npm run build
-Then: python3 tests/browser/rune_mobile.py (from the repository root).
+From runtime/rune-mobile-web: npm run build
+Then: python3 tests/browser/rune_mobile_web.py (from the repository root).
 Install Python Playwright and its chromium/webkit browsers first.
 """
 from functools import partial
@@ -76,8 +76,8 @@ def check(base):
 
 
 if __name__ == "__main__":
-    assets = ROOT / "runtime/rune-mobile/www"
-    assert (assets / "index.html").exists(), "Build runtime/rune-mobile first"
+    assets = ROOT / "runtime/rune-mobile-web/www"
+    assert (assets / "index.html").exists(), "Build runtime/rune-mobile-web first"
     server = ThreadingHTTPServer(("127.0.0.1", 0), partial(QuietHandler, directory=str(assets)))
     Thread(target=server.serve_forever, daemon=True).start()
     try:

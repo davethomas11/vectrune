@@ -65,6 +65,28 @@ async fn main() -> anyhow::Result<()> {
                 .value_parser(["text", "json", "rune", "xml", "yaml", "curl", "html"]),
         )
         .arg(
+            Arg::new("build")
+                .long("build")
+                .value_parser(["android", "ios"])
+                .requires("SCRIPT")
+                .conflicts_with_all(["output", "input", "calculate", "transform", "merge-with", "filter", "watch", "chunks-dir", "ai"])
+                .help("Build a rune-mobile-web app: Android debug APK or unsigned iOS Simulator app"),
+        )
+        .arg(
+            Arg::new("build-dir")
+                .long("build-dir")
+                .value_name("DIRECTORY")
+                .requires("build")
+                .help("Generated mobile project directory (default: <source>/.vectrune/rune-mobile-web)"),
+        )
+        .arg(
+            Arg::new("prepare-only")
+                .long("prepare-only")
+                .action(clap::ArgAction::SetTrue)
+                .requires("build")
+                .help("Export the mobile project without installing dependencies or invoking native build tools"),
+        )
+        .arg(
             Arg::new("path")
                 .long("path")
                 .help("Path to render when using -o html (default: /)")
@@ -397,6 +419,18 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    if let Some(target) = matches.get_one::<String>("build") {
+        anyhow::ensure!(script_paths.len() == 1 && script_paths[0] != "-",
+            "--build requires exactly one Rune file or directory");
+        cli::mobile_web::build(
+            std::path::Path::new(script_paths[0]),
+            target,
+            matches.get_one::<String>("build-dir").map(std::path::Path::new),
+            matches.get_flag("prepare-only"),
+        ).await?;
+        return Ok(());
+    }
+
     if input_format.is_none()
         && calc_expr.is_none()
         && transform_spec.is_none()
@@ -541,7 +575,7 @@ async fn main() -> anyhow::Result<()> {
         if output_format == Some("html") {
             let chunks_dir = matches.get_one::<String>("chunks-dir").map(|s| s.as_str());
             match get_frontend_type(&doc) {
-                Some("rune-web") => {
+                Some("rune-web" | "rune-mobile-web") => {
                     if let Some(dir) = chunks_dir {
                         let page_name = doc
                             .sections

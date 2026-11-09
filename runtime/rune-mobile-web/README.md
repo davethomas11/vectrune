@@ -1,10 +1,22 @@
-# Rune Mobile prototype
+# Rune Mobile Web prototype
 
 Android and iOS shells for a bundled Rune-Web app, using Capacitor 8.6.0.
 The Rust compiler converts `.rune` into HTML and JavaScript **at build time**.
 The device runs the existing Rune-Web engine in WKWebView (iOS) or Android
 WebView. No Rust compiler, HTTP backend, remote page, or new Rune interpreter
 ships in the app.
+
+`rune-mobile-web` is the WebView target. **`rune-mobile` is reserved for the
+future full native runtime and UI.** Mobile Web documents declare:
+
+```rune
+@Frontend
+type = rune-mobile-web
+page = mobile
+```
+
+`@App type = REST` remains the application host setting for browser previews;
+`--build` exports the frontend and exits without starting that server.
 
 ## Run the prototype
 
@@ -16,10 +28,54 @@ The projects target iOS 15+ and Android API 24+.
 From the repository root:
 
 ```sh
-# Rebuild the runtime embedded by the Rust compiler when changing Rune-Web.
+# Build this branch's CLI (installed releases before 0.2.19 lack --build).
+cargo build
+target/debug/vectrune ./examples/rune_mobile_web --build android
+# On macOS with Xcode, build an unsigned Simulator app:
+target/debug/vectrune ./examples/rune_mobile_web --build ios
+```
+
+Once this version is installed, use `vectrune` directly:
+
+```sh
+vectrune ./examples/rune_mobile_web --build android
+vectrune ./examples/rune_mobile_web/app.rune --build ios
+```
+
+The CLI embeds the platform templates, compiles the supplied Rune file or
+directory, runs `npm ci`, syncs Capacitor and invokes Gradle or Xcode. It works
+from an installed binary without a repository checkout. Node/npm, the native
+SDKs, and network access to download npm/native dependencies are still required.
+
+Default outputs, relative to the source directory:
+
+- Android: `.vectrune/rune-mobile-web/android/app/build/outputs/apk/debug/app-debug.apk`
+- iOS: `.vectrune/rune-mobile-web/build/ios/Build/Products/Debug-iphonesimulator/App.app`
+
+Each successful build prints the artifact's absolute path. Android builds are
+debug APKs. iOS builds are Simulator `.app` bundles, **not device IPAs**. Device
+builds, signing, archives and store distribution remain manual Xcode workflows.
+The native application identifier is currently `com.vectrune.mobileweb`; custom
+identifiers are not exposed through the CLI yet.
+
+```sh
+# Choose an output project directory:
+vectrune ./examples/rune_mobile_web --build android --build-dir ./output/android
+# Export sources and compiled HTML without Node or native SDKs:
+vectrune ./examples/rune_mobile_web --build ios --prepare-only --build-dir ./output/ios
+```
+
+Build directories are generated projects: template files are replaced on each
+build. Nonempty directories without the generation marker are rejected to
+protect existing projects. Use a separate directory for manual native edits.
+
+For development of the checked-in Capacitor shells, the existing npm/IDE
+workflow is also available:
+
+```sh
 npm ci --prefix runtime/rune-web
 npm run build --prefix runtime/rune-web
-cd runtime/rune-mobile
+cd runtime/rune-mobile-web
 npm ci
 npm run android   # compiles Rune, syncs bundled assets, opens Android Studio
 # Or, on a Mac with Xcode:
@@ -39,13 +95,13 @@ cd android
 ```
 
 ```sh
-# From runtime/rune-mobile, on macOS with Xcode:
+# From runtime/rune-mobile-web, on macOS with Xcode:
 xcodebuild -project ios/App/App.xcodeproj -scheme App \
   -configuration Debug -sdk iphonesimulator \
   -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
-Edit [the demo](../../examples/rune_mobile/app.rune) and its imported styles,
+Edit [the demo](../../examples/rune_mobile_web/app.rune) and its imported styles,
 then run `npm run sync`. The demo supports touch, counter actions, two views,
 safe areas, and explicit save/restore through Rune's local storage builtins.
 It works offline from first launch. Save/restore demonstrates small local
@@ -76,8 +132,9 @@ npx cap sync
 # From the repository root:
 python3 -m pip install playwright
 python3 -m playwright install chromium webkit
-python3 tests/browser/rune_mobile.py
+python3 tests/browser/rune_mobile_web.py
 cargo check --offline
+cargo test --offline --test mobile_web_cli --test html_output_cli
 ```
 
 Browser checks exercise the actual compiled Rune page in Chromium and WebKit:
@@ -85,7 +142,10 @@ touch actions, local save/restore across reloads, navigation, offline actions,
 48px targets, and portrait/landscape layouts. They are not device or native
 build tests. Native compilation and device profiling still require the SDKs
 above. Template icons/splash screens and application identifiers are prototype
-defaults; replace them before distribution.
+defaults; replace them before distribution. CLI tests verify both embedded
+project exports, frontend validation, protection of existing directories,
+tool invocation and failure propagation. Mocked build tools in those tests do
+not validate native SDK compilation.
 
 ## Runtime and performance decision
 
@@ -120,5 +180,5 @@ bytecode interpreter can avoid depending on runtime machine-code generation.
 Keep application code bundled; any future downloaded-code feature needs its own
 distribution design and review against [Apple's guidelines](https://developer.apple.com/app-store/review/guidelines/).
 
-This prototype starts phase 6.2 with a WebView adapter; it does **not** complete
-the headless-core extraction, native widget renderer, or AOT compiler.
+This prototype is the separate phase 6.3 WebView target; it does **not** complete
+the native `rune-mobile` headless core, native widget renderer, or AOT compiler.

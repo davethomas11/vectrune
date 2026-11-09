@@ -1,11 +1,11 @@
 #!RUNE
-# Offline mobile prototype. Compile with runtime/rune-mobile; no HTTP server needed.
+# Offline mobile prototype. Compile with runtime/rune-mobile-web; no HTTP server needed.
 import "style.rune"
 @App
-name = Rune Mobile
+name = Rune Mobile Web
 type = REST
 @Frontend
-type = rune-web
+type = rune-mobile-web
 path = /
 page = mobile
 @Logic/mobile
@@ -19,19 +19,19 @@ action decrement():
 action reset():
     count = 0
 action save():
-    storage.set("rune-mobile.count", count)
+    storage.set("rune-mobile-web.count", count)
 action restore():
-    count = storage.get("rune-mobile.count", 0)
+    count = storage.get("rune-mobile-web.count", 0)
 action navigate(value):
     screen = value
 @Page/mobile
-title = Rune Mobile
+title = Rune Mobile Web
 style = mobile
 logic = mobile
 view:
     main:
         header:
-            p .eyebrow "VECTRUNE / MOBILE"
+            p .eyebrow "VECTRUNE / MOBILE WEB"
             h1 "Small source. Real app."
             p .intro "One Rune file, ready for your pocket."
         nav aria-label="Demo screens":

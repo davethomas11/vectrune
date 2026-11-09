@@ -1,0 +1,181 @@
+//! Build-time Rune-Web compilation followed by a Capacitor platform build.
+//! Templates are embedded so an installed vectrune binary needs no source checkout.
+use anyhow::{bail, ensure, Context, Result};
+use std::fs;
+use std::path::Path;
+use std::process::Command;
+
+#[path = "mobile_web_templates.rs"]
+mod templates;
+
+const MARKER: &str = ".rune-mobile-web-project";
+
+pub async fn build(
+    source: &Path,
+    target: &str,
+    output: Option<&Path>,
+    prepare_only: bool,
+) -> Result<()> {
+    ensure!(
+        matches!(target, "android" | "ios"),
+        "Unsupported mobile platform: {target}"
+    );
+    let source = source
+        .canonicalize()
+        .with_context(|| format!("Cannot read Rune source {}", source.display()))?;
+    let doc = crate::rune_parser::load_rune_document_from_path(&source)?;
+    let frontend = doc
+        .get_section("Frontend")
+        .context("--build requires @Frontend type = rune-mobile-web")?;
+    ensure!(frontend.kv.get("type").and_then(|value| value.as_str()) == Some("rune-mobile-web"),
+        "--build requires @Frontend type = rune-mobile-web; rune-mobile is reserved for the future native runtime");
+    if !prepare_only && target == "ios" {
+        ensure!(
+            cfg!(target_os = "macos"),
+            "iOS builds require macOS with Xcode 26+; use --prepare-only to export elsewhere"
+        );
+    }
+    let route = frontend
+        .kv
+        .get("path")
+        .and_then(|value| value.as_str())
+        .unwrap_or("/");
+    let route = if route == "%ROOT%" { "/" } else { route };
+    let html = crate::apps::rune_web::render_html_for_path(&doc, route).await?;
+    let html = html.replace(
+        "initial-scale=1.0\"",
+        "initial-scale=1.0, viewport-fit=cover\"",
+    );
+    let base = if source.is_dir() {
+        source.as_path()
+    } else {
+        source.parent().unwrap()
+    };
+    let output = output
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| base.join(".vectrune/rune-mobile-web"));
+    prepare_project(&output, &html)?;
+    let output = output.canonicalize()?;
+    println!("Prepared Rune Mobile Web project: {}", output.display());
+    if prepare_only {
+        return Ok(());
+    }
+
+    // These commands receive separate arguments, never Rune text interpolated into a shell.
+    let mut npm = if cfg!(windows) {
+        let mut cmd = Command::new("cmd");
+        cmd.args(["/C", "npm"]);
+        cmd
+    } else {
+        Command::new("npm")
+    };
+    run(
+        npm.args(["ci", "--include=dev"]).current_dir(&output),
+        "npm ci (Node.js 22+ and npm are required)",
+    )?;
+    run(
+        Command::new("node")
+            .args(["node_modules/@capacitor/cli/bin/capacitor", "sync", target])
+            .current_dir(&output),
+        "Capacitor sync",
+    )?;
+
+    let artifact = if target == "android" {
+        let android = output.join("android");
+        let mut gradle = if cfg!(windows) {
+            let mut cmd = Command::new("cmd");
+            cmd.args(["/C", "gradlew.bat"]);
+            cmd
+        } else {
+            let mut cmd = Command::new("sh");
+            cmd.arg("./gradlew");
+            cmd
+        };
+        run(
+            gradle.arg("assembleDebug").current_dir(&android),
+            "Android build (JDK 21 and Android SDK 36 are required)",
+        )?;
+        android.join("app/build/outputs/apk/debug/app-debug.apk")
+    } else {
+        run(
+            Command::new("xcodebuild")
+                .args([
+                    "-project",
+                    "ios/App/App.xcodeproj",
+                    "-scheme",
+                    "App",
+                    "-configuration",
+                    "Debug",
+                    "-sdk",
+                    "iphonesimulator",
+                    "-destination",
+                    "generic/platform=iOS Simulator",
+                    "-derivedDataPath",
+                    "build/ios",
+                    "CODE_SIGNING_ALLOWED=NO",
+                    "build",
+                ])
+                .current_dir(&output),
+            "iOS Simulator build (Xcode 26+ is required)",
+        )?;
+        output.join("build/ios/Build/Products/Debug-iphonesimulator/App.app")
+    };
+    ensure!(
+        artifact.exists(),
+        "Build command succeeded but the expected artifact is missing: {}",
+        artifact.display()
+    );
+    println!(
+        "Built {}: {}",
+        if target == "android" {
+            "debug APK"
+        } else {
+            "unsigned iOS Simulator app"
+        },
+        artifact.display()
+    );
+    Ok(())
+}
+
+fn prepare_project(output: &Path, html: &str) -> Result<()> {
+    if output.exists() && !output.join(MARKER).is_file() && fs::read_dir(output)?.next().is_some() {
+        bail!(
+            "Refusing to overwrite non-generated directory {}; choose an empty --build-dir",
+            output.display()
+        );
+    }
+    fs::create_dir_all(output)?;
+    fs::write(
+        output.join(MARKER),
+        "Generated by vectrune --build; template files are replaced on each build.\n",
+    )?;
+    for (relative, data) in templates::FILES {
+        let destination = output.join(relative);
+        fs::create_dir_all(destination.parent().unwrap())?;
+        fs::write(destination, data)?;
+    }
+    // The development shell's build script needs a checkout. Generated projects
+    // already contain compiled HTML and should only expose native tooling commands.
+    let package_path = output.join("package.json");
+    let mut package: serde_json::Value = serde_json::from_slice(&fs::read(&package_path)?)?;
+    package["scripts"] = serde_json::json!({
+        "sync": "cap sync",
+        "android": "cap open android",
+        "ios": "cap open ios"
+    });
+    fs::write(package_path, serde_json::to_vec_pretty(&package)?)?;
+    fs::create_dir_all(output.join("www"))?;
+    fs::write(output.join("www/index.html"), html)?;
+    Ok(())
+}
+
+fn run(command: &mut Command, description: &str) -> Result<()> {
+    let status = command
+        .status()
+        .with_context(|| format!("Cannot start {description}"))?;
+    ensure!(
+        status.success(),
+        "{description} failed ({status}); see tool output above"
+    );
+    Ok(())
+}

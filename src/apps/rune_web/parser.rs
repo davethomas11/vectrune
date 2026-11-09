@@ -35,7 +35,7 @@ fn resolve_preview_attribute(value: &str) -> Result<String, ParseError> {
             .map_err(|error| ParseError(format!("Cannot parse Rune preview: {}", error)))?;
         let frontend_section = document.get_section("Frontend")
             .ok_or_else(|| ParseError("Rune previews require an @Frontend section".into()))?;
-        if frontend_section.kv.get("type").and_then(|value| value.as_str()) != Some("rune-web") {
+        if !matches!(frontend_section.kv.get("type").and_then(|value| value.as_str()), Some("rune-web" | "rune-mobile-web")) {
             return Err(ParseError("Rune previews require @Frontend type = rune-web".into()));
         }
         let page = frontend_section.kv.get("page").and_then(|value| value.as_str()).unwrap_or("index");

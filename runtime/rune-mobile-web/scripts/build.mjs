@@ -31,13 +31,13 @@ export function prepareHtml(html) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
-    const source = process.argv[2] || resolve(repoRoot, 'examples/rune_mobile/app.rune');
+    const source = process.argv[2] || resolve(repoRoot, 'examples/rune_mobile_web/app.rune');
     const html = compilePage({ source, binary: process.env.VECTRUNE_BIN });
     const destination = resolve(mobileRoot, 'www');
     mkdirSync(destination, { recursive: true });
     writeFileSync(resolve(destination, 'index.html.tmp'), html);
     renameSync(resolve(destination, 'index.html.tmp'), resolve(destination, 'index.html'));
-    console.log(`Built ${source} → runtime/rune-mobile/www/index.html`);
+    console.log(`Built ${source} → runtime/rune-mobile-web/www/index.html`);
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
