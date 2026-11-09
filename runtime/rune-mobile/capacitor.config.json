@@ -1,0 +1,7 @@
+{
+  "appId": "com.vectrune.mobile",
+  "appName": "Rune Mobile",
+  "webDir": "www",
+  "backgroundColor": "#101827",
+  "ios": { "contentInset": "never" }
+}

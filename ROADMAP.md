@@ -51,6 +51,7 @@ As Vectrune has rapidly evolved, various language processors and dialects develo
 4. **Phase 4: REPL Modernization & `.vect` Script Alignment**: Connect `vectrune repl` and `.vect` scripts directly to the unified expression and collection engine.
 5. **Phase 5: Ahead-Of-Time (AOT) Compiler Architecture (`rune compiler`)**: Define bytecode/IR for compiling `.rune` into standalone native executables and WASM.
 6. **Phase 6: Rune Mobile & Native UI Architecture (`rune mobile`)**: Decouple reactive engine into a headless core (`@vectrune/core`) and build mobile presentation adapters (canvas/native UI bridge).
+   - Android/iOS prototype started in [`runtime/rune-mobile`](runtime/rune-mobile/README.md): bundled Rune-Web export, Capacitor native projects, and an offline demo. This is an initial WebView adapter; shared headless core, native widgets, AOT, and device performance validation remain future work.
 7. **Phase 7: Converge Vectrune Natural-Language Intent Compiler**: Modernize the natural language compiler to emit the unified Rune AST / IR directly.
 
 ---

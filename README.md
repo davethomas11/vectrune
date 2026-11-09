@@ -98,6 +98,7 @@ Start with one of these depending on what you want to learn first:
 - `examples/dynamic_ai_web.rune` — [descriptive AI sites](knowledge/language/dynamic-ai-web.md) with Ollama, Codex CLI, or Copilot CLI
 - `examples/sales_report.rune` — one-line grouped CSV reports with [`summarize`](knowledge/language/summarize.md)
 - `examples/tic_tac_toe/` — multi-file Rune-Web example with UI, logic, and style parts
+- `examples/rune_mobile/` — offline Android/iOS prototype; see [Rune Mobile setup and runtime design](runtime/rune-mobile/README.md)
 
 ## Installation
 

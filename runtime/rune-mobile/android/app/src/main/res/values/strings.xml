@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rune Mobile</string>
+    <string name="title_activity_main">Rune Mobile</string>
+    <string name="package_name">com.vectrune.mobile</string>
+    <string name="custom_url_scheme">com.vectrune.mobile</string>
+</resources>

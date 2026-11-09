@@ -175,6 +175,7 @@ Over successive releases, features were added to specific targets to solve immed
 - [ ] **6.2 Rune Mobile Presentation Layer**:
   - Support native mobile presentation adapters (e.g. Flutter / React Native bridge / Android & iOS canvas/web view surface).
   - Enable building mobile games and applications from the same `.rune` logic, style, and state definitions.
+  - Prototype started (2026-11-09): [`runtime/rune-mobile`](runtime/rune-mobile/README.md) packages a build-time Rune-Web export in Android/iOS Capacitor shells, with an offline touch demo. Headless-core extraction and native UI rendering remain open; performance work should begin with compiled expressions and device profiling.
 
 ---
 
