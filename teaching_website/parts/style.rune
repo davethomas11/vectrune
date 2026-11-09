@@ -1086,6 +1086,10 @@ rules:
         height = clamp(400px, 85svh, 720px)
         box-sizing = border-box
 
+    .studio-page .example-preview:
+        height = clamp(480px, 85svh, 860px)
+        box-sizing = border-box
+
     .example-source:
         margin-top = 1.25rem
 
@@ -1401,6 +1405,11 @@ responsive:
             border = 2px solid #00ff88
             border-radius = 12px
             box-shadow = 0 0 25px rgba(0, 255, 136, 0.2)
+
+        .studio-page .example-preview:
+            border = 2px solid #00e5ff
+            border-radius = 12px
+            box-shadow = 0 0 25px rgba(0, 229, 255, 0.2)
 
         .features-grid:
             display = grid
