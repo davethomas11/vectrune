@@ -2438,6 +2438,65 @@ var __RuneWeb = (() => {
       playMusic(trackName);
       return true;
     }
+    if (trimmed === "music.sync_steps" || trimmed === "music.sync_steps()") {
+      const state = ctx().app?.state;
+      if (state) {
+        const voice = String(state.active_voice || "lead");
+        const score = String(state[voice + "_track"] || "");
+        const selectedId = Number(state.selected_step_id ?? -1);
+        state.active_steps = parseTrackToSteps(score, selectedId);
+        if (typeof ctx().app.render === "function") {
+          ctx().app.render();
+        }
+      }
+      return true;
+    }
+    if (trimmed.startsWith("music.select_step(") && trimmed.endsWith(")")) {
+      const inner = trimmed.slice(18, -1);
+      const id = Number(evaluateExpression(inner, buildScope(locals)));
+      const state = ctx().app?.state;
+      if (state) {
+        state.selected_step_id = id;
+        const voice = String(state.active_voice || "lead");
+        const score = String(state[voice + "_track"] || "");
+        state.active_steps = parseTrackToSteps(score, id);
+        const step = state.active_steps.find((s) => s.id === id);
+        if (step && !step.is_bar && !step.is_rest) {
+          state.selected_note = step.note;
+          if (voice === "drums") {
+            playSound("drum_" + step.note);
+          } else if (voice === "bass") {
+            playSound("key_bass");
+          } else {
+            playSound("key_lead");
+          }
+        }
+        if (typeof ctx().app.render === "function") {
+          ctx().app.render();
+        }
+      }
+      return true;
+    }
+    if (trimmed.startsWith("music.delete_step(") && trimmed.endsWith(")")) {
+      const inner = trimmed.slice(18, -1);
+      const id = Number(evaluateExpression(inner, buildScope(locals)));
+      const state = ctx().app?.state;
+      if (state) {
+        const voice = String(state.active_voice || "lead");
+        const score = String(state[voice + "_track"] || "");
+        const tokens = score.trim().split(/\s+/).filter(Boolean);
+        if (id >= 0 && id < tokens.length) {
+          tokens.splice(id, 1);
+          state[voice + "_track"] = tokens.join(" ");
+          state.selected_step_id = -1;
+          state.active_steps = parseTrackToSteps(state[voice + "_track"], -1);
+          if (typeof ctx().app.render === "function") {
+            ctx().app.render();
+          }
+        }
+      }
+      return true;
+    }
     if (trimmed.startsWith("storage.set(") || trimmed.startsWith("storage.save(") || trimmed.startsWith("local_storage.set(") || trimmed.startsWith("localStorage.set(")) {
       const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
       const parts = splitTopLevel(inner, ",");
@@ -2549,6 +2608,12 @@ var __RuneWeb = (() => {
           }
           doc.body.removeAttribute("data-fullscreen");
           doc.body.classList.remove("fullscreen");
+        }
+        if (typeof window !== "undefined" && window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage({ type: "toggle_fullscreen", is_fullscreen: shouldEnter }, "*");
+          } catch (_) {
+          }
         }
         if (typeof app?.state !== "undefined") {
           app.state.is_fullscreen = shouldEnter;
@@ -2785,6 +2850,68 @@ var __RuneWeb = (() => {
       }
     }
     return true;
+  }
+  function parseTrackToSteps(scoreStr, selectedIdx) {
+    if (!scoreStr) return [];
+    const tokens = String(scoreStr).trim().split(/\s+/).filter(Boolean);
+    const steps = [];
+    let barNum = 1;
+    let stepInBar = 1;
+    for (let i = 0; i < tokens.length; i++) {
+      const raw = tokens[i];
+      if (raw === "|") {
+        steps.push({
+          id: i,
+          raw,
+          note: "|",
+          duration: "",
+          len_label: "BAR " + barNum,
+          is_bar: true,
+          is_rest: false,
+          is_selected: i === selectedIdx,
+          bar_num: barNum,
+          step_num: stepInBar,
+          pitch_class: "step-bar"
+        });
+        barNum += 1;
+        stepInBar = 1;
+        continue;
+      }
+      const colonIdx = raw.indexOf(":");
+      let pitch = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
+      let dur = colonIdx !== -1 ? raw.slice(colonIdx) : ":8";
+      const isRest = pitch === "-" || pitch.toLowerCase() === "rest";
+      let lenLabel = "1/8";
+      if (dur === ":16") lenLabel = "1/16";
+      else if (dur === ":8") lenLabel = "1/8";
+      else if (dur === ":4") lenLabel = "1/4";
+      else if (dur === ":2") lenLabel = "1/2";
+      else if (dur === ":1") lenLabel = "1/1";
+      let pitchClass = "step-note";
+      if (isRest) pitchClass = "step-rest";
+      else if (pitch.includes("2")) pitchClass = "step-bass";
+      else if (pitch.includes("3")) pitchClass = "step-mid-low";
+      else if (pitch.includes("4")) pitchClass = "step-mid";
+      else if (pitch.includes("5")) pitchClass = "step-high";
+      else if (pitch === "kick") pitchClass = "step-kick";
+      else if (pitch === "snare") pitchClass = "step-snare";
+      else if (pitch === "hihat") pitchClass = "step-hihat";
+      steps.push({
+        id: i,
+        raw,
+        note: isRest ? "REST" : pitch,
+        duration: dur,
+        len_label: lenLabel,
+        is_bar: false,
+        is_rest: isRest,
+        is_selected: i === selectedIdx,
+        bar_num: barNum,
+        step_num: stepInBar,
+        pitch_class: pitchClass
+      });
+      stepInBar += 1;
+    }
+    return steps;
   }
 
   // src/events.ts
@@ -3126,6 +3253,13 @@ var __RuneWeb = (() => {
         }
       });
     }
+    if (app2.state && app2.state.active_voice) {
+      const voice = String(app2.state.active_voice);
+      const score = app2.state[voice + "_track"];
+      if (score && !app2.state.active_steps) {
+        app2.state.active_steps = parseTrackToSteps(String(score), Number(app2.state.selected_step_id ?? -1));
+      }
+    }
     app2.render();
     return app2;
   }
@@ -3145,6 +3279,13 @@ var __RuneWeb = (() => {
         const message = JSON.parse(event.data);
         if (message.type === "memory_update") {
           app2.state[message.key] = message.value;
+          if (app2.state && app2.state.active_voice) {
+            const voice = String(app2.state.active_voice);
+            const score = app2.state[voice + "_track"];
+            if (score && !app2.state.active_steps) {
+              app2.state.active_steps = parseTrackToSteps(String(score), Number(app2.state.selected_step_id ?? -1));
+            }
+          }
           app2.render();
         }
       } catch (_err) {

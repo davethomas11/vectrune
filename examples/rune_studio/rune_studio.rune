@@ -24,8 +24,8 @@ view:
         TransportBar
         NoteEditorPanel
         div .tracks-container:
-            TrackRack voice_id=lead voice_name="VOICE 1: SQUARE LEAD" icon="🎹" badge_class="badge-square" badge_text="Square 50%" score_text="{lead_track}"
-            TrackRack voice_id=bass voice_name="VOICE 2: TRIANGLE BASS" icon="🎸" badge_class="badge-triangle" badge_text="Triangle Sub" score_text="{bass_track}"
-            TrackRack voice_id=drums voice_name="VOICE 3: PERCUSSION / DRUMS" icon="🥁" badge_class="badge-noise" badge_text="Noise & Pitch" score_text="{drums_track}"
+            TrackRack voice_id=lead voice_name="VOICE 1: SQUARE LEAD" icon="🎹" badge_class="badge-square" badge_text="Square 50%" score_text="{lead_track}" is_active="{active_voice == 'lead'}"
+            TrackRack voice_id=bass voice_name="VOICE 2: TRIANGLE BASS" icon="🎸" badge_class="badge-triangle" badge_text="Triangle Sub" score_text="{bass_track}" is_active="{active_voice == 'bass'}"
+            TrackRack voice_id=drums voice_name="VOICE 3: PERCUSSION / DRUMS" icon="🥁" badge_class="badge-noise" badge_text="Noise & Pitch" score_text="{drums_track}" is_active="{active_voice == 'drums'}"
         SfxAuditionPad
         RuneCodeExport

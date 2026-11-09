@@ -3,7 +3,7 @@ view:
     header .studio-header:
         div .header-brand:
             h1 .studio-title "RUNE STUDIO"
-            p .studio-subtitle "RETRO 8-BIT CHIPTUNE WORKSTATION & NOTE SEQUENCER"
+            p .studio-subtitle "RETRO 8-BIT CHIPTUNE WORKSTATION & STEP SEQUENCER"
         div .header-controls:
             button .btn-fullscreen click="toggleFullscreen":
                 if is_fullscreen:
@@ -81,6 +81,10 @@ view:
                     "1/2"
 
             div .editor-tools:
+                div .current-note-badge:
+                    span .badge-lbl "NOTE:"
+                    span .badge-val "{selected_note}"
+                    span .badge-sub "{active_duration}"
                 button .btn-tool click="insertRest":
                     "⏸ Rest (-)"
                 button .btn-tool click="insertBar":
@@ -88,83 +92,110 @@ view:
                 button .btn-tool .btn-tool-danger click="clearActiveTrack":
                     "🗑 Clear"
 
+        div .step-sequencer-rack:
+            div .step-rack-header:
+                div .step-rack-title:
+                    span .step-title-icon "🎼"
+                    span .step-title-text "STEP SEQUENCER TIMELINE ({active_voice})"
+                div .step-rack-hint:
+                    "Click step to audition • Click × to delete"
+
+            div .step-strip-scroll:
+                div .step-strip:
+                    for step in active_steps:
+                        if step.is_bar:
+                            div .step-card-bar:
+                                span .step-bar-label "{step.len_label}"
+                        if !step.is_bar:
+                            button .step-chip .chip-{step.pitch_class} {.selected-step when selected_step_id == step.id} click="selectStep(step.id)":
+                                div .step-num "#{step.step_num}"
+                                div .step-pitch "{step.note}"
+                                div .step-len "{step.len_label}"
+                                span .step-delete-btn click="deleteStep(step.id)":
+                                    "×"
+
         if active_voice != 'drums':
             div .piano-roll-container:
                 div .piano-roll:
-                    button .piano-key .key-white click="insertNote('C3')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'C3'} click="insertNote('C3')":
                         "C3"
-                    button .piano-key .key-white click="insertNote('D3')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'D3'} click="insertNote('D3')":
                         "D3"
-                    button .piano-key .key-white click="insertNote('E3')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'E3'} click="insertNote('E3')":
                         "E3"
-                    button .piano-key .key-white click="insertNote('F3')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'F3'} click="insertNote('F3')":
                         "F3"
-                    button .piano-key .key-white click="insertNote('G3')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'G3'} click="insertNote('G3')":
                         "G3"
-                    button .piano-key .key-white click="insertNote('A3')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'A3'} click="insertNote('A3')":
                         "A3"
-                    button .piano-key .key-white click="insertNote('B3')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'B3'} click="insertNote('B3')":
                         "B3"
-                    button .piano-key .key-white click="insertNote('C4')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'C4'} click="insertNote('C4')":
                         "C4"
-                    button .piano-key .key-black click="insertNote('C#4')":
+                    button .piano-key .key-black {.selected-key when selected_note == 'C#4'} click="insertNote('C#4')":
                         "C#4"
-                    button .piano-key .key-white click="insertNote('D4')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'D4'} click="insertNote('D4')":
                         "D4"
-                    button .piano-key .key-black click="insertNote('D#4')":
+                    button .piano-key .key-black {.selected-key when selected_note == 'D#4'} click="insertNote('D#4')":
                         "D#4"
-                    button .piano-key .key-white click="insertNote('E4')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'E4'} click="insertNote('E4')":
                         "E4"
-                    button .piano-key .key-white click="insertNote('F4')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'F4'} click="insertNote('F4')":
                         "F4"
-                    button .piano-key .key-black click="insertNote('F#4')":
+                    button .piano-key .key-black {.selected-key when selected_note == 'F#4'} click="insertNote('F#4')":
                         "F#4"
-                    button .piano-key .key-white click="insertNote('G4')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'G4'} click="insertNote('G4')":
                         "G4"
-                    button .piano-key .key-black click="insertNote('G#4')":
+                    button .piano-key .key-black {.selected-key when selected_note == 'G#4'} click="insertNote('G#4')":
                         "G#4"
-                    button .piano-key .key-white click="insertNote('A4')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'A4'} click="insertNote('A4')":
                         "A4"
-                    button .piano-key .key-black click="insertNote('A#4')":
+                    button .piano-key .key-black {.selected-key when selected_note == 'A#4'} click="insertNote('A#4')":
                         "A#4"
-                    button .piano-key .key-white click="insertNote('B4')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'B4'} click="insertNote('B4')":
                         "B4"
-                    button .piano-key .key-white click="insertNote('C5')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'C5'} click="insertNote('C5')":
                         "C5"
-                    button .piano-key .key-white click="insertNote('D5')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'D5'} click="insertNote('D5')":
                         "D5"
-                    button .piano-key .key-white click="insertNote('E5')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'E5'} click="insertNote('E5')":
                         "E5"
-                    button .piano-key .key-white click="insertNote('G5')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'G5'} click="insertNote('G5')":
                         "G5"
-                    button .piano-key .key-white click="insertNote('A5')":
+                    button .piano-key .key-white {.selected-key when selected_note == 'A5'} click="insertNote('A5')":
                         "A5"
 
         if active_voice == 'drums':
             div .drum-machine-container:
                 div .drum-pads:
-                    button .drum-pad click="insertNote('kick')":
+                    button .drum-pad {.selected-key when selected_note == 'kick'} click="insertNote('kick')":
                         span .drum-icon "💥"
                         span .drum-name "KICK"
-                    button .drum-pad click="insertNote('snare')":
+                    button .drum-pad {.selected-key when selected_note == 'snare'} click="insertNote('snare')":
                         span .drum-icon "🥁"
                         span .drum-name "SNARE"
-                    button .drum-pad click="insertNote('hihat')":
+                    button .drum-pad {.selected-key when selected_note == 'hihat'} click="insertNote('hihat')":
                         span .drum-icon "⚡"
                         span .drum-name "HI-HAT"
 
 @Component/TrackRack
-props: [voice_id, voice_name, icon, badge_class, badge_text, score_text]
+props: [voice_id, voice_name, icon, badge_class, badge_text, score_text, is_active?]
 view:
-    div .track-rack:
+    div .track-rack {.active-rack when is_active} click="selectVoice('{voice_id}')":
         div .track-header:
             div .track-meta:
-                span "{icon}"
+                span .track-icon "{icon}"
                 h3 .track-name "{voice_name}"
                 span .badge-wave "{badge_text}"
-            button .btn-edit-track click="selectVoice('{voice_id}')":
-                "✏️ EDIT VOICE"
-        div .track-score-box:
+                if is_active ?? false:
+                    span .pill-active-track "● ACTIVE RECORDING"
+            button .btn-edit-track {.btn-editing when is_active} click="selectVoice('{voice_id}')":
+                if is_active ?? false:
+                    "CURRENT VOICE"
+                if !(is_active ?? false):
+                    "✏️ EDIT VOICE"
+        div .track-score-box {.active-score-box when is_active}:
             "{score_text}"
 
 @Component/SfxAuditionPad
@@ -204,4 +235,3 @@ view:
                     "Copy Code"
         pre .code-preview:
             "# {song_title}\n\n@Music/{selected_song}\ntype = 8bit\ntempo = {tempo}\nloop = true\nvolume = 0.2\n\nlead:\n    {lead_track}\n\nbass:\n    {bass_track}\n\ndrums:\n    {drums_track}"
-

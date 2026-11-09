@@ -11,7 +11,7 @@ import { getWindowProp, setWindowProp } from './globals';
 import { buildScope, makeReactive } from './scope';
 import { normalizeLiteral, valueToString } from './utils';
 import { renderNode } from './rendering';
-import { executeSteps } from './statement';
+import { executeSteps, parseTrackToSteps } from './statement';
 import { bindEvent, setupMemoryUpdateListener } from './events';
 import { setupNavigator, updateSeoMetadata } from './navigator';
 import {
@@ -331,6 +331,14 @@ export function boot(config: RuneWebConfig): RuneApp {
     });
   }
 
+  if (app.state && app.state.active_voice) {
+    const voice = String(app.state.active_voice);
+    const score = app.state[voice + '_track'];
+    if (score && !app.state.active_steps) {
+      app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1));
+    }
+  }
+
   app.render();
 
   return app;
@@ -360,7 +368,15 @@ function setupWebSocket(endpoint: string, app: RuneApp): void {
       const message = JSON.parse(event.data);
       if (message.type === 'memory_update') {
         app.state[message.key] = message.value;
-        app.render();
+        if (app.state && app.state.active_voice) {
+    const voice = String(app.state.active_voice);
+    const score = app.state[voice + '_track'];
+    if (score && !app.state.active_steps) {
+      app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1));
+    }
+  }
+
+  app.render();
       }
     } catch (_err) {
       // Ignore malformed messages

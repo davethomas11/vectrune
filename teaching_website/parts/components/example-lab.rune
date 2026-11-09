@@ -82,7 +82,7 @@ view:
             span .tag .tag-practical "%i18n.Examples.live_preview%"
             h2 "{title}"
             p "%i18n.Examples.web_hint%"
-        iframe .example-preview src="{preview}" title="{title}" sandbox=allow-scripts
+        iframe .example-preview src="{preview}" title="{title}" allow="fullscreen; autoplay" allowfullscreen=true sandbox="allow-scripts allow-same-origin allow-downloads allow-modals"
         details .example-source open=true:
             summary "%i18n.Examples.source_label%"
             details .source-file:

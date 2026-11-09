@@ -7,10 +7,12 @@ state:
     volume = 20
     is_playing = false
     is_fullscreen = false
-    status_message = "Ready to compose. Choose a preset or edit tracks!"
+    status_message = "Ready to compose. Choose a preset, click notes, or step-edit!"
     flash_type = "info"
     active_voice = "lead"
     active_duration = ":8"
+    selected_note = "E4"
+    selected_step_id = -1
 
     lead_track = "E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | C4:8 D4:8 E4:8 G4:8 A4:4 G4:4 | E4:8 D4:8 C4:8 B3:8 A3:2"
     bass_track = "A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4 | C3:4 G2:4 C3:4 G2:4 | F2:4 C2:4 E2:4 G#2:4"
@@ -49,6 +51,8 @@ action selectSong(name):
         bass_track = "C2:4 G2:4 C2:4 G2:4 | D2:4 A2:4 D2:4 A2:4 | E2:4 F2:4 G2:4 C2:2"
         drums_track = "kick:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 kick:8 kick:8 snare:4 | kick:8 kick:8 snare:8 snare:8 kick:2"
 
+    selected_step_id = -1
+    music.sync_steps
     status_message = "Loaded preset: " + song_title
     flash_type = "info"
     if is_playing:
@@ -108,6 +112,8 @@ action loadFromStorage:
         lead_track = saved.lead
         bass_track = saved.bass
         drums_track = saved.drums
+        selected_step_id = -1
+        music.sync_steps
         status_message = "Restored " + song_title + " from Local Storage!"
         flash_type = "success"
         if is_playing:
@@ -134,12 +140,15 @@ action toggleFullscreen:
 
 action selectVoice(v):
     active_voice = v
-    status_message = "Editing " + v + " track"
+    selected_step_id = -1
+    music.sync_steps
+    status_message = "Active Voice: " + v
 
 action selectDuration(d):
     active_duration = d
 
 action insertNote(note):
+    selected_note = note
     entry = note + active_duration
     if active_voice == "lead":
         sound.play("key_lead")
@@ -150,7 +159,8 @@ action insertNote(note):
     if active_voice == "drums":
         sound.play("drum_" + note)
         drums_track = drums_track == "" ? entry : (drums_track + " " + entry)
-    status_message = "Added note " + entry + " to " + active_voice + " voice"
+    music.sync_steps
+    status_message = "Added " + entry + " to " + active_voice
 
 action insertRest:
     entry = "-" + active_duration
@@ -160,7 +170,8 @@ action insertRest:
         bass_track = bass_track == "" ? entry : (bass_track + " " + entry)
     if active_voice == "drums":
         drums_track = drums_track == "" ? entry : (drums_track + " " + entry)
-    status_message = "Added rest " + entry + " to " + active_voice + " voice"
+    music.sync_steps
+    status_message = "Added rest " + entry + " to " + active_voice
 
 action insertBar:
     if active_voice == "lead":
@@ -169,7 +180,8 @@ action insertBar:
         bass_track = bass_track + " | "
     if active_voice == "drums":
         drums_track = drums_track + " | "
-    status_message = "Added bar divider to " + active_voice + " voice"
+    music.sync_steps
+    status_message = "Added bar divider to " + active_voice
 
 action clearActiveTrack:
     if active_voice == "lead":
@@ -178,11 +190,18 @@ action clearActiveTrack:
         bass_track = ""
     if active_voice == "drums":
         drums_track = ""
-    status_message = "Cleared " + active_voice + " voice track"
+    selected_step_id = -1
+    music.sync_steps
+    status_message = "Cleared " + active_voice + " track"
+
+action selectStep(id):
+    music.select_step(id)
+
+action deleteStep(id):
+    music.delete_step(id)
 
 action copyCode:
     code = "# " + song_title + " — Generated with Rune Studio\n\n@Music/" + selected_song + "\ntype = 8bit\ntempo = " + tempo + "\nloop = true\nvolume = 0.2\n\nlead:\n    " + lead_track + "\n\nbass:\n    " + bass_track + "\n\ndrums:\n    " + drums_track + "\n"
     copy(code)
     status_message = "Copied .rune code to clipboard!"
     flash_type = "success"
-

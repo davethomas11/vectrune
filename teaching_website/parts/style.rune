@@ -1090,6 +1090,22 @@ rules:
         height = clamp(480px, 85svh, 860px)
         box-sizing = border-box
 
+    .iframe-fullscreen:
+        position = fixed !important
+        top = 0 !important
+        left = 0 !important
+        width = 100vw !important
+        height = 100vh !important
+        z-index = 999999 !important
+        border = none !important
+        border-radius = 0 !important
+        margin = 0 !important
+        max-width = none !important
+        background = #020308 !important
+
+    body.has-iframe-fullscreen:
+        overflow = hidden !important
+
     .example-source:
         margin-top = 1.25rem
 

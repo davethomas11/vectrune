@@ -300,7 +300,31 @@ rules:
     .editor-tools:
         display = flex
         gap = 0.5rem
+        align-items = center
         flex-wrap = wrap
+
+    .current-note-badge:
+        display = flex
+        align-items = center
+        gap = 0.4rem
+        background = {card_bg}
+        border = 1px solid {neon_lime}
+        border-radius = 6px
+        padding = 0.3rem 0.65rem
+
+    .badge-lbl:
+        font-size = 0.65rem
+        color = {text_muted}
+        font-weight = bold
+
+    .badge-val:
+        font-size = 0.9rem
+        color = {neon_lime}
+        font-weight = 900
+
+    .badge-sub:
+        font-size = 0.75rem
+        color = {neon_cyan}
 
     .btn-tool:
         background = {card_bg}
@@ -324,6 +348,152 @@ rules:
     .btn-tool-danger:hover:
         background = {neon_pink}
         color = #000000
+
+    .step-sequencer-rack:
+        background = #050814
+        border = 1px solid {grid_border}
+        border-radius = 10px
+        padding = 0.85rem
+        margin-bottom = 1rem
+
+    .step-rack-header:
+        display = flex
+        justify-content = space-between
+        align-items = center
+        margin-bottom = 0.6rem
+        flex-wrap = wrap
+        gap = 0.5rem
+
+    .step-rack-title:
+        display = flex
+        align-items = center
+        gap = 0.5rem
+
+    .step-title-icon:
+        font-size = 1rem
+
+    .step-title-text:
+        font-size = 0.8rem
+        font-weight = bold
+        letter-spacing = 1px
+        color = {neon_cyan}
+        text-transform = uppercase
+
+    .step-rack-hint:
+        font-size = 0.7rem
+        color = {text_muted}
+
+    .step-strip-scroll:
+        overflow-x = auto
+        padding = 0.4rem 0.2rem
+        -webkit-overflow-scrolling = touch
+
+    .step-strip:
+        display = flex
+        gap = 6px
+        align-items = stretch
+        min-width = min-content
+
+    .step-card-bar:
+        display = flex
+        align-items = center
+        justify-content = center
+        background = rgba(255, 170, 0, 0.1)
+        border-left = 2px dashed {neon_amber}
+        border-right = 2px dashed {neon_amber}
+        padding = 0 0.5rem
+        border-radius = 4px
+        min-width = 44px
+
+    .step-bar-label:
+        font-size = 0.65rem
+        font-weight = bold
+        color = {neon_amber}
+        letter-spacing = 1px
+        writing-mode = vertical-lr
+
+    .step-chip:
+        background = {card_bg}
+        border = 1px solid {grid_border}
+        border-radius = 8px
+        padding = 0.4rem 0.5rem
+        display = flex
+        flex-direction = column
+        align-items = center
+        gap = 0.15rem
+        cursor = pointer
+        font-family = inherit
+        min-width = 52px
+        transition = all 0.12s ease
+        touch-action = manipulation
+        position = relative
+
+    .step-chip:hover:
+        border-color = {neon_cyan}
+        transform = translateY(-2px)
+
+    .step-chip.selected-step:
+        border-color = {neon_lime} !important
+        background = rgba(57, 255, 20, 0.18) !important
+        box-shadow = 0 0 16px rgba(57, 255, 20, 0.4) !important
+        transform = scale(1.06)
+
+    .step-num:
+        font-size = 0.6rem
+        color = {text_muted}
+
+    .step-pitch:
+        font-size = 0.85rem
+        font-weight = 900
+        color = #ffffff
+
+    .step-len:
+        font-size = 0.65rem
+        color = {neon_cyan}
+
+    .step-delete-btn:
+        position = absolute
+        top = -4px
+        right = -4px
+        width = 16px
+        height = 16px
+        border-radius = 50%
+        background = {neon_pink}
+        color = #ffffff
+        font-size = 11px
+        display = flex
+        align-items = center
+        justify-content = center
+        line-height = 1
+        cursor = pointer
+
+    .step-delete-btn:hover:
+        transform = scale(1.2)
+
+    .chip-step-high .step-pitch:
+        color = {neon_cyan}
+
+    .chip-step-mid .step-pitch:
+        color = {neon_lime}
+
+    .chip-step-mid-low .step-pitch:
+        color = {neon_amber}
+
+    .chip-step-bass .step-pitch:
+        color = {neon_pink}
+
+    .chip-step-kick .step-pitch:
+        color = #ff5500
+
+    .chip-step-snare .step-pitch:
+        color = {neon_pink}
+
+    .chip-step-hihat .step-pitch:
+        color = #ffd000
+
+    .chip-step-rest:
+        border-style = dashed
+        opacity = 0.6
 
     .piano-roll-container:
         overflow-x = auto
@@ -389,6 +559,14 @@ rules:
         color = #000000
         transform = translateY(2px)
 
+    .piano-key.selected-key:
+        background = {neon_lime} !important
+        color = #000000 !important
+        box-shadow = 0 0 18px {neon_lime} !important
+        border-color = {neon_lime} !important
+        transform = translateY(2px)
+        font-weight = 900 !important
+
     .drum-machine-container:
         padding = 1rem 0
 
@@ -422,6 +600,11 @@ rules:
         color = #000000
         transform = scale(0.96)
 
+    .drum-pad.selected-key:
+        border-color = {neon_lime} !important
+        box-shadow = 0 0 20px {neon_lime} !important
+        background = rgba(57, 255, 20, 0.2) !important
+
     .drum-icon:
         font-size = 1.75rem
 
@@ -442,10 +625,27 @@ rules:
         border = 1px solid {grid_border}
         border-radius = 12px
         padding = 1rem
-        transition = border-color 0.15s ease
+        transition = all 0.18s ease
+        cursor = pointer
 
     .track-rack:hover:
         border-color = rgba(0, 229, 255, 0.5)
+
+    .track-rack.active-rack:
+        border = 2px solid {neon_cyan}
+        box-shadow = 0 0 25px rgba(0, 229, 255, 0.35)
+        background = rgba(0, 229, 255, 0.05)
+
+    .pill-active-track:
+        color = {neon_cyan}
+        background = rgba(0, 229, 255, 0.2)
+        border = 1px solid {neon_cyan}
+        border-radius = 12px
+        padding = 0.2rem 0.6rem
+        font-size = 0.65rem
+        font-weight = bold
+        letter-spacing = 1px
+        box-shadow = 0 0 10px rgba(0, 229, 255, 0.4)
 
     .track-header:
         display = flex
@@ -459,6 +659,10 @@ rules:
         display = flex
         align-items = center
         gap = 0.6rem
+        flex-wrap = wrap
+
+    .track-icon:
+        font-size = 1.25rem
 
     .track-name:
         font-size = 1rem
@@ -485,6 +689,12 @@ rules:
         color = #000000
         border-color = {neon_cyan}
         box-shadow = 0 0 10px {neon_cyan}
+
+    .btn-editing:
+        background = {neon_cyan} !important
+        color = #000000 !important
+        box-shadow = 0 0 12px {neon_cyan} !important
+        border-color = {neon_cyan} !important
 
     .badge-wave:
         font-size = 0.7rem
@@ -520,6 +730,11 @@ rules:
         line-height = 1.5
         white-space = pre-wrap
         word-break = break-word
+
+    .active-score-box:
+        border-color = {neon_cyan}
+        box-shadow = 0 0 12px rgba(0, 229, 255, 0.25)
+        background = #060b18
 
     .sfx-section:
         background = {rack_bg}
@@ -597,13 +812,22 @@ fullscreen:
         margin = 0
         padding = 0
         background = #020308
+        overflow = auto
     .studio-cabinet:
+        position = fixed
+        top = 0
+        left = 0
+        width = 100vw
+        height = 100vh
         max-width = 100vw
         border-radius = 0
         border = none
         min-height = 100vh
         box-shadow = none
-        padding = 1.5rem 2rem
+        padding = 1.25rem 2rem
+        z-index = 99999
+        overflow-y = auto
+        box-sizing = border-box
     .piano-roll-container:
         padding = 1rem 0
     .track-rack:
@@ -637,6 +861,8 @@ responsive:
             padding-bottom = 0.5rem
         .piano-roll-container:
             overflow-x = auto
+            padding-bottom = 0.5rem
+        .step-strip-scroll:
             padding-bottom = 0.5rem
         .piano-key:
             min-width = 38px

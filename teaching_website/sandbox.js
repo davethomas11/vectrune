@@ -355,3 +355,22 @@ const pageObserver = new MutationObserver(() => {
     if (editor && !sandboxSources.has(editor)) updateSandboxEditStatus(editor);
 });
 pageObserver.observe(document.body, { childList: true, subtree: true });
+
+// Fullscreen bridge for embedded iframe previews (e.g. Rune Studio, VectRaiders)
+window.addEventListener('message', (event) => {
+    if (!event || !event.data) return;
+    if (event.data.type === 'toggle_fullscreen') {
+        const iframes = document.querySelectorAll('iframe.example-preview');
+        for (const iframe of iframes) {
+            if (iframe.contentWindow === event.source) {
+                if (event.data.is_fullscreen) {
+                    iframe.classList.add('iframe-fullscreen');
+                    document.body.classList.add('has-iframe-fullscreen');
+                } else {
+                    iframe.classList.remove('iframe-fullscreen');
+                    document.body.classList.remove('has-iframe-fullscreen');
+                }
+            }
+        }
+    }
+});
