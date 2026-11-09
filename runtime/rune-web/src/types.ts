@@ -177,11 +177,14 @@ export interface SoundDefinition {
 export interface MusicDefinition {
   music_type?: '8bit' | 'chiptune' | 'synth' | string;
   tempo?: number;
+  time_signature?: string | null;
+  bars?: number | null;
   loop_track?: boolean;
   volume?: number;
   lead?: string | null;
   bass?: string | null;
   drums?: string | null;
+  tracks?: Record<string, string | { instrument?: string; notes?: string; volume?: number; pan?: number; muted?: boolean }> | null;
 }
 
 /** Configuration passed to boot(). */

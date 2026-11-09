@@ -637,18 +637,75 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> MusicDefinition {
         from_series.filter(|s| !s.trim().is_empty())
     };
 
+    let time_signature = section.kv.get("time_signature")
+        .or_else(|| section.kv.get("meter"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string());
+
+    let bars = section.kv.get("bars")
+        .or_else(|| section.kv.get("measures"))
+        .and_then(|v| match v {
+            Value::Number(n) => Some(*n as usize),
+            Value::String(s) => s.parse::<usize>().ok(),
+            _ => None,
+        });
+
     let lead = extract_track("lead", Some("melody"));
     let bass = extract_track("bass", None);
     let drums = extract_track("drums", Some("percussion"));
 
+    let mut tracks = HashMap::new();
+    for (k, v) in &section.kv {
+        let key_str = k.to_lowercase();
+        if !matches!(key_str.as_str(), "type" | "style" | "tempo" | "bpm" | "loop" | "loop_track" | "volume" | "time_signature" | "meter" | "bars" | "measures" | "lead" | "melody" | "bass" | "drums" | "percussion") {
+            if let Some(s) = v.as_str() {
+                let trimmed = s.trim();
+                if !trimmed.is_empty() {
+                    tracks.insert(k.clone(), trimmed.to_string());
+                }
+            }
+        }
+    }
+    for (k, items) in &section.series {
+        let key_str = k.to_lowercase();
+        if !matches!(key_str.as_str(), "lead" | "melody" | "bass" | "drums" | "percussion") {
+            let joined = items.iter().filter_map(|v| match v {
+                Value::String(s) => {
+                    let trimmed = s.trim();
+                    let clean = if trimmed.starts_with('#') {
+                        ""
+                    } else if let Some(idx) = s.find(" #") {
+                        s[..idx].trim()
+                    } else if let Some(idx) = s.find("\t#") {
+                        s[..idx].trim()
+                    } else {
+                        trimmed
+                    };
+                    if clean.is_empty() {
+                        None
+                    } else {
+                        Some(clean)
+                    }
+                }
+                _ => None,
+            }).collect::<Vec<_>>().join(" | ");
+            if !joined.trim().is_empty() {
+                tracks.insert(k.clone(), joined);
+            }
+        }
+    }
+
     MusicDefinition {
         music_type,
         tempo,
+        time_signature,
+        bars,
         loop_track,
         volume,
         lead,
         bass,
         drums,
+        tracks,
     }
 }
 
@@ -2499,6 +2556,40 @@ drums:
             Some("E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4")
         );
         assert_eq!(boss.bass.as_deref(), Some("A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4"));
+    }
+
+    #[test]
+    fn parses_music_with_time_signature_and_chords_and_custom_tracks() {
+        let doc = parse_rune(
+            r#"#!RUNE
+
+@Page/home
+view:
+    main:
+        p "Score"
+
+@Music/cyber_odyssey
+tempo = 140
+time_signature = 3/4
+bars = 4
+lead:
+    C4:4 [E4,G4]:4 C5:4
+chords:
+    [C4,E4,G4]:2 [F4,A4,C5]:4
+arp:
+    C4:16 E4:16 G4:16 C5:16
+"#,
+        )
+        .expect("expected parse to succeed");
+
+        let frontend = parse_rune_web_frontend(&doc, "home").expect("expected frontend parse");
+        let song = frontend.music.get("cyber_odyssey").expect("cyber_odyssey music exists");
+        assert_eq!(song.tempo, 140.0);
+        assert_eq!(song.time_signature.as_deref(), Some("3/4"));
+        assert_eq!(song.bars, Some(4));
+        assert_eq!(song.lead.as_deref(), Some("C4:4 [E4,G4]:4 C5:4"));
+        assert_eq!(song.tracks.get("chords").map(|s| s.as_str()), Some("[C4,E4,G4]:2 [F4,A4,C5]:4"));
+        assert_eq!(song.tracks.get("arp").map(|s| s.as_str()), Some("C4:16 E4:16 G4:16 C5:16"));
     }
 
     #[test]

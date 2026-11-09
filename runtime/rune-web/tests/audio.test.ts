@@ -71,6 +71,32 @@ describe('Web Audio Synthesizer & Music Sequencer', () => {
     expect(events[9].isRest).toBe(true);
   });
 
+  it('parses polyphonic chords with bracket notation and plus notation', () => {
+    const pattern = '[C4,E4,G4]:4 [F4,A4,C5]:2 C4+E4+G4:8 [kick,hihat]:4';
+    const events = parseTrackPattern(pattern);
+
+    expect(events.length).toBe(4);
+
+    // [C4,E4,G4]:4 -> 1 beat chord with 3 pitches
+    expect(events[0].beats).toBe(1);
+    expect(events[0].pitches?.length).toBe(3);
+    expect(events[0].pitches![0]).toBeCloseTo(261.63, 1);
+    expect(events[0].pitches![1]).toBeCloseTo(329.63, 1);
+    expect(events[0].pitches![2]).toBeCloseTo(392.00, 1);
+
+    // [F4,A4,C5]:2 -> 2 beats chord
+    expect(events[1].beats).toBe(2);
+    expect(events[1].pitches?.length).toBe(3);
+
+    // C4+E4+G4:8 -> 0.5 beat chord
+    expect(events[2].beats).toBe(0.5);
+    expect(events[2].pitches?.length).toBe(3);
+
+    // [kick,hihat]:4 -> Drum chord
+    expect(events[3].isDrum).toBe(true);
+    expect(events[3].pitches).toEqual(['kick', 'hihat']);
+  });
+
   it('registers custom @Sound definitions and plays without throwing', () => {
     registerSounds({
       laser_canon: {

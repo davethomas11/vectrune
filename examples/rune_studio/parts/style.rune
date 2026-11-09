@@ -203,6 +203,51 @@ rules:
         font-weight = bold
         touch-action = manipulation
 
+    .time-sig-controls:
+        display = flex
+        align-items = center
+        gap = 0.4rem
+
+    .btn-timesig:
+        background = {card_bg}
+        color = {text_muted}
+        border = 1px solid {grid_border}
+        padding = 0.4rem 0.65rem
+        border-radius = 6px
+        cursor = pointer
+        font-family = inherit
+        font-weight = bold
+        font-size = 0.8rem
+        transition = all 0.15s ease
+
+    .btn-timesig.active:
+        background = {neon_amber}
+        color = #000000
+        border-color = {neon_amber}
+        box-shadow = 0 0 10px {neon_amber}
+
+    .mode-controls:
+        display = flex
+        align-items = center
+        gap = 0.4rem
+
+    .btn-mode:
+        background = {card_bg}
+        color = {neon_cyan}
+        border = 1px solid {grid_border}
+        padding = 0.4rem 0.65rem
+        border-radius = 6px
+        cursor = pointer
+        font-family = inherit
+        font-weight = bold
+        font-size = 0.75rem
+        transition = all 0.15s ease
+
+    .btn-mode.active:
+        background = {neon_cyan}
+        color = #000000
+        box-shadow = 0 0 12px {neon_cyan}
+
     .storage-actions:
         display = flex
         gap = 0.4rem
@@ -272,6 +317,45 @@ rules:
         color = #000000
         border-color = {neon_cyan}
         box-shadow = 0 0 12px {neon_cyan}
+
+    .instrument-picker:
+        display = flex
+        gap = 0.4rem
+        align-items = center
+        flex-wrap = wrap
+
+    .pill-instrument:
+        background = {card_bg}
+        color = {neon_cyan}
+        border = 1px solid {grid_border}
+        padding = 0.35rem 0.65rem
+        border-radius = 12px
+        font-size = 0.75rem
+        font-weight = bold
+        cursor = pointer
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .pill-instrument:hover:
+        border-color = {neon_cyan}
+        box-shadow = 0 0 8px rgba(0, 229, 255, 0.4)
+
+    .btn-chord-toggle:
+        background = {card_bg}
+        color = {neon_amber}
+        border = 1px solid {neon_amber}
+        padding = 0.4rem 0.75rem
+        border-radius = 6px
+        cursor = pointer
+        font-size = 0.75rem
+        font-weight = bold
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .btn-chord-toggle.chord-active:
+        background = {neon_amber}
+        color = #000000
+        box-shadow = 0 0 14px {neon_amber}
 
     .duration-picker:
         display = flex
@@ -460,12 +544,15 @@ rules:
         border-radius = 50%
         background = {neon_pink}
         color = #ffffff
+        border = none
+        padding = 0
         font-size = 11px
         display = flex
         align-items = center
         justify-content = center
         line-height = 1
         cursor = pointer
+        z-index = 10
 
     .step-delete-btn:hover:
         transform = scale(1.2)
@@ -494,6 +581,139 @@ rules:
     .chip-step-rest:
         border-style = dashed
         opacity = 0.6
+
+    .chip-step-chord:
+        border-color = {neon_amber}
+        background = rgba(255, 170, 0, 0.15)
+
+    .badge-poly:
+        position = absolute
+        bottom = -5px
+        right = 4px
+        font-size = 8px
+        font-weight = 900
+        background = {neon_amber}
+        color = #000000
+        padding = 1px 4px
+        border-radius = 4px
+        letter-spacing = 0.5px
+
+    .timeline-ruler:
+        background = #080c18
+        border = 1px solid {grid_border}
+        border-radius = 8px
+        padding = 0.6rem 0.8rem
+        margin = 0.75rem 0
+        display = flex
+        flex-direction = column
+        gap = 0.35rem
+
+    .ruler-header:
+        font-size = 0.7rem
+        font-weight = bold
+        color = {text_muted}
+        letter-spacing = 1px
+
+    .ruler-bars:
+        display = grid
+        grid-template-columns = repeat(4, 1fr)
+        gap = 0.5rem
+
+    .ruler-bar-item:
+        background = {card_bg}
+        border = 1px solid {grid_border}
+        border-radius = 6px
+        padding = 0.4rem 0.5rem
+        display = flex
+        flex-direction = column
+        align-items = center
+        gap = 2px
+
+    .ruler-bar-num:
+        font-size = 0.75rem
+        font-weight = 900
+        color = {neon_cyan}
+
+    .ruler-sub:
+        font-size = 0.65rem
+        color = {text_muted}
+
+    .piano-matrix-rack:
+        background = #050814
+        border = 1px solid {grid_border}
+        border-radius = 8px
+        padding = 0.75rem
+        margin = 0.75rem 0
+
+    .matrix-header:
+        display = flex
+        justify-content = space-between
+        align-items = center
+        margin-bottom = 0.5rem
+        flex-wrap = wrap
+        gap = 0.5rem
+
+    .matrix-title:
+        font-size = 0.8rem
+        font-weight = 900
+        color = {neon_lime}
+        letter-spacing = 1px
+
+    .matrix-sub:
+        font-size = 0.7rem
+        color = {text_muted}
+
+    .matrix-container:
+        display = flex
+        border = 1px solid {grid_border}
+        border-radius = 6px
+        overflow = hidden
+
+    .matrix-keys-column:
+        display = flex
+        flex-direction = column
+        background = #03050c
+        border-right = 2px solid {grid_border}
+        width = 54px
+        flex-shrink = 0
+
+    .matrix-key:
+        font-family = inherit
+        font-size = 0.65rem
+        font-weight = bold
+        padding = 3px 6px
+        border = none
+        border-bottom = 1px solid rgba(255, 255, 255, 0.05)
+        text-align = right
+        cursor = pointer
+        transition = all 0.1s ease
+        touch-action = manipulation
+        height = 24px
+        display = flex
+        align-items = center
+        justify-content = flex-end
+
+    .mkey-white:
+        background = #e2e8f0
+        color = #0f172a
+
+    .mkey-black:
+        background = #1e293b
+        color = {neon_cyan}
+
+    .matrix-timeline-scroll:
+        flex = 1
+        overflow-x = auto
+        background = #080c1a
+        padding = 0.5rem
+
+    .matrix-grid-surface:
+        min-width = 600px
+
+    .matrix-strip:
+        display = flex
+        gap = 0.4rem
+        align-items = center
 
     .piano-roll-container:
         overflow-x = auto
@@ -670,6 +890,30 @@ rules:
         color = #ffffff
         margin = 0
 
+    .track-actions:
+        display = flex
+        align-items = center
+        gap = 0.4rem
+
+    .btn-track-mute:
+        background = {card_bg}
+        color = {text_muted}
+        border = 1px solid {grid_border}
+        padding = 0.35rem 0.6rem
+        border-radius = 6px
+        font-size = 0.75rem
+        cursor = pointer
+        font-weight = bold
+        font-family = inherit
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .btn-track-mute.btn-muted:
+        background = #ef4444 !important
+        color = #ffffff !important
+        border-color = #ef4444 !important
+        box-shadow = 0 0 10px #ef4444 !important
+
     .btn-edit-track:
         background = {card_bg}
         color = {neon_cyan}
@@ -683,6 +927,30 @@ rules:
         letter-spacing = 1px
         transition = all 0.15s ease
         touch-action = manipulation
+
+    .track-actions:
+        display = flex
+        align-items = center
+        gap = 0.4rem
+
+    .btn-track-mute:
+        background = {card_bg}
+        color = {text_muted}
+        border = 1px solid {grid_border}
+        padding = 0.35rem 0.6rem
+        border-radius = 6px
+        font-size = 0.75rem
+        cursor = pointer
+        font-weight = bold
+        font-family = inherit
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .btn-track-mute.btn-muted:
+        background = #ef4444 !important
+        color = #ffffff !important
+        border-color = #ef4444 !important
+        box-shadow = 0 0 10px #ef4444 !important
 
     .btn-edit-track:hover:
         background = {neon_cyan}
@@ -718,6 +986,11 @@ rules:
         background = rgba(255, 42, 133, 0.2)
         color = {neon_pink}
         border = 1px solid {neon_pink}
+
+    .badge-saw:
+        background = rgba(255, 170, 0, 0.2)
+        color = {neon_amber}
+        border = 1px solid {neon_amber}
 
     .track-score-box:
         background = #03050c
@@ -853,7 +1126,52 @@ responsive:
             justify-content = space-between
         .tempo-controls:
             justify-content = space-between
-        .storage-actions:
+        .time-sig-controls:
+        display = flex
+        align-items = center
+        gap = 0.4rem
+
+    .btn-timesig:
+        background = {card_bg}
+        color = {text_muted}
+        border = 1px solid {grid_border}
+        padding = 0.4rem 0.65rem
+        border-radius = 6px
+        cursor = pointer
+        font-family = inherit
+        font-weight = bold
+        font-size = 0.8rem
+        transition = all 0.15s ease
+
+    .btn-timesig.active:
+        background = {neon_amber}
+        color = #000000
+        border-color = {neon_amber}
+        box-shadow = 0 0 10px {neon_amber}
+
+    .mode-controls:
+        display = flex
+        align-items = center
+        gap = 0.4rem
+
+    .btn-mode:
+        background = {card_bg}
+        color = {neon_cyan}
+        border = 1px solid {grid_border}
+        padding = 0.4rem 0.65rem
+        border-radius = 6px
+        cursor = pointer
+        font-family = inherit
+        font-weight = bold
+        font-size = 0.75rem
+        transition = all 0.15s ease
+
+    .btn-mode.active:
+        background = {neon_cyan}
+        color = #000000
+        box-shadow = 0 0 12px {neon_cyan}
+
+    .storage-actions:
             flex-wrap = wrap
         .song-selector:
             overflow-x = auto
@@ -886,6 +1204,45 @@ responsive:
         .voice-tabs:
             flex-direction = column
             width = 100%
-        .duration-picker:
+        .instrument-picker:
+        display = flex
+        gap = 0.4rem
+        align-items = center
+        flex-wrap = wrap
+
+    .pill-instrument:
+        background = {card_bg}
+        color = {neon_cyan}
+        border = 1px solid {grid_border}
+        padding = 0.35rem 0.65rem
+        border-radius = 12px
+        font-size = 0.75rem
+        font-weight = bold
+        cursor = pointer
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .pill-instrument:hover:
+        border-color = {neon_cyan}
+        box-shadow = 0 0 8px rgba(0, 229, 255, 0.4)
+
+    .btn-chord-toggle:
+        background = {card_bg}
+        color = {neon_amber}
+        border = 1px solid {neon_amber}
+        padding = 0.4rem 0.75rem
+        border-radius = 6px
+        cursor = pointer
+        font-size = 0.75rem
+        font-weight = bold
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .btn-chord-toggle.chord-active:
+        background = {neon_amber}
+        color = #000000
+        box-shadow = 0 0 14px {neon_amber}
+
+    .duration-picker:
             width = 100%
             justify-content = space-between

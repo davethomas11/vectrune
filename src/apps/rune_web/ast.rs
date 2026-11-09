@@ -79,6 +79,10 @@ pub struct MusicDefinition {
     pub music_type: String,
     /// Tempo in BPM (e.g. 140)
     pub tempo: f64,
+    /// Time signature (e.g. "4/4", "3/4", "6/8")
+    pub time_signature: Option<String>,
+    /// Number of bars / measures
+    pub bars: Option<usize>,
     /// Whether track loops indefinitely
     pub loop_track: bool,
     /// Master track volume (0.0 to 1.0)
@@ -89,6 +93,9 @@ pub struct MusicDefinition {
     pub bass: Option<String>,
     /// Percussion track (e.g. "kick:4 snare:4")
     pub drums: Option<String>,
+    /// Dynamic or custom instrument tracks (e.g. "chords", "arp", "lead2")
+    #[serde(default)]
+    pub tracks: HashMap<String, String>,
 }
 
 /// Optimizer configuration from `@Optimizer`.

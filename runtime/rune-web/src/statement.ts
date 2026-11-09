@@ -287,10 +287,12 @@ export function executeStatement(
         const lead = String(evaluateExpression(parts[2], buildScope(locals)));
         const bass = String(evaluateExpression(parts[3], buildScope(locals)));
         const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals))) : '';
+        const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals))) : '4/4';
         registerMusic({
           [name]: {
             music_type: '8bit',
             tempo,
+            time_signature: timeSig,
             loop_track: true,
             volume: 0.2,
             lead,
@@ -298,6 +300,21 @@ export function executeStatement(
             drums,
           },
         });
+      }
+      return true;
+    }
+
+    if (trimmed.startsWith('music.compose_song(') || trimmed.startsWith('music.register_song(')) {
+      const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
+      const parts = splitTopLevel(inner, ',');
+      if (parts.length >= 2) {
+        const name = String(evaluateExpression(parts[0], buildScope(locals)));
+        const songConfig = evaluateExpression(parts[1], buildScope(locals)) as any;
+        if (songConfig && typeof songConfig === 'object') {
+          registerMusic({
+            [name]: songConfig,
+          });
+        }
       }
       return true;
     }
@@ -323,7 +340,8 @@ export function executeStatement(
       const voice = String(state.active_voice || 'lead');
       const score = String(state[voice + '_track'] || '');
       const selectedId = Number(state.selected_step_id ?? -1);
-      state.active_steps = parseTrackToSteps(score, selectedId);
+      const timeSig = String(state.time_signature || '4/4');
+      state.active_steps = parseTrackToSteps(score, selectedId, timeSig);
       if (typeof (ctx().app as any).render === 'function') {
         (ctx().app as any).render();
       }
@@ -339,16 +357,29 @@ export function executeStatement(
       state.selected_step_id = id;
       const voice = String(state.active_voice || 'lead');
       const score = String(state[voice + '_track'] || '');
-      state.active_steps = parseTrackToSteps(score, id);
+      const timeSig = String(state.time_signature || '4/4');
+      state.active_steps = parseTrackToSteps(score, id, timeSig);
       const step = (state.active_steps as Array<any>).find((s: any) => s.id === id);
       if (step && !step.is_bar && !step.is_rest) {
         state.selected_note = step.note;
-        if (voice === 'drums') {
-          playSound('drum_' + step.note);
-        } else if (voice === 'bass') {
-          playSound('key_bass');
+        if (step.is_chord && step.chord_notes && step.chord_notes.length > 0) {
+          for (const cn of step.chord_notes) {
+            if (voice === 'drums' || ['kick', 'snare', 'hihat'].includes(cn)) {
+              playSound('drum_' + cn);
+            } else if (voice === 'bass') {
+              playSound('key_bass');
+            } else {
+              playSound('key_lead');
+            }
+          }
         } else {
-          playSound('key_lead');
+          if (voice === 'drums') {
+            playSound('drum_' + step.note);
+          } else if (voice === 'bass') {
+            playSound('key_bass');
+          } else {
+            playSound('key_lead');
+          }
         }
       }
       if (typeof (ctx().app as any).render === 'function') {
@@ -365,12 +396,13 @@ export function executeStatement(
     if (state) {
       const voice = String(state.active_voice || 'lead');
       const score = String(state[voice + '_track'] || '');
+      const timeSig = String(state.time_signature || '4/4');
       const tokens = score.trim().split(/\s+/).filter(Boolean);
       if (id >= 0 && id < tokens.length) {
         tokens.splice(id, 1);
         state[voice + '_track'] = tokens.join(' ');
         state.selected_step_id = -1;
-        state.active_steps = parseTrackToSteps(state[voice + '_track'], -1);
+        state.active_steps = parseTrackToSteps(state[voice + '_track'], -1, timeSig);
         if (typeof (ctx().app as any).render === 'function') {
           (ctx().app as any).render();
         }
@@ -811,11 +843,19 @@ export function executeSteps(
   return true;
 }
 
-export function parseTrackToSteps(scoreStr: string, selectedIdx: number): Array<Record<string, unknown>> {
+export function parseTrackToSteps(
+  scoreStr: string,
+  selectedIdx: number,
+  timeSignature: string = '4/4',
+): Array<Record<string, unknown>> {
   if (!scoreStr) return [];
   const tokens = String(scoreStr).trim().split(/\s+/).filter(Boolean);
   const steps: Array<Record<string, unknown>> = [];
+
+  // Time signature beats per bar: e.g. "4/4" -> 4 beats, "3/4" -> 3 beats
+  const beatsPerBar = timeSignature.startsWith('3/') ? 3 : 4;
   let barNum = 1;
+  let currentBeatInBar = 0;
   let stepInBar = 1;
 
   for (let i = 0; i < tokens.length; i++) {
@@ -828,6 +868,7 @@ export function parseTrackToSteps(scoreStr: string, selectedIdx: number): Array<
         duration: '',
         len_label: 'BAR ' + barNum,
         is_bar: true,
+        is_chord: false,
         is_rest: false,
         is_selected: i === selectedIdx,
         bar_num: barNum,
@@ -835,24 +876,45 @@ export function parseTrackToSteps(scoreStr: string, selectedIdx: number): Array<
         pitch_class: 'step-bar',
       });
       barNum += 1;
+      currentBeatInBar = 0;
       stepInBar = 1;
       continue;
     }
 
-    const colonIdx = raw.indexOf(':');
-    let pitch = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
-    let dur = colonIdx !== -1 ? raw.slice(colonIdx) : ':8';
+    let pitch = raw;
+    let dur = ':8';
+    let isChord = false;
+    let chordNotes: string[] = [];
+
+    if (raw.startsWith('[') && raw.includes(']')) {
+      const closeIdx = raw.indexOf(']');
+      pitch = raw.slice(1, closeIdx);
+      const after = raw.slice(closeIdx + 1);
+      dur = after.startsWith(':') ? after : ':8';
+      isChord = true;
+      chordNotes = pitch.split(/[,+]/).map(s => s.trim()).filter(Boolean);
+    } else {
+      const colonIdx = raw.indexOf(':');
+      pitch = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
+      dur = colonIdx !== -1 ? raw.slice(colonIdx) : ':8';
+      if (pitch.includes('+')) {
+        isChord = true;
+        chordNotes = pitch.split('+').map(s => s.trim()).filter(Boolean);
+      }
+    }
 
     const isRest = pitch === '-' || pitch.toLowerCase() === 'rest';
     let lenLabel = '1/8';
-    if (dur === ':16') lenLabel = '1/16';
-    else if (dur === ':8') lenLabel = '1/8';
-    else if (dur === ':4') lenLabel = '1/4';
-    else if (dur === ':2') lenLabel = '1/2';
-    else if (dur === ':1') lenLabel = '1/1';
+    let beats = 0.5;
+    if (dur === ':16') { lenLabel = '1/16'; beats = 0.25; }
+    else if (dur === ':8') { lenLabel = '1/8'; beats = 0.5; }
+    else if (dur === ':4') { lenLabel = '1/4'; beats = 1.0; }
+    else if (dur === ':2') { lenLabel = '1/2'; beats = 2.0; }
+    else if (dur === ':1') { lenLabel = '1/1'; beats = beatsPerBar; }
 
     let pitchClass = 'step-note';
     if (isRest) pitchClass = 'step-rest';
+    else if (isChord) pitchClass = 'step-chord';
     else if (pitch.includes('2')) pitchClass = 'step-bass';
     else if (pitch.includes('3')) pitchClass = 'step-mid-low';
     else if (pitch.includes('4')) pitchClass = 'step-mid';
@@ -861,20 +923,32 @@ export function parseTrackToSteps(scoreStr: string, selectedIdx: number): Array<
     else if (pitch === 'snare') pitchClass = 'step-snare';
     else if (pitch === 'hihat') pitchClass = 'step-hihat';
 
+    const displayNote = isRest ? 'REST' : isChord ? (pitch.startsWith('[') ? pitch : `[${pitch}]`) : pitch;
+
     steps.push({
       id: i,
       raw,
-      note: isRest ? 'REST' : pitch,
+      note: displayNote,
+      chord_notes: isChord ? chordNotes : [pitch],
       duration: dur,
       len_label: lenLabel,
       is_bar: false,
+      is_chord: isChord,
       is_rest: isRest,
       is_selected: i === selectedIdx,
       bar_num: barNum,
       step_num: stepInBar,
       pitch_class: pitchClass,
     });
+
+    currentBeatInBar += beats;
     stepInBar += 1;
+    // Auto-advance bar if beat threshold is reached and track does not use manual |
+    if (currentBeatInBar >= beatsPerBar && !tokens.includes('|')) {
+      barNum += 1;
+      currentBeatInBar = 0;
+      stepInBar = 1;
+    }
   }
   return steps;
 }

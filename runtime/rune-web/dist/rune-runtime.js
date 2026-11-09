@@ -2021,16 +2021,47 @@ var __RuneWeb = (() => {
     const clean = patternStr.replace(/^\s*#.*$/gm, "").replace(/\s+#.*$/gm, "").replace(/\|/g, " ");
     const tokens = clean.split(/\s+/).filter(Boolean);
     for (const token of tokens) {
-      const parts = token.split(":");
-      const noteToken = parts[0].trim();
-      const durationNum = parts.length > 1 ? Number(parts[1].trim()) : 8;
+      let noteToken = token;
+      let durationNum = 8;
+      if (token.startsWith("[") && token.includes("]")) {
+        const closeIdx = token.indexOf("]");
+        noteToken = token.slice(1, closeIdx);
+        const after = token.slice(closeIdx + 1);
+        if (after.startsWith(":")) {
+          durationNum = Number(after.slice(1)) || 8;
+        }
+      } else {
+        const parts = token.split(":");
+        noteToken = parts[0].trim();
+        durationNum = parts.length > 1 ? Number(parts[1].trim()) : 8;
+      }
       const beats = durationNum > 0 ? 4 / durationNum : 0.5;
       if (noteToken === "-" || noteToken.toUpperCase() === "R" || noteToken === "_") {
         events.push({ pitch: 0, beats, isRest: true, isDrum: false });
-      } else if (noteToken.toLowerCase() === "kick" || noteToken.toLowerCase() === "snare" || noteToken.toLowerCase() === "hihat") {
-        events.push({ pitch: noteToken.toLowerCase(), beats, isRest: false, isDrum: true });
+        continue;
+      }
+      const subNotes = noteToken.split(/[,+]/).map((s) => s.trim()).filter(Boolean);
+      const drumNames = ["kick", "snare", "hihat", "crash", "tom"];
+      if (subNotes.length > 1) {
+        const isAnyDrum = subNotes.some((s) => drumNames.includes(s.toLowerCase()));
+        const pitches = subNotes.map((s) => {
+          if (drumNames.includes(s.toLowerCase())) return s.toLowerCase();
+          return parseNoteToFreq(s);
+        });
+        events.push({
+          pitch: pitches[0],
+          pitches,
+          beats,
+          isRest: false,
+          isDrum: isAnyDrum
+        });
       } else {
-        events.push({ pitch: parseNoteToFreq(noteToken), beats, isRest: false, isDrum: false });
+        const s = subNotes[0] || noteToken;
+        if (drumNames.includes(s.toLowerCase())) {
+          events.push({ pitch: s.toLowerCase(), beats, isRest: false, isDrum: true });
+        } else {
+          events.push({ pitch: parseNoteToFreq(s), beats, isRest: false, isDrum: false });
+        }
       }
     }
     return events;
@@ -2054,13 +2085,36 @@ var __RuneWeb = (() => {
     musicMasterGain.connect(ctx2.destination);
     tracksState = {};
     if (def.lead) {
-      tracksState.lead = { events: parseTrackPattern(def.lead), index: 0, nextBeat: 0 };
+      tracksState.lead = { events: parseTrackPattern(def.lead), index: 0, nextBeat: 0, instrument: "square" };
     }
     if (def.bass) {
-      tracksState.bass = { events: parseTrackPattern(def.bass), index: 0, nextBeat: 0 };
+      tracksState.bass = { events: parseTrackPattern(def.bass), index: 0, nextBeat: 0, instrument: "triangle" };
     }
     if (def.drums) {
-      tracksState.drums = { events: parseTrackPattern(def.drums), index: 0, nextBeat: 0 };
+      tracksState.drums = { events: parseTrackPattern(def.drums), index: 0, nextBeat: 0, instrument: "drums" };
+    }
+    if (def.tracks) {
+      for (const [tName, tVal] of Object.entries(def.tracks)) {
+        if (!tVal) continue;
+        if (typeof tVal === "string") {
+          tracksState[tName] = {
+            events: parseTrackPattern(tVal),
+            index: 0,
+            nextBeat: 0,
+            instrument: "sawtooth"
+          };
+        } else if (typeof tVal === "object" && tVal.notes) {
+          tracksState[tName] = {
+            events: parseTrackPattern(tVal.notes),
+            index: 0,
+            nextBeat: 0,
+            instrument: tVal.instrument || "sawtooth",
+            volume: tVal.volume,
+            pan: tVal.pan,
+            muted: tVal.muted
+          };
+        }
+      }
     }
     musicStartTime = ctx2.currentTime + 0.05;
     nextScheduleTime = musicStartTime;
@@ -2104,11 +2158,9 @@ var __RuneWeb = (() => {
     if (!ctx2 || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
     const secondsPerBeat = 60 / musicTempoBpm;
     const lookaheadWindow = ctx2.currentTime + 0.25;
-    const trackKeys = ["lead", "bass", "drums"];
     let allFinished = true;
-    for (const trackKey of trackKeys) {
-      const track = tracksState[trackKey];
-      if (!track || !track.events.length) continue;
+    for (const [trackKey, track] of Object.entries(tracksState)) {
+      if (!track || !track.events.length || track.muted) continue;
       while (musicStartTime + track.nextBeat * secondsPerBeat < lookaheadWindow) {
         if (track.index >= track.events.length) {
           if (musicLoop) {
@@ -2121,7 +2173,7 @@ var __RuneWeb = (() => {
         const eventTime = musicStartTime + track.nextBeat * secondsPerBeat;
         const eventDurationSec = event.beats * secondsPerBeat;
         if (!event.isRest && eventTime >= ctx2.currentTime - 0.05) {
-          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, musicMasterGain);
+          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, musicMasterGain, track.instrument);
         }
         track.nextBeat += event.beats;
         track.index += 1;
@@ -2134,52 +2186,102 @@ var __RuneWeb = (() => {
       stopMusic();
     }
   }
-  function scheduleTrackNote(ctx2, channel, event, time, durationSec, destination) {
-    if (channel === "drums" || event.isDrum) {
-      const drumType = String(event.pitch).toLowerCase();
-      if (drumType === "kick") {
-        const osc2 = ctx2.createOscillator();
-        const gain2 = ctx2.createGain();
-        osc2.type = "sine";
-        osc2.frequency.setValueAtTime(130, time);
-        osc2.frequency.exponentialRampToValueAtTime(32, time + Math.min(durationSec, 0.08));
-        gain2.gain.setValueAtTime(0.4, time);
-        gain2.gain.exponentialRampToValueAtTime(1e-3, time + Math.min(durationSec, 0.08));
-        osc2.connect(gain2);
-        gain2.connect(destination);
-        osc2.start(time);
-        osc2.stop(time + Math.min(durationSec, 0.09));
-      } else if (drumType === "snare") {
-        playNoiseBurstToDestination(ctx2, time, Math.min(durationSec, 0.09), 1600, 300, 0.3, destination, "bandpass");
-      } else if (drumType === "hihat") {
-        playNoiseBurstToDestination(ctx2, time, Math.min(durationSec, 0.04), 7e3, 5e3, 0.15, destination, "highpass");
+  function scheduleTrackNote(ctx2, channel, event, time, durationSec, destination, instrumentOverride) {
+    const isDrumChannel = channel === "drums" || instrumentOverride === "drums" || event.isDrum;
+    const pitchesToPlay = event.pitches && event.pitches.length > 0 ? event.pitches : [event.pitch];
+    const chordGainMultiplier = 1 / Math.sqrt(Math.max(1, pitchesToPlay.length));
+    for (const p of pitchesToPlay) {
+      if (isDrumChannel || typeof p === "string") {
+        const drumType = String(p).toLowerCase();
+        if (drumType === "kick") {
+          const osc2 = ctx2.createOscillator();
+          const gain2 = ctx2.createGain();
+          osc2.type = "sine";
+          osc2.frequency.setValueAtTime(130, time);
+          osc2.frequency.exponentialRampToValueAtTime(32, time + Math.min(durationSec, 0.08));
+          gain2.gain.setValueAtTime(0.4 * chordGainMultiplier, time);
+          gain2.gain.exponentialRampToValueAtTime(1e-3, time + Math.min(durationSec, 0.08));
+          osc2.connect(gain2);
+          gain2.connect(destination);
+          osc2.start(time);
+          osc2.stop(time + Math.min(durationSec, 0.09));
+        } else if (drumType === "snare") {
+          playNoiseBurstToDestination(ctx2, time, Math.min(durationSec, 0.09), 1600, 300, 0.3 * chordGainMultiplier, destination, "bandpass");
+        } else if (drumType === "hihat") {
+          playNoiseBurstToDestination(ctx2, time, Math.min(durationSec, 0.04), 7e3, 5e3, 0.15 * chordGainMultiplier, destination, "highpass");
+        } else if (drumType === "crash") {
+          playNoiseBurstToDestination(ctx2, time, Math.min(durationSec, 0.25), 5e3, 1e3, 0.2 * chordGainMultiplier, destination, "bandpass");
+        } else if (drumType === "tom") {
+          const osc2 = ctx2.createOscillator();
+          const gain2 = ctx2.createGain();
+          osc2.type = "triangle";
+          osc2.frequency.setValueAtTime(220, time);
+          osc2.frequency.exponentialRampToValueAtTime(70, time + Math.min(durationSec, 0.12));
+          gain2.gain.setValueAtTime(0.35 * chordGainMultiplier, time);
+          gain2.gain.exponentialRampToValueAtTime(1e-3, time + Math.min(durationSec, 0.12));
+          osc2.connect(gain2);
+          gain2.connect(destination);
+          osc2.start(time);
+          osc2.stop(time + Math.min(durationSec, 0.13));
+        }
+        continue;
       }
-      return;
-    }
-    const freq = typeof event.pitch === "number" ? event.pitch : parseNoteToFreq(event.pitch);
-    if (freq <= 0) return;
-    const osc = ctx2.createOscillator();
-    const gain = ctx2.createGain();
-    if (channel === "lead") {
-      osc.type = "square";
-      osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = Math.min(durationSec * 0.85, 0.35);
-      gain.gain.setValueAtTime(0.2, time);
-      gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
-      osc.connect(gain);
-      gain.connect(destination);
-      osc.start(time);
-      osc.stop(time + noteSoundLen + 0.01);
-    } else if (channel === "bass") {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = Math.min(durationSec * 0.9, 0.45);
-      gain.gain.setValueAtTime(0.28, time);
-      gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
-      osc.connect(gain);
-      gain.connect(destination);
-      osc.start(time);
-      osc.stop(time + noteSoundLen + 0.01);
+      const freq = typeof p === "number" ? p : parseNoteToFreq(p);
+      if (freq <= 0) continue;
+      const osc = ctx2.createOscillator();
+      const gain = ctx2.createGain();
+      const inst = instrumentOverride || (channel === "bass" ? "triangle" : "square");
+      if (inst === "sawtooth" || inst === "synth") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(freq, time);
+        const noteSoundLen = Math.min(durationSec * 0.88, 0.4);
+        gain.gain.setValueAtTime(0.18 * chordGainMultiplier, time);
+        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        osc.connect(gain);
+        gain.connect(destination);
+        osc.start(time);
+        osc.stop(time + noteSoundLen + 0.01);
+      } else if (inst === "triangle" || inst === "bass") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, time);
+        const noteSoundLen = Math.min(durationSec * 0.9, 0.45);
+        gain.gain.setValueAtTime(0.28 * chordGainMultiplier, time);
+        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        osc.connect(gain);
+        gain.connect(destination);
+        osc.start(time);
+        osc.stop(time + noteSoundLen + 0.01);
+      } else if (inst === "sine") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, time);
+        const noteSoundLen = Math.min(durationSec * 0.9, 0.5);
+        gain.gain.setValueAtTime(0.25 * chordGainMultiplier, time);
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + noteSoundLen);
+        osc.connect(gain);
+        gain.connect(destination);
+        osc.start(time);
+        osc.stop(time + noteSoundLen + 0.01);
+      } else if (inst === "pluck") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, time);
+        const noteSoundLen = Math.min(durationSec * 0.6, 0.15);
+        gain.gain.setValueAtTime(0.3 * chordGainMultiplier, time);
+        gain.gain.exponentialRampToValueAtTime(1e-3, time + noteSoundLen);
+        osc.connect(gain);
+        gain.connect(destination);
+        osc.start(time);
+        osc.stop(time + noteSoundLen + 0.01);
+      } else {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq, time);
+        const noteSoundLen = Math.min(durationSec * 0.85, 0.35);
+        gain.gain.setValueAtTime(0.2 * chordGainMultiplier, time);
+        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        osc.connect(gain);
+        gain.connect(destination);
+        osc.start(time);
+        osc.stop(time + noteSoundLen + 0.01);
+      }
     }
   }
   function playNoiseBurstToDestination(ctx2, now, duration, filterStart, filterEnd, volume, destination, filterType = "lowpass") {
@@ -2410,10 +2512,12 @@ var __RuneWeb = (() => {
           const lead = String(evaluateExpression(parts[2], buildScope(locals)));
           const bass = String(evaluateExpression(parts[3], buildScope(locals)));
           const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals))) : "";
+          const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals))) : "4/4";
           registerMusic({
             [name]: {
               music_type: "8bit",
               tempo,
+              time_signature: timeSig,
               loop_track: true,
               volume: 0.2,
               lead,
@@ -2421,6 +2525,20 @@ var __RuneWeb = (() => {
               drums
             }
           });
+        }
+        return true;
+      }
+      if (trimmed.startsWith("music.compose_song(") || trimmed.startsWith("music.register_song(")) {
+        const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
+        const parts = splitTopLevel(inner, ",");
+        if (parts.length >= 2) {
+          const name = String(evaluateExpression(parts[0], buildScope(locals)));
+          const songConfig = evaluateExpression(parts[1], buildScope(locals));
+          if (songConfig && typeof songConfig === "object") {
+            registerMusic({
+              [name]: songConfig
+            });
+          }
         }
         return true;
       }
@@ -2444,7 +2562,8 @@ var __RuneWeb = (() => {
         const voice = String(state.active_voice || "lead");
         const score = String(state[voice + "_track"] || "");
         const selectedId = Number(state.selected_step_id ?? -1);
-        state.active_steps = parseTrackToSteps(score, selectedId);
+        const timeSig = String(state.time_signature || "4/4");
+        state.active_steps = parseTrackToSteps(score, selectedId, timeSig);
         if (typeof ctx().app.render === "function") {
           ctx().app.render();
         }
@@ -2459,16 +2578,29 @@ var __RuneWeb = (() => {
         state.selected_step_id = id;
         const voice = String(state.active_voice || "lead");
         const score = String(state[voice + "_track"] || "");
-        state.active_steps = parseTrackToSteps(score, id);
+        const timeSig = String(state.time_signature || "4/4");
+        state.active_steps = parseTrackToSteps(score, id, timeSig);
         const step = state.active_steps.find((s) => s.id === id);
         if (step && !step.is_bar && !step.is_rest) {
           state.selected_note = step.note;
-          if (voice === "drums") {
-            playSound("drum_" + step.note);
-          } else if (voice === "bass") {
-            playSound("key_bass");
+          if (step.is_chord && step.chord_notes && step.chord_notes.length > 0) {
+            for (const cn of step.chord_notes) {
+              if (voice === "drums" || ["kick", "snare", "hihat"].includes(cn)) {
+                playSound("drum_" + cn);
+              } else if (voice === "bass") {
+                playSound("key_bass");
+              } else {
+                playSound("key_lead");
+              }
+            }
           } else {
-            playSound("key_lead");
+            if (voice === "drums") {
+              playSound("drum_" + step.note);
+            } else if (voice === "bass") {
+              playSound("key_bass");
+            } else {
+              playSound("key_lead");
+            }
           }
         }
         if (typeof ctx().app.render === "function") {
@@ -2484,12 +2616,13 @@ var __RuneWeb = (() => {
       if (state) {
         const voice = String(state.active_voice || "lead");
         const score = String(state[voice + "_track"] || "");
+        const timeSig = String(state.time_signature || "4/4");
         const tokens = score.trim().split(/\s+/).filter(Boolean);
         if (id >= 0 && id < tokens.length) {
           tokens.splice(id, 1);
           state[voice + "_track"] = tokens.join(" ");
           state.selected_step_id = -1;
-          state.active_steps = parseTrackToSteps(state[voice + "_track"], -1);
+          state.active_steps = parseTrackToSteps(state[voice + "_track"], -1, timeSig);
           if (typeof ctx().app.render === "function") {
             ctx().app.render();
           }
@@ -2851,11 +2984,13 @@ var __RuneWeb = (() => {
     }
     return true;
   }
-  function parseTrackToSteps(scoreStr, selectedIdx) {
+  function parseTrackToSteps(scoreStr, selectedIdx, timeSignature = "4/4") {
     if (!scoreStr) return [];
     const tokens = String(scoreStr).trim().split(/\s+/).filter(Boolean);
     const steps = [];
+    const beatsPerBar = timeSignature.startsWith("3/") ? 3 : 4;
     let barNum = 1;
+    let currentBeatInBar = 0;
     let stepInBar = 1;
     for (let i = 0; i < tokens.length; i++) {
       const raw = tokens[i];
@@ -2867,6 +3002,7 @@ var __RuneWeb = (() => {
           duration: "",
           len_label: "BAR " + barNum,
           is_bar: true,
+          is_chord: false,
           is_rest: false,
           is_selected: i === selectedIdx,
           bar_num: barNum,
@@ -2874,21 +3010,52 @@ var __RuneWeb = (() => {
           pitch_class: "step-bar"
         });
         barNum += 1;
+        currentBeatInBar = 0;
         stepInBar = 1;
         continue;
       }
-      const colonIdx = raw.indexOf(":");
-      let pitch = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
-      let dur = colonIdx !== -1 ? raw.slice(colonIdx) : ":8";
+      let pitch = raw;
+      let dur = ":8";
+      let isChord = false;
+      let chordNotes = [];
+      if (raw.startsWith("[") && raw.includes("]")) {
+        const closeIdx = raw.indexOf("]");
+        pitch = raw.slice(1, closeIdx);
+        const after = raw.slice(closeIdx + 1);
+        dur = after.startsWith(":") ? after : ":8";
+        isChord = true;
+        chordNotes = pitch.split(/[,+]/).map((s) => s.trim()).filter(Boolean);
+      } else {
+        const colonIdx = raw.indexOf(":");
+        pitch = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
+        dur = colonIdx !== -1 ? raw.slice(colonIdx) : ":8";
+        if (pitch.includes("+")) {
+          isChord = true;
+          chordNotes = pitch.split("+").map((s) => s.trim()).filter(Boolean);
+        }
+      }
       const isRest = pitch === "-" || pitch.toLowerCase() === "rest";
       let lenLabel = "1/8";
-      if (dur === ":16") lenLabel = "1/16";
-      else if (dur === ":8") lenLabel = "1/8";
-      else if (dur === ":4") lenLabel = "1/4";
-      else if (dur === ":2") lenLabel = "1/2";
-      else if (dur === ":1") lenLabel = "1/1";
+      let beats = 0.5;
+      if (dur === ":16") {
+        lenLabel = "1/16";
+        beats = 0.25;
+      } else if (dur === ":8") {
+        lenLabel = "1/8";
+        beats = 0.5;
+      } else if (dur === ":4") {
+        lenLabel = "1/4";
+        beats = 1;
+      } else if (dur === ":2") {
+        lenLabel = "1/2";
+        beats = 2;
+      } else if (dur === ":1") {
+        lenLabel = "1/1";
+        beats = beatsPerBar;
+      }
       let pitchClass = "step-note";
       if (isRest) pitchClass = "step-rest";
+      else if (isChord) pitchClass = "step-chord";
       else if (pitch.includes("2")) pitchClass = "step-bass";
       else if (pitch.includes("3")) pitchClass = "step-mid-low";
       else if (pitch.includes("4")) pitchClass = "step-mid";
@@ -2896,20 +3063,29 @@ var __RuneWeb = (() => {
       else if (pitch === "kick") pitchClass = "step-kick";
       else if (pitch === "snare") pitchClass = "step-snare";
       else if (pitch === "hihat") pitchClass = "step-hihat";
+      const displayNote = isRest ? "REST" : isChord ? pitch.startsWith("[") ? pitch : `[${pitch}]` : pitch;
       steps.push({
         id: i,
         raw,
-        note: isRest ? "REST" : pitch,
+        note: displayNote,
+        chord_notes: isChord ? chordNotes : [pitch],
         duration: dur,
         len_label: lenLabel,
         is_bar: false,
+        is_chord: isChord,
         is_rest: isRest,
         is_selected: i === selectedIdx,
         bar_num: barNum,
         step_num: stepInBar,
         pitch_class: pitchClass
       });
+      currentBeatInBar += beats;
       stepInBar += 1;
+      if (currentBeatInBar >= beatsPerBar && !tokens.includes("|")) {
+        barNum += 1;
+        currentBeatInBar = 0;
+        stepInBar = 1;
+      }
     }
     return steps;
   }
