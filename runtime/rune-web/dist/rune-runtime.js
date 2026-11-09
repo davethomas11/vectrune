@@ -382,33 +382,33 @@ var __RuneWeb = (() => {
     if (!config || prop !== config.bind) return;
     updateNavigatorUrl(String(value ?? ""));
   }
-  function setupNavigator(config, app) {
+  function setupNavigator(config, app2) {
     if (typeof window === "undefined") return;
     const boundVar = config.bind;
     if (!boundVar) return;
     const initialUrlRoute = readNavigatorUrl(config);
     if (initialUrlRoute) {
-      app.state[boundVar] = initialUrlRoute;
+      app2.state[boundVar] = initialUrlRoute;
       lastKnownRoute = initialUrlRoute;
     } else {
-      lastKnownRoute = String(app.state[boundVar] || "home");
+      lastKnownRoute = String(app2.state[boundVar] || "home");
     }
     updateSeoMetadata(lastKnownRoute);
     window.navigate = function(target) {
-      if (typeof app.state[boundVar] !== "undefined") {
-        app.state[boundVar] = target;
-        if (app.render) app.render();
+      if (typeof app2.state[boundVar] !== "undefined") {
+        app2.state[boundVar] = target;
+        if (app2.render) app2.render();
         updateSeoMetadata(target);
       }
     };
     window.addEventListener("popstate", (_event) => {
       const currentRoute = readNavigatorUrl(config) || "home";
-      if (currentRoute !== app.state[boundVar]) {
+      if (currentRoute !== app2.state[boundVar]) {
         isNavigatingFromUrl = true;
         try {
           lastKnownRoute = currentRoute;
-          app.state[boundVar] = currentRoute;
-          if (app.render) app.render();
+          app2.state[boundVar] = currentRoute;
+          if (app2.render) app2.render();
           updateSeoMetadata(currentRoute);
         } finally {
           isNavigatingFromUrl = false;
@@ -417,12 +417,12 @@ var __RuneWeb = (() => {
     });
     window.addEventListener("hashchange", (_event) => {
       const currentRoute = readNavigatorUrl(config);
-      if (currentRoute && currentRoute !== app.state[boundVar]) {
+      if (currentRoute && currentRoute !== app2.state[boundVar]) {
         isNavigatingFromUrl = true;
         try {
           lastKnownRoute = currentRoute;
-          app.state[boundVar] = currentRoute;
-          if (app.render) app.render();
+          app2.state[boundVar] = currentRoute;
+          if (app2.render) app2.render();
           updateSeoMetadata(currentRoute);
         } finally {
           isNavigatingFromUrl = false;
@@ -1140,7 +1140,7 @@ var __RuneWeb = (() => {
     if (node.LazyRoute) {
       const lazy = node.LazyRoute;
       const context = ctx();
-      const app = context.app;
+      const app2 = context.app;
       const cleanRoute = lazy.route.toLowerCase();
       if (context.loadedChunks && context.loadedChunks[cleanRoute]) {
         const chunk = context.loadedChunks[cleanRoute];
@@ -1149,8 +1149,8 @@ var __RuneWeb = (() => {
         }
         return renderNode(chunk, locals);
       }
-      if (app && app.loadChunk) {
-        app.loadChunk(cleanRoute, lazy.chunk_url);
+      if (app2 && app2.loadChunk) {
+        app2.loadChunk(cleanRoute, lazy.chunk_url);
       }
       if (lazy.fallback && lazy.fallback.length > 0) {
         return lazy.fallback.map((c) => renderNode(c, locals)).join("");
@@ -1640,18 +1640,18 @@ var __RuneWeb = (() => {
     const action = match[1];
     let ms = Number(match[2]);
     if (match[3]?.toLowerCase() === "s") ms *= 1e3;
-    const app = ctx().app;
-    if (app.startTimer) {
-      app.startTimer(action, ms);
+    const app2 = ctx().app;
+    if (app2.startTimer) {
+      app2.startTimer(action, ms);
     }
     return true;
   }
   function handleStopTimer(statement, _locals) {
     const trimmed = statement.trim();
     if (trimmed !== "stop-timer" && trimmed !== "clear-timer" && trimmed !== "clear-interval") return void 0;
-    const app = ctx().app;
-    if (app.stopTimer) {
-      app.stopTimer();
+    const app2 = ctx().app;
+    if (app2.stopTimer) {
+      app2.stopTimer();
     }
     return true;
   }
@@ -2519,6 +2519,46 @@ var __RuneWeb = (() => {
       }
       return true;
     }
+    if (trimmed === "fullscreen.toggle()" || trimmed === "fullscreen.toggle" || trimmed === "fullscreen()" || trimmed === "fullscreen" || trimmed === "toggle_fullscreen()" || trimmed === "fullscreen.enter()" || trimmed === "fullscreen.exit()") {
+      if (typeof document !== "undefined") {
+        const doc = document;
+        const docEl = document.documentElement;
+        const isFs = Boolean(
+          doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement || doc.body.getAttribute("data-fullscreen") === "true" || doc.body.classList.contains("fullscreen")
+        );
+        const shouldEnter = trimmed === "fullscreen.enter()" ? true : trimmed === "fullscreen.exit()" ? false : !isFs;
+        if (shouldEnter) {
+          if (docEl.requestFullscreen) {
+            docEl.requestFullscreen().catch(() => {
+            });
+          } else if (docEl.webkitRequestFullscreen) {
+            docEl.webkitRequestFullscreen();
+          } else if (docEl.msRequestFullscreen) {
+            docEl.msRequestFullscreen();
+          }
+          doc.body.setAttribute("data-fullscreen", "true");
+          doc.body.classList.add("fullscreen");
+        } else {
+          if (doc.exitFullscreen) {
+            doc.exitFullscreen().catch(() => {
+            });
+          } else if (doc.webkitExitFullscreen) {
+            doc.webkitExitFullscreen();
+          } else if (doc.msExitFullscreen) {
+            doc.msExitFullscreen();
+          }
+          doc.body.removeAttribute("data-fullscreen");
+          doc.body.classList.remove("fullscreen");
+        }
+        if (typeof app?.state !== "undefined") {
+          app.state.is_fullscreen = shouldEnter;
+          if (typeof app.render === "function") {
+            app.render();
+          }
+        }
+      }
+      return true;
+    }
     const emitterMatch = trimmed.match(/^([A-Za-z_][\w]*)\.(burst|step)\((.*)\)$/);
     if (emitterMatch && ctx().emitters && Object.prototype.hasOwnProperty.call(ctx().emitters, emitterMatch[1])) {
       const name = emitterMatch[1];
@@ -2853,7 +2893,7 @@ var __RuneWeb = (() => {
   function boot(config) {
     registerSounds(config.sounds);
     registerMusic(config.music);
-    const app = {
+    const app2 = {
       state: {},
       derived: {},
       playSound,
@@ -2917,8 +2957,8 @@ var __RuneWeb = (() => {
     };
     const loadedChunks = {};
     const loadingChunks = {};
-    app.loadedChunks = loadedChunks;
-    app.loadChunk = function(route, chunkUrl) {
+    app2.loadedChunks = loadedChunks;
+    app2.loadChunk = function(route, chunkUrl) {
       const cleanRoute = route.toLowerCase();
       if (loadedChunks[cleanRoute]) {
         return Promise.resolve(loadedChunks[cleanRoute]);
@@ -2935,7 +2975,7 @@ var __RuneWeb = (() => {
       }).then((data) => {
         loadedChunks[cleanRoute] = data;
         delete loadingChunks[cleanRoute];
-        app.render();
+        app2.render();
         return data;
       }).catch((err) => {
         delete loadingChunks[cleanRoute];
@@ -2945,7 +2985,7 @@ var __RuneWeb = (() => {
       loadingChunks[cleanRoute] = promise;
       return promise;
     };
-    app.preloadChunks = function() {
+    app2.preloadChunks = function() {
       if (typeof window === "undefined" || typeof fetch === "undefined") return;
       const context = ctx();
       const opt = context.optimizer;
@@ -2987,7 +3027,7 @@ var __RuneWeb = (() => {
       helperDefinitions: config.helperDefinitions,
       actionDefinitions: config.actionDefinitions,
       i18nData: config.i18nData,
-      app,
+      app: app2,
       isRendering: false,
       memorySubscriptions: {},
       navigator: config.navigator || null,
@@ -2998,31 +3038,31 @@ var __RuneWeb = (() => {
       loadedChunks,
       loadingChunks
     });
-    app.state = makeReactive(
+    app2.state = makeReactive(
       Object.assign({}, config.stateJson, { i18n: config.i18nData })
     );
     if (config.navigator) {
-      setupNavigator(config.navigator, app);
+      setupNavigator(config.navigator, app2);
     } else if (config.seo) {
       updateSeoMetadata("home");
     }
-    if (config.optimizer?.pre_load && app.preloadChunks) {
-      app.preloadChunks();
+    if (config.optimizer?.pre_load && app2.preloadChunks) {
+      app2.preloadChunks();
     }
-    const originalRender = app.render;
-    app.render = function() {
+    const originalRender = app2.render;
+    app2.render = function() {
       setWindowProp("__renderingComponent", "app");
       originalRender.call(this);
       setWindowProp("__renderingComponent", null);
     };
     let activeTimerId = null;
-    app.startTimer = function(action, ms) {
+    app2.startTimer = function(action, ms) {
       if (activeTimerId !== null) clearInterval(activeTimerId);
       activeTimerId = setInterval(() => {
-        app.invokeAction(action, []);
+        app2.invokeAction(action, []);
       }, ms);
     };
-    app.stopTimer = function() {
+    app2.stopTimer = function() {
       if (activeTimerId !== null) {
         clearInterval(activeTimerId);
         activeTimerId = null;
@@ -3044,7 +3084,7 @@ var __RuneWeb = (() => {
         const action = keyMap[event.code] || keyMap[event.key] || keyMap[event.key.toLowerCase()] || keyMap[event.code.toLowerCase()];
         if (action) {
           event.preventDefault();
-          app.invokeAction(action, []);
+          app2.invokeAction(action, []);
         }
       });
     }
@@ -3054,13 +3094,13 @@ var __RuneWeb = (() => {
         const action = match[1];
         let ms = Number(match[2]);
         if (match[3]?.toLowerCase() === "s") ms *= 1e3;
-        app.startTimer(action, ms);
+        app2.startTimer(action, ms);
       }
     }
     if (config.wsEndpoint) {
-      setupWebSocket(config.wsEndpoint, app);
+      setupWebSocket(config.wsEndpoint, app2);
     }
-    setWindowProp("runeWebApp", app);
+    setWindowProp("runeWebApp", app2);
     setWindowProp("playSound", playSound);
     setWindowProp("playMusic", playMusic);
     setWindowProp("stopMusic", stopMusic);
@@ -3068,10 +3108,28 @@ var __RuneWeb = (() => {
     setWindowProp("resumeMusic", resumeMusic);
     setWindowProp("registerSounds", registerSounds);
     setWindowProp("registerMusic", registerMusic);
-    app.render();
-    return app;
+    if (typeof document !== "undefined") {
+      document.addEventListener("fullscreenchange", () => {
+        const isFs = Boolean(
+          document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement
+        );
+        if (isFs) {
+          document.body.setAttribute("data-fullscreen", "true");
+          document.body.classList.add("fullscreen");
+        } else {
+          document.body.removeAttribute("data-fullscreen");
+          document.body.classList.remove("fullscreen");
+        }
+        if (typeof app2.state?.is_fullscreen !== "undefined") {
+          app2.state.is_fullscreen = isFs;
+          app2.render();
+        }
+      });
+    }
+    app2.render();
+    return app2;
   }
-  function setupWebSocket(endpoint, app) {
+  function setupWebSocket(endpoint, app2) {
     setWindowProp("__runeWebEmit", function(eventName, payload) {
       const ws2 = getWindowProp("__runeWebSocket");
       if (!ws2 || ws2.readyState !== WebSocket.OPEN) {
@@ -3086,8 +3144,8 @@ var __RuneWeb = (() => {
       try {
         const message = JSON.parse(event.data);
         if (message.type === "memory_update") {
-          app.state[message.key] = message.value;
-          app.render();
+          app2.state[message.key] = message.value;
+          app2.render();
         }
       } catch (_err) {
       }

@@ -15,6 +15,7 @@ pub struct CssCompiler {
     presets: HashMap<String, HashMap<String, String>>,
     preset_chain: Vec<String>, // For cycle detection during resolution
     responsive: Vec<ResponsiveStyleRule>,
+    fullscreen: HashMap<String, HashMap<String, String>>,
 }
 
 impl CssCompiler {
@@ -25,6 +26,7 @@ impl CssCompiler {
             presets: style.presets.clone(),
             preset_chain: Vec::new(),
             responsive: style.responsive.clone(),
+            fullscreen: style.fullscreen.clone(),
         }
     }
 
@@ -433,6 +435,25 @@ impl CssCompiler {
             css.push_str("}\n");
         }
 
+        if !self.fullscreen.is_empty() {
+            let fullscreen_rules = self.fullscreen.clone();
+            let mut fs_scoped_rules = HashMap::new();
+            for (selector, props) in &fullscreen_rules {
+                let s = selector.trim();
+                let scoped_key = if s == "body" || s == ":root" || s == "html" {
+                    ":fullscreen, :-webkit-full-screen, [data-fullscreen=\"true\"], .fullscreen".to_string()
+                } else {
+                    format!(":fullscreen {s}, :fullscreen{s}, :-webkit-full-screen {s}, :-webkit-full-screen{s}, [data-fullscreen=\"true\"] {s}, [data-fullscreen=\"true\"]{s}, .fullscreen {s}")
+                };
+                fs_scoped_rules.insert(scoped_key, props.clone());
+            }
+            self.compile_rules(&mut css, "", &fs_scoped_rules);
+
+            css.push_str("@media (display-mode: fullscreen) {\n");
+            self.compile_rules(&mut css, "", &fullscreen_rules);
+            css.push_str("}\n");
+        }
+
         css
     }
 
@@ -580,6 +601,7 @@ responsive:
                 .collect(),
             presets: HashMap::new(),
             rules: HashMap::new(),
+            fullscreen: HashMap::new(),
         };
 
         let compiler = CssCompiler::new(&style);
@@ -615,6 +637,7 @@ responsive:
             tokens: HashMap::new(),
             presets: presets.clone(),
             rules: HashMap::new(),
+            fullscreen: HashMap::new(),
         };
 
         let mut compiler = CssCompiler::new(&style);
@@ -646,6 +669,7 @@ responsive:
             tokens: HashMap::new(),
             presets,
             rules: HashMap::new(),
+            fullscreen: HashMap::new(),
         };
 
         let mut compiler = CssCompiler::new(&style);
@@ -682,6 +706,7 @@ responsive:
                     ]),
                 ),
             ]),
+            fullscreen: HashMap::new(),
         };
 
         let mut compiler = CssCompiler::new(&style);
@@ -715,6 +740,7 @@ responsive:
                     HashMap::from([("size".to_string(), "96px".to_string())]),
                 ),
             ]),
+            fullscreen: HashMap::new(),
         };
 
         let mut compiler = CssCompiler::new(&style);
@@ -775,6 +801,7 @@ responsive:
             ]
             .into_iter()
             .collect(),
+            fullscreen: HashMap::new(),
         };
 
         let mut compiler = CssCompiler::new(&style);
@@ -825,6 +852,37 @@ rules:
         assert!(css.contains("box-shadow: 0 0 10px var(--accent);"));
         assert!(css.contains(".btn:active {\n"));
         assert!(css.contains("box-shadow: none;"));
+    }
+
+    #[test]
+    fn test_fullscreen_style_section_compilation() {
+        let doc = crate::rune_parser::parse_rune(r#"
+@Page/studio
+view:
+    div .studio-cabinet "Studio"
+
+@Style/studio
+tokens:
+    neon = #00e5ff
+rules:
+    .studio-cabinet:
+        max-width = 960px
+fullscreen:
+    .studio-cabinet:
+        max-width = 100vw
+        height = 100vh
+"#).expect("parsed doc");
+
+        let frontend = super::super::parser::parse_rune_web_frontend(&doc, "studio").expect("parsed frontend");
+        let style = &frontend.style_definitions["studio"];
+        let mut compiler = CssCompiler::new(style);
+        let css = compiler.compile(&style.rules);
+
+        assert!(css.contains(":fullscreen .studio-cabinet"));
+        assert!(css.contains("[data-fullscreen=\"true\"] .studio-cabinet"));
+        assert!(css.contains("@media (display-mode: fullscreen)"));
+        assert!(css.contains("max-width: 100vw;"));
+        assert!(css.contains("height: 100vh;"));
     }
 }
 

@@ -287,7 +287,7 @@ pub enum ViewNode {
 }
 
 /// A style definition from `@Style/<name>`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[allow(dead_code)]
 pub struct StyleDefinition {
     /// Design tokens: repeated values like colors, sizes
@@ -304,6 +304,11 @@ pub struct StyleDefinition {
     /// `(max-width: 640px):` containing the same selector/property syntax as `rules:`.
     #[serde(default)]
     pub responsive: Vec<ResponsiveStyleRule>,
+
+    /// Fullscreen overrides applied when running in fullscreen mode.
+    /// Authored as `fullscreen:` containing selector/property rules.
+    #[serde(default)]
+    pub fullscreen: HashMap<String, HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

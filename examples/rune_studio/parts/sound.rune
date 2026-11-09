@@ -42,6 +42,37 @@ sequence = C5:120ms, E5:120ms, G5:120ms, C6:240ms
 duration = 600ms
 volume = 0.3
 
+@Sound/key_lead
+wave = square
+freq = 523.25
+duration = 150ms
+volume = 0.25
+
+@Sound/key_bass
+wave = triangle
+freq = 130.81
+duration = 180ms
+volume = 0.3
+
+@Sound/drum_kick
+wave = sine
+freq = 150 -> 40
+duration = 120ms
+volume = 0.4
+curve = exponential
+
+@Sound/drum_snare
+wave = noise
+filter = bandpass 1200 -> 300
+duration = 100ms
+volume = 0.35
+
+@Sound/drum_hihat
+wave = noise
+filter = highpass 5000 -> 8000
+duration = 50ms
+volume = 0.2
+
 @Music/vectraiders
 type = 8bit
 tempo = 144

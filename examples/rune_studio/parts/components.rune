@@ -1,0 +1,207 @@
+@Component/StudioHeader
+view:
+    header .studio-header:
+        div .header-brand:
+            h1 .studio-title "RUNE STUDIO"
+            p .studio-subtitle "RETRO 8-BIT CHIPTUNE WORKSTATION & NOTE SEQUENCER"
+        div .header-controls:
+            button .btn-fullscreen click="toggleFullscreen":
+                if is_fullscreen:
+                    "🗗 EXIT FULLSCREEN"
+                if !is_fullscreen:
+                    "⛶ FULLSCREEN"
+            div .status-pill:
+                "{status_message}"
+
+@Component/SongSelector
+view:
+    div .song-selector:
+        button .song-tab {.active when selected_song == 'vectraiders'} click="selectSong('vectraiders')":
+            "👾 VectRaiders"
+        button .song-tab {.active when selected_song == 'vectworms'} click="selectSong('vectworms')":
+            "🐛 VectWorms"
+        button .song-tab {.active when selected_song == 'cyber_run'} click="selectSong('cyber_run')":
+            "⚡ Cyber Run"
+        button .song-tab {.active when selected_song == 'moonlight'} click="selectSong('moonlight')":
+            "🏰 Moonlight Dungeon"
+        button .song-tab {.active when selected_song == 'victory'} click="selectSong('victory')":
+            "🏆 Victory Fanfare"
+
+@Component/TransportBar
+view:
+    div .transport-bar:
+        div .transport-buttons:
+            button .btn-transport .btn-play click="playTrack":
+                "▶ PLAY"
+            button .btn-transport .btn-pause click="pauseTrack":
+                "⏸ PAUSE"
+            button .btn-transport .btn-stop click="stopTrack":
+                "⏹ STOP"
+
+        div .tempo-controls:
+            span .ctrl-label "TEMPO:"
+            button .btn-tempo click="changeTempo(-4)":
+                "-"
+            span .bpm-badge "{tempo} BPM"
+            button .btn-tempo click="changeTempo(4)":
+                "+"
+
+        div .storage-actions:
+            button .btn-storage click="saveToStorage":
+                "💾 SAVE"
+            button .btn-storage click="loadFromStorage":
+                "📂 RESTORE"
+            button .btn-storage click="exportRune":
+                "📥 EXPORT .RUNE"
+            button .btn-storage click="copyCode":
+                "📋 COPY"
+
+@Component/NoteEditorPanel
+view:
+    section .note-editor-panel:
+        div .editor-header:
+            div .voice-tabs:
+                span .editor-label "EDITING VOICE:"
+                button .voice-tab {.active when active_voice == 'lead'} click="selectVoice('lead')":
+                    "🎹 Voice 1: Lead"
+                button .voice-tab {.active when active_voice == 'bass'} click="selectVoice('bass')":
+                    "🎸 Voice 2: Bass"
+                button .voice-tab {.active when active_voice == 'drums'} click="selectVoice('drums')":
+                    "🥁 Voice 3: Drums"
+
+            div .duration-picker:
+                span .editor-label "NOTE LENGTH:"
+                button .pill-duration {.active when active_duration == ':16'} click="selectDuration(':16')":
+                    "1/16"
+                button .pill-duration {.active when active_duration == ':8'} click="selectDuration(':8')":
+                    "1/8"
+                button .pill-duration {.active when active_duration == ':4'} click="selectDuration(':4')":
+                    "1/4"
+                button .pill-duration {.active when active_duration == ':2'} click="selectDuration(':2')":
+                    "1/2"
+
+            div .editor-tools:
+                button .btn-tool click="insertRest":
+                    "⏸ Rest (-)"
+                button .btn-tool click="insertBar":
+                    "| Add Bar"
+                button .btn-tool .btn-tool-danger click="clearActiveTrack":
+                    "🗑 Clear"
+
+        if active_voice != 'drums':
+            div .piano-roll-container:
+                div .piano-roll:
+                    button .piano-key .key-white click="insertNote('C3')":
+                        "C3"
+                    button .piano-key .key-white click="insertNote('D3')":
+                        "D3"
+                    button .piano-key .key-white click="insertNote('E3')":
+                        "E3"
+                    button .piano-key .key-white click="insertNote('F3')":
+                        "F3"
+                    button .piano-key .key-white click="insertNote('G3')":
+                        "G3"
+                    button .piano-key .key-white click="insertNote('A3')":
+                        "A3"
+                    button .piano-key .key-white click="insertNote('B3')":
+                        "B3"
+                    button .piano-key .key-white click="insertNote('C4')":
+                        "C4"
+                    button .piano-key .key-black click="insertNote('C#4')":
+                        "C#4"
+                    button .piano-key .key-white click="insertNote('D4')":
+                        "D4"
+                    button .piano-key .key-black click="insertNote('D#4')":
+                        "D#4"
+                    button .piano-key .key-white click="insertNote('E4')":
+                        "E4"
+                    button .piano-key .key-white click="insertNote('F4')":
+                        "F4"
+                    button .piano-key .key-black click="insertNote('F#4')":
+                        "F#4"
+                    button .piano-key .key-white click="insertNote('G4')":
+                        "G4"
+                    button .piano-key .key-black click="insertNote('G#4')":
+                        "G#4"
+                    button .piano-key .key-white click="insertNote('A4')":
+                        "A4"
+                    button .piano-key .key-black click="insertNote('A#4')":
+                        "A#4"
+                    button .piano-key .key-white click="insertNote('B4')":
+                        "B4"
+                    button .piano-key .key-white click="insertNote('C5')":
+                        "C5"
+                    button .piano-key .key-white click="insertNote('D5')":
+                        "D5"
+                    button .piano-key .key-white click="insertNote('E5')":
+                        "E5"
+                    button .piano-key .key-white click="insertNote('G5')":
+                        "G5"
+                    button .piano-key .key-white click="insertNote('A5')":
+                        "A5"
+
+        if active_voice == 'drums':
+            div .drum-machine-container:
+                div .drum-pads:
+                    button .drum-pad click="insertNote('kick')":
+                        span .drum-icon "💥"
+                        span .drum-name "KICK"
+                    button .drum-pad click="insertNote('snare')":
+                        span .drum-icon "🥁"
+                        span .drum-name "SNARE"
+                    button .drum-pad click="insertNote('hihat')":
+                        span .drum-icon "⚡"
+                        span .drum-name "HI-HAT"
+
+@Component/TrackRack
+props: [voice_id, voice_name, icon, badge_class, badge_text, score_text]
+view:
+    div .track-rack:
+        div .track-header:
+            div .track-meta:
+                span "{icon}"
+                h3 .track-name "{voice_name}"
+                span .badge-wave "{badge_text}"
+            button .btn-edit-track click="selectVoice('{voice_id}')":
+                "✏️ EDIT VOICE"
+        div .track-score-box:
+            "{score_text}"
+
+@Component/SfxAuditionPad
+view:
+    div .sfx-section:
+        h4 .sfx-heading "⚡ RETRO ARCADE SOUND FX AUDITION PAD"
+        div .sfx-pads:
+            button .pad-btn click="playSfx('laser')":
+                span "💥"
+                span "Laser"
+            button .pad-btn click="playSfx('hit')":
+                span "🥊"
+                span "Hit"
+            button .pad-btn click="playSfx('explosion')":
+                span "💣"
+                span "Explosion"
+            button .pad-btn click="playSfx('coin')":
+                span "🪙"
+                span "Coin"
+            button .pad-btn click="playSfx('step')":
+                span "👣"
+                span "Footstep"
+            button .pad-btn click="playSfx('gameover')":
+                span "💀"
+                span "Game Over"
+            button .pad-btn click="playSfx('victory')":
+                span "🌟"
+                span "Victory"
+
+@Component/RuneCodeExport
+view:
+    div .export-section:
+        div .export-header:
+            h4 .sfx-heading "📜 GENERATED RUNE DECLARATION"
+            div:
+                button .btn-storage click="copyCode":
+                    "Copy Code"
+        pre .code-preview:
+            "# {song_title}\n\n@Music/{selected_song}\ntype = 8bit\ntempo = {tempo}\nloop = true\nvolume = 0.2\n\nlead:\n    {lead_track}\n\nbass:\n    {bass_track}\n\ndrums:\n    {drums_track}"
+

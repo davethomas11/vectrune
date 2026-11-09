@@ -1638,11 +1638,24 @@ fn parse_style_section(section: &crate::rune_ast::Section) -> Result<StyleDefini
         }
     }
 
+    let mut fullscreen = HashMap::new();
+    if let Some(items) = section.series.get("fullscreen") {
+        for item in items {
+            if let Value::Map(map) = item {
+                for (selector, rule_body) in map {
+                    let props = parse_style_properties(rule_body)?;
+                    fullscreen.insert(selector.clone(), props);
+                }
+            }
+        }
+    }
+
     Ok(StyleDefinition {
         tokens,
         presets,
         rules,
         responsive,
+        fullscreen,
     })
 }
 

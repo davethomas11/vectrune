@@ -422,6 +422,59 @@ export function executeStatement(
     return true;
   }
 
+  // Fullscreen helper: fullscreen.toggle(), fullscreen.enter(), fullscreen.exit(), fullscreen()
+  if (
+    trimmed === 'fullscreen.toggle()' ||
+    trimmed === 'fullscreen.toggle' ||
+    trimmed === 'fullscreen()' ||
+    trimmed === 'fullscreen' ||
+    trimmed === 'toggle_fullscreen()' ||
+    trimmed === 'fullscreen.enter()' ||
+    trimmed === 'fullscreen.exit()'
+  ) {
+    if (typeof document !== 'undefined') {
+      const doc = document as any;
+      const docEl = document.documentElement as any;
+      const isFs = Boolean(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement ||
+        doc.body.getAttribute('data-fullscreen') === 'true' ||
+        doc.body.classList.contains('fullscreen')
+      );
+      const shouldEnter = trimmed === 'fullscreen.enter()' ? true : trimmed === 'fullscreen.exit()' ? false : !isFs;
+      if (shouldEnter) {
+        if (docEl.requestFullscreen) {
+          docEl.requestFullscreen().catch(() => {});
+        } else if (docEl.webkitRequestFullscreen) {
+          docEl.webkitRequestFullscreen();
+        } else if (docEl.msRequestFullscreen) {
+          docEl.msRequestFullscreen();
+        }
+        doc.body.setAttribute('data-fullscreen', 'true');
+        doc.body.classList.add('fullscreen');
+      } else {
+        if (doc.exitFullscreen) {
+          doc.exitFullscreen().catch(() => {});
+        } else if (doc.webkitExitFullscreen) {
+          doc.webkitExitFullscreen();
+        } else if (doc.msExitFullscreen) {
+          doc.msExitFullscreen();
+        }
+        doc.body.removeAttribute('data-fullscreen');
+        doc.body.classList.remove('fullscreen');
+      }
+      if (typeof (app as any)?.state !== 'undefined') {
+        (app as any).state.is_fullscreen = shouldEnter;
+        if (typeof (app as any).render === 'function') {
+          (app as any).render();
+        }
+      }
+    }
+    return true;
+  }
+
   // Particle emitters (declared in state as `name = emitter { ... }`):
   //   <emitter>.burst(x, y, [count, color, speed])
   //   <emitter>.step()

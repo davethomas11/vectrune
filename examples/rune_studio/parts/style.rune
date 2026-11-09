@@ -28,10 +28,11 @@ rules:
         border-radius = 16px
         border = 2px solid {grid_border}
         box-shadow = 0 0 40px rgba(0, 229, 255, 0.15), inset 0 0 20px rgba(0, 0, 0, 0.8)
-        max-width = 960px
+        max-width = 980px
         margin = 0 auto
         width = 100%
         box-sizing = border-box
+        transition = all 0.2s ease
 
     .studio-header:
         display = flex
@@ -42,6 +43,17 @@ rules:
         margin-bottom = 1.25rem
         flex-wrap = wrap
         gap = 1rem
+
+    .header-brand:
+        display = flex
+        flex-direction = column
+        gap = 0.25rem
+
+    .header-controls:
+        display = flex
+        align-items = center
+        gap = 0.6rem
+        flex-wrap = wrap
 
     .studio-title:
         color = {neon_cyan}
@@ -55,7 +67,25 @@ rules:
         color = {text_muted}
         font-size = 0.8rem
         letter-spacing = 1px
-        margin = 0.25rem 0 0 0
+        margin = 0
+
+    .btn-fullscreen:
+        padding = 0.4rem 0.85rem
+        border-radius = 6px
+        font-size = 0.75rem
+        letter-spacing = 1px
+        font-weight = bold
+        background = {card_bg}
+        border = 1px solid {neon_cyan}
+        color = {neon_cyan}
+        cursor = pointer
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .btn-fullscreen:hover:
+        background = {neon_cyan}
+        color = #000000
+        box-shadow = 0 0 12px {neon_cyan}
 
     .status-pill:
         padding = 0.4rem 0.85rem
@@ -63,8 +93,8 @@ rules:
         font-size = 0.75rem
         letter-spacing = 1px
         background = {card_bg}
-        border = 1px solid {neon_cyan}
-        color = {neon_cyan}
+        border = 1px solid {grid_border}
+        color = {neon_lime}
 
     .song-selector:
         display = flex
@@ -84,6 +114,7 @@ rules:
         font-size = 0.85rem
         letter-spacing = 1px
         transition = all 0.15s ease
+        touch-action = manipulation
 
     .song-tab:hover:
         color = #ffffff
@@ -124,6 +155,8 @@ rules:
         align-items = center
         gap = 0.4rem
         transition = all 0.15s ease
+        touch-action = manipulation
+        min-height = 42px
 
     .btn-play:
         background = {neon_lime}
@@ -147,6 +180,11 @@ rules:
         align-items = center
         gap = 0.6rem
 
+    .ctrl-label:
+        font-size = 0.8rem
+        color = {text_muted}
+        font-weight = bold
+
     .bpm-badge:
         font-size = 1.1rem
         font-weight = bold
@@ -158,15 +196,17 @@ rules:
         background = {card_bg}
         color = #ffffff
         border = 1px solid {grid_border}
-        width = 32px
-        height = 32px
+        width = 36px
+        height = 36px
         border-radius = 6px
         cursor = pointer
         font-weight = bold
+        touch-action = manipulation
 
     .storage-actions:
         display = flex
         gap = 0.4rem
+        flex-wrap = wrap
 
     .btn-storage:
         background = {card_bg}
@@ -179,10 +219,217 @@ rules:
         font-size = 0.75rem
         letter-spacing = 1px
         transition = all 0.15s ease
+        touch-action = manipulation
+        min-height = 36px
 
     .btn-storage:hover:
         border-color = {neon_cyan}
         box-shadow = 0 0 10px rgba(0, 229, 255, 0.3)
+
+    .note-editor-panel:
+        background = {rack_bg}
+        border = 2px solid {neon_cyan}
+        box-shadow = 0 0 20px rgba(0, 229, 255, 0.2)
+        border-radius = 12px
+        padding = 1.25rem
+        margin-bottom = 1.25rem
+
+    .editor-header:
+        display = flex
+        flex-direction = column
+        gap = 0.85rem
+        margin-bottom = 1rem
+        border-bottom = 1px solid {grid_border}
+        padding-bottom = 1rem
+
+    .editor-label:
+        font-size = 0.75rem
+        color = {text_muted}
+        font-weight = bold
+        letter-spacing = 1px
+        align-self = center
+
+    .voice-tabs:
+        display = flex
+        gap = 0.5rem
+        flex-wrap = wrap
+
+    .voice-tab:
+        background = {card_bg}
+        color = {text_muted}
+        border = 1px solid {grid_border}
+        padding = 0.5rem 0.9rem
+        border-radius = 6px
+        cursor = pointer
+        font-family = inherit
+        font-weight = bold
+        font-size = 0.85rem
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .voice-tab.active:
+        background = {neon_cyan}
+        color = #000000
+        border-color = {neon_cyan}
+        box-shadow = 0 0 12px {neon_cyan}
+
+    .duration-picker:
+        display = flex
+        gap = 0.4rem
+        align-items = center
+        flex-wrap = wrap
+
+    .pill-duration:
+        background = {card_bg}
+        color = {neon_lime}
+        border = 1px solid {grid_border}
+        padding = 0.35rem 0.75rem
+        border-radius = 16px
+        font-size = 0.8rem
+        font-weight = bold
+        cursor = pointer
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .pill-duration.active:
+        background = {neon_lime}
+        color = #000000
+        box-shadow = 0 0 12px {neon_lime}
+        border-color = {neon_lime}
+
+    .editor-tools:
+        display = flex
+        gap = 0.5rem
+        flex-wrap = wrap
+
+    .btn-tool:
+        background = {card_bg}
+        color = #ffffff
+        border = 1px solid {grid_border}
+        padding = 0.45rem 0.85rem
+        border-radius = 6px
+        font-size = 0.8rem
+        cursor = pointer
+        font-family = inherit
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .btn-tool:hover:
+        border-color = {neon_cyan}
+
+    .btn-tool-danger:
+        color = {neon_pink}
+        border-color = rgba(255, 42, 133, 0.4)
+
+    .btn-tool-danger:hover:
+        background = {neon_pink}
+        color = #000000
+
+    .piano-roll-container:
+        overflow-x = auto
+        padding = 0.5rem 0 1rem 0
+        margin-top = 0.5rem
+
+    .piano-roll:
+        display = flex
+        gap = 3px
+        min-width = 720px
+        padding = 4px
+
+    .piano-key:
+        border-radius = 0 0 6px 6px
+        cursor = pointer
+        font-family = inherit
+        font-weight = bold
+        font-size = 0.75rem
+        display = flex
+        align-items = flex-end
+        justify-content = center
+        padding-bottom = 8px
+        transition = all 0.1s ease
+        user-select = none
+        touch-action = manipulation
+
+    .key-white:
+        background = #e2e8f0
+        color = #0f172a
+        border = 1px solid #94a3b8
+        width = 36px
+        height = 110px
+        z-index = 1
+
+    .key-white:hover:
+        background = #00e5ff
+        color = #000000
+        box-shadow = 0 0 14px #00e5ff
+
+    .key-white:active:
+        background = #39ff14
+        transform = translateY(2px)
+
+    .key-black:
+        background = #090d1a
+        color = #00e5ff
+        border = 1px solid #00e5ff
+        width = 30px
+        height = 75px
+        margin-left = -15px
+        margin-right = -15px
+        z-index = 2
+        box-shadow = 0 2px 8px rgba(0, 0, 0, 0.9)
+
+    .key-black:hover:
+        background = #ff2a85
+        color = #ffffff
+        border-color = #ff2a85
+        box-shadow = 0 0 14px #ff2a85
+
+    .key-black:active:
+        background = #39ff14
+        color = #000000
+        transform = translateY(2px)
+
+    .drum-machine-container:
+        padding = 1rem 0
+
+    .drum-pads:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(130px, 1fr))
+        gap = 0.75rem
+
+    .drum-pad:
+        background = {card_bg}
+        border = 2px solid {grid_border}
+        border-radius = 12px
+        padding = 1.25rem 0.5rem
+        cursor = pointer
+        display = flex
+        flex-direction = column
+        align-items = center
+        gap = 0.5rem
+        font-family = inherit
+        transition = all 0.12s ease
+        touch-action = manipulation
+        min-height = 90px
+
+    .drum-pad:hover:
+        border-color = {neon_pink}
+        box-shadow = 0 0 18px {neon_pink}
+        transform = translateY(-2px)
+
+    .drum-pad:active:
+        background = {neon_pink}
+        color = #000000
+        transform = scale(0.96)
+
+    .drum-icon:
+        font-size = 1.75rem
+
+    .drum-name:
+        font-size = 0.85rem
+        font-weight = bold
+        color = #ffffff
+        letter-spacing = 2px
 
     .tracks-container:
         display = flex
@@ -195,12 +442,18 @@ rules:
         border = 1px solid {grid_border}
         border-radius = 12px
         padding = 1rem
+        transition = border-color 0.15s ease
+
+    .track-rack:hover:
+        border-color = rgba(0, 229, 255, 0.5)
 
     .track-header:
         display = flex
         justify-content = space-between
         align-items = center
         margin-bottom = 0.75rem
+        flex-wrap = wrap
+        gap = 0.5rem
 
     .track-meta:
         display = flex
@@ -212,6 +465,26 @@ rules:
         font-weight = bold
         color = #ffffff
         margin = 0
+
+    .btn-edit-track:
+        background = {card_bg}
+        color = {neon_cyan}
+        border = 1px solid {grid_border}
+        padding = 0.35rem 0.75rem
+        border-radius = 6px
+        font-size = 0.75rem
+        cursor = pointer
+        font-family = inherit
+        font-weight = bold
+        letter-spacing = 1px
+        transition = all 0.15s ease
+        touch-action = manipulation
+
+    .btn-edit-track:hover:
+        background = {neon_cyan}
+        color = #000000
+        border-color = {neon_cyan}
+        box-shadow = 0 0 10px {neon_cyan}
 
     .badge-wave:
         font-size = 0.7rem
@@ -282,6 +555,8 @@ rules:
         align-items = center
         gap = 0.25rem
         transition = all 0.1s ease
+        touch-action = manipulation
+        min-height = 54px
 
     .pad-btn:hover:
         border-color = {neon_pink}
@@ -316,3 +591,75 @@ rules:
         overflow-x = auto
         white-space = pre-wrap
         max-height = 240px
+
+fullscreen:
+    body:
+        margin = 0
+        padding = 0
+        background = #020308
+    .studio-cabinet:
+        max-width = 100vw
+        border-radius = 0
+        border = none
+        min-height = 100vh
+        box-shadow = none
+        padding = 1.5rem 2rem
+    .piano-roll-container:
+        padding = 1rem 0
+    .track-rack:
+        border-color = rgba(0, 229, 255, 0.4)
+
+responsive:
+    (max-width: 768px):
+        .studio-cabinet:
+            padding = 0.75rem
+            border-radius = 12px
+        .studio-header:
+            flex-direction = column
+            align-items = flex-start
+            gap = 0.75rem
+        .header-controls:
+            width = 100%
+            justify-content = space-between
+        .transport-bar:
+            flex-direction = column
+            align-items = stretch
+            gap = 0.75rem
+        .transport-buttons:
+            justify-content = space-between
+        .tempo-controls:
+            justify-content = space-between
+        .storage-actions:
+            flex-wrap = wrap
+        .song-selector:
+            overflow-x = auto
+            flex-wrap = nowrap
+            padding-bottom = 0.5rem
+        .piano-roll-container:
+            overflow-x = auto
+            padding-bottom = 0.5rem
+        .piano-key:
+            min-width = 38px
+            height = 90px
+        .drum-pads:
+            grid-template-columns = repeat(3, 1fr)
+
+    (max-width: 480px):
+        .studio-title:
+            font-size = 1.2rem
+        .studio-subtitle:
+            font-size = 0.7rem
+        .btn-transport:
+            padding = 0.5rem 0.8rem
+            font-size = 0.8rem
+        .btn-storage:
+            flex = 1
+            text-align = center
+            font-size = 0.7rem
+            padding = 0.4rem 0.5rem
+        .voice-tabs:
+            flex-direction = column
+            width = 100%
+        .duration-picker:
+            width = 100%
+            justify-content = space-between

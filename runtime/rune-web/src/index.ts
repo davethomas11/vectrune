@@ -308,6 +308,29 @@ export function boot(config: RuneWebConfig): RuneApp {
   setWindowProp('resumeMusic', resumeMusic);
   setWindowProp('registerSounds', registerSounds);
   setWindowProp('registerMusic', registerMusic);
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('fullscreenchange', () => {
+      const isFs = Boolean(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      if (isFs) {
+        document.body.setAttribute('data-fullscreen', 'true');
+        document.body.classList.add('fullscreen');
+      } else {
+        document.body.removeAttribute('data-fullscreen');
+        document.body.classList.remove('fullscreen');
+      }
+      if (typeof app.state?.is_fullscreen !== 'undefined') {
+        app.state.is_fullscreen = isFs;
+        app.render();
+      }
+    });
+  }
+
   app.render();
 
   return app;

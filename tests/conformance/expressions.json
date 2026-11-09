@@ -1,0 +1,269 @@
+[
+  {
+    "category": "literals",
+    "expr": "42",
+    "context": {},
+    "expected": 42
+  },
+  {
+    "category": "literals",
+    "expr": "3.14",
+    "context": {},
+    "expected": 3.14
+  },
+  {
+    "category": "literals",
+    "expr": "\"hello world\"",
+    "context": {},
+    "expected": "hello world"
+  },
+  {
+    "category": "literals",
+    "expr": "true",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "literals",
+    "expr": "false",
+    "context": {},
+    "expected": false
+  },
+  {
+    "category": "literals",
+    "expr": "null",
+    "context": {},
+    "expected": null
+  },
+  {
+    "category": "arithmetic",
+    "expr": "2 + 3",
+    "context": {},
+    "expected": 5
+  },
+  {
+    "category": "arithmetic",
+    "expr": "10 - 4",
+    "context": {},
+    "expected": 6
+  },
+  {
+    "category": "arithmetic",
+    "expr": "6 * 7",
+    "context": {},
+    "expected": 42
+  },
+  {
+    "category": "arithmetic",
+    "expr": "20 / 4",
+    "context": {},
+    "expected": 5
+  },
+  {
+    "category": "arithmetic",
+    "expr": "14 % 5",
+    "context": {},
+    "expected": 4
+  },
+  {
+    "category": "precedence",
+    "expr": "2 + 3 * 4",
+    "context": {},
+    "expected": 14
+  },
+  {
+    "category": "precedence",
+    "expr": "(2 + 3) * 4",
+    "context": {},
+    "expected": 20
+  },
+  {
+    "category": "precedence",
+    "expr": "10 - 2 * 3 + 4",
+    "context": {},
+    "expected": 8
+  },
+  {
+    "category": "unary",
+    "expr": "-5 + 12",
+    "context": {},
+    "expected": 7
+  },
+  {
+    "category": "unary",
+    "expr": "-(3 * 4)",
+    "context": {},
+    "expected": -12
+  },
+  {
+    "category": "unary",
+    "expr": "!false",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "unary",
+    "expr": "!true",
+    "context": {},
+    "expected": false
+  },
+  {
+    "category": "unary",
+    "expr": "not false",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "relational",
+    "expr": "10 > 5",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "relational",
+    "expr": "5 >= 5",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "relational",
+    "expr": "4 < 9",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "relational",
+    "expr": "9 <= 8",
+    "context": {},
+    "expected": false
+  },
+  {
+    "category": "equality",
+    "expr": "10 == 10",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "equality",
+    "expr": "10 != 5",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "equality",
+    "expr": "\"apple\" == \"apple\"",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "logical",
+    "expr": "true and false",
+    "context": {},
+    "expected": false
+  },
+  {
+    "category": "logical",
+    "expr": "true or false",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "logical",
+    "expr": "false and true",
+    "context": {},
+    "expected": false
+  },
+  {
+    "category": "coalesce",
+    "expr": "null ?? \"fallback\"",
+    "context": {},
+    "expected": "fallback"
+  },
+  {
+    "category": "coalesce",
+    "expr": "\"primary\" ?? \"fallback\"",
+    "context": {},
+    "expected": "primary"
+  },
+  {
+    "category": "ternary",
+    "expr": "true ? 100 : 200",
+    "context": {},
+    "expected": 100
+  },
+  {
+    "category": "ternary",
+    "expr": "false ? 100 : 200",
+    "context": {},
+    "expected": 200
+  },
+  {
+    "category": "ternary",
+    "expr": "5 > 3 ? \"greater\" : \"lesser\"",
+    "context": {},
+    "expected": "greater"
+  },
+  {
+    "category": "ternary_nested",
+    "expr": "1 > 2 ? 10 : 2 > 1 ? 20 : 30",
+    "context": {},
+    "expected": 20
+  },
+  {
+    "category": "variables",
+    "expr": "score + bonus",
+    "context": {
+      "score": 150,
+      "bonus": 25
+    },
+    "expected": 175
+  },
+  {
+    "category": "member_access",
+    "expr": "user.name",
+    "context": {
+      "user": {
+        "name": "Alex"
+      }
+    },
+    "expected": "Alex"
+  },
+  {
+    "category": "member_access_nested",
+    "expr": "player.stats.health - damage",
+    "context": {
+      "player": {
+        "stats": {
+          "health": 100
+        }
+      },
+      "damage": 35
+    },
+    "expected": 65
+  },
+  {
+    "category": "functions",
+    "expr": "clamp(120, 0, 100)",
+    "context": {},
+    "expected": 100
+  },
+  {
+    "category": "functions",
+    "expr": "clamp(-10, 0, 100)",
+    "context": {},
+    "expected": 0
+  },
+  {
+    "category": "functions",
+    "expr": "clamp(50, 0, 100)",
+    "context": {},
+    "expected": 50
+  },
+  {
+    "category": "functions",
+    "expr": "abs(-42)",
+    "context": {},
+    "expected": 42
+  }
+]
+
