@@ -51,6 +51,9 @@ view:
                     button .nav-link {.active when 'games'} click="navigate('games')" "%i18n.Nav.vectraiders%"
                     button .nav-link {.active when 'vectworms'} click="navigate('vectworms')" "%i18n.Nav.vectworms%"
                 div .nav-group:
+                    h3 "%i18n.Nav.music%"
+                    button .nav-link {.active when 'studio'} click="navigate('studio')" "%i18n.Nav.studio%"
+                div .nav-group:
                     h3 "%i18n.Examples.lab_eyebrow%"
                     button .nav-link {.active when 'examples'} click="openExample('app')" "%i18n.Examples.lab_title%"
             
@@ -65,6 +68,8 @@ view:
                     "vectraiders"     -> SpaceInvadersPage
                     "space_invaders"  -> SpaceInvadersPage
                     "vectworms"       -> VectWormsPage
+                    "studio"          -> RuneStudioPage
+                    "music"           -> RuneStudioPage
                     "examples"        -> ExampleLab
                     "builtins"        -> BuiltinReferencePage
                     "rest_get"        -> RestGetPage

@@ -1,0 +1,35 @@
+@Component/RuneStudioPage
+view:
+    div .page .application-guide .studio-page:
+        section .card:
+            div .section-heading:
+                span .tag .tag-advanced "%i18n.Studio.badge%"
+                h1 "%i18n.Studio.title%"
+                p .lead "%i18n.Studio.description%"
+            
+            div .features-grid:
+                article .feature-card:
+                    h3 "🎹 %i18n.Studio.feature_chiptune_title%"
+                    p "%i18n.Studio.feature_chiptune_desc%"
+                article .feature-card:
+                    h3 "🎼 %i18n.Studio.feature_multitrack_title%"
+                    p "%i18n.Studio.feature_multitrack_desc%"
+                article .feature-card:
+                    h3 "💾 %i18n.Studio.feature_storage_title%"
+                    p "%i18n.Studio.feature_storage_desc%"
+                article .feature-card:
+                    h3 "⚡ %i18n.Studio.feature_export_title%"
+                    p "%i18n.Studio.feature_export_desc%"
+
+            h3 "%i18n.Studio.instructions_title%"
+            p "🎵 %i18n.Studio.instructions_songs%"
+            p "💾 %i18n.Studio.instructions_storage%"
+
+        WebExample title="{i18n.Studio.title}" preview="{preview ../../../examples/rune_studio/rune_studio.rune}" main_file="rune_studio.rune" source="{raw ../../../examples/rune_studio/rune_studio.rune}" extra_file="parts/sound.rune" extra_source="{raw ../../../examples/rune_studio/parts/sound.rune}" logic_source="{raw ../../../examples/rune_studio/parts/logic.rune}" style_source="{raw ../../../examples/rune_studio/parts/style.rune}" sound_source="{raw ../../../examples/rune_studio/parts/sound.rune}"
+
+        section .card:
+            h3 "%i18n.Guide.run_locally%"
+            p "%i18n.WebGuide.run%"
+            pre:
+                code .code-block .language-bash "vectrune examples/rune_studio/rune_studio.rune\nvectrune examples/rune_studio/rune_studio.rune -o html > runestudio.html"
+

@@ -41,6 +41,7 @@ mod emit_function_test {
 
                 let auto_logic = ast::LogicDefinition {
                     state: std::collections::HashMap::new(),
+                    locals: std::collections::HashMap::new(),
                     derived: std::collections::HashMap::new(),
                     helpers: std::collections::HashMap::new(),
                     actions,
@@ -144,6 +145,7 @@ mod emit_function_test {
 
         let auto_logic = ast::LogicDefinition {
             state: std::collections::HashMap::new(),
+            locals: std::collections::HashMap::new(),
             derived: std::collections::HashMap::new(),
             helpers: std::collections::HashMap::new(),
             actions,
@@ -172,6 +174,10 @@ mod emit_function_test {
             Some("/ws".to_string()),
             HashMap::new(),
             None,
+            None,
+            None,
+            HashMap::new(),
+            HashMap::new(),
         );
 
         let generated_code = codegen.generate();

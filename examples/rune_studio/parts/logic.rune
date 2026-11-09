@@ -1,0 +1,129 @@
+@Logic/studio
+
+state:
+    selected_song = "vectraiders"
+    song_title = "VectRaiders"
+    tempo = 144
+    volume = 20
+    is_playing = false
+    status_message = "Ready to compose. Choose a preset or edit tracks!"
+    flash_type = "info"
+
+    lead_track = "E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | C4:8 D4:8 E4:8 G4:8 A4:4 G4:4 | E4:8 D4:8 C4:8 B3:8 A3:2"
+    bass_track = "A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4 | C3:4 G2:4 C3:4 G2:4 | F2:4 C2:4 E2:4 G#2:4"
+    drums_track = "kick:4 snare:4 kick:4 snare:4 | kick:4 snare:4 kick:4 snare:4 | kick:8 hihat:8 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:4 snare:4"
+
+action selectSong(name):
+    selected_song = name
+    if name == "vectraiders":
+        song_title = "VectRaiders"
+        tempo = 144
+        lead_track = "E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | C4:8 D4:8 E4:8 G4:8 A4:4 G4:4 | E4:8 D4:8 C4:8 B3:8 A3:2"
+        bass_track = "A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4 | C3:4 G2:4 C3:4 G2:4 | F2:4 C2:4 E2:4 G#2:4"
+        drums_track = "kick:4 snare:4 kick:4 snare:4 | kick:4 snare:4 kick:4 snare:4 | kick:8 hihat:8 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:4 snare:4"
+    if name == "vectworms":
+        song_title = "VectWorms"
+        tempo = 136
+        lead_track = "C4:8 E4:8 G4:8 A4:8 G4:8 E4:8 C4:8 D4:8 | E4:8 G4:8 A4:8 C5:8 B4:4 G4:4 | A4:8 G4:8 E4:8 C4:8 D4:8 E4:8 D4:4 | C4:2 -:2"
+        bass_track = "C2:4 G2:4 C2:4 G2:4 | E2:4 B2:4 E2:4 B2:4 | F2:4 C3:4 G2:4 D3:4 | C2:4 G2:4 C2:2 -:4"
+        drums_track = "kick:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 kick:2"
+    if name == "cyber_run":
+        song_title = "Cyber Run"
+        tempo = 152
+        lead_track = "D4:16 F4:16 A4:16 D5:16 C5:8 A4:8 | D4:16 F4:16 A4:16 D5:16 C5:8 A4:8 | Bb4:8 A4:8 G4:8 F4:8 E4:8 F4:8 G4:4 | D4:8 F4:8 A4:8 D5:4 C5:4 D5:2"
+        bass_track = "D2:8 D2:8 A2:8 D2:8 D2:8 A2:8 D2:4 | D2:8 D2:8 A2:8 D2:8 D2:8 A2:8 D2:4 | Bb2:8 Bb2:8 F2:8 Bb2:8 C3:8 C3:8 G2:8 C3:4 | D2:8 D2:8 A2:8 D2:8 D2:2"
+        drums_track = "kick:4 snare:4 kick:4 snare:4 | kick:4 snare:4 kick:4 snare:4 | kick:8 kick:8 snare:4 kick:8 kick:8 snare:4 | kick:8 hihat:8 snare:8 hihat:8 kick:4 snare:4"
+    if name == "moonlight":
+        song_title = "Moonlight Dungeon"
+        tempo = 108
+        lead_track = "A3:8 C4:8 E4:8 A4:4 G4:8 E4:4 | F4:8 D4:8 B3:8 D4:4 C4:8 A3:2 | E4:8 G4:8 B4:8 D5:4 C5:8 A4:4 | F4:8 E4:8 D#4:8 E4:2 -:4"
+        bass_track = "A1:2 E2:2 | D2:2 A1:2 | C2:2 G1:2 | E2:2 E1:2"
+        drums_track = "kick:2 snare:4 hihat:4 | kick:2 snare:4 hihat:4 | kick:2 snare:4 hihat:4 | kick:4 hihat:4 snare:2"
+    if name == "victory":
+        song_title = "Victory Fanfare"
+        tempo = 140
+        lead_track = "C4:8 C4:8 C4:8 C4:4 G3:4 C4:4 | D4:8 D4:8 D4:8 D4:4 A3:4 D4:4 | E4:8 E4:8 F4:8 G4:4 E4:8 D4:4 C4:2"
+        bass_track = "C2:4 G2:4 C2:4 G2:4 | D2:4 A2:4 D2:4 A2:4 | E2:4 F2:4 G2:4 C2:2"
+        drums_track = "kick:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 kick:8 kick:8 snare:4 | kick:8 kick:8 snare:8 snare:8 kick:2"
+
+    status_message = "Loaded preset: " + song_title
+    flash_type = "info"
+    if is_playing:
+        music.stop
+        music.compose(selected_song, tempo, lead_track, bass_track, drums_track)
+        music.play(selected_song)
+
+action playTrack:
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track)
+    music.play(selected_song)
+    is_playing = true
+    status_message = "Playing: " + song_title + " (" + tempo + " BPM)"
+    flash_type = "success"
+
+action pauseTrack:
+    music.pause
+    is_playing = false
+    status_message = "Paused: " + song_title
+    flash_type = "info"
+
+action resumeTrack:
+    music.resume
+    is_playing = true
+    status_message = "Resumed: " + song_title
+    flash_type = "success"
+
+action stopTrack:
+    music.stop
+    is_playing = false
+    status_message = "Playback stopped"
+    flash_type = "info"
+
+action changeTempo(delta):
+    tempo = clamp(tempo + delta, 60, 240)
+    music.tempo = tempo
+    status_message = "Tempo adjusted to " + tempo + " BPM"
+
+action changeVolume(val):
+    volume = clamp(val, 0, 100)
+    music.volume = volume / 100
+
+action playSfx(name):
+    sound.play(name)
+    status_message = "Auditioning sound effect: @" + name
+    flash_type = "info"
+
+action saveToStorage:
+    storage.set("rune_studio_last_song", selected_song)
+    storage.set("rune_studio_" + selected_song, { "title": song_title, "tempo": tempo, "lead": lead_track, "bass": bass_track, "drums": drums_track })
+    status_message = "Saved " + song_title + " to Local Storage!"
+    flash_type = "success"
+
+action loadFromStorage:
+    saved = storage.get("rune_studio_" + selected_song)
+    if saved != null:
+        tempo = saved.tempo
+        lead_track = saved.lead
+        bass_track = saved.bass
+        drums_track = saved.drums
+        status_message = "Restored " + song_title + " from Local Storage!"
+        flash_type = "success"
+        if is_playing:
+            music.stop
+            music.compose(selected_song, tempo, lead_track, bass_track, drums_track)
+            music.play(selected_song)
+    if saved == null:
+        status_message = "No saved data found in Local Storage for " + song_title
+        flash_type = "warning"
+
+action exportRune:
+    code = "# " + song_title + " — Generated with Rune Studio\n\n@Music/" + selected_song + "\ntype = 8bit\ntempo = " + tempo + "\nloop = true\nvolume = 0.2\n\nlead:\n    " + lead_track + "\n\nbass:\n    " + bass_track + "\n\ndrums:\n    " + drums_track + "\n"
+    download(selected_song + ".rune", code)
+    status_message = "Exported " + selected_song + ".rune!"
+    flash_type = "success"
+
+action copyCode:
+    code = "# " + song_title + " — Generated with Rune Studio\n\n@Music/" + selected_song + "\ntype = 8bit\ntempo = " + tempo + "\nloop = true\nvolume = 0.2\n\nlead:\n    " + lead_track + "\n\nbass:\n    " + bass_track + "\n\ndrums:\n    " + drums_track + "\n"
+    copy(code)
+    status_message = "Copied .rune code to clipboard!"
+    flash_type = "success"
+

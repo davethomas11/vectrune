@@ -254,6 +254,8 @@ Nav {
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
     vectworms = "VectWorms"
+    music = "Música"
+    studio = "Rune Studio"
 }
 
 Lab {
@@ -307,6 +309,23 @@ VectWorms {
     instructions_title = "Controles"
     instructions_keyboard = "WASD / Flechas: Mover en 4 direcciones • Espacio: Disparar"
     instructions_mobile = "Usa la cruceta táctil y el botón de disparo en móviles o tabletas."
+}
+
+Studio {
+    badge = "DAW y Sintetizador 8-Bit"
+    title = "Rune Studio: DAW Chiptune 8-Bit"
+    description = "Una estación de trabajo de audio digital y secuenciador 8-bit construido completamente con Rune-Web declarativo: edición visual de partituras, síntesis Web Audio en tiempo real, persistencia en almacenamiento local y exportación de archivos .rune."
+    feature_chiptune_title = "Sintetizador Chiptune Web Audio"
+    feature_chiptune_desc = "Escucha ondas cuadradas, líneas de bajo triangulares y percusión de ruido blanco en tiempo real con envolventes ADSR y frecuencias configurables."
+    feature_multitrack_title = "Secuenciador Multipista Visual"
+    feature_multitrack_desc = "Compón melodías solistas, arpegios, bajos pulsantes y percusión con notación compás por compás y control de tempo."
+    feature_storage_title = "Persistencia en Almacenamiento Local"
+    feature_storage_desc = "Las funciones integradas storage.set y storage.get conservan tus canciones y parámetros entre recargas del navegador."
+    feature_export_title = "Exportar y Descargar Fuente .rune"
+    feature_export_desc = "Exporta tus pistas directamente como código Rune-Web válido usando las funciones de descarga y portapapeles."
+    instructions_title = "Cómo usar"
+    instructions_songs = "Elige cualquier canción precargada (VectRaiders, VectWorms, Cyber Run, Moonlight Dungeon, Victory Fanfare) o escribe tus propias notas."
+    instructions_storage = "Haz clic en 'Guardar en Almacenamiento' para conservar tus notas, o 'Descargar .rune' para guardar tu canción como archivo."
 }
 
 Reference {

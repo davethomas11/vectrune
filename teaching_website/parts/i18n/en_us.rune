@@ -254,6 +254,8 @@ Nav {
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
     vectworms = "VectWorms"
+    music = "Music"
+    studio = "Rune Studio"
 }
 
 Lab {
@@ -307,6 +309,23 @@ VectWorms {
     instructions_title = "Controls"
     instructions_keyboard = "WASD / Arrows: Move Blaster (4-Way) • Space: Fire Laser"
     instructions_mobile = "Use the on-screen D-pad and Fire button on mobile or tablet."
+}
+
+Studio {
+    badge = "8-Bit DAW & Synth"
+    title = "Rune Studio: 8-Bit Chiptune DAW"
+    description = "A visual 8-bit digital audio workstation and synthesizer tracker built entirely with declarative Rune-Web: multitrack score editing, real-time Web Audio synthesis, local storage persistence, and .rune file export."
+    feature_chiptune_title = "Web Audio Chiptune Synthesizer"
+    feature_chiptune_desc = "Audition square waves, triangle basslines, and white-noise drums in real-time with customizable envelope ADSR and frequencies."
+    feature_multitrack_title = "Multitrack Visual Sequencing"
+    feature_multitrack_desc = "Compose lead melodies, arpeggios, pulsing bass, and percussion with readable bar-by-bar note notation and tempo control."
+    feature_storage_title = "Browser Local Storage Persistence"
+    feature_storage_desc = "Builtin storage.set and storage.get bindings persist your customized song arrangements and sound parameters across page reloads."
+    feature_export_title = "Export & Download .rune Source"
+    feature_export_desc = "Export your audio tracks and songs directly as valid Rune-Web code using client-side download() and clipboard bindings."
+    instructions_title = "How to Use"
+    instructions_songs = "Select any preloaded song (VectRaiders, VectWorms, Cyber Run, Moonlight Dungeon, Victory Fanfare) or write your own melody in the track boxes."
+    instructions_storage = "Click 'Save to Storage' to persist your changes in browser memory, or 'Download .rune' to save your song file locally."
 }
 
 Reference {

@@ -212,6 +212,45 @@ fn parse_map_block<I: Iterator<Item = String>>(lines: &mut I) -> HashMap<String,
     map
 }
 
+fn resolve_series_path_mut<'a>(
+    series: &'a mut HashMap<String, Vec<Value>>,
+    path: &[String],
+    auto_create: bool,
+) -> Option<&'a mut Vec<Value>> {
+    if path.is_empty() {
+        return None;
+    }
+    let mut current_list = series.get_mut(&path[0])?;
+    for nested_key in path.iter().skip(1) {
+        if auto_create {
+            let needs_map = match current_list.last() {
+                Some(Value::Map(m)) => !m.contains_key(nested_key),
+                _ => true,
+            };
+            if needs_map {
+                if let Some(Value::Map(m)) = current_list.last_mut() {
+                    m.insert(nested_key.clone(), Value::List(Vec::new()));
+                } else {
+                    let mut new_map = HashMap::new();
+                    new_map.insert(nested_key.clone(), Value::List(Vec::new()));
+                    current_list.push(Value::Map(new_map));
+                }
+            }
+        }
+
+        match current_list.last_mut() {
+            Some(Value::Map(m)) => match m.get_mut(nested_key) {
+                Some(Value::List(inner)) => {
+                    current_list = inner;
+                }
+                _ => return None,
+            },
+            _ => return None,
+        }
+    }
+    Some(current_list)
+}
+
 pub fn parse_rune(input: &str) -> Result<RuneDocument, ParseError> {
     parse_rune_with_source(input, None)
 }
@@ -376,58 +415,7 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                 } else {
                     // Nested series under the current list's last element as a map
                     let path = series_stack.last().unwrap().1.clone();
-
-                    // Find the parent list by traversing the path
-                    let mut maybe_list: Option<&mut Vec<Value>> = None;
-                    // SAFETY: borrow checker dance using a scoped block
-                    {
-                        // Start at top-level list
-                        let top_key = &path[0];
-                        if let Some(list) = sec.series.get_mut(top_key) {
-                            // Traverse nested keys by looking at last map in the list
-                            let mut current_list: *mut Vec<Value> = list as *mut _;
-                            for nested_key in path.iter().skip(1) {
-                                unsafe {
-                                    if let Some(Value::Map(m)) = (*current_list).last_mut() {
-                                        if let Some(Value::List(inner)) = m.get_mut(nested_key) {
-                                            current_list = inner as *mut _;
-                                        } else {
-                                            // Structure missing; create it
-                                            let mut new_map = HashMap::new();
-                                            new_map.insert(
-                                                nested_key.clone(),
-                                                Value::List(Vec::new()),
-                                            );
-                                            (*current_list).push(Value::Map(new_map));
-                                            if let Some(Value::Map(m2)) = (*current_list).last_mut()
-                                            {
-                                                if let Some(Value::List(inner2)) =
-                                                    m2.get_mut(nested_key)
-                                                {
-                                                    current_list = inner2 as *mut _;
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        // No last element, create one
-                                        let mut new_map = HashMap::new();
-                                        new_map.insert(nested_key.clone(), Value::List(Vec::new()));
-                                        (*current_list).push(Value::Map(new_map));
-                                        if let Some(Value::Map(m2)) = (*current_list).last_mut() {
-                                            if let Some(Value::List(inner2)) =
-                                                m2.get_mut(nested_key)
-                                            {
-                                                current_list = inner2 as *mut _;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            unsafe {
-                                maybe_list = Some(&mut *current_list);
-                            }
-                        }
-                    }
+                    let maybe_list = resolve_series_path_mut(&mut sec.series, &path, true);
 
                     if let Some(parent_list) = maybe_list {
                         // Push a new map with the nested key -> empty list
@@ -448,27 +436,7 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                 // Handle object assignment in series right after series start
                 if is_object_assignment_line(line) {
                     if let Some((_, path)) = series_stack.last().cloned() {
-                        let mut maybe_list: Option<&mut Vec<Value>> = None;
-                        {
-                            let top_key = &path[0];
-                            if let Some(list) = sec.series.get_mut(top_key) {
-                                let mut current_list: *mut Vec<Value> = list as *mut _;
-                                for nested_key in path.iter().skip(1) {
-                                    unsafe {
-                                        if let Some(Value::Map(m)) = (*current_list).last_mut() {
-                                            if let Some(Value::List(inner)) = m.get_mut(nested_key)
-                                            {
-                                                current_list = inner as *mut _;
-                                            }
-                                        }
-                                    }
-                                }
-                                unsafe {
-                                    maybe_list = Some(&mut *current_list);
-                                }
-                            }
-                        }
-                        if let Some(list) = maybe_list {
+                        if let Some(list) = resolve_series_path_mut(&mut sec.series, &path, false) {
                             let mut assignment = line.trim().to_string();
                             let mut depth: i32 = assignment.chars().map(|c| match c { '{' => 1, '}' => -1, _ => 0 }).sum();
                             while depth > 0 {
@@ -515,26 +483,8 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                             trimmed_indented.trim().to_string()
                         };
 
-                        // Find the parent list
-                        let mut maybe_list: Option<&mut Vec<Value>> = None;
-                        {
-                            let top_key = &path[0];
-                            if let Some(list) = sec.series.get_mut(top_key) {
-                                let mut current_list: *mut Vec<Value> = list as *mut _;
-                                for nested_key in path.iter().skip(1) {
-                                    unsafe {
-                                        if let Some(Value::Map(m)) = (*current_list).last_mut() {
-                                            if let Some(Value::List(inner)) = m.get_mut(nested_key) {
-                                                current_list = inner as *mut _;
-                                            }
-                                        }
-                                    }
-                                }
-                                unsafe {
-                                    maybe_list = Some(&mut *current_list);
-                                }
-                            }
-                        }
+                        // Find the parent list safely
+                        let maybe_list = resolve_series_path_mut(&mut sec.series, &path, true);
 
                         if let Some(parent_list) = maybe_list {
                             // Push a new map with the nested key -> empty list
@@ -561,26 +511,8 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                 }
 
                 if let Some((_, path)) = series_stack.last().cloned() {
-                    // Compute the target list
-                    let mut maybe_list: Option<&mut Vec<Value>> = None;
-                    {
-                        let top_key = &path[0];
-                        if let Some(list) = sec.series.get_mut(top_key) {
-                            let mut current_list: *mut Vec<Value> = list as *mut _;
-                            for nested_key in path.iter().skip(1) {
-                                unsafe {
-                                    if let Some(Value::Map(m)) = (*current_list).last_mut() {
-                                        if let Some(Value::List(inner)) = m.get_mut(nested_key) {
-                                            current_list = inner as *mut _;
-                                        }
-                                    }
-                                }
-                            }
-                            unsafe {
-                                maybe_list = Some(&mut *current_list);
-                            }
-                        }
-                    }
+                    // Compute the target list safely
+                    let maybe_list = resolve_series_path_mut(&mut sec.series, &path, false);
 
                     if let Some(list) = maybe_list {
                         // Robust handling: object assignment at any point in series

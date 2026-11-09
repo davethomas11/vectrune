@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { initContext } from '../src/context';
 import { assignPath, deletePath, executeStatement } from '../src/statement';
+import { evaluateExpression } from '../src/expression';
 import type { RuneApp, EmitterConfig } from '../src/types';
 
 function setupTestContext(
@@ -222,5 +223,23 @@ describe('executeStatement', () => {
     expect(() => executeStatement('music.tempo = 150', {})).not.toThrow();
     expect(() => executeStatement('music.volume = 0.25', {})).not.toThrow();
     expect(() => executeStatement('music.stop', {})).not.toThrow();
+    expect(() => executeStatement('music.compose("test_song", 140, "C4:8", "C2:4", "kick:4")', {})).not.toThrow();
+  });
+
+  it('handles local storage and download statements', () => {
+    setupTestContext({});
+    executeStatement('storage.set("track_name", "Cyberpunk")', {});
+    expect(evaluateExpression('storage.get("track_name")', {})).toBe('Cyberpunk');
+    expect(evaluateExpression('storage.has("track_name")', {})).toBe(true);
+
+    executeStatement('storage.set("track_meta", { "bpm": 150 })', {});
+    expect(evaluateExpression('storage.get("track_meta").bpm', {})).toBe(150);
+
+    executeStatement('storage.remove("track_name")', {});
+    expect(evaluateExpression('storage.get("track_name")', {})).toBe(null);
+    expect(evaluateExpression('storage.get("track_name", "default_val")', {})).toBe('default_val');
+
+    expect(() => executeStatement('download("test.rune", "content")', {})).not.toThrow();
+    expect(() => executeStatement('copy("music code")', {})).not.toThrow();
   });
 });

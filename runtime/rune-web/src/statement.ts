@@ -9,7 +9,8 @@ import { interpolate } from './interpolation';
 import { splitPathSegments, buildScope } from './scope';
 import { handleBuiltin } from "./builtins";
 import { splitTopLevel, valueToString, normalizeLiteral } from './utils';
-import { playSound, playMusic, stopMusic, pauseMusic, resumeMusic, setMusicTempo, setMusicVolume } from './audio';
+import { playSound, playMusic, stopMusic, pauseMusic, resumeMusic, setMusicTempo, setMusicVolume, registerMusic, registerSounds } from './audio';
+import { setStorageItem, removeStorageItem, clearStorage } from './storage';
 import type { ActionStep, Scope } from './types';
 import { NO_ACTION, STOP } from './builtins/command';
 
@@ -277,6 +278,29 @@ export function executeStatement(
       if (!isNaN(val)) setMusicVolume(val);
       return true;
     }
+    if (trimmed.startsWith('music.compose(') || trimmed.startsWith('music.register(')) {
+      const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
+      const parts = splitTopLevel(inner, ',');
+      if (parts.length >= 4) {
+        const name = String(evaluateExpression(parts[0], buildScope(locals)));
+        const tempo = Number(evaluateExpression(parts[1], buildScope(locals))) || 128;
+        const lead = String(evaluateExpression(parts[2], buildScope(locals)));
+        const bass = String(evaluateExpression(parts[3], buildScope(locals)));
+        const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals))) : '';
+        registerMusic({
+          [name]: {
+            music_type: '8bit',
+            tempo,
+            loop_track: true,
+            volume: 0.2,
+            lead,
+            bass,
+            drums,
+          },
+        });
+      }
+      return true;
+    }
     let trackName = '';
     if (trimmed.startsWith('music.play(') && trimmed.endsWith(')')) {
       trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
@@ -289,6 +313,112 @@ export function executeStatement(
     }
     trackName = normalizeLiteral(trackName);
     playMusic(trackName);
+    return true;
+  }
+
+  // Local storage statements: storage.set(key, val), storage.save(key, val), storage.remove(key), storage.clear()
+  if (
+    trimmed.startsWith('storage.set(') ||
+    trimmed.startsWith('storage.save(') ||
+    trimmed.startsWith('local_storage.set(') ||
+    trimmed.startsWith('localStorage.set(')
+  ) {
+    const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
+    const parts = splitTopLevel(inner, ',');
+    if (parts.length >= 2) {
+      const key = String(evaluateExpression(parts[0], buildScope(locals)));
+      const val = evaluateExpression(parts[1], buildScope(locals));
+      const serialized = typeof val === 'string' ? val : JSON.stringify(val);
+      setStorageItem(key, serialized);
+    }
+    return true;
+  }
+
+  if (trimmed.startsWith('storage.set ') || trimmed.startsWith('storage.save ')) {
+    const rest = trimmed.slice(12).trim();
+    const parts = splitTopLevel(rest, ',');
+    if (parts.length >= 2) {
+      const key = String(evaluateExpression(parts[0], buildScope(locals)));
+      const val = evaluateExpression(parts[1], buildScope(locals));
+      const serialized = typeof val === 'string' ? val : JSON.stringify(val);
+      setStorageItem(key, serialized);
+    }
+    return true;
+  }
+
+  if (
+    trimmed.startsWith('storage.remove(') ||
+    trimmed.startsWith('storage.delete(') ||
+    trimmed.startsWith('local_storage.remove(')
+  ) {
+    const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
+    const key = String(evaluateExpression(inner, buildScope(locals)));
+    removeStorageItem(key);
+    return true;
+  }
+
+  if (
+    trimmed === 'storage.clear()' ||
+    trimmed === 'storage.clear' ||
+    trimmed === 'local_storage.clear()'
+  ) {
+    clearStorage();
+    return true;
+  }
+
+  // File download helper: download(filename, content) or download filename, content
+  if (trimmed.startsWith('download(') && trimmed.endsWith(')')) {
+    const inner = trimmed.slice(9, -1);
+    const parts = splitTopLevel(inner, ',');
+    if (parts.length >= 2) {
+      const filename = String(evaluateExpression(parts[0], buildScope(locals)));
+      const content = String(evaluateExpression(parts[1], buildScope(locals)));
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    }
+    return true;
+  }
+
+  if (trimmed.startsWith('download ')) {
+    const rest = trimmed.slice(9).trim();
+    const parts = splitTopLevel(rest, ',');
+    if (parts.length >= 2) {
+      const filename = String(evaluateExpression(parts[0], buildScope(locals)));
+      const content = String(evaluateExpression(parts[1], buildScope(locals)));
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    }
+    return true;
+  }
+
+  // Clipboard copy helper: clipboard.copy(text) or copy(text)
+  if (
+    (trimmed.startsWith('clipboard.copy(') || trimmed.startsWith('copy(')) &&
+    trimmed.endsWith(')')
+  ) {
+    const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
+    const text = String(evaluateExpression(inner, buildScope(locals)));
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
     return true;
   }
 

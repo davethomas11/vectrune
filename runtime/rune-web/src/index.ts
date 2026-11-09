@@ -306,6 +306,8 @@ export function boot(config: RuneWebConfig): RuneApp {
   setWindowProp('stopMusic', stopMusic);
   setWindowProp('pauseMusic', pauseMusic);
   setWindowProp('resumeMusic', resumeMusic);
+  setWindowProp('registerSounds', registerSounds);
+  setWindowProp('registerMusic', registerMusic);
   app.render();
 
   return app;

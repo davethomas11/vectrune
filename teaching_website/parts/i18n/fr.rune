@@ -254,6 +254,8 @@ Nav {
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
     vectworms = "VectWorms"
+    music = "Musique"
+    studio = "Rune Studio"
 }
 
 Lab {
@@ -307,6 +309,23 @@ VectWorms {
     instructions_title = "Commandes"
     instructions_keyboard = "WASD / Flèches : Déplacer (4 directions) • Espace : Tirer"
     instructions_mobile = "Utilisez la croix directionnelle et le bouton de tir sur mobile ou tablette."
+}
+
+Studio {
+    badge = "DAW et Synthétiseur 8-Bit"
+    title = "Rune Studio : DAW Chiptune 8-Bit"
+    description = "Une station audio numérique et tracker de synthétiseur 8-bit entièrement conçu avec Rune-Web déclaratif : édition visuelle multipiste, synthèse Web Audio en temps réel, persistance en stockage local et export de fichiers .rune."
+    feature_chiptune_title = "Synthétiseur Chiptune Web Audio"
+    feature_chiptune_desc = "Écoutez des ondes carrées, basses triangulaires et percussions bruit blanc en temps réel avec enveloppes ADSR et fréquences configurables."
+    feature_multitrack_title = "Séquenceur Multipiste Visuel"
+    feature_multitrack_desc = "Composez mélodies principales, arpèges, basses pulsées et percussions avec notation mesure par mesure et tempo ajustable."
+    feature_storage_title = "Persistance en Stockage Local"
+    feature_storage_desc = "Les liaisons natives storage.set et storage.get conservent vos morceaux et réglages à travers les rechargements du navigateur."
+    feature_export_title = "Export et Téléchargement Source .rune"
+    feature_export_desc = "Exportez directement vos compositions sous forme de code Rune-Web valide grâce aux fonctions de téléchargement et presse-papiers."
+    instructions_title = "Comment utiliser"
+    instructions_songs = "Sélectionnez un morceau préchargé (VectRaiders, VectWorms, Cyber Run, Moonlight Dungeon, Victory Fanfare) ou composez vos propres notes."
+    instructions_storage = "Cliquez sur 'Sauvegarder' pour conserver vos notes en mémoire, ou 'Télécharger .rune' pour enregistrer le fichier."
 }
 
 Reference {

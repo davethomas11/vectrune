@@ -75,7 +75,7 @@ jobs:
           git checkout -- teaching.rune
 
           # Pre-render SEO route pages for direct link sharing & iMessage previews
-          for route in games vectraiders vectworms documents localization rest static graphql dynamic_ai rune_web websocket examples builtins; do
+          for route in games vectraiders vectworms studio music documents localization rest static graphql dynamic_ai rune_web websocket examples builtins; do
             mkdir -p "$OUT/$route"
             "$BIN" teaching.rune -o html --path "/$route" > "$OUT/$route/index.html"
           done

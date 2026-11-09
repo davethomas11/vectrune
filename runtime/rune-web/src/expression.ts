@@ -10,6 +10,7 @@ import {
   normalizeLiteral,
   valueToString,
 } from './utils';
+import { getStorageItem, hasStorageItem } from './storage';
 import type { Scope } from './types';
 
 const MAX_DEPTH = 64;
@@ -299,6 +300,46 @@ export function evaluateExpression(
     const parts = splitTopLevel(trimmed.slice(4, -1), ',');
     const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
     return Math.max(...nums);
+  }
+
+  // --- Local storage expressions: storage.get(key, default?), storage.has(key) ---
+  if (
+    trimmed.startsWith('storage.get(') ||
+    trimmed.startsWith('local_storage.get(') ||
+    trimmed.startsWith('localStorage.get(')
+  ) {
+    const callEnd = trimmed.lastIndexOf(')');
+    const callPart = trimmed.slice(0, callEnd + 1);
+    const trailingProp = trimmed.slice(callEnd + 1).trim();
+
+    const inner = callPart.slice(callPart.indexOf('(') + 1, -1);
+    const parts = splitTopLevel(inner, ',');
+    const key = String(evaluateExpression(parts[0], scope, nextDepth));
+    const defVal = parts.length > 1 ? evaluateExpression(parts[1], scope, nextDepth) : null;
+    const item = getStorageItem(key);
+    let result: unknown = defVal;
+    if (item !== null) {
+      try {
+        result = JSON.parse(item);
+      } catch {
+        result = item;
+      }
+    }
+    if (trailingProp.startsWith('.') && result && typeof result === 'object') {
+      const prop = trailingProp.slice(1);
+      return (result as Record<string, unknown>)[prop];
+    }
+    return result;
+  }
+
+  if (
+    trimmed.startsWith('storage.has(') ||
+    trimmed.startsWith('local_storage.has(') ||
+    trimmed.startsWith('localStorage.has(')
+  ) {
+    const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
+    const key = String(evaluateExpression(inner, scope, nextDepth));
+    return hasStorageItem(key);
   }
 
   // --- Helper call ---

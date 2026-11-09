@@ -540,6 +540,51 @@ var __RuneWeb = (() => {
     return proxy;
   }
 
+  // src/storage.ts
+  var memoryStorage = {};
+  function getStorageItem(key) {
+    if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
+      try {
+        const val = window.localStorage.getItem(key);
+        if (val !== null) return val;
+      } catch {
+      }
+    }
+    return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null;
+  }
+  function setStorageItem(key, val) {
+    memoryStorage[key] = val;
+    if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
+      try {
+        window.localStorage.setItem(key, val);
+      } catch {
+      }
+    }
+  }
+  function removeStorageItem(key) {
+    delete memoryStorage[key];
+    if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+      }
+    }
+  }
+  function clearStorage() {
+    for (const k of Object.keys(memoryStorage)) {
+      delete memoryStorage[k];
+    }
+    if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
+      try {
+        window.localStorage.clear();
+      } catch {
+      }
+    }
+  }
+  function hasStorageItem(key) {
+    return getStorageItem(key) !== null;
+  }
+
   // src/expression.ts
   var MAX_DEPTH = 64;
   function tryParseLiteral(expr, scope) {
@@ -749,6 +794,34 @@ var __RuneWeb = (() => {
       const parts = splitTopLevel(trimmed.slice(4, -1), ",");
       const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
       return Math.max(...nums);
+    }
+    if (trimmed.startsWith("storage.get(") || trimmed.startsWith("local_storage.get(") || trimmed.startsWith("localStorage.get(")) {
+      const callEnd = trimmed.lastIndexOf(")");
+      const callPart = trimmed.slice(0, callEnd + 1);
+      const trailingProp = trimmed.slice(callEnd + 1).trim();
+      const inner = callPart.slice(callPart.indexOf("(") + 1, -1);
+      const parts = splitTopLevel(inner, ",");
+      const key = String(evaluateExpression(parts[0], scope, nextDepth));
+      const defVal = parts.length > 1 ? evaluateExpression(parts[1], scope, nextDepth) : null;
+      const item = getStorageItem(key);
+      let result = defVal;
+      if (item !== null) {
+        try {
+          result = JSON.parse(item);
+        } catch {
+          result = item;
+        }
+      }
+      if (trailingProp.startsWith(".") && result && typeof result === "object") {
+        const prop = trailingProp.slice(1);
+        return result[prop];
+      }
+      return result;
+    }
+    if (trimmed.startsWith("storage.has(") || trimmed.startsWith("local_storage.has(") || trimmed.startsWith("localStorage.has(")) {
+      const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
+      const key = String(evaluateExpression(inner, scope, nextDepth));
+      return hasStorageItem(key);
     }
     const helperCall = parseHelperCall(trimmed);
     if (helperCall) {
@@ -2328,6 +2401,29 @@ var __RuneWeb = (() => {
         if (!isNaN(val)) setMusicVolume(val);
         return true;
       }
+      if (trimmed.startsWith("music.compose(") || trimmed.startsWith("music.register(")) {
+        const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
+        const parts = splitTopLevel(inner, ",");
+        if (parts.length >= 4) {
+          const name = String(evaluateExpression(parts[0], buildScope(locals)));
+          const tempo = Number(evaluateExpression(parts[1], buildScope(locals))) || 128;
+          const lead = String(evaluateExpression(parts[2], buildScope(locals)));
+          const bass = String(evaluateExpression(parts[3], buildScope(locals)));
+          const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals))) : "";
+          registerMusic({
+            [name]: {
+              music_type: "8bit",
+              tempo,
+              loop_track: true,
+              volume: 0.2,
+              lead,
+              bass,
+              drums
+            }
+          });
+        }
+        return true;
+      }
       let trackName = "";
       if (trimmed.startsWith("music.play(") && trimmed.endsWith(")")) {
         trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
@@ -2340,6 +2436,87 @@ var __RuneWeb = (() => {
       }
       trackName = normalizeLiteral(trackName);
       playMusic(trackName);
+      return true;
+    }
+    if (trimmed.startsWith("storage.set(") || trimmed.startsWith("storage.save(") || trimmed.startsWith("local_storage.set(") || trimmed.startsWith("localStorage.set(")) {
+      const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
+      const parts = splitTopLevel(inner, ",");
+      if (parts.length >= 2) {
+        const key = String(evaluateExpression(parts[0], buildScope(locals)));
+        const val = evaluateExpression(parts[1], buildScope(locals));
+        const serialized = typeof val === "string" ? val : JSON.stringify(val);
+        setStorageItem(key, serialized);
+      }
+      return true;
+    }
+    if (trimmed.startsWith("storage.set ") || trimmed.startsWith("storage.save ")) {
+      const rest = trimmed.slice(12).trim();
+      const parts = splitTopLevel(rest, ",");
+      if (parts.length >= 2) {
+        const key = String(evaluateExpression(parts[0], buildScope(locals)));
+        const val = evaluateExpression(parts[1], buildScope(locals));
+        const serialized = typeof val === "string" ? val : JSON.stringify(val);
+        setStorageItem(key, serialized);
+      }
+      return true;
+    }
+    if (trimmed.startsWith("storage.remove(") || trimmed.startsWith("storage.delete(") || trimmed.startsWith("local_storage.remove(")) {
+      const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
+      const key = String(evaluateExpression(inner, buildScope(locals)));
+      removeStorageItem(key);
+      return true;
+    }
+    if (trimmed === "storage.clear()" || trimmed === "storage.clear" || trimmed === "local_storage.clear()") {
+      clearStorage();
+      return true;
+    }
+    if (trimmed.startsWith("download(") && trimmed.endsWith(")")) {
+      const inner = trimmed.slice(9, -1);
+      const parts = splitTopLevel(inner, ",");
+      if (parts.length >= 2) {
+        const filename = String(evaluateExpression(parts[0], buildScope(locals)));
+        const content = String(evaluateExpression(parts[1], buildScope(locals)));
+        if (typeof window !== "undefined" && typeof document !== "undefined") {
+          const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }
+      return true;
+    }
+    if (trimmed.startsWith("download ")) {
+      const rest = trimmed.slice(9).trim();
+      const parts = splitTopLevel(rest, ",");
+      if (parts.length >= 2) {
+        const filename = String(evaluateExpression(parts[0], buildScope(locals)));
+        const content = String(evaluateExpression(parts[1], buildScope(locals)));
+        if (typeof window !== "undefined" && typeof document !== "undefined") {
+          const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }
+      return true;
+    }
+    if ((trimmed.startsWith("clipboard.copy(") || trimmed.startsWith("copy(")) && trimmed.endsWith(")")) {
+      const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
+      const text = String(evaluateExpression(inner, buildScope(locals)));
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(text).catch(() => {
+        });
+      }
       return true;
     }
     const emitterMatch = trimmed.match(/^([A-Za-z_][\w]*)\.(burst|step)\((.*)\)$/);
@@ -2889,6 +3066,8 @@ var __RuneWeb = (() => {
     setWindowProp("stopMusic", stopMusic);
     setWindowProp("pauseMusic", pauseMusic);
     setWindowProp("resumeMusic", resumeMusic);
+    setWindowProp("registerSounds", registerSounds);
+    setWindowProp("registerMusic", registerMusic);
     app.render();
     return app;
   }

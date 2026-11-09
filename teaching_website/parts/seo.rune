@@ -28,6 +28,16 @@ title = VectWorms Arcade — Built with Vectrune & Rune-Web
 description = Purge the mushroom grid in this high-velocity retro Centipede reimagining built with declarative Rune-Web — dynamic splitting worms, particle bursts, and Web Audio fx.
 image = /assets/rune-logo.png
 
+@SEO/studio
+title = Rune Studio — 8-Bit Chiptune DAW & Synth Tracker
+description = Compose, audition, and export retro chiptune tracks in Rune Studio — a visual 8-bit web DAW built entirely with declarative Rune-Web, featuring real-time Web Audio synthesis, multitrack sequencing, local storage persistence, and .rune file export.
+image = /assets/rune-logo.png
+
+@SEO/music
+title = Rune Studio — 8-Bit Chiptune DAW & Synth Tracker
+description = Compose, audition, and export retro chiptune tracks in Rune Studio — a visual 8-bit web DAW built entirely with declarative Rune-Web, featuring real-time Web Audio synthesis, multitrack sequencing, local storage persistence, and .rune file export.
+image = /assets/rune-logo.png
+
 @SEO/documents
 title = Vectrune Documents — Syntax & Grammar Guide
 description = Master Vectrune document syntax: structured data schemas, type definitions, records, series, and clean declarative data modeling.

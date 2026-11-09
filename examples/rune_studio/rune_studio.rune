@@ -1,0 +1,129 @@
+#!RUNE
+
+import "parts"
+
+@App
+name = RuneStudio
+version = 1.0
+type = REST
+port = 3001
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = studio
+
+@Page/studio
+title = Rune Studio — 8-Bit Chiptune DAW
+style = studio
+logic = studio
+view:
+    main .studio-cabinet:
+        header .studio-header:
+            div:
+                h1 .studio-title "RUNE STUDIO"
+                p .studio-subtitle "RETRO 8-BIT CHIPTUNE WORKSTATION & SOUND SYNTHESIZER"
+            div .status-pill:
+                "{status_message}"
+
+        div .song-selector:
+            button .song-tab {.active when selected_song == 'vectraiders'} click="selectSong('vectraiders')":
+                "👾 VectRaiders"
+            button .song-tab {.active when selected_song == 'vectworms'} click="selectSong('vectworms')":
+                "🐛 VectWorms"
+            button .song-tab {.active when selected_song == 'cyber_run'} click="selectSong('cyber_run')":
+                "⚡ Cyber Run"
+            button .song-tab {.active when selected_song == 'moonlight'} click="selectSong('moonlight')":
+                "🏰 Moonlight Dungeon"
+            button .song-tab {.active when selected_song == 'victory'} click="selectSong('victory')":
+                "🏆 Victory Fanfare"
+
+        div .transport-bar:
+            div .transport-buttons:
+                button .btn-transport .btn-play click="playTrack":
+                    "▶ PLAY"
+                button .btn-transport .btn-pause click="pauseTrack":
+                    "⏸ PAUSE"
+                button .btn-transport .btn-stop click="stopTrack":
+                    "⏹ STOP"
+
+            div .tempo-controls:
+                span "TEMPO:"
+                button .btn-tempo click="changeTempo(-4)":
+                    "-"
+                span .bpm-badge "{tempo} BPM"
+                button .btn-tempo click="changeTempo(4)":
+                    "+"
+
+            div .storage-actions:
+                button .btn-storage click="saveToStorage":
+                    "💾 SAVE"
+                button .btn-storage click="loadFromStorage":
+                    "📂 RESTORE"
+                button .btn-storage click="exportRune":
+                    "📥 EXPORT .RUNE"
+                button .btn-storage click="copyCode":
+                    "📋 COPY"
+
+        div .tracks-container:
+            div .track-rack:
+                div .track-header:
+                    div .track-meta:
+                        span "🎹"
+                        h3 .track-name "VOICE 1: SQUARE LEAD"
+                        span .badge-wave .badge-square "Square 50%"
+                div .track-score-box:
+                    "{lead_track}"
+
+            div .track-rack:
+                div .track-header:
+                    div .track-meta:
+                        span "🎸"
+                        h3 .track-name "VOICE 2: TRIANGLE BASS"
+                        span .badge-wave .badge-triangle "Triangle Sub"
+                div .track-score-box:
+                    "{bass_track}"
+
+            div .track-rack:
+                div .track-header:
+                    div .track-meta:
+                        span "🥁"
+                        h3 .track-name "VOICE 3: PERCUSSION / DRUMS"
+                        span .badge-wave .badge-noise "Noise & Pitch"
+                div .track-score-box:
+                    "{drums_track}"
+
+        div .sfx-section:
+            h4 .sfx-heading "⚡ RETRO ARCADE SOUND FX AUDITION PAD"
+            div .sfx-pads:
+                button .pad-btn click="playSfx('laser')":
+                    span "💥"
+                    span "Laser"
+                button .pad-btn click="playSfx('hit')":
+                    span "🥊"
+                    span "Hit"
+                button .pad-btn click="playSfx('explosion')":
+                    span "💣"
+                    span "Explosion"
+                button .pad-btn click="playSfx('coin')":
+                    span "🪙"
+                    span "Coin"
+                button .pad-btn click="playSfx('step')":
+                    span "👣"
+                    span "Footstep"
+                button .pad-btn click="playSfx('gameover')":
+                    span "💀"
+                    span "Game Over"
+                button .pad-btn click="playSfx('victory')":
+                    span "🌟"
+                    span "Victory"
+
+        div .export-section:
+            div .export-header:
+                h4 .sfx-heading "📜 GENERATED RUNE DECLARATION"
+                div:
+                    button .btn-storage click="copyCode":
+                        "Copy Code"
+            pre .code-preview:
+                "# {song_title}\n\n@Music/{selected_song}\ntype = 8bit\ntempo = {tempo}\nloop = true\nvolume = 0.2\n\nlead:\n    {lead_track}\n\nbass:\n    {bass_track}\n\ndrums:\n    {drums_track}"
+
