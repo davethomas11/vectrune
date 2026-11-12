@@ -131,6 +131,10 @@ pub async fn call_builtin(
     app_state: &AppState,
     assign_to: Option<&str>,
 ) -> BuiltinResult {
+    #[cfg(not(target_arch = "wasm32"))]
+    if matches!(name, "assert" | "test-request") {
+        return crate::cli::testing::call(name, args, ctx, assign_to).await;
+    }
     // Preprocess args: combine quoted strings and remove surrounding quotes
     let mut processed_args = Vec::new();
     let mut in_quotes = false;
@@ -522,6 +526,10 @@ pub async fn call_builtin(
         _ => {
             if ctx.get(name).is_none() {
                 log(LogLevel::Error, &format!("unknown builtin: {}", name));
+                #[cfg(not(target_arch = "wasm32"))]
+                if crate::cli::testing::is_active() {
+                    return BuiltinResult::Error(format!("Unknown builtin: {name}"));
+                }
             }
             BuiltinResult::Ok
         }

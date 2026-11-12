@@ -111,6 +111,12 @@ pub fn split_path_parts(ident: &str) -> Vec<String> {
 }
 
 fn json_value_to_lookup_key(value: &serde_json::Value) -> String {
+    // Numeric literals resolve as f64; array index 0 must stay "0", not "0.0".
+    if let Some(number) = value.as_f64() {
+        if number.fract() == 0.0 {
+            return format!("{number:.0}");
+        }
+    }
     value
         .as_str()
         .map(ToString::to_string)
@@ -621,7 +627,7 @@ fn parse_object_literal(
     cmd: &str,
 ) -> serde_json::Map<String, serde_json::Value> {
     let mut map = serde_json::Map::new();
-    let content = cmd.trim_matches(|c| c == '{' || c == '}');
+    let content = cmd.strip_prefix('{').and_then(|s| s.strip_suffix('}')).unwrap_or(cmd);
 
     for pair in split_outside_quotes(content, ',') {
         let pair = pair.trim();
@@ -638,15 +644,23 @@ fn parse_object_literal(
                 .trim_matches('"');
             let val_expr = val_expr[1..].trim();
 
-            let mut value = resolve_path(ctx, val_expr, None).unwrap_or(serde_json::Value::Null);
+            let mut value = if val_expr.starts_with('{') && val_expr.ends_with('}') {
+                serde_json::Value::Object(parse_object_literal(ctx, val_expr))
+            } else if let Ok(value) = serde_json::from_str(val_expr) {
+                value
+            } else {
+                resolve_path(ctx, val_expr, None).unwrap_or(serde_json::Value::Null)
+            };
 
-            // Try to normalize numeric strings to actual JSON numbers
+            // Preserve explicitly quoted strings (e.g. IDs and header values).
             if let serde_json::Value::String(ref s) = value {
-                if let Ok(n) = s.parse::<i64>() {
-                    value = serde_json::Value::Number(n.into());
-                } else if let Ok(n) = s.parse::<f64>() {
-                    if let Some(num) = serde_json::Number::from_f64(n) {
-                        value = serde_json::Value::Number(num);
+                if !val_expr.starts_with('"') {
+                    if let Ok(n) = s.parse::<i64>() {
+                        value = serde_json::Value::Number(n.into());
+                    } else if let Ok(n) = s.parse::<f64>() {
+                        if let Some(num) = serde_json::Number::from_f64(n) {
+                            value = serde_json::Value::Number(num);
+                        }
                     }
                 }
             }
@@ -659,7 +673,7 @@ fn parse_object_literal(
 /// Like execute_steps_inner but does NOT call resolve_last_response at the end.
 /// Used for conditional blocks so the outer loop continues after the if-body.
 #[async_recursion]
-async fn execute_steps_inner_no_fallthrough(
+pub(crate) async fn execute_steps_inner_no_fallthrough(
     state: AppState,
     steps: &[Value],
     ctx: &mut Context,
@@ -726,9 +740,12 @@ fn handle_builtin_result(res: BuiltinResult) -> Option<(u16, String)> {
 
 fn find_assignment_equals(s: &str) -> Option<usize> {
     let mut in_quotes = false;
+    let mut escaped = false;
     let bytes = s.as_bytes();
     for i in 0..bytes.len() {
         let c = bytes[i] as char;
+        if escaped { escaped = false; continue; }
+        if in_quotes && c == '\\' { escaped = true; continue; }
         if c == '"' {
             in_quotes = !in_quotes;
         }
@@ -739,7 +756,7 @@ fn find_assignment_equals(s: &str) -> Option<usize> {
             } else {
                 '\0'
             };
-            if prev != '=' && next != '=' && prev != '!' && next != '>' && prev != '<' {
+            if prev != '=' && next != '=' && prev != '!' && next != '>' && prev != '<' && prev != '>' {
                 return Some(i);
             }
         }
@@ -749,7 +766,10 @@ fn find_assignment_equals(s: &str) -> Option<usize> {
 
 fn find_char_outside_quotes(s: &str, target: char) -> Option<usize> {
     let mut in_quotes = false;
-    for (i, c) in s.chars().enumerate() {
+    let mut escaped = false;
+    for (i, c) in s.char_indices() {
+        if escaped { escaped = false; continue; }
+        if in_quotes && c == '\\' { escaped = true; continue; }
         if c == '"' {
             in_quotes = !in_quotes;
         }
@@ -764,12 +784,19 @@ fn split_outside_quotes<'a>(s: &'a str, delimiter: char) -> Vec<&'a str> {
     let mut parts = Vec::new();
     let mut start = 0usize;
     let mut in_quotes = false;
+    let mut escaped = false;
+    let mut depth = 0usize;
 
     for (i, c) in s.char_indices() {
+        if escaped { escaped = false; continue; }
+        if in_quotes && c == '\\' { escaped = true; continue; }
         if c == '"' {
             in_quotes = !in_quotes;
         }
-        if c == delimiter && !in_quotes {
+        if !in_quotes {
+            match c { '{' | '[' => depth += 1, '}' | ']' => depth = depth.saturating_sub(1), _ => {} }
+        }
+        if c == delimiter && !in_quotes && depth == 0 {
             parts.push(&s[start..i]);
             start = i + c.len_utf8();
         }
@@ -872,6 +899,8 @@ fn is_known_command_name(ctx: &Context, name: &str) -> bool {
     if matches!(
         name,
         "func"
+            | "assert"
+            | "test-request"
             | "log"
             | "respond"
             | "parse-json"

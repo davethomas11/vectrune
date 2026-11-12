@@ -1,0 +1,40 @@
+name: Developer CLI checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'examples/testing/**'
+      - 'Cargo.toml'
+      - '.github/workflows/developer-cli.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'examples/testing/**'
+      - 'Cargo.toml'
+      - '.github/workflows/developer-cli.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Check compiler
+        run: cargo check
+      - name: Test CLI and runtime integration
+        run: cargo test --test developer_cli --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test
+      - name: Test request cancellation
+        run: cargo test --lib cli::testing
+      - name: Lint example suite
+        run: target/debug/vectrune check examples/testing --deny-warnings
+      - name: Run tests written in Rune
+        run: target/debug/vectrune test examples/testing --json

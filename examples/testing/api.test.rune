@@ -1,0 +1,24 @@
+#!RUNE
+import "app.rune"
+
+@Test/Health
+run:
+    req = { method: "GET", path: "/health" }
+    res = test-request req
+    assert res.status == 200
+    assert res.text == "OK"
+
+@Test/UserCreation
+run:
+    req = { method: "POST", path: "/users", body: { name: "Alice", role: "admin" } }
+    res = test-request req
+    assert res.status == 201
+    assert res.body.name == "Alice"
+    assert res.body.role == "admin"
+
+@Test/InvalidUser
+run:
+    req = { method: "POST", path: "/users", body: { name: "Alice" } }
+    res = test-request req
+    assert res.status == 400
+    assert res.text contains "role"

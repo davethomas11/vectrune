@@ -41,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
         .version(env!("CARGO_PKG_VERSION"))
         .author("David Thomas")
         .about("Vectrune: Structured data in motion.")
+        .subcommands(cli::developer::commands())
         .arg(
             Arg::new("SCRIPT")
                 .help("Path to the .rune, .vect, or .vectrune script, directory, or '-' to read from STDIN")
@@ -287,6 +288,17 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .get_matches();
+
+    if let Some((name @ ("doctor" | "check" | "test"), args)) = matches.subcommand() {
+        // Runtime logs must not corrupt machine-readable command output.
+        set_log_level(LogLevel::Error, true);
+        crate::util::set_log_stderr();
+        let success = cli::developer::run(name, args).await?;
+        if !success {
+            process::exit(1);
+        }
+        return Ok(());
+    }
 
     let log_level = matches
         .get_one::<String>("log-level")

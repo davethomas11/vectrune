@@ -246,6 +246,55 @@ ollama pull phi4
 - `VECTRUNE_AI_MODEL` (optional): Ollama model to use for generation (default: `phi4`)
 
 
+## Doctor, check, and Rune tests
+
+These commands are available in Vectrune 0.2.21 and newer:
+
+```sh
+vectrune doctor examples/testing/app.rune
+vectrune check examples/testing
+vectrune test examples/testing
+vectrune test examples/testing --filter User --json
+```
+
+`doctor` reports the running version, executable, platform, other Vectrune executables on PATH, import resolution, project diagnostics, and local availability of the configured port. This helps identify an older global binary shadowing a workspace build. Without a path it checks `app.rune` if present, otherwise just the installation. An occupied port is advisory; invalid project configuration fails.
+
+`check` loads imports and validates native application types, REST methods, conflicting parameterized routes, authentication/schema/data-source references, test declarations, and Rune-Web pages/components/props using the frontend parser. It reports schema types unsupported by native `validate` as warnings. Use `--deny-warnings` to fail on warnings, and `--json` for structured diagnostics. It never starts the server or executes `run:` blocks. This is an initial static checker; full expression typing and cross-engine schema parity remain roadmap work.
+
+### Write tests in Rune
+
+Keep tests beside the application, for example `api.test.rune`:
+
+```rune
+import "app.rune"
+
+@Test/UserCreation
+run:
+    req = { method: "POST", path: "/users", body: { name: "Alice", role: "admin" } }
+    res = test-request req
+    assert res.status == 201
+    assert res.body.name == "Alice"
+    assert res.body.role == "admin"
+```
+
+Run the [complete example](examples/testing/api.test.rune):
+
+```sh
+vectrune test examples/testing
+vectrune test examples/testing --list
+vectrune test examples/testing --filter UserCreation --timeout 5
+```
+
+With no path, `test` discovers `.rune` files recursively in the current directory. A directory is **one application/suite**; point it at a project rather than a catalogue of unrelated applications. Imported files are deduplicated. Discovery skips `target`, `node_modules`, `.git`, `.venv`, `_site`, `dist`, and `build`, and does not follow directory symlinks. A file path runs that file and its imports, so import the application from your test entry. `check` defaults to `app.rune`, then the current directory.
+
+`test-request` sends an in-process HTTP request through the native application router, including middleware. No listening port is needed. The request accepts `method` (default `GET`), a local `path`, optional string-valued `headers`, and `body`. Object/array bodies are JSON-encoded with a default JSON content type. Responses expose `status`, parsed JSON `body` (or a string for other content), raw `text`, and `headers`; use indexed paths such as `res.body.tags[0]` or `res.headers["content-type"]`.
+
+Assertions support `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains` for strings/arrays, and boolean values. Equality compares values without coercing strings to numbers. Missing paths fail explicitly. Existing backend `run:` steps and conditional blocks are available for setup and helpers; `assert` and `test-request` are test-only builtins. Each test must execute at least one assertion. A failed assertion or unknown command in test steps stops that test, while remaining tests continue. Application handlers retain their normal runtime behavior.
+
+Tests run sequentially, rebuilding the application and resetting Rune memory before each test and clearing it afterwards. Application startup runs for every test. Tests use the application's normal file, network, and database behavior; external resources are not rolled back. Use dedicated test configuration for these resources. The default timeout is 10 seconds per test including startup; response bodies are limited to 8 MiB. Timeouts cancel asynchronous work, while synchronous/blocking operations follow the runtime's normal behavior.
+
+`--list` only discovers tests and performs static checks. `--filter` selects case-sensitive substrings of test names. `--json` writes a machine-readable report to stdout with runtime diagnostics on stderr. Successful checks/tests exit `0`; project/test failures and an empty test selection exit `1`; invalid command usage exits `2`. Listing an empty selection succeeds. Formatting, watch mode, fixture APIs, and richer assertion helpers are follow-up work.
+
 ## Tests
 
 This project has unit and integration tests. Integration tests live under "tests/":

@@ -1,4 +1,6 @@
 mod ai;
+pub mod developer;
+pub mod testing;
 pub mod calculate;
 pub mod knowledge;
 pub mod lambda;

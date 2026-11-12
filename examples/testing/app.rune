@@ -1,0 +1,19 @@
+#!RUNE
+@App
+name = Tested API
+type = REST
+port = 3000
+
+@Route/GET /health
+run:
+    respond 200 "OK"
+
+@Schema/User
+name = string
+role = string
+
+@Route/POST /users
+run:
+    user = parse-json body
+    validate user #User
+    respond 201 user

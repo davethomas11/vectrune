@@ -1,7 +1,7 @@
 use crate::rune_ast;
 use crate::rune_ast::RuneDocument;
 use serde_json::Value;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use once_cell::sync::Lazy;
 
 pub fn json_to_xml(value: &Value, root: &str) -> String {
@@ -88,6 +88,11 @@ impl fmt::Display for LogLevel {
 }
 
 static LOG_LEVEL: Lazy<AtomicUsize> = Lazy::new(|| AtomicUsize::new(log_level_to_usize(&LogLevel::Debug)));
+static LOG_STDERR: AtomicBool = AtomicBool::new(false);
+
+pub fn set_log_stderr() {
+    LOG_STDERR.store(true, Ordering::Relaxed);
+}
 
 fn log_level_to_usize(level: &LogLevel) -> usize {
     match level {
@@ -125,7 +130,11 @@ pub fn log(level: LogLevel, msg: &str) {
         LogLevel::Warn => "[WARN]",
         LogLevel::Error => "[ERROR]",
     };
-    println!("{} {}", prefix, msg);
+    if LOG_STDERR.load(Ordering::Relaxed) {
+        eprintln!("{} {}", prefix, msg);
+    } else {
+        println!("{} {}", prefix, msg);
+    }
 }
 
 pub fn unescape_string(s: &str) -> String {
