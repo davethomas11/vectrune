@@ -41,7 +41,7 @@ jobs:
       - name: Test CLI and runtime integration
         run: cargo test --test developer_cli --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package
       - name: Test CLI support and deployment packaging
-        run: cargo test --lib cli::
+        run: 'cargo test --lib cli::'
       - name: Check starter formatting
         run: target/debug/vectrune fmt examples/testing --check
       - name: Lint example suite
