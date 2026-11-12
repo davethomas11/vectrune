@@ -1,6 +1,8 @@
 //! Read-only project diagnostics and entry points for developer commands.
 use crate::rune_ast::RuneDocument;
-use crate::rune_parser::{load_rune_document_from_path, load_rune_document_from_str_with_base};
+use crate::rune_parser::{
+    load_rune_test_document_from_path, load_rune_test_document_from_str_with_base,
+};
 use anyhow::{Context, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
@@ -47,7 +49,7 @@ pub fn project_path(args: &ArgMatches) -> PathBuf {
 /// Exclude generated/dependency trees, and never follow directory symlinks.
 pub fn load_project(path: &Path) -> Result<RuneDocument> {
     if !path.is_dir() {
-        return Ok(load_rune_document_from_path(path)?);
+        return Ok(load_rune_test_document_from_path(path)?);
     }
     let base = path.canonicalize()?;
     let files = discover_files(path)?;
@@ -55,7 +57,7 @@ pub fn load_project(path: &Path) -> Result<RuneDocument> {
         .iter()
         .map(|file| format!("import \"{}\"\n", file.display()))
         .collect::<String>();
-    Ok(load_rune_document_from_str_with_base(
+    Ok(load_rune_test_document_from_str_with_base(
         &imports,
         &base,
         "<project discovery>",
@@ -102,7 +104,7 @@ pub fn discover_files(path: &Path) -> Result<Vec<PathBuf>> {
 pub fn project_files(path: &Path) -> Result<Vec<PathBuf>> {
     let mut files = std::collections::BTreeSet::new();
     for entry in discover_files(path)? {
-        files.extend(crate::rune_parser::load_rune_source_paths(&entry)?);
+        files.extend(crate::rune_parser::load_rune_test_source_paths(&entry)?);
     }
     Ok(files.into_iter().collect())
 }

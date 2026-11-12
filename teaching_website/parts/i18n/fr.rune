@@ -601,4 +601,6 @@ Developer {
     cmd_9 = "vectrune check . --deny-warnings\nvectrune test . --json"
     cmd_10 = "vectrune fmt . --check\nvectrune fmt ."
     cmd_11 = "brew update\nbrew upgrade vectrune\nvectrune --version\nvectrune doctor ."
+    boundary_title = "Garder les tests hors de la production"
+    boundary_text = "Utilisez .test.rune pour les tests, fixtures et hooks de suite. Les imports de dossiers ignorent ces fichiers et les imports explicites depuis une application sont refusés. Les tests peuvent importer le code applicatif et explicitement d’autres helpers de test. Les imports de dossiers ignorent toujours les tests ; vectrune test les découvre séparément. Les bundles Lambda les excluent également."
 }

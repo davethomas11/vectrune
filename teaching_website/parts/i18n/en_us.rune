@@ -601,4 +601,6 @@ Developer {
     cmd_9 = "vectrune check . --deny-warnings\nvectrune test . --json"
     cmd_10 = "vectrune fmt . --check\nvectrune fmt ."
     cmd_11 = "brew update\nbrew upgrade vectrune\nvectrune --version\nvectrune doctor ."
+    boundary_title = "Keep test files out of live builds"
+    boundary_text = "Use .test.rune for tests, fixtures, and suite hooks. Application directory imports skip these files recursively, and explicit imports from application files are rejected. Test files can import application code and explicitly import other test helpers. Directory imports always skip tests; vectrune test discovers them separately. Lambda bundles omit test files too."
 }

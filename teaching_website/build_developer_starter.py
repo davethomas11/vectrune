@@ -23,6 +23,10 @@ Expected: 5 passed, 0 failed.
 During development:
   vectrune test . --watch
 
+Keep tests and test-only fixtures in .test.rune files. Application directory
+imports and Lambda bundles exclude them. Application files cannot explicitly
+import test modules; tests can import application modules and test helpers.
+
 The fixture and suite hooks are in api.test.rune. Tests use the real native
 router without opening a port. Each test starts with fresh Rune memory.
 External files/databases are not rolled back. Main execution and cleanup each

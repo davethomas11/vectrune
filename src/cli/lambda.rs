@@ -93,6 +93,13 @@ fn package_lambda(config: PackageConfig) -> Result<()> {
 
 fn package_lambda_with_limit(config: PackageConfig, size_limit: u64) -> Result<()> {
     ensure_exists(&config.rune_path, "Rune source")?;
+    if config.rune_path.is_file() {
+        anyhow::ensure!(
+            !crate::rune_parser::is_test_source(&config.rune_path)
+                && !config.rune_path.canonicalize().is_ok_and(|path| crate::rune_parser::is_test_source(&path)),
+            "Test source {} cannot be packaged for deployment", config.rune_path.display()
+        );
+    }
     if let Some(ref cfg) = config.config_path {
         ensure_exists(cfg, "Config path")?;
     }
@@ -227,6 +234,12 @@ fn copy_source(
     size_limit: u64,
 ) -> Result<()> {
     if source.is_file() {
+        anyhow::ensure!(
+            !crate::rune_parser::is_test_source(source)
+                && !source.canonicalize().is_ok_and(|path| crate::rune_parser::is_test_source(&path)),
+            "Test source {} cannot be packaged for deployment",
+            source.display()
+        );
         let filename = source
             .file_name()
             .ok_or_else(|| anyhow::anyhow!("Invalid file name"))?;
@@ -247,6 +260,10 @@ fn copy_source(
             let entry = entry?;
             let path = entry.path();
             if entry.file_type().is_dir() {
+                continue;
+            }
+            if crate::rune_parser::is_test_source(path)
+                || path.canonicalize().is_ok_and(|path| crate::rune_parser::is_test_source(&path)) {
                 continue;
             }
             let relative = path.strip_prefix(source).unwrap();
@@ -416,6 +433,46 @@ mod tests {
         drop(bootstrap);
         archive.by_name("manifest.json").unwrap();
         archive.by_name("rune/app.rune").unwrap();
+    }
+
+    #[test]
+    fn deployment_bundles_exclude_test_sources() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("application");
+        fs::create_dir_all(source.join("parts")).unwrap();
+        fs::write(source.join("app.rune"), "@App\n").unwrap();
+        fs::write(source.join("parts/model.rune"), "@Schema/User\n").unwrap();
+        fs::write(source.join("api.test.rune"), "invalid test source").unwrap();
+        fs::write(source.join("parts/helper.TEST.rune"), "invalid helper").unwrap();
+        let binary = temp.path().join("vectrune");
+        fs::write(&binary, b"fake-binary").unwrap();
+        let output = temp.path().join("bundle.zip");
+        package_lambda_with_limit(PackageConfig {
+            rune_path: source, config_path: None, binary_path: binary,
+            output_path: output.clone(), mode: PackageMode::Zip, image_name: None,
+        }, 1024 * 1024).unwrap();
+        let mut archive = zip::ZipArchive::new(fs::File::open(output).unwrap()).unwrap();
+        assert!(archive.by_name("rune/app.rune").is_ok());
+        assert!(archive.by_name("rune/parts/model.rune").is_ok());
+        let names = archive.file_names().map(str::to_string).collect::<Vec<_>>();
+        assert!(names.iter().all(|name| !name.to_ascii_lowercase().ends_with(".test.rune")), "{names:?}");
+        let mut manifest = String::new();
+        archive.by_name("manifest.json").unwrap().read_to_string(&mut manifest).unwrap();
+        assert!(!manifest.contains("api.test.rune") && !manifest.contains("helper.TEST.rune"));
+    }
+
+    #[test]
+    fn deployment_rejects_a_test_entry_file() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("api.test.rune");
+        fs::write(&source, "@Test/Only\n").unwrap();
+        let binary = temp.path().join("vectrune");
+        fs::write(&binary, b"fake-binary").unwrap();
+        let error = package_lambda_with_limit(PackageConfig {
+            rune_path: source, config_path: None, binary_path: binary,
+            output_path: temp.path().join("bundle.zip"), mode: PackageMode::Zip, image_name: None,
+        }, 1024 * 1024).unwrap_err();
+        assert!(error.to_string().contains("cannot be packaged"), "{error}");
     }
 
     #[test]

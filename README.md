@@ -264,7 +264,11 @@ vectrune test examples/testing --filter User --json
 
 ### Write tests in Rune
 
-Keep tests beside the application, for example `api.test.rune`:
+Keep tests beside the application, for example `api.test.rune`. Put test-only fixtures and suite setup in `.test.rune` files too. Application directory imports skip these files recursively; explicit imports from application `.rune` files into test files fail clearly. Test files may import application modules and explicitly import other test helpers. Importing a directory always skips test files, so a test can safely import its application directory without importing itself.
+
+`vectrune test` still discovers test files, and developer `check`/`fmt` can inspect them. Normal application loading, source collection, and Lambda deployment bundles exclude them. Existing inline `@Test` declarations in ordinary `.rune` files remain supported; use the `.test.rune` convention when you want deployment isolation.
+
+Example:
 
 ```rune
 import "app.rune"

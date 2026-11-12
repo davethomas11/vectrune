@@ -30,12 +30,14 @@ pub enum LoadError {
     InvalidImport { path: String, message: String },
     #[error("Import cycle detected while loading {path}")]
     ImportCycle { path: String },
+    #[error("Test file {path} is excluded from application loading; use `vectrune test` to load .test.rune files")]
+    TestImport { path: String },
 }
 
 pub fn load_rune_document_from_path(path: &Path) -> Result<RuneDocument, LoadError> {
     let mut visiting = HashSet::new();
     let mut loaded = HashSet::new();
-    load_rune_document_from_path_inner(path, &mut visiting, &mut loaded)
+    load_rune_document_from_path_inner(path, &mut visiting, &mut loaded, false)
 }
 
 /// Return the exact files visited by the normal import loader, including
@@ -44,7 +46,7 @@ pub fn load_rune_document_from_path(path: &Path) -> Result<RuneDocument, LoadErr
 pub fn load_rune_source_paths(path: &Path) -> Result<Vec<PathBuf>, LoadError> {
     let mut visiting = HashSet::new();
     let mut loaded = HashSet::new();
-    load_rune_document_from_path_inner(path, &mut visiting, &mut loaded)?;
+    load_rune_document_from_path_inner(path, &mut visiting, &mut loaded, false)?;
     let entry = canonicalize_for_tracking(path)?;
     let mut paths: Vec<_> = loaded.into_iter().filter(|p| p.is_file()).collect();
     paths.sort_by(|a, b| (a != &entry, a).cmp(&(b != &entry, b)));
@@ -56,20 +58,81 @@ pub fn load_rune_document_from_str_with_base(
     base_dir: &Path,
     source_name: &str,
 ) -> Result<RuneDocument, LoadError> {
+    if is_test_source(Path::new(source_name))
+        || base_dir.join(source_name).canonicalize().is_ok_and(|path| is_test_source(&path)) {
+        return Err(LoadError::TestImport { path: source_name.to_string() });
+    }
     let mut visiting = HashSet::new();
     let mut loaded = HashSet::new();
-    load_rune_document_from_content_inner(content, base_dir, source_name, &mut visiting, &mut loaded)
+    load_rune_document_from_content_inner(
+        content,
+        base_dir,
+        source_name,
+        &mut visiting,
+        &mut loaded,
+        false,
+    )
+}
+
+/// Naming boundary shared by loaders, tooling, and deployment packaging.
+pub fn is_test_source(path: &Path) -> bool {
+    path.file_name().is_some_and(|name| {
+        name.to_string_lossy()
+            .to_ascii_lowercase()
+            .ends_with(".test.rune")
+    })
+}
+
+/// Developer tools deliberately opt into test entry points. Application modules
+/// still cannot import test modules, even when reached from a test entry point.
+pub fn load_rune_test_document_from_path(path: &Path) -> Result<RuneDocument, LoadError> {
+    load_rune_document_from_path_inner(path, &mut HashSet::new(), &mut HashSet::new(), true)
+}
+
+pub fn load_rune_test_document_from_str_with_base(
+    content: &str,
+    base_dir: &Path,
+    source_name: &str,
+) -> Result<RuneDocument, LoadError> {
+    load_rune_document_from_content_inner(
+        content,
+        base_dir,
+        source_name,
+        &mut HashSet::new(),
+        &mut HashSet::new(),
+        true,
+    )
+}
+
+pub fn load_rune_test_source_paths(path: &Path) -> Result<Vec<PathBuf>, LoadError> {
+    let mut loaded = HashSet::new();
+    load_rune_document_from_path_inner(path, &mut HashSet::new(), &mut loaded, true)?;
+    let entry = canonicalize_for_tracking(path)?;
+    let mut paths = loaded
+        .into_iter()
+        .filter(|path| path.is_file())
+        .collect::<Vec<_>>();
+    paths.sort_by(|a, b| (a != &entry, a).cmp(&(b != &entry, b)));
+    Ok(paths)
 }
 
 fn load_rune_document_from_path_inner(
     path: &Path,
     visiting: &mut HashSet<PathBuf>,
     loaded: &mut HashSet<PathBuf>,
+    allow_tests: bool,
 ) -> Result<RuneDocument, LoadError> {
     let canonical = canonicalize_for_tracking(path)?;
+    if !allow_tests && (is_test_source(path) || is_test_source(&canonical)) {
+        return Err(LoadError::TestImport {
+            path: path.display().to_string(),
+        });
+    }
 
     if loaded.contains(&canonical) {
-        return Ok(RuneDocument { sections: Vec::new() });
+        return Ok(RuneDocument {
+            sections: Vec::new(),
+        });
     }
     if !visiting.insert(canonical.clone()) {
         return Err(LoadError::ImportCycle {
@@ -84,13 +147,20 @@ fn load_rune_document_from_path_inner(
                 source,
             })?
             .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-            .filter(|entry| entry.is_dir() || entry.extension().and_then(|ext| ext.to_str()) == Some("rune"))
+            .filter(|entry| {
+                entry.is_dir()
+                    || (entry.extension().and_then(|ext| ext.to_str()) == Some("rune")
+                        && !is_test_source(entry)
+                        && !entry.canonicalize().is_ok_and(|path| is_test_source(&path)))
+            })
             .collect::<Vec<_>>();
         entries.sort();
 
-        let mut doc = RuneDocument { sections: Vec::new() };
+        let mut doc = RuneDocument {
+            sections: Vec::new(),
+        };
         for entry in entries {
-            let imported = load_rune_document_from_path_inner(&entry, visiting, loaded)?;
+            let imported = load_rune_document_from_path_inner(&entry, visiting, loaded, false)?;
             doc.merge(imported);
         }
         Ok(doc)
@@ -106,6 +176,7 @@ fn load_rune_document_from_path_inner(
             &canonical.display().to_string(),
             visiting,
             loaded,
+            allow_tests && is_test_source(&canonical),
         )
     };
 
@@ -122,20 +193,25 @@ fn load_rune_document_from_content_inner(
     source_name: &str,
     visiting: &mut HashSet<PathBuf>,
     loaded: &mut HashSet<PathBuf>,
+    allow_tests: bool,
 ) -> Result<RuneDocument, LoadError> {
     let (imports, stripped_content) = extract_imports(content, source_name)?;
 
-    let mut doc = RuneDocument { sections: Vec::new() };
+    let mut doc = RuneDocument {
+        sections: Vec::new(),
+    };
     for import_path in imports {
         let resolved = base_dir.join(import_path);
-        let imported = load_rune_document_from_path_inner(&resolved, visiting, loaded)?;
+        let imported =
+            load_rune_document_from_path_inner(&resolved, visiting, loaded, allow_tests)?;
         doc.merge(imported);
     }
 
-    let current = parse_rune_with_source(&stripped_content, Some(source_name.to_string())).map_err(|source| LoadError::Parse {
-        path: source_name.to_string(),
-        source,
-    })?;
+    let current = parse_rune_with_source(&stripped_content, Some(source_name.to_string()))
+        .map_err(|source| LoadError::Parse {
+            path: source_name.to_string(),
+            source,
+        })?;
     doc.merge(current);
     Ok(doc)
 }

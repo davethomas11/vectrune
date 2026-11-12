@@ -103,16 +103,13 @@ pub fn run(path: &Path, args: &ArgMatches) -> Result<bool> {
             continue;
         }
         let base = file.parent().unwrap();
-        let before = crate::rune_parser::load_rune_document_from_str_with_base(
-            &source,
-            base,
-            &file.to_string_lossy(),
-        )?;
-        let after = crate::rune_parser::load_rune_document_from_str_with_base(
-            &formatted,
-            base,
-            &file.to_string_lossy(),
-        )?;
+        let loader = if crate::rune_parser::is_test_source(&file) {
+            crate::rune_parser::load_rune_test_document_from_str_with_base
+        } else {
+            crate::rune_parser::load_rune_document_from_str_with_base
+        };
+        let before = loader(&source, base, &file.to_string_lossy())?;
+        let after = loader(&formatted, base, &file.to_string_lossy())?;
         anyhow::ensure!(
             serde_json::to_value(before)? == serde_json::to_value(after)?,
             "Refusing to change meaning while formatting {}",

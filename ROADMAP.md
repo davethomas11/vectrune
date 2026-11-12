@@ -189,7 +189,7 @@ As Vectrune has rapidly evolved, various language processors and dialects develo
 
 ### Track 7: Developer Tooling & Testing ("Complete Tool" Layer)
 
-- [-] **0.3.1 Developer Workflow Release**: Source-aware failures and command suggestions; startup/teardown failure gates; versioned JSON/JSON Lines; fixture hooks, watch recovery, safe formatting; five-test CRUD starter with reproducible download; six developer pages in English, Spanish, and French. Local verification: 65 targeted Rust tests, five Rune starter tests, all 18 developer route/locale pages, and the existing 93-route teaching-site UX suite pass. Cross-platform CI and release/deployment verification pending.
+- [-] **0.3.1 Developer Workflow Release**: Source-aware failures and command suggestions; startup/teardown failure gates; versioned JSON/JSON Lines; fixture hooks, watch recovery, safe formatting; production exclusion of `.test.rune` imports/source lists/Lambda bundles; five-test CRUD starter with reproducible download; six developer pages in English, Spanish, and French. Local verification: 89 targeted Rust tests, five Rune starter tests, all 18 developer route/locale pages, and the existing 93-route teaching-site UX suite pass. Cross-platform CI and release/deployment verification pending.
 
 - [x] **Native In-Language Test Runner (`@Test` & `vectrune test`)**:
   - Introduce `@Test/<name>` sections directly in `.rune` files:

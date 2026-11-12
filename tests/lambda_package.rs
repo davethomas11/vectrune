@@ -1,5 +1,5 @@
 use assert_cmd::Command;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Read;
 use std::path::PathBuf;
 use tempfile::tempdir;
@@ -10,6 +10,10 @@ fn lambda_package_creates_zip_bundle() -> Result<(), Box<dyn std::error::Error>>
     let temp = tempdir()?;
     let output_zip = temp.path().join("lambda_bundle.zip");
     let vectrune_bin = assert_cmd::cargo::cargo_bin!("vectrune");
+    // Packaging accepts a supplied bootstrap. Keep this test independent of
+    // debug-symbol size and the size of the compiler used to run the test.
+    let bootstrap = temp.path().join("bootstrap-fixture");
+    fs::write(&bootstrap, b"test-bootstrap")?;
     let rune_path = PathBuf::from("examples/book_graphql.rune");
 
     let mut cmd = Command::new(&vectrune_bin);
@@ -18,7 +22,7 @@ fn lambda_package_creates_zip_bundle() -> Result<(), Box<dyn std::error::Error>>
         .arg("--rune")
         .arg(rune_path.to_str().unwrap())
         .arg("--binary")
-        .arg(vectrune_bin.to_str().unwrap())
+        .arg(bootstrap.to_str().unwrap())
         .arg("--mode")
         .arg("zip")
         .arg("--output")
