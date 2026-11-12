@@ -44,6 +44,14 @@ impl JsCodegen {
 
     /// Generate complete JavaScript application code.
     pub fn generate(&self) -> String {
+        self.generate_with_runtime(include_str!("../../../runtime/rune-web/dist/rune-runtime.js"))
+    }
+
+    pub fn generate_logic_test(&self) -> String {
+        self.generate_with_runtime(include_str!("../../../runtime/rune-web/dist/rune-logic-test.js"))
+    }
+
+    fn generate_with_runtime(&self, runtime: &str) -> String {
         let mut normalized_derived = HashMap::new();
         for (name, def) in &self.logic.derived {
             let mut normalized_cases = Vec::new();
@@ -115,7 +123,7 @@ __RuneWeb.boot({{
   music: {music_json}
 }});
 "#,
-            include_str!("../../../runtime/rune-web/dist/rune-runtime.js")
+            runtime
         )
     }
 

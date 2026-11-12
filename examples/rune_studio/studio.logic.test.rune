@@ -1,0 +1,67 @@
+#!RUNE
+# JavaScript logic tests: vectrune test examples/rune_studio (or --type logic)
+import "rune_studio.rune"
+
+@Test/StudioLogic/Tempo
+type = logic
+page = studio
+run:
+    assert state.tempo == 144
+    invoke changeTempo 4
+    assert state.tempo == 148
+    assert state.status_message == "Tempo: 148 BPM"
+    assert mock.audio[0].operation == "music.tempo"
+    assert mock.audio[0].args[0] == 148
+    invoke changeTempo 1000
+    assert state.tempo == 240
+    invoke changeTempo -1000
+    assert state.tempo == 40
+
+@Test/StudioLogic/SaveLoad
+type = logic
+page = studio
+setup:
+    invoke selectSong "moonlight"
+run:
+    invoke changeTempo 4
+    invoke saveToStorage
+    assert mock.storage.rune_studio_last_song == "moonlight"
+    assert mock.storage.rune_studio_moonlight.tempo == 112
+    invoke changeTempo 20
+    assert state.tempo == 132
+    invoke loadFromStorage
+    assert state.tempo == 112
+    assert state.status_message contains "Restored"
+
+@Test/StudioLogic/Export
+type = logic
+page = studio
+run:
+    invoke selectSong "moonlight"
+    invoke exportRune
+    assert mock.downloads[0].filename == "moonlight.rune"
+    assert mock.downloads[0].content contains "@Music/moonlight\ntype = 8bit\ntempo = 108"
+    assert mock.downloads[0].content contains "\nlead:\n    "
+    invoke copyCode
+    assert mock.clipboard[0] == mock.downloads[0].content
+
+@Test/StudioLogic/Isolation
+type = logic
+page = studio
+run:
+    assert state.tempo == 144
+    assert state.selected_song == "vectraiders"
+    assert mock.storage == {}
+    assert mock.downloads == []
+    assert mock.clipboard == []
+
+@Test/StudioLogic/Playback
+type = logic
+page = studio
+run:
+    invoke playTrack
+    assert state.is_playing == true
+    assert state.status_message contains "Playing: VectRaiders"
+    invoke stopTrack
+    assert state.is_playing == false
+    assert state.is_paused == false

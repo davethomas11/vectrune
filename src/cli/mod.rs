@@ -1,3 +1,4 @@
+pub mod logic_testing;
 mod ai;
 pub mod developer;
 pub mod diagnostics;

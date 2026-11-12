@@ -1066,166 +1066,24 @@ var __RuneWeb = (() => {
     return resolveValue(trimmed, scope);
   }
 
-  // src/rendering.ts
-  function renderNode(node, locals) {
-    if (node.Element) {
-      const element = node.Element;
-      if (element.for_each) {
-        const collection = evaluateExpression(
-          element.for_each.collection,
-          buildScope(locals)
-        );
-        if (!Array.isArray(collection)) return "";
-        return collection.map((item, index) => {
-          const childLocals = Object.assign(
-            {},
-            locals || {}
-          );
-          childLocals[element.for_each.item_name] = item;
-          if (element.for_each.index_name)
-            childLocals[element.for_each.index_name] = index;
-          return renderElement(element, childLocals);
-        }).join("");
-      }
-      return renderElement(element, locals);
-    }
-    if (node.Loop) {
-      const loop = node.Loop;
-      const collection = evaluateExpression(
-        loop.collection,
-        buildScope(locals)
-      );
-      if (!Array.isArray(collection)) return "";
-      return collection.map((item, index) => {
-        const childLocals = Object.assign(
-          {},
-          locals || {}
-        );
-        childLocals[loop.item_name] = item;
-        if (loop.index_name) childLocals[loop.index_name] = index;
-        return (loop.body || []).map((child) => renderNode(child, childLocals)).join("");
-      }).join("");
-    }
-    if (node.Conditional) {
-      const conditional = node.Conditional;
-      if (Boolean(
-        evaluateExpression(
-          conditional.condition,
-          buildScope(locals)
-        )
-      )) {
-        return (conditional.body || []).map((child) => renderNode(child, locals)).join("");
-      }
-      return "";
-    }
-    if (node.Match) {
-      const match = node.Match;
-      const value = String(evaluateExpression(match.expression, buildScope(locals)));
-      for (const caseDef of match.cases) {
-        let matcher = normalizeLiteral(caseDef.matcher);
-        if (matcher === "_" || matcher === value) {
-          return (caseDef.body || []).map((child) => renderNode(child, locals)).join("");
-        }
-      }
-      return "";
-    }
-    if (node.ComponentScope) {
-      const scope = node.ComponentScope;
-      const childLocals = Object.assign(
-        {},
-        locals || {}
-      );
-      for (const [key, value] of Object.entries(scope.props || {})) {
-        const valStr = String(value ?? "").trim();
-        if (valStr.startsWith("{") && valStr.endsWith("}")) {
-          const exprStr = valStr.slice(1, -1).trim();
-          childLocals[key] = evaluateExpression(
-            exprStr,
-            buildScope(locals)
-          );
-        } else {
-          const parsed = tryParseLiteral(valStr, buildScope(locals));
-          childLocals[key] = parsed !== void 0 ? parsed : valStr;
-        }
-      }
-      return renderNode(scope.body, childLocals);
-    }
-    if (node.MemoryBinding) {
-      const binding = node.MemoryBinding;
-      const memValue = ctx().app.state[binding.key];
-      const childLocals = Object.assign(
-        {},
-        locals || {},
-        { [binding.var]: memValue }
-      );
-      return (binding.body || []).map((child) => renderNode(child, childLocals)).join("");
-    }
-    if (node.Text !== void 0) {
-      return escapeHtml(interpolate(node.Text, buildScope(locals)));
-    }
-    if (node.Comment !== void 0) {
-      return `<!--${interpolate(node.Comment, buildScope(locals))}-->`;
-    }
-    if (node.LazyRoute) {
-      const lazy = node.LazyRoute;
-      const context = ctx();
-      const app = context.app;
-      const cleanRoute = lazy.route.toLowerCase();
-      if (context.loadedChunks && context.loadedChunks[cleanRoute]) {
-        const chunk = context.loadedChunks[cleanRoute];
-        if (Array.isArray(chunk)) {
-          return chunk.map((c) => renderNode(c, locals)).join("");
-        }
-        return renderNode(chunk, locals);
-      }
-      if (app && app.loadChunk) {
-        app.loadChunk(cleanRoute, lazy.chunk_url);
-      }
-      if (lazy.fallback && lazy.fallback.length > 0) {
-        return lazy.fallback.map((c) => renderNode(c, locals)).join("");
-      }
-      return `<div class="rune-lazy-placeholder" data-route="${escapeHtml(lazy.route)}"></div>`;
-    }
-    return "";
+  // src/effects.ts
+  function downloadText(filename, content) {
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
-  function renderElement(element, locals) {
-    const scope = buildScope(locals);
-    let attrs = "";
-    if (element.id)
-      attrs += ` id="${escapeHtml(interpolate(element.id, scope))}"`;
-    if (element.classes && element.classes.length) {
-      const renderedClasses = element.classes.map((c) => interpolate(c, scope)).filter((c) => c.length > 0);
-      if (renderedClasses.length)
-        attrs += ` class="${renderedClasses.join(" ")}"`;
+  function copyText(text) {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {
+      });
     }
-    for (const [key, value] of Object.entries(element.attrs || {})) {
-      const interpolated = interpolate(value, scope);
-      const renderedValue = key === "src" || key === "href" ? hostedUrl(interpolated) : interpolated;
-      if (renderedValue === "false" || renderedValue === "undefined" || renderedValue === "null") {
-        const boolAttrs = [
-          "checked",
-          "disabled",
-          "readonly",
-          "selected",
-          "hidden",
-          "required",
-          "multiple",
-          "autofocus"
-        ];
-        if (boolAttrs.includes(key)) continue;
-      }
-      attrs += ` ${key}="${escapeHtml(renderedValue)}"`;
-    }
-    const eventEntries = Object.entries(element.events || {});
-    if (eventEntries.length > 0 && locals && Object.keys(locals).length) {
-      attrs += ` data-rune-scope="${escapeHtml(JSON.stringify(locals))}"`;
-    }
-    for (const [eventName, handler] of eventEntries) {
-      attrs += ` data-on-${eventName}="${escapeHtml(interpolate(handler, scope))}"`;
-    }
-    const text = element.text ? escapeHtml(interpolate(element.text, scope)) : "";
-    const children = (element.children || []).map((child) => renderNode(child, locals)).join("");
-    return `<${element.tag}${attrs}>${text}${children}</${element.tag}>`;
   }
 
   // src/builtins/command.ts
@@ -3286,17 +3144,7 @@ var __RuneWeb = (() => {
       if (parts.length >= 2) {
         const filename = String(evaluateExpression(parts[0], buildScope(locals)));
         const content = String(evaluateExpression(parts[1], buildScope(locals)));
-        if (typeof window !== "undefined" && typeof document !== "undefined") {
-          const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
+        downloadText(filename, content);
       }
       return true;
     }
@@ -3306,27 +3154,14 @@ var __RuneWeb = (() => {
       if (parts.length >= 2) {
         const filename = String(evaluateExpression(parts[0], buildScope(locals)));
         const content = String(evaluateExpression(parts[1], buildScope(locals)));
-        if (typeof window !== "undefined" && typeof document !== "undefined") {
-          const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
+        downloadText(filename, content);
       }
       return true;
     }
     if ((trimmed.startsWith("clipboard.copy(") || trimmed.startsWith("copy(")) && trimmed.endsWith(")")) {
       const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
       const text = String(evaluateExpression(inner, buildScope(locals)));
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        navigator.clipboard.writeText(text).catch(() => {
-        });
-      }
+      copyText(text);
       return true;
     }
     if (trimmed === "fullscreen.toggle()" || trimmed === "fullscreen.toggle" || trimmed === "fullscreen()" || trimmed === "fullscreen" || trimmed === "toggle_fullscreen()" || trimmed === "fullscreen.enter()" || trimmed === "fullscreen.exit()") {
@@ -3816,6 +3651,222 @@ var __RuneWeb = (() => {
     return steps;
   }
 
+  // src/logic.ts
+  function createLogicApp(render) {
+    return {
+      state: {},
+      derived: {},
+      playSound,
+      playMusic,
+      stopMusic,
+      pauseMusic,
+      resumeMusic,
+      computeDerived() {
+        const context = ctx();
+        const baseScope = buildScope({});
+        for (const [name, def] of Object.entries(
+          context.derivedDefinitions
+        )) {
+          const sourceValue = resolveValue(def.source, baseScope);
+          const sourceKey = valueToString(sourceValue);
+          let resolved = void 0;
+          for (const currentCase of def.cases || []) {
+            const matcher = normalizeLiteral(currentCase.matcher);
+            if (matcher === "_" || matcher === sourceKey) {
+              resolved = evaluateExpression(
+                currentCase.value,
+                buildScope({})
+              );
+              break;
+            }
+          }
+          this.derived[name] = resolved;
+        }
+      },
+      render,
+      invokeAction(name, args, locals) {
+        const context = ctx();
+        const def = context.actionDefinitions[name];
+        if (!def) {
+          if (typeof window !== "undefined" && typeof window[name] === "function") {
+            window[name](...args);
+          }
+          return;
+        }
+        const scopedLocals = Object.assign(
+          {},
+          locals || {}
+        );
+        (def.params || []).forEach((param, index) => {
+          scopedLocals[param] = args[index];
+        });
+        executeSteps(def.steps || [], scopedLocals);
+      }
+    };
+  }
+
+  // src/rendering.ts
+  function renderNode(node, locals) {
+    if (node.Element) {
+      const element = node.Element;
+      if (element.for_each) {
+        const collection = evaluateExpression(
+          element.for_each.collection,
+          buildScope(locals)
+        );
+        if (!Array.isArray(collection)) return "";
+        return collection.map((item, index) => {
+          const childLocals = Object.assign(
+            {},
+            locals || {}
+          );
+          childLocals[element.for_each.item_name] = item;
+          if (element.for_each.index_name)
+            childLocals[element.for_each.index_name] = index;
+          return renderElement(element, childLocals);
+        }).join("");
+      }
+      return renderElement(element, locals);
+    }
+    if (node.Loop) {
+      const loop = node.Loop;
+      const collection = evaluateExpression(
+        loop.collection,
+        buildScope(locals)
+      );
+      if (!Array.isArray(collection)) return "";
+      return collection.map((item, index) => {
+        const childLocals = Object.assign(
+          {},
+          locals || {}
+        );
+        childLocals[loop.item_name] = item;
+        if (loop.index_name) childLocals[loop.index_name] = index;
+        return (loop.body || []).map((child) => renderNode(child, childLocals)).join("");
+      }).join("");
+    }
+    if (node.Conditional) {
+      const conditional = node.Conditional;
+      if (Boolean(
+        evaluateExpression(
+          conditional.condition,
+          buildScope(locals)
+        )
+      )) {
+        return (conditional.body || []).map((child) => renderNode(child, locals)).join("");
+      }
+      return "";
+    }
+    if (node.Match) {
+      const match = node.Match;
+      const value = String(evaluateExpression(match.expression, buildScope(locals)));
+      for (const caseDef of match.cases) {
+        let matcher = normalizeLiteral(caseDef.matcher);
+        if (matcher === "_" || matcher === value) {
+          return (caseDef.body || []).map((child) => renderNode(child, locals)).join("");
+        }
+      }
+      return "";
+    }
+    if (node.ComponentScope) {
+      const scope = node.ComponentScope;
+      const childLocals = Object.assign(
+        {},
+        locals || {}
+      );
+      for (const [key, value] of Object.entries(scope.props || {})) {
+        const valStr = String(value ?? "").trim();
+        if (valStr.startsWith("{") && valStr.endsWith("}")) {
+          const exprStr = valStr.slice(1, -1).trim();
+          childLocals[key] = evaluateExpression(
+            exprStr,
+            buildScope(locals)
+          );
+        } else {
+          const parsed = tryParseLiteral(valStr, buildScope(locals));
+          childLocals[key] = parsed !== void 0 ? parsed : valStr;
+        }
+      }
+      return renderNode(scope.body, childLocals);
+    }
+    if (node.MemoryBinding) {
+      const binding = node.MemoryBinding;
+      const memValue = ctx().app.state[binding.key];
+      const childLocals = Object.assign(
+        {},
+        locals || {},
+        { [binding.var]: memValue }
+      );
+      return (binding.body || []).map((child) => renderNode(child, childLocals)).join("");
+    }
+    if (node.Text !== void 0) {
+      return escapeHtml(interpolate(node.Text, buildScope(locals)));
+    }
+    if (node.Comment !== void 0) {
+      return `<!--${interpolate(node.Comment, buildScope(locals))}-->`;
+    }
+    if (node.LazyRoute) {
+      const lazy = node.LazyRoute;
+      const context = ctx();
+      const app = context.app;
+      const cleanRoute = lazy.route.toLowerCase();
+      if (context.loadedChunks && context.loadedChunks[cleanRoute]) {
+        const chunk = context.loadedChunks[cleanRoute];
+        if (Array.isArray(chunk)) {
+          return chunk.map((c) => renderNode(c, locals)).join("");
+        }
+        return renderNode(chunk, locals);
+      }
+      if (app && app.loadChunk) {
+        app.loadChunk(cleanRoute, lazy.chunk_url);
+      }
+      if (lazy.fallback && lazy.fallback.length > 0) {
+        return lazy.fallback.map((c) => renderNode(c, locals)).join("");
+      }
+      return `<div class="rune-lazy-placeholder" data-route="${escapeHtml(lazy.route)}"></div>`;
+    }
+    return "";
+  }
+  function renderElement(element, locals) {
+    const scope = buildScope(locals);
+    let attrs = "";
+    if (element.id)
+      attrs += ` id="${escapeHtml(interpolate(element.id, scope))}"`;
+    if (element.classes && element.classes.length) {
+      const renderedClasses = element.classes.map((c) => interpolate(c, scope)).filter((c) => c.length > 0);
+      if (renderedClasses.length)
+        attrs += ` class="${renderedClasses.join(" ")}"`;
+    }
+    for (const [key, value] of Object.entries(element.attrs || {})) {
+      const interpolated = interpolate(value, scope);
+      const renderedValue = key === "src" || key === "href" ? hostedUrl(interpolated) : interpolated;
+      if (renderedValue === "false" || renderedValue === "undefined" || renderedValue === "null") {
+        const boolAttrs = [
+          "checked",
+          "disabled",
+          "readonly",
+          "selected",
+          "hidden",
+          "required",
+          "multiple",
+          "autofocus"
+        ];
+        if (boolAttrs.includes(key)) continue;
+      }
+      attrs += ` ${key}="${escapeHtml(renderedValue)}"`;
+    }
+    const eventEntries = Object.entries(element.events || {});
+    if (eventEntries.length > 0 && locals && Object.keys(locals).length) {
+      attrs += ` data-rune-scope="${escapeHtml(JSON.stringify(locals))}"`;
+    }
+    for (const [eventName, handler] of eventEntries) {
+      attrs += ` data-on-${eventName}="${escapeHtml(interpolate(handler, scope))}"`;
+    }
+    const text = element.text ? escapeHtml(interpolate(element.text, scope)) : "";
+    const children = (element.children || []).map((child) => renderNode(child, locals)).join("");
+    return `<${element.tag}${attrs}>${text}${children}</${element.tag}>`;
+  }
+
   // src/events.ts
   function parseHandlerSpec(spec) {
     const trimmed = String(spec || "").trim();
@@ -3928,68 +3979,19 @@ var __RuneWeb = (() => {
   function boot(config) {
     registerSounds(config.sounds);
     registerMusic(config.music);
-    const app = {
-      state: {},
-      derived: {},
-      playSound,
-      playMusic,
-      stopMusic,
-      pauseMusic,
-      resumeMusic,
-      computeDerived() {
-        const context = ctx();
-        const baseScope = buildScope({});
-        for (const [name, def] of Object.entries(
-          context.derivedDefinitions
-        )) {
-          const sourceValue = resolveValue(def.source, baseScope);
-          const sourceKey = valueToString(sourceValue);
-          let resolved = void 0;
-          for (const currentCase of def.cases || []) {
-            const matcher = normalizeLiteral(currentCase.matcher);
-            if (matcher === "_" || matcher === sourceKey) {
-              resolved = evaluateExpression(
-                currentCase.value,
-                buildScope({})
-              );
-              break;
-            }
-          }
-          this.derived[name] = resolved;
-        }
-      },
-      render() {
-        const context = ctx();
-        if (context.isRendering) return;
-        context.isRendering = true;
-        try {
-          this.computeDerived();
-          const root = document.getElementById("app");
-          if (!root) return;
-          root.innerHTML = renderNode(context.pageTree, {});
-        } finally {
-          context.isRendering = false;
-        }
-      },
-      invokeAction(name, args, locals) {
-        const context = ctx();
-        const def = context.actionDefinitions[name];
-        if (!def) {
-          if (typeof window !== "undefined" && typeof window[name] === "function") {
-            window[name](...args);
-          }
-          return;
-        }
-        const scopedLocals = Object.assign(
-          {},
-          locals || {}
-        );
-        (def.params || []).forEach((param, index) => {
-          scopedLocals[param] = args[index];
-        });
-        executeSteps(def.steps || [], scopedLocals);
+    const app = createLogicApp(function() {
+      const context = ctx();
+      if (context.isRendering) return;
+      context.isRendering = true;
+      try {
+        this.computeDerived();
+        const root = document.getElementById("app");
+        if (!root) return;
+        root.innerHTML = renderNode(context.pageTree, {});
+      } finally {
+        context.isRendering = false;
       }
-    };
+    });
     const loadedChunks = {};
     const loadingChunks = {};
     app.loadedChunks = loadedChunks;

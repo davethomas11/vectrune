@@ -1,3 +1,4 @@
+import { downloadText, copyText } from './effects';
 // ============================================================================
 // Statement execution — actions, assignments, mutations
 // ============================================================================
@@ -654,17 +655,7 @@ function syncMusicState(state: any): void {
     if (parts.length >= 2) {
       const filename = String(evaluateExpression(parts[0], buildScope(locals)));
       const content = String(evaluateExpression(parts[1], buildScope(locals)));
-      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      downloadText(filename, content);
     }
     return true;
   }
@@ -675,17 +666,7 @@ function syncMusicState(state: any): void {
     if (parts.length >= 2) {
       const filename = String(evaluateExpression(parts[0], buildScope(locals)));
       const content = String(evaluateExpression(parts[1], buildScope(locals)));
-      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      downloadText(filename, content);
     }
     return true;
   }
@@ -697,9 +678,7 @@ function syncMusicState(state: any): void {
   ) {
     const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
     const text = String(evaluateExpression(inner, buildScope(locals)));
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(() => {});
-    }
+    copyText(text);
     return true;
   }
 

@@ -248,7 +248,7 @@ ollama pull phi4
 
 ## Doctor, check, and Rune tests
 
-The developer workflow is available in Vectrune 0.3.1. See the [Developer section](https://vectrune.com/developer) for installation, examples, and a downloadable tested starter. `doctor`, `check`, and the initial test runner were introduced in 0.2.21.
+The developer workflow is available in Vectrune 0.3.2, including embedded JavaScript logic tests (introduced in 0.3.2). See the [Developer section](https://vectrune.com/developer) for installation, examples, and a downloadable tested starter. `doctor`, `check`, and the initial test runner were introduced in 0.2.21.
 
 ```sh
 vectrune doctor examples/testing/app.rune
@@ -318,6 +318,33 @@ python3 tests/browser/rune_studio.py
 ```
 
 It requires a built `target/debug/vectrune`, Python Playwright, and Chromium, as do the other scripts in `tests/browser`. It checks UI state and export contents; it does not measure audible playback quality. The `.test.rune` file remains excluded from production imports, source bundles, and Lambda packages.
+
+### JavaScript logic tests
+
+The test command includes an embedded QuickJS runner that executes Rune-Web's production action and expression interpreter without opening a browser. Try the [Studio logic tests](examples/rune_studio/studio.logic.test.rune):
+
+```sh
+vectrune test examples/rune_studio/studio.logic.test.rune
+vectrune test examples/rune_studio --json
+```
+
+`vectrune test` runs native and JavaScript logic tests together by default (`--type all`). Use `--type native` or `--type logic` to select one engine. These selectors also apply to `--list`, `--filter`, and `--watch`. No feature flag, Node installation, or browser is required to run logic tests in a newly built CLI.
+
+```rune
+@Test/Tempo
+type = logic
+page = studio
+run:
+    invoke changeTempo 4
+    assert state.tempo == 148
+    assert mock.audio[0].operation == "music.tempo"
+```
+
+Set `page` to an existing `@Page` name; its `logic` reference selects the action definitions. An optional `logic = name` overrides that reference. `invoke` accepts an action name followed by one JSON value, or a JSON array of positional arguments; omit the value for actions without arguments. Assertions use the same strict comparisons as native tests, with `state`, `derived`, and `mock` as roots. Unknown actions and test steps fail. A test must execute an assertion in its own `run:` block.
+
+Every test gets a fresh runtime with isolated state and in-memory storage. `mock.storage` contains decoded saved values; `mock.downloads` records `{filename, content}`; `mock.clipboard` records copied text; `mock.audio` records `{operation, args}` without producing sound. Reactive renders recompute derived values without a DOM. Optional per-test `setup:` and `teardown:` blocks use the same `invoke`/`assert` steps; teardown runs after action or assertion failure and has a separate bounded budget. QuickJS interrupts runaway JavaScript at `--timeout`, with a 64 MiB memory limit and a 512 KiB stack limit.
+
+This first prototype covers synchronous actions. DOM/layout/events, network mocks, timers, pending asynchronous jobs, shared fixtures, logic suite hooks, i18n/memory seeds, and a `type = browser` adapter remain future work. Native suite hooks belong to native tests and are not applied to logic tests. Use the existing Playwright companion for actual browser behavior. The developer CLI CI matrix exercises both engines on Linux, macOS, and Windows. Node is only needed when rebuilding the JavaScript bundles (`cd runtime/rune-web && npm ci && npm run build`).
 
 ### Fixtures and cleanup
 

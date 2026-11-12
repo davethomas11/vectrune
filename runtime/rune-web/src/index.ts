@@ -5,13 +5,13 @@
 // It exposes boot(config) which initializes the entire application.
 // ============================================================================
 
+import { createLogicApp } from './logic';
 import { initContext, ctx } from './context';
-import { evaluateExpression, resolveValue } from './expression';
 import { getWindowProp, setWindowProp } from './globals';
-import { buildScope, makeReactive } from './scope';
-import { hostedUrl, normalizeLiteral, valueToString } from './utils';
+import { makeReactive } from './scope';
+import { hostedUrl } from './utils';
 import { renderNode } from './rendering';
-import { executeSteps, parseTrackToSteps } from './statement';
+import { parseTrackToSteps } from './statement';
 import { bindEvent, setupMemoryUpdateListener } from './events';
 import { setupNavigator, updateSeoMetadata } from './navigator';
 import {
@@ -52,75 +52,19 @@ export function boot(config: RuneWebConfig): RuneApp {
   registerSounds(config.sounds);
   registerMusic(config.music);
 
-  // Build the app object first (render will be set after context init)
-  const app: RuneApp = {
-    state: {} as Record<string, unknown>,
-    derived: {},
-    playSound,
-    playMusic,
-    stopMusic,
-    pauseMusic,
-    resumeMusic,
-    computeDerived() {
-      const context = ctx();
-      const baseScope = buildScope({});
-      for (const [name, def] of Object.entries(
-        context.derivedDefinitions,
-      )) {
-        const sourceValue = resolveValue(def.source, baseScope);
-        const sourceKey = valueToString(sourceValue);
-        let resolved: unknown = undefined;
-
-        for (const currentCase of def.cases || []) {
-          const matcher = normalizeLiteral(currentCase.matcher);
-          if (matcher === '_' || matcher === sourceKey) {
-            resolved = evaluateExpression(
-              currentCase.value,
-              buildScope({}),
-            );
-            break;
-          }
-        }
-
-        this.derived[name] = resolved;
-      }
-    },
-    render() {
-      const context = ctx();
-      if (context.isRendering) return;
-      context.isRendering = true;
-      try {
-        this.computeDerived();
-        const root = document.getElementById('app');
-        if (!root) return;
-        root.innerHTML = renderNode(context.pageTree, {});
-      } finally {
-        context.isRendering = false;
-      }
-    },
-    invokeAction(
-      name: string,
-      args: unknown[],
-      locals?: Record<string, unknown>,
-    ) {
-      const context = ctx();
-      const def = context.actionDefinitions[name];
-      if (!def) {
-        if (typeof window !== 'undefined' && typeof (window as any)[name] === 'function') {
-          (window as any)[name](...args);
-        }
-        return;
-      }
-      const scopedLocals: Record<string, unknown> = Object.assign(
-        {},
-        locals || {},
-      );
-      (def.params || []).forEach((param, index) => {
-        scopedLocals[param] = args[index];
-      });
-      executeSteps(def.steps || [], scopedLocals);
-    },
-  };
+  const app = createLogicApp(function (this: RuneApp) {
+    const context = ctx();
+    if (context.isRendering) return;
+    context.isRendering = true;
+    try {
+      this.computeDerived();
+      const root = document.getElementById('app');
+      if (!root) return;
+      root.innerHTML = renderNode(context.pageTree, {});
+    } finally {
+      context.isRendering = false;
+    }
+  });
 
   // Initialize the context singleton
   const loadedChunks: Record<string, import('./types').ViewNode[] | import('./types').ViewNode> = {};

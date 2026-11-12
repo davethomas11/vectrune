@@ -17,7 +17,7 @@ pub fn commands() -> Vec<Command> {
             "doctor" => "Diagnose executable, project, and local port configuration",
             "check" => "Check Rune imports, routes, references, and frontend without running the app",
             "fmt" => "Format Rune documents while preserving views, styles, and embedded source",
-            _ => "Run @Test sections against the real application without opening a port",
+            _ => "Run native and Rune-Web logic @Test sections without opening a port",
         }).arg(Arg::new("project").value_name("PATH").help(if name == "test" { "Rune entry file or project directory (default: current directory)" } else { "Rune entry file or project directory (default: app.rune, then current directory)" }))
           .arg(Arg::new("json").long("json").action(ArgAction::SetTrue).help("Emit a JSON report"));
         if name == "fmt" {
@@ -26,6 +26,7 @@ pub fn commands() -> Vec<Command> {
             command.arg(Arg::new("deny-warnings").long("deny-warnings").action(ArgAction::SetTrue).help("Treat linter warnings as failures"))
         } else if name == "test" {
             command.arg(Arg::new("watch").long("watch").action(ArgAction::SetTrue).conflicts_with("list").help("Rerun tests after source and fixture changes; Ctrl-C exits"))
+                .arg(Arg::new("type").long("type").default_value("all").value_parser(["native", "logic", "all"]).help("Select native HTTP tests, JavaScript logic tests, or both"))
                 .arg(Arg::new("filter").long("filter").value_name("NAME").help("Only run test names containing NAME"))
                 .arg(Arg::new("list").long("list").action(ArgAction::SetTrue).help("List matching tests without running startup or test code"))
                 .arg(Arg::new("timeout").long("timeout").default_value("10").value_parser(clap::value_parser!(u64).range(1..)).help("Timeout in seconds per test, including application startup"))
@@ -225,6 +226,14 @@ pub fn check(doc: &RuneDocument) -> Vec<Diagnostic> {
                         format!("Unknown @Authentication/{auth}"),
                     );
                 }
+            }
+        }
+        if matches!(kind, "Test" | "TestSuite" | "TestFixture") {
+            let engine = super::testing::test_type(section);
+            if section.kv.get("type").is_some_and(|v| v.as_str().is_none()) {
+                report("error", "test-type", "Test type must be native or logic".into());
+            } else if !matches!(engine, "native" | "logic") {
+                report("error", "test-type", format!("Unsupported test type: {engine}; expected native or logic (browser tests are not implemented yet)"));
             }
         }
         if kind == "Test" && section.series.get("run").is_none_or(Vec::is_empty) {
@@ -621,6 +630,13 @@ fn command_diagnostics(doc: &RuneDocument) -> Vec<Diagnostic> {
             section.path.first().map(String::as_str),
             Some("App" | "Route" | "Test" | "TestSuite" | "TestFixture" | "GraphQL")
         ) {
+            continue;
+        }
+        if matches!(
+            section.path.first().map(String::as_str),
+            Some("Test" | "TestSuite" | "TestFixture")
+        ) && super::testing::test_type(section) == "logic"
+        {
             continue;
         }
         let mut lines = Vec::new();

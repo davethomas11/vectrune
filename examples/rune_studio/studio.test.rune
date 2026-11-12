@@ -1,6 +1,7 @@
 #!RUNE
 # Native web tests exercise the real HTTP router and server-rendered markup.
-# Clicks, browser storage, downloads, and audio need the browser companion test.
+# Client actions and mocked effects are covered by studio.logic.test.rune.
+# Real browser interactions are covered by the Playwright companion.
 import "rune_studio.rune"
 
 @Test/Studio/Document

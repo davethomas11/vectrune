@@ -4,6 +4,7 @@ on:
   push:
     branches: [main, 'release/**']
     paths:
+      - 'runtime/rune-web/**'
       - 'src/**'
       - 'tests/**'
       - 'examples/testing/**'
@@ -14,6 +15,7 @@ on:
       - '.github/workflows/developer-cli.yml'
   pull_request:
     paths:
+      - 'runtime/rune-web/**'
       - 'src/**'
       - 'tests/**'
       - 'examples/testing/**'
@@ -41,7 +43,7 @@ jobs:
       - name: Check compiler
         run: cargo check
       - name: Test CLI and runtime integration
-        run: cargo test --test developer_cli --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package
+        run: cargo test --test developer_cli --test logic_testing --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package
       - name: Test CLI support and deployment packaging
         run: 'cargo test --lib cli::'
       - name: Check starter formatting
@@ -54,7 +56,7 @@ jobs:
         run: target/debug/vectrune check examples/rune_studio --deny-warnings
       - name: Check Studio test formatting
         run: target/debug/vectrune fmt examples/rune_studio/studio.test.rune --check
-      - name: Run Rune Studio web response tests
+      - name: Run Rune Studio native and logic tests
         run: target/debug/vectrune test examples/rune_studio --json
       - name: Verify downloaded starter workflow
         run: python tests/browser/test_developer_starter.py

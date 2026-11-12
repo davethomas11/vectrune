@@ -88,6 +88,14 @@ jobs:
           fi
         shell: bash
 
+      - name: Verify native release binaries
+        if: matrix.platform.name != 'linux-arm64' && matrix.platform.name != 'linux-armv7'
+        shell: bash
+        run: |
+          BIN="target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}"
+          "$BIN" --version
+          "$BIN" test examples/rune_studio --json
+
       - name: Package
         shell: bash
         run: |

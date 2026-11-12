@@ -161,7 +161,7 @@ fn operand(text: &str, ctx: &Context) -> Result<Value> {
         .ok_or_else(|| anyhow::anyhow!("Unresolved assertion operand: {text}"))
 }
 
-fn assertion(expression: &str, ctx: &Context) -> Result<()> {
+pub(super) fn assertion(expression: &str, ctx: &Context) -> Result<()> {
     // Locate an operator outside quoted strings and indexed paths.
     let mut quoted = false;
     let mut escaped = false;
@@ -315,22 +315,27 @@ async fn request(
 }
 
 #[derive(Serialize)]
-struct TestResult {
-    name: String,
-    file: Option<String>,
-    passed: bool,
-    assertions: usize,
-    duration_ms: u128,
-    error: Option<String>,
-    location: Option<super::diagnostics::SourceLocation>,
+pub(super) struct TestResult {
+    pub(super) name: String,
+    pub(super) file: Option<String>,
+    pub(super) passed: bool,
+    pub(super) assertions: usize,
+    pub(super) duration_ms: u128,
+    pub(super) error: Option<String>,
+    pub(super) location: Option<super::diagnostics::SourceLocation>,
 }
 
 pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bool> {
     let filter = args.get_one::<String>("filter");
+    let engine = args
+        .get_one::<String>("type")
+        .map(String::as_str)
+        .unwrap_or("all");
     let mut tests = doc
         .sections
         .iter()
         .filter(|s| s.path.first().map(String::as_str) == Some("Test"))
+        .filter(|s| engine == "all" || test_type(s) == engine)
         .filter(|s| filter.is_none_or(|f| s.path[1..].join("/").contains(f)))
         .cloned()
         .collect::<Vec<_>>();
@@ -368,6 +373,17 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
     let mut results = Vec::new();
     for test in tests {
         let started = Instant::now();
+        if test_type(&test) == "logic" {
+            let result = {
+                let doc = state.doc.clone();
+                let test = test.clone();
+                tokio::task::spawn_blocking(move || super::logic_testing::run(&doc, &test, timeout))
+                    .await?
+            };
+            report_result(&result, json_output);
+            results.push(result);
+            continue;
+        }
         let assertions = Arc::new(AtomicUsize::new(0));
         let failure = Arc::new(Mutex::new(None));
         let location = Arc::new(Mutex::new(None));
@@ -415,8 +431,11 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
                                         .await?;
                                 }
                             }
-                            if let Some(suite) =
-                                state.doc.sections.iter().find(|s| s.path == ["TestSuite"])
+                            if let Some(suite) = state
+                                .doc
+                                .sections
+                                .iter()
+                                .find(|s| s.path == ["TestSuite"] && test_type(s) == "native")
                             {
                                 cleanup.push(suite.clone());
                                 phase(&state, suite, "setup", &mut context).await?;
@@ -430,6 +449,10 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
                                     .ok_or_else(|| {
                                         anyhow::anyhow!("Unknown @TestFixture/{name}")
                                     })?;
+                                anyhow::ensure!(
+                                    test_type(fixture) == "native",
+                                    "Native tests require native fixtures"
+                                );
                                 cleanup.push(fixture.clone());
                                 phase(&state, fixture, "setup", &mut context).await?;
                             }
@@ -511,23 +534,7 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
             error,
             location: location.lock().unwrap().clone(),
         };
-        if !json_output {
-            println!(
-                "{} {} ({} assertions, {}ms)",
-                if result.passed { "PASS" } else { "FAIL" },
-                result.name,
-                result.assertions,
-                result.duration_ms
-            );
-            if let Some(location) = &result.location {
-                if !result.passed {
-                    println!("{}", super::diagnostics::render(location));
-                }
-            }
-            if let Some(error) = &result.error {
-                println!("  {error}");
-            }
-        }
+        report_result(&result, json_output);
         results.push(result);
     }
     let passed = results.iter().filter(|r| r.passed).count();
@@ -636,5 +643,33 @@ mod tests {
         .await;
         assert!(result.is_err());
         assert!(!context.contains_key("res"));
+    }
+}
+
+pub(super) fn test_type(section: &Section) -> &str {
+    section
+        .kv
+        .get("type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("native")
+}
+
+fn report_result(result: &TestResult, json_output: bool) {
+    if !json_output {
+        println!(
+            "{} {} ({} assertions, {}ms)",
+            if result.passed { "PASS" } else { "FAIL" },
+            result.name,
+            result.assertions,
+            result.duration_ms
+        );
+        if let Some(location) = &result.location {
+            if !result.passed {
+                println!("{}", super::diagnostics::render(location));
+            }
+        }
+        if let Some(error) = &result.error {
+            println!("  {error}");
+        }
     }
 }
