@@ -78,7 +78,8 @@ def check(base, directory, screenshots):
     for locale in manifest['locales']:
         for route in manifest['routes']:
             path = '/'.join(part for part in [locale, '' if route == 'home' else route] if part)
-            with urlopen(Request(f'{base}/{path}/', method='HEAD')) as response:
+            address = f'{base}/{path}/' if path else base + '/'
+            with urlopen(Request(address, method='HEAD')) as response:
                 assert response.status == 200, (locale, route)
     print('All', len(manifest['routes']) * len(manifest['locales']), 'public route/locale combinations return 200', flush=True)
     with sync_playwright() as playwright:
@@ -295,15 +296,23 @@ def check_hosting_prefix():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--site-dir', type=Path)
+    destination = parser.add_mutually_exclusive_group()
+    destination.add_argument('--site-dir', type=Path)
+    destination.add_argument('--url', help='Check a deployed site, including its public route inventory')
     parser.add_argument('--screenshots', type=Path)
     args = parser.parse_args()
     if args.screenshots:
         args.screenshots.mkdir(parents=True, exist_ok=True)
-    if args.site_dir:
+    if args.url:
+        with tempfile.TemporaryDirectory(prefix='vectrune-live-smoke-') as directory:
+            with urlopen(args.url.rstrip('/') + '/routes.json') as response:
+                Path(directory, 'routes.json').write_bytes(response.read())
+            check(args.url.rstrip('/'), Path(directory), args.screenshots)
+    elif args.site_dir:
         run(args.site_dir.resolve(), args.screenshots)
     else:
         with tempfile.TemporaryDirectory(prefix='vectrune-teaching-ux-') as directory:
             build_site(Path(directory), ROOT / 'target/debug/vectrune')
             run(Path(directory), args.screenshots)
-    check_hosting_prefix()
+    if not args.url:
+        check_hosting_prefix()
