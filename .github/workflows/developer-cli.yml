@@ -7,6 +7,7 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'examples/testing/**'
+      - 'examples/rune_studio/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -16,6 +17,7 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'examples/testing/**'
+      - 'examples/rune_studio/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -48,5 +50,11 @@ jobs:
         run: target/debug/vectrune check examples/testing --deny-warnings
       - name: Run tests written in Rune
         run: target/debug/vectrune test examples/testing --json
+      - name: Lint Rune Studio
+        run: target/debug/vectrune check examples/rune_studio --deny-warnings
+      - name: Check Studio test formatting
+        run: target/debug/vectrune fmt examples/rune_studio/studio.test.rune --check
+      - name: Run Rune Studio web response tests
+        run: target/debug/vectrune test examples/rune_studio --json
       - name: Verify downloaded starter workflow
         run: python tests/browser/test_developer_starter.py

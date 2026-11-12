@@ -300,6 +300,25 @@ Tests run sequentially, rebuilding the application and resetting Rune memory bef
 
 `--list` only discovers tests and performs static checks. `--filter` selects case-sensitive substrings of test names. `--json` writes a machine-readable report to stdout with runtime diagnostics on stderr. Successful checks/tests exit `0`; project/test failures and an empty test selection exit `1`; invalid command usage exits `2`. Listing an empty selection succeeds. `test --watch` reruns after edits to Rune source, recursive imports, and JSON/YAML/CSV fixtures, including atomic saves, deletions, and repairs after load errors. Generated/dependency directories are skipped. Ctrl-C while waiting exits with the last run’s status. Changes during execution are picked up afterwards. Keep generated output outside watched fixture inputs to avoid rerun loops.
 
+### Testing Rune-Web
+
+The native test runner supports Rune-Web HTTP responses and server-rendered HTML through `test-request`. The [Studio suite](examples/rune_studio/studio.test.rune) exercises document rendering, initial editor markup, presets and controls, HEAD requests, missing pages, and unsupported methods:
+
+```sh
+vectrune test examples/rune_studio
+vectrune test examples/rune_studio/studio.test.rune --filter Studio/Document
+```
+
+These assertions check full rendered elements, rather than just text that could also appear in the embedded client templates. They do not execute JavaScript, click controls, or inspect a browser DOM. Studio's client logic runs in the browser, so posting an action name to its page is not a way to invoke that action.
+
+The companion browser check exercises preset changes, tempo, note editing, Save/Load across a reload, Play/Stop controls, and the downloaded song:
+
+```sh
+python3 tests/browser/rune_studio.py
+```
+
+It requires a built `target/debug/vectrune`, Python Playwright, and Chromium, as do the other scripts in `tests/browser`. It checks UI state and export contents; it does not measure audible playback quality. The `.test.rune` file remains excluded from production imports, source bundles, and Lambda packages.
+
 ### Fixtures and cleanup
 
 ```rune

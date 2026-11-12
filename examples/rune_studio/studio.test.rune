@@ -1,0 +1,67 @@
+#!RUNE
+# Native web tests exercise the real HTTP router and server-rendered markup.
+# Clicks, browser storage, downloads, and audio need the browser companion test.
+import "rune_studio.rune"
+
+@Test/Studio/Document
+run:
+    req = { path: "/" }
+    page = test-request req
+    assert page.status == 200
+    assert page.headers["content-type"] contains "text/html"
+    assert page.text contains "<!DOCTYPE html>"
+    assert page.text contains "<title>Rune Studio — 8-Bit Chiptune DAW</title>"
+    assert page.text contains "<h1 class=\"studio-title\">RUNE STUDIO</h1>"
+
+@Test/Studio/InitialEditor
+run:
+    req = { path: "/" }
+    page = test-request req
+    assert page.status == 200
+    assert page.text contains "<div class=\"piano-matrix-rack\">"
+    assert page.text contains "<span class=\"badge-val\">E4</span>"
+    assert page.text contains "<span class=\"badge-sub\">:8</span>"
+    assert page.text contains "<span class=\"status-txt\">Ready to compose. Choose a preset, click notes, or step-edit!</span>"
+
+@Test/Studio/Presets
+run:
+    req = { path: "/" }
+    page = test-request req
+    assert page.status == 200
+    assert page.text contains ">👾 VectRaiders (144 BPM)</button>"
+    assert page.text contains ">🐛 VectWorms (136 BPM)</button>"
+    assert page.text contains ">⚡ Cyber Run (152 BPM)</button>"
+    assert page.text contains ">🌙 Moonlight (108 BPM • 3/4)</button>"
+    assert page.text contains ">🏆 Victory (140 BPM)</button>"
+
+@Test/Studio/TransportAndStorageControls
+run:
+    req = { path: "/" }
+    page = test-request req
+    assert page.status == 200
+    assert page.text contains ">▶ PLAY</button>"
+    assert page.text contains ">⏹ STOP</button>"
+    assert page.text contains ">💾 SAVE</button>"
+    assert page.text contains ">📂 LOAD</button>"
+    assert page.text contains ">📥 EXPORT .RUNE</button>"
+    assert page.text contains "data-on-click=\"exportRune\""
+
+@Test/Studio/Head
+run:
+    req = { method: "HEAD", path: "/" }
+    page = test-request req
+    assert page.status == 200
+    assert page.headers["content-type"] contains "text/html"
+    assert page.text == ""
+
+@Test/Studio/UnknownPage
+run:
+    req = { path: "/__missing_studio_page__" }
+    page = test-request req
+    assert page.status == 404
+
+@Test/Studio/UnsupportedMethod
+run:
+    req = { method: "POST", path: "/", body: { action: "playTrack" } }
+    page = test-request req
+    assert page.status == 405
