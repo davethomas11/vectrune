@@ -17,7 +17,9 @@ view:
         SidebarLayout
         TeachingFooter
         BuiltWithTag
+        script src="/assets/site-navigation.js?v=1"
+        script src="/assets/command-copy.js?v=1"
         script src="/assets/source-explorer.js?v=1"
         script src="/assets/syntax-highlight.js?v=5"
-        script src="/assets/sandbox.js?v=13"
+        script src="/assets/sandbox.js?v=14"
         script src="/assets/builtin-reference.js?v=8"

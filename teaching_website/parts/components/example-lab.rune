@@ -75,13 +75,14 @@ view:
         WebExample title="{i18n.Lab.worms_title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" files="{sources ../../../examples/vectworms/vectworms.rune}"
 
 @Component/WebExample
-props: [title, preview, files]
+props: [title, preview, files, show_heading?]
 view:
     section .card .web-example:
-        div .section-heading:
-            span .tag .tag-practical "%i18n.Examples.live_preview%"
-            h2 "{title}"
-            p "%i18n.Examples.web_hint%"
+        if show_heading ?? true:
+            div .section-heading:
+                span .tag .tag-practical "%i18n.Examples.live_preview%"
+                h2 "{title}"
+                p "%i18n.Examples.web_hint%"
         iframe .example-preview src="{preview}" title="{title}" allow="fullscreen; autoplay" allowfullscreen=true sandbox="allow-scripts allow-same-origin allow-downloads allow-modals"
         details .example-source open=true:
             summary "%i18n.Examples.source_label%"
@@ -102,3 +103,17 @@ props: [code]
 view:
     pre .example-code tabindex=0:
         code .code-block .language-rune "{code}"
+
+@Component/RunExampleLocally
+props: [example]
+view:
+    section .card:
+        h3 "%i18n.Guide.run_locally%"
+        p "%i18n.Guide.project_setup%"
+        a .content-link href="{i18n.Common.base_path}#quickstart" data-route-link=true click="navigate('home')" "%i18n.Header.nav_quickstart%"
+        CommandBlock code="{i18n.Guide.clone_cmd}"
+        p "%i18n.Guide.project_folder%"
+        div .command-block:
+            button .command-copy type=button data-copied="%i18n.Quickstart.command_copied%" data-failed="%i18n.Quickstart.command_failed%" "%i18n.Quickstart.command_copy%"
+            pre:
+                code .code-block .language-shell "vectrune examples/{example}/{example}.rune\nvectrune examples/{example}/{example}.rune -o html > {example}.html"

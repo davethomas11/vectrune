@@ -4,7 +4,7 @@ view:
     div .page .application-guide:
         section .card:
             p .eyebrow "%i18n.RuneWebGuide.group%"
-            h2 "{title}"
+            h1 "{title}"
             p .lead "{intro}"
             h3 "%i18n.Guide.syntax%"
             p "{syntax}"

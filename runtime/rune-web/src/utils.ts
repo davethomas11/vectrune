@@ -1,5 +1,5 @@
 // ============================================================================
-// Pure utility functions — no dependencies on other runtime modules
+// Utility functions — no dependencies on other runtime modules
 // ============================================================================
 
 export function escapeHtml(value: unknown): string {
@@ -9,6 +9,19 @@ export function escapeHtml(value: unknown): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+/** Optional prefix supplied by static hosts that mount an app below '/'. */
+export function hostingPrefix(): string {
+  if (typeof document === 'undefined') return '';
+  return (document.querySelector('meta[name="rune-base-path"]')?.getAttribute('content') || '').replace(/\/$/, '');
+}
+
+/** Resolve app URLs without rewriting source strings or external URLs. */
+export function hostedUrl(value: string): string {
+  const prefix = hostingPrefix();
+  if (!prefix || !value.startsWith('/') || value.startsWith('//') || value === prefix || value.startsWith(prefix + '/')) return value;
+  return prefix + value;
 }
 
 /**

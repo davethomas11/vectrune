@@ -7,8 +7,6 @@ import argparse
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-import shutil
-import subprocess
 import tempfile
 from threading import Thread
 
@@ -30,26 +28,12 @@ class QuietHandler(SimpleHTTPRequestHandler):
 
 
 def build_site(destination, binary):
-    source = ROOT / "teaching_website/teaching.rune"
-    with tempfile.NamedTemporaryFile(dir=source.parent, suffix=".rune", delete=False) as file:
-        temporary = Path(file.name)
-    try:
-        for locale, folder in [("en_us", ""), ("es", "es"), ("fr", "fr")]:
-            temporary.write_text(source.read_text(encoding="utf-8").replace("locale = en_us", f"locale = {locale}"), encoding="utf-8")
-            result = subprocess.run(
-                [binary, str(temporary), "-o", "html", "--chunks-dir", str(destination / "assets/routes")],
-                capture_output=True, text=True, encoding="utf-8", check=True,
-            )
-            output = destination / folder
-            output.mkdir(parents=True, exist_ok=True)
-            (output / "index.html").write_text(result.stdout, encoding="utf-8")
-        assets = destination / "assets"
-        assets.mkdir(exist_ok=True)
-        for pattern in ["*.js", "*.png", "*.css"]:
-            for asset in source.parent.glob(pattern):
-                shutil.copy(asset, assets / asset.name)
-    finally:
-        temporary.unlink(missing_ok=True)
+    # Exercise the same renderer as deployment, with just home HTML for tests
+    # that intentionally exercise lazy navigation rather than direct links.
+    import sys
+    sys.path.insert(0, str(ROOT / "teaching_website"))
+    from build_site import build_site as render_site
+    render_site(destination, binary, selected_routes=[])
 
 
 def check(base):
@@ -69,7 +53,7 @@ def check(base):
                 title = page.evaluate(
                     "(key) => runeWebApp.state.i18n.RuneWebGuide[key]", lesson + "_title",
                 )
-                expect(page.locator("main.content-area h2").first).to_have_text(title)
+                expect(page.locator("main.content-area h1").first).to_have_text(title)
                 frame = page.frame_locator(".example-preview")
                 expect(frame.locator("h1")).to_be_visible()
                 if lesson == "components":

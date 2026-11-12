@@ -27,6 +27,7 @@ use crate::builtins::builtin::memory::get_memory_value;
 use axum::{extract::Query, response::Html, routing::get, Router};
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Build a mountable rune-web frontend router.
 ///
@@ -106,7 +107,7 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
                 }
             }
 
-            let frontend = frontend.clone();
+            let frontend = Arc::new(frontend.clone());
             let page_name = page_name.to_string();
             let default_locale = active_locale.clone();
             let ws_endpoint = ws_endpoint.clone();
@@ -126,33 +127,67 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
             // Stable ordering makes duplicate path configuration deterministic.
             mounts.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
             mounts.dedup_by(|a, b| a.0 == b.0);
+            let named_routes = frontend.navigator.as_ref().filter(|nav| nav.mode == "path")
+                .and_then(|nav| frontend.page_views.get(&page_name).map(|page| optimizer::navigation_routes(&page.view_tree, &nav.bind)))
+                .unwrap_or_default();
             let mut router = Router::new();
+            let mut registered = std::collections::HashSet::new();
             for (path, default_locale) in mounts {
-                let frontend = frontend.clone();
-                let page_name = page_name.clone();
-                let ws_endpoint = ws_endpoint.clone();
-                router = router.route(&path, get(move |Query(params): Query<HashMap<String, String>>| {
-                    let frontend = frontend.clone();
-                    let page_name = page_name.clone();
-                    let default_locale = default_locale.clone();
-                    let ws_endpoint = ws_endpoint.clone();
-                    async move {
-                        let request_locale = params
-                            .get("locale")
-                            .map(String::as_str)
-                            .filter(|locale| frontend.i18n_sections.contains_key(*locale));
-                        let target_route = params.get("page").map(String::as_str);
-                        let html = render_page_html(
-                            &frontend,
-                            &page_name,
-                            request_locale,
-                            default_locale.as_deref(),
-                            ws_endpoint,
-                            target_route,
-                        ).await;
-                        Html(html)
+                let mut destinations = vec![(path.clone(), None)];
+                for route in &named_routes {
+                    if route != "home" {
+                        destinations.push((format!("{}/{}", path.trim_end_matches('/'), route), Some(route.clone())));
                     }
-                }));
+                }
+                for (address, fixed_route) in destinations {
+                    let canonical = canonicalize_path(&address);
+                    for address in [canonical.clone(), format!("{}/", canonical.trim_end_matches('/'))] {
+                        if !registered.insert(address.clone()) { continue; }
+                        let frontend = frontend.clone();
+                        let page_name = page_name.clone();
+                        let ws_endpoint = ws_endpoint.clone();
+                        let default_locale = default_locale.clone();
+                        let fixed_route = fixed_route.clone();
+                        router = router.route(&address, get(move |Query(params): Query<HashMap<String, String>>| {
+                            let frontend = frontend.clone();
+                            let page_name = page_name.clone();
+                            let default_locale = default_locale.clone();
+                            let ws_endpoint = ws_endpoint.clone();
+                            let fixed_route = fixed_route.clone();
+                            async move {
+                                let request_locale = params
+                                    .get("locale")
+                                    .map(String::as_str)
+                                    .filter(|locale| frontend.i18n_sections.contains_key(*locale));
+                                let target_route = fixed_route.as_deref().or_else(|| params.get("page").map(String::as_str));
+                                let html = render_page_html(
+                                    &frontend,
+                                    &page_name,
+                                    request_locale,
+                                    default_locale.as_deref(),
+                                    ws_endpoint,
+                                    target_route,
+                                ).await;
+                                Html(html)
+                            }
+                        }));
+                    }
+                }
+            }
+            // Native servers must serve lazy chunks too; static export is not
+            // involved when a user runs `vectrune teaching.rune` directly.
+            if let (Some(opt), Some(page)) = (&frontend.optimizer, frontend.page_views.get(&page_name)) {
+                let bind = frontend.navigator.as_ref().map(|nav| nav.bind.as_str());
+                let chunks = optimizer::extract_all_route_chunks(&page.view_tree, opt, bind).chunks;
+                for (route, body) in chunks {
+                    let address = format!("{}/{}.json", opt.chunk_path.trim_end_matches('/'), route);
+                    let Ok(body) = serde_json::to_string(&body) else { continue; };
+                    let body = Arc::new(body);
+                    router = router.route(&address, get(move || {
+                        let body = body.clone();
+                        async move { ([(axum::http::header::CONTENT_TYPE, "application/json; charset=utf-8")], body.as_ref().clone()) }
+                    }));
+                }
             }
             router
         }
@@ -209,14 +244,17 @@ pub async fn render_html_for_path(
             .unwrap_or("/"),
     );
 
-    let path_locale = frontend_section.kv.get("locale_paths").and_then(|value| {
+    let normalized_request = canonicalize_path(request_path);
+    let locale_mount = frontend_section.kv.get("locale_paths").and_then(|value| {
         if let crate::rune_ast::Value::Map(paths) = value {
-            paths.iter().find_map(|(locale, path)| {
-                path.as_str().filter(|path| canonicalize_path(path) == canonicalize_path(request_path))
-                    .map(|_| locale.as_str())
-            })
+            paths.iter().filter_map(|(locale, path)| {
+                let prefix = canonicalize_path(path.as_str()?);
+                (normalized_request == prefix || normalized_request.starts_with(&format!("{}/", prefix)))
+                    .then_some((locale.as_str(), prefix))
+            }).max_by_key(|(_, prefix)| prefix.len())
         } else { None }
     });
+    let path_locale = locale_mount.as_ref().map(|(locale, _)| *locale);
     let reactivity_mode = frontend_section
         .kv
         .get("reactivity")
@@ -265,8 +303,11 @@ pub async fn render_html_for_path(
     }
 
     let target_route = {
-        let trimmed = request_path.trim_matches('/');
-        if trimmed.is_empty() || trimmed == "es" || trimmed == "fr" {
+        let prefix = locale_mount.as_ref().map(|(_, prefix)| prefix.as_str())
+            .unwrap_or(mount_path);
+        let route = normalized_request.strip_prefix(prefix).unwrap_or(&normalized_request);
+        let trimmed = route.trim_matches('/');
+        if trimmed.is_empty() {
             None
         } else {
             Some(trimmed)
@@ -354,10 +395,15 @@ fn render_frontend_shell(
 ) -> String {
     let page = frontend.page_views.get(page_name);
 
-    let logic = page
+    let mut logic = page
         .and_then(|p| p.logic_ref.as_ref())
-        .and_then(|logic_name| frontend.logic_definitions.get(logic_name));
-    let mut runtime_data = build_runtime_data(logic);
+        .and_then(|logic_name| frontend.logic_definitions.get(logic_name)).cloned();
+    // Server markup, optimizer selection and browser state must start on the
+    // same route, including a locale-prefixed direct request.
+    if let (Some(route), Some(nav), Some(logic)) = (target_route, &frontend.navigator, &mut logic) {
+        logic.state.insert(nav.bind.clone(), serde_json::to_string(&route.trim_matches('/')).unwrap());
+    }
+    let mut runtime_data = build_runtime_data(logic.as_ref());
 
     // Merge pre-fetched memory values so MemoryBinding nodes resolve on SSR
     for (key, value) in pre_fetched_memory {
@@ -384,14 +430,12 @@ fn render_frontend_shell(
         .or_else(|| default_seo.and_then(|s| s.title.as_deref()))
         .or_else(|| page.map(|page| page.title.as_str()).filter(|title| !title.is_empty()))
         .unwrap_or("Vectrune");
-    let title = html_escape(title_str);
 
     let description_str = route_seo
         .and_then(|r| r.description.as_deref())
         .or_else(|| default_seo.and_then(|s| s.description.as_deref()))
         .or_else(|| page.and_then(|p| p.description.as_deref()))
         .unwrap_or("Vectrune — Declarative Full-Stack Language and Reactive Web Framework");
-    let description = html_escape(description_str);
 
     let image_str = route_seo
         .and_then(|r| r.image.as_deref())
@@ -431,6 +475,9 @@ fn render_frontend_shell(
         "{}".to_string()
     };
 
+    let title = html_escape(&interpolate_template(title_str, &runtime_data, &JsonMap::new()));
+    let description = html_escape(&interpolate_template(description_str, &runtime_data, &JsonMap::new()));
+
     let locals = JsonMap::new();
 
     let optimized = if let (Some(opt), Some(p)) = (&frontend.optimizer, page) {
@@ -450,7 +497,7 @@ fn render_frontend_shell(
     let style_html = render_styles(frontend, page.and_then(|p| p.style_ref.clone()));
     let logic_html = render_logic(
         page_tree,
-        logic.cloned(),
+        logic,
         &i18n_json,
         ws_endpoint,
         pre_fetched_memory,
@@ -1214,12 +1261,11 @@ pub fn export_optimizer_chunks(
         .ok_or_else(|| anyhow::anyhow!("Page '{}' not found", page_name))?;
 
     let bound_var = frontend.navigator.as_ref().map(|n| n.bind.as_str());
-    // Prune with active_route = None so all named route branches are extracted as chunks
-    let opt_res = optimizer::extract_route_chunks(&page.view_tree, None, optimizer, bound_var);
+    let exported = optimizer::extract_all_route_chunks(&page.view_tree, optimizer, bound_var);
 
     std::fs::create_dir_all(out_dir)?;
     let mut count = 0;
-    for (route, chunk_body) in opt_res.chunks {
+    for (route, chunk_body) in exported.chunks {
         let chunk_json = serde_json::to_string_pretty(&chunk_body)?;
         let dest = out_dir.join(format!("{}.json", route));
         std::fs::write(&dest, chunk_json)?;

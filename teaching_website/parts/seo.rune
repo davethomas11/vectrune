@@ -87,3 +87,27 @@ image = /assets/rune-logo.png
 title = Vectrune Built-ins & Reference Manual
 description = Comprehensive standard library reference for Vectrune types, functions, collections, math, and system capabilities.
 image = /assets/rune-logo.png
+
+@SEO/rest_get
+title = %i18n.Nav.get% — Vectrune
+
+@SEO/rest_post
+title = %i18n.Nav.post% — Vectrune
+
+@SEO/rest_validation
+title = %i18n.Nav.validation% — Vectrune
+
+@SEO/web_components
+title = %i18n.RuneWebGuide.components_title% — Vectrune
+
+@SEO/web_forms
+title = %i18n.RuneWebGuide.forms_title% — Vectrune
+
+@SEO/web_actions
+title = %i18n.RuneWebGuide.actions_title% — Vectrune
+
+@SEO/web_views
+title = %i18n.RuneWebGuide.views_title% — Vectrune
+
+@SEO/web_styles
+title = %i18n.RuneWebGuide.styles_title% — Vectrune

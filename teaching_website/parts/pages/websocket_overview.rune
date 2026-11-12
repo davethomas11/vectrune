@@ -3,7 +3,7 @@ view:
     div .page .application-guide:
         section .card:
             p .eyebrow "%i18n.Nav.applications%"
-            h2 "%i18n.SocketGuide.title%"
+            h1 "%i18n.SocketGuide.title%"
             p .lead "%i18n.SocketGuide.intro%"
             ExampleSource code="{raw ../../content/applications/websocket.rune}"
             h3 "%i18n.Guide.syntax%"

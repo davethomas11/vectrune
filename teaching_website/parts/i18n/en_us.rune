@@ -1,5 +1,7 @@
 @I18N/en_us
 Common {
+    language_name = "English"
+    base_path = "/"
     locale = "en_us"
     language_label = "Language:"
     built_with = "Built entirely with Rune-Web"
@@ -20,6 +22,8 @@ Header {
     nav_next = "What next"
 }
 Banner {
+    details = "Release notes ↗"
+    compact = "Pre-1.0: syntax may change."
     badge = "Early development"
     message = "Vectrune is pre-1.0 and evolving quickly. Syntax and APIs may change between releases."
     link = "Follow progress on GitHub"
@@ -27,9 +31,9 @@ Banner {
 Hero {
     eyebrow = "Structured data in motion"
     headline = "Get to a useful Vectrune app in minutes."
-    lead = "From your first API to interactive web apps, Vectrune keeps data and behavior in one readable language. Start small, explore real examples, and try them in your browser."
-    cta_primary = "Start the 5-minute path"
-    cta_secondary = "Browse starter examples"
+    lead = "Build APIs, reactive pages, and playable demos in one language. Edit an example and see it run in your browser."
+    cta_primary = "Try in browser"
+    cta_secondary = "Install Vectrune"
     sidebar_title = "Why Vectrune"
     reason_1 = "Readable .rune files"
     reason_2 = "Compact REST and GraphQL definitions"
@@ -38,33 +42,48 @@ Hero {
     lab_link = "Explore live examples →"
 }
 Quickstart {
+    command_copy = "Copy command"
+    command_copied = "Copied!"
+    command_failed = "Copy failed — select and copy the command."
+
     eyebrow = "Quickstart"
     headline = "5-minute first success"
-    description = "Install Vectrune for your platform, then run your first app end to end."
+    description = "Try a request in the browser, or install Vectrune and create a complete API in a new folder."
     install_title = "Install Vectrune"
     homebrew_title = "macOS and Linux - Homebrew"
     homebrew_cmd = "brew tap davethomas11/homebrew-vectrune\nbrew install vectrune"
     verify_with = "Then verify the install with:"
     verify_cmd = "vectrune --version"
     windows_title = "Windows - release download"
-    windows_desc = "The repository currently documents a release-download path for Windows."
-    windows_step1 = "Open the GitHub Releases page."
-    windows_step2 = "Download the latest Windows executable."
-    windows_step3 = "Place the executable folder on your PATH."
+    windows_desc = "Download the Windows archive and extract vectrune.exe before using it."
+    windows_step1 = "Open the latest release and download vectrune.exe-windows-x86_64.tar.gz."
+    windows_step2 = "Extract the archive with tar -xzf vectrune.exe-windows-x86_64.tar.gz in PowerShell, or use an archive tool."
+    windows_step3 = "Add the extracted folder to your user PATH and open a new terminal, or keep the executable in your project folder and use .\\vectrune.exe instead of vectrune below."
     releases_link = "Open Releases page"
     source_title = "Any platform - build from source"
-    source_cmd = "cargo install --path ."
-    source_note = "Use this path when you already have a Rust toolchain and want to run from a local clone."
+    source_cmd = "git clone https://github.com/davethomas11/vectrune.git\ncd vectrune\ncargo install --path ."
+    source_note = "Advanced: requires Git and a Rust toolchain with Cargo. Run these commands in a folder where you want to keep the checkout."
     steps_verify = "Verify the install"
     steps_verify_cmd = "vectrune --version"
     steps_run = "Run the example app"
-    steps_run_cmd = "vectrune examples/app.rune"
-    steps_run_note = "This starts the minimal REST app defined in examples/app.rune."
-    steps_hit = "Hit the health route"
+    steps_run_cmd = "vectrune app.rune"
+    steps_run_note = "Run this from the folder containing app.rune. The server listens on http://127.0.0.1:3000. Leave this terminal running."
+    steps_hit = "Send your first request"
     steps_hit_cmd = "curl http://127.0.0.1:3000/health"
-    steps_hit_result = "Expected response: OK"
+    steps_hit_result = "Expected response: OK. Open this URL in a browser, or use curl in a second terminal. In Windows PowerShell, use curl.exe for the same command."
     callout_title = "What you just learned"
     callout_text = "Vectrune apps use readable sections like @App and @Route, and you can get a working server without a lot of framework boilerplate."
+    browser_title = "Try in browser"
+    browser_hint = "No installation needed. Apply the code, then send a request in the playground below."
+    homebrew_prerequisite = "Requires Homebrew. Install Homebrew first if you do not have it."
+    linux_title = "Linux without Homebrew"
+    linux_hint = "Download the Linux archive for your architecture from Releases. Extract it with tar -xzf ARCHIVE.tar.gz, then run chmod +x vectrune. Put the executable on your PATH, or keep it in your project folder and use ./vectrune below."
+    version_result = "Expected: vectrune followed by its installed version."
+    local_binary = "For an executable in the current folder, replace vectrune with .\\vectrune.exe on Windows or ./vectrune on macOS/Linux."
+    create_title = "Create app.rune"
+    create_hint = "Create a new project folder and open a terminal there. Download app.rune into that folder, or save the exact code below as app.rune using a text editor. No repository checkout is needed."
+    download_example = "Download app.rune"
+    stop_hint = "Press Ctrl+C in the server terminal to stop. If port 3000 is already in use, change port in app.rune and use that port in the request."
 }
 LanguageTour {
     eyebrow = "Language tour"
@@ -144,7 +163,7 @@ Examples {
     graphql_hint = "Run the app to explore real queries and mutations. Choose a sample operation or write your own. Changes stay in browser memory; Run resets the starting records."
     web_hint = "This preview is compiled from the actual Rune example, including its styles and actions. Interact with the app, then expand the source below."
     sandbox_title = "Read, edit, run"
-    sandbox_hint = "Edit the source and run it in your browser. Export the document or inspect the AST with the other controls."
+    sandbox_hint = "Apply the code to prepare this browser example, then send a request. Document and AST inspection are available under the advanced controls."
     graphql_ready = "Choose an operation, edit the query or variables, then execute. Mutations share memory with subsequent queries."
     graphql_examples = "Example operation"
     graphql_query = "Query or mutation"
@@ -166,10 +185,10 @@ WhatsNext {
 }
 Sandbox {
     dynamic_ai_native = "Dynamic AI sites need the native server and an AI engine. Run cargo run -- examples/dynamic_ai_web.rune to try the cafe."
-    edit_hint = "Edit the source, then press Run to apply your changes."
-    run = "Run"
-    run_changes = "Run changes"
-    pending_changes = "Changes not applied. Press Run to apply your edits."
+    edit_hint = "This playground simulates requests in your browser. Apply the code, then choose an endpoint and press Send Request."
+    run = "Apply code"
+    run_changes = "Apply changes"
+    pending_changes = "Changes not applied. Press Apply code to update the running example."
     interactive = "Interactive"
     code = "Code"
     output = "Output"
@@ -177,7 +196,7 @@ Sandbox {
     placeholder = "Type your .rune code here…"
     show_document = "Show Document"
     show_ast = "Show AST"
-    idle = "Press Run to see output here."
+    idle = "Apply code to prepare the example, then send a request."
     format = "Output format"
     status = "Status"
     logs = "Logs"
@@ -193,9 +212,12 @@ Sandbox {
     request_path = "Request path"
     send = "Send Request"
     sending = "Sending request…"
-    request_ready = "Press Send Request to execute the endpoint."
+    request_ready = "Code applied. Choose an endpoint and press Send Request."
     web_compile = "Compile Rune-Web apps to preview them. Open Counter or Tic Tac Toe in Example Lab to try a compiled example."
     native_only = "Run this WebSocket example with the native CLI; socket hooks are not executed by the browser sandbox."
+    advanced = "Inspect document or AST"
+    reset = "Reset example"
+    reset_ready = "Example reset. Apply code to prepare it again."
 }
 Footer {
     copyright = "© 2026 Vectrune Project"
@@ -241,6 +263,11 @@ DocumentSyntax {
 }
 
 Nav {
+    skip = "Skip to content"
+    close = "Close documentation"
+    not_found = "Page not found"
+    not_found_hint = "This page does not exist. Browse the documentation or return to the overview."
+
     browse = "Browse documentation"
     aria = "Documentation"
     intro = "Introduction"
@@ -284,7 +311,7 @@ Lab {
 SpaceInvaders {
     badge = "Retro Arcade Game"
     title = "VectRaiders: Defend the Vector Grid"
-    description = "A complete retro arcade game showcasing Vectrune's declarative power: real-time game loop ticker, zero-boilerplate keyboard and touch controls, and reusable 2D collision primitives in under 60 lines of logic."
+    description = "Defend the grid in a playable arcade game built with Rune-Web."
     play_label = "Play VectRaiders"
     feature_loop_title = "Real-Time Game Loop"
     feature_loop_desc = "timer: tick 40ms runs an automated 25fps game loop ticker directly into reactive state without manual setInterval or requestAnimationFrame boilerplate."
@@ -297,12 +324,13 @@ SpaceInvaders {
     instructions_title = "Controls"
     instructions_keyboard = "A / ◀: Move Left • D / ▶: Move Right • Space: Fire Laser"
     instructions_mobile = "Touch and hold the on-screen arcade buttons to glide and fire on any mobile device or tablet."
+    try_it = "Press PLAY NOW, then move with A/D or the arrow keys and fire with Space. Touch controls are below the arena."
 }
 
 VectWorms {
     badge = "Retro Arcade Game"
     title = "VectWorms: Purge the Mushroom Grid"
-    description = "A fast-paced centipede arcade shooter in declarative Rune-Web: splitting worm segments, destructible mushroom obstacles, particle emitters, and Web Audio synthesizer effects."
+    description = "Clear the mushroom grid in this playable Rune-Web arcade shooter."
     play_label = "Play VectWorms"
     feature_split_title = "Splitting Worm Chains"
     feature_split_desc = "Blasting any body segment spawns a new mushroom obstacle and promotes the trailing segment into an independent head."
@@ -315,26 +343,29 @@ VectWorms {
     instructions_title = "Controls"
     instructions_keyboard = "WASD / Arrows: Move Blaster (4-Way) • Space: Fire Laser"
     instructions_mobile = "Use the on-screen D-pad and Fire button on mobile or tablet."
+    try_it = "Press PLAY NOW, move with WASD or the arrow keys, and fire with Space. On a phone, use the on-screen D-pad and FIRE."
 }
 
 Studio {
     badge = "8-Bit DAW & Synth"
     title = "Rune Studio: 8-Bit Chiptune DAW"
-    description = "A visual 8-bit digital audio workstation and synthesizer tracker built entirely with declarative Rune-Web: multitrack score editing, real-time Web Audio synthesis, local storage persistence, and .rune file export."
+    description = "Compose an 8-bit track in your browser, edit the notes, and export your song as .rune code."
     feature_chiptune_title = "Web Audio Chiptune Synthesizer"
     feature_chiptune_desc = "Audition square waves, triangle basslines, and white-noise drums in real-time with customizable envelope ADSR and frequencies."
     feature_multitrack_title = "Multitrack Visual Sequencing"
     feature_multitrack_desc = "Compose lead melodies, arpeggios, pulsing bass, and percussion with readable bar-by-bar note notation and tempo control."
-    feature_storage_title = "Browser Local Storage Persistence"
-    feature_storage_desc = "Builtin storage.set and storage.get bindings persist your customized song arrangements and sound parameters across page reloads."
-    feature_export_title = "Export & Download .rune Source"
-    feature_export_desc = "Export your audio tracks and songs directly as valid Rune-Web code using client-side download() and clipboard bindings."
+    feature_storage_title = "Save and restore arrangements"
+    feature_storage_desc = "SAVE and LOAD keep an arrangement in this browser. In the embedded preview, storage may last only for the current session; export a file to keep your song."
+    feature_export_title = "Export your song"
+    feature_export_desc = "EXPORT .RUNE downloads the song’s @Music code. It is separate from the complete Studio application and its source files."
     instructions_title = "How to Use"
-    instructions_songs = "Select any preloaded song (VectRaiders, VectWorms, Cyber Run, Moonlight Dungeon, Victory Fanfare) or write your own melody in the track boxes."
-    instructions_storage = "Click 'Save to Storage' to persist your changes in browser memory, or 'Download .rune' to save your song file locally."
+    instructions_songs = "Choose a preset, press PLAY to listen, and STOP to finish. Select an editing voice and use the piano roll or STRIP view to edit notes."
+    instructions_storage = "SAVE stores the current arrangement in the browser; LOAD restores it. EXPORT .RUNE downloads your song code as a file. Keep that export before leaving or reloading the preview."
+    try_it = "Choose a preset and press PLAY, then STOP. Select a voice and click a note to edit your arrangement."
 }
 
 Reference {
+    search_label = "Search builtins"
     eyebrow = "Standard Library"
     title = "Builtin Reference"
     intro = "Explore builtin syntax and examples. Filter by category or search, then load an example into the browser sandbox."
@@ -359,6 +390,10 @@ Reference {
 Guide {
     syntax = "Reading the syntax"
     run_locally = "Run locally"
+    how_it_works = "How this example works"
+    project_setup = "To run the complete example, install Vectrune and Git first. Clone the repository once; keep the imported parts folder with the main file."
+    clone_cmd = "git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
+    project_folder = "Run these commands from the repository root. If you already have a checkout, skip cloning and open a terminal at its root."
 }
 
 RestGuide {

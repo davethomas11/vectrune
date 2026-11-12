@@ -56,6 +56,15 @@ var __RuneWeb = (() => {
   function escapeHtml(value) {
     return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
+  function hostingPrefix() {
+    if (typeof document === "undefined") return "";
+    return (document.querySelector('meta[name="rune-base-path"]')?.getAttribute("content") || "").replace(/\/$/, "");
+  }
+  function hostedUrl(value) {
+    const prefix = hostingPrefix();
+    if (!prefix || !value.startsWith("/") || value.startsWith("//") || value === prefix || value.startsWith(prefix + "/")) return value;
+    return prefix + value;
+  }
   function includesTopLevel(input, delimiter) {
     let depth = 0;
     let inQuotes = false;
@@ -206,13 +215,13 @@ var __RuneWeb = (() => {
     if (mode === "path" || mode === "auto") {
       try {
         const url = new URL(window.location.href);
-        const cleanPath = url.pathname.replace(/^\/+|\/+$/g, "");
+        const prefix = hostingPrefix();
+        const pathname = prefix && (url.pathname === prefix || url.pathname.startsWith(prefix + "/")) ? url.pathname.slice(prefix.length) : url.pathname;
+        const cleanPath = pathname.replace(/^\/+|\/+$/g, "");
         const parts = cleanPath.split("/").filter(Boolean);
+        if (parts[0] === "es" || parts[0] === "fr") parts.shift();
         if (parts.length > 0) {
-          let route = parts[parts.length - 1];
-          if (parts.length > 1 && (parts[0] === "es" || parts[0] === "fr")) {
-            route = parts[1];
-          }
+          const route = decodeURIComponent(parts.join("/"));
           if (route && route !== "index.html") {
             return route;
           }
@@ -291,7 +300,7 @@ var __RuneWeb = (() => {
       setMetaTag("name", "twitter:description", description);
     }
     if (rawImage) {
-      const image = interpolate(rawImage, scope);
+      const image = hostedUrl(interpolate(rawImage, scope));
       setMetaTag("property", "og:image", image);
       setMetaTag("name", "twitter:image", image);
     }
@@ -327,10 +336,11 @@ var __RuneWeb = (() => {
     if (mode === "path") {
       try {
         const url = new URL(window.location.href);
-        const pathname = url.pathname;
-        let prefix = "";
-        if (pathname.startsWith("/es/") || pathname === "/es") prefix = "/es";
-        if (pathname.startsWith("/fr/") || pathname === "/fr") prefix = "/fr";
+        const base = hostingPrefix();
+        const pathname = url.pathname.slice(base.length);
+        let prefix = base;
+        if (pathname.startsWith("/es/") || pathname === "/es") prefix += "/es";
+        if (pathname.startsWith("/fr/") || pathname === "/fr") prefix += "/fr";
         let newPath = "";
         if (!cleanRoute || cleanRoute === "home") {
           newPath = prefix ? `${prefix}/` : "/";
@@ -543,43 +553,42 @@ var __RuneWeb = (() => {
 
   // src/storage.ts
   var memoryStorage = {};
+  function browserStorage() {
+    try {
+      return typeof window !== "undefined" ? window.localStorage : null;
+    } catch {
+      return null;
+    }
+  }
   function getStorageItem(key) {
-    if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
-      try {
-        const val = window.localStorage.getItem(key);
-        if (val !== null) return val;
-      } catch {
-      }
+    try {
+      const val = browserStorage()?.getItem(key);
+      if (val != null) return val;
+    } catch {
     }
     return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null;
   }
   function setStorageItem(key, val) {
     memoryStorage[key] = val;
-    if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
-      try {
-        window.localStorage.setItem(key, val);
-      } catch {
-      }
+    try {
+      browserStorage()?.setItem(key, val);
+    } catch {
     }
   }
   function removeStorageItem(key) {
     delete memoryStorage[key];
-    if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
-      try {
-        window.localStorage.removeItem(key);
-      } catch {
-      }
+    try {
+      browserStorage()?.removeItem(key);
+    } catch {
     }
   }
   function clearStorage() {
     for (const k of Object.keys(memoryStorage)) {
       delete memoryStorage[k];
     }
-    if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
-      try {
-        window.localStorage.clear();
-      } catch {
-      }
+    try {
+      browserStorage()?.clear();
+    } catch {
     }
   }
   function hasStorageItem(key) {
@@ -1190,7 +1199,8 @@ var __RuneWeb = (() => {
         attrs += ` class="${renderedClasses.join(" ")}"`;
     }
     for (const [key, value] of Object.entries(element.attrs || {})) {
-      const renderedValue = interpolate(value, scope);
+      const interpolated = interpolate(value, scope);
+      const renderedValue = key === "src" || key === "href" ? hostedUrl(interpolated) : interpolated;
       if (renderedValue === "false" || renderedValue === "undefined" || renderedValue === "null") {
         const boolAttrs = [
           "checked",
@@ -3835,6 +3845,9 @@ var __RuneWeb = (() => {
       const mouse = event;
       if (linkClick && (mouse.ctrlKey || mouse.metaKey || mouse.shiftKey || mouse.altKey || mouse.button > 0 || element.getAttribute("target") === "_blank")) return;
       const href = linkClick ? element.getAttribute("href") : null;
+      if (linkClick && element.getAttribute("data-route-link") === "true") {
+        event.preventDefault();
+      }
       const spec = parseHandlerSpec(
         element.getAttribute(`data-on-${eventName}`) || ""
       );
@@ -3991,7 +4004,7 @@ var __RuneWeb = (() => {
       if (typeof fetch === "undefined") {
         return Promise.resolve(null);
       }
-      const promise = fetch(chunkUrl).then((res) => {
+      const promise = fetch(hostedUrl(chunkUrl)).then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status} fetching route chunk ${chunkUrl}`);
         return res.json();
       }).then((data) => {
@@ -4030,7 +4043,7 @@ var __RuneWeb = (() => {
         chunksToPreload.forEach(({ route, chunk_url }) => {
           const cleanRoute = route.toLowerCase();
           if (!loadedChunks[cleanRoute] && !loadingChunks[cleanRoute]) {
-            fetch(chunk_url).then((r) => r.json()).then((data) => {
+            fetch(hostedUrl(chunk_url)).then((r) => r.json()).then((data) => {
               loadedChunks[cleanRoute] = data;
             }).catch(() => {
             });

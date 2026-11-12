@@ -3,7 +3,7 @@ view:
     div .page .localization-guide:
         section .card:
             p .eyebrow "Rune-Web"
-            h2 "%i18n.Localization.title%"
+            h1 "%i18n.Localization.title%"
             p .lead "%i18n.Localization.intro%"
             ExampleSource code="{raw ../../content/applications/localization.rune}"
         section .card:

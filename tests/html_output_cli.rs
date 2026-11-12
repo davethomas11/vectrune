@@ -34,6 +34,109 @@ fn html_output_renders_root_mounted_rune_web_page() {
 }
 
 #[test]
+fn html_output_localized_routes_render_the_destination_before_javascript() {
+    let temp = tempdir().unwrap();
+    let path = temp.path().join("app.rune");
+    write_file(&path, r#"
+@Frontend
+type = rune-web
+path = %ROOT%
+page = index
+locale = en_us
+locale_paths = { "fr": "/fr/" }
+
+@SEO
+title = Default title
+
+@SEO/lesson
+title = %i18n.Copy.lesson%
+
+@Navigator
+url bound to activePage
+mode = path
+
+@Page/index
+logic = app
+view:
+    main:
+        match activePage:
+            "home" -> Home
+            "lesson" -> Lesson
+            _ -> Missing
+
+@Component/Home
+view:
+    h1 "{i18n.Copy.home}"
+
+@Component/Lesson
+view:
+    h1 "{i18n.Copy.lesson}"
+
+@Component/Missing
+view:
+    h1 "Missing"
+
+@Logic/app
+state:
+    activePage = "home"
+
+@I18N/en_us
+Copy {
+    home = "Welcome"
+    lesson = "English lesson"
+}
+
+
+@I18N/fr
+Copy {
+    home = "Bienvenue"
+    lesson = "Leçon française"
+}
+"#);
+    for (request, heading) in [("/", "Welcome"), ("/fr/", "Bienvenue"), ("/fr/lesson", "Leçon française"), ("/lesson", "English lesson"), ("/fr/missing", "Missing")] {
+        let result = vectrune_cmd().arg(&path).args(["-o", "html", "--path", request]).assert().success();
+        let html = String::from_utf8_lossy(&result.get_output().stdout);
+        assert!(html.contains(&format!("<h1>{}</h1>", heading)), "Missing SSR heading for {request}");
+        if request.ends_with("/lesson") { assert!(html.contains(&format!("<title>{}</title>", heading))); }
+        if request.starts_with("/fr/") { assert!(html.contains("lang=\"fr\"")); }
+    }
+}
+
+#[test]
+fn static_route_export_includes_home_for_navigation_from_deep_links() {
+    let temp = tempdir().unwrap();
+    let path = temp.path().join("app.rune");
+    write_file(&path, r#"
+@Frontend
+type = rune-web
+path = %ROOT%
+page = index
+
+@Navigator
+url bound to activePage
+mode = path
+
+@Optimizer
+dynamic_xhr = on
+
+@Page/index
+state:
+    activePage = "home"
+view:
+    main:
+        match activePage:
+            "home" -> h1 "Welcome home"
+            "lesson" -> h1 "A lesson"
+"#);
+    let chunks = temp.path().join("chunks");
+    vectrune_cmd().arg(&path).args(["-o", "html", "--path", "/lesson", "--chunks-dir"])
+        .arg(&chunks).assert().success();
+    assert!(fs::read_to_string(chunks.join("home.json")).unwrap().contains("Welcome home"));
+    assert!(chunks.join("lesson.json").is_file());
+}
+
+
+#[test]
 fn html_output_rejects_non_matching_rune_web_path() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let script = manifest_dir.join("examples/i18n_demo.rune");

@@ -6,7 +6,7 @@ import { ctx } from './context';
 import { evaluateExpression, tryParseLiteral } from './expression';
 import { interpolate } from './interpolation';
 import { buildScope } from './scope';
-import { escapeHtml, normalizeLiteral } from './utils';
+import { escapeHtml, hostedUrl, normalizeLiteral } from './utils';
 import type { ViewNode, ElementNode } from './types';
 
 // ---------------------------------------------------------------------------
@@ -188,7 +188,8 @@ export function renderElement(
   }
 
   for (const [key, value] of Object.entries(element.attrs || {})) {
-    const renderedValue = interpolate(value, scope);
+    const interpolated = interpolate(value, scope);
+    const renderedValue = key === 'src' || key === 'href' ? hostedUrl(interpolated) : interpolated;
     if (
       renderedValue === 'false' ||
       renderedValue === 'undefined' ||

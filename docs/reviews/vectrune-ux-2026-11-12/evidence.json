@@ -1,0 +1,254 @@
+{
+  "review_date": "2026-11-12",
+  "site": "https://vectrune.com",
+  "browser": "Chromium via Playwright",
+  "viewports_css_px": [
+    [
+      1440,
+      1000
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      320,
+      640
+    ],
+    [
+      720,
+      500
+    ]
+  ],
+  "routes": {
+    "/fr/": {
+      "status": 200,
+      "url": "https://vectrune.com/fr/fr",
+      "mainText": "",
+      "title": "Fr \u2014 Learn Vectrune \u2014 Declarative Full-Stack Language & Reactive Web",
+      "active": "fr"
+    },
+    "/es/": {
+      "status": 200,
+      "url": "https://vectrune.com/es/es",
+      "mainText": "",
+      "title": "Es \u2014 Learn Vectrune \u2014 Declarative Full-Stack Language & Reactive Web",
+      "active": "es"
+    },
+    "/fr/studio": {
+      "status": 404,
+      "url": "https://vectrune.com/fr/studio",
+      "mainText": "8-Bit DAW & Synth\nRune Studio: 8-Bit Chiptune DAW\n\nA visual 8-bit digital audio workstation and synthesizer tracker built entirely with declarative Rune-Web: multitrack score editing, real-time Web Audio synthesis, local storage persistence, and .run",
+      "title": "Rune Studio \u2014 8-Bit Chiptune DAW & Synth Tracker",
+      "active": "studio"
+    },
+    "/es/studio": {
+      "status": 404,
+      "url": "https://vectrune.com/es/studio",
+      "mainText": "8-Bit DAW & Synth\nRune Studio: 8-Bit Chiptune DAW\n\nA visual 8-bit digital audio workstation and synthesizer tracker built entirely with declarative Rune-Web: multitrack score editing, real-time Web Audio synthesis, local storage persistence, and .run",
+      "title": "Rune Studio \u2014 8-Bit Chiptune DAW & Synth Tracker",
+      "active": "studio"
+    },
+    "/studio": {
+      "status": 200,
+      "url": "https://vectrune.com/studio",
+      "mainText": "8-Bit DAW & Synth\nRune Studio: 8-Bit Chiptune DAW\n\nA visual 8-bit digital audio workstation and synthesizer tracker built entirely with declarative Rune-Web: multitrack score editing, real-time Web Audio synthesis, local storage persistence, and .run",
+      "title": "Rune Studio \u2014 8-Bit Chiptune DAW & Synth Tracker",
+      "active": "studio"
+    },
+    "/web_components": {
+      "status": 404,
+      "url": "https://vectrune.com/web_components",
+      "mainText": "RUNE-WEB GUIDE\n\nComponents and props\n\nCompose a page from reusable @Component views. Workshop cards share a layout while their content comes from props.\n\nReading the syntax\n\nprops: [title, level, note?] declares required inputs and an optional note. ",
+      "title": "Web_components \u2014 Learn Vectrune \u2014 Declarative Full-Stack Language & Reactive Web",
+      "active": "web_components"
+    }
+  },
+  "route_scroll": {
+    "before": 529,
+    "after": 529,
+    "headingTop": -287.703125,
+    "focus": "BODY"
+  },
+  "language_switch_from_studio": {
+    "url": "https://vectrune.com/fr/fr",
+    "main": ""
+  },
+  "mobile_geometry": {
+    "header": {
+      "x": 0,
+      "y": 111.953125,
+      "width": 390,
+      "height": 323.234375
+    },
+    "banner": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 111.953125
+    },
+    "menu": {
+      "x": 0,
+      "y": 435.1875,
+      "width": 390,
+      "height": 52
+    },
+    "hero": {
+      "x": 12,
+      "y": 507.1875,
+      "width": 366,
+      "height": 758.75
+    },
+    "cta": {
+      "x": 33,
+      "y": 795.859375,
+      "width": 324,
+      "height": 54.78125
+    },
+    "badge": {
+      "x": 239.3125,
+      "y": 784,
+      "width": 134.6875,
+      "height": 44
+    }
+  },
+  "sidebar_heading": [
+    {
+      "color": "rgb(108, 137, 131)",
+      "fontSize": "10.88px"
+    }
+  ],
+  "sidebar_route_link_count": 22,
+  "sidebar_navigation_uses_buttons": true,
+  "sidebar_aria_current_count": 0,
+  "reference_inputs": [
+    {
+      "id": "builtin-search",
+      "type": "text",
+      "placeholder": "Filter builtins (log, csv, memory, validate)\u2026",
+      "label": null
+    },
+    {
+      "id": "graphql-operation-name",
+      "type": "text",
+      "placeholder": "",
+      "label": "Operation name (optional)"
+    }
+  ],
+  "sandbox_response": "GET /health\nPOST /echo\nSend Request\nStatus: 200\n\nLogs:\nHealth check\n\nResponse:\n\n\"OK\"",
+  "demo_top_css_px": {
+    "studio": 1214.90625,
+    "games": 1214.90625,
+    "vectworms": 1189.3125
+  },
+  "keyboard_first_16": [
+    {
+      "tag": "A",
+      "text": "Follow progress on GitHub",
+      "label": null,
+      "href": "https://github.com/davethomas11/vectrune"
+    },
+    {
+      "tag": "A",
+      "text": "The Vectrune languageVectruneA practical path from first API to reusable examples.",
+      "label": "Vectrune home",
+      "href": "#app"
+    },
+    {
+      "tag": "A",
+      "text": "Quickstart",
+      "label": null,
+      "href": "#quickstart"
+    },
+    {
+      "tag": "A",
+      "text": "Language tour",
+      "label": null,
+      "href": "#tour"
+    },
+    {
+      "tag": "A",
+      "text": "Walkthrough",
+      "label": null,
+      "href": "#walkthrough"
+    },
+    {
+      "tag": "A",
+      "text": "Examples",
+      "label": null,
+      "href": "#examples"
+    },
+    {
+      "tag": "A",
+      "text": "What next",
+      "label": null,
+      "href": "#next"
+    },
+    {
+      "tag": "A",
+      "text": "English",
+      "label": null,
+      "href": "/"
+    },
+    {
+      "tag": "A",
+      "text": "Espa\u00f1ol",
+      "label": null,
+      "href": "/es/"
+    },
+    {
+      "tag": "A",
+      "text": "Fran\u00e7ais",
+      "label": null,
+      "href": "/fr/"
+    },
+    {
+      "tag": "A",
+      "text": "Help translate on GitHub \u2197",
+      "label": null,
+      "href": "https://github.com/davethomas11/vectrune/tree/main/teaching_website/parts/i18n"
+    },
+    {
+      "tag": "A",
+      "text": "Localization guide",
+      "label": null,
+      "href": "#app"
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Overview",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Document Syntax",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Localization",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "text": "REST API",
+      "label": null,
+      "href": null
+    }
+  ],
+  "console_errors_initial_pass": [],
+  "source_file_counts": {
+    "vectraiders": 5,
+    "vectworms": 5,
+    "rune_studio": 15
+  },
+  "limits": [
+    "Expert walkthrough without recruited users",
+    "Chromium only; no Safari, Firefox or screen reader certification",
+    "No clean-machine installation or audio-quality evaluation",
+    "No controlled network or Core Web Vitals benchmark"
+  ]
+}

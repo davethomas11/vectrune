@@ -1,12 +1,18 @@
 @Component/RuneStudioPage
 view:
     div .page .application-guide .studio-page:
-        section .card:
+        section .card .showcase-intro:
             div .section-heading:
                 span .tag .tag-advanced "%i18n.Studio.badge%"
                 h1 "%i18n.Studio.title%"
                 p .lead "%i18n.Studio.description%"
             
+            p .showcase-try "%i18n.Studio.try_it%"
+
+        WebExample title="{i18n.Studio.title}" preview="{preview ../../../examples/rune_studio/rune_studio.rune}" files="{sources ../../../examples/rune_studio/rune_studio.rune}" show_heading=false
+
+        details .card .showcase-notes:
+            summary "%i18n.Guide.how_it_works%"
             div .features-grid:
                 article .feature-card:
                     h3 "🎹 %i18n.Studio.feature_chiptune_title%"
@@ -25,11 +31,4 @@ view:
             p "🎵 %i18n.Studio.instructions_songs%"
             p "💾 %i18n.Studio.instructions_storage%"
 
-        WebExample title="{i18n.Studio.title}" preview="{preview ../../../examples/rune_studio/rune_studio.rune}" files="{sources ../../../examples/rune_studio/rune_studio.rune}"
-
-        section .card:
-            h3 "%i18n.Guide.run_locally%"
-            p "%i18n.WebGuide.run%"
-            pre:
-                code .code-block .language-bash "vectrune examples/rune_studio/rune_studio.rune\nvectrune examples/rune_studio/rune_studio.rune -o html > runestudio.html"
-
+        RunExampleLocally example="rune_studio"

@@ -2,8 +2,8 @@
 view:
     div .page:
         HeroSection
-        QuickstartSection
         SandboxSection code="{raw ../../../examples/app.rune}"
+        QuickstartSection
         LanguageTourSection
         WalkthroughSection
         ExamplesSection

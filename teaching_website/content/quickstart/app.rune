@@ -1,0 +1,10 @@
+#!RUNE
+
+@App
+name = First API
+type = REST
+port = 3000
+
+@Route/GET /health
+run:
+    respond 200 "OK"

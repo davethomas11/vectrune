@@ -9,6 +9,7 @@
 
 import { ctx } from './context';
 import { interpolate } from './interpolation';
+import { hostingPrefix, hostedUrl } from './utils';
 import type { NavigatorConfig, RuneApp, Scope } from './types';
 
 let isNavigatingFromUrl = false;
@@ -28,13 +29,15 @@ export function readNavigatorUrl(config: NavigatorConfig): string | null {
   if (mode === 'path' || mode === 'auto') {
     try {
       const url = new URL(window.location.href);
-      const cleanPath = url.pathname.replace(/^\/+|\/+$/g, '');
+      const prefix = hostingPrefix();
+      const pathname = prefix && (url.pathname === prefix || url.pathname.startsWith(prefix + '/'))
+        ? url.pathname.slice(prefix.length) : url.pathname;
+      const cleanPath = pathname.replace(/^\/+|\/+$/g, '');
       const parts = cleanPath.split('/').filter(Boolean);
+      // A locale root is the home page, not a route named after the locale.
+      if (parts[0] === 'es' || parts[0] === 'fr') parts.shift();
       if (parts.length > 0) {
-        let route = parts[parts.length - 1];
-        if (parts.length > 1 && (parts[0] === 'es' || parts[0] === 'fr')) {
-          route = parts[1];
-        }
+        const route = decodeURIComponent(parts.join('/'));
         if (route && route !== 'index.html') {
           return route;
         }
@@ -138,7 +141,7 @@ export function updateSeoMetadata(route: string): void {
   }
 
   if (rawImage) {
-    const image = interpolate(rawImage, scope);
+    const image = hostedUrl(interpolate(rawImage, scope));
     setMetaTag('property', 'og:image', image);
     setMetaTag('name', 'twitter:image', image);
   }
@@ -183,10 +186,11 @@ export function updateNavigatorUrl(route: string, replace = false): void {
   if (mode === 'path') {
     try {
       const url = new URL(window.location.href);
-      const pathname = url.pathname;
-      let prefix = '';
-      if (pathname.startsWith('/es/') || pathname === '/es') prefix = '/es';
-      if (pathname.startsWith('/fr/') || pathname === '/fr') prefix = '/fr';
+      const base = hostingPrefix();
+      const pathname = url.pathname.slice(base.length);
+      let prefix = base;
+      if (pathname.startsWith('/es/') || pathname === '/es') prefix += '/es';
+      if (pathname.startsWith('/fr/') || pathname === '/fr') prefix += '/fr';
 
       let newPath = '';
       if (!cleanRoute || cleanRoute === 'home') {

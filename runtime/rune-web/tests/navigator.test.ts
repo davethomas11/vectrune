@@ -30,6 +30,31 @@ describe('Rune-Web Navigator', () => {
     expect(route).toBe('documents');
   });
 
+  it.each(['/es/', '/fr/', '/es', '/fr', '/es/index.html', '/fr/index.html'])(
+    'treats locale root %s as home rather than a route', (path) => {
+      mockWindow.location = new URL('https://vectrune.com' + path);
+      expect(readNavigatorUrl({ bind: 'activePage', mode: 'path' })).toBeNull();
+    },
+  );
+
+  it.each(['/fr/studio', '/es/web_components'])('removes the locale prefix from %s', (path) => {
+    mockWindow.location = new URL('https://vectrune.com' + path);
+    expect(readNavigatorUrl({ bind: 'activePage', mode: 'path' })).toBe(path.split('/')[2]);
+  });
+
+  it('keeps an unknown nested path intact for not-found recovery', () => {
+    mockWindow.location = new URL('https://vectrune.com/fr/missing/studio');
+    expect(readNavigatorUrl({ bind: 'activePage', mode: 'path' })).toBe('missing/studio');
+  });
+
+  it('reads routes under the configured static hosting prefix', () => {
+    vi.stubGlobal('document', { querySelector: () => ({ getAttribute: () => '/vectrune/' }) });
+    mockWindow.location = new URL('https://example.github.io/vectrune/fr/studio');
+    expect(readNavigatorUrl({ bind: 'activePage', mode: 'path' })).toBe('studio');
+    mockWindow.location = new URL('https://example.github.io/vectrune/fr/');
+    expect(readNavigatorUrl({ bind: 'activePage', mode: 'path' })).toBeNull();
+  });
+
   it('reads route from query parameter fallback (?p=games)', () => {
     mockWindow.location = new URL('https://vectrune.com/?p=games');
     const config: NavigatorConfig = { bind: 'activePage', mode: 'auto', param: 'page' };

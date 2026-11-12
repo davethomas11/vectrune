@@ -3,7 +3,7 @@ view:
     div .page .application-guide:
         section .card:
             p .eyebrow "%i18n.DynamicAi.eyebrow%"
-            h2 "%i18n.DynamicAi.title%"
+            h1 "%i18n.DynamicAi.title%"
             p .lead "%i18n.DynamicAi.intro%"
             ExampleSource code="{raw ../../../examples/dynamic_ai_web.rune}"
             h3 "%i18n.Guide.syntax%"

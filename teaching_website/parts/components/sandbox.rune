@@ -17,13 +17,17 @@ view:
                         "{code}"
                 div .editor-actions:
                     button #run-button .cta click="runSandbox(this)" data-run-label="%i18n.Sandbox.run%" data-changes-label="%i18n.Sandbox.run_changes%" "%i18n.Sandbox.run%"
-                    if {show_output}:
-                        select #ast-format aria-label="%i18n.Sandbox.format%" style="padding:0.5rem; border-radius:4px; border:1px solid #d8e1ee;":
-                            option value="json" "JSON"
-                            option value="yaml" "YAML"
-                            option value="xml" "XML"
-                        button #show-doc-button .secondary-cta click="showDoc(this)" "%i18n.Sandbox.show_document%"
-                        button #show-ast-button .secondary-cta click="showAst(this)" "%i18n.Sandbox.show_ast%"
+                    button .secondary-cta .sandbox-reset type=button click="resetSandbox(this)" "%i18n.Sandbox.reset%"
+                    if show_output ?? false:
+                        details .sandbox-advanced:
+                            summary "%i18n.Sandbox.advanced%"
+                            div .editor-actions:
+                                select #ast-format aria-label="%i18n.Sandbox.format%" style="padding:0.5rem; border-radius:4px; border:1px solid #d8e1ee;":
+                                    option value="json" "JSON"
+                                    option value="yaml" "YAML"
+                                    option value="xml" "XML"
+                                button #show-doc-button .secondary-cta click="showDoc(this)" "%i18n.Sandbox.show_document%"
+                                button #show-ast-button .secondary-cta click="showAst(this)" "%i18n.Sandbox.show_ast%"
                 p #sandbox-edit-status .sandbox-edit-status role=status aria-live=polite hidden=true "%i18n.Sandbox.pending_changes%"
             
             div .output-pane:

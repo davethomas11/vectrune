@@ -3,7 +3,7 @@ view:
     div .page .application-guide:
         section .card:
             p .eyebrow "%i18n.Nav.applications%"
-            h2 "%i18n.GraphqlGuide.title%"
+            h1 "%i18n.GraphqlGuide.title%"
             p .lead "%i18n.GraphqlGuide.intro%"
             ExampleSource code="{raw ../../content/applications/graphql.rune}"
             h3 "%i18n.Guide.syntax%"

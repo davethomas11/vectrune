@@ -3,6 +3,7 @@
 let serializeFn = null;
 const graphqlRuntimes = new WeakMap();
 const sandboxSources = new WeakMap();
+const sandboxVersions = new WeakMap();
 
 function updateSandboxEditStatus(editor) {
     if (!sandboxSources.has(editor)) sandboxSources.set(editor, editor.defaultValue);
@@ -25,6 +26,22 @@ function markSandboxApplied(editor, source) {
     updateSandboxEditStatus(editor);
 }
 
+window.resetSandbox = (button) => {
+    const container = button.closest('.sandbox-container');
+    const editor = container?.querySelector('#sandbox-editor');
+    const output = container?.querySelector('#sandbox-output');
+    if (!editor || !output) return;
+    sandboxVersions.set(container, (sandboxVersions.get(container) || 0) + 1);
+    editor.value = editor.defaultValue;
+    graphqlRuntimes.delete(container);
+    const consoleUI = container.querySelector('.graphql-console');
+    if (consoleUI) consoleUI.hidden = true;
+    output.textContent = t('reset_ready');
+    markSandboxApplied(editor, editor.value);
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.focus();
+};
+
 document.addEventListener('input', (event) => {
     if (event.target.matches('#sandbox-editor')) updateSandboxEditStatus(event.target);
 });
@@ -35,8 +52,8 @@ const t = (key) => window.siteText('Sandbox.' + key);
 
 function getEmulatorUrl() {
     const script = document.querySelector('script[src*="sandbox.js"]');
-    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=13', location.href));
-    url.search = script ? new URL(script.src).search : '?v=13';
+    const url = new URL('rune-emulator.js', script?.src || new URL('/assets/sandbox.js?v=14', location.href));
+    url.search = script ? new URL(script.src).search : '?v=14';
     return url.href;
 }
 
@@ -173,6 +190,8 @@ window.runSandbox = async (btn) => {
     if (!editor || !output) return;
 
     const code = editor.value;
+    const version = (sandboxVersions.get(container) || 0) + 1;
+    sandboxVersions.set(container, version);
     output.textContent = t('running');
     const graphqlConsole = container.querySelector('.graphql-console');
     if (graphqlConsole) graphqlConsole.hidden = true;
@@ -180,6 +199,7 @@ window.runSandbox = async (btn) => {
     
     try {
         const { parse, createApp, serialize, toDocument } = await loadEmulator();
+        if (sandboxVersions.get(container) !== version) return;
         serializeFn = serialize;
         
         const doc = parse(code);
@@ -345,6 +365,7 @@ window.runSandbox = async (btn) => {
         
         markSandboxApplied(editor, code);
     } catch (err) {
+        if (sandboxVersions.get(container) !== version) return;
         output.textContent = t('error') + ': ' + err;
         console.error("Sandbox runtime error:", err);
     }

@@ -3,7 +3,7 @@ view:
     div .page:
         div .section-heading:
             p .eyebrow "%i18n.Nav.rest%"
-            h2 "%i18n.Tutorial.post_title%"
+            h1 "%i18n.Tutorial.post_title%"
             p "%i18n.Tutorial.post_intro%"
             
         SandboxSection code="{raw examples/rest_api_post_example.rune}" show_output=true

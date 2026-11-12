@@ -1,12 +1,18 @@
 @Component/VectWormsPage
 view:
     div .page .application-guide .space-invaders-page:
-        section .card:
+        section .card .showcase-intro:
             div .section-heading:
                 span .tag .tag-advanced "%i18n.VectWorms.badge%"
                 h1 "%i18n.VectWorms.title%"
                 p .lead "%i18n.VectWorms.description%"
 
+            p .showcase-try "%i18n.VectWorms.try_it%"
+
+        WebExample title="{i18n.VectWorms.title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" files="{sources ../../../examples/vectworms/vectworms.rune}" show_heading=false
+
+        details .card .showcase-notes:
+            summary "%i18n.Guide.how_it_works%"
             div .features-grid:
                 article .feature-card:
                     h3 "🐛 %i18n.VectWorms.feature_split_title%"
@@ -25,11 +31,4 @@ view:
             p "⌨️ %i18n.VectWorms.instructions_keyboard%"
             p "📱 %i18n.VectWorms.instructions_mobile%"
 
-        WebExample title="{i18n.VectWorms.title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" files="{sources ../../../examples/vectworms/vectworms.rune}"
-
-        section .card:
-            h3 "%i18n.Guide.run_locally%"
-            p "%i18n.WebGuide.run%"
-            pre:
-                code .code-block .language-bash "vectrune examples/vectworms/vectworms.rune\nvectrune examples/vectworms/vectworms.rune -o html > vectworms.html"
-
+        RunExampleLocally example="vectworms"

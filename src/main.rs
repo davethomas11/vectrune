@@ -550,7 +550,7 @@ async fn main() -> anyhow::Result<()> {
                             .and_then(|s| s.kv.get("page"))
                             .and_then(|v| v.as_str())
                             .unwrap_or("index");
-                        let _ = crate::apps::rune_web::export_optimizer_chunks(&doc, page_name, std::path::Path::new(dir));
+                        crate::apps::rune_web::export_optimizer_chunks(&doc, page_name, std::path::Path::new(dir))?;
                     }
                     let html = crate::apps::rune_web::render_html_for_path(&doc, render_path).await?;
                     println!("{}", html);

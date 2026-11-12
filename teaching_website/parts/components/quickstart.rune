@@ -5,48 +5,61 @@ view:
             p .eyebrow "%i18n.Quickstart.eyebrow%"
             h2 "%i18n.Quickstart.headline%"
             p .section-copy "%i18n.Quickstart.description%"
-        div .install-section:
-            h3 "%i18n.Quickstart.install_title%"
-            div .install-grid:
-                article .install-card:
-                    h4 "%i18n.Quickstart.homebrew_title%"
-                    pre:
-                        code .code-block .language-bash "%i18n.Quickstart.homebrew_cmd%"
-                    p "%i18n.Quickstart.verify_with%"
-                    pre:
-                        code .code-block .language-bash "%i18n.Quickstart.verify_cmd%"
-                article .install-card:
-                    h4 "%i18n.Quickstart.windows_title%"
-                    p "%i18n.Quickstart.windows_desc%"
-                    ul:
-                        li "%i18n.Quickstart.windows_step1%"
-                        li "%i18n.Quickstart.windows_step2%"
-                        li "%i18n.Quickstart.windows_step3%"
-                    a .content-link href="https://github.com/davethomas11/vectrune/releases" target=_blank "%i18n.Quickstart.releases_link%"
-                article .install-card:
-                    h4 "%i18n.Quickstart.source_title%"
-                    pre:
-                        code .code-block .language-bash "%i18n.Quickstart.source_cmd%"
-                    p "%i18n.Quickstart.source_note%"
-        div .steps-grid:
-            article .step-card:
-                span .step-number "1"
+        div .quickstart-browser:
+            a .cta href=#sandbox "%i18n.Quickstart.browser_title%"
+            p "%i18n.Quickstart.browser_hint%"
+        h3 "%i18n.Quickstart.install_title%"
+        details .installation-method open=true name=installation:
+            summary "%i18n.Quickstart.homebrew_title%"
+            p:
+                a href=https://brew.sh target=_blank rel="noopener noreferrer" "%i18n.Quickstart.homebrew_prerequisite%"
+            CommandBlock code="{i18n.Quickstart.homebrew_cmd}"
+        details .installation-method name=installation:
+            summary "%i18n.Quickstart.windows_title%"
+            p "%i18n.Quickstart.windows_desc%"
+            ol:
+                li "%i18n.Quickstart.windows_step1%"
+                li "%i18n.Quickstart.windows_step2%"
+                li "%i18n.Quickstart.windows_step3%"
+            a .content-link href=https://github.com/davethomas11/vectrune/releases/latest target=_blank rel="noopener noreferrer" "%i18n.Quickstart.releases_link%"
+        details .installation-method name=installation:
+            summary "%i18n.Quickstart.linux_title%"
+            p "%i18n.Quickstart.linux_hint%"
+            a .content-link href=https://github.com/davethomas11/vectrune/releases/latest target=_blank rel="noopener noreferrer" "%i18n.Quickstart.releases_link%"
+        details .installation-method name=installation:
+            summary "%i18n.Quickstart.source_title%"
+            p "%i18n.Quickstart.source_note%"
+            CommandBlock code="{i18n.Quickstart.source_cmd}"
+        ol .quickstart-steps:
+            li:
                 h3 "%i18n.Quickstart.steps_verify%"
-                pre:
-                    code .code-block .language-bash "%i18n.Quickstart.steps_verify_cmd%"
-            article .step-card:
-                span .step-number "2"
+                CommandBlock code="{i18n.Quickstart.steps_verify_cmd}"
+                p "%i18n.Quickstart.version_result%"
+                p .document-note "%i18n.Quickstart.local_binary%"
+            li:
+                h3 "%i18n.Quickstart.create_title%"
+                p "%i18n.Quickstart.create_hint%"
+                a .secondary-cta href=/assets/content/quickstart/app.rune download=app.rune "%i18n.Quickstart.download_example%"
+                div .command-block .quickstart-source:
+                    button .command-copy type=button data-copied="%i18n.Quickstart.command_copied%" data-failed="%i18n.Quickstart.command_failed%" "%i18n.Examples.copy_source%"
+                    ExampleSource code="{raw ../../content/quickstart/app.rune}"
+            li:
                 h3 "%i18n.Quickstart.steps_run%"
-                pre:
-                    code .code-block .language-bash "%i18n.Quickstart.steps_run_cmd%"
+                CommandBlock code="{i18n.Quickstart.steps_run_cmd}"
                 p "%i18n.Quickstart.steps_run_note%"
-            article .step-card:
-                span .step-number "3"
+            li:
                 h3 "%i18n.Quickstart.steps_hit%"
-                pre:
-                    code .code-block .language-bash "%i18n.Quickstart.steps_hit_cmd%"
+                CommandBlock code="{i18n.Quickstart.steps_hit_cmd}"
                 p "%i18n.Quickstart.steps_hit_result%"
+                p .document-note "%i18n.Quickstart.stop_hint%"
         div .callout .callout-success:
             strong "%i18n.Quickstart.callout_title%"
             p "%i18n.Quickstart.callout_text%"
 
+@Component/CommandBlock
+props: [code]
+view:
+    div .command-block:
+        button .command-copy type=button data-copied="%i18n.Quickstart.command_copied%" data-failed="%i18n.Quickstart.command_failed%" "%i18n.Quickstart.command_copy%"
+        pre:
+            code .code-block .language-shell "{code}"

@@ -3,7 +3,7 @@ view:
     div .page .application-guide:
         section .card:
             p .eyebrow "%i18n.Nav.applications%"
-            h2 "%i18n.StaticGuide.title%"
+            h1 "%i18n.StaticGuide.title%"
             p .lead "%i18n.StaticGuide.intro%"
             ExampleSource code="{raw ../../content/applications/static.rune}"
             h3 "%i18n.Guide.syntax%"

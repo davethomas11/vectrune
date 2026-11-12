@@ -3,12 +3,13 @@ view:
     div .page:
         div .section-heading:
             p .eyebrow "%i18n.Reference.eyebrow%"
-            h2 "%i18n.Reference.title%"
+            h1 "%i18n.Reference.title%"
             p .section-copy "%i18n.Reference.intro%"
 
         div .reference-shell:
             div .reference-controls:
-                input #builtin-search .search-input placeholder="%i18n.Reference.search%" oninput="filterBuiltins()"
+                label for=builtin-search "%i18n.Reference.search_label%"
+                input #builtin-search .search-input type=search placeholder="%i18n.Reference.search%" oninput="filterBuiltins()"
                 div .category-pills:
                     button .pill .active onclick="selectCategory('all', this)" "%i18n.Reference.all%"
                     button .pill onclick="selectCategory('diagnostics', this)" "%i18n.Reference.diagnostics%"

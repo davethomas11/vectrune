@@ -6,3 +6,6 @@ view:
             strong "%i18n.Common.app_name%"
         p "%i18n.Footer.copyright%"
 
+        div .language-help:
+            a href=https://github.com/davethomas11/vectrune/tree/main/teaching_website/parts/i18n target=_blank rel="noopener noreferrer" "%i18n.Common.translation_source%"
+            a href="{i18n.Common.base_path}localization" data-route-link=true click="navigate('localization')" "%i18n.Common.localization_guide%"

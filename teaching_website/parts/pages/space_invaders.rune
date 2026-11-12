@@ -1,12 +1,18 @@
 @Component/SpaceInvadersPage
 view:
     div .page .application-guide .space-invaders-page:
-        section .card:
+        section .card .showcase-intro:
             div .section-heading:
                 span .tag .tag-advanced "%i18n.SpaceInvaders.badge%"
                 h1 "%i18n.SpaceInvaders.title%"
                 p .lead "%i18n.SpaceInvaders.description%"
             
+            p .showcase-try "%i18n.SpaceInvaders.try_it%"
+
+        WebExample title="{i18n.SpaceInvaders.title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" files="{sources ../../../examples/space_invaders/space_invaders.rune}" show_heading=false
+
+        details .card .showcase-notes:
+            summary "%i18n.Guide.how_it_works%"
             div .features-grid:
                 article .feature-card:
                     h3 "⏱️ %i18n.SpaceInvaders.feature_loop_title%"
@@ -25,10 +31,4 @@ view:
             p "⌨️ %i18n.SpaceInvaders.instructions_keyboard%"
             p "📱 %i18n.SpaceInvaders.instructions_mobile%"
 
-        WebExample title="{i18n.SpaceInvaders.title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" files="{sources ../../../examples/space_invaders/space_invaders.rune}"
-
-        section .card:
-            h3 "%i18n.Guide.run_locally%"
-            p "%i18n.WebGuide.run%"
-            pre:
-                code .code-block .language-bash "vectrune examples/space_invaders/space_invaders.rune\nvectrune examples/space_invaders/space_invaders.rune -o html > vectraiders.html"
+        RunExampleLocally example="space_invaders"

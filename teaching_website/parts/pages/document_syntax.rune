@@ -4,7 +4,7 @@ view:
         section .card:
             div .section-heading:
                 p .eyebrow "%i18n.DocumentSyntax.eyebrow%"
-                h2 "%i18n.DocumentSyntax.title%"
+                h1 "%i18n.DocumentSyntax.title%"
                 p .lead "%i18n.DocumentSyntax.intro%"
             nav .document-toc aria-label="%i18n.DocumentSyntax.contents%":
                 a .secondary-cta href=#document-sections "%i18n.DocumentSyntax.sections_title%"

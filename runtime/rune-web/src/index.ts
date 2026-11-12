@@ -9,7 +9,7 @@ import { initContext, ctx } from './context';
 import { evaluateExpression, resolveValue } from './expression';
 import { getWindowProp, setWindowProp } from './globals';
 import { buildScope, makeReactive } from './scope';
-import { normalizeLiteral, valueToString } from './utils';
+import { hostedUrl, normalizeLiteral, valueToString } from './utils';
 import { renderNode } from './rendering';
 import { executeSteps, parseTrackToSteps } from './statement';
 import { bindEvent, setupMemoryUpdateListener } from './events';
@@ -140,7 +140,7 @@ export function boot(config: RuneWebConfig): RuneApp {
       return Promise.resolve(null);
     }
 
-    const promise = fetch(chunkUrl)
+    const promise = fetch(hostedUrl(chunkUrl))
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status} fetching route chunk ${chunkUrl}`);
         return res.json();
@@ -186,7 +186,7 @@ export function boot(config: RuneWebConfig): RuneApp {
       chunksToPreload.forEach(({ route, chunk_url }) => {
         const cleanRoute = route.toLowerCase();
         if (!loadedChunks[cleanRoute] && !loadingChunks[cleanRoute]) {
-          fetch(chunk_url)
+          fetch(hostedUrl(chunk_url))
             .then((r) => r.json())
             .then((data) => {
               loadedChunks[cleanRoute] = data;

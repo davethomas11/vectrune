@@ -61,6 +61,11 @@ export function bindEvent(eventName: string): void {
     if (linkClick && (mouse.ctrlKey || mouse.metaKey || mouse.shiftKey || mouse.altKey
       || mouse.button > 0 || element.getAttribute('target') === '_blank')) return;
     const href = linkClick ? element.getAttribute('href') : null;
+    // Explicit route links retain native new-tab behavior above while normal
+    // clicks use the action and History API without reloading the document.
+    if (linkClick && element.getAttribute('data-route-link') === 'true') {
+      event.preventDefault();
+    }
     const spec = parseHandlerSpec(
       element.getAttribute(`data-on-${eventName}`) || '',
     );

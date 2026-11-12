@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderNode, renderElement } from '../src/rendering';
 import { initContext } from '../src/context';
 import type { RuneApp, ViewNode } from '../src/types';
@@ -104,6 +104,21 @@ describe('renderNode', () => {
 describe('renderElement', () => {
   beforeEach(() => {
     setupTestContext({ count: 5 });
+  });
+
+  it('prefixes hosted URLs while keeping displayed source literal', () => {
+    vi.stubGlobal('document', { querySelector: () => ({ getAttribute: () => '/guide/' }) });
+    try {
+      const source = 'img src="/assets/example.png"\n';
+      const html = renderElement({
+        tag: 'a', classes: [], id: null, events: {}, for_each: null,
+        attrs: { href: '/fr/studio', src: '/assets/example.png' },
+        text: '{source}', children: [],
+      }, { source });
+      expect(html).toContain('href="/guide/fr/studio"');
+      expect(html).toContain('src="/guide/assets/example.png"');
+      expect(html).toContain(escapeHtml(source));
+    } finally { vi.unstubAllGlobals(); }
   });
 
   it('renders basic element', () => {

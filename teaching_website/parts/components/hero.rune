@@ -3,11 +3,11 @@ view:
     section #hero .card .hero:
         div .hero-copy:
             p .eyebrow "%i18n.Hero.eyebrow%"
-            h2 "%i18n.Hero.headline%"
+            h1 "%i18n.Hero.headline%"
             p .lead "%i18n.Hero.lead%"
             div .hero-actions:
-                a .cta href=#quickstart "%i18n.Hero.cta_primary%"
-                a .secondary-cta href=#examples "%i18n.Hero.cta_secondary%"
+                a .cta href=#sandbox "%i18n.Hero.cta_primary%"
+                a .secondary-cta href=#quickstart "%i18n.Hero.cta_secondary%"
         aside .hero-panel:
             div .hero-panel-heading:
                 img .hero-logo src=/assets/rune-logo.png width=80 height=80 alt="" aria-hidden=true decoding=async

@@ -52,6 +52,9 @@ jobs:
           npm ci
           npm run build
 
+      - name: Check teaching site compiler compatibility guard
+        run: python3 tests/browser/test_teaching_build.py
+
       - name: Render static site
         env:
           # Set repo variable PAGES_CNAME=vectrune.com once DNS is ready.
@@ -61,45 +64,8 @@ jobs:
           BIN="$GITHUB_WORKSPACE/target/release/vectrune"
           OUT="$GITHUB_WORKSPACE/_site"
           if [ -n "${PAGES_CNAME:-}" ]; then BASE="/"; else BASE="/${GITHUB_REPOSITORY#*/}/"; fi
-          mkdir -p "$OUT/assets"
-          cd teaching_website
-
-          # Render one static page per locale: / (en_us), /es/, /fr/
-          mkdir -p "$OUT/assets/routes"
-          for loc in en_us es fr; do
-            if [ "$loc" = "en_us" ]; then dest="$OUT"; else dest="$OUT/$loc"; fi
-            mkdir -p "$dest"
-            sed -i "s/^locale = .*/locale = $loc/" teaching.rune
-            "$BIN" teaching.rune -o html --chunks-dir "$OUT/assets/routes" > "$dest/index.html"
-          done
-          git checkout -- teaching.rune
-
-          # Pre-render SEO route pages for direct link sharing & iMessage previews
-          for route in games vectraiders vectworms studio music documents localization rest static graphql dynamic_ai rune_web websocket examples builtins; do
-            mkdir -p "$OUT/$route"
-            "$BIN" teaching.rune -o html --path "/$route" > "$OUT/$route/index.html"
-          done
-
-          # GitHub Pages SPA fallback: 404 loads root SPA
-          cp "$OUT/index.html" "$OUT/404.html"
-
-          # Rewrite paths if hosted on subpath instead of custom domain root
-          if [ "$BASE" != "/" ]; then
-            find "$OUT" -name index.html -exec sed -i \
-              -e "s#href=\"/\"#href=\"${BASE}\"#g" \
-              -e "s#href=\"/es/\"#href=\"${BASE}es/\"#g" \
-              -e "s#href=\"/fr/\"#href=\"${BASE}fr/\"#g" \
-              -e "s#\(src\|href\)=\"/assets/#\1=\"${BASE}assets/#g" {} +
-          fi
-
-          # Static assets referenced as /assets/* and root favicons
-          cp *.js *.css *.png *.ico "$OUT/assets/" 2>/dev/null || true
-          [ -f favicon.ico ] && cp favicon.ico "$OUT/" || true
-          [ -f favicon.png ] && cp favicon.png "$OUT/" || true
-          [ -d pkg ] && cp -r pkg "$OUT/assets/pkg" || true
-
+          python3 teaching_website/build_site.py --binary "$BIN" --output "$OUT" --base "$BASE"
           if [ -n "${PAGES_CNAME:-}" ]; then echo "$PAGES_CNAME" > "$OUT/CNAME"; fi
-          touch "$OUT/.nojekyll"
 
       - uses: actions/upload-pages-artifact@v3
         with:

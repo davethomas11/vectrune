@@ -11,53 +11,54 @@ bindings:
 
 view:
     div .app-layout:
+        a .skip-link href=#content "%i18n.Nav.skip%"
         DevBanner
         TeachingHeader
         div .app-body data-navigation-open="{navigationOpen}":
             button .navigation-toggle type=button click="navigationOpen = !navigationOpen" aria-expanded="{navigationOpen}" aria-controls=site-navigation:
-                span "%i18n.Nav.browse%"
+                span "{navigationOpen ? i18n.Nav.close : i18n.Nav.browse}"
                 span aria-hidden=true "☰"
             nav #site-navigation .sidebar aria-label="%i18n.Nav.aria%":
                 div .nav-group:
                     h3 "%i18n.Nav.intro%"
-                    button .nav-link {.active when 'home'} click="navigate('home')" "%i18n.Nav.overview%"
-                    button .nav-link {.active when 'documents'} click="navigate('documents')" "%i18n.DocumentSyntax.nav%"
-                    button .nav-link {.active when 'localization'} click="navigate('localization')" "%i18n.Nav.localization%"
+                    a .nav-link {.active when 'home'} href="{i18n.Common.base_path}" data-route-link=true aria-current="{activePage == 'home' ? 'page' : 'false'}" click="navigate('home')" "%i18n.Nav.overview%"
+                    a .nav-link {.active when 'documents'} href="{i18n.Common.base_path}documents" data-route-link=true aria-current="{activePage == 'documents' ? 'page' : 'false'}" click="navigate('documents')" "%i18n.DocumentSyntax.nav%"
+                    a .nav-link {.active when 'localization'} href="{i18n.Common.base_path}localization" data-route-link=true aria-current="{activePage == 'localization' ? 'page' : 'false'}" click="navigate('localization')" "%i18n.Nav.localization%"
                 div .nav-group:
                     h3 "%i18n.Nav.applications%"
-                    button .nav-link {.active when 'rest'} click="navigate('rest')" "%i18n.Nav.rest%"
-                    button .nav-link {.active when 'static'} click="navigate('static')" "%i18n.Nav.static%"
-                    button .nav-link {.active when 'graphql'} click="navigate('graphql')" "GraphQL"
-                    button .nav-link {.active when 'dynamic_ai'} click="navigate('dynamic_ai')" "%i18n.DynamicAi.nav%"
-                    button .nav-link {.active when 'rune_web'} click="navigate('rune_web')" "%i18n.Nav.rune_web%"
-                    button .nav-link {.active when 'websocket'} click="navigate('websocket')" "%i18n.Nav.websockets%"
+                    a .nav-link {.active when 'rest'} href="{i18n.Common.base_path}rest" data-route-link=true aria-current="{activePage == 'rest' ? 'page' : 'false'}" click="navigate('rest')" "%i18n.Nav.rest%"
+                    a .nav-link {.active when 'static'} href="{i18n.Common.base_path}static" data-route-link=true aria-current="{activePage == 'static' ? 'page' : 'false'}" click="navigate('static')" "%i18n.Nav.static%"
+                    a .nav-link {.active when 'graphql'} href="{i18n.Common.base_path}graphql" data-route-link=true aria-current="{activePage == 'graphql' ? 'page' : 'false'}" click="navigate('graphql')" "GraphQL"
+                    a .nav-link {.active when 'dynamic_ai'} href="{i18n.Common.base_path}dynamic_ai" data-route-link=true aria-current="{activePage == 'dynamic_ai' ? 'page' : 'false'}" click="navigate('dynamic_ai')" "%i18n.DynamicAi.nav%"
+                    a .nav-link {.active when 'rune_web'} href="{i18n.Common.base_path}rune_web" data-route-link=true aria-current="{activePage == 'rune_web' ? 'page' : 'false'}" click="navigate('rune_web')" "%i18n.Nav.rune_web%"
+                    a .nav-link {.active when 'websocket'} href="{i18n.Common.base_path}websocket" data-route-link=true aria-current="{activePage == 'websocket' ? 'page' : 'false'}" click="navigate('websocket')" "%i18n.Nav.websockets%"
                 div .nav-group:
                     h3 "%i18n.Nav.rest%"
-                    button .nav-link {.active when 'rest_get'} click="navigate('rest_get')" "%i18n.Nav.get%"
-                    button .nav-link {.active when 'rest_post'} click="navigate('rest_post')" "%i18n.Nav.post%"
-                    button .nav-link {.active when 'rest_validation'} click="navigate('rest_validation')" "%i18n.Nav.validation%"
+                    a .nav-link {.active when 'rest_get'} href="{i18n.Common.base_path}rest_get" data-route-link=true aria-current="{activePage == 'rest_get' ? 'page' : 'false'}" click="navigate('rest_get')" "%i18n.Nav.get%"
+                    a .nav-link {.active when 'rest_post'} href="{i18n.Common.base_path}rest_post" data-route-link=true aria-current="{activePage == 'rest_post' ? 'page' : 'false'}" click="navigate('rest_post')" "%i18n.Nav.post%"
+                    a .nav-link {.active when 'rest_validation'} href="{i18n.Common.base_path}rest_validation" data-route-link=true aria-current="{activePage == 'rest_validation' ? 'page' : 'false'}" click="navigate('rest_validation')" "%i18n.Nav.validation%"
                 div .nav-group:
                     h3 "%i18n.RuneWebGuide.group%"
-                    button .nav-link {.active when 'web_components'} click="navigate('web_components')" "%i18n.RuneWebGuide.components_title%"
-                    button .nav-link {.active when 'web_forms'} click="navigate('web_forms')" "%i18n.RuneWebGuide.forms_title%"
-                    button .nav-link {.active when 'web_actions'} click="navigate('web_actions')" "%i18n.RuneWebGuide.actions_title%"
-                    button .nav-link {.active when 'web_views'} click="navigate('web_views')" "%i18n.RuneWebGuide.views_title%"
-                    button .nav-link {.active when 'web_styles'} click="navigate('web_styles')" "%i18n.RuneWebGuide.styles_title%"
+                    a .nav-link {.active when 'web_components'} href="{i18n.Common.base_path}web_components" data-route-link=true aria-current="{activePage == 'web_components' ? 'page' : 'false'}" click="navigate('web_components')" "%i18n.RuneWebGuide.components_title%"
+                    a .nav-link {.active when 'web_forms'} href="{i18n.Common.base_path}web_forms" data-route-link=true aria-current="{activePage == 'web_forms' ? 'page' : 'false'}" click="navigate('web_forms')" "%i18n.RuneWebGuide.forms_title%"
+                    a .nav-link {.active when 'web_actions'} href="{i18n.Common.base_path}web_actions" data-route-link=true aria-current="{activePage == 'web_actions' ? 'page' : 'false'}" click="navigate('web_actions')" "%i18n.RuneWebGuide.actions_title%"
+                    a .nav-link {.active when 'web_views'} href="{i18n.Common.base_path}web_views" data-route-link=true aria-current="{activePage == 'web_views' ? 'page' : 'false'}" click="navigate('web_views')" "%i18n.RuneWebGuide.views_title%"
+                    a .nav-link {.active when 'web_styles'} href="{i18n.Common.base_path}web_styles" data-route-link=true aria-current="{activePage == 'web_styles' ? 'page' : 'false'}" click="navigate('web_styles')" "%i18n.RuneWebGuide.styles_title%"
                 div .nav-group:
                     h3 "%i18n.Nav.reference%"
-                    button .nav-link {.active when 'builtins'} click="navigate('builtins')" "%i18n.Nav.builtins%"
+                    a .nav-link {.active when 'builtins'} href="{i18n.Common.base_path}builtins" data-route-link=true aria-current="{activePage == 'builtins' ? 'page' : 'false'}" click="navigate('builtins')" "%i18n.Nav.builtins%"
                 div .nav-group:
                     h3 "%i18n.Nav.games%"
-                    button .nav-link {.active when 'games'} click="navigate('games')" "%i18n.Nav.vectraiders%"
-                    button .nav-link {.active when 'vectworms'} click="navigate('vectworms')" "%i18n.Nav.vectworms%"
+                    a .nav-link {.active when 'games'} href="{i18n.Common.base_path}games" data-route-link=true aria-current="{activePage == 'games' or activePage == 'vectraiders' or activePage == 'space_invaders' ? 'page' : 'false'}" click="navigate('games')" "%i18n.Nav.vectraiders%"
+                    a .nav-link {.active when 'vectworms'} href="{i18n.Common.base_path}vectworms" data-route-link=true aria-current="{activePage == 'vectworms' ? 'page' : 'false'}" click="navigate('vectworms')" "%i18n.Nav.vectworms%"
                 div .nav-group:
                     h3 "%i18n.Nav.music%"
-                    button .nav-link {.active when 'studio'} click="navigate('studio')" "%i18n.Nav.studio%"
+                    a .nav-link {.active when 'studio'} href="{i18n.Common.base_path}studio" data-route-link=true aria-current="{activePage == 'studio' or activePage == 'music' ? 'page' : 'false'}" click="navigate('studio')" "%i18n.Nav.studio%"
                 div .nav-group:
                     h3 "%i18n.Examples.lab_eyebrow%"
-                    button .nav-link {.active when 'examples'} click="openExample('app')" "%i18n.Examples.lab_title%"
+                    a .nav-link {.active when 'examples'} href="{i18n.Common.base_path}examples" data-route-link=true aria-current="{activePage == 'examples' ? 'page' : 'false'}" click="openExample('app')" "%i18n.Examples.lab_title%"
             
-            main .content-area:
+            main #content .content-area tabindex=-1 data-route="{activePage}":
                 match activePage:
                     "home"            -> HomeContent
                     "documents"       -> DocumentSyntaxPage
@@ -84,3 +85,11 @@ view:
                     "web_actions" -> RuneWebActionsGuide
                     "web_views" -> RuneWebViewsGuide
                     "web_styles" -> RuneWebStylesGuide
+                    _ -> NotFoundPage
+
+@Component/NotFoundPage
+view:
+    section .page .card .not-found:
+        h1 "%i18n.Nav.not_found%"
+        p "%i18n.Nav.not_found_hint%"
+        a .cta href="{i18n.Common.base_path}" "%i18n.Nav.overview%"

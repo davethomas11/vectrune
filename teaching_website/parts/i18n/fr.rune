@@ -1,5 +1,7 @@
 @I18N/fr
 Common {
+    language_name = "Français"
+    base_path = "/fr/"
     locale = "fr"
     language_label = "Langue :"
     built_with = "Site entièrement créé avec Rune-Web"
@@ -20,6 +22,8 @@ Header {
     nav_next = "Prochaines étapes"
 }
 Banner {
+    details = "Notes de version ↗"
+    compact = "Pré-1.0 : la syntaxe peut évoluer."
     badge = "Développement précoce"
     message = "Vectrune est en version pré-1.0 et évolue rapidement. La syntaxe et les API peuvent changer entre les versions."
     link = "Suivez les progrès sur GitHub"
@@ -27,9 +31,9 @@ Banner {
 Hero {
     eyebrow = "Les données en mouvement"
     headline = "Obtenez une application Vectrune utile en quelques minutes."
-    lead = "De votre première API aux applications web interactives, Vectrune réunit données et comportement dans un langage lisible. Explorez des exemples concrets et essayez-les dans votre navigateur."
-    cta_primary = "Commencez le parcours de 5 minutes"
-    cta_secondary = "Parcourez les exemples de démarrage"
+    lead = "Créez des API, des pages réactives et des démos avec un seul langage. Modifiez un exemple et essayez-le dans le navigateur."
+    cta_primary = "Essayer dans le navigateur"
+    cta_secondary = "Installer Vectrune"
     sidebar_title = "Pourquoi Vectrune"
     reason_1 = "Fichiers .rune lisibles"
     reason_2 = "Définitions REST et GraphQL compactes"
@@ -38,33 +42,48 @@ Hero {
     lab_link = "Explorer les exemples interactifs →"
 }
 Quickstart {
+    command_copy = "Copier la commande"
+    command_copied = "Copié !"
+    command_failed = "Échec de la copie. Sélectionnez et copiez la commande."
+
     eyebrow = "Démarrage rapide"
     headline = "Succès en 5 minutes"
-    description = "Installez Vectrune pour votre plateforme, puis exécutez votre première application de bout en bout."
+    description = "Essayez une requête dans le navigateur, ou installez Vectrune et créez une API complète dans un nouveau dossier."
     install_title = "Installer Vectrune"
     homebrew_title = "macOS et Linux - Homebrew"
     homebrew_cmd = "brew tap davethomas11/homebrew-vectrune\nbrew install vectrune"
     verify_with = "Ensuite, vérifiez l'installation avec :"
     verify_cmd = "vectrune --version"
     windows_title = "Windows - téléchargement de version"
-    windows_desc = "Le dépôt documente actuellement un chemin de téléchargement de version pour Windows."
-    windows_step1 = "Ouvrez la page des versions de GitHub."
-    windows_step2 = "Téléchargez le dernier exécutable Windows."
-    windows_step3 = "Placez le dossier exécutable sur votre PATH."
+    windows_desc = "Téléchargez l’archive Windows et extrayez vectrune.exe avant de l’utiliser."
+    windows_step1 = "Ouvrez la dernière version et téléchargez vectrune.exe-windows-x86_64.tar.gz."
+    windows_step2 = "Extrayez l’archive avec tar -xzf vectrune.exe-windows-x86_64.tar.gz dans PowerShell, ou avec un outil d’archivage."
+    windows_step3 = "Ajoutez le dossier au PATH utilisateur et ouvrez un nouveau terminal, ou gardez l’exécutable dans votre projet et utilisez .\\vectrune.exe au lieu de vectrune ci-dessous."
     releases_link = "Ouvrir la page des versions"
     source_title = "N'importe quelle plateforme - construire à partir de la source"
-    source_cmd = "cargo install --path ."
-    source_note = "Utilisez ce chemin si vous avez déjà une chaîne d'outils Rust et que vous souhaitez l'exécuter à partir d'un clone local."
+    source_cmd = "git clone https://github.com/davethomas11/vectrune.git\ncd vectrune\ncargo install --path ."
+    source_note = "Avancé : nécessite Git et Rust avec Cargo. Exécutez ces commandes dans le dossier où vous souhaitez conserver le dépôt."
     steps_verify = "Vérifier l'installation"
     steps_verify_cmd = "vectrune --version"
     steps_run = "Exécutez l'application d'exemple"
-    steps_run_cmd = "vectrune examples/app.rune"
-    steps_run_note = "Cela démarre l'application REST minimale définie dans examples/app.rune."
-    steps_hit = "Frappez la route de santé"
+    steps_run_cmd = "vectrune app.rune"
+    steps_run_note = "Exécutez cette commande dans le dossier contenant app.rune. Le serveur écoute sur http://127.0.0.1:3000. Laissez ce terminal ouvert."
+    steps_hit = "Envoyer une première requête"
     steps_hit_cmd = "curl http://127.0.0.1:3000/health"
-    steps_hit_result = "Réponse attendue : OK"
+    steps_hit_result = "Réponse attendue : OK. Ouvrez cette URL dans un navigateur, ou utilisez curl dans un second terminal. Dans Windows PowerShell, utilisez curl.exe."
     callout_title = "Ce que vous venez d'apprendre"
     callout_text = "Les applications Vectrune utilisent des sections lisibles comme @App et @Route, et vous pouvez obtenir un serveur fonctionnant sans beaucoup de code standard."
+    browser_title = "Essayer dans le navigateur"
+    browser_hint = "Aucune installation. Appliquez le code, puis envoyez une requête dans le bac à sable ci-dessous."
+    homebrew_prerequisite = "Nécessite Homebrew. Installez-le d’abord si nécessaire."
+    linux_title = "Linux sans Homebrew"
+    linux_hint = "Téléchargez l’archive Linux adaptée à votre architecture. Extrayez-la avec tar -xzf ARCHIVE.tar.gz, puis exécutez chmod +x vectrune. Ajoutez l’exécutable au PATH ou gardez-le dans votre projet et utilisez ./vectrune ci-dessous."
+    version_result = "Résultat attendu : vectrune suivi de la version installée."
+    local_binary = "Pour un exécutable dans le dossier courant, remplacez vectrune par .\\vectrune.exe sous Windows ou ./vectrune sous macOS/Linux."
+    create_title = "Créer app.rune"
+    create_hint = "Créez un nouveau dossier de projet et ouvrez-y un terminal. Téléchargez app.rune dans ce dossier, ou enregistrez le code ci-dessous sous app.rune avec un éditeur de texte. Aucun dépôt à cloner."
+    download_example = "Télécharger app.rune"
+    stop_hint = "Arrêtez le serveur avec Ctrl+C. Si le port 3000 est occupé, modifiez port dans app.rune et utilisez ce port dans la requête."
 }
 LanguageTour {
     eyebrow = "Visite de la langue"
@@ -144,7 +163,7 @@ Examples {
     graphql_hint = "Lancez l’application pour tester de vraies requêtes et mutations. Choisissez une opération ou écrivez la vôtre. Les changements restent dans le navigateur ; Run réinitialise les données."
     web_hint = "Cet aperçu est compilé à partir du véritable exemple Rune, avec ses styles et ses actions. Testez l’application, puis ouvrez le code source."
     sandbox_title = "Lire, modifier, exécuter"
-    sandbox_hint = "Modifiez le code et exécutez-le dans le navigateur. Exportez le document ou examinez l’AST avec les autres commandes."
+    sandbox_hint = "Appliquez le code pour préparer cet exemple dans le navigateur, puis envoyez une requête. Les contrôles avancés permettent d’inspecter le document et l’AST."
     graphql_ready = "Choisissez une opération, modifiez la requête ou les variables, puis exécutez. Les mutations partagent la mémoire avec les requêtes suivantes."
     graphql_examples = "Exemple d’opération"
     graphql_query = "Requête ou mutation"
@@ -166,10 +185,10 @@ WhatsNext {
 }
 Sandbox {
     dynamic_ai_native = "Les sites IA dynamiques nécessitent le serveur natif et un moteur IA. Lancez cargo run -- examples/dynamic_ai_web.rune pour essayer le café."
-    edit_hint = "Modifiez le code, puis appuyez sur Exécuter pour appliquer les modifications."
-    run = "Exécuter"
+    edit_hint = "Ce bac à sable simule les requêtes dans le navigateur. Appliquez le code, choisissez un point de terminaison et appuyez sur Envoyer la requête."
+    run = "Appliquer le code"
     run_changes = "Appliquer les modifications"
-    pending_changes = "Modifications non appliquées. Appuyez sur Exécuter pour les appliquer."
+    pending_changes = "Modifications non appliquées. Appuyez sur Appliquer le code pour actualiser l’exemple."
     interactive = "Interactif"
     code = "Code"
     output = "Résultat"
@@ -177,7 +196,7 @@ Sandbox {
     placeholder = "Saisissez votre code .rune ici…"
     show_document = "Voir le document"
     show_ast = "Voir l’AST"
-    idle = "Appuyez sur Exécuter pour voir le résultat."
+    idle = "Appliquez le code pour préparer l’exemple, puis envoyez une requête."
     format = "Format de sortie"
     status = "Statut"
     logs = "Journaux"
@@ -193,9 +212,12 @@ Sandbox {
     request_path = "Chemin de requête"
     send = "Envoyer la requête"
     sending = "Envoi de la requête…"
-    request_ready = "Appuyez sur Envoyer la requête pour appeler le point de terminaison."
+    request_ready = "Code appliqué. Choisissez un point de terminaison et appuyez sur Envoyer la requête."
     web_compile = "Compilez les applications Rune-Web pour les prévisualiser. Ouvrez Compteur ou Morpion dans les exemples pour essayer une application compilée."
     native_only = "Exécutez cet exemple WebSocket avec le CLI natif ; le bac à sable n’exécute pas les hooks de sockets."
+    advanced = "Inspecter le document ou l’AST"
+    reset = "Réinitialiser l’exemple"
+    reset_ready = "Exemple réinitialisé. Appliquez le code pour le préparer à nouveau."
 }
 Footer {
     copyright = "© 2026 Projet Vectrune"
@@ -241,6 +263,11 @@ DocumentSyntax {
 }
 
 Nav {
+    skip = "Aller au contenu"
+    close = "Fermer la documentation"
+    not_found = "Page introuvable"
+    not_found_hint = "Cette page n’existe pas. Parcourez la documentation ou revenez à la présentation."
+
     browse = "Parcourir la documentation"
     aria = "Documentation"
     intro = "Introduction"
@@ -284,7 +311,7 @@ Lab {
 SpaceInvaders {
     badge = "Jeu Rétro Arcade"
     title = "VectRaiders : Défendez la Grille Vectorielle"
-    description = "Un jeu d'arcade rétro complet démontrant la puissance déclarative de Vectrune : boucle de jeu en temps réel, commandes clavier et tactiles sans code superflu et primitives de collision 2D réutilisables en moins de 60 lignes de logique."
+    description = "Défendez la grille dans un jeu d’arcade jouable créé avec Rune-Web."
     play_label = "Jouer à VectRaiders"
     feature_loop_title = "Boucle de jeu temps réel"
     feature_loop_desc = "timer = tick 40ms exécute une boucle à 25 fps directement dans l'état réactif sans nécessiter setInterval ou requestAnimationFrame."
@@ -297,12 +324,13 @@ SpaceInvaders {
     instructions_title = "Commandes"
     instructions_keyboard = "A / ◀: Gauche • D / ▶: Droite • Espace: Tirer"
     instructions_mobile = "Touchez et maintenez les boutons d'arcade à l'écran pour glisser et tirer sur mobile et tablette."
+    try_it = "Appuyez sur PLAY NOW, déplacez-vous avec A/D ou les flèches et tirez avec Espace. Les commandes tactiles sont sous le jeu."
 }
 
 VectWorms {
     badge = "Jeu Rétro Arcade"
     title = "VectWorms : Purgez la Grille de Champignons"
-    description = "Un jeu d'arcade mille-pattes rapide en Rune-Web déclaratif : segments qui se divisent, champignons destructibles, émetteurs de particules et effets sonores Web Audio."
+    description = "Nettoyez la grille de champignons dans ce jeu d’arcade Rune-Web."
     play_label = "Jouer à VectWorms"
     feature_split_title = "Division des Segments"
     feature_split_desc = "Détruire un segment fait apparaître un champignon et transforme le segment suivant en nouvelle tête indépendante."
@@ -315,26 +343,29 @@ VectWorms {
     instructions_title = "Commandes"
     instructions_keyboard = "WASD / Flèches : Déplacer (4 directions) • Espace : Tirer"
     instructions_mobile = "Utilisez la croix directionnelle et le bouton de tir sur mobile ou tablette."
+    try_it = "Appuyez sur PLAY NOW, utilisez WASD ou les flèches et tirez avec Espace. Sur téléphone, utilisez le pavé directionnel et FIRE."
 }
 
 Studio {
     badge = "DAW et Synthétiseur 8-Bit"
     title = "Rune Studio : DAW Chiptune 8-Bit"
-    description = "Une station audio numérique et tracker de synthétiseur 8-bit entièrement conçu avec Rune-Web déclaratif : édition visuelle multipiste, synthèse Web Audio en temps réel, persistance en stockage local et export de fichiers .rune."
+    description = "Composez un morceau 8 bits dans le navigateur, modifiez les notes et exportez votre musique en code .rune."
     feature_chiptune_title = "Synthétiseur Chiptune Web Audio"
     feature_chiptune_desc = "Écoutez des ondes carrées, basses triangulaires et percussions bruit blanc en temps réel avec enveloppes ADSR et fréquences configurables."
     feature_multitrack_title = "Séquenceur Multipiste Visuel"
     feature_multitrack_desc = "Composez mélodies principales, arpèges, basses pulsées et percussions avec notation mesure par mesure et tempo ajustable."
-    feature_storage_title = "Persistance en Stockage Local"
-    feature_storage_desc = "Les liaisons natives storage.set et storage.get conservent vos morceaux et réglages à travers les rechargements du navigateur."
-    feature_export_title = "Export et Téléchargement Source .rune"
-    feature_export_desc = "Exportez directement vos compositions sous forme de code Rune-Web valide grâce aux fonctions de téléchargement et presse-papiers."
+    feature_storage_title = "Enregistrer et restaurer un arrangement"
+    feature_storage_desc = "SAVE et LOAD conservent un arrangement dans ce navigateur. Dans l’aperçu intégré, les données peuvent disparaître à la fin de la session ; exportez un fichier pour garder votre morceau."
+    feature_export_title = "Exporter votre morceau"
+    feature_export_desc = "EXPORT .RUNE télécharge le code @Music du morceau, distinct de l’application Studio complète et de ses fichiers sources."
     instructions_title = "Comment utiliser"
-    instructions_songs = "Sélectionnez un morceau préchargé (VectRaiders, VectWorms, Cyber Run, Moonlight Dungeon, Victory Fanfare) ou composez vos propres notes."
-    instructions_storage = "Cliquez sur 'Sauvegarder' pour conserver vos notes en mémoire, ou 'Télécharger .rune' pour enregistrer le fichier."
+    instructions_songs = "Choisissez un morceau, utilisez PLAY pour l’écouter et STOP pour terminer. Sélectionnez une voix et modifiez les notes dans le piano roll ou la vue STRIP."
+    instructions_storage = "SAVE enregistre l’arrangement dans le navigateur ; LOAD le restaure. EXPORT .RUNE télécharge le code du morceau. Conservez cet export avant de quitter ou recharger l’aperçu."
+    try_it = "Choisissez un morceau et appuyez sur PLAY, puis STOP. Sélectionnez une voix et cliquez sur une note pour la modifier."
 }
 
 Reference {
+    search_label = "Rechercher une fonction"
     eyebrow = "Bibliothèque standard"
     title = "Référence des fonctions intégrées"
     intro = "Explorez la syntaxe et les exemples des fonctions intégrées. Filtrez par catégorie ou recherchez, puis chargez un exemple dans le bac à sable."
@@ -359,6 +390,10 @@ Reference {
 Guide {
     syntax = "Lire la syntaxe"
     run_locally = "Exécuter localement"
+    how_it_works = "Comment fonctionne cet exemple"
+    project_setup = "Pour exécuter l’exemple complet, installez Vectrune et Git. Clonez le dépôt une fois et conservez le dossier parts avec le fichier principal."
+    clone_cmd = "git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
+    project_folder = "Exécutez ces commandes à la racine du dépôt. Si vous avez déjà une copie, ouvrez simplement un terminal à sa racine."
 }
 
 RestGuide {

@@ -1,18 +1,18 @@
 @Component/TeachingHeader
 view:
     header .site-header:
-        a .brand href=#app click="navigate('home')" aria-label="%i18n.Header.home_label%":
+        a .brand href="{i18n.Common.base_path}" data-route-link=true click="navigate('home')" aria-label="%i18n.Header.home_label%":
             img .brand-logo src=/assets/rune-logo.png width=64 height=64 alt="" decoding=async
             div .brand-copy:
                 p .eyebrow "%i18n.Header.kicker%"
-                h1 "%i18n.Common.app_name%"
+                strong .brand-name "%i18n.Common.app_name%"
                 p .subtitle "%i18n.Common.tagline%"
         nav .site-nav:
-            a href=#quickstart click="navigate('home')" "%i18n.Header.nav_quickstart%"
-            a href=#tour click="navigate('home')" "%i18n.Header.nav_tour%"
-            a href=#walkthrough click="navigate('home')" "%i18n.Header.nav_walkthrough%"
-            a href=#examples click="navigate('home')" "%i18n.Header.nav_examples%"
-            a href=#next click="navigate('home')" "%i18n.Header.nav_next%"
+            a href="{i18n.Common.base_path}#quickstart" data-route-link=true click="navigate('home')" "%i18n.Header.nav_quickstart%"
+            a href="{i18n.Common.base_path}#tour" data-route-link=true click="navigate('home')" "%i18n.Header.nav_tour%"
+            a href="{i18n.Common.base_path}#walkthrough" data-route-link=true click="navigate('home')" "%i18n.Header.nav_walkthrough%"
+            a href="{i18n.Common.base_path}#examples" data-route-link=true click="navigate('home')" "%i18n.Header.nav_examples%"
+            a href="{i18n.Common.base_path}#next" data-route-link=true click="navigate('home')" "%i18n.Header.nav_next%"
         div .header-actions:
             LanguageSelector
 

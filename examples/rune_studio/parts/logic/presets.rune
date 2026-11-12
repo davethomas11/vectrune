@@ -84,7 +84,7 @@ action setTimeSignature(sig):
 action saveToStorage:
     storage.set("rune_studio_last_song", selected_song)
     storage.set("rune_studio_" + selected_song, { "title": song_title, "tempo": tempo, "time_signature": time_signature, "lead": lead_track, "bass": bass_track, "chords": chords_track, "drums": drums_track })
-    status_message = "Saved " + song_title + " to Local Storage!"
+    status_message = "Saved " + song_title + " in this browser. EXPORT .RUNE keeps a file copy."
     flash_type = "success"
 
 action loadFromStorage:
@@ -99,14 +99,14 @@ action loadFromStorage:
         drums_track = saved.drums ?? drums_track
         selected_step_id = -1
         music.sync_steps
-        status_message = "Restored " + song_title + " from Local Storage!"
+        status_message = "Restored " + song_title + " from saved browser data."
         flash_type = "success"
         if is_playing:
             music.stop
             music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
             music.play(selected_song)
     if saved == null:
-        status_message = "No saved data found in Local Storage for " + song_title
+        status_message = "No saved browser data found for " + song_title
         flash_type = "warning"
 
 action exportRune:
