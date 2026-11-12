@@ -71,7 +71,7 @@ fn load_rune_document_from_path_inner(
                 source,
             })?
             .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-            .filter(|entry| entry.extension().and_then(|ext| ext.to_str()) == Some("rune"))
+            .filter(|entry| entry.is_dir() || entry.extension().and_then(|ext| ext.to_str()) == Some("rune"))
             .collect::<Vec<_>>();
         entries.sort();
 

@@ -65,6 +65,9 @@ export function bindEvent(eventName: string): void {
       element.getAttribute(`data-on-${eventName}`) || '',
     );
     if (!spec) return;
+    if (typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
     const locals = readScope(element);
     
     if (spec.name) {

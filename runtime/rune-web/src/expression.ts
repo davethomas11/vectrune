@@ -476,8 +476,18 @@ export function evaluateExpression(
       Boolean(evaluateExpression(part, scope, nextDepth)),
     );
   }
+  if (includesTopLevel(trimmed, ' || ')) {
+    return splitTopLevel(trimmed, ' || ').some((part) =>
+      Boolean(evaluateExpression(part, scope, nextDepth)),
+    );
+  }
   if (includesTopLevel(trimmed, ' and ')) {
     return splitTopLevel(trimmed, ' and ').every((part) =>
+      Boolean(evaluateExpression(part, scope, nextDepth)),
+    );
+  }
+  if (includesTopLevel(trimmed, ' && ')) {
+    return splitTopLevel(trimmed, ' && ').every((part) =>
       Boolean(evaluateExpression(part, scope, nextDepth)),
     );
   }

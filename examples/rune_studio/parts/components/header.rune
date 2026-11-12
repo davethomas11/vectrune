@@ -1,0 +1,13 @@
+@Component/StudioHeader
+props: [status_message?, is_fullscreen?]
+view:
+    header .studio-header:
+        div .header-brand:
+            h1 .studio-title "RUNE STUDIO"
+            p .studio-subtitle "Retro 8-Bit Chiptune DAW • Synthesizer & Sequencer"
+        div .header-controls:
+            button .btn-fullscreen click="toggleFullscreen":
+                "{is_fullscreen ? '⛶ FULLSCREEN: ON' : '⛶ FULLSCREEN'}"
+            div .status-pill:
+                span .badge-live "● LIVE"
+                span .status-txt "{status_message}"

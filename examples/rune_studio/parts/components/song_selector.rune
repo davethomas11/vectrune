@@ -1,0 +1,14 @@
+@Component/SongSelector
+props: [selected_song?]
+view:
+    div .song-selector:
+        button .song-tab {.active when selected_song == 'vectraiders'} click="selectSong('vectraiders')":
+            "👾 VectRaiders (144 BPM)"
+        button .song-tab {.active when selected_song == 'vectworms'} click="selectSong('vectworms')":
+            "🐛 VectWorms (136 BPM)"
+        button .song-tab {.active when selected_song == 'cyber_run'} click="selectSong('cyber_run')":
+            "⚡ Cyber Run (152 BPM)"
+        button .song-tab {.active when selected_song == 'moonlight'} click="selectSong('moonlight')":
+            "🌙 Moonlight (108 BPM • 3/4)"
+        button .song-tab {.active when selected_song == 'victory'} click="selectSong('victory')":
+            "🏆 Victory (140 BPM)"

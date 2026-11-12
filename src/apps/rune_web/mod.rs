@@ -605,11 +605,30 @@ fn render_view_node(node: &ast::ViewNode, data: &JsonMap<String, JsonValue>, loc
             // but do NOT appear in data-rune-scope (which is reserved for loop locals).
             let mut child_data = data.clone();
             for (key, value) in props {
-                let expression = value.strip_prefix('{').and_then(|value| value.strip_suffix('}')).unwrap_or(value);
-                child_data.insert(
-                    key.clone(),
-                    resolve_expression_value(expression, data, locals).unwrap_or(JsonValue::Null),
-                );
+                let val_trimmed = value.trim();
+                let prop_val = if val_trimmed.starts_with('{') && val_trimmed.ends_with('}') {
+                    let expression = &val_trimmed[1..val_trimmed.len() - 1];
+                    if expression.contains(" == ") || expression.contains(" != ") || expression.contains(" >= ") || expression.contains(" <= ") || expression.contains(" > ") || expression.contains(" < ") {
+                        JsonValue::Bool(evaluate_condition(expression, data, locals))
+                    } else {
+                        resolve_expression_value(expression, data, locals).unwrap_or(JsonValue::Null)
+                    }
+                } else if val_trimmed.starts_with('"') {
+                    if let Ok(val) = serde_json::from_str::<JsonValue>(val_trimmed) {
+                        val
+                    } else {
+                        JsonValue::String(val_trimmed.to_string())
+                    }
+                } else if val_trimmed == "true" {
+                    JsonValue::Bool(true)
+                } else if val_trimmed == "false" {
+                    JsonValue::Bool(false)
+                } else if let Ok(num) = val_trimmed.parse::<f64>() {
+                    serde_json::Number::from_f64(num).map(JsonValue::Number).unwrap_or(JsonValue::Null)
+                } else {
+                    JsonValue::String(val_trimmed.to_string())
+                };
+                child_data.insert(key.clone(), prop_val);
             }
             render_view_node(body, &child_data, locals)
         }
@@ -682,7 +701,7 @@ fn render_element_node(
         elem.push_str(&format!(
             r#" data-on-{}="{}""#,
             event,
-            html_escape(handler)
+            html_escape(&interpolate_template(handler, data, locals))
         ));
     }
 
@@ -1033,11 +1052,23 @@ fn split_path_segments(expr: &str) -> Vec<String> {
 }
 
 fn evaluate_condition(condition: &str, data: &JsonMap<String, JsonValue>, locals: &JsonMap<String, JsonValue>) -> bool {
-    let trimmed = condition.trim();
+    let mut trimmed = condition.trim();
+    while trimmed.starts_with('(') && trimmed.ends_with(')') {
+        trimmed = trimmed[1..trimmed.len() - 1].trim();
+    }
+    if let Some(negated) = trimmed.strip_prefix('!') {
+        return !evaluate_condition(negated, data, locals);
+    }
     if let Some((left, right)) = trimmed.split_once(" or ") {
         return evaluate_condition(left, data, locals) || evaluate_condition(right, data, locals);
     }
+    if let Some((left, right)) = trimmed.split_once(" || ") {
+        return evaluate_condition(left, data, locals) || evaluate_condition(right, data, locals);
+    }
     if let Some((left, right)) = trimmed.split_once(" and ") {
+        return evaluate_condition(left, data, locals) && evaluate_condition(right, data, locals);
+    }
+    if let Some((left, right)) = trimmed.split_once(" && ") {
         return evaluate_condition(left, data, locals) && evaluate_condition(right, data, locals);
     }
     if let Some((left, right)) = trimmed.split_once(" != ") {
@@ -1045,6 +1076,26 @@ fn evaluate_condition(condition: &str, data: &JsonMap<String, JsonValue>, locals
     }
     if let Some((left, right)) = trimmed.split_once(" == ") {
         return resolve_expression_value(left, data, locals) == resolve_expression_value(right, data, locals);
+    }
+    if let Some((left, right)) = trimmed.split_once(" >= ") {
+        let lv = resolve_expression_value(left, data, locals).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let rv = resolve_expression_value(right, data, locals).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        return lv >= rv;
+    }
+    if let Some((left, right)) = trimmed.split_once(" <= ") {
+        let lv = resolve_expression_value(left, data, locals).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let rv = resolve_expression_value(right, data, locals).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        return lv <= rv;
+    }
+    if let Some((left, right)) = trimmed.split_once(" > ") {
+        let lv = resolve_expression_value(left, data, locals).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let rv = resolve_expression_value(right, data, locals).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        return lv > rv;
+    }
+    if let Some((left, right)) = trimmed.split_once(" < ") {
+        let lv = resolve_expression_value(left, data, locals).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let rv = resolve_expression_value(right, data, locals).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        return lv < rv;
     }
 
     match resolve_expression_value(trimmed, data, locals) {

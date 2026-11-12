@@ -1,0 +1,25 @@
+@Component/TrackRack
+props: [voice_id, voice_name, icon, badge_class, badge_text, score_text, is_active?, is_muted?]
+view:
+    div .track-rack {.active-rack when is_active} click="selectVoice('{voice_id}')":
+        div .track-header:
+            div .track-meta:
+                span .track-icon "{icon}"
+                h3 .track-name "{voice_name}"
+                span .badge-wave "{badge_text}"
+                if is_active:
+                    span .pill-active-track "● ACTIVE RECORDING"
+            div .track-actions:
+                button .btn-track-mute {.btn-muted when is_muted} click="toggleTrackMute('{voice_id}')":
+                    if is_muted:
+                        "MUTED"
+                    if !is_muted:
+                        "MUTE"
+                button .btn-edit-track {.btn-editing when is_active} click="selectVoice('{voice_id}')":
+                    if is_active:
+                        "CURRENT VOICE"
+                    if !is_active:
+                        "✏️ EDIT VOICE"
+        div .track-score-box {.active-score-box when is_active}:
+            "{score_text}"
+

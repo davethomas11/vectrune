@@ -12,6 +12,7 @@ import {
   setMusicTempo,
   setMusicVolume,
 } from '../src/audio';
+import { audioSync } from '../src/audio_sync';
 
 describe('Web Audio Synthesizer & Music Sequencer', () => {
   it('parses musical note names to standard frequencies (A4 = 440 Hz)', () => {
@@ -142,6 +143,54 @@ describe('Web Audio Synthesizer & Music Sequencer', () => {
     expect(() => setMusicTempo(160)).not.toThrow();
     expect(() => setMusicVolume(0.3)).not.toThrow();
     expect(() => stopMusic()).not.toThrow();
+  });
+
+  it('assigns stepId matching token indices in parseTrackPattern', () => {
+    const pattern = 'C4:8 D4:8 | E4:4 G4:8';
+    const events = parseTrackPattern(pattern);
+
+    expect(events.length).toBe(4);
+    // C4:8 is token 0
+    expect(events[0].stepId).toBe(0);
+    // D4:8 is token 1
+    expect(events[1].stepId).toBe(1);
+    // Token 2 is '|' (skipped in events)
+    // E4:4 is token 3
+    expect(events[2].stepId).toBe(3);
+    // G4:8 is token 4
+    expect(events[3].stepId).toBe(4);
+  });
+
+  it('manages decoupled AudioSyncEngine snapshots and subscriptions', () => {
+    const events: any[] = [];
+    const unsubscribe = audioSync.subscribe((snapshot) => {
+      events.push(snapshot);
+    });
+
+    audioSync.onPlay({
+      track: 'test_song',
+      tempo: 120,
+      timeSignature: '4/4',
+      totalBars: 4,
+      totalBeats: 16,
+      startTime: 10,
+    });
+
+    const snapshot = audioSync.getSnapshot();
+    expect(snapshot.isPlaying).toBe(true);
+    expect(snapshot.isPaused).toBe(false);
+    expect(snapshot.track).toBe('test_song');
+    expect(snapshot.totalBars).toBe(4);
+    expect(snapshot.totalBeats).toBe(16);
+
+    audioSync.onPause();
+    expect(audioSync.getSnapshot().isPaused).toBe(true);
+
+    audioSync.onStop();
+    expect(audioSync.getSnapshot().isPlaying).toBe(false);
+
+    expect(events.length).toBeGreaterThanOrEqual(1);
+    unsubscribe();
   });
 });
 

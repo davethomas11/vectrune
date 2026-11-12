@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { ctx } from './context';
-import { evaluateExpression } from './expression';
+import { evaluateExpression, tryParseLiteral } from './expression';
 import { interpolate } from './interpolation';
 import { buildScope } from './scope';
 import { escapeHtml, normalizeLiteral } from './utils';
@@ -101,14 +101,17 @@ export function renderNode(
       locals || {},
     );
     for (const [key, value] of Object.entries(scope.props || {})) {
-      let exprStr = String(value).trim();
-      if (exprStr.startsWith('{') && exprStr.endsWith('}')) {
-        exprStr = exprStr.slice(1, -1).trim();
+      const valStr = String(value ?? '').trim();
+      if (valStr.startsWith('{') && valStr.endsWith('}')) {
+        const exprStr = valStr.slice(1, -1).trim();
+        childLocals[key] = evaluateExpression(
+          exprStr,
+          buildScope(locals),
+        );
+      } else {
+        const parsed = tryParseLiteral(valStr, buildScope(locals));
+        childLocals[key] = parsed !== undefined ? parsed : valStr;
       }
-      childLocals[key] = evaluateExpression(
-        exprStr,
-        buildScope(locals),
-      );
     }
     return renderNode(scope.body, childLocals);
   }

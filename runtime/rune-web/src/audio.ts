@@ -4,6 +4,7 @@
 // ============================================================================
 
 import type { SoundDefinition, MusicDefinition } from './types';
+import { audioSync } from './audio_sync';
 
 let audioCtx: AudioContext | null = null;
 let stepIndex = 0;
@@ -32,7 +33,7 @@ export function getAudioContext(): AudioContext | null {
   if (!audioCtx) {
     audioCtx = new AudioCtx();
   }
-  if (audioCtx.state === 'suspended') {
+  if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
   return audioCtx;
@@ -346,6 +347,7 @@ function playCustomSound(
 // ============================================================================
 
 export interface ParsedNoteEvent {
+  stepId: number;
   pitch: string | number;
   pitches?: Array<string | number>;
   beats: number;
@@ -371,16 +373,24 @@ let musicTempoBpm = 128;
 let musicLoop = true;
 let isMusicPaused = false;
 let musicStartTime = 0;
+let musicPauseTime = 0;
+let musicPausedElapsed = 0;
 let nextScheduleTime = 0;
 let tracksState: Record<string, TrackPlaybackState> = {};
 
 export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
   const events: ParsedNoteEvent[] = [];
   // Strip inline comments (\s+#... or ^#...) without breaking sharp notes like D#4 or C#5
-  const clean = patternStr.replace(/^\s*#.*$/gm, '').replace(/\s+#.*$/gm, '').replace(/\|/g, ' ');
+  const clean = patternStr.replace(/^\s*#.*$/gm, '').replace(/\s+#.*$/gm, '');
   const tokens = clean.split(/\s+/).filter(Boolean);
 
-  for (const token of tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token === '|') {
+      // Bar marker: preserves token indexing alignment with parseTrackToSteps
+      continue;
+    }
+
     let noteToken = token;
     let durationNum = 8; // Default 8th note
 
@@ -402,7 +412,7 @@ export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
     const beats = durationNum > 0 ? 4 / durationNum : 0.5;
 
     if (noteToken === '-' || noteToken.toUpperCase() === 'R' || noteToken === '_') {
-      events.push({ pitch: 0, beats, isRest: true, isDrum: false });
+      events.push({ stepId: i, pitch: 0, beats, isRest: true, isDrum: false });
       continue;
     }
 
@@ -417,6 +427,7 @@ export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
         return parseNoteToFreq(s);
       });
       events.push({
+        stepId: i,
         pitch: pitches[0],
         pitches,
         beats,
@@ -426,9 +437,9 @@ export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
     } else {
       const s = subNotes[0] || noteToken;
       if (drumNames.includes(s.toLowerCase())) {
-        events.push({ pitch: s.toLowerCase(), beats, isRest: false, isDrum: true });
+        events.push({ stepId: i, pitch: s.toLowerCase(), beats, isRest: false, isDrum: true });
       } else {
-        events.push({ pitch: parseNoteToFreq(s), beats, isRest: false, isDrum: false });
+        events.push({ stepId: i, pitch: parseNoteToFreq(s), beats, isRest: false, isDrum: false });
       }
     }
   }
@@ -494,19 +505,56 @@ export function playMusic(trackName: string): void {
     }
   }
 
+  const beatsPerBar = def.time_signature?.startsWith('3/') ? 3 : 4;
+  let maxTrackBeats = 0;
+  for (const track of Object.values(tracksState)) {
+    if (track && track.events && track.events.length > 0) {
+      const trackBeats = track.events.reduce((sum, e) => sum + (e.beats || 0), 0);
+      if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
+    }
+  }
+
+  const appStateBars = Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+  const totalBars = appStateBars > 0 ? appStateBars : (def.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
+  const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
+
   musicStartTime = ctx.currentTime + 0.05;
   nextScheduleTime = musicStartTime;
+  musicPauseTime = 0;
+  musicPausedElapsed = 0;
+
+  audioSync.configure({ getAudioContext: () => getAudioContext() });
+  audioSync.onPlay({
+    track: key,
+    tempo: musicTempoBpm,
+    timeSignature: def.time_signature || '4/4',
+    totalBars,
+    totalBeats,
+    startTime: musicStartTime,
+  });
 
   scheduleMusicTicks();
-  musicSchedulerTimer = setInterval(scheduleMusicTicks, 35);
+  musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
+}
+
+export function startPlaybackAnimation(): void {
+  // Visual animation handled by AudioSyncEngine
+}
+
+export function stopPlaybackAnimation(_keepParked = false): void {
+  audioSync.onStop();
 }
 
 export function stopMusic(): void {
+  audioSync.onStop();
   if (musicSchedulerTimer) {
     clearInterval(musicSchedulerTimer);
     musicSchedulerTimer = null;
   }
   activeMusicTrackName = null;
+  musicPauseTime = 0;
+  musicPausedElapsed = 0;
+  isMusicPaused = false;
   tracksState = {};
   if (musicMasterGain) {
     try {
@@ -519,11 +567,74 @@ export function stopMusic(): void {
 }
 
 export function pauseMusic(): void {
+  const ctx = getAudioContext();
+  if (!ctx || isMusicPaused || !activeMusicTrackName) return;
   isMusicPaused = true;
+  musicPauseTime = ctx.currentTime;
+  musicPausedElapsed = Math.max(0, musicPauseTime - musicStartTime);
+  if (musicMasterGain) {
+    try {
+      musicMasterGain.gain.setValueAtTime(0, ctx.currentTime);
+    } catch (_) {}
+  }
+  audioSync.onPause();
 }
 
 export function resumeMusic(): void {
+  const ctx = getAudioContext();
+  if (!ctx || !isMusicPaused || !activeMusicTrackName) return;
+
+  const pausedDuration = ctx.currentTime - musicPauseTime;
+  musicStartTime += pausedDuration;
+
+  const secondsPerBeat = 60 / musicTempoBpm;
+  const currentBeat = musicPausedElapsed / secondsPerBeat;
+
+  for (const track of Object.values(tracksState)) {
+    if (!track || !track.events.length) continue;
+    let accum = 0;
+    track.index = 0;
+    track.nextBeat = 0;
+    for (let i = 0; i < track.events.length; i++) {
+      const ev = track.events[i];
+      if (accum + ev.beats > currentBeat) {
+        track.index = i;
+        track.nextBeat = accum;
+        break;
+      }
+      accum += ev.beats;
+    }
+  }
+
+  if (musicMasterGain) {
+    try {
+      musicMasterGain.gain.setValueAtTime(musicVolume, ctx.currentTime);
+    } catch (_) {}
+  }
+
   isMusicPaused = false;
+
+  const def = registeredMusic[activeMusicTrackName];
+  const beatsPerBar = def?.time_signature?.startsWith('3/') ? 3 : 4;
+  let maxTrackBeats = 0;
+  for (const track of Object.values(tracksState)) {
+    if (track && track.events && track.events.length > 0) {
+      const trackBeats = track.events.reduce((sum, e) => sum + (e.beats || 0), 0);
+      if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
+    }
+  }
+  const appStateBars = Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+  const totalBars = appStateBars > 0 ? appStateBars : (def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
+  const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
+
+  audioSync.onPlay({
+    track: activeMusicTrackName,
+    tempo: musicTempoBpm,
+    timeSignature: def?.time_signature || '4/4',
+    totalBars,
+    totalBeats,
+    startTime: musicStartTime,
+  });
 }
 
 export function setMusicTempo(bpm: number): void {
@@ -558,6 +669,19 @@ function scheduleMusicTicks(): void {
   const secondsPerBeat = 60 / musicTempoBpm;
   const lookaheadWindow = ctx.currentTime + 0.25;
 
+  const def = registeredMusic[activeMusicTrackName];
+  const beatsPerBar = def?.time_signature?.startsWith('3/') ? 3 : 4;
+  let maxTrackBeats = 0;
+  for (const t of Object.values(tracksState)) {
+    if (t && t.events && t.events.length > 0) {
+      const tb = t.events.reduce((sum, e) => sum + (e.beats || 0), 0);
+      if (tb > maxTrackBeats) maxTrackBeats = tb;
+    }
+  }
+  const appStateBars = Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+  const totalBars = appStateBars > 0 ? appStateBars : (def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
+  const songTotalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
+
   let allFinished = true;
 
   for (const [trackKey, track] of Object.entries(tracksState)) {
@@ -566,6 +690,10 @@ function scheduleMusicTicks(): void {
     while (musicStartTime + track.nextBeat * secondsPerBeat < lookaheadWindow) {
       if (track.index >= track.events.length) {
         if (musicLoop) {
+          if (songTotalBeats > 0) {
+            const currentIteration = Math.floor((track.nextBeat - 0.0001) / songTotalBeats);
+            track.nextBeat = (currentIteration + 1) * songTotalBeats;
+          }
           track.index = 0;
         } else {
           break;
@@ -603,6 +731,17 @@ function scheduleTrackNote(
   destination: GainNode,
   instrumentOverride?: string,
 ): void {
+  // Enqueue precise Web Audio hardware timestamp for sample-accurate visual sync
+  audioSync.enqueueNote({
+    channel,
+    stepId: event.stepId ?? -1,
+    pitch: event.pitch,
+    startTime: time,
+    endTime: time + durationSec,
+    beat: 0,
+    bar: 1,
+  });
+
   const isDrumChannel = channel === 'drums' || instrumentOverride === 'drums' || event.isDrum;
 
   // Single pitch or array of chord pitches

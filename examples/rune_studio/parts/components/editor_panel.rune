@@ -1,0 +1,334 @@
+@Component/NoteEditorPanel
+view:
+    section .note-editor-panel:
+        div .editor-header:
+            div .voice-tabs:
+                span .editor-label "EDITING VOICE:"
+                button .voice-tab {.active when active_voice == 'lead'} click="selectVoice('lead')":
+                    "🎹 Voice 1: Lead"
+                button .voice-tab {.active when active_voice == 'bass'} click="selectVoice('bass')":
+                    "🎸 Voice 2: Bass"
+                button .voice-tab {.active when active_voice == 'chords'} click="selectVoice('chords')":
+                    "✨ Voice 3: Chords"
+                button .voice-tab {.active when active_voice == 'drums'} click="selectVoice('drums')":
+                    "🥁 Voice 4: Drums"
+
+            div .instrument-picker:
+                span .editor-label "SOUND:"
+                button .pill-instrument {.active when active_instrument == 'square'} click="setVoiceInstrument('square')":
+                    "Square"
+                button .pill-instrument {.active when active_instrument == 'sawtooth'} click="setVoiceInstrument('sawtooth')":
+                    "Saw"
+                button .pill-instrument {.active when active_instrument == 'triangle'} click="setVoiceInstrument('triangle')":
+                    "Triangle"
+                button .pill-instrument {.active when active_instrument == 'sine'} click="setVoiceInstrument('sine')":
+                    "Sine"
+                button .pill-instrument {.active when active_instrument == 'pluck'} click="setVoiceInstrument('pluck')":
+                    "Pluck"
+
+            div .duration-picker:
+                span .editor-label "LENGTH:"
+                button .pill-duration {.active when active_duration == ':16'} click="selectDuration(':16')":
+                    "1/16"
+                button .pill-duration {.active when active_duration == ':8'} click="selectDuration(':8')":
+                    "1/8"
+                button .pill-duration {.active when active_duration == ':4'} click="selectDuration(':4')":
+                    "1/4"
+                button .pill-duration {.active when active_duration == ':2'} click="selectDuration(':2')":
+                    "1/2"
+
+            div .editor-tools:
+                div .current-note-badge:
+                    span .badge-lbl "NOTE:"
+                    span .badge-val "{selected_note}"
+                    span .badge-sub "{active_duration}"
+                button .btn-chord-toggle {.chord-active when chord_mode} click="toggleChordMode":
+                    if chord_mode:
+                        "⚡ POLY CHORD [ON]"
+                    if !chord_mode:
+                        "➕ CHORD MODE"
+                button .btn-tool click="insertRest":
+                    "⏸ Rest (-)"
+                button .btn-tool click="insertBar":
+                    "| Add Bar"
+                button .btn-tool .btn-tool-danger click="clearActiveTrack":
+                    "🗑 Clear"
+
+        # Master Timeline Ruler (Cubase / Pro Tools Style)
+        div .timeline-ruler:
+            div .ruler-header-row:
+                span .ruler-header "MASTER TIMELINE ({time_signature} • {bars} BARS):"
+                span .ruler-hint "Click bar to select • Playhead moves in real time"
+            div .ruler-track:
+                div .ruler-playhead #ruler-playhead data-sync-playhead="progress":
+                div .ruler-bars:
+                    if bars >= 1:
+                        div .ruler-bar-item data-bar-num="1" data-sync-bar="1" {.active-bar when selected_bar == 1} {.playing-bar when playback_bar == 1} click="selectBar(1)":
+                            span .ruler-bar-num "BAR 1"
+                            span .ruler-sub "1.1 • 1.2"
+                    if bars >= 2:
+                        div .ruler-bar-item data-bar-num="2" data-sync-bar="2" {.active-bar when selected_bar == 2} {.playing-bar when playback_bar == 2} click="selectBar(2)":
+                            span .ruler-bar-num "BAR 2"
+                            span .ruler-sub "2.1 • 2.2"
+                    if bars >= 3:
+                        div .ruler-bar-item data-bar-num="3" data-sync-bar="3" {.active-bar when selected_bar == 3} {.playing-bar when playback_bar == 3} click="selectBar(3)":
+                            span .ruler-bar-num "BAR 3"
+                            span .ruler-sub "3.1 • 3.2"
+                    if bars >= 4:
+                        div .ruler-bar-item data-bar-num="4" data-sync-bar="4" {.active-bar when selected_bar == 4} {.playing-bar when playback_bar == 4} click="selectBar(4)":
+                            span .ruler-bar-num "BAR 4"
+                            span .ruler-sub "4.1 • 4.2"
+                    if bars >= 5:
+                        div .ruler-bar-item data-bar-num="5" data-sync-bar="5" {.active-bar when selected_bar == 5} {.playing-bar when playback_bar == 5} click="selectBar(5)":
+                            span .ruler-bar-num "BAR 5"
+                            span .ruler-sub "5.1 • 5.2"
+                    if bars >= 6:
+                        div .ruler-bar-item data-bar-num="6" data-sync-bar="6" {.active-bar when selected_bar == 6} {.playing-bar when playback_bar == 6} click="selectBar(6)":
+                            span .ruler-bar-num "BAR 6"
+                            span .ruler-sub "6.1 • 6.2"
+                    if bars >= 7:
+                        div .ruler-bar-item data-bar-num="7" data-sync-bar="7" {.active-bar when selected_bar == 7} {.playing-bar when playback_bar == 7} click="selectBar(7)":
+                            span .ruler-bar-num "BAR 7"
+                            span .ruler-sub "7.1 • 7.2"
+                    if bars >= 8:
+                        div .ruler-bar-item data-bar-num="8" data-sync-bar="8" {.active-bar when selected_bar == 8} {.playing-bar when playback_bar == 8} click="selectBar(8)":
+                            span .ruler-bar-num "BAR 8"
+                            span .ruler-sub "8.1 • 8.2"
+
+        # Measure / Bar Navigation & Actions Strip
+        div .bar-selector-strip:
+            div .bar-tabs:
+                span .bar-selector-label "MEASURE / BAR:"
+                button .bar-tab {.active when selected_bar == 0} click="selectBar(0)":
+                    "✨ ALL BARS"
+                if bars >= 1:
+                    button .bar-tab {.active when selected_bar == 1} click="selectBar(1)":
+                        "BAR 1"
+                if bars >= 2:
+                    button .bar-tab {.active when selected_bar == 2} click="selectBar(2)":
+                        "BAR 2"
+                if bars >= 3:
+                    button .bar-tab {.active when selected_bar == 3} click="selectBar(3)":
+                        "BAR 3"
+                if bars >= 4:
+                    button .bar-tab {.active when selected_bar == 4} click="selectBar(4)":
+                        "BAR 4"
+                if bars >= 5:
+                    button .bar-tab {.active when selected_bar == 5} click="selectBar(5)":
+                        "BAR 5"
+                if bars >= 6:
+                    button .bar-tab {.active when selected_bar == 6} click="selectBar(6)":
+                        "BAR 6"
+                if bars >= 7:
+                    button .bar-tab {.active when selected_bar == 7} click="selectBar(7)":
+                        "BAR 7"
+                if bars >= 8:
+                    button .bar-tab {.active when selected_bar == 8} click="selectBar(8)":
+                        "BAR 8"
+            div .bar-actions:
+                button .btn-bar-action .btn-add-bar click="addNewBar":
+                    "➕ ADD BAR"
+                button .btn-bar-action click="duplicateCurrentBar":
+                    "📋 DUP BAR"
+                button .btn-bar-action .btn-tool-danger click="deleteCurrentBar":
+                    "🗑 DEL BAR"
+
+        # 2D Piano Roll Matrix Grid View (Cubase MIDI Editor style)
+        if editor_mode == 'matrix':
+            div .piano-matrix-rack:
+                div .matrix-header:
+                    span .matrix-title "🎹 2D PIANO ROLL MIDI MATRIX ({active_voice})"
+                    span .matrix-sub "Click keys to audition • Click cells to select • ◀ ▶ to stretch duration • × to delete"
+                div .matrix-container:
+                    div .matrix-keys-column:
+                        if active_voice == 'drums':
+                            button .matrix-key .mkey-drum {.selected-key when selected_note == 'hihat'} click="insertNote('hihat')":
+                                "⚡ HI-HAT"
+                            button .matrix-key .mkey-drum {.selected-key when selected_note == 'snare'} click="insertNote('snare')":
+                                "🥁 SNARE"
+                            button .matrix-key .mkey-drum {.selected-key when selected_note == 'kick'} click="insertNote('kick')":
+                                "💥 KICK"
+                        if active_voice != 'drums':
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'C5'} click="insertNote('C5')":
+                                "C5"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'B4'} click="insertNote('B4')":
+                                "B4"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'A#4'} click="insertNote('A#4')":
+                                "A#4"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'A4'} click="insertNote('A4')":
+                                "A4"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'G#4'} click="insertNote('G#4')":
+                                "G#4"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'G4'} click="insertNote('G4')":
+                                "G4"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'F#4'} click="insertNote('F#4')":
+                                "F#4"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'F4'} click="insertNote('F4')":
+                                "F4"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'E4'} click="insertNote('E4')":
+                                "E4"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'D#4'} click="insertNote('D#4')":
+                                "D#4"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'D4'} click="insertNote('D4')":
+                                "D4"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'C#4'} click="insertNote('C#4')":
+                                "C#4"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'C4'} click="insertNote('C4')":
+                                "C4"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'B3'} click="insertNote('B3')":
+                                "B3"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'A#3'} click="insertNote('A#3')":
+                                "A#3"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'A3'} click="insertNote('A3')":
+                                "A3"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'G#3'} click="insertNote('G#3')":
+                                "G#3"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'G3'} click="insertNote('G3')":
+                                "G3"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'F#3'} click="insertNote('F#3')":
+                                "F#3"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'F3'} click="insertNote('F3')":
+                                "F3"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'E3'} click="insertNote('E3')":
+                                "E3"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'D#3'} click="insertNote('D#3')":
+                                "D#3"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'D3'} click="insertNote('D3')":
+                                "D3"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'C#3'} click="insertNote('C#3')":
+                                "C#3"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'C3'} click="insertNote('C3')":
+                                "C3"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'B2'} click="insertNote('B2')":
+                                "B2"
+                            button .matrix-key .mkey-black {.selected-key when selected_note == 'A#2'} click="insertNote('A#2')":
+                                "A#2"
+                            button .matrix-key .mkey-white {.selected-key when selected_note == 'A2'} click="insertNote('A2')":
+                                "A2"
+
+                    div .matrix-timeline-scroll data-sync-scroll="beat":
+                        div .seq-playhead #seq-playhead data-sync-playhead="beat":
+                        div .matrix-grid-surface {.surface-drums when active_voice == 'drums'}:
+                            for step in active_steps:
+                                if selected_bar == 0 or step.bar_num == selected_bar:
+                                    if step.is_bar and selected_bar == 0:
+                                        div .matrix-bar-divider style="left: {step.matrix_left}px;" click="selectBar(step.bar_num)":
+                                            span .matrix-bar-divider-label "{step.len_label}"
+                                    if !step.is_bar:
+                                        div .matrix-note-block .chip-{step.pitch_class} {.selected-step when selected_step_id == step.id} {.playing-step-now when playback_step_id == step.id} data-sync-step="{step.id}" data-step-idx="{step.id}" style="top: {step.matrix_top}px; left: {step.matrix_left}px; width: {step.matrix_width}px;" click="selectStep(step.id)":
+                                            if step.can_shorten:
+                                                button .btn-note-stretch .btn-shorten click="stretchStep(step.id, -1)" title="Shorten":
+                                                    "◀"
+                                            div .matrix-note-body:
+                                                span .matrix-note-pitch "{step.note}"
+                                                span .matrix-note-len "{step.len_label}"
+                                            if step.is_chord:
+                                                span .badge-matrix-poly "POLY"
+                                            if step.can_stretch:
+                                                button .btn-note-stretch .btn-lengthen click="stretchStep(step.id, 1)" title="Stretch":
+                                                    "▶"
+                                            button .matrix-delete-btn click="deleteStep(step.id)" title="Delete":
+                                                "×"
+
+        # Step Sequencer Strip View
+        if editor_mode == 'strip':
+            div .step-sequencer-rack:
+                div .step-rack-header:
+                    div .step-rack-title:
+                        span .step-title-icon "🎼"
+                        span .step-title-text "STEP SEQUENCER TIMELINE ({active_voice})"
+                    div .step-rack-hint:
+                        "Click step to audition • ◀ ▶ to stretch • Click × to delete"
+
+                div .step-strip-scroll data-sync-scroll="beat":
+                    div .seq-playhead #seq-playhead data-sync-playhead="beat":
+                    div .step-strip:
+                        for step in active_steps:
+                            if selected_bar == 0 or step.bar_num == selected_bar:
+                                if step.is_bar and selected_bar == 0:
+                                    div .step-card-bar click="selectBar(step.bar_num)":
+                                        span .step-bar-label "{step.len_label}"
+                                        span .step-bar-hint "Bar {step.bar_num}"
+                                if !step.is_bar:
+                                    div .step-chip .chip-{step.pitch_class} {.selected-step when selected_step_id == step.id} {.playing-step-now when playback_step_id == step.id} data-sync-step="{step.id}" data-step-idx="{step.id}" style="min-width: {step.strip_width}px;" click="selectStep(step.id)":
+                                        div .step-num "B{step.bar_num}.{step.step_num}"
+                                        div .step-pitch "{step.note}"
+                                        div .step-len "{step.len_label}"
+                                        div .step-chip-actions:
+                                            if step.can_shorten:
+                                                button .step-stretch-btn click="stretchStep(step.id, -1)" title="Shorten":
+                                                    "◀"
+                                            if step.can_stretch:
+                                                button .step-stretch-btn click="stretchStep(step.id, 1)" title="Stretch":
+                                                    "▶"
+                                        if step.is_chord:
+                                            span .badge-poly "POLY"
+                                        button .step-delete-btn click="deleteStep(step.id)" title="Delete":
+                                            "×"
+
+        # Interactive Audition Keyboard & Drum Pads
+        if active_voice != 'drums':
+            div .piano-roll-container:
+                div .piano-roll:
+                    button .piano-key .key-white {.selected-key when selected_note == 'C3'} click="insertNote('C3')":
+                        "C3"
+                    button .piano-key .key-white {.selected-key when selected_note == 'D3'} click="insertNote('D3')":
+                        "D3"
+                    button .piano-key .key-white {.selected-key when selected_note == 'E3'} click="insertNote('E3')":
+                        "E3"
+                    button .piano-key .key-white {.selected-key when selected_note == 'F3'} click="insertNote('F3')":
+                        "F3"
+                    button .piano-key .key-white {.selected-key when selected_note == 'G3'} click="insertNote('G3')":
+                        "G3"
+                    button .piano-key .key-white {.selected-key when selected_note == 'A3'} click="insertNote('A3')":
+                        "A3"
+                    button .piano-key .key-white {.selected-key when selected_note == 'B3'} click="insertNote('B3')":
+                        "B3"
+                    button .piano-key .key-white {.selected-key when selected_note == 'C4'} click="insertNote('C4')":
+                        "C4"
+                    button .piano-key .key-black {.selected-key when selected_note == 'C#4'} click="insertNote('C#4')":
+                        "C#4"
+                    button .piano-key .key-white {.selected-key when selected_note == 'D4'} click="insertNote('D4')":
+                        "D4"
+                    button .piano-key .key-black {.selected-key when selected_note == 'D#4'} click="insertNote('D#4')":
+                        "D#4"
+                    button .piano-key .key-white {.selected-key when selected_note == 'E4'} click="insertNote('E4')":
+                        "E4"
+                    button .piano-key .key-white {.selected-key when selected_note == 'F4'} click="insertNote('F4')":
+                        "F4"
+                    button .piano-key .key-black {.selected-key when selected_note == 'F#4'} click="insertNote('F#4')":
+                        "F#4"
+                    button .piano-key .key-white {.selected-key when selected_note == 'G4'} click="insertNote('G4')":
+                        "G4"
+                    button .piano-key .key-black {.selected-key when selected_note == 'G#4'} click="insertNote('G#4')":
+                        "G#4"
+                    button .piano-key .key-white {.selected-key when selected_note == 'A4'} click="insertNote('A4')":
+                        "A4"
+                    button .piano-key .key-black {.selected-key when selected_note == 'A#4'} click="insertNote('A#4')":
+                        "A#4"
+                    button .piano-key .key-white {.selected-key when selected_note == 'B4'} click="insertNote('B4')":
+                        "B4"
+                    button .piano-key .key-white {.selected-key when selected_note == 'C5'} click="insertNote('C5')":
+                        "C5"
+                    button .piano-key .key-white {.selected-key when selected_note == 'D5'} click="insertNote('D5')":
+                        "D5"
+                    button .piano-key .key-white {.selected-key when selected_note == 'E5'} click="insertNote('E5')":
+                        "E5"
+                    button .piano-key .key-white {.selected-key when selected_note == 'G5'} click="insertNote('G5')":
+                        "G5"
+                    button .piano-key .key-white {.selected-key when selected_note == 'A5'} click="insertNote('A5')":
+                        "A5"
+
+        if active_voice == 'drums':
+            div .drum-machine-container:
+                div .drum-pads:
+                    button .drum-pad {.selected-key when selected_note == 'kick'} click="insertNote('kick')":
+                        span .drum-icon "💥"
+                        span .drum-name "KICK"
+                    button .drum-pad {.selected-key when selected_note == 'snare'} click="insertNote('snare')":
+                        span .drum-icon "🥁"
+                        span .drum-name "SNARE"
+                    button .drum-pad {.selected-key when selected_note == 'hihat'} click="insertNote('hihat')":
+                        span .drum-icon "⚡"
+                        span .drum-name "HI-HAT"
+

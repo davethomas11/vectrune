@@ -23,10 +23,4 @@ view:
         SongSelector
         TransportBar
         NoteEditorPanel
-        div .tracks-container:
-            TrackRack voice_id=lead voice_name="VOICE 1: SQUARE LEAD" icon="🎹" badge_class="badge-square" badge_text="{lead_instrument}" score_text="{lead_track}" is_active="{active_voice == 'lead'}" is_muted="{lead_muted}"
-            TrackRack voice_id=bass voice_name="VOICE 2: TRIANGLE BASS" icon="🎸" badge_class="badge-triangle" badge_text="{bass_instrument}" score_text="{bass_track}" is_active="{active_voice == 'bass'}" is_muted="{bass_muted}"
-            TrackRack voice_id=chords voice_name="VOICE 3: POLYPHONIC CHORDS" icon="✨" badge_class="badge-saw" badge_text="{chords_instrument}" score_text="{chords_track}" is_active="{active_voice == 'chords'}" is_muted="{chords_muted}"
-            TrackRack voice_id=drums voice_name="VOICE 4: PERCUSSION / DRUMS" icon="🥁" badge_class="badge-noise" badge_text="Drums" score_text="{drums_track}" is_active="{active_voice == 'drums'}" is_muted="{drums_muted}"
-        SfxAuditionPad
-        RuneCodeExport
+        LowerContentTabs

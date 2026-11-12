@@ -21,6 +21,7 @@ var __RuneWeb = (() => {
   // src/index.ts
   var index_exports = {};
   __export(index_exports, {
+    audioSync: () => audioSync,
     boot: () => boot,
     pauseMusic: () => pauseMusic,
     playMusic: () => playMusic,
@@ -382,33 +383,33 @@ var __RuneWeb = (() => {
     if (!config || prop !== config.bind) return;
     updateNavigatorUrl(String(value ?? ""));
   }
-  function setupNavigator(config, app2) {
+  function setupNavigator(config, app) {
     if (typeof window === "undefined") return;
     const boundVar = config.bind;
     if (!boundVar) return;
     const initialUrlRoute = readNavigatorUrl(config);
     if (initialUrlRoute) {
-      app2.state[boundVar] = initialUrlRoute;
+      app.state[boundVar] = initialUrlRoute;
       lastKnownRoute = initialUrlRoute;
     } else {
-      lastKnownRoute = String(app2.state[boundVar] || "home");
+      lastKnownRoute = String(app.state[boundVar] || "home");
     }
     updateSeoMetadata(lastKnownRoute);
     window.navigate = function(target) {
-      if (typeof app2.state[boundVar] !== "undefined") {
-        app2.state[boundVar] = target;
-        if (app2.render) app2.render();
+      if (typeof app.state[boundVar] !== "undefined") {
+        app.state[boundVar] = target;
+        if (app.render) app.render();
         updateSeoMetadata(target);
       }
     };
     window.addEventListener("popstate", (_event) => {
       const currentRoute = readNavigatorUrl(config) || "home";
-      if (currentRoute !== app2.state[boundVar]) {
+      if (currentRoute !== app.state[boundVar]) {
         isNavigatingFromUrl = true;
         try {
           lastKnownRoute = currentRoute;
-          app2.state[boundVar] = currentRoute;
-          if (app2.render) app2.render();
+          app.state[boundVar] = currentRoute;
+          if (app.render) app.render();
           updateSeoMetadata(currentRoute);
         } finally {
           isNavigatingFromUrl = false;
@@ -417,12 +418,12 @@ var __RuneWeb = (() => {
     });
     window.addEventListener("hashchange", (_event) => {
       const currentRoute = readNavigatorUrl(config);
-      if (currentRoute && currentRoute !== app2.state[boundVar]) {
+      if (currentRoute && currentRoute !== app.state[boundVar]) {
         isNavigatingFromUrl = true;
         try {
           lastKnownRoute = currentRoute;
-          app2.state[boundVar] = currentRoute;
-          if (app2.render) app2.render();
+          app.state[boundVar] = currentRoute;
+          if (app.render) app.render();
           updateSeoMetadata(currentRoute);
         } finally {
           isNavigatingFromUrl = false;
@@ -926,8 +927,18 @@ var __RuneWeb = (() => {
         (part) => Boolean(evaluateExpression(part, scope, nextDepth))
       );
     }
+    if (includesTopLevel(trimmed, " || ")) {
+      return splitTopLevel(trimmed, " || ").some(
+        (part) => Boolean(evaluateExpression(part, scope, nextDepth))
+      );
+    }
     if (includesTopLevel(trimmed, " and ")) {
       return splitTopLevel(trimmed, " and ").every(
+        (part) => Boolean(evaluateExpression(part, scope, nextDepth))
+      );
+    }
+    if (includesTopLevel(trimmed, " && ")) {
+      return splitTopLevel(trimmed, " && ").every(
         (part) => Boolean(evaluateExpression(part, scope, nextDepth))
       );
     }
@@ -1110,14 +1121,17 @@ var __RuneWeb = (() => {
         locals || {}
       );
       for (const [key, value] of Object.entries(scope.props || {})) {
-        let exprStr = String(value).trim();
-        if (exprStr.startsWith("{") && exprStr.endsWith("}")) {
-          exprStr = exprStr.slice(1, -1).trim();
+        const valStr = String(value ?? "").trim();
+        if (valStr.startsWith("{") && valStr.endsWith("}")) {
+          const exprStr = valStr.slice(1, -1).trim();
+          childLocals[key] = evaluateExpression(
+            exprStr,
+            buildScope(locals)
+          );
+        } else {
+          const parsed = tryParseLiteral(valStr, buildScope(locals));
+          childLocals[key] = parsed !== void 0 ? parsed : valStr;
         }
-        childLocals[key] = evaluateExpression(
-          exprStr,
-          buildScope(locals)
-        );
       }
       return renderNode(scope.body, childLocals);
     }
@@ -1140,7 +1154,7 @@ var __RuneWeb = (() => {
     if (node.LazyRoute) {
       const lazy = node.LazyRoute;
       const context = ctx();
-      const app2 = context.app;
+      const app = context.app;
       const cleanRoute = lazy.route.toLowerCase();
       if (context.loadedChunks && context.loadedChunks[cleanRoute]) {
         const chunk = context.loadedChunks[cleanRoute];
@@ -1149,8 +1163,8 @@ var __RuneWeb = (() => {
         }
         return renderNode(chunk, locals);
       }
-      if (app2 && app2.loadChunk) {
-        app2.loadChunk(cleanRoute, lazy.chunk_url);
+      if (app && app.loadChunk) {
+        app.loadChunk(cleanRoute, lazy.chunk_url);
       }
       if (lazy.fallback && lazy.fallback.length > 0) {
         return lazy.fallback.map((c) => renderNode(c, locals)).join("");
@@ -1640,18 +1654,18 @@ var __RuneWeb = (() => {
     const action = match[1];
     let ms = Number(match[2]);
     if (match[3]?.toLowerCase() === "s") ms *= 1e3;
-    const app2 = ctx().app;
-    if (app2.startTimer) {
-      app2.startTimer(action, ms);
+    const app = ctx().app;
+    if (app.startTimer) {
+      app.startTimer(action, ms);
     }
     return true;
   }
   function handleStopTimer(statement, _locals) {
     const trimmed = statement.trim();
     if (trimmed !== "stop-timer" && trimmed !== "clear-timer" && trimmed !== "clear-interval") return void 0;
-    const app2 = ctx().app;
-    if (app2.stopTimer) {
-      app2.stopTimer();
+    const app = ctx().app;
+    if (app.stopTimer) {
+      app.stopTimer();
     }
     return true;
   }
@@ -1747,6 +1761,305 @@ var __RuneWeb = (() => {
     return void 0;
   }
 
+  // src/audio_sync.ts
+  var AudioSyncEngine = class {
+    constructor() {
+      this.scheduledNotes = [];
+      this.listeners = /* @__PURE__ */ new Set();
+      this.animFrameId = null;
+      this.isPlaying = false;
+      this.isPaused = false;
+      this.activeTrackName = null;
+      this.tempoBpm = 128;
+      this.timeSignature = "4/4";
+      this.totalBars = 4;
+      this.totalBeats = 16;
+      this.musicStartTime = 0;
+      this.getAudioCtx = null;
+      this.lastActiveStepId = -1;
+      this.lastActiveBar = -1;
+      this.channelStepIds = {};
+    }
+    /**
+     * Configure the audio context provider and track metadata.
+     */
+    configure(options) {
+      this.getAudioCtx = options.getAudioContext;
+    }
+    /**
+     * Subscribe a callback to audio sync updates.
+     */
+    subscribe(listener) {
+      this.listeners.add(listener);
+      return () => {
+        this.listeners.delete(listener);
+      };
+    }
+    /**
+     * Record a scheduled note with its precise Web Audio hardware timestamp.
+     */
+    enqueueNote(note) {
+      this.scheduledNotes.push(note);
+    }
+    /**
+     * Notify sync engine that playback has started or resumed.
+     */
+    onPlay(params) {
+      this.isPlaying = true;
+      this.isPaused = false;
+      this.activeTrackName = params.track;
+      this.tempoBpm = params.tempo;
+      this.timeSignature = params.timeSignature;
+      this.totalBars = params.totalBars;
+      this.totalBeats = params.totalBeats;
+      this.musicStartTime = params.startTime;
+      this.scheduledNotes = [];
+      this.lastActiveStepId = -1;
+      this.lastActiveBar = -1;
+      this.channelStepIds = {};
+      this.startLoop();
+    }
+    /**
+     * Notify sync engine that playback has paused.
+     */
+    onPause() {
+      this.isPaused = true;
+      this.broadcastSnapshot();
+    }
+    /**
+     * Notify sync engine that playback has stopped.
+     */
+    onStop() {
+      this.isPlaying = false;
+      this.isPaused = false;
+      this.activeTrackName = null;
+      this.scheduledNotes = [];
+      this.channelStepIds = {};
+      this.lastActiveStepId = -1;
+      this.lastActiveBar = -1;
+      this.stopLoop();
+      this.clearVisuals();
+      this.broadcastSnapshot();
+    }
+    /**
+     * Get current snapshot of the audio sync state.
+     */
+    getSnapshot() {
+      const ctx2 = this.getAudioCtx ? this.getAudioCtx() : null;
+      const outputLatency = ctx2 ? (ctx2.outputLatency || 0) + (ctx2.baseLatency || 0) : 0;
+      const visualTime = ctx2 ? Math.max(0, ctx2.currentTime - outputLatency) : 0;
+      const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
+      const elapsedSec = this.isPlaying && !this.isPaused ? Math.max(0, visualTime - this.musicStartTime) : 0;
+      const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
+      const currentBeat = this.totalBeats > 0 ? elapsedSec / secondsPerBeat % this.totalBeats : 0;
+      const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
+      const progressPercent = this.totalBeats > 0 ? currentBeat / this.totalBeats * 100 : 0;
+      return {
+        isPlaying: this.isPlaying,
+        isPaused: this.isPaused,
+        track: this.activeTrackName,
+        tempo: this.tempoBpm,
+        timeSignature: this.timeSignature,
+        currentBeat,
+        currentBar,
+        totalBars: this.totalBars,
+        totalBeats: this.totalBeats,
+        progressPercent,
+        activeStepId: this.lastActiveStepId,
+        activeBar: currentBar,
+        channelStepIds: { ...this.channelStepIds }
+      };
+    }
+    startLoop() {
+      if (typeof window === "undefined") return;
+      if (this.animFrameId) {
+        cancelAnimationFrame(this.animFrameId);
+        this.animFrameId = null;
+      }
+      const tick = () => {
+        if (!this.isPlaying || this.isPaused) {
+          return;
+        }
+        this.updateFrame();
+        this.animFrameId = requestAnimationFrame(tick);
+      };
+      this.animFrameId = requestAnimationFrame(tick);
+    }
+    stopLoop() {
+      if (typeof window === "undefined") return;
+      if (this.animFrameId) {
+        cancelAnimationFrame(this.animFrameId);
+        this.animFrameId = null;
+      }
+    }
+    updateFrame() {
+      const ctx2 = this.getAudioCtx ? this.getAudioCtx() : null;
+      if (!ctx2) return;
+      const outputLatency = (ctx2.outputLatency || 0) + (ctx2.baseLatency || 0);
+      const visualTime = ctx2.currentTime - outputLatency;
+      this.scheduledNotes = this.scheduledNotes.filter((n) => n.endTime >= visualTime - 0.5);
+      const activeVoice = this.getActiveVoice();
+      let currentStepId = -1;
+      this.channelStepIds = {};
+      for (const note of this.scheduledNotes) {
+        if (visualTime >= note.startTime && visualTime < note.endTime) {
+          this.channelStepIds[note.channel] = note.stepId;
+          if (note.channel === activeVoice) {
+            currentStepId = note.stepId;
+          }
+        }
+      }
+      const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
+      const elapsedSec = Math.max(0, visualTime - this.musicStartTime);
+      const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
+      const currentBeat = this.totalBeats > 0 ? elapsedSec / secondsPerBeat % this.totalBeats : elapsedSec / secondsPerBeat;
+      const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
+      const progressPercent = this.totalBeats > 0 ? currentBeat / this.totalBeats * 100 : 0;
+      if (typeof document !== "undefined" && document.documentElement) {
+        const rootStyle = document.documentElement.style;
+        rootStyle.setProperty("--music-beat", currentBeat.toFixed(3));
+        rootStyle.setProperty("--music-bar", String(currentBar));
+        rootStyle.setProperty("--music-progress", `${progressPercent.toFixed(2)}%`);
+        rootStyle.setProperty("--music-seq-left", `${Math.round(currentBeat * 120)}px`);
+        rootStyle.setProperty("--music-playing", this.isPlaying ? "1" : "0");
+      }
+      this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
+      if (currentStepId !== this.lastActiveStepId || currentBar !== this.lastActiveBar) {
+        this.lastActiveStepId = currentStepId;
+        this.lastActiveBar = currentBar;
+        try {
+          const appState = window?.__RuneWeb?.ctx?.()?.app?.state;
+          if (appState) {
+            appState.playback_step_id = currentStepId;
+            appState.playback_bar = currentBar;
+            appState.playback_beat = currentBeat;
+            appState.playback_progress = progressPercent;
+            appState.playback_playing = this.isPlaying;
+          }
+        } catch (_) {
+        }
+        this.broadcastSnapshot();
+      }
+    }
+    updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId) {
+      if (typeof document === "undefined") return;
+      const progressPlayheads = document.querySelectorAll(
+        '[data-sync-playhead="progress"], #ruler-playhead'
+      );
+      progressPlayheads.forEach((el) => {
+        el.style.left = `${Math.min(100, Math.max(0, progressPercent))}%`;
+        el.style.display = "block";
+      });
+      const beatPlayheads = document.querySelectorAll(
+        '[data-sync-playhead="beat"], #seq-playhead'
+      );
+      const pxLeft = Math.round(currentBeat * 120);
+      beatPlayheads.forEach((el) => {
+        el.style.left = `${pxLeft}px`;
+        el.style.display = "block";
+      });
+      const scrollContainers = document.querySelectorAll(
+        '[data-sync-scroll="beat"], .matrix-timeline-scroll'
+      );
+      scrollContainers.forEach((container) => {
+        if (pxLeft > container.scrollLeft + container.clientWidth - 140) {
+          container.scrollLeft = pxLeft - 60;
+        } else if (pxLeft < container.scrollLeft) {
+          container.scrollLeft = Math.max(0, pxLeft - 60);
+        }
+      });
+      if (currentBar !== this.lastActiveBar) {
+        document.querySelectorAll(".playing-bar, [data-sync-playing-bar]").forEach((el) => {
+          el.classList.remove("playing-bar");
+          el.removeAttribute("data-sync-playing-bar");
+        });
+        document.querySelectorAll(
+          `[data-sync-bar="${currentBar}"], .ruler-bar-item[data-bar-num="${currentBar}"]`
+        ).forEach((el) => {
+          el.classList.add("playing-bar");
+          el.setAttribute("data-sync-playing-bar", "true");
+        });
+      }
+      if (currentStepId !== this.lastActiveStepId) {
+        document.querySelectorAll(".playing-step-now, [data-sync-playing-step]").forEach((el) => {
+          el.classList.remove("playing-step-now");
+          el.removeAttribute("data-sync-playing-step");
+        });
+        if (currentStepId >= 0) {
+          document.querySelectorAll(
+            `[data-sync-step="${currentStepId}"], .step-chip[data-step-idx="${currentStepId}"], .matrix-note-block[data-step-idx="${currentStepId}"]`
+          ).forEach((el) => {
+            el.classList.add("playing-step-now");
+            el.setAttribute("data-sync-playing-step", "true");
+          });
+        }
+      }
+    }
+    clearVisuals() {
+      if (typeof document === "undefined") return;
+      if (document.documentElement) {
+        const rootStyle = document.documentElement.style;
+        rootStyle.setProperty("--music-beat", "0");
+        rootStyle.setProperty("--music-bar", "1");
+        rootStyle.setProperty("--music-progress", "0%");
+        rootStyle.setProperty("--music-seq-left", "0px");
+        rootStyle.setProperty("--music-playing", "0");
+      }
+      document.querySelectorAll(".playing-bar, [data-sync-playing-bar]").forEach((el) => {
+        el.classList.remove("playing-bar");
+        el.removeAttribute("data-sync-playing-bar");
+      });
+      document.querySelectorAll(".playing-step-now, [data-sync-playing-step]").forEach((el) => {
+        el.classList.remove("playing-step-now");
+        el.removeAttribute("data-sync-playing-step");
+      });
+      const rulerPlayhead = document.getElementById("ruler-playhead");
+      if (rulerPlayhead) {
+        rulerPlayhead.style.left = "0%";
+      }
+      const seqPlayhead = document.getElementById("seq-playhead");
+      if (seqPlayhead) {
+        seqPlayhead.style.left = "0px";
+      }
+      try {
+        const appState = window?.__RuneWeb?.ctx?.()?.app?.state;
+        if (appState) {
+          appState.playback_step_id = -1;
+          appState.playback_bar = 1;
+          appState.playback_beat = 0;
+          appState.playback_progress = 0;
+          appState.playback_playing = false;
+        }
+      } catch (_) {
+      }
+    }
+    broadcastSnapshot() {
+      const snapshot = this.getSnapshot();
+      for (const listener of this.listeners) {
+        try {
+          listener(snapshot);
+        } catch (err) {
+          console.error("[AudioSyncEngine] Listener error:", err);
+        }
+      }
+      if (typeof window !== "undefined") {
+        try {
+          window.dispatchEvent(new CustomEvent("rune:music-sync", { detail: snapshot }));
+        } catch (_) {
+        }
+      }
+    }
+    getActiveVoice() {
+      try {
+        const voice = window?.__RuneWeb?.ctx?.()?.app?.state?.active_voice;
+        return String(voice || "lead");
+      } catch {
+        return "lead";
+      }
+    }
+  };
+  var audioSync = new AudioSyncEngine();
+
   // src/audio.ts
   var audioCtx = null;
   var stepIndex = 0;
@@ -1771,7 +2084,7 @@ var __RuneWeb = (() => {
     if (!audioCtx) {
       audioCtx = new AudioCtx();
     }
-    if (audioCtx.state === "suspended") {
+    if (audioCtx && audioCtx.state === "suspended") {
       audioCtx.resume();
     }
     return audioCtx;
@@ -2014,13 +2327,19 @@ var __RuneWeb = (() => {
   var musicLoop = true;
   var isMusicPaused = false;
   var musicStartTime = 0;
+  var musicPauseTime = 0;
+  var musicPausedElapsed = 0;
   var nextScheduleTime = 0;
   var tracksState = {};
   function parseTrackPattern(patternStr) {
     const events = [];
-    const clean = patternStr.replace(/^\s*#.*$/gm, "").replace(/\s+#.*$/gm, "").replace(/\|/g, " ");
+    const clean = patternStr.replace(/^\s*#.*$/gm, "").replace(/\s+#.*$/gm, "");
     const tokens = clean.split(/\s+/).filter(Boolean);
-    for (const token of tokens) {
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (token === "|") {
+        continue;
+      }
       let noteToken = token;
       let durationNum = 8;
       if (token.startsWith("[") && token.includes("]")) {
@@ -2037,7 +2356,7 @@ var __RuneWeb = (() => {
       }
       const beats = durationNum > 0 ? 4 / durationNum : 0.5;
       if (noteToken === "-" || noteToken.toUpperCase() === "R" || noteToken === "_") {
-        events.push({ pitch: 0, beats, isRest: true, isDrum: false });
+        events.push({ stepId: i, pitch: 0, beats, isRest: true, isDrum: false });
         continue;
       }
       const subNotes = noteToken.split(/[,+]/).map((s) => s.trim()).filter(Boolean);
@@ -2049,6 +2368,7 @@ var __RuneWeb = (() => {
           return parseNoteToFreq(s);
         });
         events.push({
+          stepId: i,
           pitch: pitches[0],
           pitches,
           beats,
@@ -2058,9 +2378,9 @@ var __RuneWeb = (() => {
       } else {
         const s = subNotes[0] || noteToken;
         if (drumNames.includes(s.toLowerCase())) {
-          events.push({ pitch: s.toLowerCase(), beats, isRest: false, isDrum: true });
+          events.push({ stepId: i, pitch: s.toLowerCase(), beats, isRest: false, isDrum: true });
         } else {
-          events.push({ pitch: parseNoteToFreq(s), beats, isRest: false, isDrum: false });
+          events.push({ stepId: i, pitch: parseNoteToFreq(s), beats, isRest: false, isDrum: false });
         }
       }
     }
@@ -2116,17 +2436,43 @@ var __RuneWeb = (() => {
         }
       }
     }
+    const beatsPerBar = def.time_signature?.startsWith("3/") ? 3 : 4;
+    let maxTrackBeats = 0;
+    for (const track of Object.values(tracksState)) {
+      if (track && track.events && track.events.length > 0) {
+        const trackBeats = track.events.reduce((sum, e) => sum + (e.beats || 0), 0);
+        if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
+      }
+    }
+    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const totalBars = appStateBars > 0 ? appStateBars : def.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
+    const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
     musicStartTime = ctx2.currentTime + 0.05;
     nextScheduleTime = musicStartTime;
+    musicPauseTime = 0;
+    musicPausedElapsed = 0;
+    audioSync.configure({ getAudioContext: () => getAudioContext() });
+    audioSync.onPlay({
+      track: key,
+      tempo: musicTempoBpm,
+      timeSignature: def.time_signature || "4/4",
+      totalBars,
+      totalBeats,
+      startTime: musicStartTime
+    });
     scheduleMusicTicks();
-    musicSchedulerTimer = setInterval(scheduleMusicTicks, 35);
+    musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
   }
   function stopMusic() {
+    audioSync.onStop();
     if (musicSchedulerTimer) {
       clearInterval(musicSchedulerTimer);
       musicSchedulerTimer = null;
     }
     activeMusicTrackName = null;
+    musicPauseTime = 0;
+    musicPausedElapsed = 0;
+    isMusicPaused = false;
     tracksState = {};
     if (musicMasterGain) {
       try {
@@ -2137,10 +2483,68 @@ var __RuneWeb = (() => {
     }
   }
   function pauseMusic() {
+    const ctx2 = getAudioContext();
+    if (!ctx2 || isMusicPaused || !activeMusicTrackName) return;
     isMusicPaused = true;
+    musicPauseTime = ctx2.currentTime;
+    musicPausedElapsed = Math.max(0, musicPauseTime - musicStartTime);
+    if (musicMasterGain) {
+      try {
+        musicMasterGain.gain.setValueAtTime(0, ctx2.currentTime);
+      } catch (_) {
+      }
+    }
+    audioSync.onPause();
   }
   function resumeMusic() {
+    const ctx2 = getAudioContext();
+    if (!ctx2 || !isMusicPaused || !activeMusicTrackName) return;
+    const pausedDuration = ctx2.currentTime - musicPauseTime;
+    musicStartTime += pausedDuration;
+    const secondsPerBeat = 60 / musicTempoBpm;
+    const currentBeat = musicPausedElapsed / secondsPerBeat;
+    for (const track of Object.values(tracksState)) {
+      if (!track || !track.events.length) continue;
+      let accum = 0;
+      track.index = 0;
+      track.nextBeat = 0;
+      for (let i = 0; i < track.events.length; i++) {
+        const ev = track.events[i];
+        if (accum + ev.beats > currentBeat) {
+          track.index = i;
+          track.nextBeat = accum;
+          break;
+        }
+        accum += ev.beats;
+      }
+    }
+    if (musicMasterGain) {
+      try {
+        musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
+      } catch (_) {
+      }
+    }
     isMusicPaused = false;
+    const def = registeredMusic[activeMusicTrackName];
+    const beatsPerBar = def?.time_signature?.startsWith("3/") ? 3 : 4;
+    let maxTrackBeats = 0;
+    for (const track of Object.values(tracksState)) {
+      if (track && track.events && track.events.length > 0) {
+        const trackBeats = track.events.reduce((sum, e) => sum + (e.beats || 0), 0);
+        if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
+      }
+    }
+    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const totalBars = appStateBars > 0 ? appStateBars : def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
+    const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
+    audioSync.onPlay({
+      track: activeMusicTrackName,
+      tempo: musicTempoBpm,
+      timeSignature: def?.time_signature || "4/4",
+      totalBars,
+      totalBeats,
+      startTime: musicStartTime
+    });
   }
   function setMusicTempo(bpm) {
     if (bpm > 20 && bpm < 400) {
@@ -2158,12 +2562,28 @@ var __RuneWeb = (() => {
     if (!ctx2 || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
     const secondsPerBeat = 60 / musicTempoBpm;
     const lookaheadWindow = ctx2.currentTime + 0.25;
+    const def = registeredMusic[activeMusicTrackName];
+    const beatsPerBar = def?.time_signature?.startsWith("3/") ? 3 : 4;
+    let maxTrackBeats = 0;
+    for (const t of Object.values(tracksState)) {
+      if (t && t.events && t.events.length > 0) {
+        const tb = t.events.reduce((sum, e) => sum + (e.beats || 0), 0);
+        if (tb > maxTrackBeats) maxTrackBeats = tb;
+      }
+    }
+    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const totalBars = appStateBars > 0 ? appStateBars : def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
+    const songTotalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
     let allFinished = true;
     for (const [trackKey, track] of Object.entries(tracksState)) {
       if (!track || !track.events.length || track.muted) continue;
       while (musicStartTime + track.nextBeat * secondsPerBeat < lookaheadWindow) {
         if (track.index >= track.events.length) {
           if (musicLoop) {
+            if (songTotalBeats > 0) {
+              const currentIteration = Math.floor((track.nextBeat - 1e-4) / songTotalBeats);
+              track.nextBeat = (currentIteration + 1) * songTotalBeats;
+            }
             track.index = 0;
           } else {
             break;
@@ -2187,6 +2607,15 @@ var __RuneWeb = (() => {
     }
   }
   function scheduleTrackNote(ctx2, channel, event, time, durationSec, destination, instrumentOverride) {
+    audioSync.enqueueNote({
+      channel,
+      stepId: event.stepId ?? -1,
+      pitch: event.pitch,
+      startTime: time,
+      endTime: time + durationSec,
+      beat: 0,
+      bar: 1
+    });
     const isDrumChannel = channel === "drums" || instrumentOverride === "drums" || event.isDrum;
     const pitchesToPlay = event.pitches && event.pitches.length > 0 ? event.pitches : [event.pitch];
     const chordGainMultiplier = 1 / Math.sqrt(Math.max(1, pitchesToPlay.length));
@@ -2513,11 +2942,13 @@ var __RuneWeb = (() => {
           const bass = String(evaluateExpression(parts[3], buildScope(locals)));
           const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals))) : "";
           const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals))) : "4/4";
+          const songBars = Number(ctx().app?.state?.bars) || 4;
           registerMusic({
             [name]: {
               music_type: "8bit",
               tempo,
               time_signature: timeSig,
+              bars: songBars,
               loop_track: true,
               volume: 0.2,
               lead,
@@ -2542,19 +2973,21 @@ var __RuneWeb = (() => {
         }
         return true;
       }
-      let trackName = "";
-      if (trimmed.startsWith("music.play(") && trimmed.endsWith(")")) {
-        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
-      } else if (trimmed.startsWith("play_music(") && trimmed.endsWith(")")) {
-        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
-      } else if (trimmed.startsWith("music.play ")) {
-        trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || "");
-      } else {
-        trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || "");
+      if (trimmed === "music.play" || trimmed === "music.play()" || trimmed.startsWith("music.play(") || trimmed.startsWith("music.play ") || trimmed.startsWith("play_music(") || trimmed.startsWith("music ") && !trimmed.startsWith("music.tempo") && !trimmed.startsWith("music.volume")) {
+        let trackName = "";
+        if (trimmed.startsWith("music.play(") && trimmed.endsWith(")")) {
+          trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
+        } else if (trimmed.startsWith("play_music(") && trimmed.endsWith(")")) {
+          trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
+        } else if (trimmed.startsWith("music.play ")) {
+          trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || "");
+        } else if (trimmed.startsWith("music ")) {
+          trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || "");
+        }
+        trackName = normalizeLiteral(trackName);
+        if (trackName) playMusic(trackName);
+        return true;
       }
-      trackName = normalizeLiteral(trackName);
-      playMusic(trackName);
-      return true;
     }
     if (trimmed === "music.sync_steps" || trimmed === "music.sync_steps()") {
       const state = ctx().app?.state;
@@ -2563,7 +2996,8 @@ var __RuneWeb = (() => {
         const score = String(state[voice + "_track"] || "");
         const selectedId = Number(state.selected_step_id ?? -1);
         const timeSig = String(state.time_signature || "4/4");
-        state.active_steps = parseTrackToSteps(score, selectedId, timeSig);
+        const selectedBar = Number(state.selected_bar ?? 0);
+        state.active_steps = parseTrackToSteps(score, selectedId, timeSig, selectedBar);
         if (typeof ctx().app.render === "function") {
           ctx().app.render();
         }
@@ -2579,7 +3013,8 @@ var __RuneWeb = (() => {
         const voice = String(state.active_voice || "lead");
         const score = String(state[voice + "_track"] || "");
         const timeSig = String(state.time_signature || "4/4");
-        state.active_steps = parseTrackToSteps(score, id, timeSig);
+        const selectedBar = Number(state.selected_bar ?? 0);
+        state.active_steps = parseTrackToSteps(score, id, timeSig, selectedBar);
         const step = state.active_steps.find((s) => s.id === id);
         if (step && !step.is_bar && !step.is_rest) {
           state.selected_note = step.note;
@@ -2609,6 +3044,29 @@ var __RuneWeb = (() => {
       }
       return true;
     }
+    function syncMusicState(state) {
+      if (!state || !state.selected_song) return;
+      const name = String(state.selected_song);
+      const tempo = Number(state.tempo) || 128;
+      const timeSig = String(state.time_signature || "4/4");
+      const bars = Number(state.bars) || 4;
+      const lead = String(state.lead_track || "");
+      const bass = String(state.bass_track || "");
+      const drums = String(state.drums_track || "");
+      registerMusic({
+        [name]: {
+          music_type: "8bit",
+          tempo,
+          time_signature: timeSig,
+          bars,
+          loop_track: true,
+          volume: 0.2,
+          lead,
+          bass,
+          drums
+        }
+      });
+    }
     if (trimmed.startsWith("music.delete_step(") && trimmed.endsWith(")")) {
       const inner = trimmed.slice(18, -1);
       const id = Number(evaluateExpression(inner, buildScope(locals)));
@@ -2617,12 +3075,156 @@ var __RuneWeb = (() => {
         const voice = String(state.active_voice || "lead");
         const score = String(state[voice + "_track"] || "");
         const timeSig = String(state.time_signature || "4/4");
+        const selectedBar = Number(state.selected_bar ?? 0);
         const tokens = score.trim().split(/\s+/).filter(Boolean);
         if (id >= 0 && id < tokens.length) {
           tokens.splice(id, 1);
           state[voice + "_track"] = tokens.join(" ");
           state.selected_step_id = -1;
-          state.active_steps = parseTrackToSteps(state[voice + "_track"], -1, timeSig);
+          state.active_steps = parseTrackToSteps(state[voice + "_track"], -1, timeSig, selectedBar);
+          syncMusicState(state);
+          if (typeof ctx().app.render === "function") {
+            ctx().app.render();
+          }
+        }
+      }
+      return true;
+    }
+    if (trimmed.startsWith("music.stretch_step(") && trimmed.endsWith(")")) {
+      const inner = trimmed.slice(19, -1);
+      const parts = splitTopLevel(inner, ",");
+      const id = Number(evaluateExpression(parts[0], buildScope(locals)));
+      const delta = parts.length > 1 ? Number(evaluateExpression(parts[1], buildScope(locals))) : 1;
+      const state = ctx().app?.state;
+      if (state) {
+        const voice = String(state.active_voice || "lead");
+        const score = String(state[voice + "_track"] || "");
+        const timeSig = String(state.time_signature || "4/4");
+        const selectedBar = Number(state.selected_bar ?? 0);
+        const tokens = score.trim().split(/\s+/).filter(Boolean);
+        if (id >= 0 && id < tokens.length) {
+          const raw = tokens[id];
+          if (raw !== "|") {
+            const DURS = [":16", ":8", ":4", ":2", ":1"];
+            let currentDur = ":8";
+            let prefix = raw;
+            if (raw.startsWith("[") && raw.includes("]")) {
+              const closeIdx = raw.indexOf("]");
+              prefix = raw.slice(0, closeIdx + 1);
+              currentDur = raw.slice(closeIdx + 1) || ":8";
+            } else {
+              const colonIdx = raw.indexOf(":");
+              prefix = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
+              currentDur = colonIdx !== -1 ? raw.slice(colonIdx) : ":8";
+            }
+            let durIdx = DURS.indexOf(currentDur);
+            if (durIdx === -1) durIdx = 1;
+            const newDurIdx = Math.max(0, Math.min(DURS.length - 1, durIdx + delta));
+            tokens[id] = `${prefix}${DURS[newDurIdx]}`;
+            state[voice + "_track"] = tokens.join(" ");
+            state.active_steps = parseTrackToSteps(state[voice + "_track"], id, timeSig, selectedBar);
+            syncMusicState(state);
+            if (typeof ctx().app.render === "function") {
+              ctx().app.render();
+            }
+          }
+        }
+      }
+      return true;
+    }
+    if (trimmed.startsWith("music.stack_chord_note(") && trimmed.endsWith(")")) {
+      const inner = trimmed.slice(23, -1);
+      const parts = splitTopLevel(inner, ",");
+      const note = String(evaluateExpression(parts[0], buildScope(locals)));
+      const dur = parts[1] ? String(evaluateExpression(parts[1], buildScope(locals))) : ":8";
+      const state = ctx().app?.state;
+      if (state) {
+        const voice = String(state.active_voice || "lead");
+        const score = String(state[voice + "_track"] || "").trim();
+        const timeSig = String(state.time_signature || "4/4");
+        const selectedBar = Number(state.selected_bar ?? 0);
+        const tokens = score.length > 0 ? score.split(/\s+/).filter(Boolean) : [];
+        if (tokens.length > 0) {
+          const lastToken = tokens[tokens.length - 1];
+          if (lastToken.startsWith("[") && lastToken.includes("]")) {
+            const closeIdx = lastToken.indexOf("]");
+            const currentNotes = lastToken.slice(1, closeIdx).split(/[,+]/).map((s) => s.trim()).filter(Boolean);
+            const currentDur = lastToken.slice(closeIdx + 1) || dur;
+            if (!currentNotes.includes(note)) {
+              currentNotes.push(note);
+              tokens[tokens.length - 1] = `[${currentNotes.join(",")}]${currentDur}`;
+            }
+          } else {
+            tokens.push(`[${note}]${dur}`);
+          }
+        } else {
+          tokens.push(`[${note}]${dur}`);
+        }
+        state[voice + "_track"] = tokens.join(" ");
+        state.selected_note = note;
+        state.active_steps = parseTrackToSteps(state[voice + "_track"], tokens.length - 1, timeSig, selectedBar);
+        syncMusicState(state);
+        if (typeof ctx().app.render === "function") {
+          ctx().app.render();
+        }
+      }
+      return true;
+    }
+    if (trimmed === "music.add_bar" || trimmed === "music.add_bar()") {
+      const state = ctx().app?.state;
+      if (state) {
+        const voice = String(state.active_voice || "lead");
+        const score = String(state[voice + "_track"] || "").trim();
+        const timeSig = String(state.time_signature || "4/4");
+        const selectedBar = Number(state.selected_bar ?? 0);
+        state[voice + "_track"] = score.length > 0 ? `${score} |` : "|";
+        state.active_steps = parseTrackToSteps(state[voice + "_track"], -1, timeSig, selectedBar);
+        syncMusicState(state);
+        if (typeof ctx().app.render === "function") {
+          ctx().app.render();
+        }
+      }
+      return true;
+    }
+    if (trimmed.startsWith("music.duplicate_bar(") && trimmed.endsWith(")")) {
+      const inner = trimmed.slice(20, -1);
+      const barNum = Number(evaluateExpression(inner, buildScope(locals))) || 1;
+      const state = ctx().app?.state;
+      if (state) {
+        const voice = String(state.active_voice || "lead");
+        const score = String(state[voice + "_track"] || "").trim();
+        const timeSig = String(state.time_signature || "4/4");
+        const selectedBar = Number(state.selected_bar ?? 0);
+        const bars = score.split("|").map((b) => b.trim());
+        const barIdx = Math.max(0, Math.min(bars.length - 1, barNum - 1));
+        if (bars[barIdx] !== void 0) {
+          bars.push(bars[barIdx]);
+          state[voice + "_track"] = bars.join(" | ");
+          state.active_steps = parseTrackToSteps(state[voice + "_track"], -1, timeSig, selectedBar);
+          syncMusicState(state);
+          if (typeof ctx().app.render === "function") {
+            ctx().app.render();
+          }
+        }
+      }
+      return true;
+    }
+    if (trimmed.startsWith("music.delete_bar(") && trimmed.endsWith(")")) {
+      const inner = trimmed.slice(17, -1);
+      const barNum = Number(evaluateExpression(inner, buildScope(locals))) || 1;
+      const state = ctx().app?.state;
+      if (state) {
+        const voice = String(state.active_voice || "lead");
+        const score = String(state[voice + "_track"] || "").trim();
+        const timeSig = String(state.time_signature || "4/4");
+        const selectedBar = Number(state.selected_bar ?? 0);
+        const bars = score.split("|").map((b) => b.trim());
+        const barIdx = Math.max(0, Math.min(bars.length - 1, barNum - 1));
+        if (bars.length > 1 && bars[barIdx] !== void 0) {
+          bars.splice(barIdx, 1);
+          state[voice + "_track"] = bars.join(" | ");
+          state.active_steps = parseTrackToSteps(state[voice + "_track"], -1, timeSig, selectedBar);
+          syncMusicState(state);
           if (typeof ctx().app.render === "function") {
             ctx().app.render();
           }
@@ -2748,6 +3350,7 @@ var __RuneWeb = (() => {
           } catch (_) {
           }
         }
+        const app = ctx().app;
         if (typeof app?.state !== "undefined") {
           app.state.is_fullscreen = shouldEnter;
           if (typeof app.render === "function") {
@@ -2984,30 +3587,116 @@ var __RuneWeb = (() => {
     }
     return true;
   }
-  function parseTrackToSteps(scoreStr, selectedIdx, timeSignature = "4/4") {
+  var PITCH_ROWS = {
+    "C5": 0,
+    "B4": 1,
+    "A#4": 2,
+    "BB4": 2,
+    "A4": 3,
+    "G#4": 4,
+    "AB4": 4,
+    "G4": 5,
+    "F#4": 6,
+    "GB4": 6,
+    "F4": 7,
+    "E4": 8,
+    "D#4": 9,
+    "EB4": 9,
+    "D4": 10,
+    "C#4": 11,
+    "DB4": 11,
+    "C4": 12,
+    "B3": 13,
+    "A#3": 14,
+    "BB3": 14,
+    "A3": 15,
+    "G#3": 16,
+    "AB3": 16,
+    "G3": 17,
+    "F#3": 18,
+    "GB3": 18,
+    "F3": 19,
+    "E3": 20,
+    "D#3": 21,
+    "EB3": 21,
+    "D3": 22,
+    "C#3": 23,
+    "DB3": 23,
+    "C3": 24,
+    "B2": 25,
+    "A#2": 26,
+    "BB2": 26,
+    "A2": 27,
+    "G#2": 28,
+    "AB2": 28,
+    "G2": 29,
+    "F#2": 30,
+    "GB2": 30,
+    "F2": 31,
+    "E2": 32,
+    "D2": 33,
+    "C2": 34,
+    "A1": 35,
+    // Drums
+    "hihat": 0,
+    "snare": 1,
+    "kick": 2
+  };
+  function getPitchRow(pitch, isDrum) {
+    if (isDrum) {
+      const p = pitch.toLowerCase();
+      if (p.includes("hihat") || p.includes("crash")) return 0;
+      if (p.includes("snare") || p.includes("tom")) return 1;
+      return 2;
+    }
+    const clean = pitch.toUpperCase().trim();
+    if (clean in PITCH_ROWS) return PITCH_ROWS[clean];
+    const match = clean.match(/^([A-G][#B]?)([0-8])$/);
+    if (match) {
+      const oct = parseInt(match[2], 10);
+      if (oct >= 5) return 0;
+      if (oct === 4) return 8;
+      if (oct === 3) return 15;
+      if (oct <= 2) return 27;
+    }
+    return 12;
+  }
+  function parseTrackToSteps(scoreStr, selectedIdx, timeSignature = "4/4", selectedBar = 0) {
     if (!scoreStr) return [];
     const tokens = String(scoreStr).trim().split(/\s+/).filter(Boolean);
     const steps = [];
     const beatsPerBar = timeSignature.startsWith("3/") ? 3 : 4;
     let barNum = 1;
     let currentBeatInBar = 0;
+    let totalBeatOffset = 0;
     let stepInBar = 1;
     for (let i = 0; i < tokens.length; i++) {
       const raw = tokens[i];
       if (raw === "|") {
+        const totalLeft2 = Math.round(totalBeatOffset * 120);
+        const barLeft2 = Math.round(currentBeatInBar * 120);
         steps.push({
           id: i,
           raw,
           note: "|",
           duration: "",
           len_label: "BAR " + barNum,
+          beats: 0,
           is_bar: true,
           is_chord: false,
           is_rest: false,
           is_selected: i === selectedIdx,
           bar_num: barNum,
           step_num: stepInBar,
-          pitch_class: "step-bar"
+          pitch_class: "step-bar",
+          matrix_top: 0,
+          matrix_left: selectedBar > 0 ? barLeft2 : totalLeft2,
+          matrix_total_left: totalLeft2,
+          matrix_bar_left: barLeft2,
+          matrix_width: 8,
+          strip_width: 54,
+          can_stretch: false,
+          can_shorten: false
         });
         barNum += 1;
         currentBeatInBar = 0;
@@ -3056,13 +3745,23 @@ var __RuneWeb = (() => {
       let pitchClass = "step-note";
       if (isRest) pitchClass = "step-rest";
       else if (isChord) pitchClass = "step-chord";
-      else if (pitch.includes("2")) pitchClass = "step-bass";
+      else if (pitch.includes("2") || pitch.includes("1")) pitchClass = "step-bass";
       else if (pitch.includes("3")) pitchClass = "step-mid-low";
       else if (pitch.includes("4")) pitchClass = "step-mid";
       else if (pitch.includes("5")) pitchClass = "step-high";
       else if (pitch === "kick") pitchClass = "step-kick";
       else if (pitch === "snare") pitchClass = "step-snare";
       else if (pitch === "hihat") pitchClass = "step-hihat";
+      const rootPitch = isChord && chordNotes.length > 0 ? chordNotes[0] : pitch;
+      const isDrumPitch = ["kick", "snare", "hihat", "crash", "tom"].includes(rootPitch.toLowerCase());
+      const row = getPitchRow(rootPitch, isDrumPitch);
+      const rowHeight = isDrumPitch ? 48 : 28;
+      const matrixTop = row * rowHeight + 2;
+      const totalLeft = Math.round(totalBeatOffset * 120);
+      const barLeft = Math.round(currentBeatInBar * 120);
+      const matrixLeft = selectedBar > 0 ? barLeft : totalLeft;
+      const matrixWidth = Math.max(34, Math.round(beats * 120) - 4);
+      const stripWidth = Math.max(54, Math.round(beats * 140));
       const displayNote = isRest ? "REST" : isChord ? pitch.startsWith("[") ? pitch : `[${pitch}]` : pitch;
       steps.push({
         id: i,
@@ -3071,14 +3770,25 @@ var __RuneWeb = (() => {
         chord_notes: isChord ? chordNotes : [pitch],
         duration: dur,
         len_label: lenLabel,
+        beats,
         is_bar: false,
         is_chord: isChord,
         is_rest: isRest,
         is_selected: i === selectedIdx,
         bar_num: barNum,
         step_num: stepInBar,
-        pitch_class: pitchClass
+        pitch_class: pitchClass,
+        pitch_row: row,
+        matrix_top: matrixTop,
+        matrix_left: matrixLeft,
+        matrix_total_left: totalLeft,
+        matrix_bar_left: barLeft,
+        matrix_width: matrixWidth,
+        strip_width: stripWidth,
+        can_stretch: beats < 4,
+        can_shorten: beats > 0.25
       });
+      totalBeatOffset += beats;
       currentBeatInBar += beats;
       stepInBar += 1;
       if (currentBeatInBar >= beatsPerBar && !tokens.includes("|")) {
@@ -3123,6 +3833,9 @@ var __RuneWeb = (() => {
         element.getAttribute(`data-on-${eventName}`) || ""
       );
       if (!spec) return;
+      if (typeof event.stopPropagation === "function") {
+        event.stopPropagation();
+      }
       const locals = readScope(element);
       if (spec.name) {
         const scope = buildScope(
@@ -3196,7 +3909,7 @@ var __RuneWeb = (() => {
   function boot(config) {
     registerSounds(config.sounds);
     registerMusic(config.music);
-    const app2 = {
+    const app = {
       state: {},
       derived: {},
       playSound,
@@ -3260,13 +3973,13 @@ var __RuneWeb = (() => {
     };
     const loadedChunks = {};
     const loadingChunks = {};
-    app2.loadedChunks = loadedChunks;
-    app2.loadChunk = function(route, chunkUrl) {
+    app.loadedChunks = loadedChunks;
+    app.loadChunk = function(route, chunkUrl) {
       const cleanRoute = route.toLowerCase();
       if (loadedChunks[cleanRoute]) {
         return Promise.resolve(loadedChunks[cleanRoute]);
       }
-      if (loadingChunks[cleanRoute]) {
+      if (cleanRoute in loadingChunks) {
         return loadingChunks[cleanRoute];
       }
       if (typeof fetch === "undefined") {
@@ -3278,7 +3991,7 @@ var __RuneWeb = (() => {
       }).then((data) => {
         loadedChunks[cleanRoute] = data;
         delete loadingChunks[cleanRoute];
-        app2.render();
+        app.render();
         return data;
       }).catch((err) => {
         delete loadingChunks[cleanRoute];
@@ -3288,7 +4001,7 @@ var __RuneWeb = (() => {
       loadingChunks[cleanRoute] = promise;
       return promise;
     };
-    app2.preloadChunks = function() {
+    app.preloadChunks = function() {
       if (typeof window === "undefined" || typeof fetch === "undefined") return;
       const context = ctx();
       const opt = context.optimizer;
@@ -3330,7 +4043,7 @@ var __RuneWeb = (() => {
       helperDefinitions: config.helperDefinitions,
       actionDefinitions: config.actionDefinitions,
       i18nData: config.i18nData,
-      app: app2,
+      app,
       isRendering: false,
       memorySubscriptions: {},
       navigator: config.navigator || null,
@@ -3341,31 +4054,31 @@ var __RuneWeb = (() => {
       loadedChunks,
       loadingChunks
     });
-    app2.state = makeReactive(
+    app.state = makeReactive(
       Object.assign({}, config.stateJson, { i18n: config.i18nData })
     );
     if (config.navigator) {
-      setupNavigator(config.navigator, app2);
+      setupNavigator(config.navigator, app);
     } else if (config.seo) {
       updateSeoMetadata("home");
     }
-    if (config.optimizer?.pre_load && app2.preloadChunks) {
-      app2.preloadChunks();
+    if (config.optimizer?.pre_load && app.preloadChunks) {
+      app.preloadChunks();
     }
-    const originalRender = app2.render;
-    app2.render = function() {
+    const originalRender = app.render;
+    app.render = function() {
       setWindowProp("__renderingComponent", "app");
       originalRender.call(this);
       setWindowProp("__renderingComponent", null);
     };
     let activeTimerId = null;
-    app2.startTimer = function(action, ms) {
+    app.startTimer = function(action, ms) {
       if (activeTimerId !== null) clearInterval(activeTimerId);
       activeTimerId = setInterval(() => {
-        app2.invokeAction(action, []);
+        app.invokeAction(action, []);
       }, ms);
     };
-    app2.stopTimer = function() {
+    app.stopTimer = function() {
       if (activeTimerId !== null) {
         clearInterval(activeTimerId);
         activeTimerId = null;
@@ -3387,7 +4100,7 @@ var __RuneWeb = (() => {
         const action = keyMap[event.code] || keyMap[event.key] || keyMap[event.key.toLowerCase()] || keyMap[event.code.toLowerCase()];
         if (action) {
           event.preventDefault();
-          app2.invokeAction(action, []);
+          app.invokeAction(action, []);
         }
       });
     }
@@ -3397,13 +4110,14 @@ var __RuneWeb = (() => {
         const action = match[1];
         let ms = Number(match[2]);
         if (match[3]?.toLowerCase() === "s") ms *= 1e3;
-        app2.startTimer(action, ms);
+        app.startTimer(action, ms);
       }
     }
     if (config.wsEndpoint) {
-      setupWebSocket(config.wsEndpoint, app2);
+      setupWebSocket(config.wsEndpoint, app);
     }
-    setWindowProp("runeWebApp", app2);
+    setWindowProp("runeWebApp", app);
+    setWindowProp("audioSync", audioSync);
     setWindowProp("playSound", playSound);
     setWindowProp("playMusic", playMusic);
     setWindowProp("stopMusic", stopMusic);
@@ -3411,6 +4125,13 @@ var __RuneWeb = (() => {
     setWindowProp("resumeMusic", resumeMusic);
     setWindowProp("registerSounds", registerSounds);
     setWindowProp("registerMusic", registerMusic);
+    if (typeof window !== "undefined") {
+      window.__RuneWeb = {
+        ctx,
+        app,
+        audioSync
+      };
+    }
     if (typeof document !== "undefined") {
       document.addEventListener("fullscreenchange", () => {
         const isFs = Boolean(
@@ -3423,23 +4144,25 @@ var __RuneWeb = (() => {
           document.body.removeAttribute("data-fullscreen");
           document.body.classList.remove("fullscreen");
         }
-        if (typeof app2.state?.is_fullscreen !== "undefined") {
-          app2.state.is_fullscreen = isFs;
-          app2.render();
+        if (typeof app.state?.is_fullscreen !== "undefined") {
+          app.state.is_fullscreen = isFs;
+          app.render();
         }
       });
     }
-    if (app2.state && app2.state.active_voice) {
-      const voice = String(app2.state.active_voice);
-      const score = app2.state[voice + "_track"];
-      if (score && !app2.state.active_steps) {
-        app2.state.active_steps = parseTrackToSteps(String(score), Number(app2.state.selected_step_id ?? -1));
+    if (app.state && app.state.active_voice) {
+      const voice = String(app.state.active_voice);
+      const score = app.state[voice + "_track"];
+      if (score && !app.state.active_steps) {
+        const timeSig = String(app.state.time_signature || "4/4");
+        const selectedBar = Number(app.state.selected_bar ?? 0);
+        app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1), timeSig, selectedBar);
       }
     }
-    app2.render();
-    return app2;
+    app.render();
+    return app;
   }
-  function setupWebSocket(endpoint, app2) {
+  function setupWebSocket(endpoint, app) {
     setWindowProp("__runeWebEmit", function(eventName, payload) {
       const ws2 = getWindowProp("__runeWebSocket");
       if (!ws2 || ws2.readyState !== WebSocket.OPEN) {
@@ -3454,15 +4177,17 @@ var __RuneWeb = (() => {
       try {
         const message = JSON.parse(event.data);
         if (message.type === "memory_update") {
-          app2.state[message.key] = message.value;
-          if (app2.state && app2.state.active_voice) {
-            const voice = String(app2.state.active_voice);
-            const score = app2.state[voice + "_track"];
-            if (score && !app2.state.active_steps) {
-              app2.state.active_steps = parseTrackToSteps(String(score), Number(app2.state.selected_step_id ?? -1));
+          app.state[message.key] = message.value;
+          if (app.state && app.state.active_voice) {
+            const voice = String(app.state.active_voice);
+            const score = app.state[voice + "_track"];
+            if (score && !app.state.active_steps) {
+              const timeSig = String(app.state.time_signature || "4/4");
+              const selectedBar = Number(app.state.selected_bar ?? 0);
+              app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1), timeSig, selectedBar);
             }
           }
-          app2.render();
+          app.render();
         }
       } catch (_err) {
       }

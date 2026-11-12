@@ -123,7 +123,7 @@ bass:
     C2:4 G2:4 C2:4 G2:4                           # Bar 1: Walking groove
     E2:4 B2:4 E2:4 B2:4                           # Bar 2
     F2:4 C3:4 G2:4 D3:4                           # Bar 3
-    C2:4 G2:4 C2:2 -:4                            # Bar 4
+    C2:4 G2:4 C2:2                                # Bar 4
 
 chords:
     [C4,E4,G4]:2 [C4,E4,G4]:2                     # Bar 1: C Major
@@ -146,10 +146,10 @@ loop = true
 volume = 0.18
 
 lead:
-    D4:16 F4:16 A4:16 D5:16 C5:8 A4:8             # Bar 1: Arp rush
-    D4:16 F4:16 A4:16 D5:16 C5:8 A4:8             # Bar 2: Repeat
-    Bb4:8 A4:8 G4:8 F4:8 E4:8 F4:8 G4:4           # Bar 3: Cascade
-    D4:8 F4:8 A4:8 D5:4 C5:4 D5:2                 # Bar 4: Climax
+    D4:16 F4:16 A4:16 D5:16 C5:8 A4:8 D4:16 F4:16 A4:16 D5:16 C5:8 A4:8 # Bar 1: Arp rush
+    D4:16 F4:16 A4:16 D5:16 C5:8 A4:8 D4:16 F4:16 A4:16 D5:16 C5:8 A4:8 # Bar 2: Repeat
+    Bb4:8 A4:8 G4:8 F4:8 E4:8 F4:8 G4:4                                  # Bar 3: Cascade
+    D4:8 F4:8 A4:8 D5:4 C5:4 D5:2                                        # Bar 4: Climax
 
 bass:
     D2:8 D2:8 A2:8 D2:8 D2:8 A2:8 D2:4            # Bar 1: Octave drive

@@ -1,0 +1,173 @@
+@Logic/studio
+
+action setEditorMode(mode):
+    editor_mode = mode
+
+action setLowerTab(tab):
+    active_lower_tab = tab
+
+action selectVoice(v):
+    active_voice = v
+    if v == "lead":
+        active_instrument = lead_instrument
+    if v == "bass":
+        active_instrument = bass_instrument
+    if v == "chords":
+        active_instrument = chords_instrument
+    if v == "drums":
+        active_instrument = drums_instrument
+    selected_step_id = -1
+    music.sync_steps
+    status_message = "Active Voice: " + v
+    flash_type = "info"
+
+action setVoiceInstrument(inst):
+    active_instrument = inst
+    if active_voice == "lead":
+        lead_instrument = inst
+    if active_voice == "bass":
+        bass_instrument = inst
+    if active_voice == "chords":
+        chords_instrument = inst
+    status_message = "Set " + active_voice + " instrument sound to " + inst
+
+action selectDuration(d):
+    active_duration = d
+
+action toggleChordMode:
+    chord_mode = !chord_mode
+    if chord_mode:
+        status_message = "Polyphonic Chord Mode ON: Click notes to stack chords!"
+    if !chord_mode:
+        status_message = "Single Note Mode ON"
+
+action selectBar(b):
+    selected_bar = b
+    music.sync_steps
+    if b == 0:
+        status_message = "Viewing all bars"
+    if b > 0:
+        status_message = "Selected Bar " + b
+    flash_type = "info"
+
+action addNewBar:
+    bars = bars + 1
+    music.add_bar
+    selected_bar = bars
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    status_message = "Added Bar " + bars + " to " + active_voice
+    flash_type = "success"
+
+action duplicateCurrentBar:
+    target = selected_bar == 0 ? bars : selected_bar
+    music.duplicate_bar(target)
+    bars = bars + 1
+    selected_bar = bars
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    status_message = "Duplicated Bar " + target + " as Bar " + bars
+    flash_type = "success"
+
+action deleteCurrentBar:
+    target = selected_bar == 0 ? bars : selected_bar
+    if bars > 1:
+        music.delete_bar(target)
+        bars = bars - 1
+        selected_bar = bars
+        music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+        status_message = "Deleted Bar " + target
+        flash_type = "info"
+
+action insertNote(note):
+    selected_note = note
+    if active_voice == "lead":
+        sound.play("key_lead")
+    if active_voice == "bass":
+        sound.play("key_bass")
+    if active_voice == "chords":
+        sound.play("key_lead")
+    if active_voice == "drums":
+        sound.play("drum_" + note)
+
+    if chord_mode:
+        music.stack_chord_note(note, active_duration)
+        status_message = "Stacked chord note " + note + " in " + active_voice
+    if !chord_mode:
+        entry = note + active_duration
+        if active_voice == "lead":
+            lead_track = lead_track == "" ? entry : (lead_track + " " + entry)
+        if active_voice == "bass":
+            bass_track = bass_track == "" ? entry : (bass_track + " " + entry)
+        if active_voice == "chords":
+            chords_track = chords_track == "" ? entry : (chords_track + " " + entry)
+        if active_voice == "drums":
+            drums_track = drums_track == "" ? entry : (drums_track + " " + entry)
+        music.sync_steps
+        music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+        status_message = "Added " + entry + " to " + active_voice
+
+action addChordNote(note):
+    sound.play("key_lead")
+    if active_voice == "chords":
+        chords_track = chords_track == "" ? ("[" + note + "]" + active_duration) : (chords_track + " [" + note + "]" + active_duration)
+    if active_voice == "lead":
+        lead_track = lead_track == "" ? ("[" + note + "]" + active_duration) : (lead_track + " [" + note + "]" + active_duration)
+    music.sync_steps
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    status_message = "Appended chord note " + note
+
+action insertRest:
+    entry = "-" + active_duration
+    if active_voice == "lead":
+        lead_track = lead_track == "" ? entry : (lead_track + " " + entry)
+    if active_voice == "bass":
+        bass_track = bass_track == "" ? entry : (bass_track + " " + entry)
+    if active_voice == "chords":
+        chords_track = chords_track == "" ? entry : (chords_track + " " + entry)
+    if active_voice == "drums":
+        drums_track = drums_track == "" ? entry : (drums_track + " " + entry)
+    music.sync_steps
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    status_message = "Added rest " + entry + " to " + active_voice
+
+action insertBar:
+    if active_voice == "lead":
+        lead_track = lead_track == "" ? "|" : (lead_track + " |")
+    if active_voice == "bass":
+        bass_track = bass_track == "" ? "|" : (bass_track + " |")
+    if active_voice == "chords":
+        chords_track = chords_track == "" ? "|" : (chords_track + " |")
+    if active_voice == "drums":
+        drums_track = drums_track == "" ? "|" : (drums_track + " |")
+    music.sync_steps
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    status_message = "Appended measure bar to " + active_voice
+
+action clearActiveTrack:
+    if active_voice == "lead":
+        lead_track = ""
+    if active_voice == "bass":
+        bass_track = ""
+    if active_voice == "chords":
+        chords_track = ""
+    if active_voice == "drums":
+        drums_track = ""
+    selected_step_id = -1
+    music.sync_steps
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    status_message = "Cleared " + active_voice + " track"
+
+action selectStep(id):
+    music.select_step(id)
+
+action stretchStep(id, delta):
+    music.stretch_step(id, delta)
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    status_message = "Stretched note step " + id
+    flash_type = "info"
+
+action deleteStep(id):
+    music.delete_step(id)
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    status_message = "Deleted step from " + active_voice
+    flash_type = "info"
+

@@ -25,6 +25,7 @@ import {
   setMusicTempo,
   setMusicVolume,
 } from './audio';
+import { audioSync } from './audio_sync';
 import type { RuneWebConfig, RuneApp } from './types';
 
 export {
@@ -37,6 +38,7 @@ export {
   resumeMusic,
   setMusicTempo,
   setMusicVolume,
+  audioSync,
 };
 
 /**
@@ -131,7 +133,7 @@ export function boot(config: RuneWebConfig): RuneApp {
     if (loadedChunks[cleanRoute]) {
       return Promise.resolve(loadedChunks[cleanRoute]);
     }
-    if (loadingChunks[cleanRoute]) {
+    if (cleanRoute in loadingChunks) {
       return loadingChunks[cleanRoute];
     }
     if (typeof fetch === 'undefined') {
@@ -301,6 +303,7 @@ export function boot(config: RuneWebConfig): RuneApp {
 
   // Expose globally and do initial render
   setWindowProp('runeWebApp', app);
+  setWindowProp('audioSync', audioSync);
   setWindowProp('playSound', playSound);
   setWindowProp('playMusic', playMusic);
   setWindowProp('stopMusic', stopMusic);
@@ -308,6 +311,14 @@ export function boot(config: RuneWebConfig): RuneApp {
   setWindowProp('resumeMusic', resumeMusic);
   setWindowProp('registerSounds', registerSounds);
   setWindowProp('registerMusic', registerMusic);
+
+  if (typeof window !== 'undefined') {
+    (window as any).__RuneWeb = {
+      ctx,
+      app,
+      audioSync,
+    };
+  }
 
   if (typeof document !== 'undefined') {
     document.addEventListener('fullscreenchange', () => {
@@ -335,7 +346,9 @@ export function boot(config: RuneWebConfig): RuneApp {
     const voice = String(app.state.active_voice);
     const score = app.state[voice + '_track'];
     if (score && !app.state.active_steps) {
-      app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1));
+      const timeSig = String(app.state.time_signature || '4/4');
+      const selectedBar = Number(app.state.selected_bar ?? 0);
+      app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1), timeSig, selectedBar);
     }
   }
 
@@ -372,7 +385,9 @@ function setupWebSocket(endpoint: string, app: RuneApp): void {
     const voice = String(app.state.active_voice);
     const score = app.state[voice + '_track'];
     if (score && !app.state.active_steps) {
-      app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1));
+      const timeSig = String(app.state.time_signature || '4/4');
+      const selectedBar = Number(app.state.selected_bar ?? 0);
+      app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1), timeSig, selectedBar);
     }
   }
 

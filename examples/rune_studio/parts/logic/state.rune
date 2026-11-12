@@ -1,0 +1,46 @@
+@Logic/studio
+
+state:
+    selected_song = "vectraiders"
+    song_title = "VectRaiders"
+    tempo = 144
+    time_signature = "4/4"
+    bars = 4
+    volume = 20
+    is_playing = false
+    is_paused = false
+    is_fullscreen = false
+    status_message = "Ready to compose. Choose a preset, click notes, or step-edit!"
+    flash_type = "info"
+    active_voice = "lead"
+    active_duration = ":8"
+    selected_note = "E4"
+    selected_step_id = -1
+    chord_mode = false
+    editor_mode = "matrix"
+    selected_bar = 0
+    active_lower_tab = "tracks"
+
+    # Audio Sync Engine Reactive State
+    playback_step_id = -1
+    playback_bar = 1
+    playback_beat = 0
+    playback_progress = 0
+    playback_playing = false
+
+    lead_instrument = "square"
+    bass_instrument = "triangle"
+    chords_instrument = "sawtooth"
+    drums_instrument = "drums"
+    active_instrument = "square"
+
+    lead_muted = false
+    bass_muted = false
+    chords_muted = false
+    drums_muted = false
+
+    lead_track = "E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | C4:8 D4:8 E4:8 G4:8 A4:4 G4:4 | E4:8 D4:8 C4:8 B3:8 A3:2"
+    bass_track = "A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4 | C3:4 G2:4 C3:4 G2:4 | F2:4 C2:4 E2:4 G#2:4"
+    chords_track = "[A3,C4,E4]:2 [A3,C4,E4]:2 | [A3,C4,E4]:2 [A3,C4,E4]:2 | [C4,E4,G4]:2 [C4,E4,G4]:2 | [F3,A3,C4]:2 [E3,G#3,B3]:2"
+    drums_track = "kick:4 snare:4 kick:4 snare:4 | kick:4 snare:4 kick:4 snare:4 | kick:8 hihat:8 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:4 snare:4"
+

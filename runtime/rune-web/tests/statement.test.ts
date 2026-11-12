@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { initContext } from '../src/context';
-import { assignPath, deletePath, executeStatement } from '../src/statement';
+import { assignPath, deletePath, executeStatement, executeSteps } from '../src/statement';
 import { evaluateExpression } from '../src/expression';
 import type { RuneApp, EmitterConfig } from '../src/types';
 
@@ -241,5 +241,54 @@ describe('executeStatement', () => {
 
     expect(() => executeStatement('download("test.rune", "content")', {})).not.toThrow();
     expect(() => executeStatement('copy("music code")', {})).not.toThrow();
+  });
+
+  it('updates state and active_steps on selectSong', () => {
+    const app = setupTestContext({
+      selected_song: 'vectraiders',
+      active_voice: 'lead',
+      lead_track: 'E4:8 D4:8',
+      time_signature: '4/4',
+    });
+    const steps = [
+      { Statement: 'selected_song = name' },
+      {
+        Conditional: {
+          condition: 'name == "vectworms"',
+          steps: [
+            { Statement: 'lead_track = "C4:8 G4:8"' },
+            { Statement: 'time_signature = "4/4"' },
+          ],
+        },
+      },
+      { Statement: 'music.sync_steps' },
+    ];
+    executeSteps(steps, { name: 'vectworms' });
+    expect(app.state.selected_song).toBe('vectworms');
+    expect(app.state.lead_track).toBe('C4:8 G4:8');
+    expect((app.state.active_steps as any[])[0].note).toBe('C4');
+  });
+
+  it('stretches and deletes steps correctly', () => {
+    const app = setupTestContext({
+      selected_song: 'test_song',
+      active_voice: 'lead',
+      lead_track: 'C4:8 E4:8 G4:4',
+      time_signature: '4/4',
+    });
+    // Stretch step 0 from :8 to :4
+    executeStatement('music.stretch_step(0, 1)', {});
+    expect(app.state.lead_track).toBe('C4:4 E4:8 G4:4');
+    expect((app.state.active_steps as any[])[0].duration).toBe(':4');
+    expect((app.state.active_steps as any[])[0].matrix_width).toBeGreaterThan(60);
+
+    // Shorten step 0 from :4 back to :8
+    executeStatement('music.stretch_step(0, -1)', {});
+    expect(app.state.lead_track).toBe('C4:8 E4:8 G4:4');
+
+    // Delete step 1 (E4:8)
+    executeStatement('music.delete_step(1)', {});
+    expect(app.state.lead_track).toBe('C4:8 G4:4');
+    expect((app.state.active_steps as any[]).length).toBe(2);
   });
 });

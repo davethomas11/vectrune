@@ -1,0 +1,70 @@
+@Logic/studio
+
+action toggleFullscreen:
+    fullscreen.toggle()
+    is_fullscreen = !is_fullscreen
+    if is_fullscreen:
+        status_message = "Entered Fullscreen mode"
+    if !is_fullscreen:
+        status_message = "Exited Fullscreen mode"
+
+action toggleTrackMute(voice):
+    if voice == "lead":
+        lead_muted = !lead_muted
+    if voice == "bass":
+        bass_muted = !bass_muted
+    if voice == "chords":
+        chords_muted = !chords_muted
+    if voice == "drums":
+        drums_muted = !drums_muted
+
+action playTrack:
+    if is_paused:
+        music.resume
+        is_playing = true
+        is_paused = false
+        status_message = "Resumed: " + song_title
+        flash_type = "success"
+    if !is_paused:
+        music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+        music.play(selected_song)
+        is_playing = true
+        is_paused = false
+        status_message = "Playing: " + song_title + " (" + tempo + " BPM • " + time_signature + ")"
+        flash_type = "success"
+
+action pauseTrack:
+    music.pause
+    is_playing = false
+    is_paused = true
+    status_message = "Paused: " + song_title
+    flash_type = "info"
+
+action resumeTrack:
+    music.resume
+    is_playing = true
+    is_paused = false
+    status_message = "Resumed: " + song_title
+    flash_type = "success"
+
+action stopTrack:
+    music.stop
+    is_playing = false
+    is_paused = false
+    status_message = "Stopped playback"
+    flash_type = "info"
+
+action changeTempo(delta):
+    tempo = clamp(tempo + delta, 40, 240)
+    music.tempo = tempo
+    status_message = "Tempo: " + tempo + " BPM"
+
+action changeVolume(val):
+    volume = clamp(val, 0, 100)
+    music.volume = volume / 100
+
+action playSfx(name):
+    sound.play(name)
+    status_message = "Auditioning sound effect: @" + name
+    flash_type = "info"
+

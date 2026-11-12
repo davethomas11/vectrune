@@ -288,11 +288,13 @@ export function executeStatement(
         const bass = String(evaluateExpression(parts[3], buildScope(locals)));
         const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals))) : '';
         const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals))) : '4/4';
+        const songBars = Number((ctx().app as any)?.state?.bars) || 4;
         registerMusic({
           [name]: {
             music_type: '8bit',
             tempo,
             time_signature: timeSig,
+            bars: songBars,
             loop_track: true,
             volume: 0.2,
             lead,
@@ -318,19 +320,28 @@ export function executeStatement(
       }
       return true;
     }
-    let trackName = '';
-    if (trimmed.startsWith('music.play(') && trimmed.endsWith(')')) {
-      trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
-    } else if (trimmed.startsWith('play_music(') && trimmed.endsWith(')')) {
-      trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
-    } else if (trimmed.startsWith('music.play ')) {
-      trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || '');
-    } else {
-      trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || '');
+    if (
+      trimmed === 'music.play' ||
+      trimmed === 'music.play()' ||
+      trimmed.startsWith('music.play(') ||
+      trimmed.startsWith('music.play ') ||
+      trimmed.startsWith('play_music(') ||
+      (trimmed.startsWith('music ') && !trimmed.startsWith('music.tempo') && !trimmed.startsWith('music.volume'))
+    ) {
+      let trackName = '';
+      if (trimmed.startsWith('music.play(') && trimmed.endsWith(')')) {
+        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
+      } else if (trimmed.startsWith('play_music(') && trimmed.endsWith(')')) {
+        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
+      } else if (trimmed.startsWith('music.play ')) {
+        trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || '');
+      } else if (trimmed.startsWith('music ')) {
+        trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || '');
+      }
+      trackName = normalizeLiteral(trackName);
+      if (trackName) playMusic(trackName);
+      return true;
     }
-    trackName = normalizeLiteral(trackName);
-    playMusic(trackName);
-    return true;
   }
 
   // Music Step Sequencer Helpers: music.sync_steps, music.select_step(id), music.delete_step(id)
@@ -341,7 +352,8 @@ export function executeStatement(
       const score = String(state[voice + '_track'] || '');
       const selectedId = Number(state.selected_step_id ?? -1);
       const timeSig = String(state.time_signature || '4/4');
-      state.active_steps = parseTrackToSteps(score, selectedId, timeSig);
+      const selectedBar = Number(state.selected_bar ?? 0);
+      state.active_steps = parseTrackToSteps(score, selectedId, timeSig, selectedBar);
       if (typeof (ctx().app as any).render === 'function') {
         (ctx().app as any).render();
       }
@@ -358,7 +370,8 @@ export function executeStatement(
       const voice = String(state.active_voice || 'lead');
       const score = String(state[voice + '_track'] || '');
       const timeSig = String(state.time_signature || '4/4');
-      state.active_steps = parseTrackToSteps(score, id, timeSig);
+      const selectedBar = Number(state.selected_bar ?? 0);
+      state.active_steps = parseTrackToSteps(score, id, timeSig, selectedBar);
       const step = (state.active_steps as Array<any>).find((s: any) => s.id === id);
       if (step && !step.is_bar && !step.is_rest) {
         state.selected_note = step.note;
@@ -389,6 +402,30 @@ export function executeStatement(
     return true;
   }
 
+function syncMusicState(state: any): void {
+  if (!state || !state.selected_song) return;
+  const name = String(state.selected_song);
+  const tempo = Number(state.tempo) || 128;
+  const timeSig = String(state.time_signature || '4/4');
+  const bars = Number(state.bars) || 4;
+  const lead = String(state.lead_track || '');
+  const bass = String(state.bass_track || '');
+  const drums = String(state.drums_track || '');
+  registerMusic({
+    [name]: {
+      music_type: '8bit',
+      tempo,
+      time_signature: timeSig,
+      bars,
+      loop_track: true,
+      volume: 0.2,
+      lead,
+      bass,
+      drums,
+    },
+  });
+}
+
   if (trimmed.startsWith('music.delete_step(') && trimmed.endsWith(')')) {
     const inner = trimmed.slice(18, -1);
     const id = Number(evaluateExpression(inner, buildScope(locals)));
@@ -397,12 +434,161 @@ export function executeStatement(
       const voice = String(state.active_voice || 'lead');
       const score = String(state[voice + '_track'] || '');
       const timeSig = String(state.time_signature || '4/4');
+      const selectedBar = Number(state.selected_bar ?? 0);
       const tokens = score.trim().split(/\s+/).filter(Boolean);
       if (id >= 0 && id < tokens.length) {
         tokens.splice(id, 1);
         state[voice + '_track'] = tokens.join(' ');
         state.selected_step_id = -1;
-        state.active_steps = parseTrackToSteps(state[voice + '_track'], -1, timeSig);
+        state.active_steps = parseTrackToSteps(state[voice + '_track'], -1, timeSig, selectedBar);
+        syncMusicState(state);
+        if (typeof (ctx().app as any).render === 'function') {
+          (ctx().app as any).render();
+        }
+      }
+    }
+    return true;
+  }
+
+  if (trimmed.startsWith('music.stretch_step(') && trimmed.endsWith(')')) {
+    const inner = trimmed.slice(19, -1);
+    const parts = splitTopLevel(inner, ',');
+    const id = Number(evaluateExpression(parts[0], buildScope(locals)));
+    const delta = parts.length > 1 ? Number(evaluateExpression(parts[1], buildScope(locals))) : 1;
+    const state = (ctx().app as any)?.state;
+    if (state) {
+      const voice = String(state.active_voice || 'lead');
+      const score = String(state[voice + '_track'] || '');
+      const timeSig = String(state.time_signature || '4/4');
+      const selectedBar = Number(state.selected_bar ?? 0);
+      const tokens = score.trim().split(/\s+/).filter(Boolean);
+      if (id >= 0 && id < tokens.length) {
+        const raw = tokens[id];
+        if (raw !== '|') {
+          const DURS = [':16', ':8', ':4', ':2', ':1'];
+          let currentDur = ':8';
+          let prefix = raw;
+          if (raw.startsWith('[') && raw.includes(']')) {
+            const closeIdx = raw.indexOf(']');
+            prefix = raw.slice(0, closeIdx + 1);
+            currentDur = raw.slice(closeIdx + 1) || ':8';
+          } else {
+            const colonIdx = raw.indexOf(':');
+            prefix = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
+            currentDur = colonIdx !== -1 ? raw.slice(colonIdx) : ':8';
+          }
+          let durIdx = DURS.indexOf(currentDur);
+          if (durIdx === -1) durIdx = 1;
+          const newDurIdx = Math.max(0, Math.min(DURS.length - 1, durIdx + delta));
+          tokens[id] = `${prefix}${DURS[newDurIdx]}`;
+          state[voice + '_track'] = tokens.join(' ');
+          state.active_steps = parseTrackToSteps(state[voice + '_track'], id, timeSig, selectedBar);
+          syncMusicState(state);
+          if (typeof (ctx().app as any).render === 'function') {
+            (ctx().app as any).render();
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  if (trimmed.startsWith('music.stack_chord_note(') && trimmed.endsWith(')')) {
+    const inner = trimmed.slice(23, -1);
+    const parts = splitTopLevel(inner, ',');
+    const note = String(evaluateExpression(parts[0], buildScope(locals)));
+    const dur = parts[1] ? String(evaluateExpression(parts[1], buildScope(locals))) : ':8';
+    const state = (ctx().app as any)?.state;
+    if (state) {
+      const voice = String(state.active_voice || 'lead');
+      const score = String(state[voice + '_track'] || '').trim();
+      const timeSig = String(state.time_signature || '4/4');
+      const selectedBar = Number(state.selected_bar ?? 0);
+      const tokens = score.length > 0 ? score.split(/\s+/).filter(Boolean) : [];
+      if (tokens.length > 0) {
+        const lastToken = tokens[tokens.length - 1];
+        if (lastToken.startsWith('[') && lastToken.includes(']')) {
+          const closeIdx = lastToken.indexOf(']');
+          const currentNotes = lastToken.slice(1, closeIdx).split(/[,+]/).map(s => s.trim()).filter(Boolean);
+          const currentDur = lastToken.slice(closeIdx + 1) || dur;
+          if (!currentNotes.includes(note)) {
+            currentNotes.push(note);
+            tokens[tokens.length - 1] = `[${currentNotes.join(',')}]${currentDur}`;
+          }
+        } else {
+          tokens.push(`[${note}]${dur}`);
+        }
+      } else {
+        tokens.push(`[${note}]${dur}`);
+      }
+      state[voice + '_track'] = tokens.join(' ');
+      state.selected_note = note;
+      state.active_steps = parseTrackToSteps(state[voice + '_track'], tokens.length - 1, timeSig, selectedBar);
+      syncMusicState(state);
+      if (typeof (ctx().app as any).render === 'function') {
+        (ctx().app as any).render();
+      }
+    }
+    return true;
+  }
+
+  if (trimmed === 'music.add_bar' || trimmed === 'music.add_bar()') {
+    const state = (ctx().app as any)?.state;
+    if (state) {
+      const voice = String(state.active_voice || 'lead');
+      const score = String(state[voice + '_track'] || '').trim();
+      const timeSig = String(state.time_signature || '4/4');
+      const selectedBar = Number(state.selected_bar ?? 0);
+      state[voice + '_track'] = score.length > 0 ? `${score} |` : '|';
+      state.active_steps = parseTrackToSteps(state[voice + '_track'], -1, timeSig, selectedBar);
+      syncMusicState(state);
+      if (typeof (ctx().app as any).render === 'function') {
+        (ctx().app as any).render();
+      }
+    }
+    return true;
+  }
+
+  if (trimmed.startsWith('music.duplicate_bar(') && trimmed.endsWith(')')) {
+    const inner = trimmed.slice(20, -1);
+    const barNum = Number(evaluateExpression(inner, buildScope(locals))) || 1;
+    const state = (ctx().app as any)?.state;
+    if (state) {
+      const voice = String(state.active_voice || 'lead');
+      const score = String(state[voice + '_track'] || '').trim();
+      const timeSig = String(state.time_signature || '4/4');
+      const selectedBar = Number(state.selected_bar ?? 0);
+      const bars = score.split('|').map(b => b.trim());
+      const barIdx = Math.max(0, Math.min(bars.length - 1, barNum - 1));
+      if (bars[barIdx] !== undefined) {
+        bars.push(bars[barIdx]);
+        state[voice + '_track'] = bars.join(' | ');
+        state.active_steps = parseTrackToSteps(state[voice + '_track'], -1, timeSig, selectedBar);
+        syncMusicState(state);
+        if (typeof (ctx().app as any).render === 'function') {
+          (ctx().app as any).render();
+        }
+      }
+    }
+    return true;
+  }
+
+  if (trimmed.startsWith('music.delete_bar(') && trimmed.endsWith(')')) {
+    const inner = trimmed.slice(17, -1);
+    const barNum = Number(evaluateExpression(inner, buildScope(locals))) || 1;
+    const state = (ctx().app as any)?.state;
+    if (state) {
+      const voice = String(state.active_voice || 'lead');
+      const score = String(state[voice + '_track'] || '').trim();
+      const timeSig = String(state.time_signature || '4/4');
+      const selectedBar = Number(state.selected_bar ?? 0);
+      const bars = score.split('|').map(b => b.trim());
+      const barIdx = Math.max(0, Math.min(bars.length - 1, barNum - 1));
+      if (bars.length > 1 && bars[barIdx] !== undefined) {
+        bars.splice(barIdx, 1);
+        state[voice + '_track'] = bars.join(' | ');
+        state.active_steps = parseTrackToSteps(state[voice + '_track'], -1, timeSig, selectedBar);
+        syncMusicState(state);
         if (typeof (ctx().app as any).render === 'function') {
           (ctx().app as any).render();
         }
@@ -565,10 +751,11 @@ export function executeStatement(
           window.parent.postMessage({ type: 'toggle_fullscreen', is_fullscreen: shouldEnter }, '*');
         } catch (_) {}
       }
-      if (typeof (app as any)?.state !== 'undefined') {
-        (app as any).state.is_fullscreen = shouldEnter;
-        if (typeof (app as any).render === 'function') {
-          (app as any).render();
+      const app = (ctx().app as any);
+      if (typeof app?.state !== 'undefined') {
+        app.state.is_fullscreen = shouldEnter;
+        if (typeof app.render === 'function') {
+          app.render();
         }
       }
     }
@@ -843,10 +1030,75 @@ export function executeSteps(
   return true;
 }
 
+const PITCH_ROWS: Record<string, number> = {
+  'C5': 0,
+  'B4': 1,
+  'A#4': 2, 'BB4': 2,
+  'A4': 3,
+  'G#4': 4, 'AB4': 4,
+  'G4': 5,
+  'F#4': 6, 'GB4': 6,
+  'F4': 7,
+  'E4': 8,
+  'D#4': 9, 'EB4': 9,
+  'D4': 10,
+  'C#4': 11, 'DB4': 11,
+  'C4': 12,
+  'B3': 13,
+  'A#3': 14, 'BB3': 14,
+  'A3': 15,
+  'G#3': 16, 'AB3': 16,
+  'G3': 17,
+  'F#3': 18, 'GB3': 18,
+  'F3': 19,
+  'E3': 20,
+  'D#3': 21, 'EB3': 21,
+  'D3': 22,
+  'C#3': 23, 'DB3': 23,
+  'C3': 24,
+  'B2': 25,
+  'A#2': 26, 'BB2': 26,
+  'A2': 27,
+  'G#2': 28, 'AB2': 28,
+  'G2': 29,
+  'F#2': 30, 'GB2': 30,
+  'F2': 31,
+  'E2': 32,
+  'D2': 33,
+  'C2': 34,
+  'A1': 35,
+  // Drums
+  'hihat': 0,
+  'snare': 1,
+  'kick': 2,
+};
+
+function getPitchRow(pitch: string, isDrum: boolean): number {
+  if (isDrum) {
+    const p = pitch.toLowerCase();
+    if (p.includes('hihat') || p.includes('crash')) return 0;
+    if (p.includes('snare') || p.includes('tom')) return 1;
+    return 2;
+  }
+  const clean = pitch.toUpperCase().trim();
+  if (clean in PITCH_ROWS) return PITCH_ROWS[clean];
+
+  const match = clean.match(/^([A-G][#B]?)([0-8])$/);
+  if (match) {
+    const oct = parseInt(match[2], 10);
+    if (oct >= 5) return 0;
+    if (oct === 4) return 8;
+    if (oct === 3) return 15;
+    if (oct <= 2) return 27;
+  }
+  return 12;
+}
+
 export function parseTrackToSteps(
   scoreStr: string,
   selectedIdx: number,
   timeSignature: string = '4/4',
+  selectedBar: number = 0,
 ): Array<Record<string, unknown>> {
   if (!scoreStr) return [];
   const tokens = String(scoreStr).trim().split(/\s+/).filter(Boolean);
@@ -856,17 +1108,21 @@ export function parseTrackToSteps(
   const beatsPerBar = timeSignature.startsWith('3/') ? 3 : 4;
   let barNum = 1;
   let currentBeatInBar = 0;
+  let totalBeatOffset = 0;
   let stepInBar = 1;
 
   for (let i = 0; i < tokens.length; i++) {
     const raw = tokens[i];
     if (raw === '|') {
+      const totalLeft = Math.round(totalBeatOffset * 120);
+      const barLeft = Math.round(currentBeatInBar * 120);
       steps.push({
         id: i,
         raw,
         note: '|',
         duration: '',
         len_label: 'BAR ' + barNum,
+        beats: 0,
         is_bar: true,
         is_chord: false,
         is_rest: false,
@@ -874,6 +1130,14 @@ export function parseTrackToSteps(
         bar_num: barNum,
         step_num: stepInBar,
         pitch_class: 'step-bar',
+        matrix_top: 0,
+        matrix_left: selectedBar > 0 ? barLeft : totalLeft,
+        matrix_total_left: totalLeft,
+        matrix_bar_left: barLeft,
+        matrix_width: 8,
+        strip_width: 54,
+        can_stretch: false,
+        can_shorten: false,
       });
       barNum += 1;
       currentBeatInBar = 0;
@@ -915,13 +1179,24 @@ export function parseTrackToSteps(
     let pitchClass = 'step-note';
     if (isRest) pitchClass = 'step-rest';
     else if (isChord) pitchClass = 'step-chord';
-    else if (pitch.includes('2')) pitchClass = 'step-bass';
+    else if (pitch.includes('2') || pitch.includes('1')) pitchClass = 'step-bass';
     else if (pitch.includes('3')) pitchClass = 'step-mid-low';
     else if (pitch.includes('4')) pitchClass = 'step-mid';
     else if (pitch.includes('5')) pitchClass = 'step-high';
     else if (pitch === 'kick') pitchClass = 'step-kick';
     else if (pitch === 'snare') pitchClass = 'step-snare';
     else if (pitch === 'hihat') pitchClass = 'step-hihat';
+
+    const rootPitch = isChord && chordNotes.length > 0 ? chordNotes[0] : pitch;
+    const isDrumPitch = ['kick', 'snare', 'hihat', 'crash', 'tom'].includes(rootPitch.toLowerCase());
+    const row = getPitchRow(rootPitch, isDrumPitch);
+    const rowHeight = isDrumPitch ? 48 : 28;
+    const matrixTop = row * rowHeight + 2;
+    const totalLeft = Math.round(totalBeatOffset * 120);
+    const barLeft = Math.round(currentBeatInBar * 120);
+    const matrixLeft = selectedBar > 0 ? barLeft : totalLeft;
+    const matrixWidth = Math.max(34, Math.round(beats * 120) - 4);
+    const stripWidth = Math.max(54, Math.round(beats * 140));
 
     const displayNote = isRest ? 'REST' : isChord ? (pitch.startsWith('[') ? pitch : `[${pitch}]`) : pitch;
 
@@ -932,6 +1207,7 @@ export function parseTrackToSteps(
       chord_notes: isChord ? chordNotes : [pitch],
       duration: dur,
       len_label: lenLabel,
+      beats,
       is_bar: false,
       is_chord: isChord,
       is_rest: isRest,
@@ -939,8 +1215,18 @@ export function parseTrackToSteps(
       bar_num: barNum,
       step_num: stepInBar,
       pitch_class: pitchClass,
+      pitch_row: row,
+      matrix_top: matrixTop,
+      matrix_left: matrixLeft,
+      matrix_total_left: totalLeft,
+      matrix_bar_left: barLeft,
+      matrix_width: matrixWidth,
+      strip_width: stripWidth,
+      can_stretch: beats < 4.0,
+      can_shorten: beats > 0.25,
     });
 
+    totalBeatOffset += beats;
     currentBeatInBar += beats;
     stepInBar += 1;
     // Auto-advance bar if beat threshold is reached and track does not use manual |

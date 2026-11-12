@@ -76,7 +76,7 @@ pub fn parse_rune_web_frontend(
 ) -> Result<RuneWebFrontend, ParseError> {
     let mut page_views = HashMap::new();
     let mut component_definitions = HashMap::new();
-    let mut style_definitions = HashMap::new();
+    let mut style_definitions: HashMap<String, StyleDefinition> = HashMap::new();
     let mut logic_definitions: HashMap<String, LogicDefinition> = HashMap::new();
     let mut i18n_sections = HashMap::new();
 
@@ -105,7 +105,23 @@ pub fn parse_rune_web_frontend(
         if section.path.len() == 2 && section.path[0] == "Style" {
             let style_name = &section.path[1];
             let style_def = parse_style_section(section)?;
-            style_definitions.insert(style_name.clone(), style_def);
+            if let Some(existing) = style_definitions.get_mut(style_name) {
+                for (k, v) in style_def.tokens {
+                    existing.tokens.insert(k, v);
+                }
+                for (k, v) in style_def.presets {
+                    existing.presets.insert(k, v);
+                }
+                for (k, v) in style_def.rules {
+                    existing.rules.insert(k, v);
+                }
+                existing.responsive.extend(style_def.responsive);
+                for (k, v) in style_def.fullscreen {
+                    existing.fullscreen.insert(k, v);
+                }
+            } else {
+                style_definitions.insert(style_name.clone(), style_def);
+            }
         }
     }
 
@@ -1281,14 +1297,16 @@ fn extract_element_parts(
             if let Some(when_idx) = inner.find(" when ") {
                 let selector = inner[..when_idx].trim();
                 let expr = inner[when_idx + 6..].trim();
+                let class_name = if selector.starts_with('.') {
+                    &selector[1..]
+                } else {
+                    selector
+                };
                 if let Some(state_var) = bindings.get(selector) {
-                    let class_name = if selector.starts_with('.') {
-                        &selector[1..]
-                    } else {
-                        selector
-                    };
                     classes.push(format!("{{{} == {} ? '{}' : ''}}", state_var, expr, class_name));
                     events.insert("click".to_string(), format!("{} = {}", state_var, expr));
+                } else {
+                    classes.push(format!("{{{} ? '{}' : ''}}", expr, class_name));
                 }
             }
         } else if part.starts_with('#') {

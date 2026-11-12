@@ -1,0 +1,43 @@
+@Component/TransportBar
+props: [is_playing?, is_paused?, tempo?, volume?, time_signature?, editor_mode?]
+view:
+    div .transport-bar:
+        div .transport-buttons:
+            if !is_playing:
+                button .btn-transport .btn-play click="playTrack":
+                    "▶ PLAY"
+            if is_playing:
+                button .btn-transport .btn-pause click="pauseTrack":
+                    "⏸ PAUSE"
+            button .btn-transport .btn-stop click="stopTrack":
+                "⏹ STOP"
+
+        div .tempo-controls:
+            span .ctrl-label "TEMPO:"
+            button .btn-tempo click="changeTempo(-4)":
+                "-4"
+            span .bpm-badge "{tempo} BPM"
+            button .btn-tempo click="changeTempo(4)":
+                "+4"
+
+        div .time-sig-controls:
+            span .ctrl-label "TIME:"
+            button .btn-timesig {.active when time_signature == '4/4'} click="setTimeSignature('4/4')":
+                "4/4"
+            button .btn-timesig {.active when time_signature == '3/4'} click="setTimeSignature('3/4')":
+                "3/4"
+
+        div .mode-controls:
+            span .ctrl-label "VIEW:"
+            button .btn-mode {.active when editor_mode == 'matrix'} click="setEditorMode('matrix')":
+                "🎹 2D MATRIX"
+            button .btn-mode {.active when editor_mode == 'strip'} click="setEditorMode('strip')":
+                "🎼 STRIP"
+
+        div .storage-actions:
+            button .btn-storage click="saveToStorage":
+                "💾 SAVE"
+            button .btn-storage click="loadFromStorage":
+                "📂 LOAD"
+            button .btn-storage click="exportRune":
+                "📥 EXPORT .RUNE"

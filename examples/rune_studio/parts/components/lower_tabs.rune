@@ -1,0 +1,63 @@
+@Component/SfxAuditionPad
+view:
+    div .sfx-section:
+        h4 .sfx-heading "⚡ RETRO ARCADE SOUND FX AUDITION PAD"
+        div .sfx-pads:
+            button .pad-btn click="playSfx('laser')":
+                span "💥"
+                span "Laser"
+            button .pad-btn click="playSfx('hit')":
+                span "🥊"
+                span "Hit"
+            button .pad-btn click="playSfx('explosion')":
+                span "💣"
+                span "Explosion"
+            button .pad-btn click="playSfx('coin')":
+                span "🪙"
+                span "Coin"
+            button .pad-btn click="playSfx('step')":
+                span "👣"
+                span "Footstep"
+            button .pad-btn click="playSfx('gameover')":
+                span "💀"
+                span "Game Over"
+            button .pad-btn click="playSfx('victory')":
+                span "🌟"
+                span "Victory"
+
+@Component/RuneCodeExport
+view:
+    div .export-section:
+        div .export-header:
+            h4 .sfx-heading "📜 GENERATED RUNE DECLARATION"
+            div:
+                button .btn-storage click="copyCode":
+                    "Copy Code"
+        pre .code-preview:
+            "# {song_title}\n\n@Music/{selected_song}\ntype = 8bit\ntempo = {tempo}\ntime_signature = {time_signature}\nbars = {bars}\nloop = true\nvolume = 0.2\n\nlead:\n    {lead_track}\n\nbass:\n    {bass_track}\n\nchords:\n    {chords_track}\n\ndrums:\n    {drums_track}"
+
+@Component/LowerContentTabs
+view:
+    div .lower-tabs-cabinet:
+        div .lower-tab-bar:
+            button .lower-tab-btn {.active when active_lower_tab == 'tracks'} click="setLowerTab('tracks')":
+                "🎛 MULTI-TRACK RACK ({bars} BARS)"
+            button .lower-tab-btn {.active when active_lower_tab == 'sfx'} click="setLowerTab('sfx')":
+                "⚡ RETRO ARCADE SFX PAD"
+            button .lower-tab-btn {.active when active_lower_tab == 'export'} click="setLowerTab('export')":
+                "📜 GENERATED .RUNE CODE"
+
+        div .lower-tab-content:
+            if active_lower_tab == 'tracks':
+                div .tracks-container:
+                    TrackRack voice_id=lead voice_name="VOICE 1: SQUARE LEAD" icon="🎹" badge_class="badge-square" badge_text="{lead_instrument}" score_text="{lead_track}" is_active="{active_voice == 'lead'}" is_muted="{lead_muted}"
+                    TrackRack voice_id=bass voice_name="VOICE 2: TRIANGLE BASS" icon="🎸" badge_class="badge-triangle" badge_text="{bass_instrument}" score_text="{bass_track}" is_active="{active_voice == 'bass'}" is_muted="{bass_muted}"
+                    TrackRack voice_id=chords voice_name="VOICE 3: POLYPHONIC CHORDS" icon="✨" badge_class="badge-saw" badge_text="{chords_instrument}" score_text="{chords_track}" is_active="{active_voice == 'chords'}" is_muted="{chords_muted}"
+                    TrackRack voice_id=drums voice_name="VOICE 4: PERCUSSION / DRUMS" icon="🥁" badge_class="badge-noise" badge_text="Drums" score_text="{drums_track}" is_active="{active_voice == 'drums'}" is_muted="{drums_muted}"
+
+            if active_lower_tab == 'sfx':
+                SfxAuditionPad
+
+            if active_lower_tab == 'export':
+                RuneCodeExport
+
