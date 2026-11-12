@@ -1442,6 +1442,38 @@ rules:
         mix-blend-mode = multiply
 
 # Responsive overrides are emitted after base rules, in the order below.
+    .developer-nav:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.5rem
+        margin = 0 0 1.5rem
+        padding = 0.75rem
+        background = {info-bg}
+        border = 1px solid {info-border}
+        border-radius = 16px
+
+    .developer-nav a:
+        padding = 0.65rem 0.8rem
+        min-height = 44px
+        border-radius = 10px
+        color = {brand-dark}
+        text-decoration = none
+        font-weight = 600
+
+    .developer-nav a[aria-current=page]:
+        background = {brand-dark}
+        color = white
+
+    .developer-nav a:hover:
+        text-decoration = underline
+
+    .developer-page .card h2:
+        scroll-margin-top = 2rem
+
+    .developer-page .command-block:
+        min-width = 0
+        max-width = 100%
+
 responsive:
     (max-width: 1000px):
         .dev-banner-badge:
@@ -1509,6 +1541,9 @@ responsive:
             padding = 0
 
     (max-width: 640px):
+        .developer-nav:
+            display = none
+
         .built-with-tag:
             padding = 0.55rem 0.7rem
             gap = 0.4rem

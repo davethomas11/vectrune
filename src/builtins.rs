@@ -527,7 +527,7 @@ pub async fn call_builtin(
             if ctx.get(name).is_none() {
                 log(LogLevel::Error, &format!("unknown builtin: {}", name));
                 #[cfg(not(target_arch = "wasm32"))]
-                if crate::cli::testing::is_active() {
+                if crate::cli::testing::strict_commands() {
                     return BuiltinResult::Error(format!("Unknown builtin: {name}"));
                 }
             }

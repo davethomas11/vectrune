@@ -268,3 +268,226 @@ fn doctor_reports_the_running_binary_and_invalid_tests_fail_preflight() {
     assert_eq!(report["command"], "test");
     assert_eq!(report["diagnostics"][0]["code"], "test-name");
 }
+
+#[test]
+fn fixtures_share_context_and_teardown_runs_after_failure() {
+    let dir = tempfile::tempdir().unwrap();
+    let entry = dir.path().join("suite.rune");
+    fs::write(
+        &entry,
+        r#"@App
+type = REST
+@TestSuite
+setup:
+    state = { phase: "suite" }
+teardown:
+    cleaned = get-memory cleaned
+    assert cleaned == "yes"
+@TestFixture/User
+setup:
+    assert state.phase == "suite"
+    alice = { name: "Alice" }
+teardown:
+    assert state.phase == "test-cleaned"
+    set-memory cleaned "yes"
+@Test/Failure
+fixtures = [User]
+setup:
+    assert alice.name == "Alice"
+run:
+    assert false
+teardown:
+    state.phase = "test-cleaned"
+"#,
+    )
+    .unwrap();
+    let report = json(cli().arg("test").arg(&entry).arg("--json"), false);
+    assert_eq!(report["schema_version"], 1);
+    let test = &report["tests"][0];
+    assert_eq!(test["assertions"], 5, "{report}");
+    assert!(
+        !test["error"].as_str().unwrap().contains("teardown"),
+        "{report}"
+    );
+    assert_eq!(test["location"]["line"], 21, "{report}");
+    assert_eq!(test["location"]["column"], 5);
+    assert_eq!(test["location"]["source"], "    assert false");
+}
+
+#[test]
+fn startup_and_teardown_failures_cannot_pass_tests() {
+    let dir = tempfile::tempdir().unwrap();
+    let entry = dir.path().join("suite.rune");
+    fs::write(
+        &entry,
+        "@App\ntype = REST\nrun:\n    typoo-startup\n@Test/A\nrun:\n    assert true\n",
+    )
+    .unwrap();
+    let report = json(cli().arg("test").arg(&entry).arg("--json"), false);
+    assert!(
+        report["tests"][0]["error"]
+            .as_str()
+            .unwrap()
+            .contains("Unknown builtin"),
+        "{report}"
+    );
+    assert_eq!(report["tests"][0]["location"]["line"], 4);
+    fs::write(
+        &entry,
+        "@Test/A\nrun:\n    assert true\nteardown:\n    assert false\n",
+    )
+    .unwrap();
+    let report = json(cli().arg("test").arg(&entry).arg("--json"), false);
+    assert!(
+        report["tests"][0]["error"]
+            .as_str()
+            .unwrap()
+            .contains("teardown"),
+        "{report}"
+    );
+    assert_eq!(report["tests"][0]["location"]["line"], 5);
+    fs::write(
+        &entry,
+        "@Memory\nsource = missing.json\n@Test/A\nrun:\n    assert true\n",
+    )
+    .unwrap();
+    let report = json(cli().arg("test").arg(&entry).arg("--json"), false);
+    assert!(
+        report["tests"][0]["error"]
+            .as_str()
+            .unwrap()
+            .contains("Memory source"),
+        "{report}"
+    );
+}
+
+#[test]
+fn linter_suggests_commands_at_the_statement_location() {
+    let dir = tempfile::tempdir().unwrap();
+    let entry = dir.path().join("suite.rune");
+    fs::write(&entry, "@Route/GET /health\nrun:\n    repond 200 OK\n").unwrap();
+    let report = json(
+        cli()
+            .arg("check")
+            .arg(&entry)
+            .args(["--deny-warnings", "--json"]),
+        false,
+    );
+    let diagnostic = &report["diagnostics"][0];
+    assert_eq!(diagnostic["code"], "unknown-command");
+    assert_eq!(diagnostic["location"]["line"], 3);
+    assert_eq!(diagnostic["suggestion"], "Did you mean `respond`?");
+}
+
+#[test]
+fn formatting_is_idempotent_import_aware_and_preserves_opaque_blocks() {
+    let dir = tempfile::tempdir().unwrap();
+    let entry = dir.path().join("suite.rune");
+    let imported = dir.path().join("data.rune");
+    fs::write(&imported, "@Schema / User\nname=string\n").unwrap();
+    let opaque = "@Component/Whitespace\nview:\n  pre:\n    code \"a  b\\n  c\"  \n@Style/main\ncss:\n  .x:\n    color = red  \n@Raw\nsource >\n    first  \n      second\n\n";
+    fs::write(
+        &entry,
+        format!("import \"data.rune\"\n@Test / A\nrun:\n  assert true\n{opaque}"),
+    )
+    .unwrap();
+    let before = fs::read_to_string(&entry).unwrap();
+    let report = json(
+        cli().arg("fmt").arg(&entry).args(["--check", "--json"]),
+        false,
+    );
+    assert_eq!(report["schema_version"], 1);
+    assert_eq!(fs::read_to_string(&entry).unwrap(), before);
+    json(cli().arg("fmt").arg(&entry).arg("--json"), true);
+    let formatted = fs::read_to_string(&entry).unwrap();
+    assert!(
+        formatted.contains("@Test/A\nrun:\n    assert true\n"),
+        "{formatted}"
+    );
+    assert!(formatted.ends_with(opaque), "{formatted}");
+    assert_eq!(
+        fs::read_to_string(imported).unwrap(),
+        "@Schema/User\nname = string\n"
+    );
+    let report = json(
+        cli().arg("fmt").arg(&entry).args(["--check", "--json"]),
+        true,
+    );
+    assert_eq!(report["changed"], serde_json::json!([]));
+}
+
+#[cfg(unix)]
+#[test]
+fn watch_recovers_from_failed_assertions_missing_imports_and_atomic_saves() {
+    use std::{
+        io::{BufRead, BufReader},
+        process::{Command as Process, Stdio},
+        sync::mpsc,
+        time::Duration,
+    };
+    struct Guard(std::process::Child);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+    fn next_run(receiver: &mpsc::Receiver<String>, success: bool) {
+        loop {
+            let line = receiver
+                .recv_timeout(Duration::from_secs(15))
+                .expect("watch report");
+            let report: Value = serde_json::from_str(&line).expect("JSON Lines watch report");
+            assert_eq!(report["schema_version"], 1);
+            if report["event"] == "watching" {
+                assert_eq!(report["success"], success, "{report}");
+                return;
+            }
+        }
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("project");
+    fs::create_dir(&project).unwrap();
+    let shared = dir.path().join("shared.rune");
+    fs::write(&shared, "@Test/Shared\nrun:\n    assert true\n").unwrap();
+    let entry = project.join("api.test.rune");
+    fs::write(&entry, "import \"../shared.rune\"\n").unwrap();
+    let mut child = Guard(
+        Process::new(assert_cmd::cargo::cargo_bin!("vectrune"))
+            .arg("test")
+            .arg(&entry)
+            .args(["--watch", "--json"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    let stdout = child.0.stdout.take().unwrap();
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        for line in BufReader::new(stdout).lines() {
+            if tx.send(line.unwrap()).is_err() {
+                break;
+            }
+        }
+    });
+    next_run(&rx, true);
+    let replacement = dir.path().join("save.tmp");
+    fs::write(&replacement, "@Test/Shared\nrun:\n    assert false\n").unwrap();
+    fs::rename(&replacement, &shared).unwrap();
+    next_run(&rx, false);
+    fs::write(&entry, "import \"../new.rune\"\n").unwrap();
+    next_run(&rx, false);
+    fs::write(
+        dir.path().join("new.rune"),
+        "@Test/New\nrun:\n    assert true\n",
+    )
+    .unwrap();
+    next_run(&rx, true);
+    let status = Process::new("kill")
+        .args(["-INT", &child.0.id().to_string()])
+        .status()
+        .unwrap();
+    assert!(status.success());
+    assert!(child.0.wait().unwrap().success());
+}

@@ -111,3 +111,33 @@ title = %i18n.RuneWebGuide.views_title% — Vectrune
 
 @SEO/web_styles
 title = %i18n.RuneWebGuide.styles_title% — Vectrune
+
+@SEO/developer
+title = %i18n.Developer.start% — Vectrune 0.3.1
+description = %i18n.Developer.start_intro%
+image = /assets/rune-logo.png
+
+@SEO/developer_cli
+title = %i18n.Developer.cli% — Vectrune 0.3.1
+description = %i18n.Developer.cli_intro%
+image = /assets/rune-logo.png
+
+@SEO/developer_testing
+title = %i18n.Developer.testing% — Vectrune 0.3.1
+description = %i18n.Developer.testing_intro%
+image = /assets/rune-logo.png
+
+@SEO/developer_quality
+title = %i18n.Developer.quality% — Vectrune 0.3.1
+description = %i18n.Developer.quality_intro%
+image = /assets/rune-logo.png
+
+@SEO/developer_ci
+title = %i18n.Developer.ci% — Vectrune 0.3.1
+description = %i18n.Developer.ci_intro%
+image = /assets/rune-logo.png
+
+@SEO/developer_release
+title = %i18n.Developer.release% — Vectrune 0.3.1
+description = %i18n.Developer.release_intro%
+image = /assets/rune-logo.png

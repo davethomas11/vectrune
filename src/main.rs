@@ -289,7 +289,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .get_matches();
 
-    if let Some((name @ ("doctor" | "check" | "test"), args)) = matches.subcommand() {
+    if let Some((name @ ("doctor" | "check" | "test" | "fmt"), args)) = matches.subcommand() {
         // Runtime logs must not corrupt machine-readable command output.
         set_log_level(LogLevel::Error, true);
         crate::util::set_log_stderr();

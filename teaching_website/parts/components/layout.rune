@@ -25,6 +25,14 @@ view:
                     a .nav-link {.active when 'documents'} href="{i18n.Common.base_path}documents" data-route-link=true aria-current="{activePage == 'documents' ? 'page' : 'false'}" click="navigate('documents')" "%i18n.DocumentSyntax.nav%"
                     a .nav-link {.active when 'localization'} href="{i18n.Common.base_path}localization" data-route-link=true aria-current="{activePage == 'localization' ? 'page' : 'false'}" click="navigate('localization')" "%i18n.Nav.localization%"
                 div .nav-group:
+                    h3 "%i18n.Developer.group%"
+                    a .nav-link {.active when 'developer'} href="{i18n.Common.base_path}developer" data-route-link=true aria-current="{activePage == 'developer' ? 'page' : 'false'}" click="navigate('developer')" "%i18n.Developer.start%"
+                    a .nav-link {.active when 'developer_cli'} href="{i18n.Common.base_path}developer_cli" data-route-link=true aria-current="{activePage == 'developer_cli' ? 'page' : 'false'}" click="navigate('developer_cli')" "%i18n.Developer.cli%"
+                    a .nav-link {.active when 'developer_testing'} href="{i18n.Common.base_path}developer_testing" data-route-link=true aria-current="{activePage == 'developer_testing' ? 'page' : 'false'}" click="navigate('developer_testing')" "%i18n.Developer.testing%"
+                    a .nav-link {.active when 'developer_quality'} href="{i18n.Common.base_path}developer_quality" data-route-link=true aria-current="{activePage == 'developer_quality' ? 'page' : 'false'}" click="navigate('developer_quality')" "%i18n.Developer.quality%"
+                    a .nav-link {.active when 'developer_ci'} href="{i18n.Common.base_path}developer_ci" data-route-link=true aria-current="{activePage == 'developer_ci' ? 'page' : 'false'}" click="navigate('developer_ci')" "%i18n.Developer.ci%"
+                    a .nav-link {.active when 'developer_release'} href="{i18n.Common.base_path}developer_release" data-route-link=true aria-current="{activePage == 'developer_release' ? 'page' : 'false'}" click="navigate('developer_release')" "%i18n.Developer.release%"
+                div .nav-group:
                     h3 "%i18n.Nav.applications%"
                     a .nav-link {.active when 'rest'} href="{i18n.Common.base_path}rest" data-route-link=true aria-current="{activePage == 'rest' ? 'page' : 'false'}" click="navigate('rest')" "%i18n.Nav.rest%"
                     a .nav-link {.active when 'static'} href="{i18n.Common.base_path}static" data-route-link=true aria-current="{activePage == 'static' ? 'page' : 'false'}" click="navigate('static')" "%i18n.Nav.static%"
@@ -85,6 +93,12 @@ view:
                     "web_actions" -> RuneWebActionsGuide
                     "web_views" -> RuneWebViewsGuide
                     "web_styles" -> RuneWebStylesGuide
+                    "developer" -> DeveloperStart
+                    "developer_cli" -> DeveloperCli
+                    "developer_testing" -> DeveloperTesting
+                    "developer_quality" -> DeveloperQuality
+                    "developer_ci" -> DeveloperCi
+                    "developer_release" -> DeveloperRelease
                     _ -> NotFoundPage
 
 @Component/NotFoundPage

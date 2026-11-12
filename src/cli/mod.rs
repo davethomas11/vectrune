@@ -1,6 +1,9 @@
 mod ai;
 pub mod developer;
+pub mod diagnostics;
+pub mod formatting;
 pub mod testing;
+pub mod test_watch;
 pub mod calculate;
 pub mod knowledge;
 pub mod lambda;

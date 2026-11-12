@@ -3,6 +3,10 @@ view:
     div .page:
         HeroSection
         SandboxSection code="{raw ../../../examples/app.rune}"
+        section .card:
+            h2 "%i18n.Developer.badge%"
+            p "%i18n.Developer.start_intro%"
+            a .secondary-cta href="{i18n.Common.base_path}developer" data-route-link=true click="navigate('developer')" "%i18n.Developer.start%"
         QuickstartSection
         LanguageTourSection
         WalkthroughSection

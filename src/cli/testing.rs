@@ -5,7 +5,7 @@ use crate::{
         execute_steps_inner_no_fallthrough, extract_data_sources, extract_schemas, resolve_path,
         AppState,
     },
-    rune_ast::RuneDocument,
+    rune_ast::{RuneDocument, Section},
 };
 use anyhow::{bail, Result};
 use axum::{
@@ -28,14 +28,97 @@ use tower::ServiceExt;
 
 tokio::task_local! { static SESSION: TestSession; }
 tokio::task_local! { static IN_REQUEST: bool; }
+tokio::task_local! { static TRACE_SOURCE: (Option<String>, String); }
+tokio::task_local! { static STARTUP: bool; }
 struct TestSession {
     router: Router,
     assertions: Arc<AtomicUsize>,
     failure: Arc<Mutex<Option<String>>>,
+    location: Arc<Mutex<Option<super::diagnostics::SourceLocation>>>,
 }
 
 pub fn is_active() -> bool {
     SESSION.try_with(|_| ()).is_ok() && !IN_REQUEST.try_with(|active| *active).unwrap_or(false)
+}
+
+pub fn strict_commands() -> bool {
+    is_active() || STARTUP.try_with(|active| *active).unwrap_or(false)
+}
+
+pub fn trace_step(step: &str) {
+    if !is_active() {
+        return;
+    }
+    let _ = TRACE_SOURCE.try_with(|(file, section)| {
+        if let Some(location) = super::diagnostics::locate(file.as_deref(), section, Some(step)) {
+            let _ = SESSION.try_with(|session| *session.location.lock().unwrap() = Some(location));
+        }
+    });
+}
+
+pub fn record_error(message: &str) {
+    if is_active() {
+        let _ = SESSION.try_with(|session| {
+            session
+                .failure
+                .lock()
+                .unwrap()
+                .get_or_insert_with(|| message.to_string());
+        });
+    }
+}
+
+async fn phase(
+    state: &AppState,
+    section: &Section,
+    key: &str,
+    context: &mut Context,
+) -> Result<()> {
+    let Some(steps) = section.series.get(key) else {
+        return Ok(());
+    };
+    let response = TRACE_SOURCE
+        .scope(
+            (section.source_file.clone(), section.path.join("/")),
+            execute_steps_inner_no_fallthrough(state.clone(), steps, context),
+        )
+        .await;
+    if let Some(error) = SESSION.with(|session| session.failure.lock().unwrap().take()) {
+        bail!("{error}");
+    }
+    if let Some((status, _)) = &response {
+        if section.path.first().map(String::as_str) == Some("App") && *status < 400 {
+            return Ok(());
+        }
+    }
+    if let Some((status, message)) = response {
+        bail!(
+            "{} {key} stopped with response {status}: {message}",
+            section.path.join("/")
+        );
+    }
+    Ok(())
+}
+
+fn outcome(
+    result: std::result::Result<
+        std::result::Result<Result<()>, tokio::time::error::Elapsed>,
+        Box<dyn std::any::Any + Send>,
+    >,
+) -> Option<String> {
+    match result {
+        Ok(Ok(Ok(()))) => None,
+        Ok(Ok(Err(error))) => Some(error.to_string()),
+        Ok(Err(_)) => Some("Test exceeded its timeout".into()),
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| payload.downcast_ref::<&str>().copied())
+                .unwrap_or("unknown panic");
+            Some(format!("Application or test panicked: {message}"))
+        }
+    }
 }
 
 pub async fn call(
@@ -44,7 +127,7 @@ pub async fn call(
     ctx: &mut Context,
     assign_to: Option<&str>,
 ) -> BuiltinResult {
-    if !is_active() {
+    if !is_active() || STARTUP.try_with(|active| *active).unwrap_or(false) {
         return BuiltinResult::Error(format!(
             "{name} is only available inside vectrune test steps"
         ));
@@ -239,6 +322,7 @@ struct TestResult {
     assertions: usize,
     duration_ms: u128,
     error: Option<String>,
+    location: Option<super::diagnostics::SourceLocation>,
 }
 
 pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bool> {
@@ -255,10 +339,9 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
     if args.get_flag("list") {
         let names: Vec<_> = tests.iter().map(|s| s.path[1..].join("/")).collect();
         if json_output {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&json!({"command":"test","tests":names}))?
-            );
+            super::diagnostics::emit(
+                json!({"command":"test","success":true,"listed":true,"tests":names}),
+            )?;
         } else {
             for name in names {
                 println!("{name}");
@@ -287,51 +370,138 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
         let started = Instant::now();
         let assertions = Arc::new(AtomicUsize::new(0));
         let failure = Arc::new(Mutex::new(None));
+        let location = Arc::new(Mutex::new(None));
+        use futures::FutureExt;
+        let mut test_assertions = 0;
         let execution = async {
             crate::builtins::builtin::memory::builtin_clear_memory(&[], &mut Context::new()).await;
-            let router = crate::apps::build_app_router(state.clone()).await;
+            validate_memory_sources(&state)?;
+            // Run startup explicitly so an ignored HTTP-style startup error cannot pass a test.
+            let mut construction_doc = (*state.doc).clone();
+            for section in &mut construction_doc.sections {
+                if section.path.first().map(String::as_str) == Some("App") {
+                    section.series.remove("run");
+                }
+            }
+            let mut construction_state = state.clone();
+            construction_state.doc = Arc::new(construction_doc);
+            let router =
+                tokio::time::timeout(timeout, crate::apps::build_app_router(construction_state))
+                    .await
+                    .map_err(|_| anyhow::anyhow!("Application startup exceeded its timeout"))?;
             SESSION
                 .scope(
                     TestSession {
                         router,
                         assertions: assertions.clone(),
                         failure: failure.clone(),
+                        location: location.clone(),
                     },
                     async {
                         let mut context = Context::new();
-                        let response = execute_steps_inner_no_fallthrough(
-                            state.clone(),
-                            test.series.get("run").unwrap(),
-                            &mut context,
-                        )
-                        .await;
-                        if let Some(error) = failure.lock().unwrap().clone() {
-                            bail!("{error}");
+                        let mut cleanup: Vec<Section> = Vec::new();
+                        let main = async {
+                            if crate::core::get_app_type(&state.doc)
+                                .is_none_or(|kind| kind.eq_ignore_ascii_case("REST"))
+                            {
+                                if let Some(app) = state
+                                    .doc
+                                    .sections
+                                    .iter()
+                                    .find(|s| s.path.first().map(String::as_str) == Some("App"))
+                                {
+                                    STARTUP
+                                        .scope(true, phase(&state, app, "run", &mut Context::new()))
+                                        .await?;
+                                }
+                            }
+                            if let Some(suite) =
+                                state.doc.sections.iter().find(|s| s.path == ["TestSuite"])
+                            {
+                                cleanup.push(suite.clone());
+                                phase(&state, suite, "setup", &mut context).await?;
+                            }
+                            for name in fixture_names(&test)? {
+                                let fixture = state
+                                    .doc
+                                    .sections
+                                    .iter()
+                                    .find(|s| s.path == ["TestFixture", &name])
+                                    .ok_or_else(|| {
+                                        anyhow::anyhow!("Unknown @TestFixture/{name}")
+                                    })?;
+                                cleanup.push(fixture.clone());
+                                phase(&state, fixture, "setup", &mut context).await?;
+                            }
+                            cleanup.push(test.clone());
+                            phase(&state, &test, "setup", &mut context).await?;
+                            let before = assertions.load(Ordering::Relaxed);
+                            let result = phase(&state, &test, "run", &mut context).await;
+                            test_assertions = assertions.load(Ordering::Relaxed) - before;
+                            result?;
+                            anyhow::ensure!(test_assertions > 0, "Test ran no assertions");
+                            Ok::<_, anyhow::Error>(())
+                        };
+                        let remaining = timeout.saturating_sub(started.elapsed());
+                        let mut errors = Vec::new();
+                        if let Some(error) = outcome(
+                            std::panic::AssertUnwindSafe(tokio::time::timeout(remaining, main))
+                                .catch_unwind()
+                                .await,
+                        ) {
+                            errors.push(error);
                         }
-                        if let Some((status, message)) = response {
-                            bail!("Test stopped with response {status}: {message}");
+                        let primary_location = if errors.is_empty() {
+                            None
+                        } else {
+                            location.lock().unwrap().clone()
+                        };
+                        // Cleanup gets a separate bounded budget and runs after assertion/setup failure or timeout.
+                        let teardown = async {
+                            for section in cleanup.iter().rev() {
+                                let result = std::panic::AssertUnwindSafe(phase(
+                                    &state,
+                                    section,
+                                    "teardown",
+                                    &mut context,
+                                ))
+                                .catch_unwind()
+                                .await;
+                                match result {
+                                    Ok(Err(error)) => errors.push(format!("teardown: {error}")),
+                                    Err(_) => errors.push("teardown panicked".into()),
+                                    _ => {}
+                                }
+                            }
+                        };
+                        if tokio::time::timeout(timeout, teardown).await.is_err() {
+                            errors.push("Teardown exceeded its timeout".into());
                         }
-                        anyhow::ensure!(
-                            assertions.load(Ordering::Relaxed) > 0,
-                            "Test ran no assertions"
-                        );
-                        Ok::<_, anyhow::Error>(())
+                        if !errors.is_empty() {
+                            if primary_location.is_some() {
+                                *location.lock().unwrap() = primary_location;
+                            }
+                            bail!("{}", errors.join("\n"));
+                        }
+                        Ok(())
                     },
                 )
                 .await
         };
-        // Catch router construction panics as test failures, e.g. overlapping routes.
-        use futures::FutureExt;
-        let error = match std::panic::AssertUnwindSafe(tokio::time::timeout(timeout, execution))
+        // Include construction in the timeout, while allowing bounded cleanup after execution.
+        let error = outcome(
+            std::panic::AssertUnwindSafe(tokio::time::timeout(
+                timeout.saturating_mul(3),
+                execution,
+            ))
             .catch_unwind()
-            .await
-        {
-            Ok(Ok(Ok(()))) => None,
-            Ok(Ok(Err(error))) => Some(error.to_string()),
-            Ok(Err(_)) => Some(format!("Test exceeded {}s timeout", timeout.as_secs())),
-            Err(_) => Some("Application or test panicked".into()),
-        };
-        crate::builtins::builtin::memory::builtin_clear_memory(&[], &mut Context::new()).await;
+            .await,
+        );
+        let _ = std::panic::AssertUnwindSafe(
+            crate::builtins::builtin::memory::builtin_clear_memory(&[], &mut Context::new()),
+        )
+        .catch_unwind()
+        .await;
         let result = TestResult {
             name: test.path[1..].join("/"),
             file: test.source_file,
@@ -339,6 +509,7 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
             assertions: assertions.load(Ordering::Relaxed),
             duration_ms: started.elapsed().as_millis(),
             error,
+            location: location.lock().unwrap().clone(),
         };
         if !json_output {
             println!(
@@ -348,6 +519,11 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
                 result.assertions,
                 result.duration_ms
             );
+            if let Some(location) = &result.location {
+                if !result.passed {
+                    println!("{}", super::diagnostics::render(location));
+                }
+            }
             if let Some(error) = &result.error {
                 println!("  {error}");
             }
@@ -357,12 +533,9 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
     let passed = results.iter().filter(|r| r.passed).count();
     let success = !results.is_empty() && passed == results.len();
     if json_output {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(
-                &json!({"command":"test","success":success,"passed":passed,"failed":results.len()-passed,"tests":results})
-            )?
-        );
+        super::diagnostics::emit(
+            json!({"command":"test","success":success,"passed":passed,"failed":results.len()-passed,"tests":results}),
+        )?;
     } else {
         println!(
             "{passed} passed, {} failed{}",
@@ -375,6 +548,73 @@ pub async fn run(path: &Path, doc: RuneDocument, args: &ArgMatches) -> Result<bo
         );
     }
     Ok(success)
+}
+
+pub fn fixture_names(test: &Section) -> Result<Vec<String>> {
+    let names = match test.kv.get("fixtures") {
+        None => Vec::new(),
+        Some(crate::rune_ast::Value::List(names)) => names
+            .iter()
+            .map(|name| {
+                name.as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| anyhow::anyhow!("fixtures must contain names"))
+            })
+            .collect::<Result<Vec<_>>>()?,
+        Some(crate::rune_ast::Value::String(list))
+            if list.starts_with('[') && list.ends_with(']') =>
+        {
+            let inner = list[1..list.len() - 1].trim();
+            if inner.is_empty() {
+                Vec::new()
+            } else {
+                inner
+                    .split(',')
+                    .map(|name| name.trim().trim_matches('"').to_string())
+                    .collect()
+            }
+        }
+        _ => bail!("fixtures must be a list, e.g. fixtures = [User]"),
+    };
+    let mut unique = std::collections::HashSet::new();
+    for name in &names {
+        anyhow::ensure!(
+            !name.is_empty()
+                && name
+                    .chars()
+                    .all(|ch| ch.is_alphanumeric() || matches!(ch, '_' | '-' | '/')),
+            "Invalid fixture name {name:?}"
+        );
+        anyhow::ensure!(unique.insert(name), "Duplicate fixture {name}");
+    }
+    Ok(names)
+}
+
+fn validate_memory_sources(state: &AppState) -> Result<()> {
+    for section in &state.doc.sections {
+        if section.path.first().map(String::as_str) != Some("Memory") {
+            continue;
+        }
+        if let Some(source) = section.kv.get("source").and_then(|v| v.as_str()) {
+            if source.ends_with(".json") {
+                let path = if Path::new(source).exists() {
+                    source.into()
+                } else {
+                    state.path.join(source)
+                };
+                let data: Value = serde_json::from_slice(
+                    &std::fs::read(&path)
+                        .map_err(|e| anyhow::anyhow!("Memory source {}: {e}", path.display()))?,
+                )?;
+                anyhow::ensure!(
+                    data.is_object(),
+                    "Memory source {} must be a JSON object",
+                    path.display()
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

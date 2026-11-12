@@ -4,7 +4,7 @@ name = Tested API
 type = REST
 port = 3000
 
-@Route/GET /health
+@Route/GET/health
 run:
     respond 200 "OK"
 
@@ -12,8 +12,24 @@ run:
 name = string
 role = string
 
-@Route/POST /users
+@Route/POST/users
 run:
     user = parse-json body
     validate user #User
+    set-memory user user
     respond 201 user
+
+@Memory
+user = { "name": "Guest", "role": "reader" }
+
+@Route/PUT/users/current
+run:
+    user = parse-json body
+    validate user #User
+    set-memory user user
+    respond 200 user
+
+@Route/GET/users/current
+run:
+    user = get-memory user
+    respond 200 user

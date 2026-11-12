@@ -83,6 +83,10 @@ def build_site(destination, binary, base="/", selected_routes=None):
     for name in ["favicon.ico", "favicon.png"]:
         if (SITE / name).exists():
             shutil.copyfile(SITE / name, destination / name)
+    from build_developer_starter import archive
+    developer = assets / 'content/developer'
+    developer.mkdir(parents=True, exist_ok=True)
+    (developer / 'starter.zip').write_bytes(archive())
     shutil.copyfile(SITE / "content/quickstart/app.rune", assets / "first-api.rune")
     (assets / 'content/quickstart').mkdir(parents=True, exist_ok=True)
     shutil.copyfile(SITE / 'content/quickstart/app.rune', assets / 'content/quickstart/app.rune')

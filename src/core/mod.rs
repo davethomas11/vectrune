@@ -327,6 +327,8 @@ pub async fn execute_steps_inner(
         match step {
             Value::String(s) => {
                 let step_str = s.trim();
+                #[cfg(not(target_arch = "wasm32"))]
+                crate::cli::testing::trace_step(step_str);
                 log(LogLevel::Debug, &format!("execute_steps_inner: processing step='{}'", step_str));
                 if let Some(eq_pos) = find_assignment_equals(step_str) {
                     let (var, cmd) = step_str.split_at(eq_pos);
@@ -682,6 +684,8 @@ pub(crate) async fn execute_steps_inner_no_fallthrough(
         match step {
             Value::String(s) => {
                 let step_str = s.trim();
+                #[cfg(not(target_arch = "wasm32"))]
+                crate::cli::testing::trace_step(step_str);
                 if let Some(eq_pos) = find_assignment_equals(step_str) {
                     let (var, cmd) = step_str.split_at(eq_pos);
                     let var = var.trim();
@@ -733,12 +737,20 @@ async fn handle_conditional_block(
 fn handle_builtin_result(res: BuiltinResult) -> Option<(u16, String)> {
     match res {
         BuiltinResult::Ok => None,
-        BuiltinResult::Respond(code, msg) => Some((code, msg)),
-        BuiltinResult::Error(err) => Some((500, err)),
+        BuiltinResult::Respond(code, msg) => {
+            #[cfg(not(target_arch = "wasm32"))]
+            if code >= 400 { crate::cli::testing::record_error(&msg); }
+            Some((code, msg))
+        },
+        BuiltinResult::Error(err) => {
+            #[cfg(not(target_arch = "wasm32"))]
+            crate::cli::testing::record_error(&err);
+            Some((500, err))
+        },
     }
 }
 
-fn find_assignment_equals(s: &str) -> Option<usize> {
+pub(crate) fn find_assignment_equals(s: &str) -> Option<usize> {
     let mut in_quotes = false;
     let mut escaped = false;
     let bytes = s.as_bytes();

@@ -189,6 +189,8 @@ As Vectrune has rapidly evolved, various language processors and dialects develo
 
 ### Track 7: Developer Tooling & Testing ("Complete Tool" Layer)
 
+- [-] **0.3.1 Developer Workflow Release**: Source-aware failures and command suggestions; startup/teardown failure gates; versioned JSON/JSON Lines; fixture hooks, watch recovery, safe formatting; five-test CRUD starter with reproducible download; six developer pages in English, Spanish, and French. Local verification: 65 targeted Rust tests, five Rune starter tests, all 18 developer route/locale pages, and the existing 93-route teaching-site UX suite pass. Cross-platform CI and release/deployment verification pending.
+
 - [x] **Native In-Language Test Runner (`@Test` & `vectrune test`)**:
   - Introduce `@Test/<name>` sections directly in `.rune` files:
     ```rune
@@ -201,9 +203,9 @@ As Vectrune has rapidly evolved, various language processors and dialects develo
     ```
   - Implemented recursive project discovery/import deduplication, native in-process HTTP requests, strict assertions, per-test memory reset/startup, filters, listing, timeouts, and JSON reports with CI exit codes. Runnable suite: `examples/testing`; usage: README. *(Release: `v0.2.21` - 2026-11-12)*
 - [x] **Installation & Project Diagnostics (`vectrune doctor`)**: Reports version/executable/platform, PATH shadowing, resolved imports, static project diagnostics, and configured local port availability. Supports JSON without starting the application. *(Release: `v0.2.21` - 2026-11-12)*
-- [ ] **Rune Test Library Follow-ups**: Watch mode, suite/fixture APIs, richer assertion helpers, and isolated external-resource adapters.
+- [-] **Rune Test Library Follow-ups**: Watch mode with import/fixture recovery and `@TestSuite` / `@TestFixture` setup/teardown implemented for `v0.3.1`; richer assertion helpers and isolated external-resource adapters remain open.
 - [-] **Canonical Formatter & Linter (`vectrune fmt` & `vectrune check`)**:
-  - `vectrune fmt`: Formats indentation, key-value spacing, and section headers to standard style.
+  - [x] `vectrune fmt`: Conservative, import-aware formatting of section headers, top-level assignment spacing, and executable-block indentation; `--check`, JSON reports, and parsed-meaning validation before writes. Preserves view/style/raw content. *(Release: `v0.3.1` - 2026-11-12)*
   - [x] `vectrune check`: Initial read-only linter for imports, application types, native REST methods/route conflicts, schema/auth/data-source references, test declarations, Rune-Web component/prop parsing, and unsupported schema-type warnings. Human/JSON diagnostics and `--deny-warnings`. Full expression/type analysis remains open. *(Release: `v0.2.21` - 2026-11-12)*
 - [ ] **Language Server Protocol (`vectrune lsp`)**:
   - Implement a lightweight LSP server in Rust providing real-time diagnostics, hover documentation for builtins, and syntax completion for VS Code, Neovim, and Zed.

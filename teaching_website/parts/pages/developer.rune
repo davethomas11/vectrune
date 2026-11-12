@@ -1,0 +1,134 @@
+@Component/DeveloperNav
+view:
+    nav .developer-nav aria-label="%i18n.Developer.group%":
+        a href="{i18n.Common.base_path}developer" data-route-link=true aria-current="{activePage == 'developer' ? 'page' : 'false'}" click="navigate('developer')" "%i18n.Developer.start%"
+        a href="{i18n.Common.base_path}developer_cli" data-route-link=true aria-current="{activePage == 'developer_cli' ? 'page' : 'false'}" click="navigate('developer_cli')" "%i18n.Developer.cli%"
+        a href="{i18n.Common.base_path}developer_testing" data-route-link=true aria-current="{activePage == 'developer_testing' ? 'page' : 'false'}" click="navigate('developer_testing')" "%i18n.Developer.testing%"
+        a href="{i18n.Common.base_path}developer_quality" data-route-link=true aria-current="{activePage == 'developer_quality' ? 'page' : 'false'}" click="navigate('developer_quality')" "%i18n.Developer.quality%"
+        a href="{i18n.Common.base_path}developer_ci" data-route-link=true aria-current="{activePage == 'developer_ci' ? 'page' : 'false'}" click="navigate('developer_ci')" "%i18n.Developer.ci%"
+        a href="{i18n.Common.base_path}developer_release" data-route-link=true aria-current="{activePage == 'developer_release' ? 'page' : 'false'}" click="navigate('developer_release')" "%i18n.Developer.release%"
+
+@Component/DeveloperYaml
+props: [code]
+view:
+    div .command-block:
+        button .command-copy type=button data-copied="%i18n.Quickstart.command_copied%" data-failed="%i18n.Quickstart.command_failed%" "%i18n.Quickstart.command_copy%"
+        pre:
+            code .code-block .language-yaml "{code}"
+
+@Component/DeveloperStart
+view:
+    div .page .developer-page:
+        section .card:
+            p .eyebrow "%i18n.Developer.badge%"
+            h1 "%i18n.Developer.start%"
+            p .lead "%i18n.Developer.start_intro%"
+        DeveloperNav
+        section .card:
+            h2 "%i18n.Developer.install_title%"
+            p "%i18n.Developer.install_text%"
+            CommandBlock code="{i18n.Developer.cmd_1}"
+            a .content-link href=https://github.com/davethomas11/vectrune/releases/latest target=_blank rel="noopener noreferrer" "%i18n.Developer.releases%"
+        section .card:
+            h2 "%i18n.Developer.download_title%"
+            a .cta href=/assets/content/developer/starter.zip download=vectrune-developer-starter.zip "%i18n.Developer.download%"
+            p "%i18n.Developer.extract%"
+        section .card:
+            h2 "%i18n.Developer.run_title%"
+            CommandBlock code="{i18n.Developer.cmd_2}"
+            p .callout .callout-success "%i18n.Developer.expected%"
+            p "%i18n.Developer.next%"
+
+@Component/DeveloperCli
+view:
+    div .page .developer-page:
+        section .card:
+            p .eyebrow "%i18n.Developer.badge%"
+            h1 "%i18n.Developer.cli%"
+            p .lead "%i18n.Developer.cli_intro%"
+        DeveloperNav
+        section .card:
+            h2 "vectrune doctor"
+            p "%i18n.Developer.doctor_text%"
+            CommandBlock code="{i18n.Developer.cmd_3}"
+        section .card:
+            h2 "vectrune check"
+            p "%i18n.Developer.check_text%"
+            CommandBlock code="{i18n.Developer.cmd_4}"
+        section .card:
+            h2 "vectrune fmt"
+            p "%i18n.Developer.format_text%"
+            CommandBlock code="{i18n.Developer.cmd_5}"
+        section .card:
+            h2 "vectrune test"
+            p "%i18n.Developer.test_text%"
+            CommandBlock code="{i18n.Developer.cmd_6}"
+        section .card:
+            h2 "%i18n.Developer.json_title%"
+            p "%i18n.Developer.json_text%"
+            CommandBlock code="{i18n.Developer.cmd_7}"
+
+@Component/DeveloperTesting
+view:
+    div .page .developer-page:
+        section .card:
+            p .eyebrow "%i18n.Developer.badge%"
+            h1 "%i18n.Developer.testing%"
+            p .lead "%i18n.Developer.testing_intro%"
+        DeveloperNav
+        section .card:
+            h2 "%i18n.Developer.fixtures_title%"
+            p "%i18n.Developer.fixtures_text%"
+            ExampleSource code="{raw ../../../examples/testing/api.test.rune}"
+        section .card:
+            h2 "%i18n.Developer.isolation_title%"
+            p "%i18n.Developer.isolation_text%"
+        section .card:
+            h2 "%i18n.Developer.watch_title%"
+            p "%i18n.Developer.watch_text%"
+            CommandBlock code="{i18n.Developer.cmd_8}"
+
+@Component/DeveloperQuality
+view:
+    div .page .developer-page:
+        section .card:
+            p .eyebrow "%i18n.Developer.badge%"
+            h1 "%i18n.Developer.quality%"
+            p .lead "%i18n.Developer.quality_intro%"
+        DeveloperNav
+        section .card:
+            h2 "%i18n.Developer.diagnostics_title%"
+            p "%i18n.Developer.diagnostics_text%"
+            CommandBlock code="{i18n.Developer.cmd_9}"
+        section .card:
+            h2 "%i18n.Developer.opaque_title%"
+            p "%i18n.Developer.opaque_text%"
+            CommandBlock code="{i18n.Developer.cmd_10}"
+
+@Component/DeveloperCi
+view:
+    div .page .developer-page:
+        section .card:
+            p .eyebrow "%i18n.Developer.badge%"
+            h1 "%i18n.Developer.ci%"
+            p .lead "%i18n.Developer.ci_intro%"
+        DeveloperNav
+        section .card:
+            p "%i18n.Developer.ci_text%"
+            DeveloperYaml code="{raw ../../../examples/testing/ci.yml}"
+
+@Component/DeveloperRelease
+view:
+    div .page .developer-page:
+        section .card:
+            p .eyebrow "%i18n.Developer.badge%"
+            h1 "%i18n.Developer.release%"
+            p .lead "%i18n.Developer.release_intro%"
+        DeveloperNav
+        section .card:
+            p "%i18n.Developer.release_text%"
+        section .card:
+            h2 "%i18n.Developer.upgrade_title%"
+            p "%i18n.Developer.upgrade_text%"
+            CommandBlock code="{i18n.Developer.cmd_11}"
+            a .content-link href=https://github.com/davethomas11/vectrune/releases/tag/v0.3.1 target=_blank rel="noopener noreferrer" "%i18n.Developer.releases%"

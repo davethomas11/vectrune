@@ -7,6 +7,8 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'examples/testing/**'
+      - 'teaching_website/build_developer_starter.py'
+      - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
       - '.github/workflows/developer-cli.yml'
   pull_request:
@@ -14,6 +16,8 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'examples/testing/**'
+      - 'teaching_website/build_developer_starter.py'
+      - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
       - '.github/workflows/developer-cli.yml'
   workflow_dispatch:
@@ -23,7 +27,11 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -34,7 +42,11 @@ jobs:
         run: cargo test --test developer_cli --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test
       - name: Test request cancellation
         run: cargo test --lib cli::testing
+      - name: Check starter formatting
+        run: target/debug/vectrune fmt examples/testing --check
       - name: Lint example suite
         run: target/debug/vectrune check examples/testing --deny-warnings
       - name: Run tests written in Rune
         run: target/debug/vectrune test examples/testing --json
+      - name: Verify downloaded starter workflow
+        run: python tests/browser/test_developer_starter.py

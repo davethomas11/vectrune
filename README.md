@@ -248,18 +248,19 @@ ollama pull phi4
 
 ## Doctor, check, and Rune tests
 
-These commands are available in Vectrune 0.2.21 and newer:
+The developer workflow is available in Vectrune 0.3.1. See the [Developer section](https://vectrune.com/developer) for installation, examples, and a downloadable tested starter. `doctor`, `check`, and the initial test runner were introduced in 0.2.21.
 
 ```sh
 vectrune doctor examples/testing/app.rune
 vectrune check examples/testing
+vectrune fmt examples/testing --check
 vectrune test examples/testing
 vectrune test examples/testing --filter User --json
 ```
 
 `doctor` reports the running version, executable, platform, other Vectrune executables on PATH, import resolution, project diagnostics, and local availability of the configured port. This helps identify an older global binary shadowing a workspace build. Without a path it checks `app.rune` if present, otherwise just the installation. An occupied port is advisory; invalid project configuration fails.
 
-`check` loads imports and validates native application types, REST methods, conflicting parameterized routes, authentication/schema/data-source references, test declarations, and Rune-Web pages/components/props using the frontend parser. It reports schema types unsupported by native `validate` as warnings. Use `--deny-warnings` to fail on warnings, and `--json` for structured diagnostics. It never starts the server or executes `run:` blocks. This is an initial static checker; full expression typing and cross-engine schema parity remain roadmap work.
+`check` loads imports and validates native application types, REST methods, conflicting parameterized routes, authentication/schema/data-source references, test declarations, and Rune-Web pages/components/props using the frontend parser. It reports unsupported native schema types and unrecognized backend commands as warnings; likely command typos include suggestions and source locations. Use `--deny-warnings` to fail on warnings, and `--json` for structured diagnostics. It never starts the server or executes `run:` blocks. This is an initial static checker; full expression typing and cross-engine schema parity remain roadmap work.
 
 ### Write tests in Rune
 
@@ -291,9 +292,40 @@ With no path, `test` discovers `.rune` files recursively in the current director
 
 Assertions support `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains` for strings/arrays, and boolean values. Equality compares values without coercing strings to numbers. Missing paths fail explicitly. Existing backend `run:` steps and conditional blocks are available for setup and helpers; `assert` and `test-request` are test-only builtins. Each test must execute at least one assertion. A failed assertion or unknown command in test steps stops that test, while remaining tests continue. Application handlers retain their normal runtime behavior.
 
-Tests run sequentially, rebuilding the application and resetting Rune memory before each test and clearing it afterwards. Application startup runs for every test. Tests use the application's normal file, network, and database behavior; external resources are not rolled back. Use dedicated test configuration for these resources. The default timeout is 10 seconds per test including startup; response bodies are limited to 8 MiB. Timeouts cancel asynchronous work, while synchronous/blocking operations follow the runtime's normal behavior.
+Tests run sequentially, rebuilding the application and resetting Rune memory before each test and clearing it afterwards. Application startup runs for every test. Tests use the application's normal file, network, and database behavior; external resources are not rolled back. Use dedicated test configuration for these resources. The main execution budget defaults to 10 seconds including application construction/startup; cleanup has a separate budget of the same duration. Response bodies are limited to 8 MiB. Timeouts cancel asynchronous work, while synchronous/blocking operations follow the runtime's normal behavior.
 
-`--list` only discovers tests and performs static checks. `--filter` selects case-sensitive substrings of test names. `--json` writes a machine-readable report to stdout with runtime diagnostics on stderr. Successful checks/tests exit `0`; project/test failures and an empty test selection exit `1`; invalid command usage exits `2`. Listing an empty selection succeeds. Formatting, watch mode, fixture APIs, and richer assertion helpers are follow-up work.
+`--list` only discovers tests and performs static checks. `--filter` selects case-sensitive substrings of test names. `--json` writes a machine-readable report to stdout with runtime diagnostics on stderr. Successful checks/tests exit `0`; project/test failures and an empty test selection exit `1`; invalid command usage exits `2`. Listing an empty selection succeeds. `test --watch` reruns after edits to Rune source, recursive imports, and JSON/YAML/CSV fixtures, including atomic saves, deletions, and repairs after load errors. Generated/dependency directories are skipped. Ctrl-C while waiting exits with the last run’s status. Changes during execution are picked up afterwards. Keep generated output outside watched fixture inputs to avoid rerun loops.
+
+### Fixtures and cleanup
+
+```rune
+@TestSuite
+setup:
+    expected = { role: "admin" }
+
+@TestFixture/User
+setup:
+    alice = { name: "Alice", role: "admin" }
+teardown:
+    clear-memory
+
+@Test/UserCreation
+fixtures = [User]
+run:
+    req = { method: "POST", path: "/users", body: alice }
+    res = test-request req
+    assert res.body.role == expected.role
+```
+
+Each test runs suite `setup`, selected fixture `setup` blocks in list order, its own optional `setup`, and then `run`. Context variables are shared across these phases. Teardown runs in reverse order: test, fixtures, suite. An entered setup phase registers its cleanup before executing, so cleanup still runs after setup failure. Only tests that execute an assertion in their own `run` can pass. Startup, setup, assertion, and teardown failures all fail the test. Cleanup has a separate bounded timeout after the main execution budget. Abrupt termination cannot guarantee teardown. External-resource isolation and richer assertion helpers remain future work.
+
+### Formatting
+
+`vectrune fmt <entry-or-directory>` formats the entry and its imports. `--check` reports needed changes and exits `1` without writing. Section headers, top-level assignment spacing, and executable-block indentation are normalized; views, CSS, embedded text, and comments are preserved. All candidates are reparsed and compared before any writes; a semantic difference makes formatting fail. The formatter is deliberately conservative and does not rewrite expressions or reorder declarations.
+
+### Machine-readable reports
+
+All developer commands support `--json` and emit `schema_version: 1`. Ordinary invocations emit one JSON document. Watch mode emits JSON Lines: `event: "run"` for results, followed by `event: "watching"` while waiting. Test results retain `success`, `passed`, `failed`, and `tests`; preflight failures also include `diagnostics`. Each executed test includes `name`, `file`, `passed`, `assertions`, `duration_ms`, `error`, and an optional `location` with `file`, `line`, `column`, and `source`. Static diagnostics also provide `severity`, `code`, `section`, `message`, and an optional `suggestion`. Lines and columns start at one. Section-level diagnostics identify the relevant declaration; statement diagnostics identify the executed or linted source when available. Unknown future fields should be ignored.
 
 ## Tests
 
