@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { renderNode, renderElement } from '../src/rendering';
 import { initContext } from '../src/context';
 import type { RuneApp, ViewNode } from '../src/types';
+import { escapeHtml } from '../src/utils';
 
 function setupTestContext(state: Record<string, unknown> = {}) {
   const app: RuneApp = {
@@ -83,6 +84,20 @@ describe('renderNode', () => {
       }
     };
     expect(renderNode(node, {})).toBe('Component Dave');
+  });
+
+  it('preserves source through nested component props', () => {
+    const source = '#!RUNE\n\n# user\'s code, literal \\n and \\t\nview:\n    h1 "Count: {count}"\n';
+    const node: ViewNode = {
+      ComponentScope: {
+        props: { source: JSON.stringify(source.replaceAll('{', '\uE000').replaceAll('}', '\uE001')) },
+        body: { ComponentScope: {
+          props: { code: '{source}' },
+          body: { Text: '{code}' },
+        } },
+      },
+    };
+    expect(renderNode(node, {})).toBe(escapeHtml(source));
   });
 });
 

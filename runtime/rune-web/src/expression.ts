@@ -31,6 +31,11 @@ export function tryParseLiteral(expr: string, scope?: Scope): unknown {
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
   ) {
+    // Compiler-provided source props are JSON strings, including escaped
+    // newlines, quotes and backslashes. Decode once at the prop boundary.
+    if (trimmed.startsWith('"')) {
+      try { return JSON.parse(trimmed); } catch (_) { /* Rune literal fallback. */ }
+    }
     return normalizeLiteral(trimmed);
   }
   if (trimmed.startsWith('[') || trimmed.startsWith('{')) {

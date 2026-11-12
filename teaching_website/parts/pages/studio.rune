@@ -25,7 +25,7 @@ view:
             p "🎵 %i18n.Studio.instructions_songs%"
             p "💾 %i18n.Studio.instructions_storage%"
 
-        WebExample title="{i18n.Studio.title}" preview="{preview ../../../examples/rune_studio/rune_studio.rune}" main_file="rune_studio.rune" source="{raw ../../../examples/rune_studio/rune_studio.rune}" extra_file="parts/components.rune" extra_source="{raw ../../../examples/rune_studio/parts/components.rune}" logic_source="{raw ../../../examples/rune_studio/parts/logic.rune}" style_source="{raw ../../../examples/rune_studio/parts/style.rune}" sound_source="{raw ../../../examples/rune_studio/parts/sound.rune}"
+        WebExample title="{i18n.Studio.title}" preview="{preview ../../../examples/rune_studio/rune_studio.rune}" files="{sources ../../../examples/rune_studio/rune_studio.rune}"
 
         section .card:
             h3 "%i18n.Guide.run_locally%"

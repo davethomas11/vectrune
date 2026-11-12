@@ -38,6 +38,19 @@ pub fn load_rune_document_from_path(path: &Path) -> Result<RuneDocument, LoadErr
     load_rune_document_from_path_inner(path, &mut visiting, &mut loaded)
 }
 
+/// Return the exact files visited by the normal import loader, including
+/// recursive directory imports and empty files. Cycles and failures use the
+/// same diagnostics as compilation.
+pub fn load_rune_source_paths(path: &Path) -> Result<Vec<PathBuf>, LoadError> {
+    let mut visiting = HashSet::new();
+    let mut loaded = HashSet::new();
+    load_rune_document_from_path_inner(path, &mut visiting, &mut loaded)?;
+    let entry = canonicalize_for_tracking(path)?;
+    let mut paths: Vec<_> = loaded.into_iter().filter(|p| p.is_file()).collect();
+    paths.sort_by(|a, b| (a != &entry, a).cmp(&(b != &entry, b)));
+    Ok(paths)
+}
+
 pub fn load_rune_document_from_str_with_base(
     content: &str,
     base_dir: &Path,

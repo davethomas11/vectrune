@@ -25,7 +25,7 @@ view:
             p "⌨️ %i18n.SpaceInvaders.instructions_keyboard%"
             p "📱 %i18n.SpaceInvaders.instructions_mobile%"
 
-        WebExample title="{i18n.SpaceInvaders.title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" main_file="space_invaders.rune" source="{raw ../../../examples/space_invaders/space_invaders.rune}" extra_file="parts/enemies.rune" extra_source="{raw ../../../examples/space_invaders/parts/enemies.rune}" logic_source="{raw ../../../examples/space_invaders/parts/logic.rune}" style_source="{raw ../../../examples/space_invaders/parts/style.rune}" sound_source="{raw ../../../examples/space_invaders/parts/sound.rune}"
+        WebExample title="{i18n.SpaceInvaders.title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" files="{sources ../../../examples/space_invaders/space_invaders.rune}"
 
         section .card:
             h3 "%i18n.Guide.run_locally%"

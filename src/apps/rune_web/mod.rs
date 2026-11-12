@@ -613,7 +613,7 @@ fn render_view_node(node: &ast::ViewNode, data: &JsonMap<String, JsonValue>, loc
                     } else {
                         resolve_expression_value(expression, data, locals).unwrap_or(JsonValue::Null)
                     }
-                } else if val_trimmed.starts_with('"') {
+                } else if val_trimmed.starts_with('"') || val_trimmed.starts_with('[') {
                     if let Ok(val) = serde_json::from_str::<JsonValue>(val_trimmed) {
                         val
                     } else {

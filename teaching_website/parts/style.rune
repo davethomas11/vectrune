@@ -1108,6 +1108,38 @@ rules:
 
     .example-source:
         margin-top = 1.25rem
+        min-width = 0
+
+    .source-tools, .source-actions:
+        display = flex
+        align-items = center
+        flex-wrap = wrap
+        gap = 0.75rem
+        margin = 0.5rem 0
+
+    .source-filter:
+        flex = 1
+        min-width = 0
+        padding = 0.7rem
+        border = 1px solid {border}
+        border-radius = 8px
+        font = inherit
+
+    .source-count:
+        font-variant-numeric = tabular-nums
+
+    .source-actions button:
+        min-height = 44px
+        padding = 0.5rem 0.75rem
+        border = 1px solid {border}
+        border-radius = 8px
+        background = {panel}
+        color = {brand}
+        cursor = pointer
+
+    .source-filter:focus-visible, .source-actions button:focus-visible, .source-file summary:focus-visible, .example-code:focus-visible:
+        outline = 2px solid {brand}
+        outline-offset = 3px
 
     .source-file:
         margin-top = 0.5rem
@@ -1129,6 +1161,7 @@ rules:
     .source-file summary:
         font-family = ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace
         font-size = 0.92rem
+        overflow-wrap = anywhere
 
     .example-code:
         max-height = 32rem

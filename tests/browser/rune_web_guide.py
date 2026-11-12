@@ -37,14 +37,14 @@ def build_site(destination, binary):
         for locale, folder in [("en_us", ""), ("es", "es"), ("fr", "fr")]:
             temporary.write_text(source.read_text(encoding="utf-8").replace("locale = en_us", f"locale = {locale}"), encoding="utf-8")
             result = subprocess.run(
-                [binary, str(temporary), "-o", "html"],
+                [binary, str(temporary), "-o", "html", "--chunks-dir", str(destination / "assets/routes")],
                 capture_output=True, text=True, encoding="utf-8", check=True,
             )
             output = destination / folder
             output.mkdir(parents=True, exist_ok=True)
             (output / "index.html").write_text(result.stdout, encoding="utf-8")
         assets = destination / "assets"
-        assets.mkdir()
+        assets.mkdir(exist_ok=True)
         for pattern in ["*.js", "*.png", "*.css"]:
             for asset in source.parent.glob(pattern):
                 shutil.copy(asset, assets / asset.name)
@@ -103,14 +103,11 @@ def check(base):
                     expect(frame.get_by_role("button", name="Schedule")).to_have_class("active")
                     frame.get_by_role("button", name="Summary").click()
                     expect(frame.locator("h2")).to_have_text("A weekend by the coast")
-                page.locator(".example-source > summary").click()
-                expect(page.locator(".example-source > .example-code code")).to_have_text(
-                    (ROOT / f"examples/rune_web_guide/{filename}.rune").read_text(encoding="utf-8"),
-                )
-                page.locator(".source-file > summary").click()
-                expect(page.locator(".source-file code")).to_have_text(
-                    (ROOT / "examples/rune_web_guide/parts/style.rune").read_text(encoding="utf-8"),
-                )
+                for path in [f"{filename}.rune", "parts/style.rune"]:
+                    file = page.locator('.source-file').filter(has=page.get_by_text(path, exact=True))
+                    if not file.evaluate('(file) => file.open'):
+                        file.locator('summary').click()
+                    assert file.locator('code').text_content() == (ROOT / 'examples/rune_web_guide' / path).read_text(encoding='utf-8')
                 for width in [320, 390, 768, 1440]:
                     page.set_viewport_size({"width": width, "height": 1000})
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), (locale, lesson, width)

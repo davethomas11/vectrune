@@ -125,6 +125,10 @@ Keep the imported `parts/style.rune` next to the example when copying it. Each a
 
 The guide and instructions are localized in English, Spanish and French. Canonical example code and its small demo UI remain in English so the displayed source matches the runnable files exactly.
 
+The teaching site's shared `WebExample` takes a single source bundle prop, for example `files="{sources ../../../examples/rune_studio/rune_studio.rune}"`. The build-time `sources` directive follows the compiler's imports, including recursive directory imports, and embeds an array of `{path, code}` records. The entry file appears first, followed by imported files in path order. Paths resolve relative to the declaring Rune file. Missing files and import cycles fail the build with loader diagnostics. Only loaded Rune files are included; unrelated sibling files are excluded.
+
+The source explorer provides filename filtering, file counts, copy and download controls, and native keyboard-accessible disclosures. The first file opens automatically, with one file expanded at a time. Source content preserves its newlines, indentation, quotes, backslashes and literal template braces through both server and browser rendering. Run `python3 tests/browser/source_explorer.py` to verify all source files for the games and Rune Studio, controls, Example Lab, three locales and mobile widths.
+
 After building the CLI, run the repeatable browser regression:
 
 ```sh

@@ -53,6 +53,31 @@ fn resolve_preview_attribute(value: &str) -> Result<String, ParseError> {
     result
 }
 
+/// Embed a complete source bundle using the same recursive imports as the compiler.
+/// Usage: Example files="{sources ../examples/app.rune}"
+fn resolve_sources_attribute(value: &str) -> Result<String, ParseError> {
+    let Some(relative) = value.strip_prefix("{sources ").and_then(|s| s.strip_suffix('}')) else {
+        return Ok(value.to_string());
+    };
+    let source = CURRENT_SOURCE_FILE.with(|source| source.borrow().clone());
+    let base = source.as_deref().and_then(|s| std::path::Path::new(s).parent())
+        .unwrap_or_else(|| std::path::Path::new("."));
+    let entry = base.join(relative.trim()).canonicalize()
+        .map_err(|error| ParseError(format!("Cannot load Rune sources '{}': {}", relative, error)))?;
+    let root = if entry.is_dir() { entry.as_path() } else { entry.parent().unwrap() };
+    let paths = crate::rune_parser::load_rune_source_paths(&entry)
+        .map_err(|error| ParseError(format!("Cannot load Rune sources: {}", error)))?;
+    let files: Result<Vec<_>, ParseError> = paths.iter().map(|path| {
+        let code = std::fs::read_to_string(path)
+            .map_err(|error| ParseError(format!("Cannot read Rune source '{}': {}", path.display(), error)))?;
+        // Keep source braces literal through any nested component interpolation.
+        let code = code.replace('{', "\u{E000}").replace('}', "\u{E001}");
+        let name = path.strip_prefix(root).unwrap_or(path).to_string_lossy().replace('\\', "/");
+        Ok(serde_json::json!({ "path": name, "code": code }))
+    }).collect();
+    Ok(serde_json::to_string(&files?).unwrap())
+}
+
 /// Parse error type for frontend parsing.
 #[derive(Debug)]
 pub struct ParseError(pub String);
@@ -1364,7 +1389,7 @@ fn extract_element_parts(
                             }
                         }
                     }
-                    attrs.insert(name.to_string(), resolve_preview_attribute(&final_value)?);
+                    attrs.insert(name.to_string(), resolve_preview_attribute(&resolve_sources_attribute(&final_value)?)?);
                 }
             }
         }
@@ -2157,6 +2182,34 @@ mod tests {
         let result = resolve_preview_attribute(&format!("{{preview {}}}", path.display()));
         assert!(matches!(result, Err(error) if error.0.contains("Circular Rune preview")));
         assert!(PREVIEW_STACK.with(|stack| stack.borrow().is_empty()));
+    }
+
+    #[test]
+    fn source_bundles_follow_recursive_imports_and_preserve_exact_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("parts/nested")).unwrap();
+        let code = "@Component/Greeting\nview:\n    h1 \"Hello {name}\\n\"\n";
+        std::fs::write(root.join("entry.rune"), "import \"parts\"\n@Page/demo\nview:\n    Greeting\n").unwrap();
+        std::fs::write(root.join("parts/nested/component.rune"), code).unwrap();
+        std::fs::write(root.join("parts/empty.rune"), "").unwrap();
+        std::fs::write(root.join("parts/ignored.txt"), "ignored").unwrap();
+        std::fs::write(root.join("unrelated.rune"), "@App\nname = unrelated").unwrap();
+        let host = root.join("host.rune");
+        for attribute in ["files=\"{sources entry.rune}\"", ":\n        files = {sources entry.rune}"] {
+            std::fs::write(&host, format!("@Page/demo\nview:\n    Explorer {}\n\n@Component/Explorer\nprops: [files]\nview:\n    for file in files:\n        pre \"{{file.code}}\"\n", attribute)).unwrap();
+            let doc = crate::rune_parser::load_rune_document_from_path(&host).unwrap();
+            let frontend = parse_rune_web_frontend(&doc, "demo").unwrap();
+            let ViewNode::ComponentScope { props, .. } = &frontend.page_views["demo"].view_tree else { panic!("expected component") };
+            let files: serde_json::Value = serde_json::from_str(&props["files"]).unwrap();
+            assert_eq!(files.as_array().unwrap().len(), 3);
+            assert_eq!(files[0]["path"], "entry.rune");
+            assert_eq!(files[2]["path"], "parts/nested/component.rune");
+            assert_eq!(files[2]["code"], code.replace('{', "\u{E000}").replace('}', "\u{E001}"));
+            let html = super::super::render_frontend_shell(&frontend, "demo", None, None, &serde_json::Map::new(), None);
+            assert!(html.contains(&super::super::html_escape(code)));
+        }
+        assert!(resolve_sources_attribute("{sources missing.rune}").is_err());
     }
 
     #[test]
@@ -2987,7 +3040,7 @@ fn extract_indented_attributes(value: &Value) -> Result<(HashMap<String, String>
                                         }
                                     }
                                 }
-                                attrs.insert(k, resolve_preview_attribute(&final_value)?);
+                                attrs.insert(k, resolve_preview_attribute(&resolve_sources_attribute(&final_value)?)?);
                             }
                             continue;
                         }

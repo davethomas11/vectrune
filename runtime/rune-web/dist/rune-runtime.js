@@ -597,6 +597,12 @@ var __RuneWeb = (() => {
     if (!Number.isNaN(Number(trimmed)) && /^-?\d+(\.\d+)?$/.test(trimmed))
       return Number(trimmed);
     if (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
+      if (trimmed.startsWith('"')) {
+        try {
+          return JSON.parse(trimmed);
+        } catch (_) {
+        }
+      }
       return normalizeLiteral(trimmed);
     }
     if (trimmed.startsWith("[") || trimmed.startsWith("{")) {

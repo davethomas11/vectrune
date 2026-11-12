@@ -59,6 +59,7 @@ As Vectrune has rapidly evolved, various language processors and dialects develo
 
 ### Track 1: Teaching Site & Interactive Learning ([vectrune.com](https://vectrune.com))
 
+- [x] **Repair and Complete the Source Explorer**: Preserve source newlines, indentation, quotes and escapes through client component props. Replace fixed file lists with one `files="{sources entry.rune}"` prop that follows recursive imports, including all 15 Rune Studio files. Add localized filename filtering, file counts, copy/download controls, keyboard focus and one expanded file at a time. Verified compiler/runtime tests and Chromium regressions across three locales, Example Lab, lessons and mobile widths. *(2026-11-12)*
 - [x] **Fix Builtin Demo Sandbox Corrupted Syntax**: Resolved Rune-Web template interpolation stripping curly braces and quotes from `{raw ...}` imports; fixed emulator multi-line objects, comment tokenization, and schema validation. *(Commit: `b8875d9` - 2026-11-01)*
 - [x] **Fix Subpage Code Snippet Loading**: Updated `rest_api_get.rune`, `rest_api_post.rune`, `rest_api_validation.rune`, `graphql_overview.rune`, `websocket_overview.rune`, and `rune_web_overview.rune` to inject canonical, untampered code snippets into `#sandbox-editor` via JS page detection; added reactive mock runners for REST, GraphQL, WebSocket, and Rune-Web components. *(Commit: `ca2df80` - 2026-11-02)*
 - [ ] **Enrich REST Tutorial Pages**:
