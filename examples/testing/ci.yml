@@ -7,10 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Vectrune 0.3.1
+      - name: Install Vectrune 0.3.2
         shell: bash
         run: |
-          curl --fail --location --retry 3 https://github.com/davethomas11/vectrune/releases/download/v0.3.1/vectrune-linux-x86_64.tar.gz --output "$RUNNER_TEMP/vectrune.tar.gz"
+          curl --fail --location --retry 3 https://github.com/davethomas11/vectrune/releases/download/v0.3.2/vectrune-linux-x86_64.tar.gz --output "$RUNNER_TEMP/vectrune.tar.gz"
           tar -xzf "$RUNNER_TEMP/vectrune.tar.gz" -C "$RUNNER_TEMP"
           chmod +x "$RUNNER_TEMP/vectrune"
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"

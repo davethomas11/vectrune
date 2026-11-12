@@ -5,9 +5,9 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parent.parent
 DESTINATION = ROOT / 'teaching_website/content/developer/starter.zip'
-README = '''Vectrune 0.3.1 developer starter
+README = '''Vectrune 0.3.2 developer starter
 
-Install Vectrune 0.3.1 or newer from:
+Install Vectrune 0.3.2 or newer from:
 https://github.com/davethomas11/vectrune/releases
 macOS/Homebrew: brew install davethomas11/vectrune/vectrune
 For an existing installation: brew update && brew upgrade vectrune
@@ -31,7 +31,7 @@ The fixture and suite hooks are in api.test.rune. Tests use the real native
 router without opening a port. Each test starts with fresh Rune memory.
 External files/databases are not rolled back. Main execution and cleanup each
 have a bounded timeout. Ctrl-C stops watch mode; abrupt process termination
-cannot guarantee teardown. The included GitHub workflow is pinned to 0.3.1.
+cannot guarantee teardown. The included GitHub workflow is pinned to 0.3.2.
 
 Run the server separately if wanted:
   vectrune app.rune

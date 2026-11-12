@@ -81,6 +81,12 @@ view:
             p "%i18n.Developer.fixtures_text%"
             ExampleSource code="{raw ../../../examples/testing/api.test.rune}"
         section .card:
+            h2 "%i18n.Developer.logic_title%"
+            p "%i18n.Developer.logic_text%"
+            CommandBlock code="{i18n.Developer.cmd_12}"
+            ExampleSource code="{raw ../../../examples/rune_studio/studio.logic.test.rune}"
+            p "%i18n.Developer.logic_limits%"
+        section .card:
             h2 "%i18n.Developer.boundary_title%"
             p "%i18n.Developer.boundary_text%"
         section .card:
@@ -134,4 +140,4 @@ view:
             h2 "%i18n.Developer.upgrade_title%"
             p "%i18n.Developer.upgrade_text%"
             CommandBlock code="{i18n.Developer.cmd_11}"
-            a .content-link href=https://github.com/davethomas11/vectrune/releases/tag/v0.3.1 target=_blank rel="noopener noreferrer" "%i18n.Developer.releases%"
+            a .content-link href=https://github.com/davethomas11/vectrune/releases/tag/v0.3.2 target=_blank rel="noopener noreferrer" "%i18n.Developer.releases%"
