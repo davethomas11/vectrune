@@ -4,6 +4,14 @@ use clap::ArgMatches;
 use std::path::Path;
 
 pub fn format_source(source: &str) -> String {
+    let newline = if source
+        .find('\n')
+        .is_some_and(|index| index > 0 && source.as_bytes()[index - 1] == b'\r')
+    {
+        "\r\n"
+    } else {
+        "\n"
+    };
     let mut output = String::new();
     let mut run_block = false;
     let mut levels = Vec::new();
@@ -57,7 +65,7 @@ pub fn format_source(source: &str) -> String {
             // Rune-Web, CSS, object blocks, and embedded source retain their exact contents.
             output.push_str(line);
         }
-        output.push('\n');
+        output.push_str(newline);
     }
     output
 }

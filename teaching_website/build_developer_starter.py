@@ -37,9 +37,9 @@ Run the server separately if wanted:
 
 def files():
     return {
-        'app.rune': (ROOT / 'examples/testing/app.rune').read_bytes(),
-        'api.test.rune': (ROOT / 'examples/testing/api.test.rune').read_bytes(),
-        '.github/workflows/rune.yml': (ROOT / 'examples/testing/ci.yml').read_bytes(),
+        'app.rune': (ROOT / 'examples/testing/app.rune').read_text(encoding='utf-8').encode('utf-8'),
+        'api.test.rune': (ROOT / 'examples/testing/api.test.rune').read_text(encoding='utf-8').encode('utf-8'),
+        '.github/workflows/rune.yml': (ROOT / 'examples/testing/ci.yml').read_text(encoding='utf-8').encode('utf-8'),
         'README.txt': README.encode('utf-8'),
     }
 
@@ -50,6 +50,7 @@ def archive():
         for name, content in sorted(files().items()):
             info = ZipInfo(name, date_time=(2026, 11, 12, 0, 0, 0))
             info.compress_type = ZIP_DEFLATED
+            info.create_system = 3
             info.external_attr = 0o100644 << 16
             target.writestr(info, content)
     return result.getvalue()

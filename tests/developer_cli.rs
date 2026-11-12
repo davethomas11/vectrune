@@ -414,6 +414,13 @@ fn formatting_is_idempotent_import_aware_and_preserves_opaque_blocks() {
         true,
     );
     assert_eq!(report["changed"], serde_json::json!([]));
+    let crlf = formatted.replace('\n', "\r\n");
+    fs::write(&entry, &crlf).unwrap();
+    json(
+        cli().arg("fmt").arg(&entry).args(["--check", "--json"]),
+        true,
+    );
+    assert_eq!(fs::read_to_string(&entry).unwrap(), crlf);
 }
 
 #[cfg(unix)]
