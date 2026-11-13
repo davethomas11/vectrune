@@ -1,0 +1,72 @@
+#!RUNE
+# Compact Rune-Web cabinet for the teaching site and standalone browser play.
+import "monster_city.rune"
+
+@App
+shell = site_arcade
+
+@Page/site_arcade
+title = Monster City — Attack of the Kaju
+logic = site_arcade
+style = site_arcade
+view:
+    main .arcade:
+        header .arcade-heading:
+            div:
+                h1 "{label}"
+                p "ATTACK OF THE KAJU"
+            button .primary data-pixel-start=true "Start rampage"
+        div .game-surface:
+            canvas data-rune-pixel=true tabindex=0 aria-label="Monster City. Enter to start, arrows to move, Space to smash, Down or S to block, X for special."
+        p .status data-pixel-status=true role=status aria-live=polite "Ready to make a big entrance?"
+        div .touch aria-label="Game controls":
+            button data-pixel-input="left" aria-label="Move left" "LEFT"
+            button data-pixel-input="right" aria-label="Move right" "RIGHT"
+            button data-pixel-input="defend" aria-label="Duck and block" aria-pressed=false "BLOCK"
+            button data-pixel-input="special" aria-label="Use skin special" "SPECIAL"
+            button .smash data-pixel-input="smash" "SMASH"
+        p .energy data-pixel-energy=true
+        div .toolbar:
+            button data-pixel-action="openStore" "Shop · B"
+            button data-pixel-action="openTitle" "Title · T"
+            button data-pixel-pause=true aria-pressed=false "Pause"
+            button data-pixel-mute=true aria-pressed=false aria-label="Mute game audio" "Sound on"
+            button data-pixel-fullscreen=true "Fullscreen"
+            button data-pixel-start=true "Restart"
+        nav .menu-controls data-pixel-menu=true aria-label="Game menu"
+        p .save data-pixel-save=true role=status
+        details .instructions:
+            summary "Controls"
+            p "Arrows/A/D move · Space smash · Down/S block · X special · P pause · M sound · F fullscreen. On a phone, hold the buttons below the arena."
+
+@Logic/site_arcade
+state:
+    label = "MONSTER CITY"
+
+@Style/site_arcade
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #141d27; color: #f0eddf; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.arcade { max-width: 1000px; margin: auto; padding: 12px; }
+.arcade-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+h1 { color: #b5ef77; font-size: 20px; margin: 0; letter-spacing: 1px; }
+.arcade-heading p { color: #eccc85; margin: 4px 0 0; font-size: 10px; }
+button { font: inherit; font-size: 11px; font-weight: bold; color: #f0eddf; background: #273b36; border: 1px solid #77806d; border-radius: 4px; padding: 10px; cursor: pointer; min-height: 44px; }
+button:hover { background: #3b4a36; }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, canvas:focus-visible { outline: 3px solid #b5ef77; outline-offset: 3px; }
+.primary { background: #b5ef77; color: #141d27; }
+.game-surface { display: flex; justify-content: center; padding: 6px; background: #0b1019; border: 1px solid #849274; border-radius: 5px; }
+.game-surface:fullscreen { align-items: center; padding: 0; border: 0; background: #080d16; }
+canvas { display: block; max-width: 100%; image-rendering: pixelated; touch-action: none; }
+.status, .energy, .save { font-size: 11px; line-height: 1.5; color: #b5ef77; margin: 8px 0; }
+.touch { display: flex; gap: 6px; }
+.touch button { flex: 1; min-width: 0; padding: 10px 4px; user-select: none; touch-action: none; }
+.touch button[aria-pressed = "true"] { background: #65d5ed; color: #141d27; }
+.smash { background: #d99b77; color: #141d27; }
+.toolbar, .menu-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.toolbar button { flex: 1; }
+.menu-controls { margin-top: 8px; }
+.menu-controls[hidden] { display: none; }
+.menu-controls span { flex-basis: 100%; font-size: 11px; color: #b8c6bb; }
+.instructions { font-size: 11px; line-height: 1.6; color: #b8c6bb; margin-top: 8px; }

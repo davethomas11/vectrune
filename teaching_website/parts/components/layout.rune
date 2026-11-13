@@ -58,6 +58,7 @@ view:
                 div .nav-group:
                     h3 "%i18n.Nav.games%"
                     a .nav-link {.active when 'games'} href="{i18n.Common.base_path}games" data-route-link=true aria-current="{activePage == 'games' or activePage == 'vectraiders' or activePage == 'space_invaders' ? 'page' : 'false'}" click="navigate('games')" "%i18n.Nav.vectraiders%"
+                    a .nav-link {.active when 'monster-city'} href="{i18n.Common.base_path}monster-city" data-route-link=true aria-current="{activePage == 'monster-city' ? 'page' : 'false'}" click="navigate('monster-city')" "%i18n.Nav.monster_city%"
                     a .nav-link {.active when 'vectworms'} href="{i18n.Common.base_path}vectworms" data-route-link=true aria-current="{activePage == 'vectworms' ? 'page' : 'false'}" click="navigate('vectworms')" "%i18n.Nav.vectworms%"
                 div .nav-group:
                     h3 "%i18n.Nav.music%"
@@ -77,6 +78,7 @@ view:
                     "vectraiders"     -> SpaceInvadersPage
                     "space_invaders"  -> SpaceInvadersPage
                     "vectworms"       -> VectWormsPage
+                    "monster-city"    -> MonsterCityPage
                     "studio"          -> RuneStudioPage
                     "music"           -> RuneStudioPage
                     "examples"        -> ExampleLab

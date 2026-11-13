@@ -346,9 +346,9 @@ Every test gets a fresh runtime with isolated state and in-memory storage. `mock
 
 This first prototype covers synchronous actions. DOM/layout/events, network mocks, timers, pending asynchronous jobs, shared fixtures, logic suite hooks, i18n/memory seeds, and a `type = browser` adapter remain future work. Native suite hooks belong to native tests and are not applied to logic tests. Use the existing Playwright companion for actual browser behavior. The developer CLI CI matrix exercises both engines on Linux, macOS, and Windows. Node is only needed when rebuilding the JavaScript bundles (`cd runtime/rune-web && npm ci && npm run build`).
 
-### Rune Pixel / Monster City prototype
+### Rune Pixel / Monster City
 
-The pixel engine runs a Rune-authored game in a browser canvas or an optional native desktop window. The [Monster City example](examples/monster_city/monster_city.rune) has a giant kaiju, five destructible buildings, soldiers, tanks, bullets, health, scoring, animation, keyboard/touch controls, pause, restart, and fullscreen.
+Play [Monster City on vectrune.com](https://vectrune.com/monster-city/). The pixel engine runs the same Rune-authored game in a browser canvas or an optional native desktop window. The [Monster City example](examples/monster_city/monster_city.rune) has a giant kaiju, five destructible buildings, soldiers, tanks, bullets, health, scoring, animation, keyboard/touch controls, pause, restart, and fullscreen.
 
 ```sh
 # Serve the game at http://127.0.0.1:3010
@@ -368,7 +368,7 @@ cargo run --features pixel-desktop -- examples/monster_city/monster_city.rune --
 cargo run -- test examples/monster_city
 ```
 
-Use arrows/A/D to move, Space to smash, Enter to start/restart, P to pause, and F for fullscreen. M toggles music and effects in both hosts. Desktop also supports F11; Escape leaves fullscreen or closes the window. Desktop builds play through CPAL; the browser uses Web Audio. Both use the same Rune synth/sequencer and declarations. This entire pixel engine is an unreleased prototype, absent from the published 0.3.2 CLI. The native host is opt-in while platform packaging is validated. On Debian/Ubuntu, install `libasound2-dev` before compiling the desktop feature. The default pixel target is web.
+Use arrows/A/D to move, Space to smash, Enter to start/restart, P to pause, and F for fullscreen. M toggles music and effects in both hosts. Desktop also supports F11; Escape leaves fullscreen or closes the window. Desktop builds play through CPAL; the browser uses Web Audio. Both use the same Rune synth/sequencer and declarations. Rune Pixel is available from the latest source checkout and as a playable website game; it is absent from the published 0.3.2 CLI. The native host is opt-in while platform packaging is validated. On Debian/Ubuntu, install `libasound2-dev` before compiling the desktop feature. The default pixel target is web.
 
 [sound.rune](examples/monster_city/sound.rune) defines the original four-bar **Monster March** with `@Music/monster_city`, the title/shop themes **Monster Parade** / **Tiny Treasures**, menu move/confirm/purchase/denial cues, plus ten gameplay `@Sound` effects for roar, footsteps, smash, collapse, rifle/cannon fire, damage, tank explosions, victory and game over. These are the same declarations and `music.play` / `sound.play` commands used by VectRaiders and VectWorms; no audio files or downloads are needed. The native title screen plays Monster Parade immediately; browsers wait for a game interaction before starting music. Tiny Treasures plays in the shop, and Monster March plays during a rampage. Track changes keep one scheduler, browsing/buying does not restart the shop loop, music pauses on focus loss, and victory/defeat stops the level track. M or the Sound button mutes both music and effects while gameplay continues. Muting survives restart; hiding the page or replacing/removing the canvas pauses audio and stops its schedulers. The pixel audio host disables Rune-Web playback-state/DOM synchronization so music cannot rerender its surrounding shell.
 

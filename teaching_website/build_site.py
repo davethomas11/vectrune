@@ -83,6 +83,12 @@ def build_site(destination, binary, base="/", selected_routes=None):
     for name in ["favicon.ico", "favicon.png"]:
         if (SITE / name).exists():
             shutil.copyfile(SITE / name, destination / name)
+    # A stable same-origin game URL preserves localStorage across locale changes
+    # and reloads; data-URI previews have opaque origins and cannot do that.
+    game = assets / "games/monster-city"
+    game.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run([binary, str(SITE.parent / "examples/monster_city/site_shell.rune"), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)
+    (game / "index.html").write_text(result.stdout, encoding="utf-8")
     from build_developer_starter import archive
     developer = assets / 'content/developer'
     developer.mkdir(parents=True, exist_ok=True)

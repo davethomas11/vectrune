@@ -38,6 +38,12 @@ view:
                 a .secondary-cta href=#app click="openExample('counter')" "%i18n.Examples.play_label%"
 
             article .example-card:
+                span .tag .tag-advanced "%i18n.MonsterCity.badge%"
+                h3 "%i18n.MonsterCity.title%"
+                p "%i18n.MonsterCity.description%"
+                a .secondary-cta href="{i18n.Common.base_path}monster-city" data-route-link=true click="navigate('monster-city')" "%i18n.MonsterCity.play%"
+
+            article .example-card:
                 span .tag .tag-advanced "%i18n.SpaceInvaders.badge%"
                 h3 "%i18n.Examples.invaders_title%"
                 p "%i18n.Examples.invaders_desc%"

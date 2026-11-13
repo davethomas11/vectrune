@@ -141,3 +141,8 @@ image = /assets/rune-logo.png
 title = %i18n.Developer.release% — Vectrune 0.3.2
 description = %i18n.Developer.release_intro%
 image = /assets/rune-logo.png
+
+@SEO/monster-city
+title = Monster City: Attack of the Kaju — Play on Vectrune
+description = Play Monster City free: 17 monsters with unique specials, parachute power-ups, generated cities, aircraft, a skin shop and saved progress. Built with Rune Pixel.
+image = /assets/rune-logo.png

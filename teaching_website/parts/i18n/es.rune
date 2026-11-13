@@ -287,6 +287,7 @@ Nav {
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
     vectworms = "VectWorms"
+    monster_city = "Monster City"
     music = "Música"
     studio = "Rune Studio"
 }
@@ -607,4 +608,21 @@ Developer {
     logic_text = "Usa type = logic y page = studio para probar las acciones reales de Rune-Web. invoke llama a una acción con argumentos JSON opcionales; assert comprueba el estado, los valores derivados o los efectos simulados. Ambos motores se ejecutan juntos por defecto. Cada prueba de lógica usa un entorno JavaScript nuevo, con setup y teardown opcionales."
     logic_limits = "Este primer motor admite acciones síncronas. DOM y diseño, temporizadores, tareas asíncronas, red simulada y fixtures de lógica compartidos quedan pendientes. Usa el script Playwright para interacciones reales del navegador. Los ejemplos siguientes se ejecutan desde el repositorio de Vectrune."
     cmd_12 = "vectrune test examples/rune_studio\nvectrune test examples/rune_studio --type logic --json"
+}
+
+MonsterCity {
+    badge = "Arcade Rune Pixel"
+    title = "Monster City: El ataque del Kaju"
+    description = "Sé el monstruo gigante. Arrasa ciudades generadas, esquiva al ejército y desbloquea 17 monstruos con movimientos especiales exclusivos."
+    play = "Jugar a Monster City"
+    try_it = "Pulsa Start rampage. Tus monedas y tu colección se guardan en este navegador. Usa Fullscreen para jugar con más espacio."
+    controls_title = "Muévete, defiéndete y ataca"
+    controls = "Flechas o A/D para moverte · Espacio para golpear · Abajo/S para agacharte y bloquear · X para el especial de tu monstruo · P para pausar · M para el sonido. Hay controles táctiles para móviles y tabletas."
+    powers = "Recoge cajas con paracaídas para obtener aliento atómico, campo de fuerza, electricidad, más tamaño, velocidad, un pequeño kaju o una onda sísmica. Los suministros son más frecuentes desde la ciudad 15."
+    progress = "Gana monedas por puntos y victorias. Visita las seis páginas de la tienda para descubrir monstruos y especiales. Los helicópteros llegan en la ciudad 3 y los aviones en la 5."
+    privacy = "El progreso se guarda en este navegador y dispositivo; no necesitas una cuenta. Reiniciar en la ciudad 1 conserva monedas y monstruos. Borrar los datos del navegador elimina el perfil local."
+    standalone = "Abrir el juego completo ↗"
+    source_title = "Juega y explora el código Rune"
+    local_title = "Ejecuta la versión de escritorio desde el código fuente"
+    local_intro = "La CLI publicada 0.3.2 es anterior a Rune Pixel. Clona el código más reciente y usa estos comandos para abrir el juego de escritorio o exportarlo como HTML independiente."
 }

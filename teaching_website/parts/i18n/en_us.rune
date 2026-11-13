@@ -287,6 +287,7 @@ Nav {
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
     vectworms = "VectWorms"
+    monster_city = "Monster City"
     music = "Music"
     studio = "Rune Studio"
 }
@@ -607,4 +608,21 @@ Developer {
     logic_text = "Use type = logic and page = studio to test the real Rune-Web actions. invoke calls an action with optional JSON arguments; assert checks state, derived values or recorded mock effects. Native and logic tests run together by default. Each logic test gets a fresh JavaScript runtime, with optional setup and teardown."
     logic_limits = "This first runner supports synchronous actions. DOM/layout, timers, asynchronous jobs, network mocks and shared logic fixtures remain future work. Use the Playwright companion for actual browser interactions. The examples below run from the Vectrune repository."
     cmd_12 = "vectrune test examples/rune_studio\nvectrune test examples/rune_studio --type logic --json"
+}
+
+MonsterCity {
+    badge = "Rune Pixel Arcade"
+    title = "Monster City: Attack of the Kaju"
+    description = "Be the giant monster. Flatten generated cities, dodge the army, and unlock 17 monsters with exclusive special moves."
+    play = "Play Monster City"
+    try_it = "Press Start rampage. Your coins and monster collection save in this browser. Use the game’s Fullscreen button for more room."
+    controls_title = "Move, defend, unleash"
+    controls = "Arrows or A/D to move · Space to smash · Down/S to duck and block · X for your skin’s special · P to pause · M for sound. Touch controls work on phones and tablets."
+    powers = "Catch parachute crates for Atomic Breath, Force Field, electricity, Bigger Juice, speed, a baby kaju, or Aftershock. Supplies become more frequent from city 15."
+    progress = "Earn coins from city victories and points. Visit the six-page shop for new skins and exclusive moves. Helicopters arrive in city 3 and planes in city 5."
+    privacy = "Progress stays on this browser and device; no account is needed. Reset to city 1 keeps coins and owned skins. Clearing browser storage removes the local profile."
+    standalone = "Open the full game ↗"
+    source_title = "Play it, then explore the Rune"
+    local_title = "Run the desktop preview from source"
+    local_intro = "The published 0.3.2 CLI predates Rune Pixel. Clone the latest source and run these commands to open the native desktop game or export a standalone HTML game."
 }

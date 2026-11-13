@@ -117,7 +117,7 @@ def check(base, directory, screenshots):
             expect(page.locator('.skip-link')).to_be_focused()
             page.keyboard.press('Enter')
             expect(page.locator('#content')).to_be_focused()
-            expect(page.locator('.sidebar a.nav-link')).to_have_count(28)
+            expect(page.locator('.sidebar a.nav-link')).to_have_count(29)
             expect(page.locator('.sidebar [aria-current="page"]')).to_have_count(1)
             for width in [320, 390, 768, 1440]:
                 page.set_viewport_size({'width': width, 'height': 844})

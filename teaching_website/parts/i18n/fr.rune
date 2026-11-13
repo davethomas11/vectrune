@@ -287,6 +287,7 @@ Nav {
     space_invaders = "VectRaiders"
     vectraiders = "VectRaiders"
     vectworms = "VectWorms"
+    monster_city = "Monster City"
     music = "Musique"
     studio = "Rune Studio"
 }
@@ -607,4 +608,21 @@ Developer {
     logic_text = "Utilisez type = logic et page = studio pour tester les vraies actions Rune-Web. invoke appelle une action avec des arguments JSON facultatifs ; assert vérifie l’état, les valeurs dérivées ou les effets simulés. Les deux moteurs fonctionnent ensemble par défaut. Chaque test de logique reçoit un nouvel environnement JavaScript, avec setup et teardown facultatifs."
     logic_limits = "Ce premier moteur prend en charge les actions synchrones. DOM et mise en page, temporisateurs, tâches asynchrones, réseau simulé et fixtures de logique partagées restent à venir. Utilisez le script Playwright pour les interactions réelles du navigateur. Les exemples suivants se lancent depuis le dépôt Vectrune."
     cmd_12 = "vectrune test examples/rune_studio\nvectrune test examples/rune_studio --type logic --json"
+}
+
+MonsterCity {
+    badge = "Arcade Rune Pixel"
+    title = "Monster City : Attaque du Kaju"
+    description = "Incarnez le monstre géant. Rasez des villes générées, évitez l’armée et débloquez 17 monstres aux techniques spéciales exclusives."
+    play = "Jouer à Monster City"
+    try_it = "Appuyez sur Start rampage. Vos pièces et votre collection sont enregistrées dans ce navigateur. Utilisez Fullscreen pour jouer plus confortablement."
+    controls_title = "Bougez, défendez-vous, attaquez"
+    controls = "Flèches ou A/D pour bouger · Espace pour frapper · Bas/S pour se baisser et bloquer · X pour le spécial du monstre · P pour la pause · M pour le son. Des commandes tactiles sont disponibles sur mobile et tablette."
+    powers = "Attrapez les caisses parachutées : souffle atomique, champ de force, électricité, taille géante, vitesse, bébé kaju ou onde de choc. Les ravitaillements sont plus fréquents dès la ville 15."
+    progress = "Gagnez des pièces grâce aux points et aux victoires. Explorez les six pages de la boutique et les techniques exclusives. Les hélicoptères arrivent à la ville 3 et les avions à la ville 5."
+    privacy = "La progression reste dans ce navigateur et sur cet appareil ; aucun compte requis. Revenir à la ville 1 conserve pièces et monstres. Effacer les données du navigateur supprime le profil local."
+    standalone = "Ouvrir le jeu complet ↗"
+    source_title = "Jouez, puis explorez le code Rune"
+    local_title = "Lancer la version de bureau depuis les sources"
+    local_intro = "La CLI publiée 0.3.2 précède Rune Pixel. Clonez les sources récentes et utilisez ces commandes pour lancer le jeu natif ou exporter un jeu HTML autonome."
 }

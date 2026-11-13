@@ -1,0 +1,28 @@
+@Component/MonsterCityPage
+view:
+    div .page .application-guide .space-invaders-page .monster-city-page:
+        section .card .showcase-intro:
+            div .section-heading:
+                span .tag .tag-advanced "%i18n.MonsterCity.badge%"
+                h1 "%i18n.MonsterCity.title%"
+                p .lead "%i18n.MonsterCity.description%"
+            p .showcase-try "%i18n.MonsterCity.try_it%"
+            a .secondary-cta href="/assets/games/monster-city/index.html" target=_blank rel=noopener "%i18n.MonsterCity.standalone%"
+
+        WebExample title="{i18n.MonsterCity.title}" preview="/assets/games/monster-city/index.html" files="{sources ../../../examples/monster_city/site_shell.rune}" show_heading=false
+
+        section .card:
+            h2 "%i18n.MonsterCity.controls_title%"
+            p "%i18n.MonsterCity.controls%"
+            p "%i18n.MonsterCity.powers%"
+            p "%i18n.MonsterCity.progress%"
+            p "%i18n.MonsterCity.privacy%"
+
+        details .card .showcase-notes:
+            summary "%i18n.MonsterCity.source_title%"
+            p "%i18n.MonsterCity.description%"
+            h3 "%i18n.MonsterCity.local_title%"
+            p "%i18n.MonsterCity.local_intro%"
+            CommandBlock code="git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
+            CommandBlock code="cargo run --features pixel-desktop -- examples/monster_city/monster_city.rune --target desktop"
+            CommandBlock code="cargo run -- examples/monster_city/monster_city.rune -o html > monster-city.html"
