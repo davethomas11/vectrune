@@ -50,7 +50,7 @@ action openTitle:
     status = "ready"
     level = profile.level
     monster.sprite = profile.skin + "/idle"
-    menu = {"title":"MONSTER CITY","subtitle":"LOGANS MONSTER RAMPAGE","note":"EARN COINS - UNLOCK YOUR NEXT MONSTER","buttons":[{"label":"PLAY CITY " + profile.level,"action":"start"},{"label":"MONSTER SHOP","action":"openStore"},{"label":"RESET TO CITY 1","action":"requestLevelReset"}]}
+    menu = {"title":"MONSTER CITY","subtitle":"ATTACK OF THE KAJU","note":"EARN COINS - UNLOCK YOUR NEXT MONSTER","buttons":[{"label":"PLAY CITY " + profile.level,"action":"start"},{"label":"MONSTER SHOP","action":"openStore"},{"label":"RESET TO CITY 1","action":"requestLevelReset"}]}
 
 action requestLevelReset:
     stop when status != "ready"
