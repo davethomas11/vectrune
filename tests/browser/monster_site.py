@@ -1,12 +1,13 @@
 """Verify the published cabinet, discoverability, locale routing, source and real-origin saves."""
 import argparse
+from contextlib import nullcontext
 from pathlib import Path
 import re
 from playwright.sync_api import expect, sync_playwright
 from teaching_ux import preview
 
-parser=argparse.ArgumentParser();parser.add_argument('--site-dir',required=True);args=parser.parse_args()
-with preview(Path(args.site_dir)) as base, sync_playwright() as pw:
+parser=argparse.ArgumentParser();source=parser.add_mutually_exclusive_group(required=True);source.add_argument('--site-dir');source.add_argument('--url');args=parser.parse_args()
+with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rstrip('/'))) as base, sync_playwright() as pw:
     browser=pw.chromium.launch();context=browser.new_context(viewport={'width':1440,'height':1000})
     page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(base+'/')
@@ -14,10 +15,12 @@ with preview(Path(args.site_dir)) as base, sync_playwright() as pw:
     page.locator('.sidebar a[href$="monster-city"]').click()
     expect(page.locator('main')).to_have_attribute('data-route','monster-city')
     expect(page.locator('main h1')).to_contain_text('Monster City')
+    page.wait_for_load_state('networkidle')
     iframe=page.locator('iframe.example-preview');expect(iframe).to_have_attribute('src','/assets/games/monster-city/index.html')
     game=page.frame_locator('iframe.example-preview')
-    game.get_by_role('button',name='Start rampage',exact=True).click()
     frame=iframe.element_handle().content_frame()
+    frame.wait_for_function('typeof __RunePixel !== "undefined"')
+    game.get_by_role('button',name='Start rampage',exact=True).click()
     assert frame.evaluate('getComputedStyle(document.body).backgroundColor')=='rgb(20, 29, 39)'
     assert frame.get_by_role('button',name='Use skin special').evaluate('(b)=>b.getBoundingClientRect().height>=44')
     assert frame.url.startswith(base+'/assets/games/monster-city/'),frame.url
