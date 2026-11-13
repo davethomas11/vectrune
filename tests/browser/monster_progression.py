@@ -62,6 +62,17 @@ with tempfile.TemporaryDirectory(prefix='monster-progression-') as folder, sync_
     page.set_viewport_size({'width':390,'height':844})
     page.wait_for_function('document.documentElement.scrollWidth <= innerWidth')
     page.screenshot(path='/private/tmp/monster-shop-mobile.png',full_page=True)
+    page.locator('[data-pixel-action="openTitle"]').click()
+    page.get_by_role('button',name='RESET TO CITY 1',exact=True).click()
+    assert page.evaluate('__RunePixel.app.state.profile.level') == 5
+    page.get_by_role('button',name='CANCEL',exact=True).click()
+    assert page.evaluate('__RunePixel.app.state.profile.level') == 5
+    page.get_by_role('button',name='RESET TO CITY 1',exact=True).click()
+    page.get_by_role('button',name='RESET TO CITY 1',exact=True).click()
+    page.reload()
+    assert page.evaluate('__RunePixel.app.state.profile.level') == 1
+    assert page.evaluate('__RunePixel.app.state.profile.coins') == 90
+    assert page.evaluate('__RunePixel.app.state.profile.skin') == 'ember'
     # A fresh tab reads the same device profile.
     second=page.context.new_page();second.goto(game.as_uri())
     assert second.evaluate('__RunePixel.app.state.profile.skin') == 'ember'

@@ -168,3 +168,31 @@ run:
 @Logic/monster
 action fundRareMonster:
     profile.coins = 1000
+
+@Test/Progression/ResetCityKeepsCollection
+type = logic
+page = city
+run:
+    invoke lateCity
+    invoke fundShop
+    invoke openStore
+    invoke chooseSkin "ember"
+    invoke openTitle
+    invoke requestLevelReset
+    assert state.status == "reset"
+    assert state.profile.level == 5
+    invoke openTitle
+    assert state.profile.level == 5
+    invoke confirmLevelReset
+    assert state.profile.level == 5
+    invoke requestLevelReset
+    invoke confirmLevelReset
+    assert state.status == "ready"
+    assert state.profile.level == 1
+    assert state.level == 1
+    assert state.profile.coins == 180
+    assert state.profile.owned == ["kaiju", "ember"]
+    assert state.profile.skin == "ember"
+    invoke start
+    assert state.level == 1
+    assert state.monster.sprite == "ember/idle"

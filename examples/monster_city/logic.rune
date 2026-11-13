@@ -50,7 +50,17 @@ action openTitle:
     status = "ready"
     level = profile.level
     monster.sprite = profile.skin + "/idle"
-    menu = {"title":"MONSTER CITY","subtitle":"LOGANS MONSTER RAMPAGE","note":"EARN COINS - UNLOCK YOUR NEXT MONSTER","buttons":[{"label":"PLAY CITY " + profile.level,"action":"start"},{"label":"MONSTER SHOP","action":"openStore"}]}
+    menu = {"title":"MONSTER CITY","subtitle":"LOGANS MONSTER RAMPAGE","note":"EARN COINS - UNLOCK YOUR NEXT MONSTER","buttons":[{"label":"PLAY CITY " + profile.level,"action":"start"},{"label":"MONSTER SHOP","action":"openStore"},{"label":"RESET TO CITY 1","action":"requestLevelReset"}]}
+
+action requestLevelReset:
+    stop when status != "ready"
+    status = "reset"
+    menu = {"title":"RESET TO CITY 1","subtitle":"COINS AND SKINS WILL BE KEPT","note":"ONLY YOUR CITY PROGRESS WILL RESET","buttons":[{"label":"CANCEL","action":"openTitle"},{"label":"RESET TO CITY 1","action":"confirmLevelReset"}]}
+
+action confirmLevelReset:
+    stop when status != "reset"
+    profile.level = 1
+    call openTitle
 
 action openStore:
     music.stop
