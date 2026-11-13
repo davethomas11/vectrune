@@ -1,4 +1,5 @@
 import { PixelEngine, type PixelConfig, type Input } from './engine';
+import { getAudioContext } from '../audio';
 import type { RuneWebConfig } from '../types';
 let settings: PixelConfig;
 export function configure(config: PixelConfig): void { settings = config; }
@@ -36,19 +37,21 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   const listen = (element: EventTarget, name: string, callback: EventListener) => element.addEventListener(name, callback, { signal: abort.signal });
   const pending = new Set<string>();
   const clear = () => { input = {}; pending.clear(); };
-  const pause = () => { game.paused = !game.paused; clear(); previous = 0; accumulator = 0; };
-  const start = () => { clear(); game.start(); previous = 0; accumulator = 0; canvas.focus(); };
+  const pause = () => { getAudioContext(); game.paused = !game.paused; clear(); previous = 0; accumulator = 0; };
+  const start = () => { getAudioContext(); clear(); game.start(); previous = 0; accumulator = 0; canvas.focus(); };
+  const mute = () => { canvas.focus(); game.muted = !game.muted; };
   const fullscreen = () => {
     const surface = canvas.closest<HTMLElement>('.game-surface') || canvas;
     const result = document.fullscreenElement ? document.exitFullscreen() : surface.requestFullscreen?.();
     result?.catch(() => { /* The browser may deny fullscreen; the game keeps working. */ });
   };
   listen(canvas, 'keydown', ((event: KeyboardEvent) => {
-    if (keys[event.code] || ['Enter','KeyP','KeyF'].includes(event.code)) event.preventDefault();
+    if (keys[event.code] || ['Enter','KeyP','KeyF','KeyM'].includes(event.code)) event.preventDefault();
     if (keys[event.code]) { input[keys[event.code]] = true; pending.add(keys[event.code]); }
     if (!event.repeat && event.code === 'Enter') start();
     if (!event.repeat && event.code === 'KeyP') pause();
     if (!event.repeat && event.code === 'KeyF') fullscreen();
+    if (!event.repeat && event.code === 'KeyM') mute();
   }) as EventListener);
   listen(canvas, 'keyup', ((event: KeyboardEvent) => {
     if (keys[event.code]) input[keys[event.code]] = false;
@@ -56,7 +59,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   listen(canvas, 'blur', ((event: FocusEvent) => {
     clear();
     const next = event.relatedTarget;
-    if (next instanceof Element && next.closest('[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input]')) return;
+    if (next instanceof Element && next.closest('[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute]')) return;
     if (game.app.state.status === 'playing') game.paused = true;
   }) as EventListener);
   listen(window, 'blur', () => { clear(); if (game.app.state.status === 'playing') game.paused = true; });
@@ -69,6 +72,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   }
   for (const button of Array.from(document.querySelectorAll('[data-pixel-start]'))) listen(button,'click',start);
   for (const button of Array.from(document.querySelectorAll('[data-pixel-pause]'))) listen(button,'click',() => { canvas.focus(); pause(); });
+  for (const button of Array.from(document.querySelectorAll('[data-pixel-mute]'))) listen(button,'click',mute);
   for (const button of Array.from(document.querySelectorAll('[data-pixel-fullscreen]'))) listen(button,'click',fullscreen);
   const resize = () => {
     const surface = canvas.parentElement;
@@ -102,6 +106,11 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     const status = game.paused ? 'Paused — press P to resume' : state.status === 'won' ? 'City conquered! Play again?' : state.status === 'gameover' ? 'Monster down. Try another rampage!' : state.status === 'ready' ? 'Ready to make a big entrance?' : 'Smash buildings. Watch out for the army!';
     if (announce && status !== lastStatus) { announce.textContent = status; lastStatus = status; }
     for (const button of Array.from(document.querySelectorAll('[data-pixel-pause]'))) { const label = game.paused ? 'Resume' : 'Pause'; if (button.textContent !== label) button.textContent = label; button.setAttribute('aria-pressed',String(game.paused)); }
+    for (const button of Array.from(document.querySelectorAll('[data-pixel-mute]'))) {
+      const label = game.muted ? 'Sound off' : 'Sound on';
+      if (button.textContent !== label) button.textContent = label;
+      button.setAttribute('aria-pressed',String(game.muted));
+    }
     frameId = requestAnimationFrame(frame);
   };
   frameId = requestAnimationFrame(frame);

@@ -1649,6 +1649,7 @@ var __RuneWeb = (() => {
       this.totalBars = 4;
       this.totalBeats = 16;
       this.musicStartTime = 0;
+      this.syncPage = true;
       this.getAudioCtx = null;
       this.lastActiveStepId = -1;
       this.lastActiveBar = -1;
@@ -1659,6 +1660,7 @@ var __RuneWeb = (() => {
      */
     configure(options) {
       this.getAudioCtx = options.getAudioContext;
+      this.syncPage = options.syncPage ?? true;
     }
     /**
      * Subscribe a callback to audio sync updates.
@@ -1698,6 +1700,7 @@ var __RuneWeb = (() => {
      */
     onPause() {
       this.isPaused = true;
+      this.stopLoop();
       this.broadcastSnapshot();
     }
     /**
@@ -1789,7 +1792,7 @@ var __RuneWeb = (() => {
       const currentBeat = this.totalBeats > 0 ? elapsedSec / secondsPerBeat % this.totalBeats : elapsedSec / secondsPerBeat;
       const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
       const progressPercent = this.totalBeats > 0 ? currentBeat / this.totalBeats * 100 : 0;
-      if (typeof document !== "undefined" && document.documentElement) {
+      if (this.syncPage && typeof document !== "undefined" && document.documentElement) {
         const rootStyle = document.documentElement.style;
         rootStyle.setProperty("--music-beat", currentBeat.toFixed(3));
         rootStyle.setProperty("--music-bar", String(currentBar));
@@ -1797,12 +1800,12 @@ var __RuneWeb = (() => {
         rootStyle.setProperty("--music-seq-left", `${Math.round(currentBeat * 120)}px`);
         rootStyle.setProperty("--music-playing", this.isPlaying ? "1" : "0");
       }
-      this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
+      if (this.syncPage) this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
       if (currentStepId !== this.lastActiveStepId || currentBar !== this.lastActiveBar) {
         this.lastActiveStepId = currentStepId;
         this.lastActiveBar = currentBar;
         try {
-          const appState = window?.__RuneWeb?.ctx?.()?.app?.state;
+          const appState = this.syncPage ? window?.__RuneWeb?.ctx?.()?.app?.state : null;
           if (appState) {
             appState.playback_step_id = currentStepId;
             appState.playback_bar = currentBar;
@@ -1870,7 +1873,7 @@ var __RuneWeb = (() => {
       }
     }
     clearVisuals() {
-      if (typeof document === "undefined") return;
+      if (!this.syncPage || typeof document === "undefined") return;
       if (document.documentElement) {
         const rootStyle = document.documentElement.style;
         rootStyle.setProperty("--music-beat", "0");
@@ -1924,6 +1927,7 @@ var __RuneWeb = (() => {
       }
     }
     getActiveVoice() {
+      if (!this.syncPage) return "lead";
       try {
         const voice = window?.__RuneWeb?.ctx?.()?.app?.state?.active_voice;
         return String(voice || "lead");
@@ -1937,6 +1941,17 @@ var __RuneWeb = (() => {
   // src/audio.ts
   var audioCtx = null;
   var stepIndex = 0;
+  var masterGain = null;
+  var audioMuted = false;
+  var syncPageAudio = true;
+  function audioOutput(ctx2) {
+    if (!masterGain) {
+      masterGain = ctx2.createGain();
+      masterGain.gain.setValueAtTime(audioMuted ? 0 : 1, ctx2.currentTime);
+      masterGain.connect(ctx2.destination);
+    }
+    return masterGain;
+  }
   var registeredSounds = {};
   var registeredMusic = {};
   function registerSounds(definitions) {
@@ -1959,7 +1974,8 @@ var __RuneWeb = (() => {
       audioCtx = new AudioCtx();
     }
     if (audioCtx && audioCtx.state === "suspended") {
-      audioCtx.resume();
+      audioCtx.resume().catch(() => {
+      });
     }
     return audioCtx;
   }
@@ -1987,6 +2003,7 @@ var __RuneWeb = (() => {
     return 440 * Math.pow(2, (midi - 69) / 12);
   }
   function playSound(type, arg) {
+    if (audioMuted) return;
     const ctx2 = getAudioContext();
     if (!ctx2) return;
     const now = ctx2.currentTime;
@@ -2007,7 +2024,7 @@ var __RuneWeb = (() => {
         gain.gain.setValueAtTime(0.25, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.13);
         break;
@@ -2022,7 +2039,7 @@ var __RuneWeb = (() => {
         gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.1);
         break;
@@ -2044,7 +2061,7 @@ var __RuneWeb = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.09);
         break;
@@ -2059,7 +2076,7 @@ var __RuneWeb = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.29);
         break;
@@ -2075,7 +2092,7 @@ var __RuneWeb = (() => {
         gain.gain.setValueAtTime(0.3, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.62);
         break;
@@ -2092,7 +2109,7 @@ var __RuneWeb = (() => {
           gain.gain.setValueAtTime(0.25, start);
           gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
           osc.connect(gain);
-          gain.connect(ctx2.destination);
+          gain.connect(audioOutput(ctx2));
           osc.start(start);
           osc.stop(start + 0.16);
         });
@@ -2107,7 +2124,7 @@ var __RuneWeb = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.16);
         break;
@@ -2134,7 +2151,7 @@ var __RuneWeb = (() => {
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx2.destination);
+    gain.connect(audioOutput(ctx2));
     noise.start(now);
     noise.stop(now + duration + 0.01);
   }
@@ -2160,7 +2177,7 @@ var __RuneWeb = (() => {
         gain2.gain.setValueAtTime(volume, start);
         gain2.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
         osc2.connect(gain2);
-        gain2.connect(ctx2.destination);
+        gain2.connect(audioOutput(ctx2));
         osc2.start(start);
         osc2.stop(start + noteDur + 0.01);
         offset += noteDur;
@@ -2189,7 +2206,7 @@ var __RuneWeb = (() => {
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     osc.connect(gain);
-    gain.connect(ctx2.destination);
+    gain.connect(audioOutput(ctx2));
     osc.start(now);
     osc.stop(now + duration + 0.01);
   }
@@ -2276,7 +2293,7 @@ var __RuneWeb = (() => {
     isMusicPaused = false;
     musicMasterGain = ctx2.createGain();
     musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
-    musicMasterGain.connect(ctx2.destination);
+    musicMasterGain.connect(audioOutput(ctx2));
     tracksState = {};
     if (def.lead) {
       tracksState.lead = { events: parseTrackPattern(def.lead), index: 0, nextBeat: 0, instrument: "square" };
@@ -2318,14 +2335,14 @@ var __RuneWeb = (() => {
         if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
       }
     }
-    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
     const totalBars = appStateBars > 0 ? appStateBars : def.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
     musicStartTime = ctx2.currentTime + 0.05;
     nextScheduleTime = musicStartTime;
     musicPauseTime = 0;
     musicPausedElapsed = 0;
-    audioSync.configure({ getAudioContext: () => getAudioContext() });
+    audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
     audioSync.onPlay({
       track: key,
       tempo: musicTempoBpm,
@@ -2360,6 +2377,10 @@ var __RuneWeb = (() => {
     const ctx2 = getAudioContext();
     if (!ctx2 || isMusicPaused || !activeMusicTrackName) return;
     isMusicPaused = true;
+    if (musicSchedulerTimer) {
+      clearInterval(musicSchedulerTimer);
+      musicSchedulerTimer = null;
+    }
     musicPauseTime = ctx2.currentTime;
     musicPausedElapsed = Math.max(0, musicPauseTime - musicStartTime);
     if (musicMasterGain) {
@@ -2408,7 +2429,7 @@ var __RuneWeb = (() => {
         if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
       }
     }
-    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
     const totalBars = appStateBars > 0 ? appStateBars : def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
     audioSync.onPlay({
@@ -2419,6 +2440,8 @@ var __RuneWeb = (() => {
       totalBeats,
       startTime: musicStartTime
     });
+    scheduleMusicTicks();
+    musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
   }
   function setMusicTempo(bpm) {
     if (bpm > 20 && bpm < 400) {
@@ -2445,7 +2468,7 @@ var __RuneWeb = (() => {
         if (tb > maxTrackBeats) maxTrackBeats = tb;
       }
     }
-    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
     const totalBars = appStateBars > 0 ? appStateBars : def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     const songTotalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
     let allFinished = true;

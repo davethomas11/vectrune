@@ -1,6 +1,7 @@
 #!RUNE
 import "sprites.pixel.rune"
 import "logic.rune"
+import "sound.rune"
 
 @App
 name = Monster City
@@ -24,10 +25,3 @@ rects = [{"x":0,"y":23,"width":384,"height":65,"color":"#233449"},{"x":0,"y":88,
 logic = monster
 view:
     canvas data-rune-pixel=true
-
-@Sound/smash
-wave = noise
-duration = 0.12
-volume = 0.12
-freq_start = 180
-freq_end = 40

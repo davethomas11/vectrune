@@ -1,0 +1,91 @@
+#!RUNE
+import "monster_city.rune"
+
+@Test/MonsterAudio/Start
+type = logic
+page = city
+run:
+    invoke start
+    assert mock.audio[0].operation == "music.stop"
+    assert mock.audio[1].operation == "music.play"
+    assert mock.audio[1].args[0] == "monster_city"
+    assert mock.audio[2].args[0] == "monster_roar"
+
+@Test/MonsterAudio/Collapse
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    invoke smash
+    assert mock.audio[3].args[0] == "monster_smash"
+    invoke coolAudioPunch
+    invoke smash
+    invoke coolAudioPunch
+    invoke smash
+    assert mock.audio[6].args[0] == "monster_collapse"
+    assert state.buildings[0].hp == 0
+
+@Test/MonsterAudio/Victory
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    invoke lastAudioBuilding
+    invoke smash
+    assert state.status == "won"
+    assert mock.audio[5].operation == "music.stop"
+    assert mock.audio[6].args[0] == "monster_victory"
+
+@Test/MonsterAudio/DamageAndGameOver
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    invoke lethalAudioShot
+    invoke tick {}
+    assert mock.audio[3].args[0] == "monster_damage"
+    assert mock.audio[4].operation == "music.stop"
+    assert mock.audio[5].args[0] == "monster_gameover"
+    assert state.status == "gameover"
+
+@Test/MonsterAudio/ArmyWeapons
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    invoke rifleBeat
+    invoke tick {}
+    assert mock.audio[3].args[0] == "monster_rifle"
+    assert mock.audio[4].args[0] == "monster_rifle"
+    assert mock.audio[5].args[0] == "monster_rifle"
+    invoke cannonBeat
+    invoke tick {}
+    assert mock.audio[6].args[0] == "monster_cannon"
+    assert mock.audio[7].args[0] == "monster_cannon"
+
+@Logic/monster
+action coolAudioPunch:
+    cooldown = 0
+
+action lastAudioBuilding:
+    destroyed = 4
+    monster.x = 300
+    buildings[0].hp = 0
+    buildings[1].hp = 0
+    buildings[2].hp = 0
+    buildings[3].hp = 0
+    buildings[4].hp = 1
+
+action lethalAudioShot:
+    shots = [{"x":20,"y":166,"sprite":"shell","scale":1,"vx":1,"life":10,"damage":100}]
+
+action rifleBeat:
+    clock = 59
+
+action cannonBeat:
+    clock = 94
+    shots = []

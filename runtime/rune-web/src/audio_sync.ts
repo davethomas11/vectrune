@@ -51,6 +51,7 @@ class AudioSyncEngine {
   private totalBars = 4;
   private totalBeats = 16;
   private musicStartTime = 0;
+  private syncPage = true;
   private getAudioCtx: (() => AudioContext | null) | null = null;
 
   private lastActiveStepId = -1;
@@ -62,8 +63,10 @@ class AudioSyncEngine {
    */
   public configure(options: {
     getAudioContext: () => AudioContext | null;
+    syncPage?: boolean;
   }): void {
     this.getAudioCtx = options.getAudioContext;
+    this.syncPage = options.syncPage ?? true;
   }
 
   /**
@@ -115,6 +118,7 @@ class AudioSyncEngine {
    */
   public onPause(): void {
     this.isPaused = true;
+    this.stopLoop();
     this.broadcastSnapshot();
   }
 
@@ -227,7 +231,7 @@ class AudioSyncEngine {
     const progressPercent = this.totalBeats > 0 ? (currentBeat / this.totalBeats) * 100 : 0;
 
     // 1. Update CSS Custom Properties (Zero-overhead, 60fps GPU rendering)
-    if (typeof document !== 'undefined' && document.documentElement) {
+    if (this.syncPage && typeof document !== 'undefined' && document.documentElement) {
       const rootStyle = document.documentElement.style;
       rootStyle.setProperty('--music-beat', currentBeat.toFixed(3));
       rootStyle.setProperty('--music-bar', String(currentBar));
@@ -237,7 +241,7 @@ class AudioSyncEngine {
     }
 
     // 2. Update generic declarative DOM data attributes
-    this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
+    if (this.syncPage) this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
 
     // 3. Update reactive state if app is present (on note/bar transitions)
     if (currentStepId !== this.lastActiveStepId || currentBar !== this.lastActiveBar) {
@@ -245,7 +249,7 @@ class AudioSyncEngine {
       this.lastActiveBar = currentBar;
 
       try {
-        const appState = (window as any)?.__RuneWeb?.ctx?.()?.app?.state;
+        const appState = this.syncPage ? (window as any)?.__RuneWeb?.ctx?.()?.app?.state : null;
         if (appState) {
           appState.playback_step_id = currentStepId;
           appState.playback_bar = currentBar;
@@ -336,7 +340,7 @@ class AudioSyncEngine {
   }
 
   private clearVisuals(): void {
-    if (typeof document === 'undefined') return;
+    if (!this.syncPage || typeof document === 'undefined') return;
 
     if (document.documentElement) {
       const rootStyle = document.documentElement.style;
@@ -396,6 +400,7 @@ class AudioSyncEngine {
   }
 
   private getActiveVoice(): string {
+    if (!this.syncPage) return 'lead';
     try {
       const voice = (window as any)?.__RuneWeb?.ctx?.()?.app?.state?.active_voice;
       return String(voice || 'lead');

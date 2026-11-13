@@ -8,6 +8,30 @@ import { audioSync } from './audio_sync';
 
 let audioCtx: AudioContext | null = null;
 let stepIndex = 0;
+let masterGain: GainNode | null = null;
+let audioMuted = false;
+let syncPageAudio = true;
+
+/** Canvas hosts can use the synthesizer without touching their Rune-Web shell. */
+export function configureAudioHost(options: { syncPage: boolean }): void {
+  syncPageAudio = options.syncPage;
+  audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
+}
+
+/** Mute music and effects together while the game clock keeps advancing. */
+export function setAudioMuted(muted: boolean): void {
+  audioMuted = muted;
+  if (masterGain && audioCtx) masterGain.gain.setValueAtTime(muted ? 0 : 1, audioCtx.currentTime);
+}
+
+function audioOutput(ctx: AudioContext): GainNode {
+  if (!masterGain) {
+    masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(audioMuted ? 0 : 1, ctx.currentTime);
+    masterGain.connect(ctx.destination);
+  }
+  return masterGain;
+}
 
 const registeredSounds: Record<string, SoundDefinition> = {};
 const registeredMusic: Record<string, MusicDefinition> = {};
@@ -34,7 +58,7 @@ export function getAudioContext(): AudioContext | null {
     audioCtx = new AudioCtx();
   }
   if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    audioCtx.resume().catch(() => { /* A later user gesture can unlock audio. */ });
   }
   return audioCtx;
 }
@@ -76,6 +100,7 @@ export function parseNoteToFreq(noteStr: string): number {
 // ---------------------------------------------------------------------------
 
 export function playSound(type: string, arg?: unknown): void {
+  if (audioMuted) return;
   const ctx = getAudioContext();
   if (!ctx) return;
 
@@ -103,7 +128,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.13);
       break;
@@ -121,7 +146,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.1);
       break;
@@ -148,7 +173,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.09);
       break;
@@ -166,7 +191,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.29);
       break;
@@ -185,7 +210,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.62);
       break;
@@ -205,7 +230,7 @@ export function playSound(type: string, arg?: unknown): void {
         gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
 
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(audioOutput(ctx));
         osc.start(start);
         osc.stop(start + 0.16);
       });
@@ -223,7 +248,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.16);
       break;
@@ -264,7 +289,7 @@ function playNoiseBurst(
 
   noise.connect(filter);
   filter.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(audioOutput(ctx));
   noise.start(now);
   noise.stop(now + duration + 0.01);
 }
@@ -302,7 +327,7 @@ function playCustomSound(
       gain.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioOutput(ctx));
       osc.start(start);
       osc.stop(start + noteDur + 0.01);
       offset += noteDur;
@@ -337,7 +362,7 @@ function playCustomSound(
   gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(audioOutput(ctx));
   osc.start(now);
   osc.stop(now + duration + 0.01);
 }
@@ -467,7 +492,7 @@ export function playMusic(trackName: string): void {
 
   musicMasterGain = ctx.createGain();
   musicMasterGain.gain.setValueAtTime(musicVolume, ctx.currentTime);
-  musicMasterGain.connect(ctx.destination);
+  musicMasterGain.connect(audioOutput(ctx));
 
   tracksState = {};
   if (def.lead) {
@@ -514,7 +539,7 @@ export function playMusic(trackName: string): void {
     }
   }
 
-  const appStateBars = Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+  const appStateBars = syncPageAudio ? Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
   const totalBars = appStateBars > 0 ? appStateBars : (def.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
   const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
 
@@ -523,7 +548,7 @@ export function playMusic(trackName: string): void {
   musicPauseTime = 0;
   musicPausedElapsed = 0;
 
-  audioSync.configure({ getAudioContext: () => getAudioContext() });
+  audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
   audioSync.onPlay({
     track: key,
     tempo: musicTempoBpm,
@@ -570,6 +595,7 @@ export function pauseMusic(): void {
   const ctx = getAudioContext();
   if (!ctx || isMusicPaused || !activeMusicTrackName) return;
   isMusicPaused = true;
+  if (musicSchedulerTimer) { clearInterval(musicSchedulerTimer); musicSchedulerTimer = null; }
   musicPauseTime = ctx.currentTime;
   musicPausedElapsed = Math.max(0, musicPauseTime - musicStartTime);
   if (musicMasterGain) {
@@ -623,7 +649,7 @@ export function resumeMusic(): void {
       if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
     }
   }
-  const appStateBars = Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+  const appStateBars = syncPageAudio ? Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
   const totalBars = appStateBars > 0 ? appStateBars : (def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
   const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
 
@@ -635,6 +661,8 @@ export function resumeMusic(): void {
     totalBeats,
     startTime: musicStartTime,
   });
+  scheduleMusicTicks();
+  musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
 }
 
 export function setMusicTempo(bpm: number): void {
@@ -678,7 +706,7 @@ function scheduleMusicTicks(): void {
       if (tb > maxTrackBeats) maxTrackBeats = tb;
     }
   }
-  const appStateBars = Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+  const appStateBars = syncPageAudio ? Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
   const totalBars = appStateBars > 0 ? appStateBars : (def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
   const songTotalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
 

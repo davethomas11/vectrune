@@ -1338,6 +1338,7 @@ var __RunePixelRuntime = (() => {
       this.totalBars = 4;
       this.totalBeats = 16;
       this.musicStartTime = 0;
+      this.syncPage = true;
       this.getAudioCtx = null;
       this.lastActiveStepId = -1;
       this.lastActiveBar = -1;
@@ -1348,6 +1349,7 @@ var __RunePixelRuntime = (() => {
      */
     configure(options) {
       this.getAudioCtx = options.getAudioContext;
+      this.syncPage = options.syncPage ?? true;
     }
     /**
      * Subscribe a callback to audio sync updates.
@@ -1387,6 +1389,7 @@ var __RunePixelRuntime = (() => {
      */
     onPause() {
       this.isPaused = true;
+      this.stopLoop();
       this.broadcastSnapshot();
     }
     /**
@@ -1478,7 +1481,7 @@ var __RunePixelRuntime = (() => {
       const currentBeat = this.totalBeats > 0 ? elapsedSec / secondsPerBeat % this.totalBeats : elapsedSec / secondsPerBeat;
       const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
       const progressPercent = this.totalBeats > 0 ? currentBeat / this.totalBeats * 100 : 0;
-      if (typeof document !== "undefined" && document.documentElement) {
+      if (this.syncPage && typeof document !== "undefined" && document.documentElement) {
         const rootStyle = document.documentElement.style;
         rootStyle.setProperty("--music-beat", currentBeat.toFixed(3));
         rootStyle.setProperty("--music-bar", String(currentBar));
@@ -1486,12 +1489,12 @@ var __RunePixelRuntime = (() => {
         rootStyle.setProperty("--music-seq-left", `${Math.round(currentBeat * 120)}px`);
         rootStyle.setProperty("--music-playing", this.isPlaying ? "1" : "0");
       }
-      this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
+      if (this.syncPage) this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
       if (currentStepId !== this.lastActiveStepId || currentBar !== this.lastActiveBar) {
         this.lastActiveStepId = currentStepId;
         this.lastActiveBar = currentBar;
         try {
-          const appState = window?.__RuneWeb?.ctx?.()?.app?.state;
+          const appState = this.syncPage ? window?.__RuneWeb?.ctx?.()?.app?.state : null;
           if (appState) {
             appState.playback_step_id = currentStepId;
             appState.playback_bar = currentBar;
@@ -1559,7 +1562,7 @@ var __RunePixelRuntime = (() => {
       }
     }
     clearVisuals() {
-      if (typeof document === "undefined") return;
+      if (!this.syncPage || typeof document === "undefined") return;
       if (document.documentElement) {
         const rootStyle = document.documentElement.style;
         rootStyle.setProperty("--music-beat", "0");
@@ -1613,6 +1616,7 @@ var __RunePixelRuntime = (() => {
       }
     }
     getActiveVoice() {
+      if (!this.syncPage) return "lead";
       try {
         const voice = window?.__RuneWeb?.ctx?.()?.app?.state?.active_voice;
         return String(voice || "lead");
@@ -1626,6 +1630,25 @@ var __RunePixelRuntime = (() => {
   // src/audio.ts
   var audioCtx = null;
   var stepIndex = 0;
+  var masterGain = null;
+  var audioMuted = false;
+  var syncPageAudio = true;
+  function configureAudioHost(options) {
+    syncPageAudio = options.syncPage;
+    audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
+  }
+  function setAudioMuted(muted) {
+    audioMuted = muted;
+    if (masterGain && audioCtx) masterGain.gain.setValueAtTime(muted ? 0 : 1, audioCtx.currentTime);
+  }
+  function audioOutput(ctx2) {
+    if (!masterGain) {
+      masterGain = ctx2.createGain();
+      masterGain.gain.setValueAtTime(audioMuted ? 0 : 1, ctx2.currentTime);
+      masterGain.connect(ctx2.destination);
+    }
+    return masterGain;
+  }
   var registeredSounds = {};
   var registeredMusic = {};
   function registerSounds(definitions) {
@@ -1648,7 +1671,8 @@ var __RunePixelRuntime = (() => {
       audioCtx = new AudioCtx();
     }
     if (audioCtx && audioCtx.state === "suspended") {
-      audioCtx.resume();
+      audioCtx.resume().catch(() => {
+      });
     }
     return audioCtx;
   }
@@ -1676,6 +1700,7 @@ var __RunePixelRuntime = (() => {
     return 440 * Math.pow(2, (midi - 69) / 12);
   }
   function playSound(type, arg) {
+    if (audioMuted) return;
     const ctx2 = getAudioContext();
     if (!ctx2) return;
     const now = ctx2.currentTime;
@@ -1696,7 +1721,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.25, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.13);
         break;
@@ -1711,7 +1736,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.1);
         break;
@@ -1733,7 +1758,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.09);
         break;
@@ -1748,7 +1773,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.29);
         break;
@@ -1764,7 +1789,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.3, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.62);
         break;
@@ -1781,7 +1806,7 @@ var __RunePixelRuntime = (() => {
           gain.gain.setValueAtTime(0.25, start);
           gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
           osc.connect(gain);
-          gain.connect(ctx2.destination);
+          gain.connect(audioOutput(ctx2));
           osc.start(start);
           osc.stop(start + 0.16);
         });
@@ -1796,7 +1821,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
         osc.connect(gain);
-        gain.connect(ctx2.destination);
+        gain.connect(audioOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.16);
         break;
@@ -1823,7 +1848,7 @@ var __RunePixelRuntime = (() => {
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx2.destination);
+    gain.connect(audioOutput(ctx2));
     noise.start(now);
     noise.stop(now + duration + 0.01);
   }
@@ -1849,7 +1874,7 @@ var __RunePixelRuntime = (() => {
         gain2.gain.setValueAtTime(volume, start);
         gain2.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
         osc2.connect(gain2);
-        gain2.connect(ctx2.destination);
+        gain2.connect(audioOutput(ctx2));
         osc2.start(start);
         osc2.stop(start + noteDur + 0.01);
         offset += noteDur;
@@ -1878,7 +1903,7 @@ var __RunePixelRuntime = (() => {
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     osc.connect(gain);
-    gain.connect(ctx2.destination);
+    gain.connect(audioOutput(ctx2));
     osc.start(now);
     osc.stop(now + duration + 0.01);
   }
@@ -1965,7 +1990,7 @@ var __RunePixelRuntime = (() => {
     isMusicPaused = false;
     musicMasterGain = ctx2.createGain();
     musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
-    musicMasterGain.connect(ctx2.destination);
+    musicMasterGain.connect(audioOutput(ctx2));
     tracksState = {};
     if (def.lead) {
       tracksState.lead = { events: parseTrackPattern(def.lead), index: 0, nextBeat: 0, instrument: "square" };
@@ -2007,14 +2032,14 @@ var __RunePixelRuntime = (() => {
         if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
       }
     }
-    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
     const totalBars = appStateBars > 0 ? appStateBars : def.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
     musicStartTime = ctx2.currentTime + 0.05;
     nextScheduleTime = musicStartTime;
     musicPauseTime = 0;
     musicPausedElapsed = 0;
-    audioSync.configure({ getAudioContext: () => getAudioContext() });
+    audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
     audioSync.onPlay({
       track: key,
       tempo: musicTempoBpm,
@@ -2049,6 +2074,10 @@ var __RunePixelRuntime = (() => {
     const ctx2 = getAudioContext();
     if (!ctx2 || isMusicPaused || !activeMusicTrackName) return;
     isMusicPaused = true;
+    if (musicSchedulerTimer) {
+      clearInterval(musicSchedulerTimer);
+      musicSchedulerTimer = null;
+    }
     musicPauseTime = ctx2.currentTime;
     musicPausedElapsed = Math.max(0, musicPauseTime - musicStartTime);
     if (musicMasterGain) {
@@ -2097,7 +2126,7 @@ var __RunePixelRuntime = (() => {
         if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
       }
     }
-    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
     const totalBars = appStateBars > 0 ? appStateBars : def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
     audioSync.onPlay({
@@ -2108,6 +2137,8 @@ var __RunePixelRuntime = (() => {
       totalBeats,
       startTime: musicStartTime
     });
+    scheduleMusicTicks();
+    musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
   }
   function setMusicTempo(bpm) {
     if (bpm > 20 && bpm < 400) {
@@ -2134,7 +2165,7 @@ var __RunePixelRuntime = (() => {
         if (tb > maxTrackBeats) maxTrackBeats = tb;
       }
     }
-    const appStateBars = Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars);
+    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
     const totalBars = appStateBars > 0 ? appStateBars : def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     const songTotalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
     let allFinished = true;
@@ -3449,7 +3480,8 @@ var __RunePixelRuntime = (() => {
   var PixelEngine = class {
     constructor(config, options) {
       this.config = config;
-      this.paused = false;
+      this._paused = false;
+      this._muted = false;
       this.ticks = 0;
       if (typeof window === "undefined") Object.assign(globalThis, { window: globalThis });
       this.buffer = new Uint32Array(config.width * config.height);
@@ -3467,12 +3499,35 @@ var __RunePixelRuntime = (() => {
         navigator: null
       };
       this.app.state = JSON.parse(JSON.stringify(options.stateJson));
+      configureAudioHost({ syncPage: false });
       registerSounds(options.sounds);
       registerMusic(options.music);
       withContext(this.context, () => this.app.computeDerived());
     }
+    get paused() {
+      return this._paused;
+    }
+    set paused(value) {
+      if (value === this._paused) return;
+      this._paused = value;
+      if (value) pauseMusic();
+      setAudioMuted(this._muted || value);
+      if (!value) resumeMusic();
+    }
+    get muted() {
+      return this._muted;
+    }
+    set muted(value) {
+      this._muted = value;
+      setAudioMuted(value || this._paused);
+    }
+    get audioState() {
+      return audioSync.getSnapshot();
+    }
     start() {
-      this.paused = false;
+      stopMusic();
+      this._paused = false;
+      setAudioMuted(this._muted);
       this.ticks = 0;
       withContext(this.context, () => {
         this.app.invokeAction("start", []);
@@ -3596,17 +3651,23 @@ var __RunePixelRuntime = (() => {
       pending.clear();
     };
     const pause = () => {
+      getAudioContext();
       game.paused = !game.paused;
       clear();
       previous = 0;
       accumulator = 0;
     };
     const start = () => {
+      getAudioContext();
       clear();
       game.start();
       previous = 0;
       accumulator = 0;
       canvas.focus();
+    };
+    const mute = () => {
+      canvas.focus();
+      game.muted = !game.muted;
     };
     const fullscreen = () => {
       const surface = canvas.closest(".game-surface") || canvas;
@@ -3615,7 +3676,7 @@ var __RunePixelRuntime = (() => {
       });
     };
     listen(canvas, "keydown", ((event) => {
-      if (keys[event.code] || ["Enter", "KeyP", "KeyF"].includes(event.code)) event.preventDefault();
+      if (keys[event.code] || ["Enter", "KeyP", "KeyF", "KeyM"].includes(event.code)) event.preventDefault();
       if (keys[event.code]) {
         input[keys[event.code]] = true;
         pending.add(keys[event.code]);
@@ -3623,6 +3684,7 @@ var __RunePixelRuntime = (() => {
       if (!event.repeat && event.code === "Enter") start();
       if (!event.repeat && event.code === "KeyP") pause();
       if (!event.repeat && event.code === "KeyF") fullscreen();
+      if (!event.repeat && event.code === "KeyM") mute();
     }));
     listen(canvas, "keyup", ((event) => {
       if (keys[event.code]) input[keys[event.code]] = false;
@@ -3630,7 +3692,7 @@ var __RunePixelRuntime = (() => {
     listen(canvas, "blur", ((event) => {
       clear();
       const next = event.relatedTarget;
-      if (next instanceof Element && next.closest("[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input]")) return;
+      if (next instanceof Element && next.closest("[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute]")) return;
       if (game.app.state.status === "playing") game.paused = true;
     }));
     listen(window, "blur", () => {
@@ -3668,6 +3730,7 @@ var __RunePixelRuntime = (() => {
       canvas.focus();
       pause();
     });
+    for (const button of Array.from(document.querySelectorAll("[data-pixel-mute]"))) listen(button, "click", mute);
     for (const button of Array.from(document.querySelectorAll("[data-pixel-fullscreen]"))) listen(button, "click", fullscreen);
     const resize = () => {
       const surface = canvas.parentElement;
@@ -3709,6 +3772,11 @@ var __RunePixelRuntime = (() => {
         const label = game.paused ? "Resume" : "Pause";
         if (button.textContent !== label) button.textContent = label;
         button.setAttribute("aria-pressed", String(game.paused));
+      }
+      for (const button of Array.from(document.querySelectorAll("[data-pixel-mute]"))) {
+        const label = game.muted ? "Sound off" : "Sound on";
+        if (button.textContent !== label) button.textContent = label;
+        button.setAttribute("aria-pressed", String(game.muted));
       }
       frameId = requestAnimationFrame(frame);
     };

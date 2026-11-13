@@ -16,6 +16,7 @@ state:
     dust = []
 
 action start:
+    music.stop
     reset monster
     reset buildings
     reset soldiers
@@ -29,6 +30,8 @@ action start:
     shots = []
     dust = []
     status = "playing"
+    music.play "monster_city"
+    sound.play("monster_roar")
 
 action smash:
     stop when status != "playing"
@@ -36,7 +39,7 @@ action smash:
     cooldown = 12
     flash = 6
     monster.sprite = "kaiju/punch"
-    sound.play("smash")
+    sound.play("monster_smash")
     for building in buildings:
         if building.hp > 0 && abs((building.x + 16) - (monster.x + 24)) < 52:
             building.hp -= 1
@@ -50,6 +53,7 @@ action smash:
                 building.y = 174
                 destroyed += 1
                 score += 100
+                sound.play("monster_collapse")
     for soldier in soldiers:
         if soldier.hp > 0 && abs(soldier.x - (monster.x + 24)) < 45:
             soldier.hp = 0
@@ -61,8 +65,11 @@ action smash:
             if tank.hp == 0:
                 tank.sprite = "wreck"
                 score += 50
+                sound.play("monster_explosion")
     if destroyed == 5:
         status = "won"
+        music.stop
+        sound.play("monster_victory")
 
 action tick(input):
     stop when status != "playing"
@@ -78,6 +85,8 @@ action tick(input):
     monster.sprite = "kaiju/idle"
     if input.left == true || input.right == true:
         monster.sprite = "kaiju/walk"
+        if clock % 12 == 0:
+            sound.play("monster_stomp")
     if flash > 0:
         monster.sprite = "kaiju/punch"
     if input.smash == true:
@@ -89,17 +98,20 @@ action tick(input):
             if abs(soldier.x - monster.x) > 65:
                 soldier.x += soldier.x > monster.x ? -0.35 : 0.35
             if clock % 60 == 0:
+                sound.play("monster_rifle")
                 shots.push({"x":soldier.x,"y":166,"sprite":"bullet","scale":1,"vx":soldier.x > monster.x ? -3 : 3,"life":140,"damage":2})
     for tank in tanks:
         if tank.hp > 0:
             tank.flip = tank.x > monster.x
             if clock % 95 == 0:
+                sound.play("monster_cannon")
                 shots.push({"x":tank.x + 12,"y":160,"sprite":"shell","scale":1,"vx":tank.x > monster.x ? -2 : 2,"life":180,"damage":5})
     for shot in shots:
         shot.x += shot.vx
         shot.life -= 1
         if shot.life > 0 && shot.x > monster.x + 8 && shot.x < monster.x + 42 && shot.y > monster.y && shot.y < monster.y + 72:
             health = max(0, health - shot.damage)
+            sound.play("monster_damage")
             shot.life = 0
     shots = shots.filter(s => s.life > 0 && s.x > 0 && s.x < 384)
     for puff in dust:
@@ -108,3 +120,5 @@ action tick(input):
     dust = dust.filter(p => p.life > 0)
     if health <= 0:
         status = "gameover"
+        music.stop
+        sound.play("monster_gameover")

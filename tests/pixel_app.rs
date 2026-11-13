@@ -70,6 +70,7 @@ async fn exports_self_contained_game_and_excludes_test_helpers() {
     assert!(html.contains("data-rune-pixel"));
     assert!(!html.contains("lineUpLastBuilding"));
     assert!(!html.contains("readyPunch"));
+    assert!(!html.contains("coolAudioPunch"));
     assert!(!html.contains("<script src="));
 }
 
@@ -136,4 +137,41 @@ fn validates_clock_resolution_and_logic_contract() {
         .unwrap()
         .to_string()
         .contains("@Logic"));
+}
+
+#[test]
+fn monster_music_uses_existing_declarative_sound_and_music_definitions() {
+    let doc =
+        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+    let frontend =
+        rune_runtime::apps::rune_web::parser::parse_rune_web_frontend(&doc, "city").unwrap();
+    let music = &frontend.music["monster_city"];
+    assert_eq!(music.tempo, 116.0);
+    assert!(music.loop_track);
+    assert!(music.lead.as_deref().unwrap().contains("E4:8"));
+    assert!(music.drums.as_deref().unwrap().contains("kick"));
+    let rifle = &frontend.sounds["monster_rifle"];
+    assert_eq!(rifle.freq_start, Some(1100.0));
+    assert_eq!(rifle.freq_end, Some(420.0));
+    assert_eq!(frontend.sounds["monster_victory"].sequence.len(), 4);
+}
+
+#[test]
+fn native_quickjs_can_run_the_musical_game_without_browser_audio_apis() {
+    let doc =
+        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+    let game = pixel::compile(&doc).unwrap();
+    let runtime = rquickjs::Runtime::new().unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    runtime.set_interrupt_handler(Some(Box::new(move || {
+        std::time::Instant::now() >= deadline
+    })));
+    let context = rquickjs::Context::full(&runtime).unwrap();
+    context.with(|ctx| {
+        ctx.eval::<(),_>(game.script.as_str()).unwrap();
+        ctx.eval::<(),_>("__RunePixel.start(); __RunePixel.step({smash:true}); __RunePixel.paused=true; __RunePixel.paused=false;").unwrap();
+        assert_eq!(ctx.eval::<String,_>("__RunePixel.app.state.status").unwrap(),"playing");
+        let frame: rquickjs::TypedArray<u32> = ctx.eval("__RunePixel.frame()").unwrap();
+        assert_eq!(frame.len(),384*216);
+    });
 }

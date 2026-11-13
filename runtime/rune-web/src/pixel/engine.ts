@@ -1,6 +1,7 @@
 import { withContext, type RuneContext } from '../context';
 import { createLogicApp } from '../logic';
-import { registerSounds, registerMusic } from '../audio';
+import { registerSounds, registerMusic, configureAudioHost, setAudioMuted, stopMusic, pauseMusic, resumeMusic } from '../audio';
+import { audioSync } from '../audio_sync';
 import type { RuneApp, RuneWebConfig } from '../types';
 
 export interface Sprite { width: number; height: number; origin: number[]; colors: (number | null)[]; pixels: number[] }
@@ -36,7 +37,19 @@ export class PixelEngine {
   readonly app: RuneApp;
   readonly buffer: Uint32Array;
   private readonly context: RuneContext;
-  paused = false;
+  private _paused = false;
+  private _muted = false;
+  get paused(): boolean { return this._paused; }
+  set paused(value: boolean) {
+    if (value === this._paused) return;
+    this._paused = value;
+    if (value) pauseMusic();
+    setAudioMuted(this._muted || value);
+    if (!value) resumeMusic();
+  }
+  get muted(): boolean { return this._muted; }
+  set muted(value: boolean) { this._muted = value; setAudioMuted(value || this._paused); }
+  get audioState() { return audioSync.getSnapshot(); }
   ticks = 0;
   constructor(readonly config: PixelConfig, options: RuneWebConfig) {
     // Browser globals used by the shared expression runtime have no host powers in QuickJS.
@@ -47,10 +60,11 @@ export class PixelEngine {
       initialState: JSON.parse(JSON.stringify(options.stateJson)), loadedChunks: {}, loadingChunks: {}, navigator: null };
     // Game state deliberately avoids the DOM reactive proxy. The game clock owns rendering.
     this.app.state = JSON.parse(JSON.stringify(options.stateJson));
+    configureAudioHost({ syncPage: false });
     registerSounds(options.sounds); registerMusic(options.music);
     withContext(this.context, () => this.app.computeDerived());
   }
-  start(): void { this.paused = false; this.ticks = 0; withContext(this.context, () => { this.app.invokeAction('start', []); this.app.computeDerived(); }); }
+  start(): void { stopMusic(); this._paused = false; setAudioMuted(this._muted); this.ticks = 0; withContext(this.context, () => { this.app.invokeAction('start', []); this.app.computeDerived(); }); }
   step(input: Input = {}): void {
     if (input.start) { this.start(); return; }
     if (this.paused) return;
