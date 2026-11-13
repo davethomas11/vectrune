@@ -217,6 +217,8 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
             Output::silent()
         }
     };
+    // Device discovery can take time; it must not consume the JS startup budget.
+    *deadline.lock().unwrap() = Instant::now() + Duration::from_secs(2);
     let context = Context::full(&runtime)?;
     audio.bridge.install(&context)?;
     context.with(|ctx| {
