@@ -27,6 +27,7 @@ struct Host {
     deadline: Arc<Mutex<Instant>>,
     input: serde_json::Value,
     keys: std::collections::HashMap<String, String>,
+    pending: std::collections::HashSet<String>,
     previous: Instant,
     tick_duration: Duration,
     accumulator: Duration,
@@ -43,6 +44,7 @@ impl Host {
         })
     }
     fn clear_input(&mut self) {
+        self.pending.clear();
         self.input = serde_json::json!({"left":false,"right":false,"smash":false});
     }
     fn draw(&mut self) -> Result<()> {
@@ -51,7 +53,11 @@ impl Host {
         self.accumulator += now.duration_since(self.previous).min(step * 5);
         self.previous = now;
         while self.accumulator >= step {
-            self.js(&format!("__RunePixel.step({})", self.input))?;
+            let mut input = self.input.clone();
+            for key in self.pending.drain() {
+                input[&key] = true.into();
+            }
+            self.js(&format!("__RunePixel.step({input})"))?;
             self.accumulator -= step;
         }
         *self.deadline.lock().unwrap() = Instant::now() + Duration::from_millis(250);
@@ -127,6 +133,9 @@ impl ApplicationHandler for Host {
                     if let PhysicalKey::Code(key) = event.physical_key {
                         if let Some(action) = self.keys.get(&format!("{key:?}")) {
                             self.input[action] = down.into();
+                            if down {
+                                self.pending.insert(action.clone());
+                            }
                         }
                         match key {
                             KeyCode::Enter if down && !event.repeat => {
@@ -212,6 +221,7 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
         deadline,
         input: serde_json::json!({}),
         keys,
+        pending: std::collections::HashSet::new(),
         previous: Instant::now(),
         tick_duration: Duration::from_secs_f64(1.0 / rate),
         accumulator: Duration::ZERO,

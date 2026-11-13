@@ -3590,8 +3590,10 @@ var __RunePixelRuntime = (() => {
     let input = {}, previous = 0, accumulator = 0, stopped = false, frameId = 0;
     const abort = new AbortController();
     const listen = (element, name, callback) => element.addEventListener(name, callback, { signal: abort.signal });
+    const pending = /* @__PURE__ */ new Set();
     const clear = () => {
       input = {};
+      pending.clear();
     };
     const pause = () => {
       game.paused = !game.paused;
@@ -3614,7 +3616,10 @@ var __RunePixelRuntime = (() => {
     };
     listen(canvas, "keydown", ((event) => {
       if (keys[event.code] || ["Enter", "KeyP", "KeyF"].includes(event.code)) event.preventDefault();
-      if (keys[event.code]) input[keys[event.code]] = true;
+      if (keys[event.code]) {
+        input[keys[event.code]] = true;
+        pending.add(keys[event.code]);
+      }
       if (!event.repeat && event.code === "Enter") start();
       if (!event.repeat && event.code === "KeyP") pause();
       if (!event.repeat && event.code === "KeyF") fullscreen();
@@ -3648,9 +3653,14 @@ var __RunePixelRuntime = (() => {
         game.paused = false;
         button.setPointerCapture(event.pointerId);
         input[key] = true;
+        pending.add(key);
       }));
-      for (const event of ["pointerup", "pointercancel", "lostpointercapture"]) listen(button, event, () => {
+      for (const event of ["pointerup", "lostpointercapture"]) listen(button, event, () => {
         input[key] = false;
+      });
+      listen(button, "pointercancel", () => {
+        input[key] = false;
+        pending.delete(key);
       });
     }
     for (const button of Array.from(document.querySelectorAll("[data-pixel-start]"))) listen(button, "click", start);
@@ -3681,7 +3691,10 @@ var __RunePixelRuntime = (() => {
       if (previous) accumulator += Math.min(now - previous, 1e3 / tickRate * 5);
       previous = now;
       while (accumulator >= 1e3 / tickRate) {
-        game.step(input);
+        const controls = { ...input };
+        for (const key of pending) controls[key] = true;
+        pending.clear();
+        game.step(controls);
         accumulator -= 1e3 / tickRate;
       }
       game.frame();

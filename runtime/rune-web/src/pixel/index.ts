@@ -34,7 +34,8 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   let input: Input = {}, previous = 0, accumulator = 0, stopped = false, frameId = 0;
   const abort = new AbortController();
   const listen = (element: EventTarget, name: string, callback: EventListener) => element.addEventListener(name, callback, { signal: abort.signal });
-  const clear = () => { input = {}; };
+  const pending = new Set<string>();
+  const clear = () => { input = {}; pending.clear(); };
   const pause = () => { game.paused = !game.paused; clear(); previous = 0; accumulator = 0; };
   const start = () => { clear(); game.start(); previous = 0; accumulator = 0; canvas.focus(); };
   const fullscreen = () => {
@@ -44,7 +45,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   };
   listen(canvas, 'keydown', ((event: KeyboardEvent) => {
     if (keys[event.code] || ['Enter','KeyP','KeyF'].includes(event.code)) event.preventDefault();
-    if (keys[event.code]) input[keys[event.code]] = true;
+    if (keys[event.code]) { input[keys[event.code]] = true; pending.add(keys[event.code]); }
     if (!event.repeat && event.code === 'Enter') start();
     if (!event.repeat && event.code === 'KeyP') pause();
     if (!event.repeat && event.code === 'KeyF') fullscreen();
@@ -62,8 +63,9 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   listen(document, 'visibilitychange', () => { if (document.hidden) { clear(); game.paused = true; } previous = 0; accumulator = 0; });
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-pixel-input]'))) {
     const key = button.dataset.pixelInput!;
-    listen(button, 'pointerdown', ((event: PointerEvent) => { event.preventDefault(); canvas.focus(); game.paused = false; button.setPointerCapture(event.pointerId); input[key] = true; }) as EventListener);
-    for (const event of ['pointerup','pointercancel','lostpointercapture']) listen(button,event,() => { input[key] = false; });
+    listen(button, 'pointerdown', ((event: PointerEvent) => { event.preventDefault(); canvas.focus(); game.paused = false; button.setPointerCapture(event.pointerId); input[key] = true; pending.add(key); }) as EventListener);
+    for (const event of ['pointerup','lostpointercapture']) listen(button,event,() => { input[key] = false; });
+    listen(button,'pointercancel',() => { input[key] = false; pending.delete(key); });
   }
   for (const button of Array.from(document.querySelectorAll('[data-pixel-start]'))) listen(button,'click',start);
   for (const button of Array.from(document.querySelectorAll('[data-pixel-pause]'))) listen(button,'click',() => { canvas.focus(); pause(); });
@@ -89,7 +91,12 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     if (stopped) return;
     if (previous) accumulator += Math.min(now - previous, 1000 / tickRate * 5);
     previous = now;
-    while (accumulator >= 1000 / tickRate) { game.step(input); accumulator -= 1000 / tickRate; }
+    while (accumulator >= 1000 / tickRate) {
+      const controls = { ...input };
+      for (const key of pending) controls[key] = true;
+      pending.clear();
+      game.step(controls); accumulator -= 1000 / tickRate;
+    }
     game.frame(); context.putImageData(image, 0, 0);
     const state = game.app.state;
     const status = game.paused ? 'Paused — press P to resume' : state.status === 'won' ? 'City conquered! Play again?' : state.status === 'gameover' ? 'Monster down. Try another rampage!' : state.status === 'ready' ? 'Ready to make a big entrance?' : 'Smash buildings. Watch out for the army!';
