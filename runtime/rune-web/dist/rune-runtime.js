@@ -2004,6 +2004,8 @@ var __RuneWeb = (() => {
   var masterGain = null;
   var audioMuted = false;
   var syncPageAudio = true;
+  var playbackUnlocked = true;
+  var pendingMusic = null;
   function audioOutput(ctx2) {
     if (!masterGain) {
       masterGain = ctx2.createGain();
@@ -2027,7 +2029,7 @@ var __RuneWeb = (() => {
     }
   }
   function getAudioContext() {
-    if (typeof window === "undefined") return null;
+    if (!playbackUnlocked || typeof window === "undefined") return null;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return null;
     if (!audioCtx) {
@@ -2338,6 +2340,10 @@ var __RuneWeb = (() => {
     return events;
   }
   function playMusic(trackName) {
+    if (!playbackUnlocked) {
+      pendingMusic = trackName;
+      return;
+    }
     const ctx2 = getAudioContext();
     if (!ctx2) return;
     const key = String(trackName || "").trim().toLowerCase();
@@ -2415,6 +2421,7 @@ var __RuneWeb = (() => {
     musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
   }
   function stopMusic() {
+    pendingMusic = null;
     audioSync.onStop();
     if (musicSchedulerTimer) {
       clearInterval(musicSchedulerTimer);

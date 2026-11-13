@@ -136,11 +136,10 @@ impl ApplicationHandler for Host {
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::Focused(false) => {
                     self.clear_input();
-                    self.js(
-                        "if (__RunePixel.app.state.status === 'playing') __RunePixel.paused = true",
-                    )?;
+                    self.js("__RunePixel.paused = true")?;
                 }
                 WindowEvent::Focused(true) => {
+                    self.js("if (__RunePixel.app.state.status !== 'playing') __RunePixel.paused = false")?;
                     self.previous = Instant::now();
                     self.accumulator = Duration::ZERO;
                 }

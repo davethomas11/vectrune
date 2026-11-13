@@ -55,6 +55,22 @@ with tempfile.TemporaryDirectory(prefix='rune-pixel-audio-') as folder, sync_pla
     page.add_init_script(PROBE)
     page.goto((folder/'game.html').as_uri())
     assert page.evaluate('audioProbe.contexts.length') == 0, 'Audio must wait for a user gesture'
+    page.locator('canvas').click(position={'x':8,'y':8})
+    page.wait_for_function('audioProbe.rms() > 0.0001')
+    assert page.evaluate('__RunePixel.audioState.track') == 'monster_title'
+    page.locator('[data-pixel-action="openStore"]').click()
+    page.wait_for_function('__RunePixel.audioState.track === "monster_shop"')
+    page.wait_for_function('audioProbe.rms() > 0.0001')
+    assert page.evaluate('audioProbe.musicTimers.size') == 1
+    before = page.evaluate('audioProbe.oscillators')
+    page.locator('canvas').focus();page.keyboard.press('ArrowRight')
+    assert page.evaluate('audioProbe.oscillators') > before
+    for _ in range(3):
+        page.get_by_role('button',name='NEXT',exact=True).click()
+        assert page.evaluate('__RunePixel.audioState.track') == 'monster_shop'
+        assert page.evaluate('audioProbe.musicTimers.size') == 1
+    page.get_by_role('button',name='BACK TO TITLE',exact=True).click()
+    page.wait_for_function('__RunePixel.audioState.track === "monster_title"')
     page.get_by_role('button',name='Start rampage').click()
     page.wait_for_function('audioProbe.rms() > 0.0001')
     assert page.evaluate('__RunePixel.audioState.track') == 'monster_city'

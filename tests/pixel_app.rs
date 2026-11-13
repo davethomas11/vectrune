@@ -214,3 +214,35 @@ fn native_pixel_frame_benchmark() {
         }
     });
 }
+
+#[test]
+fn every_catalog_monster_has_renderable_idle_step_and_punch_frames() {
+    let doc =
+        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+    let frontend =
+        rune_runtime::apps::rune_web::parser::parse_rune_web_frontend(&doc, "city").unwrap();
+    let catalog: serde_json::Value =
+        serde_json::from_str(&frontend.logic_definitions["monster"].state["skins"]).unwrap();
+    let catalog = catalog.as_array().unwrap();
+    assert_eq!(catalog.len(), 13);
+    let assets = pixel::assets(&doc).unwrap();
+    let game = pixel::compile(&doc).unwrap();
+    let runtime = rquickjs::Runtime::new().unwrap();
+    let context = rquickjs::Context::full(&runtime).unwrap();
+    let mut silhouettes = std::collections::HashSet::new();
+    context.with(|ctx| {
+        ctx.eval::<(),_>(game.script.as_str()).unwrap();
+        for skin in catalog {
+            let id=skin["id"].as_str().unwrap();
+            assert!(assets["animations"][format!("{id}/walk")].is_object());
+            let mask:Vec<bool>=assets["sprites"][format!("{id}/idle")]["pixels"].as_array().unwrap().iter().map(|p|p.as_u64().unwrap()!=0).collect();
+            silhouettes.insert(mask);
+            for pose in ["idle","step","punch"] {
+                assert!(assets["sprites"][format!("{id}/{pose}")].is_object());
+                ctx.eval::<(),_>(format!("__RunePixel.app.state.menu=null; __RunePixel.app.state.monster.sprite='{id}/{pose}'; __RunePixel.frame()")).unwrap();
+            }
+        }
+    });
+    // The original three share a silhouette; the ten additions are new shapes.
+    assert_eq!(silhouettes.len(), 11);
+}

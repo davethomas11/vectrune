@@ -1,0 +1,97 @@
+# CYCLOPS — a cosmetic monster with idle, step and punch poses.
+@Palette/cyclops
+colors = {"d":"#674482","b":"#ac79bd","h":"#efb8d8","e":"#fff5cd","k":"#282840","a":"#81c7c1",".":"transparent"}
+
+@Sprite/cyclops/idle
+palette = cyclops
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "......hh........"
+    ".....hbbh......."
+    "....dbbbbd......"
+    "...dbbbbbbd....."
+    "...dbbeeeebd...."
+    "...dbeekkebd...."
+    "...dbbeeeebd...."
+    "...dbbbbbbbd...."
+    "...dbbhhhbbd...."
+    "..dbbbbbabbbd..."
+    "..dbbbbbabbbbd.."
+    "..dbbbbbabb.hh.."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..ddbbbbbbbdd..."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    "..dbbbd.dbbbd..."
+    "..hhhhh.hhhhh..."
+
+@Sprite/cyclops/step
+palette = cyclops
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "......hh........"
+    ".....hbbh......."
+    "....dbbbbd......"
+    "...dbbbbbbd....."
+    "...dbbeeeebd...."
+    "...dbeekkebd...."
+    "...dbbeeeebd...."
+    "...dbbbbbbbd...."
+    "...dbbhhhbbd...."
+    "..dbbbbbabbbd..."
+    "..dbbbbbabbbbd.."
+    "..dbbbbbabb.hh.."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..ddbbbbbbbdd..."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "....dbbd.dbbd..."
+    "...dbbd..dbbd..."
+    "...dbbbd.dbbbd.."
+    "...hhhhh.hhhhh.."
+
+@Sprite/cyclops/punch
+palette = cyclops
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "......hh........"
+    ".....hbbh......."
+    "....dbbbbd......"
+    "...dbbbbbbd....."
+    "...dbbeeeebd...."
+    "...dbeekkebd...."
+    "...dbbeeeebd...."
+    "...dbbbbbbbd...."
+    "...dbbhhhbbd...."
+    "..dbbbbbabbddddd"
+    "..dbbbbbabbbbbbb"
+    "..dbbbbbabbhhhhh"
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..ddbbbbbbbdd..."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    "..dbbbd.dbbbd..."
+    "..hhhhh.hhhhh..."
+
+@Animation/cyclops/walk
+frames = ["cyclops/idle", "cyclops/step"]
+fps = 8

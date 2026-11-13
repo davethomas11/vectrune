@@ -47,6 +47,19 @@ describe('shared audio lifecycle', () => {
     expect(sync.audioSync.getSnapshot().isPlaying).toBe(false);
     expect(Context.instances).toHaveLength(0);
   });
+  it('defers title/shop playback until a gesture and replaces queued tracks cleanly', () => {
+    audio.configureAudioHost({syncPage:false,deferPlayback:true});
+    audio.registerMusic({shop:{music_type:'8bit',tempo:92,lead:'A4:4 C5:4',loop_track:true}});
+    audio.playMusic('march'); audio.stopMusic(); audio.playMusic('shop');
+    expect(Context.instances).toHaveLength(0);
+    expect(audio.getAudioContext()).toBeNull();
+    audio.unlockAudio();
+    expect(Context.instances).toHaveLength(1);
+    expect(sync.audioSync.getSnapshot().track).toBe('shop');
+    expect(vi.getTimerCount()).toBe(1);
+    audio.unlockAudio();
+    expect(vi.getTimerCount()).toBe(1);
+  });
   it('routes music and effects through one mute bus', () => {
     audio.configureAudioHost({syncPage:false}); audio.playMusic('march'); audio.playSound('hit');
     const context = Context.instances[0];

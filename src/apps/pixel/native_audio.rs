@@ -471,6 +471,62 @@ mod tests {
         assert_eq!(envelope.at(3.0), 0.0);
     }
     #[test]
+    fn title_shop_and_page_changes_keep_one_audible_native_music_scheduler() {
+        let runtime = rquickjs::Runtime::new().unwrap();
+        let context = rquickjs::Context::full(&runtime).unwrap();
+        let (mut mixer, bridge) = Mixer::new(48000);
+        bridge.install(&context).unwrap();
+        let doc =
+            load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune"))
+                .unwrap();
+        let compiled = crate::apps::pixel::compile(&doc).unwrap();
+        context
+            .with(|ctx| ctx.eval::<(), _>(compiled.script.as_str()))
+            .unwrap();
+        assert!(rms(&advance(&context, &mut mixer, 0.3)) > 0.001);
+        context.with(|ctx| {
+            assert_eq!(
+                ctx.eval::<String, _>("__RunePixel.audioState.track")
+                    .unwrap(),
+                "monster_title"
+            );
+            ctx.eval::<(), _>("__RunePixel.invoke('openStore')")
+                .unwrap();
+        });
+        assert!(rms(&advance(&context, &mut mixer, 0.3)) > 0.001);
+        let beat = context
+            .with(|ctx| ctx.eval::<f64, _>("__RunePixel.audioState.currentBeat"))
+            .unwrap();
+        context
+            .with(|ctx| ctx.eval::<(), _>("__RunePixel.key('PageDown')"))
+            .unwrap();
+        assert!(rms(&advance(&context, &mut mixer, 0.1)) > 0.001);
+        context.with(|ctx| {
+            assert_eq!(
+                ctx.eval::<String, _>("__RunePixel.audioState.track")
+                    .unwrap(),
+                "monster_shop"
+            );
+            assert!(
+                ctx.eval::<f64, _>("__RunePixel.audioState.currentBeat")
+                    .unwrap()
+                    > beat
+            );
+            assert_eq!(
+                ctx.eval::<u32, _>("__RuneNativeAudio.pending().timers")
+                    .unwrap(),
+                1
+            );
+            ctx.eval::<(), _>("__RunePixel.paused=true").unwrap();
+        });
+        assert_eq!(rms(&advance(&context, &mut mixer, 0.2)), 0.0);
+        context
+            .with(|ctx| ctx.eval::<(), _>("__RunePixel.invoke('openTitle')"))
+            .unwrap();
+        assert!(rms(&advance(&context, &mut mixer, 0.2)) > 0.001);
+        assert_eq!(bridge.stats.dropped.load(Ordering::Relaxed), 0);
+    }
+    #[test]
     fn rune_music_and_effects_render_native_pcm_and_obey_mute_pause_restart() {
         let runtime = rquickjs::Runtime::new().unwrap();
         let context = rquickjs::Context::full(&runtime).unwrap();

@@ -33,6 +33,16 @@ with tempfile.TemporaryDirectory(prefix='monster-progression-') as folder, sync_
     assert page.evaluate('__RunePixel.app.state.profile.coins') == 90
     page.mouse.click(box['x']+190*box['width']/384,box['y']+110*box['height']/216)
     assert page.evaluate('__RunePixel.app.state.profile.coins') == 90
+    seen=['kaiju','ember','frost']
+    for index in range(1,5):
+        page.get_by_role('button',name='NEXT',exact=True).click()
+        assert page.evaluate('__RunePixel.app.state.store_page') == index
+        seen += page.evaluate('__RunePixel.app.state.menu.cards.map(c=>c.args[0])')
+        page.screenshot(path=f'/private/tmp/monster-shop-page-{index+1}.png',full_page=True)
+    assert len(seen) == 13 and len(set(seen)) == 13
+    for _ in range(4):
+        page.get_by_role('button',name='PREVIOUS',exact=True).click()
+    assert page.evaluate('__RunePixel.app.state.store_page') == 0
     page.screenshot(path='/private/tmp/monster-shop.png',full_page=True)
     page.reload()
     assert page.evaluate('__RunePixel.app.state.profile.skin') == 'ember'

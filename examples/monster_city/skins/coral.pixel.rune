@@ -1,0 +1,97 @@
+# CORAL — a cosmetic monster with idle, step and punch poses.
+@Palette/coral
+colors = {"d":"#aa5267","b":"#ed929c","h":"#ffd2b0","e":"#fdf5cd","k":"#563551","a":"#bfe8d8",".":"transparent"}
+
+@Sprite/coral/idle
+palette = coral
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "..a.........a..."
+    "...a.......a...."
+    ".a.ddddddd.a...."
+    "..ddbbbbbbbdd..."
+    ".aabbbbbbeebba.."
+    "..dbbbbbbkebbda."
+    ".aabbbbbbbbbba.."
+    "..dbbbkkkkbbbda."
+    ".aabbbbhhbbbba.."
+    "..ddbbbhabbbdd.."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbdhh."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...ddbbbbbbdd..."
+    "....dbbddbbd...."
+    "....dbbd.dbd...."
+    "....dbbd.dbd...."
+    "...dbbd..dbd...."
+    "...dbbbd.dbbd..."
+    "...hhhhh.hhhh..."
+
+@Sprite/coral/step
+palette = coral
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "..a.........a..."
+    "...a.......a...."
+    ".a.ddddddd.a...."
+    "..ddbbbbbbbdd..."
+    ".aabbbbbbeebba.."
+    "..dbbbbbbkebbda."
+    ".aabbbbbbbbbba.."
+    "..dbbbkkkkbbbda."
+    ".aabbbbhhbbbba.."
+    "..ddbbbhabbbdd.."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbdhh."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...ddbbbbbbdd..."
+    "....dbbddbbd...."
+    "....dbbd.dbd...."
+    ".....dbbd.dbd..."
+    "....dbbd..dbd..."
+    "....dbbbd.dbbd.."
+    "....hhhhh.hhhh.."
+
+@Sprite/coral/punch
+palette = coral
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "..a.........a..."
+    "...a.......a...."
+    ".a.ddddddd.a...."
+    "..ddbbbbbbbdd..."
+    ".aabbbbbbeebba.."
+    "..dbbbbbbkebbda."
+    ".aabbbbbbbbbba.."
+    "..dbbbkkkkbbbda."
+    ".aabbbbhhbbbba.."
+    "..ddbbbhabbddddd"
+    "...dbbbhabbbbbbb"
+    "...dbbbhabbhhhhh"
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...ddbbbbbbdd..."
+    "....dbbddbbd...."
+    "....dbbd.dbd...."
+    "....dbbd.dbd...."
+    "...dbbd..dbd...."
+    "...dbbbd.dbbd..."
+    "...hhhhh.hhhh..."
+
+@Animation/coral/walk
+frames = ["coral/idle", "coral/step"]
+fps = 8

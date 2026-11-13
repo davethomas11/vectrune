@@ -1,7 +1,7 @@
 import { GameSave, type Persistence } from './persistence';
 import { withContext, type RuneContext } from '../context';
 import { createLogicApp } from '../logic';
-import { registerSounds, registerMusic, configureAudioHost, setAudioMuted, stopMusic, pauseMusic, resumeMusic } from '../audio';
+import { registerSounds, registerMusic, configureAudioHost, setAudioMuted, stopMusic, pauseMusic, resumeMusic, playSound } from '../audio';
 import { audioSync } from '../audio_sync';
 import type { RuneApp, RuneWebConfig } from '../types';
 
@@ -15,6 +15,7 @@ export interface PixelConfig {
   commands?: Record<string,string>;
   persistence?: Persistence;
   menu?: string;
+  menuSounds?: {move?:string; confirm?:string};
   hud?: { title: string; score: string; health: string; max_health: number; level?: string; coins?: string };
   overlays?: Record<string,string>;
   rects: { x: number; y: number; width: number; height: number; color: string }[];
@@ -74,7 +75,7 @@ export class PixelEngine {
       initialState: JSON.parse(JSON.stringify(options.stateJson)), loadedChunks: {}, loadingChunks: {}, navigator: null };
     // Game state deliberately avoids the DOM reactive proxy. The game clock owns rendering.
     this.app.state = JSON.parse(JSON.stringify(options.stateJson));
-    configureAudioHost({ syncPage: false });
+    configureAudioHost({ syncPage: false, deferPlayback: typeof document !== 'undefined' });
     registerSounds(options.sounds); registerMusic(options.music);
     if (config.persistence) {
       this.save = new GameSave(config.persistence);
@@ -97,44 +98,50 @@ export class PixelEngine {
   private persist(): void { if (this.save) this.save.flush(this.app.state[this.save.config.state]); }
   invoke(action: string, args: unknown[] = []): void {
     if (action === 'start') { this.start(); return; }
-    this._paused = false; setAudioMuted(this._muted);
+    this.paused = false; setAudioMuted(this._muted);
     withContext(this.context, () => { this.app.invokeAction(action,args); this.app.computeDerived(); });
     this.persist();
   }
+  /** User-triggered menu choice; programmatic Rune actions remain silent. */
+  activate(action: string,args: unknown[] = []): void {
+    if(this.config.menuSounds?.confirm) playSound(this.config.menuSounds.confirm);
+    this.invoke(action,args);
+  }
   key(code: string): boolean {
     const command = this.config.commands?.[code];
-    if (command) { this.invoke(command); return true; }
+    if (command) { this.activate(command); return true; }
     const menu = this.config.menu && this.app.state[this.config.menu] as any;
     if (!menu || this.paused) return false;
     const buttons=[...(menu.cards || []),...(menu.buttons || [])];
     if(!buttons.length) return false;
-    if(this.lastMenu !== String(menu.title)) { this.selected=0; this.lastMenu=String(menu.title); }
+    if(this.lastMenu !== String(menu.id || menu.title)) { this.selected=0; this.lastMenu=String(menu.id || menu.title); }
     if (['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(code)) {
       this.selected = (this.selected + (code === 'ArrowLeft' || code === 'ArrowUp' ? -1 : 1) + buttons.length) % buttons.length;
+      if(this.config.menuSounds?.move) playSound(this.config.menuSounds.move);
       return true;
     }
-    if (code === 'Enter' || code === 'Space') { const button = buttons[this.selected]; this.invoke(button.action,button.args || []); return true; }
+    if (code === 'Enter' || code === 'Space') { const button = buttons[this.selected]; this.activate(button.action,button.args || []); return true; }
     return false;
   }
   click(x:number,y:number): void {
     this.frame();
     const i = this.buttons.findIndex(b => x >= b.x && y >= b.y && x < b.x+b.width && y < b.y+b.height);
-    if (i >= 0) { this.selected = i; const b = this.buttons[i]; this.invoke(b.action,b.args); }
+    if (i >= 0) { this.selected = i; const b = this.buttons[i]; this.activate(b.action,b.args); }
   }
   private menuFrame(menu: any): void {
     const w = this.config.width, h = this.config.height;
-    const identity = String(menu.title);
+    const identity = String(menu.id || menu.title);
     if (identity !== this.lastMenu) this.selected = 0;
     this.lastMenu = identity; this.buttons = [];
     this.rect(8,27,w-16,h-34,0x111c2b);
     this.rect(8,27,w-16,2,0xa6f282);
-    this.text(menu.title,w/2-String(menu.title).length*4,38,0xa6f282,2);
+    this.text(menu.title,w/2-String(menu.id || menu.title).length*4,38,0xa6f282,2);
     this.text(menu.subtitle || '',w/2-String(menu.subtitle || '').length*2,56,0xeccc85);
     if(this.saveStatus === 'session') this.text('SESSION ONLY - SAVE STORAGE UNAVAILABLE',18,64,0xffb295);
     if(this.saveStatus === 'recovered') this.text('SAVE RECOVERED - USING A FRESH PROFILE',18,64,0xffb295);
     const cards = menu.cards || [];
     for (let i=0;i<cards.length;i++) {
-      const card=cards[i], x=18+i*(w-36)/cards.length, cw=(w-36)/cards.length-6;
+      const cw=(w-36)/3-6, card=cards[i], x=18+((3-cards.length)/2+i)*(w-36)/3;
       this.rect(x,70,cw,92,0x25374a);
       this.sprite({x:x+cw/2-16,y:76,sprite:card.sprite,scale:2});
       this.text(card.name,x+cw/2-card.name.length*2,130,0xf5e9cc);
@@ -143,7 +150,7 @@ export class PixelEngine {
     }
     const actions=menu.buttons || [];
     for(let i=0;i<actions.length;i++) {
-      const button=actions[i], width=156, x=w/2-width/2, y=cards.length ? 176+i*24 : 102+i*30;
+      const button=actions[i], width=cards.length ? (w-36)/actions.length-6 : 156, x=cards.length ? 18+i*(w-36)/actions.length : w/2-width/2, y=cards.length ? 176 : 102+i*30;
       this.rect(x,y,width,22,0x304c40);
       this.text(button.label,x+width/2-button.label.length*2,y+8);
       this.buttons.push({x,y,width,height:22,action:button.action,args:button.args || []});

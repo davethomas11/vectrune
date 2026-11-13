@@ -1,0 +1,97 @@
+# DRAKE — a cosmetic monster with idle, step and punch poses.
+@Palette/drake
+colors = {"d":"#743e52","b":"#c76b71","h":"#ffd09a","e":"#fff0bb","k":"#30243e","a":"#ba858b",".":"transparent"}
+
+@Sprite/drake/idle
+palette = drake
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".....h.....h...."
+    "....hbd...dbh..."
+    "....dbbddbbbd..."
+    "....dbbbbbbbd..."
+    "....dbbbbeebbd.."
+    "....dbbbbkebbd.."
+    "....dbbbbkkkk..."
+    "..a.dbbbbbha...."
+    ".aba.dbbbbdd...."
+    ".abba.dbbabbd..."
+    "aabbba.dbabbbd.."
+    "aabbba.dbab.hh.."
+    "aabbba.dbab....."
+    ".abba.ddbab....."
+    "..aa.ddbbab....."
+    "...ddbbbbab....."
+    "..ddbbbbbabb...."
+    ".ddbbbbbbabb...."
+    "ddbbbbbddbbd...."
+    "dbbbddd.dbbd...."
+    ".ddd....dbbd...."
+    "..dbbd..dbbd...."
+    "..dbbbd.dbbbd..."
+    "..hhhhh.hhhhh..."
+
+@Sprite/drake/step
+palette = drake
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".....h.....h...."
+    "....hbd...dbh..."
+    "....dbbddbbbd..."
+    "....dbbbbbbbd..."
+    "....dbbbbeebbd.."
+    "....dbbbbkebbd.."
+    "....dbbbbkkkk..."
+    "..a.dbbbbbha...."
+    ".aba.dbbbbdd...."
+    ".abba.dbbabbd..."
+    "aabbba.dbabbbd.."
+    "aabbba.dbab.hh.."
+    "aabbba.dbab....."
+    ".abba.ddbab....."
+    "..aa.ddbbab....."
+    "...ddbbbbab....."
+    "..ddbbbbbabb...."
+    ".ddbbbbbbabb...."
+    "ddbbbbbddbbd...."
+    "dbbbddd.dbbd...."
+    "..ddd....dbbd..."
+    "...dbbd..dbbd..."
+    "...dbbbd.dbbbd.."
+    "...hhhhh.hhhhh.."
+
+@Sprite/drake/punch
+palette = drake
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".....h.....h...."
+    "....hbd...dbh..."
+    "....dbbddbbbd..."
+    "....dbbbbbbbd..."
+    "....dbbbbeebbd.."
+    "....dbbbbkebbd.."
+    "....dbbbbkkkk..."
+    "..a.dbbbbbha...."
+    ".aba.dbbbbdd...."
+    ".abba.dbbabddddd"
+    "aabbba.dbabbbbbb"
+    "aabbba.dbabhhhhh"
+    "aabbba.dbab....."
+    ".abba.ddbab....."
+    "..aa.ddbbab....."
+    "...ddbbbbab....."
+    "..ddbbbbbabb...."
+    ".ddbbbbbbabb...."
+    "ddbbbbbddbbd...."
+    "dbbbddd.dbbd...."
+    ".ddd....dbbd...."
+    "..dbbd..dbbd...."
+    "..dbbbd.dbbbd..."
+    "..hhhhh.hhhhh..."
+
+@Animation/drake/walk
+frames = ["drake/idle", "drake/step"]
+fps = 8

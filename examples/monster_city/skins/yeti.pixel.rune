@@ -1,0 +1,97 @@
+# YETI — a cosmetic monster with idle, step and punch poses.
+@Palette/yeti
+colors = {"d":"#73869d","b":"#d8e4e8","h":"#ffffff","e":"#a9dded","k":"#283448","a":"#c4afc9",".":"transparent"}
+
+@Sprite/yeti/idle
+palette = yeti
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......h........"
+    ".....hhhhhh....."
+    "....hbbbbbbh...."
+    "...hbbbbbbbbh..."
+    "...hbbkeeekbh..."
+    "...hbbkkkkbbh..."
+    "...hbbbbbbbbh..."
+    "..hbbbbhhbbbbh.."
+    ".hbbbbbhbbbbbbh."
+    ".hbbbbbhbbbbbbh."
+    "hbbbbbbhbbbbbbbh"
+    "hbbbbbbhbbbbbbbh"
+    ".hhbbbbhbbbbhhh."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hhbbbbbbbhh..."
+    "...hbbbhbbbh...."
+    "...hbbbhbbbh...."
+    "...hbbbhbbbh...."
+    "..hbbbh.hbbbh..."
+    "..hbbbh.hbbbh..."
+    ".hhhhhh.hhhhhh.."
+
+@Sprite/yeti/step
+palette = yeti
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......h........"
+    ".....hhhhhh....."
+    "....hbbbbbbh...."
+    "...hbbbbbbbbh..."
+    "...hbbkeeekbh..."
+    "...hbbkkkkbbh..."
+    "...hbbbbbbbbh..."
+    "..hbbbbhhbbbbh.."
+    ".hbbbbbhbbbbbbh."
+    ".hbbbbbhbbbbbbh."
+    "hbbbbbbhbbbbbbbh"
+    "hbbbbbbhbbbbbbbh"
+    ".hhbbbbhbbbbhhh."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hhbbbbbbbhh..."
+    "...hbbbhbbbh...."
+    "...hbbbhbbbh...."
+    "....hbbbhbbbh..."
+    "...hbbbh.hbbbh.."
+    "...hbbbh.hbbbh.."
+    "..hhhhhh.hhhhhh."
+
+@Sprite/yeti/punch
+palette = yeti
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......h........"
+    ".....hhhhhh....."
+    "....hbbbbbbh...."
+    "...hbbbbbbbbh..."
+    "...hbbkeeekbh..."
+    "...hbbkkkkbbh..."
+    "...hbbbbbbbbh..."
+    "..hbbbbhhbbbbh.."
+    ".hbbbbbhbbbbbbh."
+    ".hbbbbbhbbbddddd"
+    "hbbbbbbhbbbbbbbb"
+    "hbbbbbbhbbbhhhhh"
+    ".hhbbbbhbbbbhhh."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hhbbbbbbbhh..."
+    "...hbbbhbbbh...."
+    "...hbbbhbbbh...."
+    "...hbbbhbbbh...."
+    "..hbbbh.hbbbh..."
+    "..hbbbh.hbbbh..."
+    ".hhhhhh.hhhhhh.."
+
+@Animation/yeti/walk
+frames = ["yeti/idle", "yeti/step"]
+fps = 8

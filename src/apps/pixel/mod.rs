@@ -240,6 +240,19 @@ pub fn compile(doc: &RuneDocument) -> Result<Game> {
             .is_some_and(|a| !a.is_empty() && a.iter().all(Json::is_string)),
         "Scene layers must be a non-empty list of state paths"
     );
+    config["menuSounds"] = scene
+        .kv
+        .get("menu_sounds")
+        .map(json_value)
+        .unwrap_or(json!({}));
+    ensure!(
+        config["menuSounds"]
+            .as_object()
+            .is_some_and(|map| map.values().all(|v| v
+                .as_str()
+                .is_some_and(|name| frontend.sounds.contains_key(name)))),
+        "Scene menu_sounds must reference defined sounds"
+    );
     config["menu"] = scene.kv.get("menu").map(json_value).unwrap_or(Json::Null);
     config["commands"] = scene
         .kv

@@ -1,0 +1,97 @@
+# MECHA — a cosmetic monster with idle, step and punch poses.
+@Palette/mecha
+colors = {"d":"#3b566b","b":"#8da7b8","h":"#d6e2e4","e":"#ffce6b","k":"#1a2839","a":"#ef886c",".":"transparent"}
+
+@Sprite/mecha/idle
+palette = mecha
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......a........"
+    ".......a........"
+    ".....ddddddd...."
+    ".....dbbbbbbd..."
+    ".....dbeeeebd..."
+    ".....dbkkkkbd..."
+    ".....dbbbbbbd..."
+    "....dddddddddd.."
+    "...dbbbbbbabbdd."
+    "..ddbbabbabbbbd."
+    "..dbbbabbabbbbd."
+    "..dbbbabbabb.hh."
+    "..dbbbabbab....."
+    "..ddbbabbadd...."
+    "...dbbbbbbd....."
+    "...dbbbbbbbd...."
+    "...dbbbbbbbd...."
+    "...ddddddddd...."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "..dbbbbddbbbbd.."
+    "..hhhhhh.hhhhhh."
+
+@Sprite/mecha/step
+palette = mecha
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......a........"
+    ".......a........"
+    ".....ddddddd...."
+    ".....dbbbbbbd..."
+    ".....dbeeeebd..."
+    ".....dbkkkkbd..."
+    ".....dbbbbbbd..."
+    "....dddddddddd.."
+    "...dbbbbbbabbdd."
+    "..ddbbabbabbbbd."
+    "..dbbbabbabbbbd."
+    "..dbbbabbabb.hh."
+    "..dbbbabbab....."
+    "..ddbbabbadd...."
+    "...dbbbbbbd....."
+    "...dbbbbbbbd...."
+    "...dbbbbbbbd...."
+    "...ddddddddd...."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "....dbbbddbbbd.."
+    "....dbbbddbbbd.."
+    "...dbbbbddbbbbd."
+    "...hhhhhh.hhhhhh"
+
+@Sprite/mecha/punch
+palette = mecha
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......a........"
+    ".......a........"
+    ".....ddddddd...."
+    ".....dbbbbbbd..."
+    ".....dbeeeebd..."
+    ".....dbkkkkbd..."
+    ".....dbbbbbbd..."
+    "....dddddddddd.."
+    "...dbbbbbbabbdd."
+    "..ddbbabbabddddd"
+    "..dbbbabbabbbbbb"
+    "..dbbbabbabhhhhh"
+    "..dbbbabbab....."
+    "..ddbbabbadd...."
+    "...dbbbbbbd....."
+    "...dbbbbbbbd...."
+    "...dbbbbbbbd...."
+    "...ddddddddd...."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "..dbbbbddbbbbd.."
+    "..hhhhhh.hhhhhh."
+
+@Animation/mecha/walk
+frames = ["mecha/idle", "mecha/step"]
+fps = 8

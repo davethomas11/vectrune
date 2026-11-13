@@ -89,3 +89,23 @@ action rifleBeat:
 action cannonBeat:
     clock = 94
     shots = []
+
+@Test/MonsterAudio/TitleShopAndPurchase
+type = logic
+page = city
+run:
+    invoke openTitle
+    assert mock.audio[1].args[0] == "monster_title"
+    invoke openStore
+    assert mock.audio[3].args[0] == "monster_shop"
+    invoke nextStorePage
+    invoke chooseSkin "volt"
+    assert mock.audio[4].args[0] == "menu_denied"
+    invoke fundMenuShop
+    invoke chooseSkin "volt"
+    assert mock.audio[5].args[0] == "menu_buy"
+    assert mock.audio == [{"operation":"music.stop","args":[]},{"operation":"music.play","args":["monster_title"]},{"operation":"music.stop","args":[]},{"operation":"music.play","args":["monster_shop"]},{"operation":"sound.play","args":["menu_denied",null]},{"operation":"sound.play","args":["menu_buy",null]}]
+
+@Logic/monster
+action fundMenuShop:
+    profile.coins = 300

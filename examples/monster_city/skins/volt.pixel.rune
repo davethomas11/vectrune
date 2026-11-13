@@ -1,0 +1,97 @@
+# VOLT — a cosmetic monster with idle, step and punch poses.
+@Palette/volt
+colors = {"d":"#6f5326","b":"#eab83e","h":"#fff080","e":"#fff8d0","k":"#4c3525","a":"#bfffce",".":"transparent"}
+
+@Sprite/volt/idle
+palette = volt
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......h........"
+    "......h........."
+    "....hhhh..h....."
+    "....dbbbbbbdd..."
+    "...dbbbbbbeebd.."
+    "...dbbbbbbkebd.."
+    "...dbbbbbkkkk..."
+    "...dbbbbbhaa...."
+    "..hdbbbbbdd....."
+    "..hdbbbbbabdd..."
+    ".hdbbbbbbabbbd.."
+    "..dbbbbbbab.hh.."
+    ".hdbbbbbbab....."
+    "..dbbbbbbab....."
+    ".hdbbbbbbab....."
+    "..dbbbbbbab....."
+    ".hdbbbbbbab....."
+    "..ddbbbbbbdd...."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    "..dbbbd.dbbbd..."
+    "..hhhhh.hhhhh..."
+
+@Sprite/volt/step
+palette = volt
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......h........"
+    "......h........."
+    "....hhhh..h....."
+    "....dbbbbbbdd..."
+    "...dbbbbbbeebd.."
+    "...dbbbbbbkebd.."
+    "...dbbbbbkkkk..."
+    "...dbbbbbhaa...."
+    "..hdbbbbbdd....."
+    "..hdbbbbbabdd..."
+    ".hdbbbbbbabbbd.."
+    "..dbbbbbbab.hh.."
+    ".hdbbbbbbab....."
+    "..dbbbbbbab....."
+    ".hdbbbbbbab....."
+    "..dbbbbbbab....."
+    ".hdbbbbbbab....."
+    "..ddbbbbbbdd...."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "....dbbd.dbbd..."
+    "...dbbd..dbbd..."
+    "...dbbbd.dbbbd.."
+    "...hhhhh.hhhhh.."
+
+@Sprite/volt/punch
+palette = volt
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......h........"
+    "......h........."
+    "....hhhh..h....."
+    "....dbbbbbbdd..."
+    "...dbbbbbbeebd.."
+    "...dbbbbbbkebd.."
+    "...dbbbbbkkkk..."
+    "...dbbbbbhaa...."
+    "..hdbbbbbdd....."
+    "..hdbbbbbabddddd"
+    ".hdbbbbbbabbbbbb"
+    "..dbbbbbbabhhhhh"
+    ".hdbbbbbbab....."
+    "..dbbbbbbab....."
+    ".hdbbbbbbab....."
+    "..dbbbbbbab....."
+    ".hdbbbbbbab....."
+    "..ddbbbbbbdd...."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    "..dbbbd.dbbbd..."
+    "..hhhhh.hhhhh..."
+
+@Animation/volt/walk
+frames = ["volt/idle", "volt/step"]
+fps = 8

@@ -1,0 +1,97 @@
+# SLIME — a cosmetic monster with idle, step and punch poses.
+@Palette/slime
+colors = {"d":"#2b7385","b":"#5bc8c5","h":"#b8f4df","e":"#fff0aa","k":"#183844","a":"#efffbd",".":"transparent"}
+
+@Sprite/slime/idle
+palette = slime
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "................"
+    "................"
+    ".......hh......."
+    ".....hbbbbh....."
+    "....hbbbbbbh...."
+    "....hbbbbeebh..."
+    "...hbbbbbkebbh.."
+    "...hbbbbbbbbbh.."
+    "..hbbbbbhhbbbh.."
+    "..hbbbbbbbbbbh.."
+    "..hbbbbbbbbbbhh."
+    ".hbbbbbbbbbbbbbh"
+    ".hbbbbbbbbbbbbbh"
+    ".hbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbabbbbbbbabbbh"
+    "hbbbabbbbbabbbbh"
+    ".hbbbbaaaabbbbh."
+    ".hbbbbbbbbbbbbh."
+    "..hbbbhhhhbbbh.."
+    "..hhhh....hhhh.."
+
+@Sprite/slime/step
+palette = slime
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "................"
+    "................"
+    ".......hh......."
+    ".....hbbbbh....."
+    "....hbbbbbbh...."
+    "....hbbbbeebh..."
+    "...hbbbbbkebbh.."
+    "...hbbbbbbbbbh.."
+    "..hbbbbbhhbbbh.."
+    "..hbbbbbbbbbbh.."
+    "..hbbbbbbbbbbhh."
+    ".hbbbbbbbbbbbbbh"
+    ".hbbbbbbbbbbbbbh"
+    ".hbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbabbbbbbbabbbh"
+    "hbbbabbbbbabbbbh"
+    "..hbbbbaaaabbbbh"
+    "..hbbbbbbbbbbbbh"
+    "...hbbbhhhhbbbh."
+    "...hhhh....hhhh."
+
+@Sprite/slime/punch
+palette = slime
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "................"
+    "................"
+    ".......hh......."
+    ".....hbbbbh....."
+    "....hbbbbbbh...."
+    "....hbbbbeebh..."
+    "...hbbbbbkebbh.."
+    "...hbbbbbbbbbh.."
+    "..hbbbbbhhbbbh.."
+    "..hbbbbbbbbddddd"
+    "..hbbbbbbbbbbbbb"
+    ".hbbbbbbbbbhhhhh"
+    ".hbbbbbbbbbbbbbh"
+    ".hbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbabbbbbbbabbbh"
+    "hbbbabbbbbabbbbh"
+    ".hbbbbaaaabbbbh."
+    ".hbbbbbbbbbbbbh."
+    "..hbbbhhhhbbbh.."
+    "..hhhh....hhhh.."
+
+@Animation/slime/walk
+frames = ["slime/idle", "slime/step"]
+fps = 8

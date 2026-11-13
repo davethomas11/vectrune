@@ -1,5 +1,5 @@
 import { PixelEngine, type PixelConfig, type Input } from './engine';
-import { getAudioContext } from '../audio';
+import { unlockAudio } from '../audio';
 import type { RuneWebConfig } from '../types';
 let settings: PixelConfig;
 export function configure(config: PixelConfig): void { settings = config; }
@@ -37,15 +37,17 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   const listen = (element: EventTarget, name: string, callback: EventListener) => element.addEventListener(name, callback, { signal: abort.signal });
   const pending = new Set<string>();
   const clear = () => { input = {}; pending.clear(); };
-  const pause = () => { if(game.app.state.status !== 'playing') return; getAudioContext(); game.paused = !game.paused; clear(); previous = 0; accumulator = 0; };
-  const start = () => { getAudioContext(); clear(); game.start(); previous = 0; accumulator = 0; canvas.focus(); };
-  const mute = () => { canvas.focus(); game.muted = !game.muted; };
+  const pause = () => { if(game.app.state.status !== 'playing') return; unlockAudio(); game.paused = !game.paused; clear(); previous = 0; accumulator = 0; };
+  const start = () => { unlockAudio(); clear(); game.activate('start'); previous = 0; accumulator = 0; canvas.focus(); };
+  const mute = () => { canvas.focus(); game.muted = !game.muted; unlockAudio(); };
   const fullscreen = () => {
+    unlockAudio();
     const surface = canvas.closest<HTMLElement>('.game-surface') || canvas;
     const result = document.fullscreenElement ? document.exitFullscreen() : surface.requestFullscreen?.();
     result?.catch(() => { /* The browser may deny fullscreen; the game keeps working. */ });
   };
   listen(canvas, 'keydown', ((event: KeyboardEvent) => {
+    unlockAudio();
     if (!event.repeat && game.key(event.code)) { event.preventDefault(); clear(); return; }
     if (keys[event.code] || ['Enter','KeyP','KeyF','KeyM'].includes(event.code)) event.preventDefault();
     if (keys[event.code]) { input[keys[event.code]] = true; pending.add(keys[event.code]); }
@@ -55,13 +57,13 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     if (!event.repeat && event.code === 'KeyM') mute();
   }) as EventListener);
   listen(canvas,'pointerdown',((event:PointerEvent) => {
-    getAudioContext(); canvas.focus();
+    unlockAudio(); canvas.focus();
     const rect=canvas.getBoundingClientRect();
     game.click((event.clientX-rect.left)*width/rect.width,(event.clientY-rect.top)*height/rect.height);
     clear();
   }) as EventListener);
   for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-action]'))) {
-    listen(button,'click',() => { getAudioContext(); game.invoke(button.dataset.pixelAction!); clear(); canvas.focus(); });
+    listen(button,'click',() => { unlockAudio(); game.activate(button.dataset.pixelAction!); clear(); canvas.focus(); });
   }
   listen(canvas, 'keyup', ((event: KeyboardEvent) => {
     if (keys[event.code]) input[keys[event.code]] = false;
@@ -69,10 +71,11 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   listen(canvas, 'blur', ((event: FocusEvent) => {
     clear();
     const next = event.relatedTarget;
-    if (next instanceof Element && next.closest('[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute],[data-pixel-action]')) return;
+    if (next instanceof Element && next.closest('[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute],[data-pixel-action],[data-pixel-menu]')) return;
     if (game.app.state.status === 'playing') game.paused = true;
   }) as EventListener);
-  listen(window, 'blur', () => { clear(); if (game.app.state.status === 'playing') game.paused = true; });
+  listen(window, 'blur', () => { clear(); game.paused = true; });
+  listen(window, 'focus', () => { if(game.app.state.status !== 'playing') game.paused = false; });
   listen(document, 'visibilitychange', () => { if (document.hidden) { clear(); game.paused = true; } previous = 0; accumulator = 0; });
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-pixel-input]'))) {
     const key = button.dataset.pixelInput!;
@@ -117,18 +120,19 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     const menu = game.config.menu ? state[game.config.menu] as any : null;
     const menuJson = JSON.stringify(menu);
     if(menuHost && menuJson !== lastMenu) {
-      const focus = menuHost.contains(document.activeElement) ? Array.from(menuHost.querySelectorAll('button')).indexOf(document.activeElement as HTMLButtonElement) : -1;
+      const focusKey = menuHost.contains(document.activeElement) ? (document.activeElement as HTMLElement)?.dataset.menuKey : undefined;
       menuHost.replaceChildren(); menuHost.hidden = !menu;
       if(menu) {
         const label=document.createElement('span'); label.textContent=menu.subtitle; menuHost.append(label);
         for(const item of [...(menu.cards || []),...(menu.buttons || [])]) {
           const button=document.createElement('button');
+          button.dataset.menuKey=JSON.stringify([item.action,item.args || []]);
           button.textContent=item.label || item.name + ': ' + item.detail;
-          button.onclick = () => { getAudioContext(); game.invoke(item.action,item.args || []); clear(); if(!game.config.menu || !game.app.state[game.config.menu]) canvas.focus(); };
+          button.onclick = () => { unlockAudio(); game.activate(item.action,item.args || []); clear(); if(!game.config.menu || !game.app.state[game.config.menu]) canvas.focus(); };
           menuHost.append(button);
         }
         if(menu.note) { const note=document.createElement('span'); note.textContent=menu.note; menuHost.append(note); }
-        if(focus >= 0) menuHost.querySelectorAll('button')[focus]?.focus();
+        if(focusKey) { const buttons=Array.from(menuHost.querySelectorAll('button')); (buttons.find(b=>b.dataset.menuKey===focusKey) || buttons[buttons.length-1])?.focus(); }
       }
       lastMenu=menuJson;
     }

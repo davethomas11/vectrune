@@ -127,3 +127,44 @@ action inspectCity:
 action inspectShots:
     bombs = shots.any(s => s.vy > 0)
     checks = {"bombs":bombs}
+
+@Test/Progression/StorePagesAndNewMonster
+type = logic
+page = city
+run:
+    invoke openStore
+    assert state.store_pages == 5
+    assert state.menu.cards[0].name == "MOSS"
+    invoke nextStorePage
+    assert state.menu.cards[0].name == "VOLT"
+    invoke nextStorePage
+    assert state.menu.cards[0].name == "CYCLOPS"
+    invoke nextStorePage
+    assert state.menu.cards[0].name == "YETI"
+    invoke nextStorePage
+    assert state.store_page == 4
+    assert state.menu.cards[0].name == "COSMO"
+    invoke inspectMenu
+    assert state.checks.cards == 1
+    invoke nextStorePage
+    assert state.store_page == 4
+    invoke fundRareMonster
+    invoke chooseSkin "cosmo"
+    assert state.profile.coins == 100
+    assert state.profile.skin == "cosmo"
+    assert state.store_page == 4
+    invoke chooseSkin "cosmo"
+    assert state.profile.coins == 100
+    invoke initialize
+    assert state.profile.skin == "cosmo"
+    invoke start
+    assert state.monster.sprite == "cosmo/idle"
+    invoke tick {"right":true}
+    assert state.monster.sprite == "cosmo/walk"
+    invoke openStore
+    invoke previousStorePage
+    assert state.store_page == 0
+
+@Logic/monster
+action fundRareMonster:
+    profile.coins = 1000

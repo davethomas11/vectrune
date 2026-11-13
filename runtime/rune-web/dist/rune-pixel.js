@@ -1730,9 +1730,21 @@ var __RunePixelRuntime = (() => {
   var masterGain = null;
   var audioMuted = false;
   var syncPageAudio = true;
+  var playbackUnlocked = true;
+  var pendingMusic = null;
   function configureAudioHost(options) {
     syncPageAudio = options.syncPage;
+    playbackUnlocked = !options.deferPlayback;
+    pendingMusic = null;
     audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
+  }
+  function unlockAudio() {
+    playbackUnlocked = true;
+    const context = getAudioContext();
+    const track = pendingMusic;
+    pendingMusic = null;
+    if (track) playMusic(track);
+    return context;
   }
   function setAudioMuted(muted) {
     audioMuted = muted;
@@ -1761,7 +1773,7 @@ var __RunePixelRuntime = (() => {
     }
   }
   function getAudioContext() {
-    if (typeof window === "undefined") return null;
+    if (!playbackUnlocked || typeof window === "undefined") return null;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return null;
     if (!audioCtx) {
@@ -2072,6 +2084,10 @@ var __RunePixelRuntime = (() => {
     return events;
   }
   function playMusic(trackName) {
+    if (!playbackUnlocked) {
+      pendingMusic = trackName;
+      return;
+    }
     const ctx2 = getAudioContext();
     if (!ctx2) return;
     const key = String(trackName || "").trim().toLowerCase();
@@ -2149,6 +2165,7 @@ var __RunePixelRuntime = (() => {
     musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
   }
   function stopMusic() {
+    pendingMusic = null;
     audioSync.onStop();
     if (musicSchedulerTimer) {
       clearInterval(musicSchedulerTimer);
@@ -3603,7 +3620,7 @@ var __RunePixelRuntime = (() => {
         navigator: null
       };
       this.app.state = JSON.parse(JSON.stringify(options.stateJson));
-      configureAudioHost({ syncPage: false });
+      configureAudioHost({ syncPage: false, deferPlayback: typeof document !== "undefined" });
       registerSounds(options.sounds);
       registerMusic(options.music);
       if (config.persistence) {
@@ -3671,7 +3688,7 @@ var __RunePixelRuntime = (() => {
         this.start();
         return;
       }
-      this._paused = false;
+      this.paused = false;
       setAudioMuted(this._muted);
       withContext(this.context, () => {
         this.app.invokeAction(action, args);
@@ -3679,27 +3696,33 @@ var __RunePixelRuntime = (() => {
       });
       this.persist();
     }
+    /** User-triggered menu choice; programmatic Rune actions remain silent. */
+    activate(action, args = []) {
+      if (this.config.menuSounds?.confirm) playSound(this.config.menuSounds.confirm);
+      this.invoke(action, args);
+    }
     key(code) {
       const command = this.config.commands?.[code];
       if (command) {
-        this.invoke(command);
+        this.activate(command);
         return true;
       }
       const menu = this.config.menu && this.app.state[this.config.menu];
       if (!menu || this.paused) return false;
       const buttons = [...menu.cards || [], ...menu.buttons || []];
       if (!buttons.length) return false;
-      if (this.lastMenu !== String(menu.title)) {
+      if (this.lastMenu !== String(menu.id || menu.title)) {
         this.selected = 0;
-        this.lastMenu = String(menu.title);
+        this.lastMenu = String(menu.id || menu.title);
       }
       if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(code)) {
         this.selected = (this.selected + (code === "ArrowLeft" || code === "ArrowUp" ? -1 : 1) + buttons.length) % buttons.length;
+        if (this.config.menuSounds?.move) playSound(this.config.menuSounds.move);
         return true;
       }
       if (code === "Enter" || code === "Space") {
         const button = buttons[this.selected];
-        this.invoke(button.action, button.args || []);
+        this.activate(button.action, button.args || []);
         return true;
       }
       return false;
@@ -3710,24 +3733,24 @@ var __RunePixelRuntime = (() => {
       if (i >= 0) {
         this.selected = i;
         const b = this.buttons[i];
-        this.invoke(b.action, b.args);
+        this.activate(b.action, b.args);
       }
     }
     menuFrame(menu) {
       const w = this.config.width, h = this.config.height;
-      const identity = String(menu.title);
+      const identity = String(menu.id || menu.title);
       if (identity !== this.lastMenu) this.selected = 0;
       this.lastMenu = identity;
       this.buttons = [];
       this.rect(8, 27, w - 16, h - 34, 1121323);
       this.rect(8, 27, w - 16, 2, 10941058);
-      this.text(menu.title, w / 2 - String(menu.title).length * 4, 38, 10941058, 2);
+      this.text(menu.title, w / 2 - String(menu.id || menu.title).length * 4, 38, 10941058, 2);
       this.text(menu.subtitle || "", w / 2 - String(menu.subtitle || "").length * 2, 56, 15518853);
       if (this.saveStatus === "session") this.text("SESSION ONLY - SAVE STORAGE UNAVAILABLE", 18, 64, 16757397);
       if (this.saveStatus === "recovered") this.text("SAVE RECOVERED - USING A FRESH PROFILE", 18, 64, 16757397);
       const cards = menu.cards || [];
       for (let i = 0; i < cards.length; i++) {
-        const card = cards[i], x = 18 + i * (w - 36) / cards.length, cw = (w - 36) / cards.length - 6;
+        const cw = (w - 36) / 3 - 6, card = cards[i], x = 18 + ((3 - cards.length) / 2 + i) * (w - 36) / 3;
         this.rect(x, 70, cw, 92, 2438986);
         this.sprite({ x: x + cw / 2 - 16, y: 76, sprite: card.sprite, scale: 2 });
         this.text(card.name, x + cw / 2 - card.name.length * 2, 130, 16116172);
@@ -3736,7 +3759,7 @@ var __RunePixelRuntime = (() => {
       }
       const actions = menu.buttons || [];
       for (let i = 0; i < actions.length; i++) {
-        const button = actions[i], width = 156, x = w / 2 - width / 2, y = cards.length ? 176 + i * 24 : 102 + i * 30;
+        const button = actions[i], width = cards.length ? (w - 36) / actions.length - 6 : 156, x = cards.length ? 18 + i * (w - 36) / actions.length : w / 2 - width / 2, y = cards.length ? 176 : 102 + i * 30;
         this.rect(x, y, width, 22, 3165248);
         this.text(button.label, x + width / 2 - button.label.length * 2, y + 8);
         this.buttons.push({ x, y, width, height: 22, action: button.action, args: button.args || [] });
@@ -3882,16 +3905,16 @@ var __RunePixelRuntime = (() => {
     };
     const pause = () => {
       if (game.app.state.status !== "playing") return;
-      getAudioContext();
+      unlockAudio();
       game.paused = !game.paused;
       clear();
       previous = 0;
       accumulator = 0;
     };
     const start = () => {
-      getAudioContext();
+      unlockAudio();
       clear();
-      game.start();
+      game.activate("start");
       previous = 0;
       accumulator = 0;
       canvas.focus();
@@ -3899,14 +3922,17 @@ var __RunePixelRuntime = (() => {
     const mute = () => {
       canvas.focus();
       game.muted = !game.muted;
+      unlockAudio();
     };
     const fullscreen = () => {
+      unlockAudio();
       const surface = canvas.closest(".game-surface") || canvas;
       const result = document.fullscreenElement ? document.exitFullscreen() : surface.requestFullscreen?.();
       result?.catch(() => {
       });
     };
     listen(canvas, "keydown", ((event) => {
+      unlockAudio();
       if (!event.repeat && game.key(event.code)) {
         event.preventDefault();
         clear();
@@ -3923,7 +3949,7 @@ var __RunePixelRuntime = (() => {
       if (!event.repeat && event.code === "KeyM") mute();
     }));
     listen(canvas, "pointerdown", ((event) => {
-      getAudioContext();
+      unlockAudio();
       canvas.focus();
       const rect = canvas.getBoundingClientRect();
       game.click((event.clientX - rect.left) * width / rect.width, (event.clientY - rect.top) * height / rect.height);
@@ -3931,8 +3957,8 @@ var __RunePixelRuntime = (() => {
     }));
     for (const button of Array.from(document.querySelectorAll("[data-pixel-action]"))) {
       listen(button, "click", () => {
-        getAudioContext();
-        game.invoke(button.dataset.pixelAction);
+        unlockAudio();
+        game.activate(button.dataset.pixelAction);
         clear();
         canvas.focus();
       });
@@ -3943,12 +3969,15 @@ var __RunePixelRuntime = (() => {
     listen(canvas, "blur", ((event) => {
       clear();
       const next = event.relatedTarget;
-      if (next instanceof Element && next.closest("[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute],[data-pixel-action]")) return;
+      if (next instanceof Element && next.closest("[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute],[data-pixel-action],[data-pixel-menu]")) return;
       if (game.app.state.status === "playing") game.paused = true;
     }));
     listen(window, "blur", () => {
       clear();
-      if (game.app.state.status === "playing") game.paused = true;
+      game.paused = true;
+    });
+    listen(window, "focus", () => {
+      if (game.app.state.status !== "playing") game.paused = false;
     });
     listen(document, "visibilitychange", () => {
       if (document.hidden) {
@@ -4018,7 +4047,7 @@ var __RunePixelRuntime = (() => {
       const menu = game.config.menu ? state[game.config.menu] : null;
       const menuJson = JSON.stringify(menu);
       if (menuHost && menuJson !== lastMenu) {
-        const focus = menuHost.contains(document.activeElement) ? Array.from(menuHost.querySelectorAll("button")).indexOf(document.activeElement) : -1;
+        const focusKey = menuHost.contains(document.activeElement) ? document.activeElement?.dataset.menuKey : void 0;
         menuHost.replaceChildren();
         menuHost.hidden = !menu;
         if (menu) {
@@ -4027,10 +4056,11 @@ var __RunePixelRuntime = (() => {
           menuHost.append(label);
           for (const item of [...menu.cards || [], ...menu.buttons || []]) {
             const button = document.createElement("button");
+            button.dataset.menuKey = JSON.stringify([item.action, item.args || []]);
             button.textContent = item.label || item.name + ": " + item.detail;
             button.onclick = () => {
-              getAudioContext();
-              game.invoke(item.action, item.args || []);
+              unlockAudio();
+              game.activate(item.action, item.args || []);
               clear();
               if (!game.config.menu || !game.app.state[game.config.menu]) canvas.focus();
             };
@@ -4041,7 +4071,10 @@ var __RunePixelRuntime = (() => {
             note.textContent = menu.note;
             menuHost.append(note);
           }
-          if (focus >= 0) menuHost.querySelectorAll("button")[focus]?.focus();
+          if (focusKey) {
+            const buttons = Array.from(menuHost.querySelectorAll("button"));
+            (buttons.find((b) => b.dataset.menuKey === focusKey) || buttons[buttons.length - 1])?.focus();
+          }
         }
         lastMenu = menuJson;
       }

@@ -1,0 +1,97 @@
+# GOLEM — a cosmetic monster with idle, step and punch poses.
+@Palette/golem
+colors = {"d":"#555773","b":"#9698ad","h":"#d1c7b9","e":"#f8c66c","k":"#252d42","a":"#b99c7b",".":"transparent"}
+
+@Sprite/golem/idle
+palette = golem
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "................"
+    ".....ddddddd...."
+    "....dbbbbbbbd..."
+    "....dbbbabbbd..."
+    "....dbeeeebbd..."
+    "....dbkkkkbbd..."
+    "....dbbbbbbbd..."
+    "...ddddddddddd.."
+    "..dbbbabbbbbbbd."
+    "..dbbbabbbbbbbd."
+    ".dbbbbhabbbbbbdd"
+    ".dbbbbhabbbbbbbd"
+    ".dbbbbhabbbbbbbd"
+    ".dbbbbaabbbbbbbd"
+    "..dbbbbbabbbbbd."
+    "..dbbbbbabbbbbd."
+    "..dbbbbbabbbbbd."
+    "..ddddddddddddd."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "..dbbbbddbbbbd.."
+    "..hhhhhh.hhhhhh."
+
+@Sprite/golem/step
+palette = golem
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "................"
+    ".....ddddddd...."
+    "....dbbbbbbbd..."
+    "....dbbbabbbd..."
+    "....dbeeeebbd..."
+    "....dbkkkkbbd..."
+    "....dbbbbbbbd..."
+    "...ddddddddddd.."
+    "..dbbbabbbbbbbd."
+    "..dbbbabbbbbbbd."
+    ".dbbbbhabbbbbbdd"
+    ".dbbbbhabbbbbbbd"
+    ".dbbbbhabbbbbbbd"
+    ".dbbbbaabbbbbbbd"
+    "..dbbbbbabbbbbd."
+    "..dbbbbbabbbbbd."
+    "..dbbbbbabbbbbd."
+    "..ddddddddddddd."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "....dbbbddbbbd.."
+    "....dbbbddbbbd.."
+    "...dbbbbddbbbbd."
+    "...hhhhhh.hhhhhh"
+
+@Sprite/golem/punch
+palette = golem
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "................"
+    ".....ddddddd...."
+    "....dbbbbbbbd..."
+    "....dbbbabbbd..."
+    "....dbeeeebbd..."
+    "....dbkkkkbbd..."
+    "....dbbbbbbbd..."
+    "...ddddddddddd.."
+    "..dbbbabbbbbbbd."
+    "..dbbbabbbbddddd"
+    ".dbbbbhabbbbbbbb"
+    ".dbbbbhabbbhhhhh"
+    ".dbbbbhabbbbbbbd"
+    ".dbbbbaabbbbbbbd"
+    "..dbbbbbabbbbbd."
+    "..dbbbbbabbbbbd."
+    "..dbbbbbabbbbbd."
+    "..ddddddddddddd."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "..dbbbbddbbbbd.."
+    "..hhhhhh.hhhhhh."
+
+@Animation/golem/walk
+frames = ["golem/idle", "golem/step"]
+fps = 8

@@ -2,7 +2,9 @@
 state:
     status = "ready"
     profile = {"coins":0,"owned":["kaiju"],"skin":"kaiju","level":1,"seed":0,"best_score":0}
-    skins = [{"id":"kaiju","name":"MOSS","cost":0},{"id":"ember","name":"EMBER","cost":120},{"id":"frost","name":"FROST","cost":240}]
+    skins = [{"id":"kaiju","name":"MOSS","cost":0},{"id":"ember","name":"EMBER","cost":120},{"id":"frost","name":"FROST","cost":240},{"id":"volt","name":"VOLT","cost":300},{"id":"coral","name":"CORAL","cost":360},{"id":"golem","name":"GOLEM","cost":420},{"id":"cyclops","name":"CYCLOPS","cost":480},{"id":"mantis","name":"MANTIS","cost":540},{"id":"drake","name":"DRAKE","cost":600},{"id":"yeti","name":"YETI","cost":660},{"id":"slime","name":"SLIME","cost":720},{"id":"mecha","name":"MECHA","cost":800},{"id":"cosmo","name":"COSMO","cost":900}]
+    store_page = 0
+    store_pages = 5
     level = 1
     difficulty = 1
     reward = 0
@@ -44,6 +46,7 @@ action initialize:
 
 action openTitle:
     music.stop
+    music.play "monster_title"
     status = "ready"
     level = profile.level
     monster.sprite = profile.skin + "/idle"
@@ -51,14 +54,40 @@ action openTitle:
 
 action openStore:
     music.stop
+    music.play "monster_shop"
     status = "store"
-    menu = {"title":"MONSTER SHOP","subtitle":"COINS " + profile.coins + " - SKINS ARE COSMETIC","cards":[],"note":"SELECT A MONSTER TO BUY OR EQUIP","buttons":[{"label":"BACK TO TITLE","action":"openTitle"}]}
-    for skin in skins:
-        owned = profile.owned.any(id => id == skin.id)
-        detail = owned ? "OWNED - EQUIP" : skin.cost + " COINS - BUY"
-        if profile.skin == skin.id:
-            detail = "EQUIPPED"
-        menu.cards.push({"name":skin.name,"sprite":skin.id + "/idle","detail":detail,"action":"chooseSkin","args":[skin.id]})
+    store_page = 0
+    call renderStore
+
+# Three cards per page. Adding skins automatically increases the page count.
+action renderStore:
+    store_pages = (skins.length - skins.length % 3) / 3
+    if skins.length % 3 > 0:
+        store_pages += 1
+    store_page = clamp(store_page, 0, store_pages - 1)
+    menu = {"id":"store-" + store_page,"title":"MONSTER SHOP","subtitle":"COINS " + profile.coins + " - PAGE " + (store_page + 1) + " OF " + store_pages,"cards":[],"note":"SELECT A MONSTER TO BUY OR EQUIP","buttons":[]}
+    for skin, index in skins:
+        if index >= store_page * 3 && index < store_page * 3 + 3:
+            owned = profile.owned.any(id => id == skin.id)
+            detail = owned ? "OWNED - EQUIP" : skin.cost + " COINS - BUY"
+            if profile.skin == skin.id:
+                detail = "EQUIPPED"
+            menu.cards.push({"name":skin.name,"sprite":skin.id + "/idle","detail":detail,"action":"chooseSkin","args":[skin.id]})
+    if store_page > 0:
+        menu.buttons.push({"label":"PREVIOUS","action":"previousStorePage"})
+    if store_page < store_pages - 1:
+        menu.buttons.push({"label":"NEXT","action":"nextStorePage"})
+    menu.buttons.push({"label":"BACK TO TITLE","action":"openTitle"})
+
+action nextStorePage:
+    stop when status != "store"
+    store_page = min(store_pages - 1, store_page + 1)
+    call renderStore
+
+action previousStorePage:
+    stop when status != "store"
+    store_page = max(0, store_page - 1)
+    call renderStore
 
 action chooseSkin(id):
     stop when status != "store"
@@ -68,13 +97,15 @@ action chooseSkin(id):
     owned = profile.owned.any(s => s == id)
     if !owned:
         if profile.coins < selected_skin.cost:
+            sound.play("menu_denied")
             menu.note = "MORE COINS NEEDED - BEAT A CITY TO EARN"
             stop
         profile.coins -= selected_skin.cost
         profile.owned.push(id)
+        sound.play("menu_buy")
     profile.skin = id
     monster.sprite = id + "/idle"
-    call openStore
+    call renderStore
 
 # A saved seed + city number recreates each layout on retry. Enemy counts,
 # armor and firing rates grow to bounded limits so later cities stay playable.

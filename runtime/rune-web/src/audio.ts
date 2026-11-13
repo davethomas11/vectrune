@@ -11,11 +11,24 @@ let stepIndex = 0;
 let masterGain: GainNode | null = null;
 let audioMuted = false;
 let syncPageAudio = true;
+let playbackUnlocked = true;
+let pendingMusic: string | null = null;
 
 /** Canvas hosts can use the synthesizer without touching their Rune-Web shell. */
-export function configureAudioHost(options: { syncPage: boolean }): void {
+export function configureAudioHost(options: { syncPage: boolean; deferPlayback?: boolean }): void {
   syncPageAudio = options.syncPage;
+  playbackUnlocked = !options.deferPlayback;
+  pendingMusic = null;
   audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
+}
+
+/** Called only by a browser user gesture; native hosts start unlocked. */
+export function unlockAudio(): AudioContext | null {
+  playbackUnlocked = true;
+  const context = getAudioContext();
+  const track = pendingMusic; pendingMusic = null;
+  if (track) playMusic(track);
+  return context;
 }
 
 /** Mute music and effects together while the game clock keeps advancing. */
@@ -51,7 +64,7 @@ export function registerMusic(definitions?: Record<string, MusicDefinition>): vo
 }
 
 export function getAudioContext(): AudioContext | null {
-  if (typeof window === 'undefined') return null;
+  if (!playbackUnlocked || typeof window === 'undefined') return null;
   const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
   if (!AudioCtx) return null;
   if (!audioCtx) {
@@ -473,6 +486,7 @@ export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
 }
 
 export function playMusic(trackName: string): void {
+  if (!playbackUnlocked) { pendingMusic = trackName; return; }
   const ctx = getAudioContext();
   if (!ctx) return;
 
@@ -571,6 +585,7 @@ export function stopPlaybackAnimation(_keepParked = false): void {
 }
 
 export function stopMusic(): void {
+  pendingMusic = null;
   audioSync.onStop();
   if (musicSchedulerTimer) {
     clearInterval(musicSchedulerTimer);

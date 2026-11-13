@@ -1,0 +1,97 @@
+# MANTIS — a cosmetic monster with idle, step and punch poses.
+@Palette/mantis
+colors = {"d":"#286f67","b":"#60baa0","h":"#a8e5bb","e":"#ffe898","k":"#16383c","a":"#f3c86b",".":"transparent"}
+
+@Sprite/mantis/idle
+palette = mantis
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "....a......a...."
+    ".....a....a....."
+    ".....dddddd....."
+    "....dbbbbbbd...."
+    "....dbeebbeed..."
+    "....dbkkbbkkd..."
+    ".....dbbbbdd...."
+    "......dhhd......"
+    "...a.ddbbdd.a..."
+    "..a.dbbabbd..a.."
+    ".a..dbbabbd...a."
+    ".h..dbbabbd...h."
+    "....dbbabbd....."
+    "....dbbabbd....."
+    "...ddbbabbdd...."
+    "...dbbbabbbd...."
+    "..ddbbbabbbdd..."
+    "..dbbbbabbbbd..."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "...dbbd.dbbd...."
+    "..dbbd...dbbd..."
+    ".dbbd.....dbbd.."
+    ".hhhh.....hhhh.."
+
+@Sprite/mantis/step
+palette = mantis
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "....a......a...."
+    ".....a....a....."
+    ".....dddddd....."
+    "....dbbbbbbd...."
+    "....dbeebbeed..."
+    "....dbkkbbkkd..."
+    ".....dbbbbdd...."
+    "......dhhd......"
+    "...a.ddbbdd.a..."
+    "..a.dbbabbd..a.."
+    ".a..dbbabbd...a."
+    ".h..dbbabbd...h."
+    "....dbbabbd....."
+    "....dbbabbd....."
+    "...ddbbabbdd...."
+    "...dbbbabbbd...."
+    "..ddbbbabbbdd..."
+    "..dbbbbabbbbd..."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "....dbbd.dbbd..."
+    "...dbbd...dbbd.."
+    "..dbbd.....dbbd."
+    "..hhhh.....hhhh."
+
+@Sprite/mantis/punch
+palette = mantis
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "....a......a...."
+    ".....a....a....."
+    ".....dddddd....."
+    "....dbbbbbbd...."
+    "....dbeebbeed..."
+    "....dbkkbbkkd..."
+    ".....dbbbbdd...."
+    "......dhhd......"
+    "...a.ddbbdd.a..."
+    "..a.dbbabbdddddd"
+    ".a..dbbabbdbbbbb"
+    ".h..dbbabbdhhhhh"
+    "....dbbabbd....."
+    "....dbbabbd....."
+    "...ddbbabbdd...."
+    "...dbbbabbbd...."
+    "..ddbbbabbbdd..."
+    "..dbbbbabbbbd..."
+    "...dbbddbbbd...."
+    "...dbbd.dbbd...."
+    "...dbbd.dbbd...."
+    "..dbbd...dbbd..."
+    ".dbbd.....dbbd.."
+    ".hhhh.....hhhh.."
+
+@Animation/mantis/walk
+frames = ["mantis/idle", "mantis/step"]
+fps = 8
