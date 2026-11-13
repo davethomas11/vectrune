@@ -368,7 +368,7 @@ cargo run --features pixel-desktop -- examples/monster_city/monster_city.rune --
 cargo run -- test examples/monster_city
 ```
 
-Use arrows/A/D to move, Space to smash, Enter to start/restart, P to pause, and F for fullscreen. Desktop also supports F11; Escape leaves fullscreen or closes the window. Desktop builds currently render silently; browser effects use Web Audio. The native host is opt-in while platform packaging is validated, and is not included in the published 0.3.2 binaries. The default pixel target is web.
+Use arrows/A/D to move, Space to smash, Enter to start/restart, P to pause, and F for fullscreen. Desktop also supports F11; Escape leaves fullscreen or closes the window. Desktop builds currently render silently; browser effects use Web Audio. This entire pixel engine is an unreleased prototype, absent from the published 0.3.2 CLI. The native host is opt-in while platform packaging is validated. The default pixel target is web.
 
 `.pixel.rune` is ordinary importable Rune asset data: `@Palette/<name>` defines a `colors` JSON map from single ASCII characters to `#RRGGBB` or `transparent`; `@Sprite/<name>[/frame]` declares `palette`, integer `size`, optional `origin`, and a `pixels:` block of quoted equal-width rows. `@Animation/<name>` supplies `frames` and `fps`. See [the human-readable sprites](examples/monster_city/sprites.pixel.rune). `check` validates dimensions, palette characters, colors, and animation references. Sprite sheets are represented internally by indexed sprite assets; atlas packing/editor tooling remains future work.
 
