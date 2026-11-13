@@ -390,6 +390,20 @@ Monster City's title screen offers the next city and a 13-monster shop across fi
 
 The game imports each monster from its own file in [skins/](examples/monster_city/skins). Later cities vary building positions/colors and army placements using a saved seed plus the city number; retrying recreates the same city. City 1 keeps a predictable introductory layout. Game logic remains in [logic.rune](examples/monster_city/logic.rune).
 
+Parachute crates provide seven temporary powers, all authored in [powers.rune](examples/monster_city/powers.rune), with sprites in [powers.pixel.rune](examples/monster_city/powers.pixel.rune). Walk into a descending or landed crate to collect it. A new pickup replaces the current power; the HUD shows the name and remaining seconds. Pause freezes power timers. Restart, leaving a level, victory and defeat clear temporary powers; the saved profile contains no crates or power timers.
+
+| Power | Effect | Duration |
+| --- | --- | --- |
+| Atomic Breath | Charge automatically, then aim left/right with movement; the beam damages buildings/ground units and clears shots | 2 seconds charging, 4 seconds firing |
+| Force Field | Invulnerable to incoming shots | 6 seconds |
+| Electric Storm | Contact explosions, ranged lightning against ground/air units, nearby projectile clearing | 8 seconds |
+| Bigger Juice | Larger monster, contact demolition, half incoming damage rounded up | 10 seconds |
+| Super Speed | Faster movement and a seeded 65% dodge chance on incoming hits | 10 seconds |
+| Baby Kaju | A small companion follows and attacks nearby buildings/ground troops | 20 seconds |
+| Aftershock | A ground blast demolishes nearby buildings/units and clears nearby shots | Instant blast, 1-second visual |
+
+Cities 1–4 attempt a drop every 15 seconds at 50% probability, starting after 5 seconds, with shield/speed/baby pickups. Cities 5–14 attempt every 10 seconds at 75%, starting after 3 seconds, with all seven powers. City 15+ attempts every 5 seconds at 100%, starting after 1 second. Crates take time to descend; their positions/types are seeded for reproducible retries. At most two crates coexist, and uncollected crates expire after 20 seconds. No additional controls are required. Power-up browser checks: `python3 tests/browser/monster_powers.py`.
+
 Reusable pixel scene options:
 
 ```rune

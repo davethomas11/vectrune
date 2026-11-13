@@ -16,7 +16,7 @@ export interface PixelConfig {
   persistence?: Persistence;
   menu?: string;
   menuSounds?: {move?:string; confirm?:string};
-  hud?: { title: string; score: string; health: string; max_health: number; level?: string; coins?: string };
+  hud?: { title: string; score: string; health: string; max_health: number; level?: string; coins?: string; message?: string };
   overlays?: Record<string,string>;
   rects: { x: number; y: number; width: number; height: number; color: string }[];
 }
@@ -220,6 +220,7 @@ export class PixelEngine {
       this.rect(0, 0, width, 23, 0x10131d);
       const coins = hud.coins?.split('.').reduce((value:any,part) => value?.[part],state);
       this.text(hud.level ? 'CITY ' + state[hud.level] + '  COINS ' + (coins || 0) : hud.title,10,9,0xa6f282);
+      if(hud.message && state[hud.message]) this.text(String(state[hud.message]),10,17,0x86e4ed);
       this.text('SCORE ' + String(state[hud.score] || 0).padStart(5, '0'), width - 156, 9);
       if (this.muted) this.text('MUTE',width - 76,9,0xffb295);
       this.rect(width - 54, 9, 43, 5, 0x403447);

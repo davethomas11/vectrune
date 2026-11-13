@@ -1,0 +1,213 @@
+# Temporary powers are gameplay state, never part of the saved profile.
+@Logic/monster
+state:
+    power_defs = [{"id":"atomic","name":"ATOMIC BREATH","ticks":120,"charge":60},{"id":"shield","name":"FORCE FIELD","ticks":180,"charge":0},{"id":"electric","name":"ELECTRIC STORM","ticks":240,"charge":0},{"id":"giant","name":"BIGGER JUICE","ticks":300,"charge":0},{"id":"speed","name":"SUPER SPEED","ticks":300,"charge":0},{"id":"baby","name":"BABY KAJU","ticks":600,"charge":0},{"id":"aftershock","name":"AFTERSHOCK","ticks":30,"charge":0}]
+    power = ""
+    power_name = ""
+    power_label = ""
+    power_ticks = 0
+    charge_ticks = 0
+    drop_interval = 450
+    next_drop = 150
+    drop_number = 0
+    crates = []
+    power_fx = []
+    companion = []
+    move_speed = 2
+    move_limit = 336
+
+action clearPowers:
+    power = ""
+    power_name = ""
+    power_label = ""
+    power_ticks = 0
+    charge_ticks = 0
+    power_fx = []
+    companion = []
+    monster.scale = 3
+    monster.y = 118
+    monster.x = clamp(monster.x, 0, 336)
+    move_speed = 2
+    move_limit = 336
+
+action resetSupplies:
+    call clearPowers
+    crates = []
+    drop_number = 0
+    drop_interval = level >= 15 ? 150 : level >= 5 ? 300 : 450
+    next_drop = level >= 15 ? 30 : level >= 5 ? 90 : 150
+
+action tickSupplies:
+    if clock >= next_drop:
+        next_drop = clock + drop_interval
+        drop_number += 1
+        chance = level >= 15 ? 100 : level >= 5 ? 75 : 50
+        roll = random(1, 100, city_seed + drop_number * 79)
+        if roll <= chance && crates.length < 2:
+            choices = level < 5 ? ["shield", "speed", "baby"] : ["atomic", "shield", "electric", "giant", "speed", "baby", "aftershock"]
+            kind = pick(choices, city_seed + drop_number * 131)
+            landing_x = clamp(monster.x + random(-20, 90, city_seed + drop_number * 97), 12, 340)
+            crates.push({"x":landing_x,"y":26,"sprite":"supply/parachute","scale":2,"kind":kind,"life":600})
+    for crate in crates:
+        crate.y = min(154, crate.y + 1.8)
+        crate.life -= 1
+        if crate.y >= 154:
+            crate.sprite = "supply/landed"
+        if crate.life > 0 && crate.y + 32 >= monster.y && abs((crate.x + 16) - (monster.x + monster.scale * 8)) < monster.scale * 8 + 12:
+            crate.life = 0
+            call grantPower crate.kind
+    crates = crates.filter(c => c.life > 0)
+
+action grantPower(kind):
+    stop when status != "playing"
+    valid_power = power_defs.any(p => p.id == kind)
+    stop when valid_power != true
+    definition = power_defs.find(p => p.id == kind)
+    call clearPowers
+    power = kind
+    power_name = definition.name
+    power_ticks = definition.ticks
+    charge_ticks = definition.charge
+    sound.play("power_pickup")
+    if power == "atomic":
+        sound.play("power_charge")
+    if power == "giant":
+        monster.scale = 4
+        monster.y = 94
+        move_limit = 320
+        monster.x = min(monster.x, move_limit)
+    if power == "speed":
+        move_speed = 4.5
+    if power == "baby":
+        baby_x = max(0, monster.x - 20)
+        companion = [{"x":baby_x,"y":166,"sprite":profile.skin + "/walk","scale":1,"flip":monster.flip}]
+    if power == "aftershock":
+        sound.play("power_aftershock")
+        center = monster.x + monster.scale * 8
+        shots = shots.filter(s => abs(s.x - center) > 130)
+        call powerStrike center, 130, 999, false
+    call describePower
+
+action describePower:
+    power_label = ""
+    if power != "":
+        remaining = charge_ticks > 0 ? charge_ticks : power_ticks
+        seconds = (remaining + 29 - ((remaining + 29) % 30)) / 30
+        power_label = power_name + (charge_ticks > 0 ? " - CHARGING " : " - ") + seconds + "S"
+    if power == "" && crates.length > 0:
+        power_label = "SUPPLY CRATE - WALK INTO IT"
+
+action updatePowers:
+    power_fx = []
+    center = monster.x + monster.scale * 8
+    direction = monster.flip ? -1 : 1
+    if power == "shield":
+        power_fx.push({"x":monster.x - 12,"y":monster.y - 12,"sprite":"power/shield","scale":3})
+    if power == "atomic":
+        if charge_ticks > 0:
+            power_fx.push({"x":monster.x + (monster.flip ? -10 : 34),"y":monster.y + 6,"sprite":"power/charge","scale":2})
+        if charge_ticks == 0:
+            if clock % 12 == 0:
+                sound.play("power_breath")
+            for segment in [0, 1, 2]:
+                beam_x = monster.flip ? monster.x - 54 * (segment + 1) : monster.x + 36 + 54 * segment
+                power_fx.push({"x":beam_x,"y":monster.y + 18,"sprite":"power/breath","scale":3,"flip":monster.flip})
+            strike_x = center + direction * 100
+            shots = shots.filter(s => abs(s.x - strike_x) > 100)
+            if clock % 6 == 0:
+                call powerStrike strike_x, 100, 1, false
+    if power == "electric":
+        power_fx.push({"x":monster.x - 12,"y":monster.y - 12,"sprite":"power/electric","scale":3})
+        shots = shots.filter(s => abs(s.x - center) > 42)
+        call powerStrike center, 38, 999, true
+        stop when status != "playing"
+        if clock % 12 == 0:
+            sound.play("power_zap")
+            for side in [-1, 1]:
+                power_fx.push({"x":center + (side < 0 ? -100 : 20),"y":130,"sprite":"power/bolt","scale":3,"flip":side < 0})
+            call powerStrike center, 120, 2, true
+    if power == "giant":
+        call powerStrike center, 48, 999, false
+    if power == "speed" && clock % 2 == 0:
+        power_fx.push({"x":monster.x - direction * 18,"y":monster.y + 48,"sprite":"power/speed","scale":3,"flip":monster.flip})
+    if power == "baby":
+        for baby in companion:
+            target_x = clamp(monster.x - direction * 22, 0, 368)
+            baby.x += clamp(target_x - baby.x, -3, 3)
+            baby.flip = monster.flip
+            baby.sprite = profile.skin + "/walk"
+            if clock % 18 == 0:
+                baby.sprite = profile.skin + "/punch"
+                call powerStrike baby.x + 8, 32, 1, false
+    if power == "aftershock":
+        for offset in [-96, -48, 0, 48, 96]:
+            power_fx.push({"x":center + offset - 24,"y":174,"sprite":"power/shockwave","scale":3})
+    call describePower
+
+# Called after combat so a 180-tick shield protects all 180 simulation ticks.
+action advancePowerClock:
+    was_charging = charge_ticks > 0
+    if was_charging == true:
+        charge_ticks -= 1
+        if charge_ticks == 0:
+            sound.play("power_breath")
+    if was_charging != true:
+        power_ticks = max(0, power_ticks - 1)
+        if power != "" && power_ticks == 0:
+            sound.play("power_end")
+            call clearPowers
+    call describePower
+
+# All damage paths share the same kill accounting: no repeated coins or points.
+action damageBuilding(building, amount):
+    stop when building.hp <= 0
+    building.hp = max(0, building.hp - amount)
+    if building.hp == 2:
+        building.sprite = "tower/damaged"
+    if building.hp == 1:
+        building.sprite = "tower/cracked"
+    if building.hp == 0:
+        building.sprite = "rubble"
+        building.y = 174
+        destroyed += 1
+        score += 100
+        sound.play("monster_collapse")
+
+action damageTank(tank, amount):
+    stop when tank.hp <= 0
+    tank.hp = max(0, tank.hp - amount)
+    if tank.hp == 0:
+        tank.sprite = "wreck"
+        score += 50
+        sound.play("monster_explosion")
+
+action damageSoldier(soldier):
+    stop when soldier.hp <= 0
+    soldier.hp = 0
+    soldier.visible = false
+    score += 10
+
+action damageFlyer(flyer, amount):
+    stop when flyer.hp <= 0
+    flyer.hp = max(0, flyer.hp - amount)
+    if flyer.hp == 0:
+        flyer.visible = false
+        score += 75
+        sound.play("monster_explosion")
+
+action powerStrike(center, radius, amount, air):
+    stop when status != "playing"
+    for building in buildings:
+        if abs((building.x + 16) - center) < radius:
+            call damageBuilding building, amount
+    for soldier in soldiers:
+        if abs(soldier.x - center) < radius:
+            call damageSoldier soldier
+    for tank in tanks:
+        if abs((tank.x + 16) - center) < radius:
+            call damageTank tank, amount
+    for flyer in aircraft:
+        if air == true && abs((flyer.x + 16) - center) < radius:
+            call damageFlyer flyer, amount
+    if destroyed == buildings.length:
+        call completeLevel

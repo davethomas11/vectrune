@@ -3834,6 +3834,7 @@ var __RunePixelRuntime = (() => {
         this.rect(0, 0, width, 23, 1053469);
         const coins = hud.coins?.split(".").reduce((value, part) => value?.[part], state);
         this.text(hud.level ? "CITY " + state[hud.level] + "  COINS " + (coins || 0) : hud.title, 10, 9, 10941058);
+        if (hud.message && state[hud.message]) this.text(String(state[hud.message]), 10, 17, 8840429);
         this.text("SCORE " + String(state[hud.score] || 0).padStart(5, "0"), width - 156, 9);
         if (this.muted) this.text("MUTE", width - 76, 9, 16757397);
         this.rect(width - 54, 9, 43, 5, 4207687);

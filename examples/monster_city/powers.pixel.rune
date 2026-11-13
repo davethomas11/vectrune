@@ -1,0 +1,193 @@
+# Power supplies and effects share both presentation hosts.
+@Palette/powers
+colors = {".":"transparent","d":"#263b56","c":"#50d9ed","w":"#f3ffff","b":"#288bbd","g":"#b5ef77","y":"#ffd679","o":"#ba7849","p":"#bb99f2"}
+
+@Sprite/supply/parachute
+palette = powers
+size = [16, 20]
+pixels:
+    "......yyyy......"
+    "...yyyyyyyyyy..."
+    "..yyyyywwyyyyy.."
+    ".yyyywwwwwwyyyy."
+    "yyyyyyyyyyyyyyyy"
+    "d..d........d..d"
+    "d...d......d...d"
+    ".d..d......d..d."
+    ".d...d....d...d."
+    "..d..d....d..d.."
+    "..d...d..d...d.."
+    "...d..d..d..d..."
+    "...d...dd...d..."
+    "....dddddddd...."
+    "....oyyyyyyo...."
+    "....oyowwoyo...."
+    "....oywwwwyo...."
+    "....oyowwoyo...."
+    "....oyyyyyyo...."
+    "....oooooooo...."
+
+@Sprite/supply/landed
+palette = powers
+size = [16, 20]
+pixels:
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "....oyyyyyyo...."
+    "....oyowwoyo...."
+    "....oywwwwyo...."
+    "....oyowwoyo...."
+    "....oyyyyyyo...."
+    "....oooooooo...."
+
+@Sprite/power/breath
+palette = powers
+size = [24, 8]
+pixels:
+    "...cccccc....ccccccc...."
+    "cccccccccccccccccccccc.."
+    "ccwwwwwwwwwwwwwwwwwwccc."
+    "wwwwwwwwwwwwwwwwwwwwwccc"
+    "wwwwwwwwwwwwwwwwwwwwwccc"
+    "ccwwwwwwwwwwwwwwwwwwccc."
+    "cccccccccccccccccccccc.."
+    "...cccccc....ccccccc...."
+
+@Sprite/power/bolt
+palette = powers
+size = [24, 8]
+pixels:
+    "........wwww............"
+    "......www..www.........."
+    "....www......www....ww.."
+    "wwwww..........wwwwwwwww"
+    "wwwww..........wwwwwwwww"
+    "....www......www....ww.."
+    "......www..www.........."
+    "........wwww............"
+
+@Sprite/power/speed
+palette = powers
+size = [16, 6]
+pixels:
+    "...yyyyyyyyyyy.."
+    "yyyyyyyyyyyy...."
+    "................"
+    "..wwwwwwwwwww..."
+    "wwwwwwwwwww....."
+    "................"
+
+@Sprite/power/shockwave
+palette = powers
+size = [16, 6]
+pixels:
+    "......cccc......"
+    "....ccwwwwcc...."
+    "..ccww....wwcc.."
+    "ccww........wwcc"
+    "ww............ww"
+    "................"
+
+@Sprite/power/shield
+palette = powers
+size = [24, 32]
+pixels:
+    "........................"
+    "........cccccccc........"
+    "......cccc....cccc......"
+    ".....ccc........ccc....."
+    "....cc............cc...."
+    "....c..............c...."
+    "...cc..............cc..."
+    "..cc................cc.."
+    "..cc................cc.."
+    "..c..................c.."
+    ".cc..................cc."
+    ".c....................c."
+    ".c....................c."
+    ".c....................c."
+    ".c....................c."
+    ".c....................c."
+    ".c....................c."
+    ".c....................c."
+    ".c....................c."
+    ".c....................c."
+    ".c....................c."
+    ".cc..................cc."
+    "..c..................c.."
+    "..cc................cc.."
+    "..cc................cc.."
+    "...cc..............cc..."
+    "....c..............c...."
+    "....cc............cc...."
+    ".....ccc........ccc....."
+    "......cccc....cccc......"
+    "........cccccccc........"
+    "........................"
+
+@Sprite/power/electric
+palette = powers
+size = [24, 32]
+pixels:
+    "........................"
+    "........pwwpwwpw........"
+    "......wpww...pwwpw......"
+    ".....wpw...p....wwp....."
+    "....wp...p........ww...."
+    "....p..p...........p...."
+    "...pwp.............ww..."
+    "..pw................pw.."
+    "..ww..............p.ww.."
+    "..w.............p....p.."
+    ".wp...........p......ww."
+    ".p..........p.........p."
+    ".w........p...........w."
+    ".w......p.............w."
+    ".p....p...............p."
+    ".w..p................pw."
+    ".wp................p..w."
+    ".p...............p....p."
+    ".w.............p......w."
+    ".w...........p........w."
+    ".p.........p..........p."
+    ".ww......p...........pw."
+    "..p....p.............w.."
+    "..ww.p..............ww.."
+    "..wp................wp.."
+    "...ww.............pwp..."
+    "....p...........p..p...."
+    "....ww........p...pw...."
+    ".....pww....p...wpw....."
+    "......wpwwp...wwpw......"
+    "........wpwwpwwp........"
+    "........................"
+
+@Sprite/power/charge
+palette = powers
+size = [12, 12]
+pixels:
+    "............"
+    ".....cc....."
+    "...cccccc..."
+    "..cccwwccc.."
+    "..ccwwwwcc.."
+    ".ccwwwwwwcc."
+    ".ccwwwwwwcc."
+    "..ccwwwwcc.."
+    "..cccwwccc.."
+    "...cccccc..."
+    ".....cc....."
+    "............"
+

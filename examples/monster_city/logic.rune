@@ -45,6 +45,8 @@ action initialize:
     call openTitle
 
 action openTitle:
+    call clearPowers
+    crates = []
     music.stop
     music.play "monster_title"
     status = "ready"
@@ -63,6 +65,8 @@ action confirmLevelReset:
     call openTitle
 
 action openStore:
+    call clearPowers
+    crates = []
     music.stop
     music.play "monster_shop"
     status = "store"
@@ -153,6 +157,7 @@ action start:
     reset monster
     level = profile.level
     call generateLevel
+    call resetSupplies
     monster.sprite = profile.skin + "/idle"
     score = 0
     reward = 0
@@ -172,6 +177,8 @@ action completeLevel:
     stop when status != "playing"
     stop when destroyed != buildings.length
     status = "won"
+    call clearPowers
+    crates = []
     reward = 50 + level * 10 + (score - score % 10) / 10
     profile.coins = min(999999, profile.coins + reward)
     profile.best_score = max(profile.best_score, score)
@@ -188,38 +195,18 @@ action smash:
     monster.sprite = profile.skin + "/punch"
     sound.play("monster_smash")
     for building in buildings:
-        if building.hp > 0 && abs((building.x + 16) - (monster.x + 24)) < 52:
-            building.hp -= 1
+        if building.hp > 0 && abs((building.x + 16) - (monster.x + monster.scale * 8)) < 52:
             dust.push({"x":building.x + 6,"y":120,"sprite":"dust","scale":2,"life":12})
-            if building.hp == 2:
-                building.sprite = "tower/damaged"
-            if building.hp == 1:
-                building.sprite = "tower/cracked"
-            if building.hp == 0:
-                building.sprite = "rubble"
-                building.y = 174
-                destroyed += 1
-                score += 100
-                sound.play("monster_collapse")
+            call damageBuilding building, 1
     for soldier in soldiers:
-        if soldier.hp > 0 && abs(soldier.x - (monster.x + 24)) < 45:
-            soldier.hp = 0
-            soldier.visible = false
-            score += 10
+        if soldier.hp > 0 && abs(soldier.x - (monster.x + monster.scale * 8)) < 45:
+            call damageSoldier soldier
     for tank in tanks:
-        if tank.hp > 0 && abs((tank.x + 16) - (monster.x + 24)) < 52:
-            tank.hp -= 1
-            if tank.hp == 0:
-                tank.sprite = "wreck"
-                score += 50
-                sound.play("monster_explosion")
+        if tank.hp > 0 && abs((tank.x + 16) - (monster.x + monster.scale * 8)) < 52:
+            call damageTank tank, 1
     for flyer in aircraft:
-        if flyer.hp > 0 && abs((flyer.x + 16) - (monster.x + 24)) < 52 && flyer.y > 70:
-            flyer.hp -= 1
-            if flyer.hp == 0:
-                flyer.visible = false
-                score += 75
-                sound.play("monster_explosion")
+        if flyer.hp > 0 && abs((flyer.x + 16) - (monster.x + monster.scale * 8)) < 52 && flyer.y > 70:
+            call damageFlyer flyer, 1
     if destroyed == buildings.length:
         call completeLevel
 
@@ -229,10 +216,10 @@ action tick(input):
     cooldown = max(0, cooldown - 1)
     flash = max(0, flash - 1)
     if input.left == true:
-        monster.x = clamp(monster.x - 2, 0, 336)
+        monster.x = clamp(monster.x - move_speed, 0, move_limit)
         monster.flip = true
     if input.right == true:
-        monster.x = clamp(monster.x + 2, 0, 336)
+        monster.x = clamp(monster.x + move_speed, 0, move_limit)
         monster.flip = false
     monster.sprite = profile.skin + "/idle"
     if input.left == true || input.right == true:
@@ -241,6 +228,9 @@ action tick(input):
             sound.play("monster_stomp")
     if flash > 0:
         monster.sprite = profile.skin + "/punch"
+    call tickSupplies
+    call updatePowers
+    stop when status != "playing"
     if input.smash == true:
         call smash
     stop when status != "playing"
@@ -272,16 +262,29 @@ action tick(input):
         if shot.vy > 0:
             shot.y += shot.vy
         shot.life -= 1
-        if shot.life > 0 && shot.x > monster.x + 8 && shot.x < monster.x + 42 && shot.y > monster.y && shot.y < monster.y + 72:
-            health = max(0, health - shot.damage)
-            sound.play("monster_damage")
+        if shot.life > 0 && shot.x > monster.x + 8 && shot.x < monster.x + monster.scale * 16 - 6 && shot.y > monster.y && shot.y < monster.y + monster.scale * 24:
+            incoming = shot.damage
+            if power == "shield":
+                incoming = 0
+            if power == "giant":
+                incoming = (shot.damage + 1 - ((shot.damage + 1) % 2)) / 2
+            if power == "speed":
+                dodge = random(1, 100, city_seed + clock * 31 + shot.x)
+                if dodge <= 65:
+                    incoming = 0
+            if incoming > 0:
+                health = max(0, health - incoming)
+                sound.play("monster_damage")
             shot.life = 0
     shots = shots.filter(s => s.life > 0 && s.x > 0 && s.x < 384 && s.y < 194)
     for puff in dust:
         puff.y -= 1
         puff.life -= 1
     dust = dust.filter(p => p.life > 0)
+    call advancePowerClock
     if health <= 0:
+        call clearPowers
+        crates = []
         status = "gameover"
         music.stop
         sound.play("monster_gameover")

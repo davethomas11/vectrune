@@ -1,0 +1,270 @@
+#!RUNE
+import "monster_city.rune"
+
+@Test/Powers/DropCadenceSeedAndCap
+type = logic
+page = city
+run:
+    invoke prepareLateSupply
+    invoke start
+    assert state.drop_interval == 150
+    assert state.next_drop == 30
+    invoke forceDrop
+    invoke tick {}
+    invoke inspectSupplies
+    assert state.power_checks.crates == 1
+    invoke rememberSupply
+    invoke start
+    invoke quietCity
+    invoke forceDrop
+    invoke tick {}
+    assert state.crates[0] == state.first_supply
+    invoke forceDrop
+    invoke tick {}
+    invoke forceDrop
+    invoke tick {}
+    invoke inspectSupplies
+    assert state.power_checks.crates == 2
+    invoke prepareEarlySupply
+    invoke start
+    assert state.drop_interval == 450
+    assert state.next_drop == 150
+
+@Test/Powers/ParachutePickupAndForceField
+type = logic
+page = city
+run:
+    invoke start
+    invoke quietCity
+    invoke arrangeShieldPickup
+    invoke tick {}
+    assert state.power == "shield"
+    assert state.power_ticks == 179
+    assert state.crates == []
+    assert state.health == 100
+    invoke waitFiveSeconds
+    assert state.power_ticks == 29
+    invoke waitSecond
+    assert state.power == ""
+    invoke lethalPowerShot
+    invoke tick {}
+    assert state.health == 0
+    assert state.status == "gameover"
+
+@Test/Powers/AtomicChargeAndFourSecondBeam
+type = logic
+page = city
+run:
+    invoke start
+    invoke quietCity
+    invoke hardenCity
+    invoke grantPower "atomic"
+    invoke waitSecond
+    assert state.charge_ticks == 30
+    assert state.buildings[0].hp == 1000
+    invoke waitSecond
+    assert state.charge_ticks == 0
+    assert state.power_ticks == 120
+    assert state.buildings[0].hp == 1000
+    invoke waitSecond
+    assert state.power_ticks == 90
+    assert state.buildings[0].hp == 995
+    invoke waitSecond
+    invoke waitSecond
+    invoke waitSecond
+    assert state.power == ""
+    assert state.power_ticks == 0
+    assert state.buildings[0].hp == 980
+    assert state.power_fx == []
+
+@Test/Powers/ElectricContactAndRangedZap
+type = logic
+page = city
+run:
+    invoke start
+    invoke quietCity
+    invoke hardenCity
+    invoke arrangeElectricTargets
+    invoke grantPower "electric"
+    invoke tick {}
+    assert state.soldiers[0].hp == 0
+    assert state.tanks[0].hp == 0
+    assert state.aircraft[0].hp == 0
+    assert state.score == 135
+    assert state.health == 100
+    invoke electricBeat
+    invoke tick {}
+    assert state.buildings[0].hp == 998
+    assert state.buildings[1].hp == 998
+    assert state.score == 135
+
+@Test/Powers/GiantSizeContactArmorAndExpiry
+type = logic
+page = city
+run:
+    invoke start
+    invoke quietCity
+    invoke giantAtEdge
+    invoke grantPower "giant"
+    assert state.monster.scale == 4
+    assert state.monster.y == 94
+    assert state.monster.x == 320
+    invoke giantShot
+    invoke tick {}
+    assert state.health == 97
+    assert state.buildings[4].hp == 0
+    assert state.destroyed == 1
+    invoke waitTenSeconds
+    assert state.power == ""
+    assert state.monster.scale == 3
+    assert state.monster.y == 118
+    assert state.move_limit == 336
+
+@Test/Powers/SpeedMovementDodgeAndExpiry
+type = logic
+page = city
+run:
+    invoke prepareEarlySupply
+    invoke start
+    invoke quietCity
+    invoke grantPower "speed"
+    invoke speedVolley
+    invoke tick {}
+    assert state.health > 70
+    assert state.health < 100
+    invoke tick {"right":true}
+    assert state.monster.x == 12.5
+    invoke waitTenSeconds
+    assert state.move_speed == 2
+    invoke tick {"right":true}
+    assert state.monster.x == 14.5
+
+@Test/Powers/BabyPartnerFollowsAndAttacks
+type = logic
+page = city
+run:
+    invoke start
+    invoke quietCity
+    invoke hardenCity
+    invoke babyPosition
+    invoke grantPower "baby"
+    invoke waitSecond
+    assert state.power == "baby"
+    assert state.power_ticks == 570
+    assert state.companion[0].sprite == "kaiju/walk"
+    assert state.companion[0].x == 58
+    assert state.buildings[0].hp == 999
+    invoke waitTenSeconds
+    invoke waitTenSeconds
+    assert state.companion == []
+    assert state.power == ""
+
+@Test/Powers/AftershockScoresOnceAndClearsNearbyShots
+type = logic
+page = city
+run:
+    invoke start
+    invoke quietCity
+    invoke arrangeAftershock
+    invoke grantPower "aftershock"
+    assert state.destroyed == 2
+    assert state.score == 260
+    assert state.shots[0].x == 300
+    invoke grantPower "aftershock"
+    assert state.destroyed == 2
+    assert state.score == 260
+    invoke start
+    assert state.power == ""
+    assert state.crates == []
+    assert state.power_fx == []
+    assert state.companion == []
+
+@Logic/monster
+state:
+    power_checks = {}
+    first_supply = {}
+action prepareLateSupply:
+    profile.level = 15
+    profile.seed = 42
+action prepareEarlySupply:
+    profile.level = 1
+    profile.seed = 42
+action quietCity:
+    soldiers = []
+    tanks = []
+    aircraft = []
+    next_drop = 999999
+action hardenCity:
+    for building in buildings:
+        building.hp = 1000
+action forceDrop:
+    next_drop = 1
+action inspectSupplies:
+    power_checks = {"crates":crates.length}
+action rememberSupply:
+    first_supply = crates[0]
+action arrangeShieldPickup:
+    crates = [{"x":8,"y":120,"sprite":"supply/parachute","scale":2,"kind":"shield","life":100}]
+    shots = [{"x":20,"y":166,"sprite":"shell","vx":1,"life":10,"damage":100}]
+action lethalPowerShot:
+    shots = [{"x":20,"y":166,"sprite":"shell","vx":1,"life":10,"damage":100}]
+action arrangeElectricTargets:
+    soldiers = [{"x":32,"y":170,"sprite":"soldier","scale":2,"hp":1}]
+    tanks = [{"x":30,"y":174,"sprite":"tank","scale":2,"hp":2}]
+    aircraft = [{"x":40,"y":78,"sprite":"helicopter","scale":2,"hp":2,"vx":1,"kind":"helicopter"}]
+    shots = [{"x":20,"y":166,"sprite":"shell","vx":1,"life":10,"damage":100}]
+action electricBeat:
+    clock = 11
+action giantAtEdge:
+    monster.x = 336
+action giantShot:
+    shots = [{"x":332,"y":166,"sprite":"shell","vx":1,"life":10,"damage":5}]
+action speedVolley:
+    for index in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]:
+        shots.push({"x":18 + index,"y":166,"sprite":"bullet","vx":0,"life":10,"damage":1})
+action babyPosition:
+    monster.x = 80
+action arrangeAftershock:
+    soldiers = [{"x":40,"y":170,"sprite":"soldier","hp":1}]
+    tanks = [{"x":100,"y":174,"sprite":"tank","hp":2}]
+    shots = [{"x":20,"y":166,"sprite":"shell","vx":1,"life":10,"damage":5},{"x":300,"y":166,"sprite":"shell","vx":-1,"life":10,"damage":5}]
+action waitSecond:
+    for frame in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]:
+        call tick {}
+action waitFiveSeconds:
+    for second in [0, 1, 2, 3, 4]:
+        call waitSecond
+action waitTenSeconds:
+    call waitFiveSeconds
+    call waitFiveSeconds
+
+@Test/Powers/FinishingBlastClearsEffectsAndRewardsOnce
+type = logic
+page = city
+run:
+    invoke start
+    invoke quietCity
+    invoke finalPowerBuilding
+    invoke grantPower "electric"
+    invoke tick {}
+    assert state.status == "won"
+    assert state.score == 500
+    assert state.profile.coins == 110
+    assert state.profile.level == 2
+    assert state.power == ""
+    assert state.power_fx == []
+    assert state.companion == []
+    invoke grantPower "aftershock"
+    invoke tick {}
+    assert state.score == 500
+    assert state.profile.coins == 110
+
+@Logic/monster
+action finalPowerBuilding:
+    destroyed = 4
+    score = 400
+    for building in buildings:
+        building.hp = 0
+    buildings[4].hp = 6
+    buildings[4].x = 40
+    clock = 11

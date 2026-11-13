@@ -14,6 +14,8 @@ import "skins/slime.pixel.rune"
 import "skins/mecha.pixel.rune"
 import "skins/cosmo.pixel.rune"
 import "logic.rune"
+import "powers.rune"
+import "powers.pixel.rune"
 import "sound.rune"
 
 @App
@@ -27,14 +29,14 @@ port = 3010
 @Scene/city
 logic = monster
 background = "#233449"
-hud = {"title":"MONSTER CITY","score":"score","health":"health","max_health":100,"level":"level","coins":"profile.coins"}
+hud = {"title":"MONSTER CITY","score":"score","health":"health","max_health":100,"level":"level","coins":"profile.coins","message":"power_label"}
 overlays = {"ready":"MAKE A BIG ENTRANCE","won":"CITY CONQUERED","gameover":"MONSTER DOWN"}
 keys = {"ArrowLeft":"left","ArrowRight":"right","KeyA":"left","KeyD":"right","Space":"smash"}
 persistence = {"key":"monster-city-v1","state":"profile"}
 menu = menu
 commands = {"KeyB":"openStore","KeyT":"openTitle","PageDown":"nextStorePage","PageUp":"previousStorePage"}
 menu_sounds = {"move":"menu_move","confirm":"menu_confirm"}
-layers = ["skyline", "buildings", "soldiers", "tanks", "aircraft", "shots", "monster", "dust"]
+layers = ["skyline", "buildings", "soldiers", "tanks", "aircraft", "shots", "crates", "companion", "monster", "power_fx", "dust"]
 rects = [{"x":0,"y":23,"width":384,"height":65,"color":"#233449"},{"x":0,"y":88,"width":384,"height":102,"color":"#384853"},{"x":310,"y":38,"width":22,"height":22,"color":"#e3cd9b"},{"x":306,"y":38,"width":20,"height":18,"color":"#233449"},{"x":0,"y":190,"width":384,"height":4,"color":"#9a927b"},{"x":0,"y":194,"width":384,"height":22,"color":"#202b36"},{"x":10,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":68,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":126,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":184,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":242,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":300,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":358,"y":204,"width":20,"height":2,"color":"#6d7169"}]
 
 # Page metadata lets the same Rune actions run through vectrune test.

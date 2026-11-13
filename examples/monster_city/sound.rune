@@ -149,3 +149,37 @@ volume = 0.09
 wave = square
 sequence = D3:55ms, C3:85ms
 volume = 0.05
+
+@Sound/power_pickup
+wave = triangle
+sequence = C5:50ms, E5:50ms, G5:50ms, C6:100ms
+volume = 0.10
+
+@Sound/power_charge
+wave = triangle
+freq = 90 -> 880
+duration = 1900ms
+volume = 0.045
+
+@Sound/power_breath
+wave = noise
+filter = lowpass 2000 -> 700
+duration = 400ms
+volume = 0.10
+
+@Sound/power_zap
+wave = sawtooth
+freq = 1500 -> 160
+duration = 90ms
+volume = 0.07
+
+@Sound/power_aftershock
+wave = noise
+filter = lowpass 1600 -> 35
+duration = 600ms
+volume = 0.18
+
+@Sound/power_end
+wave = triangle
+sequence = E5:60ms, C5:100ms
+volume = 0.055
