@@ -1,4 +1,4 @@
-# DRAKE — a cosmetic monster with idle, step and punch poses.
+# DRAKE — a monster with idle, step, punch and duck poses.
 @Palette/drake
 colors = {"d":"#743e52","b":"#c76b71","h":"#ffd09a","e":"#fff0bb","k":"#30243e","a":"#ba858b",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/drake/walk
 frames = ["drake/idle", "drake/step"]
 fps = 8
+
+@Sprite/drake/duck
+palette = drake
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    ".....h.....h...."
+    "....hbd...dbh..."
+    "....dbbddbbbd..."
+    "....dbbbbbbbd..."
+    "....dbbbbeebbd.."
+    "....dbbbbkebbd.."
+    "....dbbbbkkkk..."
+    "..a.dbbbbbha...."
+    ".abba.dbbabbd..."
+    "aabbba.dbab.hh.."
+    ".abba.ddbab....."
+    "...ddbbbbab....."
+    ".ddbbbbbbabb...."
+    "dbbbddd.dbbd...."
+    "..dbbd..dbbd...."
+    "..hhhhh.hhhhh..."

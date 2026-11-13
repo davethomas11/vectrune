@@ -1,4 +1,4 @@
-# YETI — a cosmetic monster with idle, step and punch poses.
+# YETI — a monster with idle, step, punch and duck poses.
 @Palette/yeti
 colors = {"d":"#73869d","b":"#d8e4e8","h":"#ffffff","e":"#a9dded","k":"#283448","a":"#c4afc9",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/yeti/walk
 frames = ["yeti/idle", "yeti/step"]
 fps = 8
+
+@Sprite/yeti/duck
+palette = yeti
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    ".......h........"
+    ".....hhhhhh....."
+    "....hbbbbbbh...."
+    "...hbbbbbbbbh..."
+    "...hbbkeeekbh..."
+    "...hbbkkkkbbh..."
+    "...hbbbbbbbbh..."
+    "..hbbbbhhbbbbh.."
+    ".hbbbbbhbbbbbbh."
+    "hbbbbbbhbbbbbbbh"
+    "..hbbbbhbbbbh..."
+    "..hbbbbhbbbbh..."
+    "..hhbbbbbbbhh..."
+    "...hbbbhbbbh...."
+    "..hbbbh.hbbbh..."
+    ".hhhhhh.hhhhhh.."

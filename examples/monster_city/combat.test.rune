@@ -1,0 +1,244 @@
+#!RUNE
+import "monster_city.rune"
+
+@Test/Combat/DuckStopsAttacksDodgesHighShotsAndBlocksLowShots
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke tick {"defend":true,"right":true,"smash":true,"special":true}
+    assert state.defending == true
+    assert state.monster.x == 8
+    assert state.monster.y == 142
+    assert state.monster.sprite == "kaiju/duck"
+    assert state.energy == 100
+    assert state.buildings[0].hp == 1000
+    invoke highCombatShot
+    invoke tick {"defend":true}
+    assert state.health == 100
+    invoke lowCombatShot
+    invoke tick {"defend":true}
+    assert state.health == 99
+    invoke heavyCombatShot
+    invoke tick {"defend":true}
+    assert state.health == 89
+    invoke tick {}
+    assert state.defending == false
+    assert state.monster.y == 118
+    assert state.monster.sprite == "kaiju/idle"
+
+@Test/Combat/EnergyCostCooldownRechargeAndCap
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke useSpecial
+    assert state.special_name == "VINE SNARE"
+    assert state.energy == 60
+    assert state.buildings[0].hp == 998
+    invoke useSpecial
+    assert state.energy == 60
+    invoke emptyCombatEnergy
+    invoke useSpecial
+    assert state.energy == 0
+    assert state.special_notice == "NEED 40 ENERGY"
+    invoke combatSecond
+    assert state.energy == 6
+    invoke almostFullCombatEnergy
+    invoke combatSecond
+    assert state.energy == 100
+
+@Test/Combat/HoldSpecialDoesNotAutofire
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke holdSpecialThreeSeconds
+    assert state.energy == 78
+    assert state.buildings[0].hp == 998
+    invoke tick {}
+    invoke tick {"special":true}
+    assert state.energy == 38
+    assert state.buildings[0].hp == 996
+
+@Test/Combat/SelectedSkinDeterminesMoveAndAirDamage
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke combatAirTarget
+    invoke useSpecial
+    assert state.aircraft[0].hp == 3
+    invoke equipVoltForCombat
+    invoke useSpecial
+    assert state.special_name == "CHAIN LIGHTNING"
+    assert state.energy == 50
+    assert state.aircraft[0].hp == 0
+    assert state.score == 75
+
+@Test/Combat/CoralHealsAndGolemGuards
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke equipCoralForCombat
+    invoke useSpecial
+    assert state.health == 75
+    assert state.energy == 40
+    invoke equipGolemForCombat
+    invoke useSpecial
+    assert state.guard_ticks == 150
+    invoke heavyCombatShot
+    invoke tick {}
+    assert state.health == 74
+
+@Test/Combat/MantisDashHitsTheTraversedPath
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke equipMantisForCombat
+    invoke useSpecial
+    assert state.monster.x == 88
+    assert state.energy == 55
+    assert state.buildings[0].hp == 0
+    assert state.buildings[1].hp == 0
+    assert state.destroyed == 2
+    assert state.score == 200
+
+@Test/Combat/AcidPersistsAndCleansUpOnRestart
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke equipSlimeForCombat
+    invoke useSpecial
+    invoke combatSecond
+    invoke combatSecond
+    invoke combatSecond
+    invoke combatSecond
+    assert state.buildings[0].hp == 995
+    assert state.special_ticks == 0
+    invoke start
+    assert state.energy == 100
+    assert state.defending == false
+    assert state.combat_fx == []
+    assert state.special_cooldown == 0
+
+@Test/Combat/GiantCanDuckAndReturnsToNormalHeight
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke grantPower "giant"
+    invoke lowCombatShot
+    invoke tick {"defend":true}
+    assert state.monster.scale == 4
+    assert state.monster.y == 126
+    assert state.health == 99
+    invoke holdDefenseTenSeconds
+    assert state.monster.scale == 3
+    assert state.monster.y == 142
+    assert state.monster.sprite == "kaiju/duck"
+
+@Test/Combat/EverySkinHasAnExclusiveAffordableMove
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke exerciseEverySpecial
+    assert state.moves_tested == 17
+    assert state.move_errors == 0
+
+@Logic/monster
+state:
+    moves_tested = 0
+    move_errors = 0
+action prepareCombat:
+    profile.skin = "kaiju"
+    profile.level = 1
+    profile.seed = 42
+    call start
+    soldiers = []
+    tanks = []
+    aircraft = []
+    next_drop = 999999
+    for building in buildings:
+        building.hp = 1000
+action highCombatShot:
+    shots = [{"x":20,"y":130,"sprite":"bullet","vx":0,"life":10,"damage":7}]
+action lowCombatShot:
+    shots = [{"x":20,"y":166,"sprite":"bullet","vx":0,"life":10,"damage":7}]
+action heavyCombatShot:
+    shots = [{"x":20,"y":166,"sprite":"shell","vx":0,"life":10,"damage":100}]
+action emptyCombatEnergy:
+    energy = 0
+    special_cooldown = 0
+action almostFullCombatEnergy:
+    energy = 99
+action combatAirTarget:
+    aircraft = [{"x":150,"y":45,"sprite":"plane","scale":2,"hp":3,"vx":1,"kind":"plane"}]
+action equipVoltForCombat:
+    profile.skin = "volt"
+    call resetCombat
+action equipCoralForCombat:
+    profile.skin = "coral"
+    health = 50
+    call resetCombat
+action equipGolemForCombat:
+    profile.skin = "golem"
+    call resetCombat
+action equipMantisForCombat:
+    profile.skin = "mantis"
+    buildings[0].hp = 4
+    buildings[1].hp = 4
+    call resetCombat
+action equipSlimeForCombat:
+    profile.skin = "slime"
+    call resetCombat
+action combatSecond:
+    for frame in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]:
+        call tick {}
+action holdSpecialThreeSeconds:
+    for second in [0, 1, 2]:
+        for frame in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]:
+            call tick {"special":true}
+action holdDefenseTenSeconds:
+    for second in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
+        for frame in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]:
+            call tick {"defend":true}
+action exerciseEverySpecial:
+    for skin in skins:
+        profile.skin = skin.id
+        call resetCombat
+        call useSpecial
+        moves_tested += 1
+        if energy != 100 - special_cost:
+            move_errors += 1
+
+@Test/Combat/MissilesAndMeteorHitOnImpact
+type = logic
+page = city
+run:
+    invoke prepareCombat
+    invoke equipMechaForCombat
+    invoke useSpecial
+    assert state.buildings[1].hp == 1000
+    invoke combatSecond
+    assert state.buildings[1].hp == 998
+    invoke combatSecond
+    invoke combatSecond
+    assert state.buildings[1].hp == 994
+    invoke equipCosmoForCombat
+    invoke useSpecial
+    assert state.buildings[1].hp == 994
+    invoke combatSecond
+    assert state.buildings[1].hp == 990
+
+@Logic/monster
+action equipMechaForCombat:
+    profile.skin = "mecha"
+    call resetCombat
+action equipCosmoForCombat:
+    profile.skin = "cosmo"
+    call resetCombat

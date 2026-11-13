@@ -1,0 +1,118 @@
+@Palette/obsidian
+colors = {"d":"#393447","b":"#625669","h":"#ffac68","e":"#ffe2a1","k":"#171e2a","a":"#e7714b",".":"transparent"}
+
+@Sprite/obsidian/idle
+palette = obsidian
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".....a....a....."
+    "....aba..aba...."
+    "....dbbddbbd...."
+    "...dbbbbbbbbd..."
+    "...dbbbeeebbd..."
+    "...dbbbkkkbbd..."
+    "...dbbbbabbbd..."
+    "..ddbbbabbbbdd.."
+    ".dbbbbabbbbbbbd."
+    ".dbbbbabbbbbbbd."
+    "dbbbbbbaabbbbbbd"
+    "dbbbbbbbabbbbbbd"
+    ".ddbbbbbabbbdd.."
+    "..dbbbbabbbbd..."
+    "..dbbbabbbbbd..."
+    "..dbbbabbbbbd..."
+    "..dbbbbabbbbd..."
+    "..ddbbbbbbbdd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "..dbbbd.dbbbd..."
+    ".dbbbbd.dbbbbd.."
+    ".hhhhhh.hhhhhh.."
+
+@Sprite/obsidian/step
+palette = obsidian
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".....a....a....."
+    "....aba..aba...."
+    "....dbbddbbd...."
+    "...dbbbbbbbbd..."
+    "...dbbbeeebbd..."
+    "...dbbbkkkbbd..."
+    "...dbbbbabbbd..."
+    "..ddbbbabbbbdd.."
+    ".dbbbbabbbbbbbd."
+    ".dbbbbabbbbbbbd."
+    "dbbbbbbaabbbbbbd"
+    "dbbbbbbbabbbbbbd"
+    ".ddbbbbbabbbdd.."
+    "..dbbbbabbbbd..."
+    "..dbbbabbbbbd..."
+    "..dbbbabbbbbd..."
+    "..dbbbbabbbbd..."
+    "..ddbbbbbbbdd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "....dbbbddbbbd.."
+    "...dbbbd.dbbbd.."
+    "..dbbbbd.dbbbbd."
+    "..hhhhhh.hhhhhh."
+
+@Sprite/obsidian/punch
+palette = obsidian
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".....a....a....."
+    "....aba..aba...."
+    "....dbbddbbd...."
+    "...dbbbbbbbbd..."
+    "...dbbbeeebbd..."
+    "...dbbbkkkbbd..."
+    "...dbbbbabbbd..."
+    "..ddbbbabbbbdd.."
+    ".dbbbbabbbbbbbd."
+    ".dbbbbabbbbddddd"
+    "dbbbbbbaabbbbbbb"
+    "dbbbbbbbabbhhhhh"
+    ".ddbbbbbabbbdd.."
+    "..dbbbbabbbbd..."
+    "..dbbbabbbbbd..."
+    "..dbbbabbbbbd..."
+    "..dbbbbabbbbd..."
+    "..ddbbbbbbbdd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "..dbbbd.dbbbd..."
+    ".dbbbbd.dbbbbd.."
+    ".hhhhhh.hhhhhh.."
+
+@Animation/obsidian/walk
+frames = ["obsidian/idle", "obsidian/step"]
+fps = 8
+
+@Sprite/obsidian/duck
+palette = obsidian
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    ".....a....a....."
+    "....aba..aba...."
+    "....dbbddbbd...."
+    "...dbbbbbbbbd..."
+    "...dbbbeeebbd..."
+    "...dbbbkkkbbd..."
+    "...dbbbbabbbd..."
+    "..ddbbbabbbbdd.."
+    ".dbbbbabbbbbbbd."
+    "dbbbbbbbabbbbbbd"
+    "..dbbbbabbbbd..."
+    "..dbbbabbbbbd..."
+    "..ddbbbbbbbdd..."
+    "...dbbbddbbbd..."
+    "..dbbbd.dbbbd..."
+    ".hhhhhh.hhhhhh.."

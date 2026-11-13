@@ -61,7 +61,7 @@ with tempfile.TemporaryDirectory(prefix='rune-pixel-browser-') as folder, sync_p
     page.keyboard.down('ArrowRight'); page.wait_for_function('__RunePixel.app.state.monster.x > 8'); page.keyboard.up('ArrowRight')
     previous = page.evaluate('__RunePixel.app.state.monster.x')
     page.get_by_role('button', name='Toggle instructions').click()
-    expect(page.get_by_text('Arrow keys to move. Space to smash. Enter to start. P to pause. M to toggle sound.')).to_be_visible()
+    expect(page.get_by_text('Arrow keys to move. Space to smash. Enter to start. Down/S to block. X for special. P to pause. M to toggle sound.')).to_be_visible()
     page.get_by_role('button', name='Resume', exact=True).click()
     page.locator('canvas').focus()
     page.keyboard.down('ArrowRight'); page.wait_for_function(f'__RunePixel.app.state.monster.x > {previous}'); page.keyboard.up('ArrowRight')

@@ -224,7 +224,22 @@ fn every_catalog_monster_has_renderable_idle_step_and_punch_frames() {
     let catalog: serde_json::Value =
         serde_json::from_str(&frontend.logic_definitions["monster"].state["skins"]).unwrap();
     let catalog = catalog.as_array().unwrap();
-    assert_eq!(catalog.len(), 13);
+    let moves: serde_json::Value =
+        serde_json::from_str(&frontend.logic_definitions["monster"].state["special_defs"]).unwrap();
+    let moves = moves.as_array().unwrap();
+    assert_eq!(moves.len(), 17);
+    let names: std::collections::HashSet<_> =
+        moves.iter().map(|m| m["name"].as_str().unwrap()).collect();
+    assert_eq!(names.len(), 17);
+    for skin in catalog {
+        let selected: Vec<_> = moves.iter().filter(|m| m["skin"] == skin["id"]).collect();
+        assert_eq!(selected.len(), 1);
+        assert!(selected[0]["cost"]
+            .as_u64()
+            .is_some_and(|n| n > 0 && n <= 100));
+    }
+
+    assert_eq!(catalog.len(), 17);
     let assets = pixel::assets(&doc).unwrap();
     let game = pixel::compile(&doc).unwrap();
     let runtime = rquickjs::Runtime::new().unwrap();
@@ -243,6 +258,6 @@ fn every_catalog_monster_has_renderable_idle_step_and_punch_frames() {
             }
         }
     });
-    // The original three share a silhouette; the ten additions are new shapes.
-    assert_eq!(silhouettes.len(), 11);
+    // The original three share a silhouette; the fourteen additions are new shapes.
+    assert_eq!(silhouettes.len(), 15);
 }

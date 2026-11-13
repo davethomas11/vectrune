@@ -1,4 +1,4 @@
-# CORAL — a cosmetic monster with idle, step and punch poses.
+# CORAL — a monster with idle, step, punch and duck poses.
 @Palette/coral
 colors = {"d":"#aa5267","b":"#ed929c","h":"#ffd2b0","e":"#fdf5cd","k":"#563551","a":"#bfe8d8",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/coral/walk
 frames = ["coral/idle", "coral/step"]
 fps = 8
+
+@Sprite/coral/duck
+palette = coral
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    "..a.........a..."
+    "...a.......a...."
+    ".a.ddddddd.a...."
+    "..ddbbbbbbbdd..."
+    ".aabbbbbbeebba.."
+    "..dbbbbbbkebbda."
+    ".aabbbbbbbbbba.."
+    "..dbbbkkkkbbbda."
+    "..ddbbbhabbbdd.."
+    "...dbbbhabbbdhh."
+    "...dbbbhabbbd..."
+    "...dbbbhabbbd..."
+    "...ddbbbbbbdd..."
+    "....dbbd.dbd...."
+    "...dbbd..dbd...."
+    "...hhhhh.hhhh..."

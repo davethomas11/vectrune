@@ -16,7 +16,7 @@ export interface PixelConfig {
   persistence?: Persistence;
   menu?: string;
   menuSounds?: {move?:string; confirm?:string};
-  hud?: { title: string; score: string; health: string; max_health: number; level?: string; coins?: string; message?: string };
+  hud?: { title: string; score: string; health: string; max_health: number; level?: string; coins?: string; message?: string; energy?: string; max_energy?: number; special?: string };
   overlays?: Record<string,string>;
   rects: { x: number; y: number; width: number; height: number; color: string }[];
 }
@@ -146,6 +146,7 @@ export class PixelEngine {
       this.sprite({x:x+cw/2-16,y:76,sprite:card.sprite,scale:2});
       this.text(card.name,x+cw/2-card.name.length*2,130,0xf5e9cc);
       this.text(card.detail,x+cw/2-card.detail.length*2,142,0xeccc85);
+      if(card.caption) this.text(card.caption,x+cw/2-card.caption.length*2,153,0x86e4ed);
       this.buttons.push({x,y:70,width:cw,height:92,action:card.action,args:card.args || []});
     }
     const actions=menu.buttons || [];
@@ -221,6 +222,13 @@ export class PixelEngine {
       const coins = hud.coins?.split('.').reduce((value:any,part) => value?.[part],state);
       this.text(hud.level ? 'CITY ' + state[hud.level] + '  COINS ' + (coins || 0) : hud.title,10,9,0xa6f282);
       if(hud.message && state[hud.message]) this.text(String(state[hud.message]),10,17,0x86e4ed);
+      if(hud.special && state[hud.special]) this.text(String(state[hud.special]),160,17,0xeccc85);
+      if(hud.energy) {
+        const energy=Math.max(0,Math.min(hud.max_energy || 100,Number(state[hud.energy]) || 0));
+        this.text('E '+Math.floor(energy),width-114,17,0x86e4ed);
+        this.rect(width-70,17,59,4,0x294056);
+        this.rect(width-70,17,energy*59/(hud.max_energy || 100),4,0x65d5ed);
+      }
       this.text('SCORE ' + String(state[hud.score] || 0).padStart(5, '0'), width - 156, 9);
       if (this.muted) this.text('MUTE',width - 76,9,0xffb295);
       this.rect(width - 54, 9, 43, 5, 0x403447);

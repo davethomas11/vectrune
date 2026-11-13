@@ -1,4 +1,4 @@
-# CYCLOPS — a cosmetic monster with idle, step and punch poses.
+# CYCLOPS — a monster with idle, step, punch and duck poses.
 @Palette/cyclops
 colors = {"d":"#674482","b":"#ac79bd","h":"#efb8d8","e":"#fff5cd","k":"#282840","a":"#81c7c1",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/cyclops/walk
 frames = ["cyclops/idle", "cyclops/step"]
 fps = 8
+
+@Sprite/cyclops/duck
+palette = cyclops
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    "......hh........"
+    ".....hbbh......."
+    "....dbbbbd......"
+    "...dbbbbbbd....."
+    "...dbbeeeebd...."
+    "...dbeekkebd...."
+    "...dbbeeeebd...."
+    "...dbbbbbbbd...."
+    "..dbbbbbabbbd..."
+    "..dbbbbbabb.hh.."
+    "..dbbbbbabb....."
+    "..dbbbbbabb....."
+    "..ddbbbbbbbdd..."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    "..hhhhh.hhhhh..."

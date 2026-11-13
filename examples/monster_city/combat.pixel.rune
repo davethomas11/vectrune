@@ -1,0 +1,193 @@
+@Palette/combat
+colors = {".":"transparent","w":"#f3ffff","b":"#65d5ed","g":"#b5ef77","o":"#f5a16b","r":"#ef767d","p":"#c4a2ef","y":"#ffe09c","d":"#283d58","a":"#99aeb8"}
+
+@Sprite/combat/block
+palette = combat
+size = [8, 16]
+pixels:
+    "...ww..."
+    "..wbw..."
+    ".wbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    "wbbbw..."
+    ".wbbw..."
+    "..wbw..."
+    "...ww..."
+
+@Sprite/combat/vines
+palette = combat
+size = [16, 8]
+pixels:
+    "..g...g...g...g."
+    "..gg.ggg.ggg.gg."
+    "...gggggggggg..."
+    "...g..gggg..g..."
+    "..gg...gg...gg.."
+    ".gg....gg....gg."
+    "gg.....gg.....gg"
+    "g......gg......g"
+
+@Sprite/combat/flame
+palette = combat
+size = [16, 8]
+pixels:
+    ".....o...o......"
+    "...oyoo.oyoo...."
+    "..oywyoooywyo..."
+    ".oywwwyoywwwyo.."
+    "oywwwwwywwwwwyo."
+    ".oywwwwwwwwwyo.."
+    "..oyyyyyyyyyo..."
+    "...ooooooooo...."
+
+@Sprite/combat/ice
+palette = combat
+size = [16, 8]
+pixels:
+    "....b......b...."
+    ".b..wb....bw..b."
+    "..bw.wb..bw.wb.."
+    "...bw.wwww.wb..."
+    "bwwwwwwwwwwwwwwb"
+    "...bw.wwww.wb..."
+    "..bw.wb..bw.wb.."
+    ".b..wb....bw..b."
+
+@Sprite/combat/lightning
+palette = combat
+size = [16, 8]
+pixels:
+    "....ww......ww.."
+    "...ww......ww..."
+    "..ww......ww...."
+    ".wwwww...wwwww.."
+    "....ww......ww.."
+    "...ww......ww..."
+    "..ww......ww...."
+    ".ww......ww....."
+
+@Sprite/combat/heal
+palette = combat
+size = [16, 8]
+pixels:
+    "......gggg......"
+    "......gwwg......"
+    "......gwwg......"
+    "...ggggwwgggg..."
+    "...gwwwwwwwwg..."
+    "...ggggwwgggg..."
+    "......gwwg......"
+    "......gggg......"
+
+@Sprite/combat/stone
+palette = combat
+size = [16, 8]
+pixels:
+    "..a....a....a..."
+    "..aa..aaa..aa..."
+    "..aya.aywa.aa..."
+    ".aayya.ayywaa..."
+    "aayyyyaayyywaa.."
+    "dddddwwddddddddd"
+    "...dd..dd..dd..."
+    "....dd...dd....."
+
+@Sprite/combat/beam
+palette = combat
+size = [16, 8]
+pixels:
+    "....pppppppp...."
+    "..ppwwwwwwwwpp.."
+    "ppwwwwwwwwwwwwpp"
+    "wwwwwwwwwwwwwwww"
+    "wwwwwwwwwwwwwwww"
+    "ppwwwwwwwwwwwwpp"
+    "..ppwwwwwwwwpp.."
+    "....pppppppp...."
+
+@Sprite/combat/dash
+palette = combat
+size = [16, 8]
+pixels:
+    ".....ggggggggggg"
+    "..gggggggggggg.."
+    "................"
+    "...wwwwwwwwww..."
+    "wwwwwwwwwww....."
+    "................"
+    "..ggggggggggggg."
+    "gggggggggggg...."
+
+@Sprite/combat/acid
+palette = combat
+size = [16, 8]
+pixels:
+    "....g......g...."
+    "..gggg...gggg..."
+    "...gg.....gg...."
+    "................"
+    "...gggggggggg..."
+    ".ggwwggwwggwwgg."
+    "gggggggggggggggg"
+    ".gggggggggggggg."
+
+@Sprite/combat/missile
+palette = combat
+size = [16, 8]
+pixels:
+    "................"
+    "...ooaaaaaaa...."
+    "..oyyaawwwwwaa.."
+    "oywwyaawwwwwwwa."
+    "..oyyaawwwwwaa.."
+    "...ooaaaaaaa...."
+    "................"
+    "................"
+
+@Sprite/combat/meteor
+palette = combat
+size = [16, 8]
+pixels:
+    ".......o........"
+    "......oyo......."
+    ".....oywo......."
+    "....oywwo......."
+    "...oywwyo......."
+    "..ddayyo........"
+    ".daaad.........."
+    "..ddd..........."
+
+@Sprite/combat/tide
+palette = combat
+size = [16, 8]
+pixels:
+    "....bbb...bbb..."
+    "...bwwbb.bwwbb.."
+    "..bwwwwbbwwwwbb."
+    ".bwwwwwwwwwwwwbb"
+    "bwwwwwwwwwwwwwwb"
+    "bbwwwwwwwwwwwwbb"
+    ".bbbbbbbbbbbbbb."
+    "..bbbbbbbbbbbb.."
+
+@Sprite/combat/solar
+palette = combat
+size = [16, 8]
+pixels:
+    ".......yy......."
+    "...y..ywwy..y..."
+    "....yywwwwyy...."
+    "..yywwwwwwwwyy.."
+    "yywwwwwwwwwwwwyy"
+    "..yywwwwwwwwyy.."
+    "....yywwwwyy...."
+    "...y..yyyy..y..."
+

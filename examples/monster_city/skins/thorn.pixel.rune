@@ -1,0 +1,118 @@
+@Palette/thorn
+colors = {"d":"#426545","b":"#89ac53","h":"#ddeb8a","e":"#fff4b1","k":"#223d35","a":"#c3de76",".":"transparent"}
+
+@Sprite/thorn/idle
+palette = thorn
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "....h......h...."
+    "...hbh....hbh..."
+    "....hbbbbbbh...."
+    "..h.hbbbbbbh...."
+    "...hbbbbbeebh..."
+    "....hbbbbkebh..."
+    "...hbbbbbhhh...."
+    "....hbbbbbbh...."
+    "...hbbbhbbbh...."
+    "..hbbbbhbbbbh..."
+    ".h.bbbbhbbbbb.h."
+    ".h.bbbbhbbb.hhh."
+    "...hbbbhbbb....."
+    "..hbbbbhbbb....."
+    "...hbbbhbbb....."
+    "..hbbbbhbbb....."
+    "...hbbbhbbb....."
+    "..hhbbbbbbhh...."
+    "...hbbhhbbbh...."
+    "...hbbh.hbbh...."
+    "..hbbh..hbbh...."
+    "..hbbh..hbbh...."
+    ".hbbbh..hbbbh..."
+    ".hhhhh..hhhhh..."
+
+@Sprite/thorn/step
+palette = thorn
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "....h......h...."
+    "...hbh....hbh..."
+    "....hbbbbbbh...."
+    "..h.hbbbbbbh...."
+    "...hbbbbbeebh..."
+    "....hbbbbkebh..."
+    "...hbbbbbhhh...."
+    "....hbbbbbbh...."
+    "...hbbbhbbbh...."
+    "..hbbbbhbbbbh..."
+    ".h.bbbbhbbbbb.h."
+    ".h.bbbbhbbb.hhh."
+    "...hbbbhbbb....."
+    "..hbbbbhbbb....."
+    "...hbbbhbbb....."
+    "..hbbbbhbbb....."
+    "...hbbbhbbb....."
+    "..hhbbbbbbhh...."
+    "...hbbhhbbbh...."
+    "...hbbh.hbbh...."
+    "...hbbh..hbbh..."
+    "...hbbh..hbbh..."
+    "..hbbbh..hbbbh.."
+    "..hhhhh..hhhhh.."
+
+@Sprite/thorn/punch
+palette = thorn
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "....h......h...."
+    "...hbh....hbh..."
+    "....hbbbbbbh...."
+    "..h.hbbbbbbh...."
+    "...hbbbbbeebh..."
+    "....hbbbbkebh..."
+    "...hbbbbbhhh...."
+    "....hbbbbbbh...."
+    "...hbbbhbbbh...."
+    "..hbbbbhbbbddddd"
+    ".h.bbbbhbbbbbbbb"
+    ".h.bbbbhbbbhhhhh"
+    "...hbbbhbbb....."
+    "..hbbbbhbbb....."
+    "...hbbbhbbb....."
+    "..hbbbbhbbb....."
+    "...hbbbhbbb....."
+    "..hhbbbbbbhh...."
+    "...hbbhhbbbh...."
+    "...hbbh.hbbh...."
+    "..hbbh..hbbh...."
+    "..hbbh..hbbh...."
+    ".hbbbh..hbbbh..."
+    ".hhhhh..hhhhh..."
+
+@Animation/thorn/walk
+frames = ["thorn/idle", "thorn/step"]
+fps = 8
+
+@Sprite/thorn/duck
+palette = thorn
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    "....h......h...."
+    "...hbh....hbh..."
+    "....hbbbbbbh...."
+    "..h.hbbbbbbh...."
+    "...hbbbbbeebh..."
+    "....hbbbbkebh..."
+    "...hbbbbbhhh...."
+    "....hbbbbbbh...."
+    "..hbbbbhbbbbh..."
+    ".h.bbbbhbbb.hhh."
+    "..hbbbbhbbb....."
+    "..hbbbbhbbb....."
+    "..hhbbbbbbhh...."
+    "...hbbh.hbbh...."
+    "..hbbh..hbbh...."
+    ".hhhhh..hhhhh..."

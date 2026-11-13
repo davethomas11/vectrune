@@ -3755,6 +3755,7 @@ var __RunePixelRuntime = (() => {
         this.sprite({ x: x + cw / 2 - 16, y: 76, sprite: card.sprite, scale: 2 });
         this.text(card.name, x + cw / 2 - card.name.length * 2, 130, 16116172);
         this.text(card.detail, x + cw / 2 - card.detail.length * 2, 142, 15518853);
+        if (card.caption) this.text(card.caption, x + cw / 2 - card.caption.length * 2, 153, 8840429);
         this.buttons.push({ x, y: 70, width: cw, height: 92, action: card.action, args: card.args || [] });
       }
       const actions = menu.buttons || [];
@@ -3835,6 +3836,13 @@ var __RunePixelRuntime = (() => {
         const coins = hud.coins?.split(".").reduce((value, part) => value?.[part], state);
         this.text(hud.level ? "CITY " + state[hud.level] + "  COINS " + (coins || 0) : hud.title, 10, 9, 10941058);
         if (hud.message && state[hud.message]) this.text(String(state[hud.message]), 10, 17, 8840429);
+        if (hud.special && state[hud.special]) this.text(String(state[hud.special]), 160, 17, 15518853);
+        if (hud.energy) {
+          const energy = Math.max(0, Math.min(hud.max_energy || 100, Number(state[hud.energy]) || 0));
+          this.text("E " + Math.floor(energy), width - 114, 17, 8840429);
+          this.rect(width - 70, 17, 59, 4, 2703446);
+          this.rect(width - 70, 17, energy * 59 / (hud.max_energy || 100), 4, 6673901);
+        }
         this.text("SCORE " + String(state[hud.score] || 0).padStart(5, "0"), width - 156, 9);
         if (this.muted) this.text("MUTE", width - 76, 9, 16757397);
         this.rect(width - 54, 9, 43, 5, 4207687);
@@ -4058,7 +4066,7 @@ var __RunePixelRuntime = (() => {
           for (const item of [...menu.cards || [], ...menu.buttons || []]) {
             const button = document.createElement("button");
             button.dataset.menuKey = JSON.stringify([item.action, item.args || []]);
-            button.textContent = item.label || item.name + ": " + item.detail;
+            button.textContent = item.label || item.name + ": " + item.detail + (item.caption ? " \u2014 " + item.caption : "");
             button.onclick = () => {
               unlockAudio();
               game.activate(item.action, item.args || []);
@@ -4095,6 +4103,14 @@ var __RunePixelRuntime = (() => {
         button.setAttribute("aria-pressed", String(game.muted));
       }
       for (const button of Array.from(document.querySelectorAll("[data-pixel-pause]"))) button.disabled = state.status !== "playing";
+      const combat = state;
+      for (const button of Array.from(document.querySelectorAll('[data-pixel-input="special"]'))) {
+        button.disabled = state.status !== "playing" || !!combat.defending || combat.energy < combat.special_cost || combat.special_cooldown > 0;
+        button.title = String(combat.special_name || "Special") + " \u2014 " + String(combat.special_cost || 0) + " energy (X)";
+      }
+      for (const button of Array.from(document.querySelectorAll('[data-pixel-input="defend"]'))) button.setAttribute("aria-pressed", String(!!combat.defending));
+      const energyMeter = document.querySelector("[data-pixel-energy]");
+      if (energyMeter) energyMeter.textContent = String(combat.special_name || "") + " \xB7 " + Math.floor(combat.energy || 0) + "/100 energy \xB7 costs " + String(combat.special_cost || 0);
       const saveNotice = document.querySelector("[data-pixel-save]");
       if (saveNotice) saveNotice.textContent = game.saveStatus === "saved" ? "Progress saved on this device" : game.saveStatus === "recovered" ? "Save could not be read. A fresh profile was created." : "Progress lasts for this session only - storage unavailable";
       frameId = requestAnimationFrame(frame);

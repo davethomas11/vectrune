@@ -1,0 +1,118 @@
+@Palette/tide
+colors = {"d":"#326886","b":"#69b8ce","h":"#c7e7d9","e":"#fff0b3","k":"#203d52","a":"#ea9b7b",".":"transparent"}
+
+@Sprite/tide/idle
+palette = tide
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "......h........."
+    ".....hbh........"
+    "....hbbbh......."
+    "....dbbbbbbdd..."
+    "....dbbbbbeebd.."
+    "...hdbbbbbkebd.."
+    "...hdbbbbkkkk..."
+    "..hhdbbbbhhaa..."
+    ".hh.dbbbbbbd...."
+    ".h..dbbhabbbd..."
+    "..hdbbbhabbbbd.."
+    "..hdbbbhabb.hh.."
+    ".hhdbbbhabb....."
+    ".h.dbbbhabb....."
+    "..hdbbbhabb....."
+    ".hhdbbbhabb....."
+    "hhddbbbhabb....."
+    "hddbbbbbbbbdd..."
+    ".ddbbbbddbbbd..."
+    "...dbbd.dbbd...."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    ".dbbbd..dbbbd..."
+    ".hhhhh..hhhhh..."
+
+@Sprite/tide/step
+palette = tide
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "......h........."
+    ".....hbh........"
+    "....hbbbh......."
+    "....dbbbbbbdd..."
+    "....dbbbbbeebd.."
+    "...hdbbbbbkebd.."
+    "...hdbbbbkkkk..."
+    "..hhdbbbbhhaa..."
+    ".hh.dbbbbbbd...."
+    ".h..dbbhabbbd..."
+    "..hdbbbhabbbbd.."
+    "..hdbbbhabb.hh.."
+    ".hhdbbbhabb....."
+    ".h.dbbbhabb....."
+    "..hdbbbhabb....."
+    ".hhdbbbhabb....."
+    "hhddbbbhabb....."
+    "hddbbbbbbbbdd..."
+    ".ddbbbbddbbbd..."
+    "...dbbd.dbbd...."
+    "....dbbd.dbbd..."
+    "...dbbd..dbbd..."
+    "..dbbbd..dbbbd.."
+    "..hhhhh..hhhhh.."
+
+@Sprite/tide/punch
+palette = tide
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    "......h........."
+    ".....hbh........"
+    "....hbbbh......."
+    "....dbbbbbbdd..."
+    "....dbbbbbeebd.."
+    "...hdbbbbbkebd.."
+    "...hdbbbbkkkk..."
+    "..hhdbbbbhhaa..."
+    ".hh.dbbbbbbd...."
+    ".h..dbbhabbddddd"
+    "..hdbbbhabbbbbbb"
+    "..hdbbbhabbhhhhh"
+    ".hhdbbbhabb....."
+    ".h.dbbbhabb....."
+    "..hdbbbhabb....."
+    ".hhdbbbhabb....."
+    "hhddbbbhabb....."
+    "hddbbbbbbbbdd..."
+    ".ddbbbbddbbbd..."
+    "...dbbd.dbbd...."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    ".dbbbd..dbbbd..."
+    ".hhhhh..hhhhh..."
+
+@Animation/tide/walk
+frames = ["tide/idle", "tide/step"]
+fps = 8
+
+@Sprite/tide/duck
+palette = tide
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    "......h........."
+    ".....hbh........"
+    "....hbbbh......."
+    "....dbbbbbbdd..."
+    "....dbbbbbeebd.."
+    "...hdbbbbbkebd.."
+    "...hdbbbbkkkk..."
+    "..hhdbbbbhhaa..."
+    ".h..dbbhabbbd..."
+    "..hdbbbhabb.hh.."
+    ".h.dbbbhabb....."
+    ".hhdbbbhabb....."
+    "hddbbbbbbbbdd..."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    ".hhhhh..hhhhh..."

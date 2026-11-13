@@ -1,4 +1,4 @@
-# SLIME — a cosmetic monster with idle, step and punch poses.
+# SLIME — a monster with idle, step, punch and duck poses.
 @Palette/slime
 colors = {"d":"#2b7385","b":"#5bc8c5","h":"#b8f4df","e":"#fff0aa","k":"#183844","a":"#efffbd",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/slime/walk
 frames = ["slime/idle", "slime/step"]
 fps = 8
+
+@Sprite/slime/duck
+palette = slime
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    "................"
+    "................"
+    ".......hh......."
+    ".....hbbbbh....."
+    "....hbbbbbbh...."
+    "....hbbbbeebh..."
+    "...hbbbbbkebbh.."
+    "...hbbbbbbbbbh.."
+    "..hbbbbbbbbbbh.."
+    ".hbbbbbbbbbbbbbh"
+    ".hbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbbbbbbbbbbbbh"
+    "hbbbabbbbbabbbbh"
+    ".hbbbbbbbbbbbbh."
+    "..hhhh....hhhh.."

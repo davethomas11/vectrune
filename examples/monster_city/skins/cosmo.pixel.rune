@@ -1,4 +1,4 @@
-# COSMO — a cosmetic monster with idle, step and punch poses.
+# COSMO — a monster with idle, step, punch and duck poses.
 @Palette/cosmo
 colors = {"d":"#40386d","b":"#7a69a8","h":"#d5b8ef","e":"#a8fff0","k":"#182540","a":"#f8da94",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/cosmo/walk
 frames = ["cosmo/idle", "cosmo/step"]
 fps = 8
+
+@Sprite/cosmo/duck
+palette = cosmo
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    "......aaaa......"
+    "....aabbbbaa...."
+    "...abbbbbbbba..."
+    "..abbbbbbbbbba.."
+    "..abbbbeeeebba.."
+    "..abbbbkkkebba.."
+    "...abbbkkkbbba.."
+    "....abbbbbba...."
+    ".....dbbbbd....."
+    "...dbbbabbbbd..."
+    "...dbbaaaab....."
+    "...dbbbabbbb...."
+    "...ddbbbbbbdd..."
+    "....dbbd.dbd...."
+    "...dbbd..dbd...."
+    "...hhhhh.hhhh..."

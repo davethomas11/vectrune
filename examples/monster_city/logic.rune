@@ -2,9 +2,9 @@
 state:
     status = "ready"
     profile = {"coins":0,"owned":["kaiju"],"skin":"kaiju","level":1,"seed":0,"best_score":0}
-    skins = [{"id":"kaiju","name":"MOSS","cost":0},{"id":"ember","name":"EMBER","cost":120},{"id":"frost","name":"FROST","cost":240},{"id":"volt","name":"VOLT","cost":300},{"id":"coral","name":"CORAL","cost":360},{"id":"golem","name":"GOLEM","cost":420},{"id":"cyclops","name":"CYCLOPS","cost":480},{"id":"mantis","name":"MANTIS","cost":540},{"id":"drake","name":"DRAKE","cost":600},{"id":"yeti","name":"YETI","cost":660},{"id":"slime","name":"SLIME","cost":720},{"id":"mecha","name":"MECHA","cost":800},{"id":"cosmo","name":"COSMO","cost":900}]
+    skins = [{"id":"kaiju","name":"MOSS","cost":0},{"id":"ember","name":"EMBER","cost":120},{"id":"frost","name":"FROST","cost":240},{"id":"volt","name":"VOLT","cost":300},{"id":"coral","name":"CORAL","cost":360},{"id":"golem","name":"GOLEM","cost":420},{"id":"cyclops","name":"CYCLOPS","cost":480},{"id":"mantis","name":"MANTIS","cost":540},{"id":"drake","name":"DRAKE","cost":600},{"id":"yeti","name":"YETI","cost":660},{"id":"slime","name":"SLIME","cost":720},{"id":"mecha","name":"MECHA","cost":800},{"id":"cosmo","name":"COSMO","cost":900},{"id":"thorn","name":"THORN","cost":1000},{"id":"obsidian","name":"OBSIDIAN","cost":1100},{"id":"tide","name":"TIDE","cost":1200},{"id":"nova","name":"NOVA","cost":1400}]
     store_page = 0
-    store_pages = 5
+    store_pages = 6
     level = 1
     difficulty = 1
     reward = 0
@@ -45,6 +45,7 @@ action initialize:
     call openTitle
 
 action openTitle:
+    call resetCombat
     call clearPowers
     crates = []
     music.stop
@@ -65,6 +66,7 @@ action confirmLevelReset:
     call openTitle
 
 action openStore:
+    call resetCombat
     call clearPowers
     crates = []
     music.stop
@@ -86,7 +88,8 @@ action renderStore:
             detail = owned ? "OWNED - EQUIP" : skin.cost + " COINS - BUY"
             if profile.skin == skin.id:
                 detail = "EQUIPPED"
-            menu.cards.push({"name":skin.name,"sprite":skin.id + "/idle","detail":detail,"action":"chooseSkin","args":[skin.id]})
+            move = special_defs.find(m => m.skin == skin.id)
+            menu.cards.push({"name":skin.name,"sprite":skin.id + "/idle","detail":detail,"caption":move.name + " " + move.cost + "E","action":"chooseSkin","args":[skin.id]})
     if store_page > 0:
         menu.buttons.push({"label":"PREVIOUS","action":"previousStorePage"})
     if store_page < store_pages - 1:
@@ -119,6 +122,7 @@ action chooseSkin(id):
         sound.play("menu_buy")
     profile.skin = id
     monster.sprite = id + "/idle"
+    call resetCombat
     call renderStore
 
 # A saved seed + city number recreates each layout on retry. Enemy counts,
@@ -158,6 +162,7 @@ action start:
     level = profile.level
     call generateLevel
     call resetSupplies
+    call resetCombat
     monster.sprite = profile.skin + "/idle"
     score = 0
     reward = 0
@@ -177,6 +182,7 @@ action completeLevel:
     stop when status != "playing"
     stop when destroyed != buildings.length
     status = "won"
+    call clearCombat
     call clearPowers
     crates = []
     reward = 50 + level * 10 + (score - score % 10) / 10
@@ -190,6 +196,7 @@ action completeLevel:
 action smash:
     stop when status != "playing"
     stop when cooldown > 0
+    stop when defending == true
     cooldown = 12
     flash = 6
     monster.sprite = profile.skin + "/punch"
@@ -215,27 +222,37 @@ action tick(input):
     clock += 1
     cooldown = max(0, cooldown - 1)
     flash = max(0, flash - 1)
+    defending = input.defend == true
     if input.left == true:
-        monster.x = clamp(monster.x - move_speed, 0, move_limit)
+        if defending != true:
+            monster.x = clamp(monster.x - move_speed, 0, move_limit)
         monster.flip = true
     if input.right == true:
-        monster.x = clamp(monster.x + move_speed, 0, move_limit)
+        if defending != true:
+            monster.x = clamp(monster.x + move_speed, 0, move_limit)
         monster.flip = false
     monster.sprite = profile.skin + "/idle"
-    if input.left == true || input.right == true:
+    if (input.left == true || input.right == true) && defending != true:
         monster.sprite = profile.skin + "/walk"
         if clock % 12 == 0:
             sound.play("monster_stomp")
     if flash > 0:
         monster.sprite = profile.skin + "/punch"
+    call applyStance
     call tickSupplies
     call updatePowers
+    call applyStance
+    if input.special == true && special_held != true:
+        call useSpecial
+    stop when status != "playing"
+    special_held = input.special == true
+    call updateCombat
     stop when status != "playing"
     if input.smash == true:
         call smash
     stop when status != "playing"
     for soldier in soldiers:
-        if soldier.hp > 0:
+        if soldier.hp > 0 && stun_ticks == 0:
             soldier.flip = soldier.x > monster.x
             if abs(soldier.x - monster.x) > 65:
                 soldier.x += soldier.x > monster.x ? -0.35 : 0.35
@@ -243,13 +260,13 @@ action tick(input):
                 sound.play("monster_rifle")
                 shots.push({"x":soldier.x,"y":166,"sprite":"bullet","scale":1,"vx":soldier.x > monster.x ? -3 : 3,"life":140,"damage":2})
     for tank in tanks:
-        if tank.hp > 0:
+        if tank.hp > 0 && stun_ticks == 0:
             tank.flip = tank.x > monster.x
             if clock % tank_rate == 0 && shots.length < 64:
                 sound.play("monster_cannon")
                 shots.push({"x":tank.x + 12,"y":160,"sprite":"shell","scale":1,"vx":tank.x > monster.x ? -2 : 2,"life":180,"damage":5})
     for flyer in aircraft:
-        if flyer.hp > 0:
+        if flyer.hp > 0 && stun_ticks == 0:
             flyer.x += flyer.vx
             flyer.flip = flyer.vx < 0
             if flyer.x < 0 || flyer.x > 350:
@@ -262,7 +279,7 @@ action tick(input):
         if shot.vy > 0:
             shot.y += shot.vy
         shot.life -= 1
-        if shot.life > 0 && shot.x > monster.x + 8 && shot.x < monster.x + monster.scale * 16 - 6 && shot.y > monster.y && shot.y < monster.y + monster.scale * 24:
+        if shot.life > 0 && shot.x > monster.x + 8 && shot.x < monster.x + monster.scale * 16 - 6 && shot.y > monster.y && shot.y < monster.y + monster.scale * stance_height:
             incoming = shot.damage
             if power == "shield":
                 incoming = 0
@@ -272,17 +289,29 @@ action tick(input):
                 dodge = random(1, 100, city_seed + clock * 31 + shot.x)
                 if dodge <= 65:
                     incoming = 0
+            if guard_ticks > 0:
+                incoming = min(incoming, 1)
+            if defending == true && incoming > 0:
+                incoming = max(1, (incoming + 9 - ((incoming + 9) % 10)) / 10)
             if incoming > 0:
                 health = max(0, health - incoming)
-                sound.play("monster_damage")
+                if defending != true:
+                    sound.play("monster_damage")
+                if defending == true && clock - last_block_sound >= 6:
+                    sound.play("combat_block")
+                    last_block_sound = clock
             shot.life = 0
     shots = shots.filter(s => s.life > 0 && s.x > 0 && s.x < 384 && s.y < 194)
     for puff in dust:
         puff.y -= 1
         puff.life -= 1
     dust = dust.filter(p => p.life > 0)
+    stop when status != "playing"
     call advancePowerClock
+    call advanceCombat
+    call applyStance
     if health <= 0:
+        call clearCombat
         call clearPowers
         crates = []
         status = "gameover"

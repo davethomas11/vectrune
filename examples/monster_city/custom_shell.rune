@@ -15,7 +15,7 @@ view:
         p "The canvas is embedded in a normal Rune-Web page."
         button click=toggleHelp "Toggle instructions"
         if show_help:
-            p "Arrow keys to move. Space to smash. Enter to start. P to pause. M to toggle sound."
+            p "Arrow keys to move. Space to smash. Enter to start. Down/S to block. X for special. P to pause. M to toggle sound."
         canvas data-rune-pixel=true tabindex=0 aria-label="Monster City game"
         nav data-pixel-menu=true aria-label="Game menu"
         button data-pixel-start=true "Start rampage"
@@ -24,6 +24,9 @@ view:
         p data-pixel-save=true
         button data-pixel-pause=true "Pause"
         button data-pixel-mute=true aria-pressed=false aria-label="Mute game audio" "Sound on"
+        button data-pixel-input="defend" aria-label="Duck and block" aria-pressed=false "BLOCK"
+        button data-pixel-input="special" aria-label="Use skin special" "SPECIAL"
+        p data-pixel-energy=true
         button data-pixel-fullscreen=true "Fullscreen"
 
 @Logic/arcade

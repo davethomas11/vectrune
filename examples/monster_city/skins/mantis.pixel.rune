@@ -1,4 +1,4 @@
-# MANTIS — a cosmetic monster with idle, step and punch poses.
+# MANTIS — a monster with idle, step, punch and duck poses.
 @Palette/mantis
 colors = {"d":"#286f67","b":"#60baa0","h":"#a8e5bb","e":"#ffe898","k":"#16383c","a":"#f3c86b",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/mantis/walk
 frames = ["mantis/idle", "mantis/step"]
 fps = 8
+
+@Sprite/mantis/duck
+palette = mantis
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    "....a......a...."
+    ".....a....a....."
+    ".....dddddd....."
+    "....dbbbbbbd...."
+    "....dbeebbeed..."
+    "....dbkkbbkkd..."
+    ".....dbbbbdd...."
+    "......dhhd......"
+    "..a.dbbabbd..a.."
+    ".h..dbbabbd...h."
+    "....dbbabbd....."
+    "...dbbbabbbd...."
+    "..dbbbbabbbbd..."
+    "...dbbd.dbbd...."
+    "..dbbd...dbbd..."
+    ".hhhh.....hhhh.."

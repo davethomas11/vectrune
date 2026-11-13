@@ -1,4 +1,4 @@
-# MECHA — a cosmetic monster with idle, step and punch poses.
+# MECHA — a monster with idle, step, punch and duck poses.
 @Palette/mecha
 colors = {"d":"#3b566b","b":"#8da7b8","h":"#d6e2e4","e":"#ffce6b","k":"#1a2839","a":"#ef886c",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/mecha/walk
 frames = ["mecha/idle", "mecha/step"]
 fps = 8
+
+@Sprite/mecha/duck
+palette = mecha
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    ".......a........"
+    ".......a........"
+    ".....ddddddd...."
+    ".....dbbbbbbd..."
+    ".....dbeeeebd..."
+    ".....dbkkkkbd..."
+    ".....dbbbbbbd..."
+    "....dddddddddd.."
+    "..ddbbabbabbbbd."
+    "..dbbbabbabb.hh."
+    "..ddbbabbadd...."
+    "...dbbbbbbbd...."
+    "...ddddddddd...."
+    "...dbbbddbbbd..."
+    "...dbbbddbbbd..."
+    "..hhhhhh.hhhhhh."

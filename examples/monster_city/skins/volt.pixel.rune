@@ -1,4 +1,4 @@
-# VOLT — a cosmetic monster with idle, step and punch poses.
+# VOLT — a monster with idle, step, punch and duck poses.
 @Palette/volt
 colors = {"d":"#6f5326","b":"#eab83e","h":"#fff080","e":"#fff8d0","k":"#4c3525","a":"#bfffce",".":"transparent"}
 
@@ -95,3 +95,25 @@ pixels:
 @Animation/volt/walk
 frames = ["volt/idle", "volt/step"]
 fps = 8
+
+@Sprite/volt/duck
+palette = volt
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    ".......h........"
+    "......h........."
+    "....hhhh..h....."
+    "....dbbbbbbdd..."
+    "...dbbbbbbeebd.."
+    "...dbbbbbbkebd.."
+    "...dbbbbbkkkk..."
+    "...dbbbbbhaa...."
+    "..hdbbbbbabdd..."
+    "..dbbbbbbab.hh.."
+    "..dbbbbbbab....."
+    "..dbbbbbbab....."
+    "..ddbbbbbbdd...."
+    "...dbbd.dbbd...."
+    "..dbbd..dbbd...."
+    "..hhhhh.hhhhh..."

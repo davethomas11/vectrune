@@ -94,3 +94,25 @@ pixels:
 @Animation/kaiju/walk
 frames = ["kaiju/idle", "kaiju/step"]
 fps = 8
+
+@Sprite/kaiju/duck
+palette = kaiju
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    ".......sss......"
+    ".....ssggggss..."
+    ".....gGGGGGGg..."
+    "....gGGGGGGeeg.."
+    "....gGGGGGGkeg.."
+    "....gGGGGGkkkk.."
+    "....gGGGGGrrr..."
+    "...sgGGGGGgg...."
+    "..ssgGGGGgbggg.."
+    "..sgGGGGGgbg.hh."
+    ".sgGGGGGGgbg...."
+    "sgGGGGGGGgbg...."
+    "ggggGGGGgggg...."
+    "..gGGGg.gGGg...."
+    "..gGGg..gGGg...."
+    ".hhhhh..hhhhh..."

@@ -133,7 +133,7 @@ type = logic
 page = city
 run:
     invoke openStore
-    assert state.store_pages == 5
+    assert state.store_pages == 6
     assert state.menu.cards[0].name == "MOSS"
     invoke nextStorePage
     assert state.menu.cards[0].name == "VOLT"
@@ -145,8 +145,13 @@ run:
     assert state.store_page == 4
     assert state.menu.cards[0].name == "COSMO"
     invoke inspectMenu
-    assert state.checks.cards == 1
+    assert state.checks.cards == 3
     invoke nextStorePage
+    assert state.store_page == 5
+    assert state.menu.cards[0].name == "TIDE"
+    invoke nextStorePage
+    assert state.store_page == 5
+    invoke previousStorePage
     assert state.store_page == 4
     invoke fundRareMonster
     invoke chooseSkin "cosmo"

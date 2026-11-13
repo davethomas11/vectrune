@@ -1,0 +1,118 @@
+@Palette/nova
+colors = {"d":"#947246","b":"#e8bf65","h":"#fff2ae","e":"#d7ffff","k":"#44354d","a":"#eca590",".":"transparent"}
+
+@Sprite/nova/idle
+palette = nova
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......hh......."
+    "...h..hbbh..h..."
+    "....hhbbbbhh...."
+    "..hhbbbbbbbbhh.."
+    "...hbbbeeeebh..."
+    "....hbbkkkbh...."
+    "..hhbbbbbbbbhh.."
+    "...hbbbhhbbbh..."
+    "....hbbbbbbh...."
+    "....dbbhbbbd...."
+    "...dbbbhbbbbd..."
+    "..hbbbbhbbbbbh.."
+    "..hhbbbhbbbhhh.."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...ddbbbbbbdd..."
+    "....dbbddbbd...."
+    "....dbbd.dbd...."
+    "....dbbd.dbd...."
+    "...dbbd..dbd...."
+    "...dbbbd.dbbd..."
+    "...hhhhh.hhhh..."
+
+@Sprite/nova/step
+palette = nova
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......hh......."
+    "...h..hbbh..h..."
+    "....hhbbbbhh...."
+    "..hhbbbbbbbbhh.."
+    "...hbbbeeeebh..."
+    "....hbbkkkbh...."
+    "..hhbbbbbbbbhh.."
+    "...hbbbhhbbbh..."
+    "....hbbbbbbh...."
+    "....dbbhbbbd...."
+    "...dbbbhbbbbd..."
+    "..hbbbbhbbbbbh.."
+    "..hhbbbhbbbhhh.."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...ddbbbbbbdd..."
+    "....dbbddbbd...."
+    "....dbbd.dbd...."
+    ".....dbbd.dbd..."
+    "....dbbd..dbd..."
+    "....dbbbd.dbbd.."
+    "....hhhhh.hhhh.."
+
+@Sprite/nova/punch
+palette = nova
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......hh......."
+    "...h..hbbh..h..."
+    "....hhbbbbhh...."
+    "..hhbbbbbbbbhh.."
+    "...hbbbeeeebh..."
+    "....hbbkkkbh...."
+    "..hhbbbbbbbbhh.."
+    "...hbbbhhbbbh..."
+    "....hbbbbbbh...."
+    "....dbbhbbbddddd"
+    "...dbbbhbbbbbbbb"
+    "..hbbbbhbbbhhhhh"
+    "..hhbbbhbbbhhh.."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...ddbbbbbbdd..."
+    "....dbbddbbd...."
+    "....dbbd.dbd...."
+    "....dbbd.dbd...."
+    "...dbbd..dbd...."
+    "...dbbbd.dbbd..."
+    "...hhhhh.hhhh..."
+
+@Animation/nova/walk
+frames = ["nova/idle", "nova/step"]
+fps = 8
+
+@Sprite/nova/duck
+palette = nova
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    ".......hh......."
+    "...h..hbbh..h..."
+    "....hhbbbbhh...."
+    "..hhbbbbbbbbhh.."
+    "...hbbbeeeebh..."
+    "....hbbkkkbh...."
+    "..hhbbbbbbbbhh.."
+    "...hbbbhhbbbh..."
+    "....dbbhbbbd...."
+    "..hbbbbhbbbbbh.."
+    "...dbbbhbbbd...."
+    "...dbbbhbbbd...."
+    "...ddbbbbbbdd..."
+    "....dbbd.dbd...."
+    "...dbbd..dbd...."
+    "...hhhhh.hhhh..."

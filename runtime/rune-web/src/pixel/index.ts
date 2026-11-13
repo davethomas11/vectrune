@@ -127,7 +127,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
         for(const item of [...(menu.cards || []),...(menu.buttons || [])]) {
           const button=document.createElement('button');
           button.dataset.menuKey=JSON.stringify([item.action,item.args || []]);
-          button.textContent=item.label || item.name + ': ' + item.detail;
+          button.textContent=item.label || item.name + ': ' + item.detail + (item.caption ? ' — '+item.caption : '');
           button.onclick = () => { unlockAudio(); game.activate(item.action,item.args || []); clear(); if(!game.config.menu || !game.app.state[game.config.menu]) canvas.focus(); };
           menuHost.append(button);
         }
@@ -145,6 +145,14 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
       button.setAttribute('aria-pressed',String(game.muted));
     }
     for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-pixel-pause]'))) button.disabled = state.status !== 'playing';
+    const combat=state as Record<string,any>;
+    for(const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-pixel-input="special"]'))) {
+      button.disabled=state.status !== 'playing' || !!combat.defending || combat.energy < combat.special_cost || combat.special_cooldown > 0;
+      button.title=String(combat.special_name || 'Special')+' — '+String(combat.special_cost || 0)+' energy (X)';
+    }
+    for(const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-pixel-input="defend"]'))) button.setAttribute('aria-pressed',String(!!combat.defending));
+    const energyMeter=document.querySelector<HTMLElement>('[data-pixel-energy]');
+    if(energyMeter) energyMeter.textContent=String(combat.special_name || '')+' · '+Math.floor(combat.energy || 0)+'/100 energy · costs '+String(combat.special_cost || 0);
     const saveNotice=document.querySelector<HTMLElement>('[data-pixel-save]');
     if(saveNotice) saveNotice.textContent = game.saveStatus === 'saved' ? 'Progress saved on this device' : game.saveStatus === 'recovered' ? 'Save could not be read. A fresh profile was created.' : 'Progress lasts for this session only - storage unavailable';
     frameId = requestAnimationFrame(frame);

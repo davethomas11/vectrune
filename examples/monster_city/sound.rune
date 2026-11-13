@@ -183,3 +183,14 @@ volume = 0.18
 wave = triangle
 sequence = E5:60ms, C5:100ms
 volume = 0.055
+
+@Sound/combat_block
+wave = triangle
+freq = 440 -> 110
+duration = 55ms
+volume = 0.045
+
+@Sound/combat_special
+wave = triangle
+sequence = E4:40ms, B4:40ms, E5:100ms
+volume = 0.09
