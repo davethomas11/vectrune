@@ -6,6 +6,8 @@ use std::collections::HashMap;
 
 #[cfg(feature = "pixel-desktop")]
 pub mod desktop;
+#[cfg(any(feature = "pixel-desktop", test))]
+pub mod native_audio;
 
 fn text<'a>(section: &'a crate::rune_ast::Section, key: &str) -> Option<&'a str> {
     section.kv.get(key).and_then(Value::as_str)

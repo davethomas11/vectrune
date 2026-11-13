@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [features]
 # Native window adapter is opt-in while the pixel engine is being developed.
-pixel-desktop = ["dep:pixels", "dep:winit"]
+pixel-desktop = ["dep:pixels", "dep:winit", "dep:cpal"]
 
 [dependencies]
 indicatif = "0.17"
@@ -58,8 +58,10 @@ lambda_runtime = "0.11"
 aws_lambda_events = "0.13"
 notify = "6"
 rquickjs = "0.14.0"
+crossbeam-queue = "0.3"
 pixels = { version = "0.17", optional = true }
 winit = { version = "0.30", optional = true }
+cpal = { version = "0.18.2", optional = true }
 
 # Wasm dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]

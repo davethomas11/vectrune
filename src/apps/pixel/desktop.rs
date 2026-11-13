@@ -1,5 +1,5 @@
 //! Optional native presentation host. Simulation and rasterization stay in shared JS.
-use super::Game;
+use super::{native_audio::Output, Game};
 use anyhow::{anyhow, Context as _, Result};
 use pixels::{Pixels, SurfaceTexture};
 use rquickjs::{CaughtError, Context, Runtime, TypedArray};
@@ -24,6 +24,7 @@ struct Host {
     window: Option<Arc<Window>>,
     pixels: Option<Pixels<'static>>,
     context: Context,
+    _audio: Output,
     deadline: Arc<Mutex<Instant>>,
     input: serde_json::Value,
     keys: std::collections::HashMap<String, String>,
@@ -48,6 +49,7 @@ impl Host {
         self.input = serde_json::json!({"left":false,"right":false,"smash":false});
     }
     fn draw(&mut self) -> Result<()> {
+        self.js("__RuneNativeAudio.pump()")?;
         let now = Instant::now();
         let step = self.tick_duration;
         self.accumulator += now.duration_since(self.previous).min(step * 5);
@@ -146,6 +148,9 @@ impl ApplicationHandler for Host {
                                 self.clear_input();
                                 self.js("__RunePixel.paused = !__RunePixel.paused")?;
                             }
+                            KeyCode::KeyM if down && !event.repeat => {
+                                self.js("__RunePixel.muted = !__RunePixel.muted")?;
+                            }
                             KeyCode::KeyF | KeyCode::F11 if down && !event.repeat => {
                                 if let Some(window) = &self.window {
                                     window.set_fullscreen(if window.fullscreen().is_some() {
@@ -202,7 +207,18 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
     runtime.set_interrupt_handler(Some(Box::new(move || {
         Instant::now() >= *interrupt.lock().unwrap()
     })));
+    let audio = match Output::open() {
+        Ok(audio) => audio,
+        Err(error) => {
+            crate::util::log(
+                crate::util::LogLevel::Warn,
+                &format!("Native audio unavailable: {error:#}. The game will continue silently."),
+            );
+            Output::silent()
+        }
+    };
     let context = Context::full(&runtime)?;
+    audio.bridge.install(&context)?;
     context.with(|ctx| {
         ctx.eval::<(), _>(game.script.as_str())
             .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))
@@ -218,6 +234,7 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
         window: None,
         pixels: None,
         context,
+        _audio: audio,
         deadline,
         input: serde_json::json!({}),
         keys,

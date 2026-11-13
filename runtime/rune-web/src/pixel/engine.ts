@@ -113,6 +113,7 @@ export class PixelEngine {
       this.rect(0, 0, width, 23, 0x10131d);
       this.text(hud.title, 10, 9, 0xa6f282);
       this.text('SCORE ' + String(state[hud.score] || 0).padStart(5, '0'), width - 156, 9);
+      if (this.muted) this.text('MUTE',width - 76,9,0xffb295);
       this.rect(width - 54, 9, 43, 5, 0x403447);
       this.rect(width - 54, 9, Math.max(0, Math.min(43, Number(state[hud.health] || 0) * 43 / hud.max_health)), 5, 0xff8966);
     }
