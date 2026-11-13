@@ -56,8 +56,12 @@ describe('portable pixel renderer and simulation', () => {
           if(px>=0 && px<384 && py>=0 && py<216) expected[py*384+px]=color;
         }
       }
-      expect(engine.frame()).toEqual(expected);
-      expect(engine.frame()).toEqual(expected);
+      // Compare every pixel, including a warm-cache pass, without Vitest's
+      // recursive inspection of multi-megabyte typed arrays on slower CI hosts.
+      for(let pass=0;pass<2;pass++) {
+        const mismatch=engine.frame().findIndex((pixel,index)=>pixel!==expected[index]);
+        expect(mismatch,`flip=${flip} scale=${scale} x=${x} pass=${pass}`).toBe(-1);
+      }
     }
   });
   it('uses the current menu for keyboard choices before its next rendered frame', () => {
