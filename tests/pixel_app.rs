@@ -175,3 +175,42 @@ fn native_quickjs_can_run_the_musical_game_without_browser_audio_apis() {
         assert_eq!(frame.len(),384*216);
     });
 }
+
+#[test]
+#[ignore = "reports native QuickJS frame timings for manual performance comparisons"]
+fn native_pixel_frame_benchmark() {
+    let doc =
+        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+    let game = pixel::compile(&doc).unwrap();
+    let runtime = rquickjs::Runtime::new().unwrap();
+    let context = rquickjs::Context::full(&runtime).unwrap();
+    context.with(|ctx| {
+        ctx.eval::<(), _>(game.script.as_str()).unwrap();
+        ctx.eval::<(), _>("__RunePixel.app.state.profile.level=12; __RunePixel.app.state.profile.seed=42; __RunePixel.start()")
+            .unwrap();
+        let mut simulation = Vec::new();
+        let mut rendering = Vec::new();
+        for i in 0..240 {
+            let now = std::time::Instant::now();
+            ctx.eval::<(), _>(
+                "__RunePixel.app.state.health=100; __RunePixel.step({right:true,smash:true})",
+            )
+            .unwrap();
+            simulation.push(now.elapsed().as_secs_f64() * 1000.0);
+            let now = std::time::Instant::now();
+            ctx.eval::<(), _>("__RunePixel.frame()").unwrap();
+            if i >= 20 {
+                rendering.push(now.elapsed().as_secs_f64() * 1000.0);
+            }
+        }
+        for (name, mut values) in [("simulation", simulation), ("render", rendering)] {
+            values.sort_by(f64::total_cmp);
+            println!(
+                "Native {name}: mean {:.2} ms, p95 {:.2} ms, max {:.2} ms",
+                values.iter().sum::<f64>() / values.len() as f64,
+                values[values.len() * 95 / 100],
+                values.last().unwrap()
+            );
+        }
+    });
+}

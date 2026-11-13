@@ -44,6 +44,29 @@ var __RuneWeb = (() => {
     return _ctx;
   }
 
+  // src/random.ts
+  function seededRandom(seed) {
+    if (!Number.isFinite(seed)) throw new Error("Random seed must be finite");
+    let n = Math.trunc(seed) + 1831565813 | 0;
+    n = Math.imul(n ^ n >>> 15, n | 1);
+    n ^= n + Math.imul(n ^ n >>> 7, n | 61);
+    return ((n ^ n >>> 14) >>> 0) / 4294967296;
+  }
+  function randomInt(min, max, seed) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max) || max < min) throw new Error("Invalid random integer range");
+    return min + Math.floor((seed === void 0 ? Math.random() : seededRandom(seed)) * (max - min + 1));
+  }
+  function shuffled(values, seed) {
+    const result = values.slice();
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = randomInt(0, i, seed + i);
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+  }
+
   // src/globals.ts
   function getWindowProp(key) {
     return window[key];
@@ -65,7 +88,18 @@ var __RuneWeb = (() => {
     if (!prefix || !value.startsWith("/") || value.startsWith("//") || value === prefix || value.startsWith(prefix + "/")) return value;
     return prefix + value;
   }
+  var operatorCache = /* @__PURE__ */ new Map();
   function includesTopLevel(input, delimiter) {
+    const key = delimiter + "\0" + input;
+    if (operatorCache.has(key)) return operatorCache.get(key);
+    const result = scanTopLevel(input, delimiter);
+    if (input.length <= 2048) {
+      if (operatorCache.size >= 8192) operatorCache.delete(operatorCache.keys().next().value);
+      operatorCache.set(key, result);
+    }
+    return result;
+  }
+  function scanTopLevel(input, delimiter) {
     let depth = 0;
     let inQuotes = false;
     let quoteChar = "";
@@ -552,6 +586,8 @@ var __RuneWeb = (() => {
   }
 
   // src/storage.ts
+  var persistent = false;
+  var native = () => globalThis;
   var memoryStorage = {};
   function browserStorage() {
     try {
@@ -562,7 +598,9 @@ var __RuneWeb = (() => {
   }
   function getStorageItem(key) {
     try {
-      const val = browserStorage()?.getItem(key);
+      const store = browserStorage();
+      const val = native().__runeStoreGet ? native().__runeStoreGet(key) : store?.getItem(key);
+      persistent = !!native().__runeStoreGet || !!store;
       if (val != null) return val;
     } catch {
     }
@@ -571,14 +609,19 @@ var __RuneWeb = (() => {
   function setStorageItem(key, val) {
     memoryStorage[key] = val;
     try {
-      browserStorage()?.setItem(key, val);
+      const store = browserStorage();
+      if (native().__runeStoreSet) native().__runeStoreSet(key, val);
+      else store?.setItem(key, val);
+      persistent = !!native().__runeStoreSet || !!store;
     } catch {
+      persistent = false;
     }
   }
   function removeStorageItem(key) {
     delete memoryStorage[key];
     try {
-      browserStorage()?.removeItem(key);
+      if (native().__runeStoreRemove) native().__runeStoreRemove(key);
+      else browserStorage()?.removeItem(key);
     } catch {
     }
   }
@@ -713,6 +756,14 @@ var __RuneWeb = (() => {
     const nextDepth = (depth || 0) + 1;
     let trimmed = String(expr || "").trim();
     if (!trimmed) return void 0;
+    if (trimmed === "true") return true;
+    if (trimmed === "false") return false;
+    if (trimmed === "null") return null;
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+    if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(trimmed)) {
+      const value = resolvePath(trimmed, scope);
+      if (value !== void 0) return value;
+    }
     if (trimmed.startsWith('"')) {
       try {
         const literal = JSON.parse(trimmed);
@@ -798,7 +849,16 @@ var __RuneWeb = (() => {
       if (parts.length >= 2) {
         const min = Number(evaluateExpression(parts[0], scope, nextDepth));
         const max = Number(evaluateExpression(parts[1], scope, nextDepth));
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+        return randomInt(min, max, parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : void 0);
+      }
+    }
+    for (const name of ["shuffle", "pick"]) {
+      if (trimmed.startsWith(name + "(") && trimmed.endsWith(")")) {
+        const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ",");
+        const values = evaluateExpression(parts[0], scope, nextDepth);
+        if (!Array.isArray(values)) return void 0;
+        const seed = parts.length > 1 ? Number(evaluateExpression(parts[1], scope, nextDepth)) : randomInt(0, 2147483647);
+        return name === "shuffle" ? shuffled(values, seed) : values.length ? values[randomInt(0, values.length - 1, seed)] : null;
       }
     }
     if (trimmed.startsWith("min(") && trimmed.endsWith(")")) {
@@ -1391,15 +1451,15 @@ var __RuneWeb = (() => {
       const varName = parts[asIndex + 1];
       const arr = evaluateExpression(pathExpr, buildScope(locals));
       if (!Array.isArray(arr)) return void 0;
-      const shuffled = arr.slice();
-      for (let i = shuffled.length - 1; i > 0; i--) {
+      const shuffled2 = arr.slice();
+      for (let i = shuffled2.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        [shuffled2[i], shuffled2[j]] = [shuffled2[j], shuffled2[i]];
       }
       if (varName) {
-        assignPath(varName, shuffled, locals);
+        assignPath(varName, shuffled2, locals);
       }
-      return shuffled;
+      return shuffled2;
     }
     return void 0;
   }
@@ -2342,7 +2402,7 @@ var __RuneWeb = (() => {
     nextScheduleTime = musicStartTime;
     musicPauseTime = 0;
     musicPausedElapsed = 0;
-    audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
+    audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
     audioSync.onPlay({
       track: key,
       tempo: musicTempoBpm,

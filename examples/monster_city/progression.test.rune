@@ -1,0 +1,129 @@
+#!RUNE
+import "monster_city.rune"
+
+@Test/Progression/TitleAndStore
+type = logic
+page = city
+run:
+    invoke initialize
+    assert state.status == "ready"
+    assert state.menu.title == "MONSTER CITY"
+    invoke openStore
+    invoke inspectMenu
+    assert state.checks.cards == 3
+    invoke chooseSkin "ember"
+    assert state.profile.coins == 0
+    assert state.profile.skin == "kaiju"
+    assert state.profile.owned == ["kaiju"]
+    assert state.menu.note == "MORE COINS NEEDED - BEAT A CITY TO EARN"
+
+@Test/Progression/PurchaseAndEquip
+type = logic
+page = city
+run:
+    invoke fundShop
+    invoke openStore
+    invoke chooseSkin "ember"
+    assert state.profile.coins == 180
+    assert state.profile.skin == "ember"
+    assert state.profile.owned == ["kaiju", "ember"]
+    invoke chooseSkin "ember"
+    assert state.profile.coins == 180
+    invoke chooseSkin "kaiju"
+    assert state.profile.coins == 180
+    invoke chooseSkin "missing"
+    assert state.profile.skin == "kaiju"
+    invoke chooseSkin "ember"
+    invoke start
+    assert state.monster.sprite == "ember/idle"
+    invoke tick {"right":true}
+    assert state.monster.sprite == "ember/walk"
+    invoke smash
+    assert state.monster.sprite == "ember/punch"
+
+@Test/Progression/RewardOnceAndAdvance
+type = logic
+page = city
+run:
+    invoke start
+    invoke lineUpLastBuilding
+    invoke smash
+    assert state.status == "won"
+    assert state.profile.level == 2
+    assert state.reward == 111
+    assert state.profile.coins == 111
+    invoke completeLevel
+    assert state.profile.coins == 111
+    invoke tick {"smash":true}
+    assert state.profile.coins == 111
+    invoke start
+    assert state.level == 2
+    assert state.score == 0
+    assert state.profile.coins == 111
+
+@Test/Progression/GeneratedLevelsAndAirForce
+type = logic
+page = city
+run:
+    invoke lateCity
+    invoke start
+    assert state.level == 5
+    invoke inspectCity
+    assert state.checks.aircraft == 2
+    assert state.checks.soldiers == 6
+    assert state.checks.tanks == 4
+    assert state.checks.buildings == 5
+    invoke rememberCity
+    invoke start
+    assert state.buildings == state.previous_buildings
+    invoke airAttack
+    invoke tick {}
+    invoke inspectShots
+    assert state.checks.bombs == true
+    invoke hardestCity
+    invoke start
+    invoke inspectCity
+    assert state.checks.aircraft == 3
+    assert state.checks.soldiers == 6
+    assert state.checks.tanks == 4
+    assert state.fire_rate == 24
+
+@Test/Progression/SaveRepair
+type = logic
+page = city
+run:
+    invoke invalidProfile
+    invoke initialize
+    assert state.profile.coins == 0
+    assert state.profile.level == 1
+    assert state.profile.skin == "kaiju"
+    assert state.profile.owned == ["kaiju"]
+
+@Logic/monster
+state:
+    previous_buildings = []
+    checks = {}
+action fundShop:
+    profile.coins = 300
+action lateCity:
+    profile.level = 5
+    profile.seed = 42
+action hardestCity:
+    profile.level = 9999
+action rememberCity:
+    previous_buildings = buildings
+action airAttack:
+    clock = 74
+action invalidProfile:
+    profile.coins = -5
+    profile.level = -1
+    profile.skin = "missing"
+    profile.owned = ["missing"]
+
+action inspectMenu:
+    checks = {"cards":menu.cards.length}
+action inspectCity:
+    checks = {"aircraft":aircraft.length,"soldiers":soldiers.length,"tanks":tanks.length,"buildings":buildings.length}
+action inspectShots:
+    bombs = shots.any(s => s.vy > 0)
+    checks = {"bombs":bombs}

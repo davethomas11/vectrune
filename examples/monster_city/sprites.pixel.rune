@@ -1,96 +1,6 @@
 @Palette/city
 colors = {".":"transparent","d":"#182b36","g":"#427e58","G":"#80b95e","h":"#c5dd88","b":"#c8cc91","e":"#ffe9a9","k":"#16242d","r":"#d8876e","s":"#69a899","w":"#eccf9a","a":"#566c7e","c":"#8c9ca0","n":"#3d5266","o":"#9c705d","t":"#526c4e","l":"#a8b97b"}
 
-@Sprite/kaiju/idle
-palette = city
-size = [16, 24]
-origin = [0, 0]
-pixels:
-    ".......sss......"
-    ".....ssggggss..."
-    ".....gGGGGGGg..."
-    "....gGGGGGGeeg.."
-    "....gGGGGGGkeg.."
-    "....gGGGGGkkkk.."
-    "....gGGGGGrrr..."
-    "...sgGGGGGgg...."
-    "...sgGGGGgbg...."
-    "..ssgGGGGgbggg.."
-    "..sgGGGGGgbggGg."
-    "..sgGGGGGgbg.hh."
-    ".ssgGGGGGgbg...."
-    ".sgGGGGGGgbg...."
-    ".sgGGGGGGgbg...."
-    "sgGGGGGGGgbg...."
-    "gGGGGGGGGgbg...."
-    "ggggGGGGgggg...."
-    "..ggGGgggGGg...."
-    "..gGGGg.gGGg...."
-    "..gGGGg.gGGg...."
-    "..gGGg..gGGg...."
-    ".gGGGg..gGGGg..."
-    ".hhhhh..hhhhh..."
-
-@Sprite/kaiju/step
-palette = city
-size = [16, 24]
-origin = [0, 0]
-pixels:
-    ".......sss......"
-    ".....ssggggss..."
-    ".....gGGGGGGg..."
-    "....gGGGGGGeeg.."
-    "....gGGGGGGkeg.."
-    "....gGGGGGkkkk.."
-    "....gGGGGGrrr..."
-    "...sgGGGGGgg...."
-    "...sgGGGGgbg...."
-    "..ssgGGGGgbggg.."
-    "..sgGGGGGgbggGg."
-    "..sgGGGGGgbg.hh."
-    ".ssgGGGGGgbg...."
-    ".sgGGGGGGgbg...."
-    ".sgGGGGGGgbg...."
-    "sgGGGGGGGgbg...."
-    "gGGGGGGGGgbg...."
-    "ggggGGGGgggg...."
-    "..ggGGgggGGg...."
-    "..gGGGg.gGGg...."
-    "..gGGGg.gGGg...."
-    "..gGGg...gGGg..."
-    "..gGGGg..gGGGg.."
-    "..hhhhh..hhhhh.."
-
-@Sprite/kaiju/punch
-palette = city
-size = [16, 24]
-origin = [0, 0]
-pixels:
-    ".......sss......"
-    ".....ssggggss..."
-    ".....gGGGGGGg..."
-    "....gGGGGGGeeg.."
-    "....gGGGGGGkeg.."
-    "....gGGGGGkkkk.."
-    "....gGGGGGrrr..."
-    "...sgGGGGGgg...."
-    "...sgGGGGgbg...."
-    "..ssgGGGGgbggggg"
-    "..sgGGGGGgbgGGGh"
-    "..sgGGGGGgbghhhh"
-    ".ssgGGGGGgbg...."
-    ".sgGGGGGGgbg...."
-    ".sgGGGGGGgbg...."
-    "sgGGGGGGGgbg...."
-    "gGGGGGGGGgbg...."
-    "ggggGGGGgggg...."
-    "..ggGGgggGGg...."
-    "..gGGGg.gGGg...."
-    "..gGGGg.gGGg...."
-    "..gGGg..gGGg...."
-    ".gGGGg..gGGGg..."
-    ".hhhhh..hhhhh..."
-
 @Sprite/tower/blue
 palette = city
 size = [16, 40]
@@ -384,6 +294,28 @@ pixels:
     "..ccc..."
     "...c...."
 
-@Animation/kaiju/walk
-frames = ["kaiju/idle", "kaiju/step"]
-fps = 8
+@Sprite/helicopter
+palette = city
+size = [16, 8]
+pixels:
+    "..cccccccccccc.."
+    ".......cc......."
+    ".....tttttt....."
+    "cc..tttwwttt...."
+    "tttttttwwtttt..."
+    ".t..tttttttt...."
+    "......c..c......"
+    ".....cccccc....."
+
+@Sprite/plane
+palette = city
+size = [20, 8]
+pixels:
+    "........cc.........."
+    ".......cccc........."
+    "...c..cccccc........"
+    "..cccccccccccccccc.."
+    ".ccccccccccccccccccc"
+    "..cccccccccccccccc.."
+    "...c..cccccc........"
+    ".......cccc........."

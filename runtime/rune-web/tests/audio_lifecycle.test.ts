@@ -42,6 +42,11 @@ beforeEach(async () => {
 afterEach(() => { audio.stopMusic(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('shared audio lifecycle', () => {
+  it('keeps title and shop audio idle until a user starts playback', () => {
+    audio.configureAudioHost({syncPage:false}); audio.stopMusic();
+    expect(sync.audioSync.getSnapshot().isPlaying).toBe(false);
+    expect(Context.instances).toHaveLength(0);
+  });
   it('routes music and effects through one mute bus', () => {
     audio.configureAudioHost({syncPage:false}); audio.playMusic('march'); audio.playSound('hit');
     const context = Context.instances[0];

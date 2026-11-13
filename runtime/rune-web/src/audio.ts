@@ -15,7 +15,7 @@ let syncPageAudio = true;
 /** Canvas hosts can use the synthesizer without touching their Rune-Web shell. */
 export function configureAudioHost(options: { syncPage: boolean }): void {
   syncPageAudio = options.syncPage;
-  audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
+  audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
 }
 
 /** Mute music and effects together while the game clock keeps advancing. */
@@ -548,7 +548,7 @@ export function playMusic(trackName: string): void {
   musicPauseTime = 0;
   musicPausedElapsed = 0;
 
-  audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
+  audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
   audioSync.onPlay({
     track: key,
     tempo: musicTempoBpm,

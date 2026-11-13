@@ -48,7 +48,7 @@ testdata/
 # AI Scratch Scripts
 .scratch/
 
-# Local runtime generations
+# Local runtime generations and desktop game JSON saves (.vectrune/saves/)
 .vectrune/
 
 # Python browser checks

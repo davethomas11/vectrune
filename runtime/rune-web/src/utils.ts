@@ -28,7 +28,19 @@ export function hostedUrl(value: string): string {
  * Check whether `delimiter` appears at the top level of `input`
  * (i.e. not inside quotes, parens, brackets, or braces).
  */
+const operatorCache = new Map<string, boolean>();
 export function includesTopLevel(input: string, delimiter: string): boolean {
+  // Cache source parsing only, never evaluated values or game state.
+  const key = delimiter + '\0' + input;
+  if (operatorCache.has(key)) return operatorCache.get(key)!;
+  const result = scanTopLevel(input,delimiter);
+  if(input.length <= 2048) {
+    if(operatorCache.size >= 8192) operatorCache.delete(operatorCache.keys().next().value!);
+    operatorCache.set(key,result);
+  }
+  return result;
+}
+function scanTopLevel(input: string, delimiter: string): boolean {
   let depth = 0;
   let inQuotes = false;
   let quoteChar = '';

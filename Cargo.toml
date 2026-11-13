@@ -82,3 +82,10 @@ uuid = { version = "1", features = ["v4", "js"] }
 assert_cmd = "2"
 
 
+# The embedded JavaScript VM is the game's hot path. Keep Rune itself debuggable
+# while compiling QuickJS's C interpreter with optimization in local builds.
+[profile.dev.package.rquickjs-sys]
+opt-level = 3
+
+[profile.test.package.rquickjs-sys]
+opt-level = 3

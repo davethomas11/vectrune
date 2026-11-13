@@ -26,6 +26,96 @@ var __RunePixelRuntime = (() => {
     mount: () => mount
   });
 
+  // src/storage.ts
+  var persistent = false;
+  function storageIsPersistent() {
+    return persistent;
+  }
+  var native = () => globalThis;
+  var memoryStorage = {};
+  function browserStorage() {
+    try {
+      return typeof window !== "undefined" ? window.localStorage : null;
+    } catch {
+      return null;
+    }
+  }
+  function getStorageItem(key) {
+    try {
+      const store = browserStorage();
+      const val = native().__runeStoreGet ? native().__runeStoreGet(key) : store?.getItem(key);
+      persistent = !!native().__runeStoreGet || !!store;
+      if (val != null) return val;
+    } catch {
+    }
+    return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null;
+  }
+  function setStorageItem(key, val) {
+    memoryStorage[key] = val;
+    try {
+      const store = browserStorage();
+      if (native().__runeStoreSet) native().__runeStoreSet(key, val);
+      else store?.setItem(key, val);
+      persistent = !!native().__runeStoreSet || !!store;
+    } catch {
+      persistent = false;
+    }
+  }
+  function removeStorageItem(key) {
+    delete memoryStorage[key];
+    try {
+      if (native().__runeStoreRemove) native().__runeStoreRemove(key);
+      else browserStorage()?.removeItem(key);
+    } catch {
+    }
+  }
+  function clearStorage() {
+    for (const k of Object.keys(memoryStorage)) {
+      delete memoryStorage[k];
+    }
+    try {
+      browserStorage()?.clear();
+    } catch {
+    }
+  }
+  function hasStorageItem(key) {
+    return getStorageItem(key) !== null;
+  }
+
+  // src/pixel/persistence.ts
+  function restore(defaults, saved) {
+    if (Array.isArray(defaults)) return Array.isArray(saved) && saved.length <= 128 && saved.every((v) => typeof v === typeof defaults[0]) ? saved.slice() : defaults.slice();
+    if (defaults && typeof defaults === "object") return Object.fromEntries(Object.keys(defaults).map((key) => [key, restore(defaults[key], saved?.[key])]));
+    return typeof defaults === typeof saved && (typeof saved !== "number" || Number.isSafeInteger(saved)) ? saved : defaults;
+  }
+  var GameSave = class {
+    constructor(config) {
+      this.config = config;
+      this.status = "session";
+      this.previous = "";
+    }
+    load(defaults) {
+      const raw = getStorageItem("rune-pixel-" + this.config.key);
+      if (!raw) return defaults;
+      try {
+        if (raw.length > 16384) throw new Error("Save too large");
+        const data = JSON.parse(raw);
+        if (data.version !== 1 || !data.data || typeof data.data !== "object") throw new Error("Unknown save format");
+        return restore(defaults, data.data);
+      } catch {
+        this.status = "recovered";
+        return defaults;
+      }
+    }
+    flush(value) {
+      const json = JSON.stringify({ version: 1, data: value });
+      if (json === this.previous) return;
+      setStorageItem("rune-pixel-" + this.config.key, json);
+      this.previous = json;
+      if (this.status !== "recovered") this.status = storageIsPersistent() ? "saved" : "session";
+    }
+  };
+
   // src/context.ts
   var _ctx = null;
   function ctx() {
@@ -42,13 +132,47 @@ var __RunePixelRuntime = (() => {
     }
   }
 
+  // src/random.ts
+  function seededRandom(seed) {
+    if (!Number.isFinite(seed)) throw new Error("Random seed must be finite");
+    let n = Math.trunc(seed) + 1831565813 | 0;
+    n = Math.imul(n ^ n >>> 15, n | 1);
+    n ^= n + Math.imul(n ^ n >>> 7, n | 61);
+    return ((n ^ n >>> 14) >>> 0) / 4294967296;
+  }
+  function randomInt(min, max, seed) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max) || max < min) throw new Error("Invalid random integer range");
+    return min + Math.floor((seed === void 0 ? Math.random() : seededRandom(seed)) * (max - min + 1));
+  }
+  function shuffled(values, seed) {
+    const result = values.slice();
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = randomInt(0, i, seed + i);
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+  }
+
   // src/globals.ts
   function getWindowProp(key) {
     return window[key];
   }
 
   // src/utils.ts
+  var operatorCache = /* @__PURE__ */ new Map();
   function includesTopLevel(input, delimiter) {
+    const key = delimiter + "\0" + input;
+    if (operatorCache.has(key)) return operatorCache.get(key);
+    const result = scanTopLevel(input, delimiter);
+    if (input.length <= 2048) {
+      if (operatorCache.size >= 8192) operatorCache.delete(operatorCache.keys().next().value);
+      operatorCache.set(key, result);
+    }
+    return result;
+  }
+  function scanTopLevel(input, delimiter) {
     let depth = 0;
     let inQuotes = false;
     let quoteChar = "";
@@ -240,50 +364,6 @@ var __RunePixelRuntime = (() => {
     return Object.assign({}, c.app.state, c.app.derived, locals || {});
   }
 
-  // src/storage.ts
-  var memoryStorage = {};
-  function browserStorage() {
-    try {
-      return typeof window !== "undefined" ? window.localStorage : null;
-    } catch {
-      return null;
-    }
-  }
-  function getStorageItem(key) {
-    try {
-      const val = browserStorage()?.getItem(key);
-      if (val != null) return val;
-    } catch {
-    }
-    return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null;
-  }
-  function setStorageItem(key, val) {
-    memoryStorage[key] = val;
-    try {
-      browserStorage()?.setItem(key, val);
-    } catch {
-    }
-  }
-  function removeStorageItem(key) {
-    delete memoryStorage[key];
-    try {
-      browserStorage()?.removeItem(key);
-    } catch {
-    }
-  }
-  function clearStorage() {
-    for (const k of Object.keys(memoryStorage)) {
-      delete memoryStorage[k];
-    }
-    try {
-      browserStorage()?.clear();
-    } catch {
-    }
-  }
-  function hasStorageItem(key) {
-    return getStorageItem(key) !== null;
-  }
-
   // src/expression.ts
   var MAX_DEPTH = 64;
   function tryParseLiteral(expr, scope) {
@@ -402,6 +482,14 @@ var __RunePixelRuntime = (() => {
     const nextDepth = (depth || 0) + 1;
     let trimmed = String(expr || "").trim();
     if (!trimmed) return void 0;
+    if (trimmed === "true") return true;
+    if (trimmed === "false") return false;
+    if (trimmed === "null") return null;
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+    if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(trimmed)) {
+      const value = resolvePath(trimmed, scope);
+      if (value !== void 0) return value;
+    }
     if (trimmed.startsWith('"')) {
       try {
         const literal = JSON.parse(trimmed);
@@ -487,7 +575,16 @@ var __RunePixelRuntime = (() => {
       if (parts.length >= 2) {
         const min = Number(evaluateExpression(parts[0], scope, nextDepth));
         const max = Number(evaluateExpression(parts[1], scope, nextDepth));
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+        return randomInt(min, max, parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : void 0);
+      }
+    }
+    for (const name of ["shuffle", "pick"]) {
+      if (trimmed.startsWith(name + "(") && trimmed.endsWith(")")) {
+        const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ",");
+        const values = evaluateExpression(parts[0], scope, nextDepth);
+        if (!Array.isArray(values)) return void 0;
+        const seed = parts.length > 1 ? Number(evaluateExpression(parts[1], scope, nextDepth)) : randomInt(0, 2147483647);
+        return name === "shuffle" ? shuffled(values, seed) : values.length ? values[randomInt(0, values.length - 1, seed)] : null;
       }
     }
     if (trimmed.startsWith("min(") && trimmed.endsWith(")")) {
@@ -1080,15 +1177,15 @@ var __RunePixelRuntime = (() => {
       const varName = parts[asIndex + 1];
       const arr = evaluateExpression(pathExpr, buildScope(locals));
       if (!Array.isArray(arr)) return void 0;
-      const shuffled = arr.slice();
-      for (let i = shuffled.length - 1; i > 0; i--) {
+      const shuffled2 = arr.slice();
+      for (let i = shuffled2.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        [shuffled2[i], shuffled2[j]] = [shuffled2[j], shuffled2[i]];
       }
       if (varName) {
-        assignPath(varName, shuffled, locals);
+        assignPath(varName, shuffled2, locals);
       }
-      return shuffled;
+      return shuffled2;
     }
     return void 0;
   }
@@ -1635,7 +1732,7 @@ var __RunePixelRuntime = (() => {
   var syncPageAudio = true;
   function configureAudioHost(options) {
     syncPageAudio = options.syncPage;
-    audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
+    audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
   }
   function setAudioMuted(muted) {
     audioMuted = muted;
@@ -2039,7 +2136,7 @@ var __RunePixelRuntime = (() => {
     nextScheduleTime = musicStartTime;
     musicPauseTime = 0;
     musicPausedElapsed = 0;
-    audioSync.configure({ getAudioContext: () => getAudioContext(), syncPage: syncPageAudio });
+    audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
     audioSync.onPlay({
       track: key,
       tempo: musicTempoBpm,
@@ -3482,9 +3579,16 @@ var __RunePixelRuntime = (() => {
       this.config = config;
       this._paused = false;
       this._muted = false;
+      this.spans = /* @__PURE__ */ new Map();
+      this.buttons = [];
+      this.selected = 0;
+      this.lastMenu = "";
       this.ticks = 0;
       if (typeof window === "undefined") Object.assign(globalThis, { window: globalThis });
       this.buffer = new Uint32Array(config.width * config.height);
+      this.buffer.fill(packed(config.background));
+      for (const r of config.rects) this.rect(r.x, r.y, r.width, r.height, parseInt(r.color.slice(1), 16));
+      this.background = this.buffer.slice();
       this.app = createLogicApp(function() {
         this.computeDerived();
       });
@@ -3502,7 +3606,15 @@ var __RunePixelRuntime = (() => {
       configureAudioHost({ syncPage: false });
       registerSounds(options.sounds);
       registerMusic(options.music);
-      withContext(this.context, () => this.app.computeDerived());
+      if (config.persistence) {
+        this.save = new GameSave(config.persistence);
+        this.app.state[config.persistence.state] = this.save.load(this.app.state[config.persistence.state]);
+      }
+      withContext(this.context, () => {
+        if (options.actionDefinitions.initialize) this.app.invokeAction("initialize", []);
+        this.app.computeDerived();
+      });
+      this.persist();
     }
     get paused() {
       return this._paused;
@@ -3524,6 +3636,9 @@ var __RunePixelRuntime = (() => {
     get audioState() {
       return audioSync.getSnapshot();
     }
+    get saveStatus() {
+      return this.save?.status;
+    }
     start() {
       stopMusic();
       this._paused = false;
@@ -3533,6 +3648,7 @@ var __RunePixelRuntime = (() => {
         this.app.invokeAction("start", []);
         this.app.computeDerived();
       });
+      this.persist();
     }
     step(input = {}) {
       if (input.start) {
@@ -3545,6 +3661,94 @@ var __RunePixelRuntime = (() => {
         this.app.computeDerived();
       });
       this.ticks++;
+      this.persist();
+    }
+    persist() {
+      if (this.save) this.save.flush(this.app.state[this.save.config.state]);
+    }
+    invoke(action, args = []) {
+      if (action === "start") {
+        this.start();
+        return;
+      }
+      this._paused = false;
+      setAudioMuted(this._muted);
+      withContext(this.context, () => {
+        this.app.invokeAction(action, args);
+        this.app.computeDerived();
+      });
+      this.persist();
+    }
+    key(code) {
+      const command = this.config.commands?.[code];
+      if (command) {
+        this.invoke(command);
+        return true;
+      }
+      const menu = this.config.menu && this.app.state[this.config.menu];
+      if (!menu || this.paused) return false;
+      const buttons = [...menu.cards || [], ...menu.buttons || []];
+      if (!buttons.length) return false;
+      if (this.lastMenu !== String(menu.title)) {
+        this.selected = 0;
+        this.lastMenu = String(menu.title);
+      }
+      if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(code)) {
+        this.selected = (this.selected + (code === "ArrowLeft" || code === "ArrowUp" ? -1 : 1) + buttons.length) % buttons.length;
+        return true;
+      }
+      if (code === "Enter" || code === "Space") {
+        const button = buttons[this.selected];
+        this.invoke(button.action, button.args || []);
+        return true;
+      }
+      return false;
+    }
+    click(x, y) {
+      this.frame();
+      const i = this.buttons.findIndex((b) => x >= b.x && y >= b.y && x < b.x + b.width && y < b.y + b.height);
+      if (i >= 0) {
+        this.selected = i;
+        const b = this.buttons[i];
+        this.invoke(b.action, b.args);
+      }
+    }
+    menuFrame(menu) {
+      const w = this.config.width, h = this.config.height;
+      const identity = String(menu.title);
+      if (identity !== this.lastMenu) this.selected = 0;
+      this.lastMenu = identity;
+      this.buttons = [];
+      this.rect(8, 27, w - 16, h - 34, 1121323);
+      this.rect(8, 27, w - 16, 2, 10941058);
+      this.text(menu.title, w / 2 - String(menu.title).length * 4, 38, 10941058, 2);
+      this.text(menu.subtitle || "", w / 2 - String(menu.subtitle || "").length * 2, 56, 15518853);
+      if (this.saveStatus === "session") this.text("SESSION ONLY - SAVE STORAGE UNAVAILABLE", 18, 64, 16757397);
+      if (this.saveStatus === "recovered") this.text("SAVE RECOVERED - USING A FRESH PROFILE", 18, 64, 16757397);
+      const cards = menu.cards || [];
+      for (let i = 0; i < cards.length; i++) {
+        const card = cards[i], x = 18 + i * (w - 36) / cards.length, cw = (w - 36) / cards.length - 6;
+        this.rect(x, 70, cw, 92, 2438986);
+        this.sprite({ x: x + cw / 2 - 16, y: 76, sprite: card.sprite, scale: 2 });
+        this.text(card.name, x + cw / 2 - card.name.length * 2, 130, 16116172);
+        this.text(card.detail, x + cw / 2 - card.detail.length * 2, 142, 15518853);
+        this.buttons.push({ x, y: 70, width: cw, height: 92, action: card.action, args: card.args || [] });
+      }
+      const actions = menu.buttons || [];
+      for (let i = 0; i < actions.length; i++) {
+        const button = actions[i], width = 156, x = w / 2 - width / 2, y = cards.length ? 176 + i * 24 : 102 + i * 30;
+        this.rect(x, y, width, 22, 3165248);
+        this.text(button.label, x + width / 2 - button.label.length * 2, y + 8);
+        this.buttons.push({ x, y, width, height: 22, action: button.action, args: button.args || [] });
+      }
+      if (this.selected >= this.buttons.length) this.selected = 0;
+      const focus = this.buttons[this.selected];
+      if (focus) {
+        this.rect(focus.x, focus.y, focus.width, 1, 10941058);
+        this.rect(focus.x, focus.y + focus.height - 1, focus.width, 1, 10941058);
+      }
+      if (menu.note) this.text(menu.note, w / 2 - String(menu.note).length * 2, cards.length ? 166 : 185, 16757397);
+      this.text("ARROWS SELECT  ENTER CHOOSE  B SHOP  T TITLE", w / 2 - 82, h - 10, 10268343);
     }
     rect(x, y, width, height, color) {
       const c = packed(color), w = this.config.width, h = this.config.height;
@@ -3569,15 +3773,33 @@ var __RunePixelRuntime = (() => {
       const sprite = this.config.sprites[name];
       if (!sprite) throw new Error(`Unknown pixel sprite: ${name}`);
       const scale = Math.max(1, Math.min(8, Math.floor(entity.scale || 1)));
-      const x = entity.x - sprite.origin[0] * scale, y = entity.y - sprite.origin[1] * scale;
-      for (let row = 0; row < sprite.height; row++) for (let col = 0; col < sprite.width; col++) {
-        const color = sprite.colors[sprite.pixels[row * sprite.width + col]];
-        if (color !== null) this.rect(x + (entity.flip ? sprite.width - 1 - col : col) * scale, y + row * scale, scale, scale, color);
+      const key = name + ":" + scale + ":" + !!entity.flip;
+      let spans = this.spans.get(key);
+      if (!spans) {
+        spans = [];
+        for (let row = 0; row < sprite.height; row++) {
+          let col = 0;
+          while (col < sprite.width) {
+            const start = col, color = sprite.colors[sprite.pixels[row * sprite.width + (entity.flip ? sprite.width - 1 - col : col)]];
+            while (++col < sprite.width && sprite.colors[sprite.pixels[row * sprite.width + (entity.flip ? sprite.width - 1 - col : col)]] === color) {
+            }
+            if (color !== null) spans.push(start * scale, row * scale, (col - start) * scale, packed(color));
+          }
+        }
+        if (this.spans.size >= 256) this.spans.clear();
+        this.spans.set(key, spans);
+      }
+      const x = Math.floor(entity.x - sprite.origin[0] * scale), y = Math.floor(entity.y - sprite.origin[1] * scale);
+      const w = this.config.width, h = this.config.height;
+      for (let i = 0; i < spans.length; i += 4) {
+        const left = Math.max(0, x + spans[i]), right = Math.min(w, x + spans[i] + spans[i + 2]);
+        if (left >= right) continue;
+        const top = Math.max(0, y + spans[i + 1]), bottom = Math.min(h, y + spans[i + 1] + scale), color = spans[i + 3];
+        for (let row = top; row < bottom; row++) this.buffer.fill(color, row * w + left, row * w + right);
       }
     }
     frame() {
-      this.buffer.fill(packed(this.config.background));
-      for (const r of this.config.rects) this.rect(r.x, r.y, r.width, r.height, parseInt(r.color.slice(1), 16));
+      this.buffer.set(this.background);
       const state = this.app.state;
       for (const path of this.config.layers) {
         const value = path.split(".").reduce((value2, part) => value2?.[part], state);
@@ -3587,11 +3809,18 @@ var __RunePixelRuntime = (() => {
       if (hud) {
         const width = this.config.width;
         this.rect(0, 0, width, 23, 1053469);
-        this.text(hud.title, 10, 9, 10941058);
+        const coins = hud.coins?.split(".").reduce((value, part) => value?.[part], state);
+        this.text(hud.level ? "CITY " + state[hud.level] + "  COINS " + (coins || 0) : hud.title, 10, 9, 10941058);
         this.text("SCORE " + String(state[hud.score] || 0).padStart(5, "0"), width - 156, 9);
         if (this.muted) this.text("MUTE", width - 76, 9, 16757397);
         this.rect(width - 54, 9, 43, 5, 4207687);
         this.rect(width - 54, 9, Math.max(0, Math.min(43, Number(state[hud.health] || 0) * 43 / hud.max_health)), 5, 16746854);
+      }
+      this.buttons = [];
+      const menu = this.config.menu && state[this.config.menu];
+      if (menu && !this.paused) {
+        this.menuFrame(menu);
+        return this.buffer;
       }
       const title = this.paused ? "PAUSED" : this.config.overlays?.[String(state.status)];
       if (title) {
@@ -3652,6 +3881,7 @@ var __RunePixelRuntime = (() => {
       pending.clear();
     };
     const pause = () => {
+      if (game.app.state.status !== "playing") return;
       getAudioContext();
       game.paused = !game.paused;
       clear();
@@ -3677,6 +3907,11 @@ var __RunePixelRuntime = (() => {
       });
     };
     listen(canvas, "keydown", ((event) => {
+      if (!event.repeat && game.key(event.code)) {
+        event.preventDefault();
+        clear();
+        return;
+      }
       if (keys[event.code] || ["Enter", "KeyP", "KeyF", "KeyM"].includes(event.code)) event.preventDefault();
       if (keys[event.code]) {
         input[keys[event.code]] = true;
@@ -3687,13 +3922,28 @@ var __RunePixelRuntime = (() => {
       if (!event.repeat && event.code === "KeyF") fullscreen();
       if (!event.repeat && event.code === "KeyM") mute();
     }));
+    listen(canvas, "pointerdown", ((event) => {
+      getAudioContext();
+      canvas.focus();
+      const rect = canvas.getBoundingClientRect();
+      game.click((event.clientX - rect.left) * width / rect.width, (event.clientY - rect.top) * height / rect.height);
+      clear();
+    }));
+    for (const button of Array.from(document.querySelectorAll("[data-pixel-action]"))) {
+      listen(button, "click", () => {
+        getAudioContext();
+        game.invoke(button.dataset.pixelAction);
+        clear();
+        canvas.focus();
+      });
+    }
     listen(canvas, "keyup", ((event) => {
       if (keys[event.code]) input[keys[event.code]] = false;
     }));
     listen(canvas, "blur", ((event) => {
       clear();
       const next = event.relatedTarget;
-      if (next instanceof Element && next.closest("[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute]")) return;
+      if (next instanceof Element && next.closest("[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute],[data-pixel-action]")) return;
       if (game.app.state.status === "playing") game.paused = true;
     }));
     listen(window, "blur", () => {
@@ -3749,7 +3999,8 @@ var __RunePixelRuntime = (() => {
     listen(document, "fullscreenchange", resize);
     resize();
     const announce = document.querySelector("[data-pixel-status]");
-    let lastStatus = "";
+    let lastStatus = "", lastMenu = "";
+    const menuHost = document.querySelector("[data-pixel-menu]");
     const frame = (now) => {
       if (stopped) return;
       if (previous) accumulator += Math.min(now - previous, 1e3 / tickRate * 5);
@@ -3764,7 +4015,37 @@ var __RunePixelRuntime = (() => {
       game.frame();
       context.putImageData(image, 0, 0);
       const state = game.app.state;
-      const status = game.paused ? "Paused \u2014 press P to resume" : state.status === "won" ? "City conquered! Play again?" : state.status === "gameover" ? "Monster down. Try another rampage!" : state.status === "ready" ? "Ready to make a big entrance?" : "Smash buildings. Watch out for the army!";
+      const menu = game.config.menu ? state[game.config.menu] : null;
+      const menuJson = JSON.stringify(menu);
+      if (menuHost && menuJson !== lastMenu) {
+        const focus = menuHost.contains(document.activeElement) ? Array.from(menuHost.querySelectorAll("button")).indexOf(document.activeElement) : -1;
+        menuHost.replaceChildren();
+        menuHost.hidden = !menu;
+        if (menu) {
+          const label = document.createElement("span");
+          label.textContent = menu.subtitle;
+          menuHost.append(label);
+          for (const item of [...menu.cards || [], ...menu.buttons || []]) {
+            const button = document.createElement("button");
+            button.textContent = item.label || item.name + ": " + item.detail;
+            button.onclick = () => {
+              getAudioContext();
+              game.invoke(item.action, item.args || []);
+              clear();
+              if (!game.config.menu || !game.app.state[game.config.menu]) canvas.focus();
+            };
+            menuHost.append(button);
+          }
+          if (menu.note) {
+            const note = document.createElement("span");
+            note.textContent = menu.note;
+            menuHost.append(note);
+          }
+          if (focus >= 0) menuHost.querySelectorAll("button")[focus]?.focus();
+        }
+        lastMenu = menuJson;
+      }
+      const status = game.paused ? "Paused \u2014 press P to resume" : state.status === "won" ? "City conquered! Coins earned \u2014 continue to the next city or visit the shop." : state.status === "gameover" ? "Monster down. Try another rampage!" : state.status === "store" ? "Monster shop \u2014 arrows to browse, Enter to buy or equip. Coins " + state.profile?.coins : state.status === "ready" ? "Ready to make a big entrance?" : "Smash buildings. Watch out for the army!";
       if (announce && status !== lastStatus) {
         announce.textContent = status;
         lastStatus = status;
@@ -3779,6 +4060,9 @@ var __RunePixelRuntime = (() => {
         if (button.textContent !== label) button.textContent = label;
         button.setAttribute("aria-pressed", String(game.muted));
       }
+      for (const button of Array.from(document.querySelectorAll("[data-pixel-pause]"))) button.disabled = state.status !== "playing";
+      const saveNotice = document.querySelector("[data-pixel-save]");
+      if (saveNotice) saveNotice.textContent = game.saveStatus === "saved" ? "Progress saved on this device" : game.saveStatus === "recovered" ? "Save could not be read. A fresh profile was created." : "Progress lasts for this session only - storage unavailable";
       frameId = requestAnimationFrame(frame);
     };
     frameId = requestAnimationFrame(frame);

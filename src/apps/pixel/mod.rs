@@ -8,6 +8,8 @@ use std::collections::HashMap;
 pub mod desktop;
 #[cfg(any(feature = "pixel-desktop", test))]
 pub mod native_audio;
+#[cfg(any(feature = "pixel-desktop", test))]
+pub mod persistence;
 
 fn text<'a>(section: &'a crate::rune_ast::Section, key: &str) -> Option<&'a str> {
     section.kv.get(key).and_then(Value::as_str)
@@ -238,6 +240,50 @@ pub fn compile(doc: &RuneDocument) -> Result<Game> {
             .is_some_and(|a| !a.is_empty() && a.iter().all(Json::is_string)),
         "Scene layers must be a non-empty list of state paths"
     );
+    config["menu"] = scene.kv.get("menu").map(json_value).unwrap_or(Json::Null);
+    config["commands"] = scene
+        .kv
+        .get("commands")
+        .map(json_value)
+        .unwrap_or(json!({}));
+    config["persistence"] = scene
+        .kv
+        .get("persistence")
+        .map(json_value)
+        .unwrap_or(Json::Null);
+    ensure!(
+        config["commands"]
+            .as_object()
+            .is_some_and(|map| map.values().all(|v| v
+                .as_str()
+                .is_some_and(|name| logic.actions.contains_key(name)))),
+        "Scene commands must map keys to existing actions"
+    );
+    if !config["menu"].is_null() {
+        ensure!(
+            config["menu"]
+                .as_str()
+                .is_some_and(|name| logic.state.contains_key(name)),
+            "Scene menu needs an existing state field"
+        );
+    }
+    if !config["persistence"].is_null() {
+        let save = &config["persistence"];
+        ensure!(
+            save["key"].as_str().is_some_and(|s| !s.is_empty()
+                && s.len() <= 64
+                && s.bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')),
+            "Persistence key must contain 1-64 letters, digits, hyphens or underscores"
+        );
+        let field = save["state"]
+            .as_str()
+            .context("Persistence needs a state field")?;
+        ensure!(
+            logic.state.contains_key(field),
+            "Persistence state field is missing"
+        );
+    }
     config["hud"] = scene.kv.get("hud").map(json_value).unwrap_or(Json::Null);
     config["overlays"] = scene
         .kv

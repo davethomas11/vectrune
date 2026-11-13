@@ -1,6 +1,15 @@
 @Logic/monster
 state:
     status = "ready"
+    profile = {"coins":0,"owned":["kaiju"],"skin":"kaiju","level":1,"seed":0,"best_score":0}
+    skins = [{"id":"kaiju","name":"MOSS","cost":0},{"id":"ember","name":"EMBER","cost":120},{"id":"frost","name":"FROST","cost":240}]
+    level = 1
+    difficulty = 1
+    reward = 0
+    fire_rate = 60
+    tank_rate = 95
+    menu = null
+    aircraft = []
     score = 0
     health = 100
     destroyed = 0
@@ -15,13 +24,97 @@ state:
     shots = []
     dust = []
 
+# Save only the profile. Scenes, projectiles and transient UI are rebuilt.
+action initialize:
+    profile.coins = clamp(profile.coins, 0, 999999)
+    profile.level = clamp(profile.level, 1, 9999)
+    profile.best_score = clamp(profile.best_score, 0, 99999999)
+    profile.seed = clamp(profile.seed, 0, 2147483647)
+    if profile.seed <= 0:
+        profile.seed = random(1, 1000000000)
+    valid_owned = ["kaiju"]
+    for skin in skins:
+        is_owned = profile.owned.any(id => id == skin.id)
+        if skin.id != "kaiju" && is_owned == true:
+            valid_owned.push(skin.id)
+    profile.owned = valid_owned
+    if !profile.owned.any(id => id == profile.skin):
+        profile.skin = "kaiju"
+    call openTitle
+
+action openTitle:
+    music.stop
+    status = "ready"
+    level = profile.level
+    monster.sprite = profile.skin + "/idle"
+    menu = {"title":"MONSTER CITY","subtitle":"LOGANS MONSTER RAMPAGE","note":"EARN COINS - UNLOCK YOUR NEXT MONSTER","buttons":[{"label":"PLAY CITY " + profile.level,"action":"start"},{"label":"MONSTER SHOP","action":"openStore"}]}
+
+action openStore:
+    music.stop
+    status = "store"
+    menu = {"title":"MONSTER SHOP","subtitle":"COINS " + profile.coins + " - SKINS ARE COSMETIC","cards":[],"note":"SELECT A MONSTER TO BUY OR EQUIP","buttons":[{"label":"BACK TO TITLE","action":"openTitle"}]}
+    for skin in skins:
+        owned = profile.owned.any(id => id == skin.id)
+        detail = owned ? "OWNED - EQUIP" : skin.cost + " COINS - BUY"
+        if profile.skin == skin.id:
+            detail = "EQUIPPED"
+        menu.cards.push({"name":skin.name,"sprite":skin.id + "/idle","detail":detail,"action":"chooseSkin","args":[skin.id]})
+
+action chooseSkin(id):
+    stop when status != "store"
+    valid_skin = skins.any(s => s.id == id)
+    stop when valid_skin != true
+    selected_skin = skins.find(s => s.id == id)
+    owned = profile.owned.any(s => s == id)
+    if !owned:
+        if profile.coins < selected_skin.cost:
+            menu.note = "MORE COINS NEEDED - BEAT A CITY TO EARN"
+            stop
+        profile.coins -= selected_skin.cost
+        profile.owned.push(id)
+    profile.skin = id
+    monster.sprite = id + "/idle"
+    call openStore
+
+# A saved seed + city number recreates each layout on retry. Enemy counts,
+# armor and firing rates grow to bounded limits so later cities stay playable.
+action generateLevel:
+    difficulty = min(level, 12)
+    city_seed = profile.seed + level * 1009
+    buildings = []
+    soldiers = []
+    tanks = []
+    aircraft = []
+    for index in [0, 1, 2, 3, 4]:
+        jitter = level == 1 ? 0 : random(-5, 5, city_seed + index)
+        tower_sprite = pick(["tower/blue", "tower/rust"], city_seed + index + 20)
+        armor = min(6, 3 + (difficulty - difficulty % 3) / 3)
+        buildings.push({"x":62 + index * 62 + jitter,"y":110,"sprite":tower_sprite,"scale":2,"hp":armor})
+    for index in [0, 1, 2, 3, 4, 5]:
+        if index < min(6, 2 + difficulty):
+            soldier_x = level == 1 ? 110 + index * 106 : random(85, 350, city_seed + 50 + index)
+            soldiers.push({"x":soldier_x,"y":170,"sprite":"soldier","scale":2,"visible":true,"hp":1})
+    for index in [0, 1, 2, 3]:
+        if index < min(4, 1 + difficulty):
+            tank_x = level == 1 ? 170 + index * 168 : random(140, 348, city_seed + 70 + index)
+            tanks.push({"x":tank_x,"y":174,"sprite":"tank","scale":2,"visible":true,"hp":2})
+    if level >= 3:
+        aircraft.push({"x":310,"y":78,"sprite":"helicopter","scale":2,"vx":-0.8,"hp":2,"visible":true,"kind":"helicopter"})
+    if level >= 5:
+        aircraft.push({"x":40,"y":45,"sprite":"plane","scale":2,"vx":1.8,"hp":3,"visible":true,"kind":"plane"})
+    if level >= 8:
+        aircraft.push({"x":140,"y":85,"sprite":"helicopter","scale":2,"vx":1,"hp":2,"visible":true,"kind":"helicopter"})
+    fire_rate = max(24, 64 - difficulty * 4)
+    tank_rate = max(40, 100 - difficulty * 5)
+
 action start:
     music.stop
     reset monster
-    reset buildings
-    reset soldiers
-    reset tanks
+    level = profile.level
+    call generateLevel
+    monster.sprite = profile.skin + "/idle"
     score = 0
+    reward = 0
     health = 100
     destroyed = 0
     clock = 0
@@ -29,16 +122,29 @@ action start:
     flash = 0
     shots = []
     dust = []
+    menu = null
     status = "playing"
     music.play "monster_city"
     sound.play("monster_roar")
+
+action completeLevel:
+    stop when status != "playing"
+    stop when destroyed != buildings.length
+    status = "won"
+    reward = 50 + level * 10 + (score - score % 10) / 10
+    profile.coins = min(999999, profile.coins + reward)
+    profile.best_score = max(profile.best_score, score)
+    profile.level = min(9999, level + 1)
+    music.stop
+    sound.play("monster_victory")
+    menu = {"title":"CITY CONQUERED","subtitle":"EARNED " + reward + " COINS - TOTAL " + profile.coins,"note":"HELICOPTERS CITY 3 - PLANES CITY 5","buttons":[{"label":"NEXT CITY " + profile.level,"action":"start"},{"label":"MONSTER SHOP","action":"openStore"},{"label":"TITLE SCREEN","action":"openTitle"}]}
 
 action smash:
     stop when status != "playing"
     stop when cooldown > 0
     cooldown = 12
     flash = 6
-    monster.sprite = "kaiju/punch"
+    monster.sprite = profile.skin + "/punch"
     sound.play("monster_smash")
     for building in buildings:
         if building.hp > 0 && abs((building.x + 16) - (monster.x + 24)) < 52:
@@ -66,10 +172,15 @@ action smash:
                 tank.sprite = "wreck"
                 score += 50
                 sound.play("monster_explosion")
-    if destroyed == 5:
-        status = "won"
-        music.stop
-        sound.play("monster_victory")
+    for flyer in aircraft:
+        if flyer.hp > 0 && abs((flyer.x + 16) - (monster.x + 24)) < 52 && flyer.y > 70:
+            flyer.hp -= 1
+            if flyer.hp == 0:
+                flyer.visible = false
+                score += 75
+                sound.play("monster_explosion")
+    if destroyed == buildings.length:
+        call completeLevel
 
 action tick(input):
     stop when status != "playing"
@@ -82,13 +193,13 @@ action tick(input):
     if input.right == true:
         monster.x = clamp(monster.x + 2, 0, 336)
         monster.flip = false
-    monster.sprite = "kaiju/idle"
+    monster.sprite = profile.skin + "/idle"
     if input.left == true || input.right == true:
-        monster.sprite = "kaiju/walk"
+        monster.sprite = profile.skin + "/walk"
         if clock % 12 == 0:
             sound.play("monster_stomp")
     if flash > 0:
-        monster.sprite = "kaiju/punch"
+        monster.sprite = profile.skin + "/punch"
     if input.smash == true:
         call smash
     stop when status != "playing"
@@ -97,23 +208,34 @@ action tick(input):
             soldier.flip = soldier.x > monster.x
             if abs(soldier.x - monster.x) > 65:
                 soldier.x += soldier.x > monster.x ? -0.35 : 0.35
-            if clock % 60 == 0:
+            if clock % fire_rate == 0 && shots.length < 64:
                 sound.play("monster_rifle")
                 shots.push({"x":soldier.x,"y":166,"sprite":"bullet","scale":1,"vx":soldier.x > monster.x ? -3 : 3,"life":140,"damage":2})
     for tank in tanks:
         if tank.hp > 0:
             tank.flip = tank.x > monster.x
-            if clock % 95 == 0:
+            if clock % tank_rate == 0 && shots.length < 64:
                 sound.play("monster_cannon")
                 shots.push({"x":tank.x + 12,"y":160,"sprite":"shell","scale":1,"vx":tank.x > monster.x ? -2 : 2,"life":180,"damage":5})
+    for flyer in aircraft:
+        if flyer.hp > 0:
+            flyer.x += flyer.vx
+            flyer.flip = flyer.vx < 0
+            if flyer.x < 0 || flyer.x > 350:
+                flyer.vx = 0 - flyer.vx
+            if clock % 75 == 0 && shots.length < 64:
+                sound.play("monster_cannon")
+                shots.push({"x":flyer.x + 16,"y":flyer.y + 12,"sprite":"shell","scale":1,"vx":0,"vy":2.5,"life":100,"damage":flyer.kind == "plane" ? 7 : 4})
     for shot in shots:
         shot.x += shot.vx
+        if shot.vy > 0:
+            shot.y += shot.vy
         shot.life -= 1
         if shot.life > 0 && shot.x > monster.x + 8 && shot.x < monster.x + 42 && shot.y > monster.y && shot.y < monster.y + 72:
             health = max(0, health - shot.damage)
             sound.play("monster_damage")
             shot.life = 0
-    shots = shots.filter(s => s.life > 0 && s.x > 0 && s.x < 384)
+    shots = shots.filter(s => s.life > 0 && s.x > 0 && s.x < 384 && s.y < 194)
     for puff in dust:
         puff.y -= 1
         puff.life -= 1
@@ -122,3 +244,4 @@ action tick(input):
         status = "gameover"
         music.stop
         sound.play("monster_gameover")
+        menu = {"title":"MONSTER DOWN","subtitle":"COINS SAFE - TRY THIS CITY AGAIN","note":"KEEP MOVING AND SMASH THE ARMY","buttons":[{"label":"RETRY CITY " + level,"action":"start"},{"label":"MONSTER SHOP","action":"openStore"},{"label":"TITLE SCREEN","action":"openTitle"}]}

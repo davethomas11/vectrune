@@ -37,7 +37,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   const listen = (element: EventTarget, name: string, callback: EventListener) => element.addEventListener(name, callback, { signal: abort.signal });
   const pending = new Set<string>();
   const clear = () => { input = {}; pending.clear(); };
-  const pause = () => { getAudioContext(); game.paused = !game.paused; clear(); previous = 0; accumulator = 0; };
+  const pause = () => { if(game.app.state.status !== 'playing') return; getAudioContext(); game.paused = !game.paused; clear(); previous = 0; accumulator = 0; };
   const start = () => { getAudioContext(); clear(); game.start(); previous = 0; accumulator = 0; canvas.focus(); };
   const mute = () => { canvas.focus(); game.muted = !game.muted; };
   const fullscreen = () => {
@@ -46,6 +46,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     result?.catch(() => { /* The browser may deny fullscreen; the game keeps working. */ });
   };
   listen(canvas, 'keydown', ((event: KeyboardEvent) => {
+    if (!event.repeat && game.key(event.code)) { event.preventDefault(); clear(); return; }
     if (keys[event.code] || ['Enter','KeyP','KeyF','KeyM'].includes(event.code)) event.preventDefault();
     if (keys[event.code]) { input[keys[event.code]] = true; pending.add(keys[event.code]); }
     if (!event.repeat && event.code === 'Enter') start();
@@ -53,13 +54,22 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     if (!event.repeat && event.code === 'KeyF') fullscreen();
     if (!event.repeat && event.code === 'KeyM') mute();
   }) as EventListener);
+  listen(canvas,'pointerdown',((event:PointerEvent) => {
+    getAudioContext(); canvas.focus();
+    const rect=canvas.getBoundingClientRect();
+    game.click((event.clientX-rect.left)*width/rect.width,(event.clientY-rect.top)*height/rect.height);
+    clear();
+  }) as EventListener);
+  for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-action]'))) {
+    listen(button,'click',() => { getAudioContext(); game.invoke(button.dataset.pixelAction!); clear(); canvas.focus(); });
+  }
   listen(canvas, 'keyup', ((event: KeyboardEvent) => {
     if (keys[event.code]) input[keys[event.code]] = false;
   }) as EventListener);
   listen(canvas, 'blur', ((event: FocusEvent) => {
     clear();
     const next = event.relatedTarget;
-    if (next instanceof Element && next.closest('[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute]')) return;
+    if (next instanceof Element && next.closest('[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute],[data-pixel-action]')) return;
     if (game.app.state.status === 'playing') game.paused = true;
   }) as EventListener);
   listen(window, 'blur', () => { clear(); if (game.app.state.status === 'playing') game.paused = true; });
@@ -90,7 +100,8 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   listen(document, 'fullscreenchange', resize);
   resize();
   const announce = document.querySelector<HTMLElement>('[data-pixel-status]');
-  let lastStatus = '';
+  let lastStatus = '', lastMenu = '';
+  const menuHost = document.querySelector<HTMLElement>('[data-pixel-menu]');
   const frame = (now: number) => {
     if (stopped) return;
     if (previous) accumulator += Math.min(now - previous, 1000 / tickRate * 5);
@@ -103,7 +114,25 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     }
     game.frame(); context.putImageData(image, 0, 0);
     const state = game.app.state;
-    const status = game.paused ? 'Paused — press P to resume' : state.status === 'won' ? 'City conquered! Play again?' : state.status === 'gameover' ? 'Monster down. Try another rampage!' : state.status === 'ready' ? 'Ready to make a big entrance?' : 'Smash buildings. Watch out for the army!';
+    const menu = game.config.menu ? state[game.config.menu] as any : null;
+    const menuJson = JSON.stringify(menu);
+    if(menuHost && menuJson !== lastMenu) {
+      const focus = menuHost.contains(document.activeElement) ? Array.from(menuHost.querySelectorAll('button')).indexOf(document.activeElement as HTMLButtonElement) : -1;
+      menuHost.replaceChildren(); menuHost.hidden = !menu;
+      if(menu) {
+        const label=document.createElement('span'); label.textContent=menu.subtitle; menuHost.append(label);
+        for(const item of [...(menu.cards || []),...(menu.buttons || [])]) {
+          const button=document.createElement('button');
+          button.textContent=item.label || item.name + ': ' + item.detail;
+          button.onclick = () => { getAudioContext(); game.invoke(item.action,item.args || []); clear(); if(!game.config.menu || !game.app.state[game.config.menu]) canvas.focus(); };
+          menuHost.append(button);
+        }
+        if(menu.note) { const note=document.createElement('span'); note.textContent=menu.note; menuHost.append(note); }
+        if(focus >= 0) menuHost.querySelectorAll('button')[focus]?.focus();
+      }
+      lastMenu=menuJson;
+    }
+    const status = game.paused ? 'Paused — press P to resume' : state.status === 'won' ? 'City conquered! Coins earned — continue to the next city or visit the shop.' : state.status === 'gameover' ? 'Monster down. Try another rampage!' : state.status === 'store' ? 'Monster shop — arrows to browse, Enter to buy or equip. Coins ' + (state.profile as any)?.coins : state.status === 'ready' ? 'Ready to make a big entrance?' : 'Smash buildings. Watch out for the army!';
     if (announce && status !== lastStatus) { announce.textContent = status; lastStatus = status; }
     for (const button of Array.from(document.querySelectorAll('[data-pixel-pause]'))) { const label = game.paused ? 'Resume' : 'Pause'; if (button.textContent !== label) button.textContent = label; button.setAttribute('aria-pressed',String(game.paused)); }
     for (const button of Array.from(document.querySelectorAll('[data-pixel-mute]'))) {
@@ -111,6 +140,9 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
       if (button.textContent !== label) button.textContent = label;
       button.setAttribute('aria-pressed',String(game.muted));
     }
+    for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-pixel-pause]'))) button.disabled = state.status !== 'playing';
+    const saveNotice=document.querySelector<HTMLElement>('[data-pixel-save]');
+    if(saveNotice) saveNotice.textContent = game.saveStatus === 'saved' ? 'Progress saved on this device' : game.saveStatus === 'recovered' ? 'Save could not be read. A fresh profile was created.' : 'Progress lasts for this session only - storage unavailable';
     frameId = requestAnimationFrame(frame);
   };
   frameId = requestAnimationFrame(frame);

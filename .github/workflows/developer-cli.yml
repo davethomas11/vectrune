@@ -60,8 +60,8 @@ jobs:
         run: cargo test --test developer_cli --test logic_testing --test pixel_app --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package
       - name: Test CLI support and deployment packaging
         run: 'cargo test --lib cli::'
-      - name: Test native audio without an output device
-        run: 'cargo test --lib apps::pixel::native_audio'
+      - name: Test pixel audio and persistence without an output device
+        run: 'cargo test --lib apps::pixel::'
       - name: Check starter formatting
         run: target/debug/vectrune fmt examples/testing --check
       - name: Lint example suite

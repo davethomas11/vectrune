@@ -41,6 +41,33 @@ describe('portable pixel renderer and simulation', () => {
     expect(first.app.state.count).toBe(2);expect(second.app.state.count).toBe(1);
     expect(first.app.derived.double).toBe(4);expect(second.app.derived.double).toBe(2);
   });
+  it('matches individual sprite pixels after span caching, clipping, scaling and flipping', () => {
+    for(const flip of [false,true]) for(const scale of [1,2,3]) for(const x of [-1,10,384]) {
+      const engine=game();
+      engine.config.sprites.pattern={width:3,height:2,origin:[1,1],colors:[null,0xff0000,0x00ff00],pixels:[1,1,0,2,0,1]};
+      engine.app.state.actor={x,y:41,sprite:'pattern',scale,flip};
+      const expected=new Uint32Array(384*216).fill(0xff030201);
+      const pattern=[1,1,0,2,0,1], colors=[0,0xff0000ff,0xff00ff00];
+      for(let row=0;row<2;row++) for(let col=0;col<3;col++) {
+        const color=colors[pattern[row*3+col]];
+        if(!color) continue;
+        for(let dy=0;dy<scale;dy++) for(let dx=0;dx<scale;dx++) {
+          const px=x-scale+(flip ? 2-col : col)*scale+dx, py=41-scale+row*scale+dy;
+          if(px>=0 && px<384 && py>=0 && py<216) expected[py*384+px]=color;
+        }
+      }
+      expect(engine.frame()).toEqual(expected);
+      expect(engine.frame()).toEqual(expected);
+    }
+  });
+  it('uses the current menu for keyboard choices before its next rendered frame', () => {
+    const engine=game(); engine.config.menu='menu';
+    engine.app.state.menu={title:'OLD',buttons:[{label:'OLD',action:'tick'}]};
+    engine.frame(); engine.step(); expect(engine.app.state.count).toBe(1);
+    engine.app.state.menu={title:'NEW',buttons:[{label:'START',action:'start'}]};
+    expect(engine.key('Enter')).toBe(true);
+    expect(engine.app.state.count).toBe(0);
+  });
   it('fails clearly on missing sprite names', () => {
     const engine=game();(engine.app.state.actor as any).sprite='typo';
     expect(()=>engine.frame()).toThrow('Unknown pixel sprite: typo');

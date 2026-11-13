@@ -10,7 +10,7 @@ use std::{
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
-    event::{ElementState, WindowEvent},
+    event::{ElementState, MouseButton, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
     window::{Fullscreen, Window, WindowId},
@@ -30,10 +30,12 @@ struct Host {
     keys: std::collections::HashMap<String, String>,
     pending: std::collections::HashSet<String>,
     previous: Instant,
+    next_redraw: Instant,
     tick_duration: Duration,
     accumulator: Duration,
     frame_limit: Option<u64>,
     frames: u64,
+    cursor: (f32, f32),
     error: Option<anyhow::Error>,
 }
 impl Host {
@@ -116,10 +118,27 @@ impl ApplicationHandler for Host {
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let result = (|| -> Result<()> {
             match event {
+                WindowEvent::CursorMoved { position, .. } => {
+                    self.cursor = (position.x as f32, position.y as f32)
+                }
+                WindowEvent::MouseInput {
+                    state: ElementState::Pressed,
+                    button: MouseButton::Left,
+                    ..
+                } => {
+                    if let Some(pixels) = &self.pixels {
+                        if let Ok((x, y)) = pixels.window_pos_to_pixel(self.cursor) {
+                            self.clear_input();
+                            self.js(&format!("__RunePixel.click({x},{y})"))?;
+                        }
+                    }
+                }
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::Focused(false) => {
                     self.clear_input();
-                    self.js("__RunePixel.paused = true")?;
+                    self.js(
+                        "if (__RunePixel.app.state.status === 'playing') __RunePixel.paused = true",
+                    )?;
                 }
                 WindowEvent::Focused(true) => {
                     self.previous = Instant::now();
@@ -139,14 +158,28 @@ impl ApplicationHandler for Host {
                                 self.pending.insert(action.clone());
                             }
                         }
+                        if down && !event.repeat && key != KeyCode::Enter {
+                            let mut handled = false;
+                            *self.deadline.lock().unwrap() =
+                                Instant::now() + Duration::from_millis(250);
+                            self.context.with(|ctx| -> Result<()> {
+                                handled =
+                                    ctx.eval(format!("__RunePixel.key('{}')", format!("{key:?}")))?;
+                                Ok(())
+                            })?;
+                            if handled {
+                                self.clear_input();
+                                return Ok(());
+                            }
+                        }
                         match key {
                             KeyCode::Enter if down && !event.repeat => {
                                 self.clear_input();
-                                self.js("__RunePixel.start()")?;
+                                self.js("if (!__RunePixel.key('Enter')) __RunePixel.start()")?;
                             }
                             KeyCode::KeyP if down && !event.repeat => {
                                 self.clear_input();
-                                self.js("__RunePixel.paused = !__RunePixel.paused")?;
+                                self.js("if (__RunePixel.app.state.status === 'playing') __RunePixel.paused = !__RunePixel.paused")?;
                             }
                             KeyCode::KeyM if down && !event.repeat => {
                                 self.js("__RunePixel.muted = !__RunePixel.muted")?;
@@ -189,12 +222,16 @@ impl ApplicationHandler for Host {
         }
     }
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        event_loop.set_control_flow(ControlFlow::WaitUntil(
-            Instant::now() + Duration::from_millis(16),
-        ));
-        if let Some(window) = &self.window {
-            window.request_redraw();
+        // Schedule against the frame start, so rendering time does not add a
+        // second delay to every frame or trigger an unbounded redraw loop.
+        let now = Instant::now();
+        if now >= self.next_redraw {
+            self.next_redraw = now + Duration::from_nanos(1_000_000_000 / 60);
+            if let Some(window) = &self.window {
+                window.request_redraw();
+            }
         }
+        event_loop.set_control_flow(ControlFlow::WaitUntil(self.next_redraw));
     }
 }
 
@@ -220,6 +257,7 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
     // Device discovery can take time; it must not consume the JS startup budget.
     *deadline.lock().unwrap() = Instant::now() + Duration::from_secs(2);
     let context = Context::full(&runtime)?;
+    super::persistence::install(&context, std::env::current_dir()?.join(".vectrune/saves"))?;
     audio.bridge.install(&context)?;
     context.with(|ctx| {
         ctx.eval::<(), _>(game.script.as_str())
@@ -242,10 +280,12 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
         keys,
         pending: std::collections::HashSet::new(),
         previous: Instant::now(),
+        next_redraw: Instant::now(),
         tick_duration: Duration::from_secs_f64(1.0 / rate),
         accumulator: Duration::ZERO,
         frame_limit,
         frames: 0,
+        cursor: (0.0, 0.0),
         error: None,
     };
     EventLoop::new()?.run_app(&mut host)?;

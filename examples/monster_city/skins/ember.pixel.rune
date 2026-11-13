@@ -1,0 +1,96 @@
+@Palette/ember
+colors = {".":"transparent","d":"#182b36","g":"#a04439","G":"#ef8053","h":"#ffe2a3","b":"#c8cc91","e":"#ffe9a9","k":"#16242d","r":"#d8876e","s":"#f7ba60","w":"#eccf9a","a":"#566c7e","c":"#8c9ca0","n":"#3d5266","o":"#9c705d","t":"#526c4e","l":"#a8b97b"}
+
+@Sprite/ember/idle
+palette = ember
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......sss......"
+    ".....ssggggss..."
+    ".....gGGGGGGg..."
+    "....gGGGGGGeeg.."
+    "....gGGGGGGkeg.."
+    "....gGGGGGkkkk.."
+    "....gGGGGGrrr..."
+    "...sgGGGGGgg...."
+    "...sgGGGGgbg...."
+    "..ssgGGGGgbggg.."
+    "..sgGGGGGgbggGg."
+    "..sgGGGGGgbg.hh."
+    ".ssgGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    "sgGGGGGGGgbg...."
+    "gGGGGGGGGgbg...."
+    "ggggGGGGgggg...."
+    "..ggGGgggGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGg..gGGg...."
+    ".gGGGg..gGGGg..."
+    ".hhhhh..hhhhh..."
+
+@Sprite/ember/step
+palette = ember
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......sss......"
+    ".....ssggggss..."
+    ".....gGGGGGGg..."
+    "....gGGGGGGeeg.."
+    "....gGGGGGGkeg.."
+    "....gGGGGGkkkk.."
+    "....gGGGGGrrr..."
+    "...sgGGGGGgg...."
+    "...sgGGGGgbg...."
+    "..ssgGGGGgbggg.."
+    "..sgGGGGGgbggGg."
+    "..sgGGGGGgbg.hh."
+    ".ssgGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    "sgGGGGGGGgbg...."
+    "gGGGGGGGGgbg...."
+    "ggggGGGGgggg...."
+    "..ggGGgggGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGg...gGGg..."
+    "..gGGGg..gGGGg.."
+    "..hhhhh..hhhhh.."
+
+@Sprite/ember/punch
+palette = ember
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......sss......"
+    ".....ssggggss..."
+    ".....gGGGGGGg..."
+    "....gGGGGGGeeg.."
+    "....gGGGGGGkeg.."
+    "....gGGGGGkkkk.."
+    "....gGGGGGrrr..."
+    "...sgGGGGGgg...."
+    "...sgGGGGgbg...."
+    "..ssgGGGGgbggggg"
+    "..sgGGGGGgbgGGGh"
+    "..sgGGGGGgbghhhh"
+    ".ssgGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    "sgGGGGGGGgbg...."
+    "gGGGGGGGGgbg...."
+    "ggggGGGGgggg...."
+    "..ggGGgggGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGg..gGGg...."
+    ".gGGGg..gGGGg..."
+    ".hhhhh..hhhhh..."
+
+@Animation/ember/walk
+frames = ["kaiju/idle", "kaiju/step"]
+fps = 8

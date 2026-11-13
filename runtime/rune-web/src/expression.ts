@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { ctx } from './context';
+import { randomInt, shuffled } from './random';
 import { splitPathSegments, buildScope } from './scope';
 import {
   includesTopLevel,
@@ -191,6 +192,16 @@ export function evaluateExpression(
   let trimmed = String(expr || '').trim();
   if (!trimmed) return undefined;
 
+  // Resolve common leaves before scanning operators; state is always read fresh.
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (trimmed === 'null') return null;
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(trimmed)) {
+    const value = resolvePath(trimmed,scope);
+    if (value !== undefined) return value;
+  }
+
   // Raw source props are JSON string literals. Decode them once, before
   // interpreting any operators, quotes, or placeholders inside the source.
   if (trimmed.startsWith('"')) {
@@ -291,7 +302,17 @@ export function evaluateExpression(
     if (parts.length >= 2) {
       const min = Number(evaluateExpression(parts[0], scope, nextDepth));
       const max = Number(evaluateExpression(parts[1], scope, nextDepth));
-      return Math.floor(Math.random() * (max - min + 1)) + min;
+      return randomInt(min, max, parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : undefined);
+    }
+  }
+
+  for (const name of ['shuffle', 'pick']) {
+    if (trimmed.startsWith(name + '(') && trimmed.endsWith(')')) {
+      const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ',');
+      const values = evaluateExpression(parts[0], scope, nextDepth);
+      if (!Array.isArray(values)) return undefined;
+      const seed = parts.length > 1 ? Number(evaluateExpression(parts[1], scope, nextDepth)) : randomInt(0,2147483647);
+      return name === 'shuffle' ? shuffled(values, seed) : values.length ? values[randomInt(0,values.length-1,seed)] : null;
     }
   }
 

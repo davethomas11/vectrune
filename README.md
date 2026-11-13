@@ -386,6 +386,27 @@ For a custom Rune-Web shell, set `@App shell = arcade`, define `@Page/arcade`, a
 
 Browser regressions: `python3 tests/browser/monster_city.py` and `python3 tests/browser/monster_audio.py`. The audio regression checks real nonzero output samples, silence when muted/paused, and scheduler cleanup. The initial game deliberately uses staged destruction and a single city block. Scrolling levels, sprite atlas packing, a sprite editor, and broader desktop release validation remain follow-ups.
 
+Monster City's title screen offers the next city and a three-skin shop. **B** opens the shop; **T** returns to the title. Use arrows and Enter, or click/tap a card. Browser shells also expose regular HTML menu buttons for keyboard and screen reader access. Moss is free; Ember costs 120 coins and Frost costs 240. Skins change appearance only. A completed city awards `50 + city * 10 + floor(score / 10)` coins exactly once. Coins and unlocks survive defeat and restart. Helicopters arrive in city 3, planes in city 5, and a second helicopter in city 8. Enemy counts, projectile counts, armor and firing rates have upper bounds.
+
+The game imports each monster from its own file in [skins/](examples/monster_city/skins). Later cities vary building positions/colors and army placements using a saved seed plus the city number; retrying recreates the same city. City 1 keeps a predictable introductory layout. Game logic remains in [logic.rune](examples/monster_city/logic.rune).
+
+Reusable pixel scene options:
+
+```rune
+@Scene/city
+persistence = {"key":"monster-city-v1","state":"profile"}
+menu = menu
+commands = {"KeyB":"openStore","KeyT":"openTitle"}
+```
+
+`persistence` saves only the named state object, with a versioned JSON envelope. Desktop saves live under `.vectrune/saves/` in the launch directory, which Git ignores; browser saves use localStorage under `rune-pixel-<key>`. Use a distinct key per game. The two hosts have separate local profiles. Writes happen when the profile changes, with atomic file replacement on desktop. Saved data restores only declared fields and compatible types; Monster City also validates its wallet, ownership and equipped skin. Unreadable saves start a fresh profile with a visible notice. When storage is unavailable, play continues with a visible session-only notice. No account or cloud sync is involved.
+
+A scene's `menu` binds a state object with `title`, `subtitle`, `note`, optional `cards` (`name`, `sprite`, `detail`, `action`, `args`) and `buttons` (`label`, `action`, `args`). The portable renderer provides the same menus on desktop and web. Custom browser shells can include `nav data-pixel-menu=true` and `p data-pixel-save=true`, plus `button data-pixel-action="openStore"` to invoke an action. A pixel logic action named `initialize` runs after the saved profile loads, before the first frame. Keep save validation there.
+
+Game expressions support `random(min, max, seed)` for an inclusive seeded integer, `pick(list, seed)` and `shuffle(list, seed)`. Equal seeds reproduce results in both hosts; shuffle returns a copy. Omitting the seed chooses fresh randomness. These are shared JavaScript runtime tools, also available to logic tests.
+
+Desktop performance: sprites reuse cached horizontal color runs and static scene backgrounds; the interpreter resolves simple state paths directly and caches operator parsing rather than evaluated values. QuickJS is optimized even in local development/test builds while Rune's Rust code retains debugging support. The desktop host schedules redraws at 60 Hz. Measure a busy generated city with `cargo test --test pixel_app native_pixel_frame_benchmark -- --ignored --nocapture`. The benchmark reports simulation and rasterization timings, separately from GPU presentation and device audio. Additional progression/browser coverage: `python3 tests/browser/monster_progression.py`.
+
 ### Fixtures and cleanup
 
 ```rune
