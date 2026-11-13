@@ -1,276 +1,316 @@
-use crate::rune_ast::{RuneDocument, Value};
+use crate::rune_ast::RuneDocument;
 use crate::rune_parser::load_rune_document_from_path;
-use serde_json;
+use serde_json::Value as JsonValue;
 use std::fs;
 use std::path::Path;
 
+#[derive(Debug, PartialEq)]
+enum SelectorStep {
+    Key(String),
+    Group(Vec<String>),
+    Wildcard,
+    Merge {
+        key_field: Option<String>,
+        target: Option<String>,
+        value_field: String,
+        source_path: String,
+    },
+}
+
 pub fn handle_merge(input_doc: &RuneDocument, spec: &str) -> Result<RuneDocument, String> {
-    // spec format: base_file@selector
     let (base_file, selector) = spec
         .split_once('@')
         .ok_or_else(|| "Merge spec must be in format base_file@selector".to_string())?;
+    if base_file.is_empty() {
+        return Err("Merge spec is missing the base file path".to_string());
+    }
 
-    let mut base_doc = if base_file.ends_with(".yaml") || base_file.ends_with(".yml") {
-        let base_content = fs::read_to_string(base_file)
-            .map_err(|e| format!("Failed to read base file {}: {}", base_file, e))?;
-        RuneDocument::from_yaml(&base_content)?
-    } else if base_file.ends_with(".json") {
-        let base_content = fs::read_to_string(base_file)
-            .map_err(|e| format!("Failed to read base file {}: {}", base_file, e))?;
-        let json_val: serde_json::Value = serde_json::from_str(&base_content)
-            .map_err(|e| format!("Failed to parse base JSON: {}", e))?;
-        RuneDocument::from_json(&json_val)
-    } else {
-        load_rune_document_from_path(Path::new(base_file)).map_err(|e| e.to_string())?
+    let extension = Path::new(base_file)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let mut base_json = match extension.as_str() {
+        "yaml" | "yml" => {
+            let content = read_base(base_file)?;
+            let yaml: serde_yaml::Value = serde_yaml::from_str(&content)
+                .map_err(|e| format!("Failed to parse base YAML: {}", e))?;
+            serde_json::to_value(yaml)
+                .map_err(|e| format!("Failed to convert base YAML to JSON: {}", e))?
+        }
+        "json" => {
+            let content = read_base(base_file)?;
+            serde_json::from_str(&content)
+                .map_err(|e| format!("Failed to parse base JSON: {}", e))?
+        }
+        "xml" => {
+            let content = read_base(base_file)?;
+            RuneDocument::from_xml(&content)?.to_json()
+        }
+        _ => load_rune_document_from_path(Path::new(base_file))
+            .map_err(|e| format!("Failed to load base Rune document: {}", e))?
+            .to_json(),
     };
-
-    apply_merge(&mut base_doc, input_doc, selector)?;
-
-    Ok(base_doc)
+    apply_merge(&mut base_json, &input_doc.to_json(), selector)?;
+    Ok(RuneDocument::from_json(&base_json))
 }
 
-fn apply_merge(
-    base_doc: &mut RuneDocument,
-    input_doc: &RuneDocument,
-    selector: &str,
-) -> Result<(), String> {
-    // Selector format: envrionment.(preview|prod).[].(name=allowedIps on value from Ips)
-    // This is quite complex. Let's break it down.
-
-    // For now, let's implement a simplified version that handles the specific case in the issue.
-    // We'll need to parse the selector parts.
-
-    let parts: Vec<&str> = selector.split('.').collect();
-
-    // We'll use a recursive approach to find and update matching sections/values.
-    update_at_path(base_doc, input_doc, &parts, 0, Vec::new())
+fn read_base(path: &str) -> Result<String, String> {
+    fs::read_to_string(path).map_err(|e| format!("Failed to read base file {}: {}", path, e))
 }
 
-fn update_at_path(
-    base_doc: &mut RuneDocument,
-    input_doc: &RuneDocument,
-    parts: &[&str],
-    part_idx: usize,
-    current_path: Vec<String>,
-) -> Result<(), String> {
-    if part_idx >= parts.len() {
-        return Ok(());
+fn apply_merge(base: &mut JsonValue, input: &JsonValue, selector: &str) -> Result<(), String> {
+    let steps = parse_selector(selector)?;
+    if !matches!(steps.last(), Some(SelectorStep::Merge { .. })) {
+        return Err("Merge selector must end with a merge instruction".to_string());
+    }
+    if steps[..steps.len() - 1]
+        .iter()
+        .any(|step| matches!(step, SelectorStep::Merge { .. }))
+    {
+        return Err(
+            "Merge selector may contain only one merge instruction, at the end".to_string(),
+        );
     }
 
-    let part = parts[part_idx];
+    let Some(SelectorStep::Merge { source_path, .. }) = steps.last() else {
+        return Err("Merge selector must end with a merge instruction".to_string());
+    };
+    let source = resolve_source(input, source_path).ok_or_else(|| {
+        format!(
+            "Merge source '{}' was not found in the input document",
+            source_path
+        )
+    })?;
 
-    if part.starts_with('(') && part.ends_with(')') {
-        let inner = &part[1..part.len() - 1];
-        if inner.contains('|') {
-            // (preview|prod)
-            let options: Vec<&str> = inner.split('|').collect();
-            for opt in options {
-                let mut next_path = current_path.clone();
-                next_path.push(opt.to_string());
-
-                // If next_path exists as a section, recurse.
-                // Otherwise, it might be a series in a parent section.
-                update_at_path(base_doc, input_doc, parts, part_idx + 1, next_path)?;
-            }
-        } else if inner.contains(" on ") && inner.contains(" from ") {
-            // (name=allowedIps on value from Ips)
-            // General form: (KEY_FIELD=TARGET_VALUE on VAL_FIELD from SOURCE_KEY)
-
-            let (target_part, rest) = inner
-                .split_once(" on ")
-                .ok_or("Invalid merge instruction syntax: missing 'on'")?;
-            let (val_field, source_key) = rest
-                .split_once(" from ")
-                .ok_or("Invalid merge instruction syntax: missing 'from'")?;
-
-            let val_field = val_field.trim();
-            let source_key = source_key.trim();
-
-            let (key_field, target_val) = if let Some((k, v)) = target_part.split_once('=') {
-                (k.trim(), Some(v.trim()))
-            } else {
-                (target_part.trim(), None)
-            };
-
-            // Perform the actual update here.
-            // Find sections in base_doc matching current_path.
-            let mut matches_found = false;
-
-            // Find source values from input_doc
-            let mut source_values = Vec::new();
-            for input_section in &input_doc.sections {
-                if let Some(vals) = input_section.series.get(source_key) {
-                    source_values.extend(vals.clone());
-                }
-                if let Some(val) = input_section.kv.get(source_key) {
-                    source_values.push(val.clone());
-                }
-            }
-
-            if !source_values.is_empty() {
-                for section in &mut base_doc.sections {
-                    if section.path == current_path {
-                        matches_found = true;
-                        if let Some(t_val) = target_val {
-                            // KEY_FIELD=TARGET_VALUE
-                            // If we're not in a list-of-objects, we just use the TARGET_VALUE as the key
-                            section
-                                .series
-                                .insert(t_val.to_string(), source_values.clone());
-                        } else {
-                            section
-                                .series
-                                .insert(key_field.to_string(), source_values.clone());
-                        }
-                    }
-                }
-
-                // New logic to handle list of key_field/val_field objects if they are in a series
-                for section in &mut base_doc.sections {
-                    let is_exact_match = section.path == current_path;
-                    let is_parent_match = section.path.len() > 0
-                        && section.path[..section.path.len() - 1] == current_path;
-                    let is_series_match = if current_path.len() > 0 {
-                        let parent_path = &current_path[..current_path.len() - 1];
-                        let last_part = &current_path[current_path.len() - 1];
-                        section.path == parent_path && section.series.contains_key(last_part)
-                    } else {
-                        false
-                    };
-
-                    if is_exact_match || is_parent_match || is_series_match {
-                        // Look through all series for the target
-                        for (series_name, series) in &mut section.series {
-                            if is_series_match {
-                                let last_part = &current_path[current_path.len() - 1];
-                                if series_name != last_part {
-                                    continue;
-                                }
-                            }
-
-                            for val in series {
-                                if let Value::Map(map) = val {
-                                    if let Some(Value::String(n)) = map.get(key_field) {
-                                        if let Some(t_val) = target_val {
-                                            if n == t_val {
-                                                map.insert(
-                                                    val_field.to_string(),
-                                                    Value::List(source_values.clone()),
-                                                );
-                                                matches_found = true;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Also check records
-                        for record in &mut section.records {
-                            if let Some(Value::String(n)) = record.kv.get(key_field) {
-                                if let Some(t_val) = target_val {
-                                    if n == t_val {
-                                        record.kv.insert(
-                                            val_field.to_string(),
-                                            Value::List(source_values.clone()),
-                                        );
-                                        matches_found = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // NEW: If section.path is exactly current_path, also check if it contains the fields directly
-                    if section.path == current_path {
-                        if let Some(t_val) = target_val {
-                            // Look for a key that matches t_val
-                            if section.kv.contains_key(t_val) {
-                                section
-                                    .kv
-                                    .insert(t_val.to_string(), Value::List(source_values.clone()));
-                                matches_found = true;
-                            }
-                            if section.series.contains_key(t_val) {
-                                section
-                                    .series
-                                    .insert(t_val.to_string(), source_values.clone());
-                                matches_found = true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if !matches_found {
-                // If the section doesn't exist, it might be a key in a parent section.
-                let mut source_values = Vec::new();
-                for input_section in &input_doc.sections {
-                    if let Some(vals) = input_section.series.get(source_key) {
-                        source_values.extend(vals.clone());
-                    }
-                    if let Some(val) = input_section.kv.get(source_key) {
-                        source_values.push(val.clone());
-                    }
-                }
-
-                if !source_values.is_empty() {
-                    let key_to_update = if let Some(t_val) = target_val {
-                        t_val
-                    } else {
-                        key_field
-                    };
-
-                    for section in &mut base_doc.sections {
-                        if section.path == current_path {
-                            section
-                                .series
-                                .insert(key_to_update.to_string(), source_values.clone());
-                        }
-                    }
-                }
-            }
-        }
-    } else if part == "[]" {
-        // Match all keys at the current level of path
-        let mut sub_paths = Vec::new();
-        for section in &base_doc.sections {
-            if section.path.len() > current_path.len()
-                && section.path[..current_path.len()] == current_path
-            {
-                sub_paths.push(section.path[current_path.len()].clone());
-            }
-        }
-
-        // NEW: Also check series in current sections for potential "keys" (like in the case of 'preview' being a series)
-        for section in &base_doc.sections {
-            if section.path == current_path {
-                for series_name in section.series.keys() {
-                    sub_paths.push(series_name.clone());
-                }
-            }
-        }
-
-        sub_paths.sort();
-        sub_paths.dedup();
-
-        if sub_paths.is_empty() {
-            // Maybe it's a leaf section, and we are looking for keys inside it?
-            // If part_idx + 1 is the merge instruction, it will be handled by the next call.
-            update_at_path(base_doc, input_doc, parts, part_idx + 1, current_path)?;
-        } else {
-            for sub in sub_paths {
-                let mut next_path = current_path.clone();
-                next_path.push(sub);
-                update_at_path(base_doc, input_doc, parts, part_idx + 1, next_path)?;
-            }
-        }
-    } else {
-        // Constant path part
-        let mut next_path = current_path;
-        next_path.push(part.to_string());
-        update_at_path(base_doc, input_doc, parts, part_idx + 1, next_path)?;
+    let mut updates = 0;
+    visit_selector(base, &steps, 0, source, selector, &mut updates)?;
+    if updates == 0 {
+        return Err(format!("Merge selector matched no targets: '{}'", selector));
     }
-
     Ok(())
+}
+
+fn parse_selector(selector: &str) -> Result<Vec<SelectorStep>, String> {
+    if selector.trim().is_empty() {
+        return Err("Merge selector cannot be empty".to_string());
+    }
+
+    let mut parts = Vec::new();
+    let mut depth = 0usize;
+    let mut start = 0usize;
+    for (index, ch) in selector.char_indices() {
+        match ch {
+            '(' => {
+                depth += 1;
+                if depth > 1 {
+                    return Err("Merge selector does not allow nested parentheses".to_string());
+                }
+            }
+            ')' => {
+                if depth == 0 {
+                    return Err("Malformed merge selector: unmatched ')'".to_string());
+                }
+                depth -= 1;
+            }
+            '.' if depth == 0 => {
+                parts.push(selector[start..index].trim());
+                start = index + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+    if depth != 0 {
+        return Err("Malformed merge selector: unclosed '('".to_string());
+    }
+    parts.push(selector[start..].trim());
+
+    let mut steps = Vec::with_capacity(parts.len());
+    for part in parts {
+        if part.is_empty() {
+            return Err("Malformed merge selector: empty path segment".to_string());
+        }
+        if part.starts_with("[]") && part.chars().all(|ch| ch == '[' || ch == ']') {
+            if part.len() % 2 != 0 || !part.as_bytes().chunks(2).all(|pair| pair == b"[]") {
+                return Err(format!("Malformed wildcard selector segment '{}'", part));
+            }
+            steps.extend((0..part.len() / 2).map(|_| SelectorStep::Wildcard));
+        } else if part.starts_with('(') || part.ends_with(')') {
+            if !(part.starts_with('(') && part.ends_with(')')) {
+                return Err(format!("Malformed selector segment '{}'", part));
+            }
+            let inner = part[1..part.len() - 1].trim();
+            if inner.is_empty() {
+                return Err("Malformed merge selector: empty parentheses".to_string());
+            }
+            if inner.contains(" from ") {
+                steps.push(parse_merge_instruction(inner)?);
+            } else if inner.contains('|') {
+                let options: Vec<String> = inner
+                    .split('|')
+                    .map(str::trim)
+                    .map(str::to_string)
+                    .collect();
+                if options.iter().any(String::is_empty) {
+                    return Err(format!("Malformed selector grouping '{}'", inner));
+                }
+                steps.push(SelectorStep::Group(options));
+            } else {
+                return Err(format!(
+                    "Unrecognized selector expression '{}'; expected a grouping or merge instruction",
+                    inner
+                ));
+            }
+        } else {
+            steps.push(SelectorStep::Key(part.to_string()));
+        }
+    }
+    Ok(steps)
+}
+
+fn parse_merge_instruction(inner: &str) -> Result<SelectorStep, String> {
+    let (destination, source_path) = inner
+        .split_once(" from ")
+        .ok_or_else(|| "Invalid merge instruction: expected 'from <source>'".to_string())?;
+    let source_path = source_path.trim();
+    if source_path.is_empty() || source_path.contains(" from ") {
+        return Err("Invalid merge instruction: source path cannot be empty".to_string());
+    }
+
+    if let Some((key_match, value_field)) = destination.split_once(" on ") {
+        let (key_field, target) = key_match.split_once('=').ok_or_else(|| {
+            "Invalid merge instruction: expected KEY_FIELD=TARGET before 'on'".to_string()
+        })?;
+        let key_field = key_field.trim();
+        let target = target.trim();
+        let value_field = value_field.trim();
+        if key_field.is_empty() || target.is_empty() || value_field.is_empty() {
+            return Err(
+                "Invalid merge instruction: field names and target must not be empty".to_string(),
+            );
+        }
+        Ok(SelectorStep::Merge {
+            key_field: Some(key_field.to_string()),
+            target: Some(target.to_string()),
+            value_field: value_field.to_string(),
+            source_path: source_path.to_string(),
+        })
+    } else {
+        let value_field = destination.trim();
+        if value_field.is_empty() {
+            return Err("Invalid merge instruction: destination field cannot be empty".to_string());
+        }
+        Ok(SelectorStep::Merge {
+            key_field: None,
+            target: None,
+            value_field: value_field.to_string(),
+            source_path: source_path.to_string(),
+        })
+    }
+}
+
+fn resolve_source<'a>(input: &'a JsonValue, source_path: &str) -> Option<&'a JsonValue> {
+    let mut value = input;
+    for segment in source_path.split('.') {
+        if segment.is_empty() {
+            return None;
+        }
+        value = value.as_object()?.get(segment)?;
+    }
+    Some(value)
+}
+
+fn visit_selector(
+    current: &mut JsonValue,
+    steps: &[SelectorStep],
+    index: usize,
+    source: &JsonValue,
+    selector: &str,
+    updates: &mut usize,
+) -> Result<(), String> {
+    match &steps[index] {
+        SelectorStep::Key(key) => {
+            if let Some(next) = current
+                .as_object_mut()
+                .and_then(|object| object.get_mut(key))
+            {
+                visit_selector(next, steps, index + 1, source, selector, updates)?;
+            }
+        }
+        SelectorStep::Group(options) => {
+            if let Some(object) = current.as_object_mut() {
+                for key in options {
+                    if let Some(next) = object.get_mut(key) {
+                        visit_selector(next, steps, index + 1, source, selector, updates)?;
+                    }
+                }
+            }
+        }
+        SelectorStep::Wildcard => match current {
+            JsonValue::Array(items) => {
+                for item in items {
+                    visit_selector(item, steps, index + 1, source, selector, updates)?;
+                }
+            }
+            JsonValue::Object(object) => {
+                for item in object.values_mut() {
+                    visit_selector(item, steps, index + 1, source, selector, updates)?;
+                }
+            }
+            _ => {}
+        },
+        SelectorStep::Merge {
+            key_field,
+            target,
+            value_field,
+            ..
+        } => {
+            if let Some(object) = current.as_object_mut() {
+                let is_target = match (key_field, target) {
+                    (Some(key_field), Some(target)) => object
+                        .get(key_field)
+                        .and_then(selector_scalar)
+                        .is_some_and(|value| value == *target),
+                    (None, None) => true,
+                    _ => false,
+                };
+                if is_target {
+                    if let Some(existing) = object.get(value_field) {
+                        if json_kind(existing) != json_kind(source) {
+                            return Err(format!(
+                                "Merge type conflict at selector '{}': destination '{}' is {}, but source is {}",
+                                selector,
+                                value_field,
+                                json_kind(existing),
+                                json_kind(source)
+                            ));
+                        }
+                    }
+                    object.insert(value_field.clone(), source.clone());
+                    *updates += 1;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn selector_scalar(value: &JsonValue) -> Option<String> {
+    match value {
+        JsonValue::String(value) => Some(value.clone()),
+        JsonValue::Number(value) => Some(value.to_string()),
+        JsonValue::Bool(value) => Some(value.to_string()),
+        JsonValue::Null | JsonValue::Array(_) | JsonValue::Object(_) => None,
+    }
+}
+
+fn json_kind(value: &JsonValue) -> &'static str {
+    match value {
+        JsonValue::Null => "null",
+        JsonValue::Bool(_) => "boolean",
+        JsonValue::Number(_) => "number",
+        JsonValue::String(_) => "string",
+        JsonValue::Array(_) => "array",
+        JsonValue::Object(_) => "object",
+    }
 }

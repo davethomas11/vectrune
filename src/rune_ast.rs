@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::rune_parser::parse_rune;
-use quick_xml::de::from_str as xml_from_str;
+use quick_xml::events::Event;
+use quick_xml::Reader;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuneDocument {
@@ -76,16 +77,13 @@ impl RuneDocument {
                     }
                 }
 
-                // If this level has data (kv, series, or records), it's a section
-                if !kv.is_empty() || !series.is_empty() || !records.is_empty() {
-                    sections.push(Section {
-                        path: current_path.clone(),
-                        kv,
-                        series,
-                        records,
-                        source_file: None,
-                    });
-                }
+                sections.push(Section {
+                    path: current_path.clone(),
+                    kv,
+                    series,
+                    records,
+                    source_file: None,
+                });
 
                 // Recurse into sub-paths
                 for (sub_key, sub_val) in sub_paths {
@@ -101,21 +99,72 @@ impl RuneDocument {
     }
 
     pub fn from_xml(s: &str) -> Result<RuneDocument, String> {
-        let json_val: serde_json::Value =
-            xml_from_str(s).map_err(|e| format!("XML parse error: {}", e))?;
+        let mut reader = Reader::from_str(s);
+        reader.config_mut().trim_text(false);
+        let mut stack: Vec<XmlElement> = Vec::new();
+        let mut root = None;
 
-        // Remove the root tag wrapper often created by quick-xml
-        let processed = if let Some(obj) = json_val.as_object() {
-            if obj.len() == 1 {
-                obj.values().next().unwrap().clone()
-            } else {
-                json_val
+        loop {
+            match reader
+                .read_event()
+                .map_err(|e| format!("XML parse error: {}", e))?
+            {
+                Event::Start(start) => {
+                    stack.push(XmlElement::new(&start, reader.decoder())?);
+                }
+                Event::Empty(start) => {
+                    let element = XmlElement::new(&start, reader.decoder())?;
+                    append_xml_element(&mut stack, &mut root, element)?;
+                }
+                Event::Text(text) => {
+                    let decoded = text
+                        .decode()
+                        .map_err(|e| format!("XML text decode error: {}", e))?;
+                    let unescaped = quick_xml::escape::unescape(&decoded)
+                        .map_err(|e| format!("XML text escape error: {}", e))?;
+                    if let Some(element) = stack.last_mut() {
+                        if !unescaped.trim().is_empty() {
+                            element.text.push_str(&unescaped);
+                        }
+                    } else if !unescaped.trim().is_empty() {
+                        return Err("XML parse error: text found outside the root element".into());
+                    }
+                }
+                Event::GeneralRef(reference) => {
+                    let name = reference
+                        .decode()
+                        .map_err(|e| format!("XML reference decode error: {}", e))?;
+                    let value = decode_xml_reference(&name)?;
+                    if let Some(element) = stack.last_mut() {
+                        element.text.push_str(&value);
+                    }
+                }
+                Event::CData(text) => {
+                    let decoded = text
+                        .decode()
+                        .map_err(|e| format!("XML text decode error: {}", e))?;
+                    if let Some(element) = stack.last_mut() {
+                        element.text.push_str(&decoded);
+                    }
+                }
+                Event::End(_) => {
+                    let element = stack
+                        .pop()
+                        .ok_or_else(|| "XML parse error: unmatched closing element".to_string())?;
+                    append_xml_element(&mut stack, &mut root, element)?;
+                }
+                Event::Eof => break,
+                _ => {}
             }
-        } else {
-            json_val
-        };
+        }
 
-        Ok(Self::from_json(&processed))
+        if !stack.is_empty() {
+            return Err("XML parse error: unclosed element".to_string());
+        }
+        let value = root
+            .ok_or_else(|| "XML parse error: document has no root element".to_string())?
+            .into_value();
+        Ok(Self::from_json(&value))
     }
 
     pub fn from_yaml(s: &str) -> Result<RuneDocument, String> {
@@ -127,6 +176,118 @@ impl RuneDocument {
 
         Ok(Self::from_json(&json_val))
     }
+}
+
+fn decode_xml_reference(name: &str) -> Result<String, String> {
+    let character = match name {
+        "amp" => '&',
+        "lt" => '<',
+        "gt" => '>',
+        "apos" => '\'',
+        "quot" => '"',
+        _ if name.starts_with("#x") => {
+            let codepoint = u32::from_str_radix(&name[2..], 16)
+                .map_err(|e| format!("Invalid XML character reference '{}': {}", name, e))?;
+            char::from_u32(codepoint)
+                .ok_or_else(|| format!("Invalid XML character reference '{}'", name))?
+        }
+        _ if name.starts_with('#') => {
+            let codepoint = name[1..]
+                .parse::<u32>()
+                .map_err(|e| format!("Invalid XML character reference '{}': {}", name, e))?;
+            char::from_u32(codepoint)
+                .ok_or_else(|| format!("Invalid XML character reference '{}'", name))?
+        }
+        _ => return Err(format!("Unsupported XML entity reference '&{};'", name)),
+    };
+    Ok(character.to_string())
+}
+
+struct XmlElement {
+    name: String,
+    attributes: serde_json::Map<String, serde_json::Value>,
+    children: serde_json::Map<String, serde_json::Value>,
+    text: String,
+}
+
+impl XmlElement {
+    fn new(
+        element: &quick_xml::events::BytesStart<'_>,
+        decoder: quick_xml::encoding::Decoder,
+    ) -> Result<Self, String> {
+        let name = decoder
+            .decode(element.name().as_ref())
+            .map_err(|e| format!("XML element name decode error: {}", e))?
+            .into_owned();
+        let mut attributes = serde_json::Map::new();
+        for attribute in element.attributes() {
+            let attribute = attribute.map_err(|e| format!("XML attribute parse error: {}", e))?;
+            let key = decoder
+                .decode(attribute.key.as_ref())
+                .map_err(|e| format!("XML attribute name decode error: {}", e))?
+                .into_owned();
+            let value = attribute
+                .decode_and_unescape_value(decoder)
+                .map_err(|e| format!("XML attribute value decode error: {}", e))?;
+            attributes.insert(
+                format!("@{}", key),
+                serde_json::Value::String(value.into_owned()),
+            );
+        }
+        Ok(Self {
+            name,
+            attributes,
+            children: serde_json::Map::new(),
+            text: String::new(),
+        })
+    }
+
+    fn into_value(self) -> serde_json::Value {
+        if self.children.is_empty() && self.attributes.is_empty() {
+            if self.text.is_empty() {
+                serde_json::Value::Null
+            } else {
+                serde_json::Value::String(self.text)
+            }
+        } else {
+            let mut object = self.attributes;
+            if !self.text.is_empty() {
+                object.insert("$text".to_string(), serde_json::Value::String(self.text));
+            }
+            object.extend(self.children);
+            serde_json::Value::Object(object)
+        }
+    }
+}
+
+fn append_xml_element(
+    stack: &mut Vec<XmlElement>,
+    root: &mut Option<XmlElement>,
+    element: XmlElement,
+) -> Result<(), String> {
+    if let Some(parent) = stack.last_mut() {
+        let name = element.name.clone();
+        let value = element.into_value();
+        match parent.children.entry(name) {
+            serde_json::map::Entry::Vacant(entry) => {
+                entry.insert(value);
+            }
+            serde_json::map::Entry::Occupied(mut entry) => {
+                let existing = entry.get_mut();
+                if let Some(values) = existing.as_array_mut() {
+                    values.push(value);
+                } else {
+                    let previous = std::mem::replace(existing, serde_json::Value::Null);
+                    *existing = serde_json::Value::Array(vec![previous, value]);
+                }
+            }
+        }
+    } else if root.is_some() {
+        return Err("XML parse error: multiple root elements".to_string());
+    } else {
+        *root = Some(element);
+    }
+    Ok(())
 }
 
 impl RuneDocument {
@@ -207,21 +368,59 @@ impl RuneDocument {
                 section_obj.insert(key.clone(), serde_json::Value::Array(json_items));
             }
 
-            let mut current = &mut obj;
-            for (i, part) in section.path.iter().enumerate() {
-                if i == section.path.len() - 1 {
-                    current.insert(part.clone(), serde_json::Value::Object(section_obj.clone()));
-                } else {
-                    current = current
-                        .entry(part.clone())
-                        .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()))
-                        .as_object_mut()
-                        .unwrap();
-                }
-            }
+            insert_json_section(&mut obj, &section.path, section_obj);
         }
 
         serde_json::Value::Object(obj)
+    }
+}
+
+fn insert_json_section(
+    target: &mut serde_json::Map<String, serde_json::Value>,
+    path: &[String],
+    value: serde_json::Map<String, serde_json::Value>,
+) {
+    let Some((head, tail)) = path.split_first() else {
+        merge_json_objects(target, value);
+        return;
+    };
+
+    let entry = target
+        .entry(head.clone())
+        .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+    if tail.is_empty() {
+        if let Some(existing) = entry.as_object_mut() {
+            merge_json_objects(existing, value);
+        } else {
+            *entry = serde_json::Value::Object(value);
+        }
+    } else {
+        if !entry.is_object() {
+            *entry = serde_json::Value::Object(serde_json::Map::new());
+        }
+        if let Some(child) = entry.as_object_mut() {
+            insert_json_section(child, tail, value);
+        }
+    }
+}
+
+fn merge_json_objects(
+    target: &mut serde_json::Map<String, serde_json::Value>,
+    source: serde_json::Map<String, serde_json::Value>,
+) {
+    for (key, value) in source {
+        match (target.get_mut(&key), value) {
+            (Some(serde_json::Value::Object(existing)), serde_json::Value::Object(incoming)) => {
+                merge_json_objects(existing, incoming);
+            }
+            (slot, value) => {
+                if let Some(slot) = slot {
+                    *slot = value;
+                } else {
+                    target.insert(key, value);
+                }
+            }
+        }
     }
 }
 

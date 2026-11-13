@@ -6,3 +6,5 @@ environment:
     value: preview.com
   - name: allowedIps
     value: []
+api_config:
+ keys: []

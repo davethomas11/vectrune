@@ -51,6 +51,29 @@ Current top-level flags include:
 - `-p`, `--port` — override app port for server runtimes
 - `-w`, `--watch` — watch for file changes and automatically restart the server (development mode)
 
+## Merging documents with `--merge-with`
+
+`--merge-with '<base-file>@<selector>'` applies values from the primary input document to a base Rune, JSON, YAML, or XML document. Input and output formats remain independently selectable with `-i` and `-o`.
+
+Selectors use dot-separated object paths, `(a|b)` alternatives, `[]` wildcards for array items or object values, and merge instructions:
+
+```text
+(KEY_FIELD=TARGET on VALUE_FIELD from SOURCE_PATH)
+(VALUE_FIELD from SOURCE_PATH)
+```
+
+`SOURCE_PATH` is a root-relative dot path in the input document. For example:
+
+```bash
+vectrune -i yaml ips.yaml \
+  --merge-with 'config.yaml@environment.(preview|prod).[].(name=allowedIps on value from Ips)' \
+  -o yaml
+```
+
+Wildcards can be chained to traverse nested arrays, for example `services.[][].(name=selected on value from data)`. Direct field instructions such as `config.(keys from api.keys)` copy the source value to the selected object. Updates replace values rather than append. Existing destinations must have the same JSON type as the source; absent destination fields are created. Missing source paths, malformed selectors, type conflicts, and selectors with no matching targets fail explicitly. Nonmatching alternatives/items are skipped if another target matches; empty source arrays are valid. A root-level instruction can populate an empty object base, for example `(settings from settings)`.
+
+XML documents use the outer element as a wrapper. Repeated sibling elements become arrays, leaf text becomes strings, empty elements become null, attributes are represented as `@name` fields, and mixed element text is stored in `$text`.
+
 ## Rune file loading behavior
 
 For Rune input, the CLI now performs an import-aware pre-parse load step.

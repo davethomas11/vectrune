@@ -13,15 +13,20 @@ vectrune -i <input_format> <input_file> --merge-with '<base_file>@<selector>' -o
 The selector follows a dot-notation path with support for:
 - **Literal paths**: `environment.dev`
 - **Groupings**: `(preview|prod)` matches either `preview` or `prod`.
-- **Wildcards**: `[]` matches all elements at that level.
+- **Wildcards**: `[]` matches each array item or object value; chain them as `[][].` to traverse arrays of arrays.
 - **Merge Instructions**: `(KEY_FIELD=TARGET on VAL_FIELD from SOURCE)`
+- **Direct field updates**: `(FIELD from SOURCE)` assigns a value to the selected object.
 
 #### Merge Instructions Explained
 `(KEY_FIELD=TARGET on VAL_FIELD from SOURCE)`
 - `KEY_FIELD`: The field name used to identify an object in a list (e.g., `name` or `id`).
 - `TARGET`: The value of the `KEY_FIELD` to match (e.g., `allowedIps`).
 - `VAL_FIELD`: The field in the matched object that should be updated (e.g., `value` or `data`).
-- `SOURCE`: The key in the **input document** from which to pull values.
+- `SOURCE`: A root-relative key path in the **input document** (for example `Ips` or `api.keys`).
+
+Merge instructions replace the destination value; they do not append to it. An existing destination must have the same JSON type as the source, otherwise the merge fails with a type-conflict error. A destination field may be absent and will be created. Group alternatives or wildcard items that do not match are skipped, but the selector must update at least one target. An empty source array is valid; a missing source path is an error. For an empty object base, a root-level instruction such as `(settings from settings)` creates the destination field.
+
+Malformed selectors, missing source paths, and selectors that match no targets return explicit errors. Base files may be Rune, JSON, YAML, or XML; the input and output formats are selected independently using the regular `-i` and `-o` options. XML treats the outer element as a document wrapper, repeated sibling elements as arrays, leaf text as strings, empty elements as null, attributes as `@name` fields, and mixed element text as `$text`.
 
 ## Examples
 
@@ -106,15 +111,6 @@ Merge API keys from a JSON file into a YAML config.
 vectrune -i json examples/merge/external_data.json --merge-with 'examples/merge/config.yaml@api_config.(keys from api_keys)' -o yaml
 ```
 
-## Future Testing Ideas
+## Additional Supported Cases
 
-To further validate and improve the merge functionality, consider the following test scenarios:
-
-1.  **Deep Nesting**: Test merging into documents with 5+ levels of nesting.
-2.  **Array of Arrays**: Test how the selector handles nested lists.
-3.  **Conflict Resolution**: Define behavior when the target field already exists but has a different type (e.g., merging a list into a string field).
-4.  **Empty Documents**: Verify behavior when merging into an empty base document or using an empty input document.
-5.  **Partial Matches**: Test selectors that match multiple locations but not all of them contain the target fields.
-6.  **Performance**: Test merging large IP lists (10,000+) into large configuration files.
-7.  **Format Cross-Compatibility**: Rigorous testing of merging between all supported formats (Rune, YAML, JSON, XML).
-8.  **Malformed Selectors**: Ensure clear error messages are provided for invalid selector syntax.
+Nested paths and nested arrays can be traversed to any depth. For example, `services.[].regions.[].(name=allowedIps on value from Ips)` updates matching entries within nested arrays. The merge tests also cover 10,000-element source arrays, partial matches, empty sources and bases, type conflicts, malformed selectors, and Rune/JSON/YAML/XML base files.

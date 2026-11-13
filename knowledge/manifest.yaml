@@ -186,7 +186,11 @@ pages:
     sources:
       - README.md
       - src/main.rs
+      - src/cli/merge.rs
+      - src/rune_ast.rs
       - src/cli/watch.rs
+      - tests/merge_tests.rs
+      - examples/merge/
       - Cargo.toml
   - id: runtime.execution-engine
     path: runtime/execution-engine.md
