@@ -1,0 +1,33 @@
+#!RUNE
+import "sprites.pixel.rune"
+import "logic.rune"
+
+@App
+name = Monster City
+type = pixel
+scene = city
+resolution = [384, 216]
+tick_rate = 30
+port = 3010
+
+@Scene/city
+logic = monster
+background = "#233449"
+hud = {"title":"MONSTER CITY","score":"score","health":"health","max_health":100}
+overlays = {"ready":"MAKE A BIG ENTRANCE","won":"CITY CONQUERED","gameover":"MONSTER DOWN"}
+keys = {"ArrowLeft":"left","ArrowRight":"right","KeyA":"left","KeyD":"right","Space":"smash"}
+layers = ["skyline", "buildings", "soldiers", "tanks", "shots", "monster", "dust"]
+rects = [{"x":0,"y":23,"width":384,"height":65,"color":"#233449"},{"x":0,"y":88,"width":384,"height":102,"color":"#384853"},{"x":310,"y":38,"width":22,"height":22,"color":"#e3cd9b"},{"x":306,"y":38,"width":20,"height":18,"color":"#233449"},{"x":0,"y":190,"width":384,"height":4,"color":"#9a927b"},{"x":0,"y":194,"width":384,"height":22,"color":"#202b36"},{"x":10,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":68,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":126,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":184,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":242,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":300,"y":204,"width":32,"height":2,"color":"#6d7169"},{"x":358,"y":204,"width":20,"height":2,"color":"#6d7169"}]
+
+# Page metadata lets the same Rune actions run through vectrune test.
+@Page/city
+logic = monster
+view:
+    canvas data-rune-pixel=true
+
+@Sound/smash
+wave = noise
+duration = 0.12
+volume = 0.12
+freq_start = 180
+freq_end = 40

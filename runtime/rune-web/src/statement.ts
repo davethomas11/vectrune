@@ -222,6 +222,18 @@ export function executeStatement(
   const trimmed = String(statement || '').trim();
   if (!trimmed) return true;
 
+  // Shared Rune action calls, including from fixed game ticks.
+  if (trimmed.startsWith('call ')) {
+    const rest = trimmed.slice(5).trim();
+    const match = rest.match(/^([a-zA-Z_][\w]*)(?:\s+(.*))?$/);
+    if (!match || !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, match[1])) {
+      throw new Error(`Unknown Rune-Web action: ${rest}`);
+    }
+    const args = match[2] ? splitTopLevel(match[2], ',').map(arg => evaluateExpression(arg, buildScope(locals))) : [];
+    ctx().app.invokeAction(match[1], args, locals);
+    return true;
+  }
+
   // Retro audio playback: sound "laser", sound.play("laser"), sound.explosion
   if (trimmed.startsWith('sound ') || trimmed.startsWith('sound.') || trimmed.startsWith('play_sound(')) {
     let soundName = '';

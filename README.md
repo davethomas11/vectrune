@@ -346,6 +346,40 @@ Every test gets a fresh runtime with isolated state and in-memory storage. `mock
 
 This first prototype covers synchronous actions. DOM/layout/events, network mocks, timers, pending asynchronous jobs, shared fixtures, logic suite hooks, i18n/memory seeds, and a `type = browser` adapter remain future work. Native suite hooks belong to native tests and are not applied to logic tests. Use the existing Playwright companion for actual browser behavior. The developer CLI CI matrix exercises both engines on Linux, macOS, and Windows. Node is only needed when rebuilding the JavaScript bundles (`cd runtime/rune-web && npm ci && npm run build`).
 
+### Rune Pixel / Monster City prototype
+
+The pixel engine runs a Rune-authored game in a browser canvas or an optional native desktop window. The [Monster City example](examples/monster_city/monster_city.rune) has a giant kaiju, five destructible buildings, soldiers, tanks, bullets, health, scoring, animation, keyboard/touch controls, pause, restart, and fullscreen.
+
+```sh
+# Serve the game at http://127.0.0.1:3010
+cargo run -- examples/monster_city/monster_city.rune --target web
+
+# Export a self-contained HTML game; it also works directly from a file URL
+cargo run -- examples/monster_city/monster_city.rune -o html > monster-city.html
+
+# Use a normal Rune-Web page as the game's shell
+cargo run -- examples/monster_city/custom_shell.rune -o html > custom-cabinet.html
+
+# Build the experimental native window host (winit + pixels)
+cargo run --features pixel-desktop -- examples/monster_city/monster_city.rune --target desktop
+cargo run --features pixel-desktop -- examples/monster_city/monster_city.rune --target desktop --fullscreen
+
+# Native HTTP/export tests and headless JavaScript game rules
+cargo run -- test examples/monster_city
+```
+
+Use arrows/A/D to move, Space to smash, Enter to start/restart, P to pause, and F for fullscreen. Desktop also supports F11; Escape leaves fullscreen or closes the window. Desktop builds currently render silently; browser effects use Web Audio. The native host is opt-in while platform packaging is validated, and is not included in the published 0.3.2 binaries. The default pixel target is web.
+
+`.pixel.rune` is ordinary importable Rune asset data: `@Palette/<name>` defines a `colors` JSON map from single ASCII characters to `#RRGGBB` or `transparent`; `@Sprite/<name>[/frame]` declares `palette`, integer `size`, optional `origin`, and a `pixels:` block of quoted equal-width rows. `@Animation/<name>` supplies `frames` and `fps`. See [the human-readable sprites](examples/monster_city/sprites.pixel.rune). `check` validates dimensions, palette characters, colors, and animation references. Sprite sheets are represented internally by indexed sprite assets; atlas packing/editor tooling remains future work.
+
+`@App type = pixel` selects a `scene`, logical `resolution`, and `tick_rate` (default 30). `@Scene/<name>` selects a `logic`, `background`, ordered `layers` of state paths, optional background `rects`, `keys`, `hud`, and status `overlays`. Each renderable entity has `x`, `y`, `sprite`, and optional integer `scale`, `flip`, and `visible`. Sprite origins are applied before scaling. Scene logic provides `start` and `tick(input)` actions; `call smash` invokes another Rune action. Keep boolean input checks explicit, such as `input.left == true`. The engine owns its fixed-step clock, so scene logic must omit `timer`.
+
+The same JavaScript interpreter, simulation, animations, and RGBA framebuffer run in the browser and native QuickJS host. The browser presents through Canvas 2D; the native host uploads that framebuffer through `pixels`. Rendering uses integer scaling when space permits, with a fitted view on smaller mobile screens. Input clears on focus loss; hidden/blurred games pause, and catch-up steps are bounded.
+
+For a custom Rune-Web shell, set `@App shell = arcade`, define `@Page/arcade`, and include one `canvas data-rune-pixel=true tabindex=0`. Optional HTML controls use `data-pixel-start`, `data-pixel-pause`, `data-pixel-fullscreen`, or `data-pixel-input="left|right|smash"`. The pixel runtime has a separate namespace/context from the shell. A shell rerender disposes old listeners/frames and remounts the same paused game state. See [custom_shell.rune](examples/monster_city/custom_shell.rune).
+
+Browser regression: `python3 tests/browser/monster_city.py`. The initial game deliberately uses staged destruction and a single city block. Scrolling levels, sprite atlas packing, a sprite editor, native audio, and broader desktop release validation remain follow-ups.
+
 ### Fixtures and cleanup
 
 ```rune

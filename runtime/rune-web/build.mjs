@@ -32,3 +32,9 @@ await build({
   }],
 });
 console.log('Built dist/rune-logic-test.js');
+
+await build({
+  entryPoints: ['src/pixel/index.ts'], bundle: true, minify: false,
+  format: 'iife', globalName: '__RunePixelRuntime', outfile: 'dist/rune-pixel.js', target: ['es2020'],
+});
+console.log('Built dist/rune-pixel.js');

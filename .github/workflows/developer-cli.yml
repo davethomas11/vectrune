@@ -2,13 +2,14 @@ name: Developer CLI checks
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'feature/pixel-*']
     paths:
       - 'runtime/rune-web/**'
       - 'src/**'
       - 'tests/**'
       - 'examples/testing/**'
       - 'examples/rune_studio/**'
+      - 'examples/monster_city/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -20,6 +21,7 @@ on:
       - 'tests/**'
       - 'examples/testing/**'
       - 'examples/rune_studio/**'
+      - 'examples/monster_city/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -40,10 +42,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: runtime/rune-web/package-lock.json
+      - name: Build and test shared JavaScript runtimes
+        working-directory: runtime/rune-web
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
       - name: Check compiler
         run: cargo check
       - name: Test CLI and runtime integration
-        run: cargo test --test developer_cli --test logic_testing --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package
+        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package
       - name: Test CLI support and deployment packaging
         run: 'cargo test --lib cli::'
       - name: Check starter formatting
@@ -60,3 +74,10 @@ jobs:
         run: target/debug/vectrune test examples/rune_studio --json
       - name: Verify downloaded starter workflow
         run: python tests/browser/test_developer_starter.py
+      - name: Lint Monster City and run pixel game tests
+        run: |
+          target/debug/vectrune check examples/monster_city --deny-warnings
+          target/debug/vectrune fmt examples/monster_city --check
+          target/debug/vectrune test examples/monster_city --json
+      - name: Check optional desktop pixel host
+        run: cargo check --features pixel-desktop

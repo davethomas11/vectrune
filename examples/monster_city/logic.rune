@@ -1,0 +1,110 @@
+@Logic/monster
+state:
+    status = "ready"
+    score = 0
+    health = 100
+    destroyed = 0
+    clock = 0
+    cooldown = 0
+    flash = 0
+    monster = {"x":8,"y":118,"sprite":"kaiju/idle","scale":3,"flip":false}
+    buildings = [{"x":62,"y":110,"sprite":"tower/blue","scale":2,"hp":3},{"x":124,"y":110,"sprite":"tower/rust","scale":2,"hp":3},{"x":186,"y":110,"sprite":"tower/blue","scale":2,"hp":3},{"x":248,"y":110,"sprite":"tower/rust","scale":2,"hp":3},{"x":310,"y":110,"sprite":"tower/blue","scale":2,"hp":3}]
+    skyline = [{"x":0,"y":92,"sprite":"skyline","scale":2},{"x":64,"y":76,"sprite":"skyline","scale":3},{"x":178,"y":98,"sprite":"skyline","scale":2},{"x":248,"y":76,"sprite":"skyline","scale":3}]
+    soldiers = [{"x":110,"y":170,"sprite":"soldier","scale":2,"visible":true,"hp":1},{"x":210,"y":170,"sprite":"soldier","scale":2,"visible":true,"hp":1},{"x":322,"y":170,"sprite":"soldier","scale":2,"visible":true,"hp":1}]
+    tanks = [{"x":170,"y":174,"sprite":"tank","scale":2,"visible":true,"hp":2},{"x":338,"y":174,"sprite":"tank","scale":2,"visible":true,"hp":2}]
+    shots = []
+    dust = []
+
+action start:
+    reset monster
+    reset buildings
+    reset soldiers
+    reset tanks
+    score = 0
+    health = 100
+    destroyed = 0
+    clock = 0
+    cooldown = 0
+    flash = 0
+    shots = []
+    dust = []
+    status = "playing"
+
+action smash:
+    stop when status != "playing"
+    stop when cooldown > 0
+    cooldown = 12
+    flash = 6
+    monster.sprite = "kaiju/punch"
+    sound.play("smash")
+    for building in buildings:
+        if building.hp > 0 && abs((building.x + 16) - (monster.x + 24)) < 52:
+            building.hp -= 1
+            dust.push({"x":building.x + 6,"y":120,"sprite":"dust","scale":2,"life":12})
+            if building.hp == 2:
+                building.sprite = "tower/damaged"
+            if building.hp == 1:
+                building.sprite = "tower/cracked"
+            if building.hp == 0:
+                building.sprite = "rubble"
+                building.y = 174
+                destroyed += 1
+                score += 100
+    for soldier in soldiers:
+        if soldier.hp > 0 && abs(soldier.x - (monster.x + 24)) < 45:
+            soldier.hp = 0
+            soldier.visible = false
+            score += 10
+    for tank in tanks:
+        if tank.hp > 0 && abs((tank.x + 16) - (monster.x + 24)) < 52:
+            tank.hp -= 1
+            if tank.hp == 0:
+                tank.sprite = "wreck"
+                score += 50
+    if destroyed == 5:
+        status = "won"
+
+action tick(input):
+    stop when status != "playing"
+    clock += 1
+    cooldown = max(0, cooldown - 1)
+    flash = max(0, flash - 1)
+    if input.left == true:
+        monster.x = clamp(monster.x - 2, 0, 336)
+        monster.flip = true
+    if input.right == true:
+        monster.x = clamp(monster.x + 2, 0, 336)
+        monster.flip = false
+    monster.sprite = "kaiju/idle"
+    if input.left == true || input.right == true:
+        monster.sprite = "kaiju/walk"
+    if flash > 0:
+        monster.sprite = "kaiju/punch"
+    if input.smash == true:
+        call smash
+    stop when status != "playing"
+    for soldier in soldiers:
+        if soldier.hp > 0:
+            soldier.flip = soldier.x > monster.x
+            if abs(soldier.x - monster.x) > 65:
+                soldier.x += soldier.x > monster.x ? -0.35 : 0.35
+            if clock % 60 == 0:
+                shots.push({"x":soldier.x,"y":166,"sprite":"bullet","scale":1,"vx":soldier.x > monster.x ? -3 : 3,"life":140,"damage":2})
+    for tank in tanks:
+        if tank.hp > 0:
+            tank.flip = tank.x > monster.x
+            if clock % 95 == 0:
+                shots.push({"x":tank.x + 12,"y":160,"sprite":"shell","scale":1,"vx":tank.x > monster.x ? -2 : 2,"life":180,"damage":5})
+    for shot in shots:
+        shot.x += shot.vx
+        shot.life -= 1
+        if shot.life > 0 && shot.x > monster.x + 8 && shot.x < monster.x + 42 && shot.y > monster.y && shot.y < monster.y + 72:
+            health = max(0, health - shot.damage)
+            shot.life = 0
+    shots = shots.filter(s => s.life > 0 && s.x > 0 && s.x < 384)
+    for puff in dust:
+        puff.y -= 1
+        puff.life -= 1
+    dust = dust.filter(p => p.life > 0)
+    if health <= 0:
+        status = "gameover"

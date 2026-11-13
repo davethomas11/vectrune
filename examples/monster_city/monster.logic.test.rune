@@ -1,0 +1,117 @@
+#!RUNE
+import "monster_city.rune"
+
+@Test/Monster/StartAndMove
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    assert state.health == 100
+    assert state.score == 0
+    invoke tick {"right":true}
+    assert state.monster.x == 10
+    assert state.monster.sprite == "kaiju/walk"
+    invoke tick {"left":true}
+    assert state.monster.x == 8
+    assert state.monster.flip == true
+
+@Test/Monster/BuildingDamageAndScore
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    invoke smash
+    assert state.buildings[0].hp == 2
+    assert state.buildings[0].sprite == "tower/damaged"
+    assert state.score == 0
+    invoke smash
+    assert state.buildings[0].hp == 2
+    invoke readyPunch
+    invoke smash
+    assert state.buildings[0].hp == 1
+    invoke readyPunch
+    invoke smash
+    assert state.buildings[0].hp == 0
+    assert state.buildings[0].sprite == "rubble"
+    assert state.score == 100
+    assert state.destroyed == 1
+    invoke readyPunch
+    invoke smash
+    assert state.score == 100
+    assert state.destroyed == 1
+
+@Test/Monster/ArmyAndRestart
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    invoke arrangeArmyShot
+    invoke tick {}
+    assert state.health == 95
+    assert state.shots == []
+    invoke start
+    assert state.health == 100
+    assert state.monster.x == 8
+    assert state.soldiers[0].hp == 1
+
+@Test/Monster/InputSmashesAndGameOver
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    invoke tick {"smash":true}
+    assert state.buildings[0].hp == 2
+    invoke fatalShot
+    invoke tick {}
+    assert state.health == 0
+    assert state.status == "gameover"
+    invoke tick {"right":true}
+    assert state.monster.x == 8
+
+@Test/Monster/VictoryAndMovementBounds
+type = logic
+page = city
+setup:
+    invoke start
+run:
+    invoke lineUpLastBuilding
+    invoke tick {"smash":true}
+    assert state.destroyed == 5
+    assert state.status == "won"
+    assert state.score == 510
+    assert state.health == 100
+    invoke tick {"right":true}
+    assert state.monster.x == 300
+    invoke start
+    invoke moveToEdge
+    invoke tick {"right":true}
+    assert state.monster.x == 336
+
+# Test helpers are excluded from normal application imports and HTML exports.
+@Logic/monster
+action readyPunch:
+    cooldown = 0
+
+action arrangeArmyShot:
+    shots = [{"x":20,"y":166,"sprite":"shell","scale":1,"vx":1,"life":10,"damage":5}]
+
+action fatalShot:
+    shots = [{"x":20,"y":166,"sprite":"shell","scale":1,"vx":1,"life":10,"damage":100}]
+
+action lineUpLastBuilding:
+    destroyed = 4
+    score = 400
+    buildings[0].hp = 0
+    buildings[1].hp = 0
+    buildings[2].hp = 0
+    buildings[3].hp = 0
+    buildings[4].hp = 1
+    monster.x = 300
+    shots = [{"x":320,"y":166,"sprite":"shell","scale":1,"vx":1,"life":10,"damage":100}]
+
+action moveToEdge:
+    monster.x = 336

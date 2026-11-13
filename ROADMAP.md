@@ -187,6 +187,13 @@ As Vectrune has rapidly evolved, various language processors and dialects develo
 
 ---
 
+### Rune Pixel Engine & Monster City
+
+- [x] **First Playable Pixel Game Slice**: Added `.pixel.rune` palettes/sprites/animations with validation, `@App type = pixel`, scene layers, a fixed-step shared JavaScript engine and software framebuffer, self-contained HTML export, a default canvas shell and a reactive Rune-Web custom shell. Monster City has five destructible buildings, soldiers/tanks/projectiles, health, scoring, win/loss, keyboard/touch, pause and restart. Native `winit`/`pixels` windows and fullscreen are available through the optional `pixel-desktop` build feature. Eight Rune tests (40 assertions), browser controls/shell remounting, 189 shared JavaScript tests, and native window/fullscreen smoke tests pass locally. *(Unreleased prototype - 2026-11-12)*
+- [ ] **Pixel Engine Follow-ups**: Validate native packaging across all release targets, add native audio, sprite atlas packing/preview tools, more city blocks and scrolling, and deterministic replay/input recording.
+
+---
+
 ### Track 7: Developer Tooling & Testing ("Complete Tool" Layer)
 
 - [x] **0.3.1 Developer Workflow Release**: Source-aware failures and command suggestions; startup/teardown failure gates; versioned JSON/JSON Lines; fixture hooks, watch recovery, safe formatting; production exclusion of `.test.rune` imports/source lists/Lambda bundles; five-test CRUD starter with reproducible download; six developer pages in English, Spanish, and French. Local verification: 89 targeted Rust tests, five Rune starter tests, all 18 developer route/locale pages, and the existing 93-route teaching-site UX suite pass. macOS Intel/Linux/Windows [release-gate CI](https://github.com/davethomas11/vectrune/actions/runs/43308420846) passed; all seven [v0.3.1 binaries](https://github.com/davethomas11/vectrune/releases/tag/v0.3.1) are published and the Homebrew formula is updated. The downloaded native release passes doctor/fmt/check, all five starter tests, and production export without test modules. The [developer section](https://vectrune.com/developer) is deployed; live checks pass for all 18 localized developer pages, metadata, lazy navigation, repeated language switching, command copying, mobile layout, and the actual downloaded starter. *(Release commit: `bf80167` - 2026-11-12)*

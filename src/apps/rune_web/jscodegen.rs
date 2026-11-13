@@ -51,7 +51,7 @@ impl JsCodegen {
         self.generate_with_runtime(include_str!("../../../runtime/rune-web/dist/rune-logic-test.js"))
     }
 
-    fn generate_with_runtime(&self, runtime: &str) -> String {
+    pub(crate) fn generate_with_runtime(&self, runtime: &str) -> String {
         let mut normalized_derived = HashMap::new();
         for (name, def) in &self.logic.derived {
             let mut normalized_cases = Vec::new();

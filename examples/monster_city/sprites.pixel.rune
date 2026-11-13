@@ -1,0 +1,389 @@
+@Palette/city
+colors = {".":"transparent","d":"#182b36","g":"#427e58","G":"#80b95e","h":"#c5dd88","b":"#c8cc91","e":"#ffe9a9","k":"#16242d","r":"#d8876e","s":"#69a899","w":"#eccf9a","a":"#566c7e","c":"#8c9ca0","n":"#3d5266","o":"#9c705d","t":"#526c4e","l":"#a8b97b"}
+
+@Sprite/kaiju/idle
+palette = city
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......sss......"
+    ".....ssggggss..."
+    ".....gGGGGGGg..."
+    "....gGGGGGGeeg.."
+    "....gGGGGGGkeg.."
+    "....gGGGGGkkkk.."
+    "....gGGGGGrrr..."
+    "...sgGGGGGgg...."
+    "...sgGGGGgbg...."
+    "..ssgGGGGgbggg.."
+    "..sgGGGGGgbggGg."
+    "..sgGGGGGgbg.hh."
+    ".ssgGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    "sgGGGGGGGgbg...."
+    "gGGGGGGGGgbg...."
+    "ggggGGGGgggg...."
+    "..ggGGgggGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGg..gGGg...."
+    ".gGGGg..gGGGg..."
+    ".hhhhh..hhhhh..."
+
+@Sprite/kaiju/step
+palette = city
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......sss......"
+    ".....ssggggss..."
+    ".....gGGGGGGg..."
+    "....gGGGGGGeeg.."
+    "....gGGGGGGkeg.."
+    "....gGGGGGkkkk.."
+    "....gGGGGGrrr..."
+    "...sgGGGGGgg...."
+    "...sgGGGGgbg...."
+    "..ssgGGGGgbggg.."
+    "..sgGGGGGgbggGg."
+    "..sgGGGGGgbg.hh."
+    ".ssgGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    "sgGGGGGGGgbg...."
+    "gGGGGGGGGgbg...."
+    "ggggGGGGgggg...."
+    "..ggGGgggGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGg...gGGg..."
+    "..gGGGg..gGGGg.."
+    "..hhhhh..hhhhh.."
+
+@Sprite/kaiju/punch
+palette = city
+size = [16, 24]
+origin = [0, 0]
+pixels:
+    ".......sss......"
+    ".....ssggggss..."
+    ".....gGGGGGGg..."
+    "....gGGGGGGeeg.."
+    "....gGGGGGGkeg.."
+    "....gGGGGGkkkk.."
+    "....gGGGGGrrr..."
+    "...sgGGGGGgg...."
+    "...sgGGGGgbg...."
+    "..ssgGGGGgbggggg"
+    "..sgGGGGGgbgGGGh"
+    "..sgGGGGGgbghhhh"
+    ".ssgGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    ".sgGGGGGGgbg...."
+    "sgGGGGGGGgbg...."
+    "gGGGGGGGGgbg...."
+    "ggggGGGGgggg...."
+    "..ggGGgggGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGGg.gGGg...."
+    "..gGGg..gGGg...."
+    ".gGGGg..gGGGg..."
+    ".hhhhh..hhhhh..."
+
+@Sprite/tower/blue
+palette = city
+size = [16, 40]
+origin = [0, 0]
+pixels:
+    "dddddddddddddddd"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dadwaawwaawwaaad"
+    "dawwaawwaawwaaad"
+    "dawwaawdaawwaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dawwaawwaawdaaad"
+    "dawdaawwaadwaaad"
+    "dadwaawwaawwaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dawwaadwaawwaaad"
+    "dawwaawwaawwaaad"
+    "dawwaawwaawdaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dawwaawwaawwaaad"
+    "dawwaawdaawwaaad"
+    "dawwaadwaawwaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dawdaawwaadwaaad"
+    "dadwaawwaawwaaad"
+    "dawwaawwaawwaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dawwaawwaawwaaad"
+    "dawwaawwaawdaaad"
+    "dawdaawwaadwaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dawwaawdaawwaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dddddddddddddddd"
+
+@Sprite/tower/rust
+palette = city
+size = [16, 40]
+origin = [0, 0]
+pixels:
+    "dddddddddddddddd"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dodwoowwoowwoood"
+    "dowwoowwoowwoood"
+    "dowwoowdoowwoood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dowwoowwoowdoood"
+    "dowdoowwoodwoood"
+    "dodwoowwoowwoood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dowwoodwoowwoood"
+    "dowwoowwoowwoood"
+    "dowwoowwoowdoood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dowwoowwoowwoood"
+    "dowwoowdoowwoood"
+    "dowwoodwoowwoood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dowdoowwoodwoood"
+    "dodwoowwoowwoood"
+    "dowwoowwoowwoood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dowwoowwoowwoood"
+    "dowwoowwoowdoood"
+    "dowdoowwoodwoood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dowwoowdoowwoood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dooooooooooooood"
+    "dddddddddddddddd"
+
+@Sprite/tower/damaged
+palette = city
+size = [16, 40]
+origin = [0, 0]
+pixels:
+    "dddddddddddddddd"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaddaaaaaaad"
+    "daaaaaddaaaaaaad"
+    "dadwaawddawwaaad"
+    "dawwaawddawwaaad"
+    "dawwaawddawwaaad"
+    "daaaaaaddaaaaaad"
+    "daaaaaaddaaaaaad"
+    "dawwaawwddwdaaad"
+    "dawdaawwdddwaaad"
+    "dadwaawwddwwaaad"
+    "daaaaaaaddaaaaad"
+    "daaaaaaaddaaaaad"
+    "dawwaadwaddwaaad"
+    "dawwaawwaddwaaad"
+    "dawwaawwadddaaad"
+    "daaaaaaaaddaaaad"
+    "daaaaaaaaddaaaad"
+    "dawwaaddaawwaaad"
+    "dawwaaddaawwaaad"
+    "dawwaaddaawwaaad"
+    "daaaaaddaaaaaaad"
+    "daaaaaddaaaaaaad"
+    "dawdaawddadwaaad"
+    "dadwaawddawwaaad"
+    "dawwaawddawwaaad"
+    "daaaaaaddaaaaaad"
+    "daaaaaaddaaaaaad"
+    "dawwaawwddwwaaad"
+    "dawwaawwddwdaaad"
+    "dawdaawwdddwaaad"
+    "daaaaaaaddaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dawwaawdaawwaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dddddddddddddddd"
+
+@Sprite/tower/cracked
+palette = city
+size = [16, 40]
+origin = [0, 0]
+pixels:
+    "dddddddddddddddd"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaddaaaaaaad"
+    "daaaaaddaaaaaaad"
+    "dadwaawddawwaaad"
+    "dawwaawddawwaaad"
+    "dawwaawddawwaaad"
+    "daaaaaaddaaaaaad"
+    "daaaaaaddaaaaaad"
+    "dawddaddddddaaad"
+    "dawdaddwddddaaad"
+    "dadwddwdddddaaad"
+    "daaddadddddaaaad"
+    "daadaddaddadaaad"
+    "dawwddddddddaaad"
+    "dawddaddaddwaaad"
+    "dawdaddwddddaaad"
+    "daaaddadddddaaad"
+    "daaddaddaddaaaad"
+    "dawdadddddwdaaad"
+    "dawwdddddaddaaad"
+    "dawddaddaddwaaad"
+    "daadadddddadaaad"
+    "daaadddddaddaaad"
+    "dawddadddddwaaad"
+    "dadwaawddawwaaad"
+    "dawwaawddawwaaad"
+    "daaaaaaddaaaaaad"
+    "daaaaaaddaaaaaad"
+    "dawwaawwddwwaaad"
+    "dawwaawwddwdaaad"
+    "dawdaawwdddwaaad"
+    "daaaaaaaddaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dawwaawdaawwaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "daaaaaaaaaaaaaad"
+    "dddddddddddddddd"
+
+@Sprite/rubble
+palette = city
+size = [16, 8]
+origin = [0, 0]
+pixels:
+    "................"
+    "...aa.....oo...."
+    "..aaaa...oooo..."
+    ".daaad.aooood..."
+    "daddddaddddddd.."
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+
+@Sprite/skyline
+palette = city
+size = [16, 16]
+origin = [0, 0]
+pixels:
+    "......nn........"
+    "......nn..nnn..."
+    "..nnnnnn..nnn..."
+    "..nnnnnn..nnn.nn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnn"
+
+@Sprite/tank
+palette = city
+size = [16, 8]
+origin = [0, 0]
+pixels:
+    "......tttt......"
+    ".....tlllltttttt"
+    "...tttttttt....."
+    "..tlllllllltt..."
+    ".ttttttttttttt.."
+    "ddtdtdtdtdtdtdd."
+    "ddddddddddddddd."
+    ".ddddddddddddd.."
+
+@Sprite/wreck
+palette = city
+size = [16, 8]
+origin = [0, 0]
+pixels:
+    "................"
+    ".....rrrr......."
+    "....rerrrr......"
+    "....rrrtttt....."
+    "...ttttttttt...."
+    "ddtdtdtdtdtdtdd."
+    "ddddddddddddddd."
+    ".ddddddddddddd.."
+
+@Sprite/soldier
+palette = city
+size = [6, 10]
+origin = [0, 0]
+pixels:
+    "..tt.."
+    ".tttt."
+    "..rr.."
+    "..rr.."
+    ".ttttt"
+    ".ttt.."
+    "..tt.."
+    "..tt.."
+    ".t.t.."
+    ".d.d.."
+
+@Sprite/bullet
+palette = city
+size = [4, 2]
+origin = [0, 0]
+pixels:
+    "wwww"
+    "wwww"
+
+@Sprite/shell
+palette = city
+size = [5, 3]
+origin = [0, 0]
+pixels:
+    ".rrr."
+    "rwwwr"
+    ".rrr."
+
+@Sprite/dust
+palette = city
+size = [8, 6]
+origin = [0, 0]
+pixels:
+    "..cc...."
+    ".cccc..."
+    "cccccc.."
+    ".ccccc.."
+    "..ccc..."
+    "...c...."
+
+@Animation/kaiju/walk
+frames = ["kaiju/idle", "kaiju/step"]
+fps = 8

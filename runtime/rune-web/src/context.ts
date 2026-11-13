@@ -46,3 +46,10 @@ export function ctx(): RuneContext {
   if (!_ctx) throw new Error('RuneWeb context not initialized — call boot() first');
   return _ctx;
 }
+
+/** Run synchronous work in a specific game context without disturbing its host page. */
+export function withContext<T>(context: RuneContext, run: () => T): T {
+  const previous = _ctx;
+  _ctx = context;
+  try { return run(); } finally { _ctx = previous; }
+}

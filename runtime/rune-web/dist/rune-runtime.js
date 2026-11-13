@@ -2753,6 +2753,16 @@ var __RuneWeb = (() => {
   function executeStatement(statement, locals) {
     const trimmed = String(statement || "").trim();
     if (!trimmed) return true;
+    if (trimmed.startsWith("call ")) {
+      const rest = trimmed.slice(5).trim();
+      const match = rest.match(/^([a-zA-Z_][\w]*)(?:\s+(.*))?$/);
+      if (!match || !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, match[1])) {
+        throw new Error(`Unknown Rune-Web action: ${rest}`);
+      }
+      const args = match[2] ? splitTopLevel(match[2], ",").map((arg) => evaluateExpression(arg, buildScope(locals))) : [];
+      ctx().app.invokeAction(match[1], args, locals);
+      return true;
+    }
     if (trimmed.startsWith("sound ") || trimmed.startsWith("sound.") || trimmed.startsWith("play_sound(")) {
       let soundName = "";
       let argVal = void 0;

@@ -65,6 +65,9 @@ async fn main() -> anyhow::Result<()> {
                 .value_name("output_format")
                 .value_parser(["text", "json", "rune", "xml", "yaml", "curl", "html"]),
         )
+        .arg(Arg::new("target").long("target").conflicts_with("output").value_parser(["web", "desktop"]).help("Pixel presentation host (default: web)"))
+        .arg(Arg::new("pixel-frames").long("pixel-frames").hide(true).value_parser(clap::value_parser!(u64).range(1..)).requires("target"))
+        .arg(Arg::new("fullscreen").long("fullscreen").action(clap::ArgAction::SetTrue).requires("target").help("Start the desktop pixel window in fullscreen"))
         .arg(
             Arg::new("path")
                 .long("path")
@@ -549,6 +552,26 @@ async fn main() -> anyhow::Result<()> {
         }
 
         let app_type = get_app_type(&doc);
+
+        if matches.get_one::<String>("target").is_some() {
+            anyhow::ensure!(app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("pixel")), "--target is only supported for @App type = pixel");
+        }
+        if matches.get_flag("fullscreen") || matches.get_one::<u64>("pixel-frames").is_some() {
+            anyhow::ensure!(matches.get_one::<String>("target").is_some_and(|t| t == "desktop"), "--fullscreen and --pixel-frames require --target desktop");
+        }
+        if app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("pixel")) {
+            if output_format == Some("html") {
+                crate::util::set_log_stderr();
+                println!("{}", apps::pixel::html(&doc).await?);
+                break;
+            }
+            if matches.get_one::<String>("target").is_some_and(|s| s == "desktop") {
+                #[cfg(feature = "pixel-desktop")]
+                { apps::pixel::desktop::run(&apps::pixel::compile(&doc)?, matches.get_flag("fullscreen"), matches.get_one::<u64>("pixel-frames").copied())?; break; }
+                #[cfg(not(feature = "pixel-desktop"))]
+                anyhow::bail!("Desktop pixel host requires cargo run --features pixel-desktop -- <game.rune> --target desktop; web and HTML export work in all builds");
+            }
+        }
 
         if output_format == Some("html") {
             let chunks_dir = matches.get_one::<String>("chunks-dir").map(|s| s.as_str());
