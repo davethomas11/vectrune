@@ -18,6 +18,8 @@ with preview(Path(args.site_dir)) as base, sync_playwright() as pw:
     game=page.frame_locator('iframe.example-preview')
     game.get_by_role('button',name='Start rampage',exact=True).click()
     frame=iframe.element_handle().content_frame()
+    assert frame.evaluate('getComputedStyle(document.body).backgroundColor')=='rgb(20, 29, 39)'
+    assert frame.get_by_role('button',name='Use skin special').evaluate('(b)=>b.getBoundingClientRect().height>=44')
     assert frame.url.startswith(base+'/assets/games/monster-city/'),frame.url
     frame.evaluate("const g=__RunePixel,s=g.app.state;s.profile.coins=300;g.invoke('openStore');g.invoke('chooseSkin',['ember'])")
     assert frame.evaluate('__RunePixel.saveStatus')=='saved'

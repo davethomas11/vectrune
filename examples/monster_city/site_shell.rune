@@ -44,29 +44,110 @@ state:
     label = "MONSTER CITY"
 
 @Style/site_arcade
-:root { color-scheme: dark; }
-* { box-sizing: border-box; }
-body { margin: 0; background: #141d27; color: #f0eddf; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-.arcade { max-width: 1000px; margin: auto; padding: 12px; }
-.arcade-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-h1 { color: #b5ef77; font-size: 20px; margin: 0; letter-spacing: 1px; }
-.arcade-heading p { color: #eccc85; margin: 4px 0 0; font-size: 10px; }
-button { font: inherit; font-size: 11px; font-weight: bold; color: #f0eddf; background: #273b36; border: 1px solid #77806d; border-radius: 4px; padding: 10px; cursor: pointer; min-height: 44px; }
-button:hover { background: #3b4a36; }
-button:disabled { opacity: .45; cursor: default; }
-button:focus-visible, canvas:focus-visible { outline: 3px solid #b5ef77; outline-offset: 3px; }
-.primary { background: #b5ef77; color: #141d27; }
-.game-surface { display: flex; justify-content: center; padding: 6px; background: #0b1019; border: 1px solid #849274; border-radius: 5px; }
-.game-surface:fullscreen { align-items: center; padding: 0; border: 0; background: #080d16; }
-canvas { display: block; max-width: 100%; image-rendering: pixelated; touch-action: none; }
-.status, .energy, .save { font-size: 11px; line-height: 1.5; color: #b5ef77; margin: 8px 0; }
-.touch { display: flex; gap: 6px; }
-.touch button { flex: 1; min-width: 0; padding: 10px 4px; user-select: none; touch-action: none; }
-.touch button[aria-pressed = "true"] { background: #65d5ed; color: #141d27; }
-.smash { background: #d99b77; color: #141d27; }
-.toolbar, .menu-controls { display: flex; flex-wrap: wrap; gap: 6px; }
-.toolbar button { flex: 1; }
-.menu-controls { margin-top: 8px; }
-.menu-controls[hidden] { display: none; }
-.menu-controls span { flex-basis: 100%; font-size: 11px; color: #b8c6bb; }
-.instructions { font-size: 11px; line-height: 1.6; color: #b8c6bb; margin-top: 8px; }
+rules:
+    :root:
+        color-scheme = dark
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #141d27
+        color = #f0eddf
+        font-family = ui-monospace, SFMono-Regular, Consolas, monospace
+    .arcade:
+        max-width = 1000px
+        margin = auto
+        padding = 12px
+    .arcade-heading:
+        display = flex
+        align-items = center
+        justify-content = space-between
+        gap = 12px
+        margin-bottom = 12px
+    h1:
+        color = #b5ef77
+        font-size = 20px
+        margin = 0
+        letter-spacing = 1px
+    .arcade-heading p:
+        color = #eccc85
+        margin = 4px 0 0
+        font-size = 10px
+    button:
+        font = inherit
+        font-size = 11px
+        font-weight = bold
+        color = #f0eddf
+        background = #273b36
+        border = 1px solid #77806d
+        border-radius = 4px
+        padding = 10px
+        cursor = pointer
+        min-height = 44px
+    button:hover:
+        background = #3b4a36
+    button:disabled:
+        opacity = .45
+        cursor = default
+    button:focus-visible, canvas:focus-visible:
+        outline = 3px solid #b5ef77
+        outline-offset = 3px
+    .primary:
+        background = #b5ef77
+        color = #141d27
+    .game-surface:
+        display = flex
+        justify-content = center
+        padding = 6px
+        background = #0b1019
+        border = 1px solid #849274
+        border-radius = 5px
+    .game-surface:fullscreen:
+        align-items = center
+        padding = 0
+        border = 0
+        background = #080d16
+    canvas:
+        display = block
+        max-width = 100%
+        image-rendering = pixelated
+        touch-action = none
+    .status, .energy, .save:
+        font-size = 11px
+        line-height = 1.5
+        color = #b5ef77
+        margin = 8px 0
+    .touch:
+        display = flex
+        gap = 6px
+    .touch button:
+        flex = 1
+        min-width = 0
+        padding = 10px 4px
+        user-select = none
+        touch-action = none
+    .touch button[aria-pressed = "true"]:
+        background = #65d5ed
+        color = #141d27
+    .smash:
+        background = #d99b77
+        color = #141d27
+    .toolbar, .menu-controls:
+        display = flex
+        flex-wrap = wrap
+        gap = 6px
+    .toolbar button:
+        flex = 1
+    .menu-controls:
+        margin-top = 8px
+    .menu-controls[hidden]:
+        display = none
+    .menu-controls span:
+        flex-basis = 100%
+        font-size = 11px
+        color = #b8c6bb
+    .instructions:
+        font-size = 11px
+        line-height = 1.6
+        color = #b8c6bb
+        margin-top = 8px
