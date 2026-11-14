@@ -53,6 +53,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -73,6 +75,8 @@ jobs:
       # Zig is a great cross-linker that handles ARM/Linux perfectly
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.14.1
 
       - name: Install cargo-zigbuild
         run: cargo install cargo-zigbuild
@@ -117,6 +121,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -128,7 +134,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*.tar.gz
-          tag_name: ${{ github.ref_name || inputs.tag }}
+          tag_name: ${{ inputs.tag || github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -138,14 +144,17 @@ jobs:
     needs: release
     if: >-
       (github.event_name == 'release' && github.event.action == 'published') ||
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      github.event_name == 'workflow_dispatch'
     steps:
       - name: Notify homebrew tap
         env:
           TAP_TOKEN: ${{ secrets.TAP_DISPATCH_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          curl -X POST \
+          jq -n --arg tag "$RELEASE_TAG" '{event_type:"vectrune-release",client_payload:{tag:$tag}}' > "$RUNNER_TEMP/tap-release.json"
+          curl --fail-with-body -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${TAP_TOKEN}" \
             https://api.github.com/repos/davethomas11/homebrew-vectrune/dispatches \
-            -d '{"event_type":"vectrune-release","client_payload":{"tag":"'"${GITHUB_REF##*/}"'"}}'
+            --data-binary "@$RUNNER_TEMP/tap-release.json"
