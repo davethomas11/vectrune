@@ -38,8 +38,9 @@ faces = [
 
 # center X/Y/Z, half extents X/Y/Z, material. Feet plant on the floor.
 action render(pose, direction):
-    ca = cos(direction * 45)
-    sa = sin(direction * 45)
+    # Canonicalize libm results across Windows, macOS and Linux before projection.
+    ca = round(cos(direction * 45) * 1e12) / 1e12
+    sa = round(sin(direction * 45) * 1e12) / 1e12
     canvas = repeat(".", W * H)
     depth = repeat(-1e9, W * H)
     stride = pose == "walk0" ? 0.085 : (pose == "walk1" ? -0.085 : 0)
@@ -98,7 +99,8 @@ action render(pose, direction):
                             continue
                         d = u * a[2] + v * b[2] + w * c[2]
                         index = py * W + px
-                        if d >= depth[index]:
+                        # Later faces win coplanar ties, independent of float noise.
+                        if d >= depth[index] - 1e-9:
                             depth[index] = d
                             canvas[index] = lookup[box[6] + "/" + side]
     rows = []

@@ -150,6 +150,8 @@ fn guard_generator_reproduces_committed_assets_from_any_working_directory() {
         .arg(&script).current_dir(&root).output().unwrap();
     assert!(result.status.success(), "{}", String::from_utf8_lossy(&result.stderr));
     let generated = fs::read_to_string(temp.path().join("guards.rune")).unwrap();
-    assert_eq!(generated, fs::read_to_string(root.join("examples/vect_breach/guards.rune")).unwrap());
+    use sha2::{Digest, Sha256};
+    let expected = fs::read_to_string(root.join("examples/vect_breach/guards.rune")).unwrap().replace("\r\n", "\n");
+    assert_eq!(Sha256::digest(generated.as_bytes()), Sha256::digest(expected.as_bytes()), "Guard pixels and palette must reproduce on every platform");
     assert_eq!(generated.matches("@Sprite/guard3d/").count(), 40);
 }
