@@ -12,6 +12,7 @@ import {
   valueToString,
 } from './utils';
 import { getStorageItem, hasStorageItem } from './storage';
+import { slide as spatialSlide, sees as spatialSees } from './pixel3d/spatial';
 import type { Scope } from './types';
 
 const MAX_DEPTH = 64;
@@ -105,6 +106,7 @@ export function resolveValue(expr: string, scope: Scope): unknown {
   if (literal !== undefined) return literal;
   const pathValue = resolvePath(expr, scope);
   if (pathValue !== undefined) return pathValue;
+  if (expr.includes('.') || expr.includes('[')) return undefined;
   return normalizeLiteral(expr);
 }
 
@@ -179,41 +181,167 @@ export function callHelper(
 }
 
 // ---------------------------------------------------------------------------
-// evaluateExpression — the main expression evaluator
+// JIT Compiler & Expression Cache
 // ---------------------------------------------------------------------------
 
-export function evaluateExpression(
-  expr: string,
-  scope: Scope,
-  depth?: number,
-): unknown {
-  if ((depth || 0) > MAX_DEPTH) return undefined;
-  const nextDepth = (depth || 0) + 1;
-  let trimmed = String(expr || '').trim();
-  if (!trimmed) return undefined;
+export type CompiledExpr = (scope: Scope) => unknown;
 
-  // Resolve common leaves before scanning operators; state is always read fresh.
-  if (trimmed === 'true') return true;
-  if (trimmed === 'false') return false;
-  if (trimmed === 'null') return null;
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
-  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(trimmed)) {
-    const value = resolvePath(trimmed,scope);
-    if (value !== undefined) return value;
+const exprCache = new Map<string, CompiledExpr>();
+const MAX_CACHE_SIZE = 8192;
+
+export function clearExpressionCache(): void {
+  exprCache.clear();
+}
+
+export function compilePath(expr: string): CompiledExpr {
+  const segments = splitPathSegments(expr);
+  if (!segments.length) return () => undefined;
+
+  // Single identifier: e.g. `clock`, `health`
+  if (segments.length === 1 && !segments[0].includes('[')) {
+    const key = segments[0];
+    return (scope: Scope) => (scope as Record<string, unknown>)?.[key];
   }
 
-  // Raw source props are JSON string literals. Decode them once, before
-  // interpreting any operators, quotes, or placeholders inside the source.
+  // 2 segments: e.g. `player.x`, `player.angle`, `enemy.hp`, `weapon.sprite`
+  if (segments.length === 2 && !segments[0].includes('[') && !segments[1].includes('[')) {
+    const k0 = segments[0];
+    const k1 = segments[1];
+    if (k1 === 'length') {
+      return (scope: Scope) => {
+        const obj = (scope as Record<string, unknown>)?.[k0];
+        return Array.isArray(obj) ? obj.length : (obj as any)?.length;
+      };
+    }
+    return (scope: Scope) => {
+      const obj = (scope as Record<string, unknown>)?.[k0] as Record<string, unknown>;
+      return obj?.[k1];
+    };
+  }
+
+  // 3 segments: e.g. `state.player.x`
+  if (segments.length === 3 && !segments[0].includes('[') && !segments[1].includes('[') && !segments[2].includes('[')) {
+    const k0 = segments[0];
+    const k1 = segments[1];
+    const k2 = segments[2];
+    if (k2 === 'length') {
+      return (scope: Scope) => {
+        const o0 = (scope as Record<string, unknown>)?.[k0] as Record<string, unknown>;
+        const obj = o0?.[k1];
+        return Array.isArray(obj) ? obj.length : (obj as any)?.length;
+      };
+    }
+    return (scope: Scope) => {
+      const o0 = (scope as Record<string, unknown>)?.[k0] as Record<string, unknown>;
+      const o1 = o0?.[k1] as Record<string, unknown>;
+      return o1?.[k2];
+    };
+  }
+
+  // Multi-segment with filter or bracket
+  const compiledSteps: ((current: unknown, scope: Scope) => unknown)[] = segments.map((segment) => {
+    if (segment === 'length') {
+      return (current: unknown) => (Array.isArray(current) ? current.length : (current as any)?.length);
+    }
+    if (segment.startsWith('[].(') && segment.endsWith(')')) {
+      const cond = compileExpression(segment.slice(4, -1));
+      return (current: unknown, scope: Scope) => {
+        if (!Array.isArray(current)) return undefined;
+        return current.find((item: unknown) => {
+          const innerScope = Object.assign({}, scope, { it: item });
+          return Boolean(cond(innerScope));
+        });
+      };
+    }
+    if (segment.startsWith('[') && segment.endsWith(']')) {
+      const inner = compileExpression(segment.slice(1, -1));
+      return (current: unknown, scope: Scope) => {
+        if (current === null || current === undefined) return undefined;
+        const lookup = inner(scope);
+        return (current as Record<string, unknown>)[valueToString(lookup)];
+      };
+    }
+    return (current: unknown) => {
+      if (current === null || current === undefined) return undefined;
+      return (current as Record<string, unknown>)[segment];
+    };
+  });
+
+  return (scope: Scope) => {
+    let current: unknown = scope;
+    for (let i = 0; i < compiledSteps.length; i++) {
+      if (current === null || current === undefined) return undefined;
+      current = compiledSteps[i](current, scope);
+    }
+    return current;
+  };
+}
+
+function compileResolveValue(expr: string): CompiledExpr {
+  const trimmed = expr.trim();
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    return (scope: Scope) => resolveValue(trimmed, scope);
+  }
+  const literal = tryParseLiteral(trimmed);
+  if (literal !== undefined) {
+    return () => literal;
+  }
+  if (trimmed.includes('.') || trimmed.includes('[')) {
+    const pathFn = compilePath(trimmed);
+    return (scope: Scope) => pathFn(scope);
+  }
+  const fallback = normalizeLiteral(trimmed);
+  return (scope: Scope) => {
+    if (scope && (scope as Record<string, unknown>)[trimmed] !== undefined) {
+      return (scope as Record<string, unknown>)[trimmed];
+    }
+    return fallback;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// compileExpression — compile a string expression into a reusable closure
+// ---------------------------------------------------------------------------
+
+export function compileExpression(expr: string, depth = 0): CompiledExpr {
+  if (depth > MAX_DEPTH) return () => undefined;
+  const nextDepth = depth + 1;
+  let trimmed = String(expr || '').trim();
+  if (!trimmed) return () => undefined;
+
+  // 1. Literal constants
+  if (trimmed === 'true') return () => true;
+  if (trimmed === 'false') return () => false;
+  if (trimmed === 'null') return () => null;
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+    const n = Number(trimmed);
+    return () => n;
+  }
+
+  // 2. Pure identifiers / simple paths without operators
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(trimmed)) {
+    const pathFn = compilePath(trimmed);
+    if (!trimmed.includes('.') && !trimmed.includes('[')) {
+      const fallback = normalizeLiteral(trimmed);
+      return (scope: Scope) => {
+        const val = pathFn(scope);
+        return val !== undefined ? val : fallback;
+      };
+    }
+    return (scope: Scope) => pathFn(scope);
+  }
+
+  // 3. Raw source props (JSON strings)
   if (trimmed.startsWith('"')) {
     try {
       const literal = JSON.parse(trimmed);
-      if (typeof literal === 'string') return literal;
+      if (typeof literal === 'string') return () => literal;
     } catch (_) {
-      // A quoted operand may also be part of a larger expression.
+      // Quoted operand may also be part of a larger expression
     }
   }
 
-  // --- @selector syntax ---
+  // 4. @selector syntax
   if (trimmed.startsWith('@')) {
     let selector = '';
     let rest = '';
@@ -230,20 +358,23 @@ export function evaluateExpression(
         rest = match[2];
       }
     }
-
-    if (selector && typeof document !== 'undefined') {
-      const el = document.querySelector(selector);
-      if (el) {
-        if (!rest) return el;
-        if (rest.startsWith('.')) {
-          return resolvePath(rest.slice(1), el as unknown as Scope);
+    if (selector) {
+      const cRest = rest ? compilePath(rest.startsWith('.') ? rest.slice(1) : rest) : null;
+      return () => {
+        if (typeof document !== 'undefined') {
+          const el = document.querySelector(selector);
+          if (el) {
+            if (!cRest) return el;
+            return cRest(el as unknown as Scope);
+          }
         }
-      }
-      return undefined;
+        return undefined;
+      };
     }
   }
 
-  // --- Strip balanced outer parens ---
+  // 5. Strip balanced outer parens
+  let parenStripped = false;
   while (trimmed.startsWith('(') && trimmed.endsWith(')')) {
     let d = 0;
     let matched = true;
@@ -257,78 +388,227 @@ export function evaluateExpression(
     }
     if (!matched) break;
     trimmed = trimmed.slice(1, -1).trim();
+    parenStripped = true;
+  }
+  if (parenStripped) {
+    return compileExpression(trimmed, nextDepth);
   }
 
-  // --- Negation ---
+  // 6. Unary !
   if (trimmed.startsWith('!')) {
-    return !Boolean(
-      evaluateExpression(trimmed.slice(1).trim(), scope, nextDepth),
-    );
+    const inner = compileExpression(trimmed.slice(1).trim(), nextDepth);
+    return (scope: Scope) => !Boolean(inner(scope));
   }
 
-  // --- Spatial & Game functions ---
+  // 7. Spatial & Game functions
   if (trimmed.startsWith('collide(') && trimmed.endsWith(')')) {
-    const argsStr = trimmed.slice(8, -1);
-    const parts = splitTopLevel(argsStr, ',');
+    const parts = splitTopLevel(trimmed.slice(8, -1), ',');
     if (parts.length >= 2) {
-      const a = evaluateExpression(parts[0], scope, nextDepth) as any;
-      const b = evaluateExpression(parts[1], scope, nextDepth) as any;
-      const w = parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : 20;
-      const h = parts.length >= 4 ? Number(evaluateExpression(parts[3], scope, nextDepth)) : w;
-      if (a && b && typeof a === 'object' && typeof b === 'object' && a.x !== undefined && a.y !== undefined && b.x !== undefined && b.y !== undefined) {
-        return Math.abs(Number(a.x) - Number(b.x)) < w && Math.abs(Number(a.y) - Number(b.y)) < h;
-      }
+      const cA = compileExpression(parts[0], nextDepth);
+      const cB = compileExpression(parts[1], nextDepth);
+      const cW = parts.length >= 3 ? compileExpression(parts[2], nextDepth) : null;
+      const cH = parts.length >= 4 ? compileExpression(parts[3], nextDepth) : null;
+      return (scope: Scope) => {
+        const a = cA(scope) as any;
+        const b = cB(scope) as any;
+        const w = cW ? Number(cW(scope)) : 20;
+        const h = cH ? Number(cH(scope)) : w;
+        if (a && b && typeof a === 'object' && typeof b === 'object' && a.x !== undefined && a.y !== undefined && b.x !== undefined && b.y !== undefined) {
+          return Math.abs(Number(a.x) - Number(b.x)) < w && Math.abs(Number(a.y) - Number(b.y)) < h;
+        }
+        return false;
+      };
     }
-    return false;
   }
 
   if (trimmed.startsWith('clamp(') && trimmed.endsWith(')')) {
     const parts = splitTopLevel(trimmed.slice(6, -1), ',');
     if (parts.length === 3) {
-      const v = Number(evaluateExpression(parts[0], scope, nextDepth));
-      const min = Number(evaluateExpression(parts[1], scope, nextDepth));
-      const max = Number(evaluateExpression(parts[2], scope, nextDepth));
-      return Math.min(Math.max(v, min), max);
+      const cV = compileExpression(parts[0], nextDepth);
+      const cMin = compileExpression(parts[1], nextDepth);
+      const cMax = compileExpression(parts[2], nextDepth);
+      return (scope: Scope) => {
+        const v = Number(cV(scope));
+        const min = Number(cMin(scope));
+        const max = Number(cMax(scope));
+        return Math.min(Math.max(v, min), max);
+      };
     }
   }
 
   if (trimmed.startsWith('abs(') && trimmed.endsWith(')')) {
-    const val = Number(evaluateExpression(trimmed.slice(4, -1), scope, nextDepth));
-    return Math.abs(val);
+    const cVal = compileExpression(trimmed.slice(4, -1), nextDepth);
+    return (scope: Scope) => Math.abs(Number(cVal(scope)));
+  }
+
+  if (trimmed.startsWith('floor(') && trimmed.endsWith(')')) {
+    const cVal = compileExpression(trimmed.slice(6, -1), nextDepth);
+    return (scope: Scope) => Math.floor(Number(cVal(scope)));
+  }
+
+  if (trimmed.startsWith('sqrt(') && trimmed.endsWith(')')) {
+    const cVal = compileExpression(trimmed.slice(5, -1), nextDepth);
+    return (scope: Scope) => Math.sqrt(Number(cVal(scope)));
+  }
+
+  if (trimmed.startsWith('sin(') && trimmed.endsWith(')')) {
+    const cVal = compileExpression(trimmed.slice(4, -1), nextDepth);
+    return (scope: Scope) => Math.sin((Number(cVal(scope)) * Math.PI) / 180);
+  }
+
+  if (trimmed.startsWith('cos(') && trimmed.endsWith(')')) {
+    const cVal = compileExpression(trimmed.slice(4, -1), nextDepth);
+    return (scope: Scope) => Math.cos((Number(cVal(scope)) * Math.PI) / 180);
+  }
+
+  if (trimmed.startsWith('atan2(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(6, -1), ',');
+    if (parts.length === 2) {
+      const cDy = compileExpression(parts[0], nextDepth);
+      const cDx = compileExpression(parts[1], nextDepth);
+      return (scope: Scope) => {
+        const dy = Number(cDy(scope));
+        const dx = Number(cDx(scope));
+        let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+        if (deg < 0) deg += 360;
+        return deg;
+      };
+    }
+  }
+
+  if (trimmed.startsWith('distance(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(9, -1), ',');
+    if (parts.length === 2) {
+      const cA = compileExpression(parts[0], nextDepth);
+      const cB = compileExpression(parts[1], nextDepth);
+      return (scope: Scope) => {
+        const a = cA(scope) as any;
+        const b = cB(scope) as any;
+        if (a && b && typeof a === 'object' && typeof b === 'object' && a.x !== undefined && a.y !== undefined && b.x !== undefined && b.y !== undefined) {
+          const dx = Number(a.x) - Number(b.x);
+          const dy = Number(a.y) - Number(b.y);
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+        return 0;
+      };
+    } else if (parts.length === 4) {
+      const cAx = compileExpression(parts[0], nextDepth);
+      const cAy = compileExpression(parts[1], nextDepth);
+      const cBx = compileExpression(parts[2], nextDepth);
+      const cBy = compileExpression(parts[3], nextDepth);
+      return (scope: Scope) => {
+        const dx = Number(cAx(scope)) - Number(cBx(scope));
+        const dy = Number(cAy(scope)) - Number(cBy(scope));
+        return Math.sqrt(dx * dx + dy * dy);
+      };
+    }
+  }
+
+  if (trimmed.startsWith('angle_to(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(9, -1), ',');
+    if (parts.length === 2) {
+      const cA = compileExpression(parts[0], nextDepth);
+      const cB = compileExpression(parts[1], nextDepth);
+      return (scope: Scope) => {
+        const a = cA(scope) as any;
+        const b = cB(scope) as any;
+        if (a && b && typeof a === 'object' && typeof b === 'object' && a.x !== undefined && a.y !== undefined && b.x !== undefined && b.y !== undefined) {
+          let deg = (Math.atan2(Number(b.y) - Number(a.y), Number(b.x) - Number(a.x)) * 180) / Math.PI;
+          if (deg < 0) deg += 360;
+          return deg;
+        }
+        return 0;
+      };
+    }
+  }
+
+  if (trimmed.startsWith('slide(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(6, -1), ',');
+    if (parts.length >= 4) {
+      const cPx = compileExpression(parts[0], nextDepth);
+      const cPy = compileExpression(parts[1], nextDepth);
+      const cDx = compileExpression(parts[2], nextDepth);
+      const cDy = compileExpression(parts[3], nextDepth);
+      const cR = parts.length >= 5 ? compileExpression(parts[4], nextDepth) : null;
+      return (scope: Scope) => {
+        const px = Number(cPx(scope));
+        const py = Number(cPy(scope));
+        const dx = Number(cDx(scope));
+        const dy = Number(cDy(scope));
+        const r = cR ? Number(cR(scope)) : 0.25;
+        return spatialSlide(px, py, dx, dy, r);
+      };
+    }
+  }
+
+  if (trimmed.startsWith('sees(') && trimmed.endsWith(')')) {
+    const parts = splitTopLevel(trimmed.slice(5, -1), ',');
+    if (parts.length === 2) {
+      const cA = compileExpression(parts[0], nextDepth);
+      const cB = compileExpression(parts[1], nextDepth);
+      return (scope: Scope) => {
+        const a = cA(scope) as any;
+        const b = cB(scope) as any;
+        if (!a || !b) return false;
+        return spatialSees(Number(a.x), Number(a.y), Number(b.x), Number(b.y));
+      };
+    } else if (parts.length >= 4) {
+      const cX1 = compileExpression(parts[0], nextDepth);
+      const cY1 = compileExpression(parts[1], nextDepth);
+      const cX2 = compileExpression(parts[2], nextDepth);
+      const cY2 = compileExpression(parts[3], nextDepth);
+      return (scope: Scope) => {
+        return spatialSees(
+          Number(cX1(scope)),
+          Number(cY1(scope)),
+          Number(cX2(scope)),
+          Number(cY2(scope))
+        );
+      };
+    }
   }
 
   if (trimmed.startsWith('random(') && trimmed.endsWith(')')) {
     const parts = splitTopLevel(trimmed.slice(7, -1), ',');
     if (parts.length >= 2) {
-      const min = Number(evaluateExpression(parts[0], scope, nextDepth));
-      const max = Number(evaluateExpression(parts[1], scope, nextDepth));
-      return randomInt(min, max, parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : undefined);
+      const cMin = compileExpression(parts[0], nextDepth);
+      const cMax = compileExpression(parts[1], nextDepth);
+      const cSeed = parts.length >= 3 ? compileExpression(parts[2], nextDepth) : null;
+      return (scope: Scope) => {
+        const min = Number(cMin(scope));
+        const max = Number(cMax(scope));
+        return randomInt(min, max, cSeed ? Number(cSeed(scope)) : undefined);
+      };
     }
   }
 
   for (const name of ['shuffle', 'pick']) {
     if (trimmed.startsWith(name + '(') && trimmed.endsWith(')')) {
       const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ',');
-      const values = evaluateExpression(parts[0], scope, nextDepth);
-      if (!Array.isArray(values)) return undefined;
-      const seed = parts.length > 1 ? Number(evaluateExpression(parts[1], scope, nextDepth)) : randomInt(0,2147483647);
-      return name === 'shuffle' ? shuffled(values, seed) : values.length ? values[randomInt(0,values.length-1,seed)] : null;
+      const cValues = compileExpression(parts[0], nextDepth);
+      const cSeed = parts.length > 1 ? compileExpression(parts[1], nextDepth) : null;
+      return (scope: Scope) => {
+        const values = cValues(scope);
+        if (!Array.isArray(values)) return undefined;
+        const seed = cSeed ? Number(cSeed(scope)) : randomInt(0, 2147483647);
+        return name === 'shuffle'
+          ? shuffled(values, seed)
+          : values.length ? values[randomInt(0, values.length - 1, seed)] : null;
+      };
     }
   }
 
   if (trimmed.startsWith('min(') && trimmed.endsWith(')')) {
-    const parts = splitTopLevel(trimmed.slice(4, -1), ',');
-    const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
-    return Math.min(...nums);
+    const cParts = splitTopLevel(trimmed.slice(4, -1), ',').map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => Math.min(...cParts.map((fn) => Number(fn(scope))));
   }
 
   if (trimmed.startsWith('max(') && trimmed.endsWith(')')) {
-    const parts = splitTopLevel(trimmed.slice(4, -1), ',');
-    const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
-    return Math.max(...nums);
+    const cParts = splitTopLevel(trimmed.slice(4, -1), ',').map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => Math.max(...cParts.map((fn) => Number(fn(scope))));
   }
 
-  // --- Local storage expressions: storage.get(key, default?), storage.has(key) ---
+  // 8. Storage expressions
   if (
     trimmed.startsWith('storage.get(') ||
     trimmed.startsWith('local_storage.get(') ||
@@ -337,25 +617,28 @@ export function evaluateExpression(
     const callEnd = trimmed.lastIndexOf(')');
     const callPart = trimmed.slice(0, callEnd + 1);
     const trailingProp = trimmed.slice(callEnd + 1).trim();
-
     const inner = callPart.slice(callPart.indexOf('(') + 1, -1);
     const parts = splitTopLevel(inner, ',');
-    const key = String(evaluateExpression(parts[0], scope, nextDepth));
-    const defVal = parts.length > 1 ? evaluateExpression(parts[1], scope, nextDepth) : null;
-    const item = getStorageItem(key);
-    let result: unknown = defVal;
-    if (item !== null) {
-      try {
-        result = JSON.parse(item);
-      } catch {
-        result = item;
+    const cKey = compileExpression(parts[0], nextDepth);
+    const cDef = parts.length > 1 ? compileExpression(parts[1], nextDepth) : null;
+    return (scope: Scope) => {
+      const key = String(cKey(scope));
+      const defVal = cDef ? cDef(scope) : null;
+      const item = getStorageItem(key);
+      let result: unknown = defVal;
+      if (item !== null) {
+        try {
+          result = JSON.parse(item);
+        } catch {
+          result = item;
+        }
       }
-    }
-    if (trailingProp.startsWith('.') && result && typeof result === 'object') {
-      const prop = trailingProp.slice(1);
-      return (result as Record<string, unknown>)[prop];
-    }
-    return result;
+      if (trailingProp.startsWith('.') && result && typeof result === 'object') {
+        const prop = trailingProp.slice(1);
+        return (result as Record<string, unknown>)[prop];
+      }
+      return result;
+    };
   }
 
   if (
@@ -364,312 +647,296 @@ export function evaluateExpression(
     trimmed.startsWith('localStorage.has(')
   ) {
     const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
-    const key = String(evaluateExpression(inner, scope, nextDepth));
-    return hasStorageItem(key);
+    const cKey = compileExpression(inner, nextDepth);
+    return (scope: Scope) => hasStorageItem(String(cKey(scope)));
   }
 
-  // --- Helper call ---
+  // 9. Helper calls
   const helperCall = parseHelperCall(trimmed);
   if (helperCall) {
-    return callHelper(
-      helperCall.name,
-      helperCall.args.map((arg) => evaluateExpression(arg, scope, nextDepth)),
-      scope,
-      nextDepth,
-    );
+    const cArgs = helperCall.args.map((arg) => compileExpression(arg, nextDepth));
+    const name = helperCall.name;
+    return (scope: Scope) => callHelper(name, cArgs.map((fn) => fn(scope)), scope, nextDepth);
   }
 
-  // --- Collection methods: any, mask, filter, find, max (+ trailing .length) ---
+  // 10. Collection methods (.any, .mask, .filter, .find, .max)
   const methodMatch = trimmed.match(
     /^(.+?)\.(any|mask|filter|find|max)(?:\((.*)\)|\s+(.+?))(?:\.(length))?$/,
   );
   if (methodMatch) {
-    const [, receiver, method, parenArgs, spaceArgs, trailingProp] =
-      methodMatch;
-    const argsStr = (
-      parenArgs !== undefined ? parenArgs : spaceArgs
-    ).trim();
-    const collection = evaluateExpression(receiver, scope, nextDepth);
+    const [, receiver, method, parenArgs, spaceArgs, trailingProp] = methodMatch;
+    const argsStr = (parenArgs !== undefined ? parenArgs : spaceArgs).trim();
+    const cReceiver = compileExpression(receiver, nextDepth);
 
-    let result: unknown = undefined;
-    if (method === 'mask' && Array.isArray(collection)) {
-      const player = valueToString(
-        evaluateExpression(argsStr, scope, nextDepth),
-      );
-      result = (collection as unknown[]).reduce(
-        (acc: number, cell: unknown, i: number) => {
-          return valueToString(cell) === player ? acc | (1 << i) : acc;
-        },
-        0,
-      );
-    } else if (
-      (method === 'any' ||
-        method === 'find' ||
-        method === 'filter' ||
-        method === 'max') &&
-      Array.isArray(collection)
-    ) {
-      const arrowMatch = argsStr.match(/^(\w+)\s*=>\s*(.+)$/);
-      const [paramName, predExpr] = arrowMatch
-        ? [arrowMatch[1], arrowMatch[2]]
-        : ['it', argsStr];
+    if (method === 'mask') {
+      const cArg = compileExpression(argsStr, nextDepth);
+      return (scope: Scope) => {
+        const collection = cReceiver(scope);
+        if (!Array.isArray(collection)) return undefined;
+        const player = valueToString(cArg(scope));
+        return (collection as unknown[]).reduce(
+          (acc: number, cell: unknown, i: number) => {
+            return valueToString(cell) === player ? acc | (1 << i) : acc;
+          },
+          0,
+        );
+      };
+    }
 
+    const arrowMatch = argsStr.match(/^(\w+)\s*=>\s*(.+)$/);
+    const [paramName, predExpr] = arrowMatch ? [arrowMatch[1], arrowMatch[2]] : ['it', argsStr];
+    const cPred = compileExpression(predExpr, nextDepth);
+
+    return (scope: Scope) => {
+      const collection = cReceiver(scope);
+      if (!Array.isArray(collection)) return undefined;
+      let result: unknown = undefined;
       if (method === 'any') {
         result = collection.some((item: unknown) => {
-          const innerScope = Object.assign({}, scope, {
-            [paramName]: item,
-          });
-          return Boolean(
-            evaluateExpression(predExpr, innerScope, nextDepth),
-          );
+          const innerScope = Object.assign({}, scope, { [paramName]: item });
+          return Boolean(cPred(innerScope));
         });
       } else if (method === 'filter') {
         result = collection.filter((item: unknown) => {
-          const innerScope = Object.assign({}, scope, {
-            [paramName]: item,
-          });
-          return Boolean(
-            evaluateExpression(predExpr, innerScope, nextDepth),
-          );
+          const innerScope = Object.assign({}, scope, { [paramName]: item });
+          return Boolean(cPred(innerScope));
         });
       } else if (method === 'find') {
         result = collection.find((item: unknown) => {
-          const innerScope = Object.assign({}, scope, {
-            [paramName]: item,
-          });
-          return Boolean(
-            evaluateExpression(predExpr, innerScope, nextDepth),
-          );
+          const innerScope = Object.assign({}, scope, { [paramName]: item });
+          return Boolean(cPred(innerScope));
         });
       } else if (method === 'max') {
         result = collection.reduce(
           (max: unknown, item: unknown) => {
-            const innerScope = Object.assign({}, scope, {
-              [paramName]: item,
-            });
-            const val = evaluateExpression(predExpr, innerScope, nextDepth);
-            return max === undefined || (val as number) > (max as number)
-              ? val
-              : max;
+            const innerScope = Object.assign({}, scope, { [paramName]: item });
+            const val = cPred(innerScope);
+            return max === undefined || (val as number) > (max as number) ? val : max;
           },
           undefined as unknown,
         );
       }
-    }
-
-    if (
-      trailingProp === 'length' &&
-      result !== undefined &&
-      (result as unknown[]).length !== undefined
-    ) {
-      return (result as unknown[]).length;
-    }
-    return result;
+      if (trailingProp === 'length' && result !== undefined && (result as unknown[]).length !== undefined) {
+        return (result as unknown[]).length;
+      }
+      return result;
+    };
   }
 
-  // --- Ternary ---
+  // 11. Ternary ? :
   if (includesTopLevel(trimmed, ' ? ')) {
     const parts = splitTopLevel(trimmed, ' ? ');
     const condition = parts[0];
     const rest = parts.slice(1).join(' ? ');
     if (includesTopLevel(rest, ' : ')) {
       const colonParts = splitTopLevel(rest, ' : ');
-      const trueExpr = colonParts[0];
-      const falseExpr = colonParts.slice(1).join(' : ');
-      return Boolean(evaluateExpression(condition, scope, nextDepth))
-        ? evaluateExpression(trueExpr, scope, nextDepth)
-        : evaluateExpression(falseExpr, scope, nextDepth);
+      const cCond = compileExpression(condition, nextDepth);
+      const cTrue = compileExpression(colonParts[0], nextDepth);
+      const cFalse = compileExpression(colonParts.slice(1).join(' : '), nextDepth);
+      return (scope: Scope) => Boolean(cCond(scope)) ? cTrue(scope) : cFalse(scope);
     }
   }
 
-  // --- Nullish coalescing ---
+  // 12. Nullish coalescing ??
   if (includesTopLevel(trimmed, ' ?? ')) {
     const parts = splitTopLevel(trimmed, ' ?? ');
     const leftRaw = parts[0].trim();
-    let left = evaluateExpression(leftRaw, scope, nextDepth);
-    if (typeof left === 'string' && left === leftRaw && resolvePath(leftRaw, scope) === undefined && tryParseLiteral(leftRaw, scope) === undefined) {
-      left = undefined;
-    }
-    if (left !== undefined && left !== null && left !== '') {
-      return left;
-    }
-    return evaluateExpression(parts.slice(1).join(' ?? '), scope, nextDepth);
+    const cLeft = compileExpression(leftRaw, nextDepth);
+    const cRight = compileExpression(parts.slice(1).join(' ?? '), nextDepth);
+    return (scope: Scope) => {
+      let left = cLeft(scope);
+      if (typeof left === 'string' && left === leftRaw && resolvePath(leftRaw, scope) === undefined && tryParseLiteral(leftRaw, scope) === undefined) {
+        left = undefined;
+      }
+      if (left !== undefined && left !== null && left !== '') {
+        return left;
+      }
+      return cRight(scope);
+    };
   }
 
-  // --- Logical operators ---
+  // 13. Logical operators (or, ||, and, &&)
   if (includesTopLevel(trimmed, ' or ')) {
-    return splitTopLevel(trimmed, ' or ').some((part) =>
-      Boolean(evaluateExpression(part, scope, nextDepth)),
-    );
+    const cParts = splitTopLevel(trimmed, ' or ').map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => cParts.some((fn) => Boolean(fn(scope)));
   }
   if (includesTopLevel(trimmed, ' || ')) {
-    return splitTopLevel(trimmed, ' || ').some((part) =>
-      Boolean(evaluateExpression(part, scope, nextDepth)),
-    );
+    const cParts = splitTopLevel(trimmed, ' || ').map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => cParts.some((fn) => Boolean(fn(scope)));
   }
   if (includesTopLevel(trimmed, ' and ')) {
-    return splitTopLevel(trimmed, ' and ').every((part) =>
-      Boolean(evaluateExpression(part, scope, nextDepth)),
-    );
+    const cParts = splitTopLevel(trimmed, ' and ').map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => cParts.every((fn) => Boolean(fn(scope)));
   }
   if (includesTopLevel(trimmed, ' && ')) {
-    return splitTopLevel(trimmed, ' && ').every((part) =>
-      Boolean(evaluateExpression(part, scope, nextDepth)),
-    );
+    const cParts = splitTopLevel(trimmed, ' && ').map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => cParts.every((fn) => Boolean(fn(scope)));
   }
 
-  // --- Comparison ---
+  // 14. Comparison == and !=
   if (includesTopLevel(trimmed, ' != ')) {
     const [left, right] = splitTopLevel(trimmed, ' != ');
-    return (
-      valueToString(evaluateExpression(left, scope, nextDepth)) !==
-      valueToString(evaluateExpression(right, scope, nextDepth))
-    );
+    const cL = compileExpression(left, nextDepth);
+    const cR = compileExpression(right, nextDepth);
+    return (scope: Scope) => valueToString(cL(scope)) !== valueToString(cR(scope));
   }
   if (includesTopLevel(trimmed, ' == ')) {
     const [left, right] = splitTopLevel(trimmed, ' == ');
-    return (
-      valueToString(evaluateExpression(left, scope, nextDepth)) ===
-      valueToString(evaluateExpression(right, scope, nextDepth))
-    );
+    const cL = compileExpression(left, nextDepth);
+    const cR = compileExpression(right, nextDepth);
+    return (scope: Scope) => valueToString(cL(scope)) === valueToString(cR(scope));
   }
 
-  // --- Comparison operators (>= <= > <) ---
+  // 15. Comparison operators (>=, <=, >, <)
   if (includesTopLevel(trimmed, ' >= ')) {
     const [left, right] = splitTopLevel(trimmed, ' >= ');
-    return (
-      (evaluateExpression(left, scope, nextDepth) as number) >=
-      (evaluateExpression(right, scope, nextDepth) as number)
-    );
+    const cL = compileExpression(left, nextDepth);
+    const cR = compileExpression(right, nextDepth);
+    return (scope: Scope) => (cL(scope) as number) >= (cR(scope) as number);
   }
   if (includesTopLevel(trimmed, ' <= ')) {
     const [left, right] = splitTopLevel(trimmed, ' <= ');
-    return (
-      (evaluateExpression(left, scope, nextDepth) as number) <=
-      (evaluateExpression(right, scope, nextDepth) as number)
-    );
+    const cL = compileExpression(left, nextDepth);
+    const cR = compileExpression(right, nextDepth);
+    return (scope: Scope) => (cL(scope) as number) <= (cR(scope) as number);
   }
   if (includesTopLevel(trimmed, ' > ')) {
     const [left, right] = splitTopLevel(trimmed, ' > ');
-    return (
-      (evaluateExpression(left, scope, nextDepth) as number) >
-      (evaluateExpression(right, scope, nextDepth) as number)
-    );
+    const cL = compileExpression(left, nextDepth);
+    const cR = compileExpression(right, nextDepth);
+    return (scope: Scope) => (cL(scope) as number) > (cR(scope) as number);
   }
   if (includesTopLevel(trimmed, ' < ')) {
     const [left, right] = splitTopLevel(trimmed, ' < ');
-    return (
-      (evaluateExpression(left, scope, nextDepth) as number) <
-      (evaluateExpression(right, scope, nextDepth) as number)
-    );
+    const cL = compileExpression(left, nextDepth);
+    const cR = compileExpression(right, nextDepth);
+    return (scope: Scope) => (cL(scope) as number) < (cR(scope) as number);
   }
 
-  // --- Addition / concatenation ---
+  // 16. Addition / concatenation
   if (includesTopLevel(trimmed, ' + ')) {
-    return splitTopLevel(trimmed, ' + ').reduce(
-      (acc: unknown, part: string, index: number) => {
-        const value = evaluateExpression(part, scope, nextDepth);
-        if (index === 0) return value;
-        if (typeof acc === 'number' && typeof value === 'number')
-          return acc + value;
-        return `${valueToString(acc)}${valueToString(value)}`;
-      },
-      undefined as unknown,
-    );
+    const cParts = splitTopLevel(trimmed, ' + ').map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => cParts.reduce((acc: unknown, fn, index: number) => {
+      const value = fn(scope);
+      if (index === 0) return value;
+      if (typeof acc === 'number' && typeof value === 'number') return acc + value;
+      return `${valueToString(acc)}${valueToString(value)}`;
+    }, undefined);
   }
 
-  // --- Subtraction ---
+  // 17. Subtraction
   if (includesTopLevel(trimmed, ' - ')) {
     const parts = splitTopLevel(trimmed, ' - ');
-    const first = Number(evaluateExpression(parts[0], scope, nextDepth));
-    return parts.slice(1).reduce((acc: number, part: string) => {
-      return acc - Number(evaluateExpression(part, scope, nextDepth));
-    }, first);
+    const cFirst = compileExpression(parts[0], nextDepth);
+    const cRest = parts.slice(1).map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => {
+      const first = Number(cFirst(scope));
+      return cRest.reduce((acc: number, fn) => acc - Number(fn(scope)), first);
+    };
   }
 
-  // --- Multiplication ---
+  // 18. Multiplication
   if (includesTopLevel(trimmed, ' * ')) {
-    return splitTopLevel(trimmed, ' * ').reduce(
-      (acc: number, part: string, idx: number) => {
-        const val = Number(evaluateExpression(part, scope, nextDepth));
-        return idx === 0 ? val : acc * val;
-      },
-      1,
-    );
+    const cParts = splitTopLevel(trimmed, ' * ').map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => cParts.reduce((acc: number, fn, idx: number) => {
+      const val = Number(fn(scope));
+      return idx === 0 ? val : acc * val;
+    }, 1);
   }
 
-  // --- Division ---
+  // 19. Division
   if (includesTopLevel(trimmed, ' / ')) {
     const parts = splitTopLevel(trimmed, ' / ');
-    const first = Number(evaluateExpression(parts[0], scope, nextDepth));
-    return parts.slice(1).reduce((acc: number, part: string) => {
-      return acc / Number(evaluateExpression(part, scope, nextDepth));
-    }, first);
+    const cFirst = compileExpression(parts[0], nextDepth);
+    const cRest = parts.slice(1).map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => {
+      const first = Number(cFirst(scope));
+      return cRest.reduce((acc: number, fn) => acc / Number(fn(scope)), first);
+    };
   }
 
-  // --- Modulo ---
+  // 20. Modulo
   if (includesTopLevel(trimmed, ' % ')) {
     const parts = splitTopLevel(trimmed, ' % ');
-    const first = Number(evaluateExpression(parts[0], scope, nextDepth));
-    return parts.slice(1).reduce((acc: number, part: string) => {
-      return acc % Number(evaluateExpression(part, scope, nextDepth));
-    }, first);
+    const cFirst = compileExpression(parts[0], nextDepth);
+    const cRest = parts.slice(1).map((p) => compileExpression(p, nextDepth));
+    return (scope: Scope) => {
+      const first = Number(cFirst(scope));
+      return cRest.reduce((acc: number, fn) => acc % Number(fn(scope)), first);
+    };
   }
 
-  // --- Swap ---
+  // 21. Swap
   if (trimmed.startsWith('swap ')) {
     const tokens = trimmed.split(/\s+/);
-    const current = valueToString(
-      evaluateExpression(tokens[1], scope, nextDepth),
-    );
-    const left = valueToString(
-      evaluateExpression(tokens[2], scope, nextDepth),
-    );
-    const right = valueToString(
-      evaluateExpression(tokens[3], scope, nextDepth),
-    );
-    return current === left ? right : left;
+    const cCurr = compileExpression(tokens[1], nextDepth);
+    const cL = compileExpression(tokens[2], nextDepth);
+    const cR = compileExpression(tokens[3], nextDepth);
+    return (scope: Scope) => {
+      const current = valueToString(cCurr(scope));
+      const left = valueToString(cL(scope));
+      const right = valueToString(cR(scope));
+      return current === left ? right : left;
+    };
   }
 
-  // --- Full (all items truthy) ---
+  // 22. Full (all items truthy)
   if (trimmed.startsWith('full ')) {
-    const collection = evaluateExpression(
-      trimmed.slice(5),
-      scope,
-      nextDepth,
-    );
-    return (
-      Array.isArray(collection) &&
-      collection.every((item: unknown) => valueToString(item) !== '')
-    );
+    const cColl = compileExpression(trimmed.slice(5), nextDepth);
+    return (scope: Scope) => {
+      const collection = cColl(scope);
+      return Array.isArray(collection) && collection.every((item: unknown) => valueToString(item) !== '');
+    };
   }
 
-  // --- Bitwise AND ---
+  // 23. Bitwise &
   if (includesTopLevel(trimmed, ' & ')) {
-    const parts = splitTopLevel(trimmed, ' & ');
-    if (parts.length === 2) {
-      return (
-        (evaluateExpression(parts[0], scope, nextDepth) as number) &
-        (evaluateExpression(parts[1], scope, nextDepth) as number)
-      );
-    }
+    const [left, right] = splitTopLevel(trimmed, ' & ');
+    const cL = compileExpression(left, nextDepth);
+    const cR = compileExpression(right, nextDepth);
+    return (scope: Scope) => (cL(scope) as number) & (cR(scope) as number);
   }
 
-  // --- Unary Negation ---
+  // 24. Unary negation
   if (trimmed.startsWith('-') && !trimmed.startsWith('--')) {
     const operand = trimmed.slice(1).trim();
     if (operand) {
-      const val = evaluateExpression(operand, scope, nextDepth);
-      if (typeof val === 'number') {
-        return -val;
-      }
-      const num = Number(val);
-      if (!Number.isNaN(num)) {
-        return -num;
-      }
+      const cOp = compileExpression(operand, nextDepth);
+      return (scope: Scope) => {
+        const val = cOp(scope);
+        if (typeof val === 'number') return -val;
+        const num = Number(val);
+        if (!Number.isNaN(num)) return -num;
+        return undefined;
+      };
     }
   }
 
-  // --- Fallback: resolve as a value ---
-  return resolveValue(trimmed, scope);
+  // 25. Fallback: resolve as a value
+  return compileResolveValue(trimmed);
+}
+
+// ---------------------------------------------------------------------------
+// evaluateExpression — the main expression evaluator (JIT cached)
+// ---------------------------------------------------------------------------
+
+export function evaluateExpression(
+  expr: string,
+  scope: Scope,
+  depth?: number,
+): unknown {
+  if ((depth || 0) > MAX_DEPTH) return undefined;
+  const trimmed = String(expr || '').trim();
+  if (!trimmed) return undefined;
+
+  let compiled = exprCache.get(trimmed);
+  if (!compiled) {
+    compiled = compileExpression(trimmed, depth || 0);
+    if (exprCache.size >= MAX_CACHE_SIZE) {
+      exprCache.clear();
+    }
+    exprCache.set(trimmed, compiled);
+  }
+
+  return compiled(scope);
 }

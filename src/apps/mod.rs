@@ -1,4 +1,5 @@
 pub mod pixel;
+pub mod pixel3d;
 pub mod dynamic_ai_web;
 pub mod graphql;
 pub mod rest;
@@ -21,6 +22,7 @@ pub async fn build_app_router(state: AppState) -> Router {
     match app_type.to_uppercase().as_str() {
         "GRAPHQL" => build_graphql_router(state).await,
         "PIXEL" => pixel::router(&state.doc).await,
+        "PIXEL-3D" => pixel3d::router(&state.doc).await,
         "REST" => build_rest_router(state).await,
         "STATIC" => build_static_router(state).await,
         "DYNAMIC-AI-WEB" => dynamic_ai_web::build_dynamic_ai_web_router(state).await,
@@ -35,7 +37,7 @@ pub async fn build_app_router(state: AppState) -> Router {
                         (
                             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                             format!(
-                                "Unsupported App type: {}. Supported types: REST, GRAPHQL, STATIC, DYNAMIC-AI-WEB, PIXEL.",
+                                "Unsupported App type: {}. Supported types: REST, GRAPHQL, STATIC, DYNAMIC-AI-WEB, PIXEL, PIXEL-3D.",
                                 other
                             ),
                         )
@@ -77,5 +79,5 @@ pub async fn build_vectrune_router(
 
 /// Returns true if the app type is supported for server launch
 pub fn app_type_supported(app_type: &str) -> bool {
-    matches!(app_type.to_uppercase().as_str(), "REST" | "GRAPHQL" | "STATIC" | "DYNAMIC-AI-WEB" | "PIXEL")
+    matches!(app_type.to_uppercase().as_str(), "REST" | "GRAPHQL" | "STATIC" | "DYNAMIC-AI-WEB" | "PIXEL" | "PIXEL-3D")
 }

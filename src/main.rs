@@ -554,7 +554,10 @@ async fn main() -> anyhow::Result<()> {
         let app_type = get_app_type(&doc);
 
         if matches.get_one::<String>("target").is_some() {
-            anyhow::ensure!(app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("pixel")), "--target is only supported for @App type = pixel");
+            anyhow::ensure!(
+                app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("pixel") || t.eq_ignore_ascii_case("pixel-3d")),
+                "--target is only supported for @App type = pixel or pixel-3d"
+            );
         }
         if matches.get_flag("fullscreen") || matches.get_one::<u64>("pixel-frames").is_some() {
             anyhow::ensure!(matches.get_one::<String>("target").is_some_and(|t| t == "desktop"), "--fullscreen and --pixel-frames require --target desktop");
@@ -568,6 +571,26 @@ async fn main() -> anyhow::Result<()> {
             if matches.get_one::<String>("target").is_some_and(|s| s == "desktop") {
                 #[cfg(feature = "pixel-desktop")]
                 { apps::pixel::desktop::run(&apps::pixel::compile(&doc)?, matches.get_flag("fullscreen"), matches.get_one::<u64>("pixel-frames").copied())?; break; }
+                #[cfg(not(feature = "pixel-desktop"))]
+                anyhow::bail!("Desktop pixel host requires cargo run --features pixel-desktop -- <game.rune> --target desktop; web and HTML export work in all builds");
+            }
+        }
+        if app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("pixel-3d")) {
+            if output_format == Some("html") {
+                crate::util::set_log_stderr();
+                println!("{}", apps::pixel3d::html(&doc).await?);
+                break;
+            }
+            if matches.get_one::<String>("target").is_some_and(|s| s == "desktop") {
+                #[cfg(feature = "pixel-desktop")]
+                {
+                    apps::pixel3d::desktop::run(
+                        &apps::pixel3d::compile(&doc)?,
+                        matches.get_flag("fullscreen"),
+                        matches.get_one::<u64>("pixel-frames").copied(),
+                    )?;
+                    break;
+                }
                 #[cfg(not(feature = "pixel-desktop"))]
                 anyhow::bail!("Desktop pixel host requires cargo run --features pixel-desktop -- <game.rune> --target desktop; web and HTML export work in all builds");
             }

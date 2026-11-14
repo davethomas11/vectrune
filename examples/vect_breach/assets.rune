@@ -1,0 +1,335 @@
+@Palette/base
+colors = {".":"transparent","k":"#0a0c0e","w":"#ffffff","r":"#992211","R":"#dd3322","g":"#3a5533","G":"#66aa44","s":"#556677","S":"#8899aa","y":"#d49922","Y":"#f6cc44","b":"#283340","B":"#3d4d5e","d":"#442a1d","D":"#6b422a"}
+
+# 16x16 power-of-two wall textures
+@Texture/wall/panel
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kSSSSSSSSSSSSSSk"
+    "kSssssssssssssSk"
+    "kSsbssssssssbsSk"
+    "kSsbssssssssbsSk"
+    "kSssssssssssssSk"
+    "kSsbssssssssbsSk"
+    "kSssssssssssssSk"
+    "kSSSSSSSSSSSSSSk"
+    "kSssssssssssssSk"
+    "kSsbssssssssbsSk"
+    "kSssssssssssssSk"
+    "kSsbssssssssbsSk"
+    "kSssssssssssssSk"
+    "kSssssssssssssSk"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/wall/tech
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kDDDDDDDDDDDDDDk"
+    "kDddddddddddddDk"
+    "kDdrrkkkrrkkddDk"
+    "kDdrrkkkrrkkddDk"
+    "kDddddddddddddDk"
+    "kDdYYkkkYYkkddDk"
+    "kDdYYkkkYYkkddDk"
+    "kDDDDDDDDDDDDDDk"
+    "kDdGGkkkGGkkddDk"
+    "kDdGGkkkGGkkddDk"
+    "kDddddddddddddDk"
+    "kDdrrkkkrrkkddDk"
+    "kDddddddddddddDk"
+    "kDddddddddddddDk"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/wall/exit
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kYyYyYyYyYyYyYyk"
+    "kSSSSSSSSSSSSSSk"
+    "kSbbbbkGGkbbbbSk"
+    "kSbbbbkGGkbbbbSk"
+    "kSssssksskssssSk"
+    "kSbbbbkbbkbbbbSk"
+    "kSbbbbkbbkbbbbSk"
+    "kSbbbbkbbkbbbbSk"
+    "kSbbbbkbbkbbbbSk"
+    "kSbbbbkbbkbbbbSk"
+    "kSbbbbkbbkbbbbSk"
+    "kSssssksskssssSk"
+    "kSSSSSSSSSSSSSSk"
+    "kyYyYyYyYyYyYyYk"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/wall/switch
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kSSSSSSSSSSSSSSk"
+    "kSyyYYYYYYyyysSk"
+    "kSykbbbbbbbbksSk"
+    "kSykbGGwbGGbksSk"
+    "kSykbGGwbGGbksSk"
+    "kSykbbbbbbbbksSk"
+    "kSSSSSSSSSSSSSSk"
+    "kSsssskRRkssssSk"
+    "kSsssskRRkssssSk"
+    "kSsssskRRkssssSk"
+    "kSsssskkkkssssSk"
+    "kSssssskGkssssSk"
+    "kSssssskGkssssSk"
+    "kSSSSSSSSSSSSSSk"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/wall/reactor
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kDDDDDDDDDDDDDDk"
+    "kDddrrkkkrrkddDk"
+    "kDddRRkkkRRkddDk"
+    "kDyykkkkkkkkYyDk"
+    "kDyykkYYkkkkYyDk"
+    "kDrrkYYYYkkkrrDk"
+    "kDRRkkYYkkkkRRDk"
+    "kDRRkkYYkkkkRRDk"
+    "kDrrkYYYYkkkrrDk"
+    "kDyykkYYkkkkYyDk"
+    "kDyykkkkkkkkYyDk"
+    "kDddRRkkkRRkddDk"
+    "kDddrrkkkrrkddDk"
+    "kDDDDDDDDDDDDDDk"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/wall/command
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kBBBBBBBBBBBBBBk"
+    "kBbbsbbssbbsbbBk"
+    "kBbwGkbbbbkGwbBk"
+    "kBbGGkbbbbkGGbBk"
+    "kBbYYkbbbbkYYbBk"
+    "kBbrrkbbbbkrrkBk"
+    "kBBBBBBBBBBBBBBk"
+    "kBbsbkwGwwkbsbBk"
+    "kBbsbkwGGwkbsbBk"
+    "kBbsbkkkkkkbsbBk"
+    "kBbbbbbbbbbbbbBk"
+    "kBbbsbbssbbsbbBk"
+    "kBbbsbbssbbsbbBk"
+    "kBBBBBBBBBBBBBBk"
+    "kkkkkkkkkkkkkkkk"
+
+# Sprites: Pickups & Items (16x16)
+@Sprite/pickup/medkit
+palette = base
+size = [16, 16]
+origin = [8, 16]
+pixels:
+    "................"
+    "................"
+    "................"
+    "....kkkkkkkk...."
+    "...kwwwwwwwwk..."
+    "...kwwRRRRwwk..."
+    "...kwwRRRRwwk..."
+    "..kwwwRRRRwwwk.."
+    "..kRRRRRRRRRRk.."
+    "..kRRRRRRRRRRk.."
+    "..kwwwRRRRwwwk.."
+    "...kwwRRRRwwk..."
+    "...kwwRRRRwwk..."
+    "...kwwwwwwwwk..."
+    "....kkkkkkkk...."
+    "................"
+
+@Sprite/pickup/ammo
+palette = base
+size = [16, 16]
+origin = [8, 16]
+pixels:
+    "................"
+    "................"
+    ".....kk..kk....."
+    "....kYYkkYYk...."
+    "....kYYkkYYk...."
+    "....kyykkyyk...."
+    "....kyykkyyk...."
+    "....kyykkyyk...."
+    "....kyykkyyk...."
+    "....kyykkyyk...."
+    "...kyyykkyyyk..."
+    "...kssssssssk..."
+    "...kssssssssk..."
+    "....kkkkkkkk...."
+    "................"
+    "................"
+
+# Enemy: Guard (Walk and Pain frames) (16x24)
+@Sprite/enemy/guard_walk1
+palette = base
+size = [16, 24]
+origin = [8, 24]
+pixels:
+    "......kkkk......"
+    ".....kggggk....."
+    ".....kGwwGk....."
+    ".....kGwwGk....."
+    ".....kggggk....."
+    "....kssssssk...."
+    "...kssssssssk..."
+    "...kskBBBBksk..."
+    "..kskkBBBBkksk.."
+    "..kskkkkkkkksk.."
+    "..kskssssssksk.."
+    "..kkksssssskkk.."
+    "....kssssssk...."
+    "....kssssssk...."
+    "....kss..ssk...."
+    "....kss..ssk...."
+    "....kss..ssk...."
+    "....kss..ssk...."
+    "...kss....ssk..."
+    "...kss....ssk..."
+    "..kss......ssk.."
+    "..kss......ssk.."
+    ".kkkk......kkkk."
+    "................"
+
+@Sprite/enemy/guard_pain
+palette = base
+size = [16, 24]
+origin = [8, 24]
+pixels:
+    "......kkkk......"
+    ".....kRRRRk....."
+    ".....kRwRwRk...."
+    ".....kRwRwRk...."
+    ".....kRRRRk....."
+    "....kssssssk...."
+    "...kssssssssk..."
+    "...kskRRRRksk..."
+    "..kskkRRRRkksk.."
+    "..kskkkkkkkksk.."
+    "..kskssssssksk.."
+    "..kkksssssskkk.."
+    "....kssssssk...."
+    "....kssssssk...."
+    "....kss..ssk...."
+    "....kss..ssk...."
+    "....kss..ssk...."
+    "....kss..ssk...."
+    "...kss....ssk..."
+    "...kss....ssk..."
+    "..kss......ssk.."
+    "..kss......ssk.."
+    ".kkkk......kkkk."
+    "................"
+
+@Sprite/enemy/guard_dead
+palette = base
+size = [16, 16]
+origin = [8, 16]
+pixels:
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "................"
+    "....kRRkkkkk...."
+    "..kRRRRssssskk.."
+    ".kRRRRRRsssssssk"
+    ".kRRRRRRsssssssk"
+    "kkkkkkkkkkkkkkkk"
+    "................"
+    "................"
+
+# First-person viewmodel: Shotgun (32x32)
+@Sprite/weapon/shotgun_idle
+palette = base
+size = [32, 32]
+origin = [16, 32]
+pixels:
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "..............kkkk.............."
+    ".............kssssk............."
+    ".............kssssk............."
+    "............kssssssk............"
+    "............kssssssk............"
+    "............ksbbsssk............"
+    "............ksbbsssk............"
+    "............kssssssk............"
+    "............kssssssk............"
+    "............kssssssk............"
+    "............kddddddk............"
+    "............kddddddk............"
+    "............kddddddk............"
+    "...........kddddddddk..........."
+    "...........kddddddddk..........."
+    "...........kddddddddk..........."
+    "...........kddddddddk..........."
+    "...........kddddddddk..........."
+    "..........kddddddddddk.........."
+    "..........kddddddddddk.........."
+    "..........kddddddddddk.........."
+
+@Sprite/weapon/shotgun_fire
+palette = base
+size = [32, 32]
+origin = [16, 32]
+pixels:
+    "............kkYYYYkk............"
+    "...........kYYwwYYk............."
+    "..........kYYwwwwYYk............"
+    "..........kYYwwwwYYk............"
+    "...........kYYwwYYk............."
+    "............kkYYkk.............."
+    "..............kk................"
+    "................................"
+    "................................"
+    "................................"
+    "................................"
+    "..............kkkk.............."
+    ".............kRRRRk............."
+    ".............kRRRRk............."
+    "............kssssssk............"
+    "............kssssssk............"
+    "............ksbbsssk............"
+    "............ksbbsssk............"
+    "............kssssssk............"
+    "............kssssssk............"
+    "............kssssssk............"
+    "............kddddddk............"
+    "............kddddddk............"
+    "............kddddddk............"
+    "...........kddddddddk..........."
+    "...........kddddddddk..........."
+    "...........kddddddddk..........."
+    "...........kddddddddk..........."
+    "...........kddddddddk..........."
+    "..........kddddddddddk.........."
+    "..........kddddddddddk.........."
+    "..........kddddddddddk.........."
+

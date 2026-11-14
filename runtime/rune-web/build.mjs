@@ -40,6 +40,12 @@ await build({
 console.log('Built dist/rune-pixel.js');
 
 await build({
+  entryPoints: ['src/pixel3d/index.ts'], bundle: true, minify: false,
+  format: 'iife', globalName: '__RunePixel3DRuntime', outfile: 'dist/rune-pixel-3d.js', target: ['es2020'],
+});
+console.log('Built dist/rune-pixel-3d.js');
+
+await build({
   entryPoints: ['src/pixel/native_audio.ts'], bundle: true, minify: false,
   format: 'iife', globalName: '__RuneNativeAudio', outfile: 'dist/rune-native-audio.js', target: ['es2020'],
 });

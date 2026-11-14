@@ -143,7 +143,7 @@ pub fn check(doc: &RuneDocument) -> Vec<Diagnostic> {
         };
         if kind == "App" {
             if let Some(value) = section.kv.get("type").and_then(|v| v.as_str()) {
-                if !["REST", "GRAPHQL", "STATIC", "DYNAMIC-AI-WEB", "PIXEL"]
+                if !["REST", "GRAPHQL", "STATIC", "DYNAMIC-AI-WEB", "PIXEL", "PIXEL-3D"]
                     .contains(&value.to_uppercase().as_str())
                 {
                     report(
@@ -307,7 +307,12 @@ pub fn check(doc: &RuneDocument) -> Vec<Diagnostic> {
             diagnostics.push(Diagnostic { severity: "error", code: "pixel", file: None, section: "@App".into(), message: error.to_string(), location: None, suggestion: None });
         }
     }
-    if !crate::core::get_app_type(doc).is_some_and(|t| t.eq_ignore_ascii_case("pixel"))
+    if crate::core::get_app_type(doc).is_some_and(|t| t.eq_ignore_ascii_case("pixel-3d")) {
+        if let Err(error) = crate::apps::pixel3d::compile(doc) {
+            diagnostics.push(Diagnostic { severity: "error", code: "pixel-3d", file: None, section: "@App".into(), message: error.to_string(), location: None, suggestion: None });
+        }
+    }
+    if !crate::core::get_app_type(doc).is_some_and(|t| t.eq_ignore_ascii_case("pixel") || t.eq_ignore_ascii_case("pixel-3d"))
         && doc.sections.iter().any(|s| s.path.first().map(String::as_str) == Some("Sprite")) {
         if let Err(error) = crate::apps::pixel::assets(doc) {
             diagnostics.push(Diagnostic { severity: "error", code: "pixel", file: None, section: "@Sprite".into(), message: error.to_string(), location: None, suggestion: None });

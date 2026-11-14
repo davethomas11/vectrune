@@ -1,0 +1,72 @@
+# Vect Breach Audio: Heavy industrial sci-fi chiptune theme and sound effects
+
+@Music/breach_theme
+type = 8bit
+tempo = 124
+time_signature = 4/4
+bars = 4
+loop = true
+volume = 0.14
+lead:
+    E2:8 E2:8 G2:8 E2:8 Bb2:4 A2:8 G2:8 |
+    E2:8 E2:8 D2:8 E2:8 G2:4 E2:4 |
+    E2:8 E2:8 G2:8 A2:8 Bb2:4 B2:8 D3:8 |
+    C3:8 B2:8 A2:8 G2:8 E2:4 -:4
+bass:
+    E1:4 E1:8 E1:8 G1:4 Bb1:4 |
+    E1:4 E1:8 E1:8 D1:4 E1:4 |
+    C1:4 C1:8 C1:8 D1:4 D1:4 |
+    E1:8 E1:8 -:8 G1:8 B1:4 E1:4
+drums:
+    kick:4 [snare,hihat]:4 kick:8 kick:8 [snare,hihat]:4 |
+    kick:4 [snare,hihat]:4 kick:4 [snare,hihat]:4 |
+    kick:8 kick:8 [snare,hihat]:4 kick:4 [snare,hihat]:8 hihat:8 |
+    kick:4 [snare,hihat]:4 [kick,snare]:4 [kick,snare]:4
+
+@Sound/shotgun_blast
+wave = noise
+filter = lowpass 1200 -> 80
+duration = 180ms
+volume = 0.22
+
+@Sound/player_pain
+wave = sawtooth
+sequence = E3:60ms, C3:80ms, A2:100ms
+volume = 0.16
+
+@Sound/guard_alert
+wave = square
+sequence = G3:70ms, B3:90ms, E4:120ms
+volume = 0.12
+
+@Sound/guard_death
+wave = noise
+filter = lowpass 900 -> 50
+duration = 220ms
+volume = 0.18
+
+@Sound/item_pickup
+wave = square
+sequence = C4:50ms, E4:50ms, G4:60ms, C5:90ms
+volume = 0.14
+
+@Sound/victory_exit
+wave = square
+sequence = C4:80ms, G4:80ms, C5:100ms, E5:160ms
+volume = 0.20
+
+@Sound/switch_flip
+wave = square
+sequence = G4:40ms, C5:80ms, G5:120ms
+volume = 0.22
+
+@Sound/door_denied
+wave = sawtooth
+sequence = Bb2:100ms, G2:160ms
+volume = 0.20
+
+@Sound/player_death
+wave = sawtooth
+sequence = A3:80ms, F3:100ms, D3:140ms, A2:240ms
+volume = 0.24
+

@@ -2,11 +2,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { initContext } from '../src/context';
 import {
   evaluateExpression,
+  compileExpression,
+  clearExpressionCache,
   resolvePath,
   resolveValue,
   tryParseLiteral,
 } from '../src/expression';
 import { buildScope } from '../src/scope';
+import { setActiveMap } from '../src/pixel3d/spatial';
 import type { RuneApp } from '../src/types';
 
 it('preserves an embedded source literal without evaluating its code or placeholders', () => {
@@ -224,6 +227,42 @@ describe('evaluateExpression', () => {
     expect(rnd).toBeLessThanOrEqual(10);
     expect(evaluateExpression('min(10, 5, 20)', scope)).toBe(5);
     expect(evaluateExpression('max(10, 5, 20)', scope)).toBe(20);
+
+    // Test slide() with active map and wall collision
+    setActiveMap({
+      width: 4,
+      height: 4,
+      grid: [
+        1, 1, 1, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 1, 1, 1,
+      ],
+    });
+    // Move into wall at x=0 from x=1.3: blocked along X
+    const blockedX = evaluateExpression('slide(1.3, 1.5, -0.2, 0, 0.25)', scope) as any;
+    expect(blockedX.x).toBe(1.3);
+    expect(blockedX.y).toBe(1.5);
+
+    // Free movement in open cell (1, 1) towards (2, 1)
+    const moved = evaluateExpression('slide(1.3, 1.5, 0.2, 0, 0.25)', scope) as any;
+    expect(moved.x).toBeCloseTo(1.5);
+    expect(moved.y).toBe(1.5);
+
+    // Line of sight: (1.5, 1.5) to (0.5, 1.5) across wall at x=0 is blocked!
+    expect(evaluateExpression('sees(1.5, 1.5, 0.5, 1.5)', scope)).toBe(false);
+    // Line of sight within open room (1.2, 1.5) to (1.8, 1.5) is clear!
+    expect(evaluateExpression('sees(1.2, 1.5, 1.8, 1.5)', scope)).toBe(true);
+    // Object form sees(player, enemy)
+    const objScope = buildScope({
+      player: { x: 1.5, y: 1.5 },
+      target1: { x: 0.5, y: 1.5 },
+      target2: { x: 1.8, y: 1.5 },
+    });
+    expect(evaluateExpression('sees(player, target1)', objScope)).toBe(false);
+    expect(evaluateExpression('sees(player, target2)', objScope)).toBe(true);
+
+    setActiveMap(null);
   });
 
   it('evaluates unary negation on variables and expressions', () => {
@@ -234,5 +273,18 @@ describe('evaluateExpression', () => {
     expect(evaluateExpression('-dir', scope)).toBe(-1);
     expect(evaluateExpression('-1', scope)).toBe(-1);
     expect(evaluateExpression('-speed', scope)).toBe(-5);
+  });
+
+  it('compiles expressions into reusable JIT closures and uses cache', () => {
+    clearExpressionCache();
+    const fn = compileExpression('player.x * 2 + player.y');
+    expect(fn({ player: { x: 10, y: 5 } })).toBe(25);
+    expect(fn({ player: { x: 3, y: 4 } })).toBe(10);
+
+    // Test JIT caching via evaluateExpression
+    const expr = 'health > 0 && ammo > 0';
+    expect(evaluateExpression(expr, { health: 100, ammo: 24 })).toBe(true);
+    expect(evaluateExpression(expr, { health: 0, ammo: 24 })).toBe(false);
+    expect(evaluateExpression(expr, { health: 100, ammo: 0 })).toBe(false);
   });
 });

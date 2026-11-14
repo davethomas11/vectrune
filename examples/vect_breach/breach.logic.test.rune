@@ -1,0 +1,94 @@
+#!RUNE
+import "vect_breach.rune"
+
+@Test/VectBreach/StartAndMovement
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    assert state.status == "playing"
+    assert state.health == 100
+    assert state.ammo == 24
+    assert state.player.x == 1.5
+    assert state.player.y == 1.5
+    assert state.player.angle == 0
+    invoke tick {"turn_right":true}
+    assert state.player.angle == 4
+    invoke tick {"forward":true}
+    assert state.player.x > 1.5
+    invoke tick {"back":true}
+    invoke tick {"back":true}
+    invoke tick {"back":true}
+    invoke tick {"back":true}
+    invoke tick {"back":true}
+    invoke tick {"back":true}
+    assert state.player.x >= 1.25
+    assert state.player.x < 1.4
+
+@Test/VectBreach/CombatAndShooting
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    assert state.ammo == 24
+    assert state.kills == 0
+    invoke tick {"fire":true}
+    assert state.ammo == 23
+    assert state.weapon.sprite == "weapon/shotgun_fire"
+    assert state.fire_cooldown == 12
+
+@Test/VectBreach/PickupCollection
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    assert state.pickups[0].visible == true
+    invoke tick
+    assert state.pickups.length == 2
+
+@Test/VectBreach/TitleAndStoryFlow
+type = logic
+page = breach_level
+run:
+    assert state.status == "title"
+    invoke advance
+    assert state.status == "story"
+    assert state.level == 1
+    assert state.level_map == "e1m1"
+    invoke advance
+    assert state.status == "playing"
+    assert state.switch_activated == false
+    assert state.health == 100
+    assert state.ammo == 24
+
+@Test/VectBreach/LevelProgression
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    assert state.level == 1
+    assert state.status == "playing"
+    invoke unlock_elevator
+    invoke teleport {"x":14.5,"y":7.4}
+    invoke tick
+    assert state.level == 2
+    assert state.status == "story"
+    assert state.level_map == "e1m2"
+    invoke advance
+    assert state.status == "playing"
+    invoke unlock_elevator
+    invoke teleport {"x":1.5,"y":7.4}
+    invoke tick
+    assert state.level == 3
+    assert state.status == "story"
+    assert state.level_map == "e1m3"
+    invoke advance
+    assert state.status == "playing"
+    invoke unlock_elevator
+    invoke teleport {"x":14.5,"y":7.4}
+    invoke tick
+    assert state.status == "won"

@@ -1,0 +1,31 @@
+#!RUNE
+import "assets.rune"
+import "map.rune"
+import "sound.rune"
+import "logic.rune"
+
+@App
+name = Vect Breach
+type = pixel-3d
+runtime = hybrid
+scene = breach_level
+resolution = [320, 200]
+tick_rate = 30
+port = 3020
+
+@Scene/breach_level
+logic = breach
+map = e1m1
+camera = player
+things = ["enemies", "pickups"]
+weapon = weapon
+hud = {"health":"health","ammo":"ammo","score":"score"}
+keys = {"KeyW":"forward","KeyS":"back","KeyA":"strafe_left","KeyD":"strafe_right","ArrowLeft":"turn_left","ArrowRight":"turn_right","Space":"fire","KeyE":"use"}
+mouse_look = true
+
+# Page metadata lets the same Rune actions run through vectrune test & parser.
+@Page/breach_level
+logic = breach
+view:
+    canvas data-rune-pixel-3d=true
+

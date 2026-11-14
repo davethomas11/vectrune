@@ -524,6 +524,107 @@ var __RuneWeb = (() => {
     return getStorageItem(key) !== null;
   }
 
+  // src/pixel3d/math.ts
+  var ANGLE_UNITS = 4096;
+  var DEG_TO_INDEX = ANGLE_UNITS / 360;
+  var RAD_TO_INDEX = ANGLE_UNITS / (Math.PI * 2);
+  var SIN_TABLE = new Float64Array(ANGLE_UNITS);
+  var COS_TABLE = new Float64Array(ANGLE_UNITS);
+  for (let i = 0; i < ANGLE_UNITS; i++) {
+    const rad = i * 2 * Math.PI / ANGLE_UNITS;
+    SIN_TABLE[i] = Math.sin(rad);
+    COS_TABLE[i] = Math.cos(rad);
+  }
+
+  // src/pixel3d/spatial.ts
+  var activeMap = null;
+  function getActiveMap() {
+    return activeMap || (typeof globalThis !== "undefined" ? globalThis.__RuneSpatialMap : null) || null;
+  }
+  function isWallAt(x, y, map = getActiveMap()) {
+    const m = map || getActiveMap();
+    if (!m) return false;
+    const mx = Math.floor(x);
+    const my = Math.floor(y);
+    if (mx < 0 || mx >= m.width || my < 0 || my >= m.height) return true;
+    const cell = m.grid[my * m.width + mx];
+    if (cell === 0) return false;
+    if (m.doors && m.doors[cell]) {
+      return m.doors[cell].open < 0.8;
+    }
+    return true;
+  }
+  function collidesWithWall(x, y, radius, map) {
+    const minX = Math.floor(x - radius);
+    const maxX = Math.floor(x + radius);
+    const minY = Math.floor(y - radius);
+    const maxY = Math.floor(y + radius);
+    for (let my = minY; my <= maxY; my++) {
+      for (let mx = minX; mx <= maxX; mx++) {
+        if (mx < 0 || mx >= map.width || my < 0 || my >= map.height) {
+          return true;
+        }
+        const cell = map.grid[my * map.width + mx];
+        let isWall = cell !== 0;
+        if (cell !== 0 && map.doors && map.doors[cell]) {
+          isWall = map.doors[cell].open < 0.8;
+        }
+        if (isWall) {
+          const cx = Math.max(mx, Math.min(mx + 1, x));
+          const cy = Math.max(my, Math.min(my + 1, y));
+          const distX = x - cx;
+          const distY = y - cy;
+          const r = radius - 1e-3;
+          if (distX * distX + distY * distY < r * r) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+  function slide(px, py, dx, dy, radius = 0.25, map = getActiveMap()) {
+    if (Number.isNaN(px) || Number.isNaN(py) || Number.isNaN(dx) || Number.isNaN(dy)) {
+      return { x: px, y: py };
+    }
+    const effectiveMap = map || getActiveMap();
+    if (!effectiveMap) return { x: px + dx, y: py + dy };
+    let newX = px;
+    let newY = py;
+    if (dx !== 0) {
+      const tryX = px + dx;
+      if (!collidesWithWall(tryX, py, radius, effectiveMap)) {
+        newX = tryX;
+      }
+    }
+    if (dy !== 0) {
+      const tryY = py + dy;
+      if (!collidesWithWall(newX, tryY, radius, effectiveMap)) {
+        newY = tryY;
+      } else if (newX !== px && !collidesWithWall(px, tryY, radius, effectiveMap)) {
+        newY = tryY;
+        newX = px;
+      }
+    }
+    return { x: newX, y: newY };
+  }
+  function sees(ax, ay, bx, by, map = getActiveMap()) {
+    const m = map || getActiveMap();
+    if (!m) return true;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1e-3) return true;
+    const steps = Math.max(2, Math.ceil(dist * 8));
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const x = ax + dx * t;
+      const y = ay + dy * t;
+      if (isWallAt(x, y, m)) return false;
+    }
+    return true;
+  }
+
   // src/expression.ts
   var MAX_DEPTH = 64;
   function tryParseLiteral(expr, scope) {
@@ -589,6 +690,7 @@ var __RuneWeb = (() => {
     if (literal !== void 0) return literal;
     const pathValue = resolvePath(expr, scope);
     if (pathValue !== void 0) return pathValue;
+    if (expr.includes(".") || expr.includes("[")) return void 0;
     return normalizeLiteral(expr);
   }
   function parseHelperCall(expr) {
@@ -637,23 +739,130 @@ var __RuneWeb = (() => {
     }
     return void 0;
   }
-  function evaluateExpression(expr, scope, depth) {
-    if ((depth || 0) > MAX_DEPTH) return void 0;
-    const nextDepth = (depth || 0) + 1;
+  var exprCache = /* @__PURE__ */ new Map();
+  var MAX_CACHE_SIZE = 8192;
+  function compilePath(expr) {
+    const segments = splitPathSegments(expr);
+    if (!segments.length) return () => void 0;
+    if (segments.length === 1 && !segments[0].includes("[")) {
+      const key = segments[0];
+      return (scope) => scope?.[key];
+    }
+    if (segments.length === 2 && !segments[0].includes("[") && !segments[1].includes("[")) {
+      const k0 = segments[0];
+      const k1 = segments[1];
+      if (k1 === "length") {
+        return (scope) => {
+          const obj = scope?.[k0];
+          return Array.isArray(obj) ? obj.length : obj?.length;
+        };
+      }
+      return (scope) => {
+        const obj = scope?.[k0];
+        return obj?.[k1];
+      };
+    }
+    if (segments.length === 3 && !segments[0].includes("[") && !segments[1].includes("[") && !segments[2].includes("[")) {
+      const k0 = segments[0];
+      const k1 = segments[1];
+      const k2 = segments[2];
+      if (k2 === "length") {
+        return (scope) => {
+          const o0 = scope?.[k0];
+          const obj = o0?.[k1];
+          return Array.isArray(obj) ? obj.length : obj?.length;
+        };
+      }
+      return (scope) => {
+        const o0 = scope?.[k0];
+        const o1 = o0?.[k1];
+        return o1?.[k2];
+      };
+    }
+    const compiledSteps = segments.map((segment) => {
+      if (segment === "length") {
+        return (current) => Array.isArray(current) ? current.length : current?.length;
+      }
+      if (segment.startsWith("[].(") && segment.endsWith(")")) {
+        const cond = compileExpression(segment.slice(4, -1));
+        return (current, scope) => {
+          if (!Array.isArray(current)) return void 0;
+          return current.find((item) => {
+            const innerScope = Object.assign({}, scope, { it: item });
+            return Boolean(cond(innerScope));
+          });
+        };
+      }
+      if (segment.startsWith("[") && segment.endsWith("]")) {
+        const inner = compileExpression(segment.slice(1, -1));
+        return (current, scope) => {
+          if (current === null || current === void 0) return void 0;
+          const lookup = inner(scope);
+          return current[valueToString(lookup)];
+        };
+      }
+      return (current) => {
+        if (current === null || current === void 0) return void 0;
+        return current[segment];
+      };
+    });
+    return (scope) => {
+      let current = scope;
+      for (let i = 0; i < compiledSteps.length; i++) {
+        if (current === null || current === void 0) return void 0;
+        current = compiledSteps[i](current, scope);
+      }
+      return current;
+    };
+  }
+  function compileResolveValue(expr) {
+    const trimmed = expr.trim();
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      return (scope) => resolveValue(trimmed, scope);
+    }
+    const literal = tryParseLiteral(trimmed);
+    if (literal !== void 0) {
+      return () => literal;
+    }
+    if (trimmed.includes(".") || trimmed.includes("[")) {
+      const pathFn = compilePath(trimmed);
+      return (scope) => pathFn(scope);
+    }
+    const fallback = normalizeLiteral(trimmed);
+    return (scope) => {
+      if (scope && scope[trimmed] !== void 0) {
+        return scope[trimmed];
+      }
+      return fallback;
+    };
+  }
+  function compileExpression(expr, depth = 0) {
+    if (depth > MAX_DEPTH) return () => void 0;
+    const nextDepth = depth + 1;
     let trimmed = String(expr || "").trim();
-    if (!trimmed) return void 0;
-    if (trimmed === "true") return true;
-    if (trimmed === "false") return false;
-    if (trimmed === "null") return null;
-    if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+    if (!trimmed) return () => void 0;
+    if (trimmed === "true") return () => true;
+    if (trimmed === "false") return () => false;
+    if (trimmed === "null") return () => null;
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+      const n = Number(trimmed);
+      return () => n;
+    }
     if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(trimmed)) {
-      const value = resolvePath(trimmed, scope);
-      if (value !== void 0) return value;
+      const pathFn = compilePath(trimmed);
+      if (!trimmed.includes(".") && !trimmed.includes("[")) {
+        const fallback = normalizeLiteral(trimmed);
+        return (scope) => {
+          const val = pathFn(scope);
+          return val !== void 0 ? val : fallback;
+        };
+      }
+      return (scope) => pathFn(scope);
     }
     if (trimmed.startsWith('"')) {
       try {
         const literal = JSON.parse(trimmed);
-        if (typeof literal === "string") return literal;
+        if (typeof literal === "string") return () => literal;
       } catch (_) {
       }
     }
@@ -673,17 +882,21 @@ var __RuneWeb = (() => {
           rest = match[2];
         }
       }
-      if (selector && typeof document !== "undefined") {
-        const el = document.querySelector(selector);
-        if (el) {
-          if (!rest) return el;
-          if (rest.startsWith(".")) {
-            return resolvePath(rest.slice(1), el);
+      if (selector) {
+        const cRest = rest ? compilePath(rest.startsWith(".") ? rest.slice(1) : rest) : null;
+        return () => {
+          if (typeof document !== "undefined") {
+            const el = document.querySelector(selector);
+            if (el) {
+              if (!cRest) return el;
+              return cRest(el);
+            }
           }
-        }
-        return void 0;
+          return void 0;
+        };
       }
     }
+    let parenStripped = false;
     while (trimmed.startsWith("(") && trimmed.endsWith(")")) {
       let d = 0;
       let matched = true;
@@ -697,65 +910,203 @@ var __RuneWeb = (() => {
       }
       if (!matched) break;
       trimmed = trimmed.slice(1, -1).trim();
+      parenStripped = true;
+    }
+    if (parenStripped) {
+      return compileExpression(trimmed, nextDepth);
     }
     if (trimmed.startsWith("!")) {
-      return !Boolean(
-        evaluateExpression(trimmed.slice(1).trim(), scope, nextDepth)
-      );
+      const inner = compileExpression(trimmed.slice(1).trim(), nextDepth);
+      return (scope) => !Boolean(inner(scope));
     }
     if (trimmed.startsWith("collide(") && trimmed.endsWith(")")) {
-      const argsStr = trimmed.slice(8, -1);
-      const parts = splitTopLevel(argsStr, ",");
+      const parts = splitTopLevel(trimmed.slice(8, -1), ",");
       if (parts.length >= 2) {
-        const a = evaluateExpression(parts[0], scope, nextDepth);
-        const b = evaluateExpression(parts[1], scope, nextDepth);
-        const w = parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : 20;
-        const h = parts.length >= 4 ? Number(evaluateExpression(parts[3], scope, nextDepth)) : w;
-        if (a && b && typeof a === "object" && typeof b === "object" && a.x !== void 0 && a.y !== void 0 && b.x !== void 0 && b.y !== void 0) {
-          return Math.abs(Number(a.x) - Number(b.x)) < w && Math.abs(Number(a.y) - Number(b.y)) < h;
-        }
+        const cA = compileExpression(parts[0], nextDepth);
+        const cB = compileExpression(parts[1], nextDepth);
+        const cW = parts.length >= 3 ? compileExpression(parts[2], nextDepth) : null;
+        const cH = parts.length >= 4 ? compileExpression(parts[3], nextDepth) : null;
+        return (scope) => {
+          const a = cA(scope);
+          const b = cB(scope);
+          const w = cW ? Number(cW(scope)) : 20;
+          const h = cH ? Number(cH(scope)) : w;
+          if (a && b && typeof a === "object" && typeof b === "object" && a.x !== void 0 && a.y !== void 0 && b.x !== void 0 && b.y !== void 0) {
+            return Math.abs(Number(a.x) - Number(b.x)) < w && Math.abs(Number(a.y) - Number(b.y)) < h;
+          }
+          return false;
+        };
       }
-      return false;
     }
     if (trimmed.startsWith("clamp(") && trimmed.endsWith(")")) {
       const parts = splitTopLevel(trimmed.slice(6, -1), ",");
       if (parts.length === 3) {
-        const v = Number(evaluateExpression(parts[0], scope, nextDepth));
-        const min = Number(evaluateExpression(parts[1], scope, nextDepth));
-        const max = Number(evaluateExpression(parts[2], scope, nextDepth));
-        return Math.min(Math.max(v, min), max);
+        const cV = compileExpression(parts[0], nextDepth);
+        const cMin = compileExpression(parts[1], nextDepth);
+        const cMax = compileExpression(parts[2], nextDepth);
+        return (scope) => {
+          const v = Number(cV(scope));
+          const min = Number(cMin(scope));
+          const max = Number(cMax(scope));
+          return Math.min(Math.max(v, min), max);
+        };
       }
     }
     if (trimmed.startsWith("abs(") && trimmed.endsWith(")")) {
-      const val = Number(evaluateExpression(trimmed.slice(4, -1), scope, nextDepth));
-      return Math.abs(val);
+      const cVal = compileExpression(trimmed.slice(4, -1), nextDepth);
+      return (scope) => Math.abs(Number(cVal(scope)));
+    }
+    if (trimmed.startsWith("floor(") && trimmed.endsWith(")")) {
+      const cVal = compileExpression(trimmed.slice(6, -1), nextDepth);
+      return (scope) => Math.floor(Number(cVal(scope)));
+    }
+    if (trimmed.startsWith("sqrt(") && trimmed.endsWith(")")) {
+      const cVal = compileExpression(trimmed.slice(5, -1), nextDepth);
+      return (scope) => Math.sqrt(Number(cVal(scope)));
+    }
+    if (trimmed.startsWith("sin(") && trimmed.endsWith(")")) {
+      const cVal = compileExpression(trimmed.slice(4, -1), nextDepth);
+      return (scope) => Math.sin(Number(cVal(scope)) * Math.PI / 180);
+    }
+    if (trimmed.startsWith("cos(") && trimmed.endsWith(")")) {
+      const cVal = compileExpression(trimmed.slice(4, -1), nextDepth);
+      return (scope) => Math.cos(Number(cVal(scope)) * Math.PI / 180);
+    }
+    if (trimmed.startsWith("atan2(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(6, -1), ",");
+      if (parts.length === 2) {
+        const cDy = compileExpression(parts[0], nextDepth);
+        const cDx = compileExpression(parts[1], nextDepth);
+        return (scope) => {
+          const dy = Number(cDy(scope));
+          const dx = Number(cDx(scope));
+          let deg = Math.atan2(dy, dx) * 180 / Math.PI;
+          if (deg < 0) deg += 360;
+          return deg;
+        };
+      }
+    }
+    if (trimmed.startsWith("distance(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(9, -1), ",");
+      if (parts.length === 2) {
+        const cA = compileExpression(parts[0], nextDepth);
+        const cB = compileExpression(parts[1], nextDepth);
+        return (scope) => {
+          const a = cA(scope);
+          const b = cB(scope);
+          if (a && b && typeof a === "object" && typeof b === "object" && a.x !== void 0 && a.y !== void 0 && b.x !== void 0 && b.y !== void 0) {
+            const dx = Number(a.x) - Number(b.x);
+            const dy = Number(a.y) - Number(b.y);
+            return Math.sqrt(dx * dx + dy * dy);
+          }
+          return 0;
+        };
+      } else if (parts.length === 4) {
+        const cAx = compileExpression(parts[0], nextDepth);
+        const cAy = compileExpression(parts[1], nextDepth);
+        const cBx = compileExpression(parts[2], nextDepth);
+        const cBy = compileExpression(parts[3], nextDepth);
+        return (scope) => {
+          const dx = Number(cAx(scope)) - Number(cBx(scope));
+          const dy = Number(cAy(scope)) - Number(cBy(scope));
+          return Math.sqrt(dx * dx + dy * dy);
+        };
+      }
+    }
+    if (trimmed.startsWith("angle_to(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(9, -1), ",");
+      if (parts.length === 2) {
+        const cA = compileExpression(parts[0], nextDepth);
+        const cB = compileExpression(parts[1], nextDepth);
+        return (scope) => {
+          const a = cA(scope);
+          const b = cB(scope);
+          if (a && b && typeof a === "object" && typeof b === "object" && a.x !== void 0 && a.y !== void 0 && b.x !== void 0 && b.y !== void 0) {
+            let deg = Math.atan2(Number(b.y) - Number(a.y), Number(b.x) - Number(a.x)) * 180 / Math.PI;
+            if (deg < 0) deg += 360;
+            return deg;
+          }
+          return 0;
+        };
+      }
+    }
+    if (trimmed.startsWith("slide(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(6, -1), ",");
+      if (parts.length >= 4) {
+        const cPx = compileExpression(parts[0], nextDepth);
+        const cPy = compileExpression(parts[1], nextDepth);
+        const cDx = compileExpression(parts[2], nextDepth);
+        const cDy = compileExpression(parts[3], nextDepth);
+        const cR = parts.length >= 5 ? compileExpression(parts[4], nextDepth) : null;
+        return (scope) => {
+          const px = Number(cPx(scope));
+          const py = Number(cPy(scope));
+          const dx = Number(cDx(scope));
+          const dy = Number(cDy(scope));
+          const r = cR ? Number(cR(scope)) : 0.25;
+          return slide(px, py, dx, dy, r);
+        };
+      }
+    }
+    if (trimmed.startsWith("sees(") && trimmed.endsWith(")")) {
+      const parts = splitTopLevel(trimmed.slice(5, -1), ",");
+      if (parts.length === 2) {
+        const cA = compileExpression(parts[0], nextDepth);
+        const cB = compileExpression(parts[1], nextDepth);
+        return (scope) => {
+          const a = cA(scope);
+          const b = cB(scope);
+          if (!a || !b) return false;
+          return sees(Number(a.x), Number(a.y), Number(b.x), Number(b.y));
+        };
+      } else if (parts.length >= 4) {
+        const cX1 = compileExpression(parts[0], nextDepth);
+        const cY1 = compileExpression(parts[1], nextDepth);
+        const cX2 = compileExpression(parts[2], nextDepth);
+        const cY2 = compileExpression(parts[3], nextDepth);
+        return (scope) => {
+          return sees(
+            Number(cX1(scope)),
+            Number(cY1(scope)),
+            Number(cX2(scope)),
+            Number(cY2(scope))
+          );
+        };
+      }
     }
     if (trimmed.startsWith("random(") && trimmed.endsWith(")")) {
       const parts = splitTopLevel(trimmed.slice(7, -1), ",");
       if (parts.length >= 2) {
-        const min = Number(evaluateExpression(parts[0], scope, nextDepth));
-        const max = Number(evaluateExpression(parts[1], scope, nextDepth));
-        return randomInt(min, max, parts.length >= 3 ? Number(evaluateExpression(parts[2], scope, nextDepth)) : void 0);
+        const cMin = compileExpression(parts[0], nextDepth);
+        const cMax = compileExpression(parts[1], nextDepth);
+        const cSeed = parts.length >= 3 ? compileExpression(parts[2], nextDepth) : null;
+        return (scope) => {
+          const min = Number(cMin(scope));
+          const max = Number(cMax(scope));
+          return randomInt(min, max, cSeed ? Number(cSeed(scope)) : void 0);
+        };
       }
     }
     for (const name of ["shuffle", "pick"]) {
       if (trimmed.startsWith(name + "(") && trimmed.endsWith(")")) {
         const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ",");
-        const values = evaluateExpression(parts[0], scope, nextDepth);
-        if (!Array.isArray(values)) return void 0;
-        const seed = parts.length > 1 ? Number(evaluateExpression(parts[1], scope, nextDepth)) : randomInt(0, 2147483647);
-        return name === "shuffle" ? shuffled(values, seed) : values.length ? values[randomInt(0, values.length - 1, seed)] : null;
+        const cValues = compileExpression(parts[0], nextDepth);
+        const cSeed = parts.length > 1 ? compileExpression(parts[1], nextDepth) : null;
+        return (scope) => {
+          const values = cValues(scope);
+          if (!Array.isArray(values)) return void 0;
+          const seed = cSeed ? Number(cSeed(scope)) : randomInt(0, 2147483647);
+          return name === "shuffle" ? shuffled(values, seed) : values.length ? values[randomInt(0, values.length - 1, seed)] : null;
+        };
       }
     }
     if (trimmed.startsWith("min(") && trimmed.endsWith(")")) {
-      const parts = splitTopLevel(trimmed.slice(4, -1), ",");
-      const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
-      return Math.min(...nums);
+      const cParts = splitTopLevel(trimmed.slice(4, -1), ",").map((p) => compileExpression(p, nextDepth));
+      return (scope) => Math.min(...cParts.map((fn) => Number(fn(scope))));
     }
     if (trimmed.startsWith("max(") && trimmed.endsWith(")")) {
-      const parts = splitTopLevel(trimmed.slice(4, -1), ",");
-      const nums = parts.map((p) => Number(evaluateExpression(p, scope, nextDepth)));
-      return Math.max(...nums);
+      const cParts = splitTopLevel(trimmed.slice(4, -1), ",").map((p) => compileExpression(p, nextDepth));
+      return (scope) => Math.max(...cParts.map((fn) => Number(fn(scope))));
     }
     if (trimmed.startsWith("storage.get(") || trimmed.startsWith("local_storage.get(") || trimmed.startsWith("localStorage.get(")) {
       const callEnd = trimmed.lastIndexOf(")");
@@ -763,36 +1114,37 @@ var __RuneWeb = (() => {
       const trailingProp = trimmed.slice(callEnd + 1).trim();
       const inner = callPart.slice(callPart.indexOf("(") + 1, -1);
       const parts = splitTopLevel(inner, ",");
-      const key = String(evaluateExpression(parts[0], scope, nextDepth));
-      const defVal = parts.length > 1 ? evaluateExpression(parts[1], scope, nextDepth) : null;
-      const item = getStorageItem(key);
-      let result = defVal;
-      if (item !== null) {
-        try {
-          result = JSON.parse(item);
-        } catch {
-          result = item;
+      const cKey = compileExpression(parts[0], nextDepth);
+      const cDef = parts.length > 1 ? compileExpression(parts[1], nextDepth) : null;
+      return (scope) => {
+        const key = String(cKey(scope));
+        const defVal = cDef ? cDef(scope) : null;
+        const item = getStorageItem(key);
+        let result = defVal;
+        if (item !== null) {
+          try {
+            result = JSON.parse(item);
+          } catch {
+            result = item;
+          }
         }
-      }
-      if (trailingProp.startsWith(".") && result && typeof result === "object") {
-        const prop = trailingProp.slice(1);
-        return result[prop];
-      }
-      return result;
+        if (trailingProp.startsWith(".") && result && typeof result === "object") {
+          const prop = trailingProp.slice(1);
+          return result[prop];
+        }
+        return result;
+      };
     }
     if (trimmed.startsWith("storage.has(") || trimmed.startsWith("local_storage.has(") || trimmed.startsWith("localStorage.has(")) {
       const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
-      const key = String(evaluateExpression(inner, scope, nextDepth));
-      return hasStorageItem(key);
+      const cKey = compileExpression(inner, nextDepth);
+      return (scope) => hasStorageItem(String(cKey(scope)));
     }
     const helperCall = parseHelperCall(trimmed);
     if (helperCall) {
-      return callHelper(
-        helperCall.name,
-        helperCall.args.map((arg) => evaluateExpression(arg, scope, nextDepth)),
-        scope,
-        nextDepth
-      );
+      const cArgs = helperCall.args.map((arg) => compileExpression(arg, nextDepth));
+      const name = helperCall.name;
+      return (scope) => callHelper(name, cArgs.map((fn) => fn(scope)), scope, nextDepth);
     }
     const methodMatch = trimmed.match(
       /^(.+?)\.(any|mask|filter|find|max)(?:\((.*)\)|\s+(.+?))(?:\.(length))?$/
@@ -800,65 +1152,58 @@ var __RuneWeb = (() => {
     if (methodMatch) {
       const [, receiver, method, parenArgs, spaceArgs, trailingProp] = methodMatch;
       const argsStr = (parenArgs !== void 0 ? parenArgs : spaceArgs).trim();
-      const collection = evaluateExpression(receiver, scope, nextDepth);
-      let result = void 0;
-      if (method === "mask" && Array.isArray(collection)) {
-        const player = valueToString(
-          evaluateExpression(argsStr, scope, nextDepth)
-        );
-        result = collection.reduce(
-          (acc, cell, i) => {
-            return valueToString(cell) === player ? acc | 1 << i : acc;
-          },
-          0
-        );
-      } else if ((method === "any" || method === "find" || method === "filter" || method === "max") && Array.isArray(collection)) {
-        const arrowMatch = argsStr.match(/^(\w+)\s*=>\s*(.+)$/);
-        const [paramName, predExpr] = arrowMatch ? [arrowMatch[1], arrowMatch[2]] : ["it", argsStr];
+      const cReceiver = compileExpression(receiver, nextDepth);
+      if (method === "mask") {
+        const cArg = compileExpression(argsStr, nextDepth);
+        return (scope) => {
+          const collection = cReceiver(scope);
+          if (!Array.isArray(collection)) return void 0;
+          const player = valueToString(cArg(scope));
+          return collection.reduce(
+            (acc, cell, i) => {
+              return valueToString(cell) === player ? acc | 1 << i : acc;
+            },
+            0
+          );
+        };
+      }
+      const arrowMatch = argsStr.match(/^(\w+)\s*=>\s*(.+)$/);
+      const [paramName, predExpr] = arrowMatch ? [arrowMatch[1], arrowMatch[2]] : ["it", argsStr];
+      const cPred = compileExpression(predExpr, nextDepth);
+      return (scope) => {
+        const collection = cReceiver(scope);
+        if (!Array.isArray(collection)) return void 0;
+        let result = void 0;
         if (method === "any") {
           result = collection.some((item) => {
-            const innerScope = Object.assign({}, scope, {
-              [paramName]: item
-            });
-            return Boolean(
-              evaluateExpression(predExpr, innerScope, nextDepth)
-            );
+            const innerScope = Object.assign({}, scope, { [paramName]: item });
+            return Boolean(cPred(innerScope));
           });
         } else if (method === "filter") {
           result = collection.filter((item) => {
-            const innerScope = Object.assign({}, scope, {
-              [paramName]: item
-            });
-            return Boolean(
-              evaluateExpression(predExpr, innerScope, nextDepth)
-            );
+            const innerScope = Object.assign({}, scope, { [paramName]: item });
+            return Boolean(cPred(innerScope));
           });
         } else if (method === "find") {
           result = collection.find((item) => {
-            const innerScope = Object.assign({}, scope, {
-              [paramName]: item
-            });
-            return Boolean(
-              evaluateExpression(predExpr, innerScope, nextDepth)
-            );
+            const innerScope = Object.assign({}, scope, { [paramName]: item });
+            return Boolean(cPred(innerScope));
           });
         } else if (method === "max") {
           result = collection.reduce(
             (max, item) => {
-              const innerScope = Object.assign({}, scope, {
-                [paramName]: item
-              });
-              const val = evaluateExpression(predExpr, innerScope, nextDepth);
+              const innerScope = Object.assign({}, scope, { [paramName]: item });
+              const val = cPred(innerScope);
               return max === void 0 || val > max ? val : max;
             },
             void 0
           );
         }
-      }
-      if (trailingProp === "length" && result !== void 0 && result.length !== void 0) {
-        return result.length;
-      }
-      return result;
+        if (trailingProp === "length" && result !== void 0 && result.length !== void 0) {
+          return result.length;
+        }
+        return result;
+      };
     }
     if (includesTopLevel(trimmed, " ? ")) {
       const parts = splitTopLevel(trimmed, " ? ");
@@ -866,150 +1211,176 @@ var __RuneWeb = (() => {
       const rest = parts.slice(1).join(" ? ");
       if (includesTopLevel(rest, " : ")) {
         const colonParts = splitTopLevel(rest, " : ");
-        const trueExpr = colonParts[0];
-        const falseExpr = colonParts.slice(1).join(" : ");
-        return Boolean(evaluateExpression(condition, scope, nextDepth)) ? evaluateExpression(trueExpr, scope, nextDepth) : evaluateExpression(falseExpr, scope, nextDepth);
+        const cCond = compileExpression(condition, nextDepth);
+        const cTrue = compileExpression(colonParts[0], nextDepth);
+        const cFalse = compileExpression(colonParts.slice(1).join(" : "), nextDepth);
+        return (scope) => Boolean(cCond(scope)) ? cTrue(scope) : cFalse(scope);
       }
     }
     if (includesTopLevel(trimmed, " ?? ")) {
       const parts = splitTopLevel(trimmed, " ?? ");
       const leftRaw = parts[0].trim();
-      let left = evaluateExpression(leftRaw, scope, nextDepth);
-      if (typeof left === "string" && left === leftRaw && resolvePath(leftRaw, scope) === void 0 && tryParseLiteral(leftRaw, scope) === void 0) {
-        left = void 0;
-      }
-      if (left !== void 0 && left !== null && left !== "") {
-        return left;
-      }
-      return evaluateExpression(parts.slice(1).join(" ?? "), scope, nextDepth);
+      const cLeft = compileExpression(leftRaw, nextDepth);
+      const cRight = compileExpression(parts.slice(1).join(" ?? "), nextDepth);
+      return (scope) => {
+        let left = cLeft(scope);
+        if (typeof left === "string" && left === leftRaw && resolvePath(leftRaw, scope) === void 0 && tryParseLiteral(leftRaw, scope) === void 0) {
+          left = void 0;
+        }
+        if (left !== void 0 && left !== null && left !== "") {
+          return left;
+        }
+        return cRight(scope);
+      };
     }
     if (includesTopLevel(trimmed, " or ")) {
-      return splitTopLevel(trimmed, " or ").some(
-        (part) => Boolean(evaluateExpression(part, scope, nextDepth))
-      );
+      const cParts = splitTopLevel(trimmed, " or ").map((p) => compileExpression(p, nextDepth));
+      return (scope) => cParts.some((fn) => Boolean(fn(scope)));
     }
     if (includesTopLevel(trimmed, " || ")) {
-      return splitTopLevel(trimmed, " || ").some(
-        (part) => Boolean(evaluateExpression(part, scope, nextDepth))
-      );
+      const cParts = splitTopLevel(trimmed, " || ").map((p) => compileExpression(p, nextDepth));
+      return (scope) => cParts.some((fn) => Boolean(fn(scope)));
     }
     if (includesTopLevel(trimmed, " and ")) {
-      return splitTopLevel(trimmed, " and ").every(
-        (part) => Boolean(evaluateExpression(part, scope, nextDepth))
-      );
+      const cParts = splitTopLevel(trimmed, " and ").map((p) => compileExpression(p, nextDepth));
+      return (scope) => cParts.every((fn) => Boolean(fn(scope)));
     }
     if (includesTopLevel(trimmed, " && ")) {
-      return splitTopLevel(trimmed, " && ").every(
-        (part) => Boolean(evaluateExpression(part, scope, nextDepth))
-      );
+      const cParts = splitTopLevel(trimmed, " && ").map((p) => compileExpression(p, nextDepth));
+      return (scope) => cParts.every((fn) => Boolean(fn(scope)));
     }
     if (includesTopLevel(trimmed, " != ")) {
       const [left, right] = splitTopLevel(trimmed, " != ");
-      return valueToString(evaluateExpression(left, scope, nextDepth)) !== valueToString(evaluateExpression(right, scope, nextDepth));
+      const cL = compileExpression(left, nextDepth);
+      const cR = compileExpression(right, nextDepth);
+      return (scope) => valueToString(cL(scope)) !== valueToString(cR(scope));
     }
     if (includesTopLevel(trimmed, " == ")) {
       const [left, right] = splitTopLevel(trimmed, " == ");
-      return valueToString(evaluateExpression(left, scope, nextDepth)) === valueToString(evaluateExpression(right, scope, nextDepth));
+      const cL = compileExpression(left, nextDepth);
+      const cR = compileExpression(right, nextDepth);
+      return (scope) => valueToString(cL(scope)) === valueToString(cR(scope));
     }
     if (includesTopLevel(trimmed, " >= ")) {
       const [left, right] = splitTopLevel(trimmed, " >= ");
-      return evaluateExpression(left, scope, nextDepth) >= evaluateExpression(right, scope, nextDepth);
+      const cL = compileExpression(left, nextDepth);
+      const cR = compileExpression(right, nextDepth);
+      return (scope) => cL(scope) >= cR(scope);
     }
     if (includesTopLevel(trimmed, " <= ")) {
       const [left, right] = splitTopLevel(trimmed, " <= ");
-      return evaluateExpression(left, scope, nextDepth) <= evaluateExpression(right, scope, nextDepth);
+      const cL = compileExpression(left, nextDepth);
+      const cR = compileExpression(right, nextDepth);
+      return (scope) => cL(scope) <= cR(scope);
     }
     if (includesTopLevel(trimmed, " > ")) {
       const [left, right] = splitTopLevel(trimmed, " > ");
-      return evaluateExpression(left, scope, nextDepth) > evaluateExpression(right, scope, nextDepth);
+      const cL = compileExpression(left, nextDepth);
+      const cR = compileExpression(right, nextDepth);
+      return (scope) => cL(scope) > cR(scope);
     }
     if (includesTopLevel(trimmed, " < ")) {
       const [left, right] = splitTopLevel(trimmed, " < ");
-      return evaluateExpression(left, scope, nextDepth) < evaluateExpression(right, scope, nextDepth);
+      const cL = compileExpression(left, nextDepth);
+      const cR = compileExpression(right, nextDepth);
+      return (scope) => cL(scope) < cR(scope);
     }
     if (includesTopLevel(trimmed, " + ")) {
-      return splitTopLevel(trimmed, " + ").reduce(
-        (acc, part, index) => {
-          const value = evaluateExpression(part, scope, nextDepth);
-          if (index === 0) return value;
-          if (typeof acc === "number" && typeof value === "number")
-            return acc + value;
-          return `${valueToString(acc)}${valueToString(value)}`;
-        },
-        void 0
-      );
+      const cParts = splitTopLevel(trimmed, " + ").map((p) => compileExpression(p, nextDepth));
+      return (scope) => cParts.reduce((acc, fn, index) => {
+        const value = fn(scope);
+        if (index === 0) return value;
+        if (typeof acc === "number" && typeof value === "number") return acc + value;
+        return `${valueToString(acc)}${valueToString(value)}`;
+      }, void 0);
     }
     if (includesTopLevel(trimmed, " - ")) {
       const parts = splitTopLevel(trimmed, " - ");
-      const first = Number(evaluateExpression(parts[0], scope, nextDepth));
-      return parts.slice(1).reduce((acc, part) => {
-        return acc - Number(evaluateExpression(part, scope, nextDepth));
-      }, first);
+      const cFirst = compileExpression(parts[0], nextDepth);
+      const cRest = parts.slice(1).map((p) => compileExpression(p, nextDepth));
+      return (scope) => {
+        const first = Number(cFirst(scope));
+        return cRest.reduce((acc, fn) => acc - Number(fn(scope)), first);
+      };
     }
     if (includesTopLevel(trimmed, " * ")) {
-      return splitTopLevel(trimmed, " * ").reduce(
-        (acc, part, idx) => {
-          const val = Number(evaluateExpression(part, scope, nextDepth));
-          return idx === 0 ? val : acc * val;
-        },
-        1
-      );
+      const cParts = splitTopLevel(trimmed, " * ").map((p) => compileExpression(p, nextDepth));
+      return (scope) => cParts.reduce((acc, fn, idx) => {
+        const val = Number(fn(scope));
+        return idx === 0 ? val : acc * val;
+      }, 1);
     }
     if (includesTopLevel(trimmed, " / ")) {
       const parts = splitTopLevel(trimmed, " / ");
-      const first = Number(evaluateExpression(parts[0], scope, nextDepth));
-      return parts.slice(1).reduce((acc, part) => {
-        return acc / Number(evaluateExpression(part, scope, nextDepth));
-      }, first);
+      const cFirst = compileExpression(parts[0], nextDepth);
+      const cRest = parts.slice(1).map((p) => compileExpression(p, nextDepth));
+      return (scope) => {
+        const first = Number(cFirst(scope));
+        return cRest.reduce((acc, fn) => acc / Number(fn(scope)), first);
+      };
     }
     if (includesTopLevel(trimmed, " % ")) {
       const parts = splitTopLevel(trimmed, " % ");
-      const first = Number(evaluateExpression(parts[0], scope, nextDepth));
-      return parts.slice(1).reduce((acc, part) => {
-        return acc % Number(evaluateExpression(part, scope, nextDepth));
-      }, first);
+      const cFirst = compileExpression(parts[0], nextDepth);
+      const cRest = parts.slice(1).map((p) => compileExpression(p, nextDepth));
+      return (scope) => {
+        const first = Number(cFirst(scope));
+        return cRest.reduce((acc, fn) => acc % Number(fn(scope)), first);
+      };
     }
     if (trimmed.startsWith("swap ")) {
       const tokens = trimmed.split(/\s+/);
-      const current = valueToString(
-        evaluateExpression(tokens[1], scope, nextDepth)
-      );
-      const left = valueToString(
-        evaluateExpression(tokens[2], scope, nextDepth)
-      );
-      const right = valueToString(
-        evaluateExpression(tokens[3], scope, nextDepth)
-      );
-      return current === left ? right : left;
+      const cCurr = compileExpression(tokens[1], nextDepth);
+      const cL = compileExpression(tokens[2], nextDepth);
+      const cR = compileExpression(tokens[3], nextDepth);
+      return (scope) => {
+        const current = valueToString(cCurr(scope));
+        const left = valueToString(cL(scope));
+        const right = valueToString(cR(scope));
+        return current === left ? right : left;
+      };
     }
     if (trimmed.startsWith("full ")) {
-      const collection = evaluateExpression(
-        trimmed.slice(5),
-        scope,
-        nextDepth
-      );
-      return Array.isArray(collection) && collection.every((item) => valueToString(item) !== "");
+      const cColl = compileExpression(trimmed.slice(5), nextDepth);
+      return (scope) => {
+        const collection = cColl(scope);
+        return Array.isArray(collection) && collection.every((item) => valueToString(item) !== "");
+      };
     }
     if (includesTopLevel(trimmed, " & ")) {
-      const parts = splitTopLevel(trimmed, " & ");
-      if (parts.length === 2) {
-        return evaluateExpression(parts[0], scope, nextDepth) & evaluateExpression(parts[1], scope, nextDepth);
-      }
+      const [left, right] = splitTopLevel(trimmed, " & ");
+      const cL = compileExpression(left, nextDepth);
+      const cR = compileExpression(right, nextDepth);
+      return (scope) => cL(scope) & cR(scope);
     }
     if (trimmed.startsWith("-") && !trimmed.startsWith("--")) {
       const operand = trimmed.slice(1).trim();
       if (operand) {
-        const val = evaluateExpression(operand, scope, nextDepth);
-        if (typeof val === "number") {
-          return -val;
-        }
-        const num = Number(val);
-        if (!Number.isNaN(num)) {
-          return -num;
-        }
+        const cOp = compileExpression(operand, nextDepth);
+        return (scope) => {
+          const val = cOp(scope);
+          if (typeof val === "number") return -val;
+          const num = Number(val);
+          if (!Number.isNaN(num)) return -num;
+          return void 0;
+        };
       }
     }
-    return resolveValue(trimmed, scope);
+    return compileResolveValue(trimmed);
+  }
+  function evaluateExpression(expr, scope, depth) {
+    if ((depth || 0) > MAX_DEPTH) return void 0;
+    const trimmed = String(expr || "").trim();
+    if (!trimmed) return void 0;
+    let compiled = exprCache.get(trimmed);
+    if (!compiled) {
+      compiled = compileExpression(trimmed, depth || 0);
+      if (exprCache.size >= MAX_CACHE_SIZE) {
+        exprCache.clear();
+      }
+      exprCache.set(trimmed, compiled);
+    }
+    return compiled(scope);
   }
 
   // src/testing/host.ts

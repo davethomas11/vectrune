@@ -207,6 +207,9 @@ pub fn resolve_path(
         } else {
             match current.take() {
                 Some(serde_json::Value::Object(m)) => current = m.get(key).cloned(),
+                Some(serde_json::Value::Array(a)) if key == "length" => {
+                    current = Some(serde_json::Value::from(a.len()));
+                }
                 _ => return None,
             }
         }

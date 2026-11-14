@@ -52,7 +52,7 @@ fn source(doc: &RuneDocument, test: &Section) -> Result<String> {
         logic.timer.is_none(),
         "Automatic timers are not supported by the logic prototype yet"
     );
-    Ok(JsCodegen::new(
+    let mut script = JsCodegen::new(
         page.view_tree.clone(),
         logic,
         "{}".into(),
@@ -64,7 +64,32 @@ fn source(doc: &RuneDocument, test: &Section) -> Result<String> {
         frontend.sounds,
         frontend.music,
     )
-    .generate_logic_test())
+    .generate_logic_test();
+
+    // If testing a pixel-3d scene or document with @Map, inject spatial map for slide() collision
+    let scene_map = doc
+        .sections
+        .iter()
+        .find(|s| s.path.first().map(String::as_str) == Some("Scene") && s.path.get(1) == Some(&page_name.to_string()))
+        .and_then(|s| s.kv.get("map"))
+        .and_then(|v| v.as_str());
+
+    let target_map = scene_map.or_else(|| {
+        doc.sections
+            .iter()
+            .find(|s| s.path.first().map(String::as_str) == Some("Map"))
+            .and_then(|s| s.path.get(1).map(String::as_str))
+    });
+
+    if let Some(map_name) = target_map {
+        if let Some(map_section) = doc.sections.iter().find(|s| s.path == ["Map", map_name]) {
+            if let Ok(map_json) = crate::apps::pixel3d::parse_map_simple(map_section) {
+                script.push_str(&format!("\nglobalThis.__RuneSpatialMap = {};\n", map_json));
+            }
+        }
+    }
+
+    Ok(script)
 }
 
 fn phase(ctx: &Ctx<'_>, test: &Section, key: &str, result: &mut TestResult) -> Result<()> {
