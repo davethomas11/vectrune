@@ -1,10 +1,16 @@
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct ExecProgram {
     pub statements: Vec<ExecStmt>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub enum ExecStmt {
+    Expression { line_no: usize, source: String },
+    Action { line_no: usize, name: String, params: Vec<String>, body: Vec<ExecStmt> },
+    For { line_no: usize, item_name: String, index_name: Option<String>, collection: String, body: Vec<ExecStmt> },
+    Return { line_no: usize, value: Option<String> },
+    Break { line_no: usize },
+    Continue { line_no: usize },
     Print { line_no: usize, text: String },
     ReadInput { line_no: usize, var_name: String },
     /// Assign a literal value (string or number) to a variable.
@@ -42,7 +48,7 @@ pub enum ExecStmt {
     },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct ExecBranch {
     pub condition: String,
     pub body: Vec<ExecStmt>,

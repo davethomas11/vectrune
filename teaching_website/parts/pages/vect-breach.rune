@@ -1,0 +1,28 @@
+@Component/VectBreachPage
+view:
+    div .page .application-guide .space-invaders-page .vect-breach-page:
+        section .card .showcase-intro:
+            div .section-heading:
+                span .tag .tag-advanced "%i18n.VectBreach.badge%"
+                h1 "%i18n.VectBreach.title%"
+                p .lead "%i18n.VectBreach.description%"
+            p .showcase-try "%i18n.VectBreach.try_it%"
+            a .secondary-cta href="/assets/games/vect-breach/index.html" target=_blank rel=noopener "%i18n.VectBreach.standalone%"
+
+        WebExample title="{i18n.VectBreach.title}" preview="/assets/games/vect-breach/index.html" files="{sources ../../../examples/vect_breach/site_shell.rune}" show_heading=false
+
+        section .card:
+            h2 "%i18n.VectBreach.controls_title%"
+            p "%i18n.VectBreach.controls%"
+            p "%i18n.VectBreach.objective%"
+            p "%i18n.VectBreach.device%"
+
+        details .card .showcase-notes:
+            summary "%i18n.VectBreach.source_title%"
+            p "%i18n.VectBreach.source_text%"
+            CommandBlock code="git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
+            CommandBlock code="vectrune examples/vect_breach/vect_breach.rune -o html > vect-breach.html"
+            CommandBlock code="vectrune examples/vect_breach/generate_guards.vect"
+            CommandBlock code="vectrune test examples/vect_breach --type logic"
+            p "%i18n.VectBreach.native%"
+            CommandBlock code="cargo run --features pixel-desktop -- examples/vect_breach/vect_breach.rune --target desktop"

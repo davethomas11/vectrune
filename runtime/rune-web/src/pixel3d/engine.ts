@@ -21,6 +21,7 @@ import {
   type Camera3D,
   type Thing3D,
   type ViewmodelWeapon,
+  type WallOverride,
 } from './raycaster';
 import { setActiveMap, type SpatialMap } from './spatial';
 
@@ -106,6 +107,8 @@ export class Pixel3DEngine {
       map: config.map,
     });
 
+    Object.assign(globalThis, { __RuneSpatialMaps: config.maps || {} });
+
     const spatialMap: SpatialMap = {
       width: config.map.width,
       height: config.map.height,
@@ -149,6 +152,7 @@ export class Pixel3DEngine {
       }
       this.app.computeDerived();
     });
+    this.syncMap();
     this.persist();
   }
 
@@ -161,6 +165,7 @@ export class Pixel3DEngine {
       this.app.invokeAction('start', []);
       this.app.computeDerived();
     });
+    this.syncMap();
     this.persist();
   }
 
@@ -176,9 +181,11 @@ export class Pixel3DEngine {
       this.app.computeDerived();
     });
     this.ticks++;
+    this.syncMap();
     this.persist();
+  }
 
-    // Check if map needs to switch
+  private syncMap(): void {
     const state = this.app.state as Record<string, any>;
     if (state.level_map && state.level_map !== this.currentMapName && this.config.maps?.[state.level_map]) {
       this.currentMapName = state.level_map;
@@ -207,6 +214,7 @@ export class Pixel3DEngine {
       this.app.invokeAction(action, args);
       this.app.computeDerived();
     });
+    this.syncMap();
     this.persist();
   }
 
@@ -234,6 +242,7 @@ export class Pixel3DEngine {
     story_body?: string;
     message?: string;
     switch_activated?: boolean;
+    wall_overrides: WallOverride[];
   } {
     const state = this.app.state as Record<string, any>;
 
@@ -250,8 +259,9 @@ export class Pixel3DEngine {
         const val = path.split('.').reduce((v, k) => v?.[k], state);
         if (Array.isArray(val)) {
           things.push(...val);
-        } else if (val && typeof val === 'object') {
-          things.push(val);
+        } else if (val && typeof val === 'object' &&
+          typeof val.x === 'number' && typeof val.y === 'number' && typeof val.sprite === 'string') {
+          things.push(val as Thing3D);
         }
       }
     }
@@ -298,6 +308,11 @@ export class Pixel3DEngine {
       story_body,
       message,
       switch_activated,
+      wall_overrides: Array.isArray(state.wall_overrides)
+        ? state.wall_overrides.flatMap((tile: any) => {
+            const texture = Object.keys(this.config.textures).indexOf(tile.texture);
+            return texture >= 0 ? [{ x: tile.x, y: tile.y, texture }] : [];
+          }) : [],
     };
   }
 
@@ -305,6 +320,7 @@ export class Pixel3DEngine {
     const stats = this.renderState();
     this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, {
       status: stats.status,
+      heading: stats.camera.angle,
       health: stats.health,
       ammo: stats.ammo,
       score: stats.score,
@@ -315,7 +331,7 @@ export class Pixel3DEngine {
       storyBody: stats.story_body,
       message: stats.message,
       switchActivated: stats.switch_activated,
-    });
+    }, stats.wall_overrides);
     return this.raycaster.buffer;
   }
 }

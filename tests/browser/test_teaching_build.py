@@ -18,7 +18,7 @@ class TeachingBuildTests(unittest.TestCase):
             previous = destination / 'index.html'
             previous.write_text('Working site')
             with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'vectrune 0.2.18\n')) as command:
-                with self.assertRaisesRegex(RuntimeError, '0.2.20.*language routing'):
+                with self.assertRaisesRegex(RuntimeError, '0.3.3.*Pixel 3D'):
                     build_site(destination, Path(folder) / 'old-compiler')
                 self.assertEqual(command.call_count, 1)
             self.assertEqual(previous.read_text(), 'Working site')

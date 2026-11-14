@@ -132,6 +132,306 @@ var __RunePixel3DRuntime = (() => {
     }
   }
 
+  // src/core_expression.ts
+  var precedence = {
+    "??": 1,
+    or: 2,
+    "||": 2,
+    and: 3,
+    "&&": 3,
+    "==": 4,
+    "!=": 4,
+    contains: 4,
+    "<": 5,
+    ">": 5,
+    "<=": 5,
+    ">=": 5,
+    "+": 6,
+    "-": 6,
+    "*": 7,
+    "/": 7,
+    "%": 7
+  };
+  var coreFunctions = {
+    abs: Math.abs,
+    floor: Math.floor,
+    ceil: Math.ceil,
+    round: Math.round,
+    min: Math.min,
+    max: Math.max,
+    sqrt: Math.sqrt,
+    pow: Math.pow,
+    sin: (x) => Math.sin(x * Math.PI / 180),
+    cos: (x) => Math.cos(x * Math.PI / 180),
+    clamp: (x, lo, hi) => Math.max(lo, Math.min(hi, x)),
+    range: (start, end, step = 1) => {
+      if (end === void 0) {
+        end = start;
+        start = 0;
+      }
+      if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(step) || step === 0)
+        throw new Error("range requires finite bounds and a nonzero step");
+      const n = Math.max(0, Math.ceil((end - start) / step));
+      if (n > 1e6) throw new Error("range exceeds 1000000 items");
+      return Array.from({ length: n }, (_, i) => start + i * step);
+    },
+    len: (x) => x.length,
+    keys: Object.keys,
+    values: Object.values,
+    repeat: (value, n) => {
+      if (!Number.isInteger(n) || n < 0 || n > 1e6) throw new Error("invalid repeat count");
+      return Array.from({ length: n }, () => value);
+    },
+    hex: (n, width = 0) => Math.trunc(n).toString(16).padStart(width, "0"),
+    "json.stringify": JSON.stringify,
+    "json.parse": JSON.parse
+  };
+  var forbidden = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function safeKey(key) {
+    key = String(key);
+    if (forbidden.has(key)) throw new Error(`Invalid member: ${key}`);
+    return key;
+  }
+  function tokenize(source) {
+    const out = [];
+    let i = 0;
+    while (i < source.length) {
+      if (/\s/.test(source[i])) {
+        i++;
+        continue;
+      }
+      const tail = source.slice(i);
+      const number = tail.match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/);
+      if (number) {
+        out.push({ kind: "number", value: number[0] });
+        i += number[0].length;
+        continue;
+      }
+      if (source[i] === '"' || source[i] === "'") {
+        const quote = source[i++];
+        let value = "";
+        let closed = false;
+        while (i < source.length) {
+          const c = source[i++];
+          if (c === quote) {
+            closed = true;
+            break;
+          }
+          if (c === "\\") {
+            const e = source[i++];
+            const escapes = { n: "\n", r: "\r", t: "	", "\\": "\\", '"': '"', "'": "'" };
+            if (!(e in escapes)) throw new Error("Invalid string escape");
+            value += escapes[e];
+          } else value += c;
+        }
+        if (!closed) throw new Error("Unclosed string");
+        out.push({ kind: "string", value });
+        continue;
+      }
+      const id = tail.match(/^[A-Za-z_$][\w$]*/);
+      if (id) {
+        out.push({ kind: "id", value: id[0] });
+        i += id[0].length;
+        continue;
+      }
+      const op = tail.match(/^(?:\?\?|&&|\|\||==|!=|<=|>=|=>|[+*/%<>()\[\]{},.:?!-])/);
+      if (!op) throw new Error(`Unexpected token: ${tail.slice(0, 20)}`);
+      out.push({ kind: "op", value: op[0] });
+      i += op[0].length;
+    }
+    out.push({ kind: "eof", value: "" });
+    return out;
+  }
+  function parseCoreExpression(source) {
+    const tokens = tokenize(source);
+    let pos = 0;
+    const peek = () => tokens[pos].value;
+    const take = () => tokens[pos++];
+    const expect = (s) => {
+      if (take().value !== s) throw new Error(`Expected ${s}`);
+    };
+    function expression(min = 0) {
+      const t = take();
+      let left;
+      if (t.kind === "number") left = { kind: "literal", value: Number(t.value) };
+      else if (t.kind === "string") left = { kind: "literal", value: t.value };
+      else if (["true", "false", "null"].includes(t.value)) left = { kind: "literal", value: JSON.parse(t.value) };
+      else if (["-", "+", "!", "not"].includes(t.value)) left = { kind: "unary", value: t.value, items: [expression(8)] };
+      else if (t.value === "(") {
+        left = expression();
+        expect(")");
+      } else if (t.value === "[") {
+        const items = [];
+        while (peek() !== "]") {
+          items.push(expression());
+          if (peek() !== ",") break;
+          take();
+        }
+        expect("]");
+        left = { kind: "array", items };
+      } else if (t.value === "{") {
+        const items = [];
+        while (peek() !== "}") {
+          const key = take();
+          if (!["id", "string"].includes(key.kind)) throw new Error("Invalid object key");
+          expect(":");
+          items.push([safeKey(key.value), expression()]);
+          if (peek() !== ",") break;
+          take();
+        }
+        expect("}");
+        left = { kind: "object", items };
+      } else if (t.kind === "id") {
+        if (peek() === "=>") {
+          take();
+          left = { kind: "lambda", value: t.value, items: [expression()] };
+        } else left = { kind: "id", value: t.value };
+      } else throw new Error(`Expected expression, got ${t.value || "end of input"}`);
+      while (true) {
+        if (peek() === ".") {
+          take();
+          const key = take();
+          if (key.kind !== "id") throw new Error("Expected member name");
+          left = { kind: "member", items: [left, { kind: "literal", value: safeKey(key.value) }] };
+          continue;
+        }
+        if (peek() === "[") {
+          take();
+          const key = expression();
+          expect("]");
+          left = { kind: "member", items: [left, key] };
+          continue;
+        }
+        if (peek() === "(") {
+          take();
+          const args = [];
+          while (peek() !== ")") {
+            args.push(expression());
+            if (peek() !== ",") break;
+            take();
+          }
+          expect(")");
+          left = { kind: "call", items: [left, ...args] };
+          continue;
+        }
+        const op = peek(), rank = precedence[op];
+        if (rank === void 0 || rank < min) break;
+        take();
+        left = { kind: "binary", value: op, items: [left, expression(rank + 1)] };
+      }
+      if (min === 0 && peek() === "?") {
+        take();
+        const yes = expression();
+        expect(":");
+        left = { kind: "ternary", items: [left, yes, expression()] };
+      }
+      return left;
+    }
+    const ast = expression();
+    if (tokens[pos].kind !== "eof") throw new Error(`Unexpected token: ${peek()}`);
+    return ast;
+  }
+  function callName(e) {
+    if (e.kind === "id") return e.value;
+    if (e.kind === "member" && e.items[1].kind === "literal") {
+      const parent = callName(e.items[0]);
+      if (parent) return parent + "." + e.items[1].value;
+    }
+  }
+  function evaluateCoreExpression(e, scope, functions = coreFunctions) {
+    const ev = (n) => evaluateCoreExpression(n, scope, functions);
+    switch (e.kind) {
+      case "literal":
+        return e.value;
+      case "id":
+        return scope[e.value];
+      case "array":
+        return e.items.map(ev);
+      case "object":
+        return Object.fromEntries(e.items.map(([k, v]) => [k, ev(v)]));
+      case "member":
+        return ev(e.items[0])?.[safeKey(ev(e.items[1]))];
+      case "unary": {
+        const v = ev(e.items[0]);
+        return e.value === "-" ? -v : e.value === "+" ? +v : !v;
+      }
+      case "ternary":
+        return ev(e.items[0]) ? ev(e.items[1]) : ev(e.items[2]);
+      case "lambda":
+        return (value) => evaluateCoreExpression(e.items[0], { ...scope, [e.value]: value }, functions);
+      case "call": {
+        const a = e.items[0];
+        const name = callName(a);
+        const args = e.items.slice(1).map(ev);
+        if (name && Object.prototype.hasOwnProperty.call(functions, name)) return functions[name](...args);
+        if (a.kind === "member") {
+          const receiver = ev(a.items[0]), key = safeKey(ev(a.items[1]));
+          const arrays = ["push", "pop", "join", "slice", "map", "filter", "find", "some", "every", "includes", "indexOf"];
+          const strings = ["join", "slice", "includes", "indexOf", "split", "toLowerCase", "toUpperCase", "padStart"];
+          if (Array.isArray(receiver) && arrays.includes(key) || typeof receiver === "string" && strings.includes(key))
+            return receiver[key](...args);
+        }
+        throw new Error(`Unknown function: ${name || "expression"}`);
+      }
+      case "binary": {
+        const [a, b] = e.items;
+        const x = ev(a);
+        if (e.value === "??") return x === null || x === void 0 || x === "" ? ev(b) : x;
+        if (["and", "&&"].includes(e.value)) return Boolean(x) && Boolean(ev(b));
+        if (["or", "||"].includes(e.value)) return Boolean(x) || Boolean(ev(b));
+        const y = ev(b);
+        switch (e.value) {
+          case "+":
+            return x + y;
+          case "-":
+            return x - y;
+          case "*":
+            return x * y;
+          case "/":
+            return x / y;
+          case "%":
+            return x % y;
+          case "==":
+            return String(x) === String(y);
+          case "!=":
+            return String(x) !== String(y);
+          case "<":
+            return x < y;
+          case ">":
+            return x > y;
+          case "<=":
+            return x <= y;
+          case ">=":
+            return x >= y;
+          case "contains":
+            return String(x).toLowerCase().includes(String(y).toLowerCase());
+        }
+      }
+    }
+    throw new Error("Unknown expression");
+  }
+  function compileCoreExpression(source) {
+    try {
+      let supported2 = function(e) {
+        if (e.kind === "call" && !Object.prototype.hasOwnProperty.call(coreFunctions, callName(e.items[0]) || "")) {
+          const callee = e.items[0];
+          if (callee.kind !== "member" || callee.items[1].kind !== "literal") return false;
+          const method = String(callee.items[1].value);
+          if (!["join", "slice", "map", "filter", "find", "some", "every", "includes", "indexOf", "split", "toLowerCase", "toUpperCase", "padStart"].includes(method)) return false;
+          if (["map", "filter", "find", "some", "every"].includes(method) && e.items[1]?.kind !== "lambda") return false;
+        }
+        if (e.kind === "object") return e.items.every(([, value]) => supported2(value));
+        return !("items" in e) || e.items.every(supported2);
+      };
+      var supported = supported2;
+      const ast = parseCoreExpression(source);
+      if (!supported2(ast)) return null;
+      return (scope) => evaluateCoreExpression(ast, scope);
+    } catch {
+      return null;
+    }
+  }
+
   // src/random.ts
   function seededRandom(seed) {
     if (!Number.isFinite(seed)) throw new Error("Random seed must be finite");
@@ -480,6 +780,11 @@ var __RunePixel3DRuntime = (() => {
     }
     return true;
   }
+  function mapSpawn(name) {
+    const map = globalThis.__RuneSpatialMaps?.[name];
+    if (!map?.spawn) throw new Error(`Map ${name} has no spawn`);
+    return { ...map.spawn };
+  }
 
   // src/expression.ts
   var MAX_DEPTH = 64;
@@ -715,6 +1020,8 @@ var __RunePixel3DRuntime = (() => {
       }
       return (scope) => pathFn(scope);
     }
+    const core = compileCoreExpression(trimmed);
+    if (core) return core;
     if (trimmed.startsWith('"')) {
       try {
         const literal = JSON.parse(trimmed);
@@ -774,6 +1081,10 @@ var __RunePixel3DRuntime = (() => {
     if (trimmed.startsWith("!")) {
       const inner = compileExpression(trimmed.slice(1).trim(), nextDepth);
       return (scope) => !Boolean(inner(scope));
+    }
+    if (trimmed.startsWith("map_spawn(") && trimmed.endsWith(")")) {
+      const name = compileExpression(trimmed.slice(10, -1), nextDepth);
+      return (scope) => mapSpawn(String(name(scope)));
     }
     if (trimmed.startsWith("collide(") && trimmed.endsWith(")")) {
       const parts = splitTopLevel(trimmed.slice(8, -1), ",");
@@ -4004,7 +4315,7 @@ var __RunePixel3DRuntime = (() => {
     setMap(map) {
       this.config.map = map;
     }
-    render(camera, things = [], weapon, flash = 0, stats) {
+    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = []) {
       const W = this.width;
       const H = this.height;
       const halfH = H >> 1;
@@ -4018,7 +4329,7 @@ var __RunePixel3DRuntime = (() => {
       const planeX = -dirY * fovScale;
       const planeY = dirX * fovScale;
       this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY);
-      this.renderWalls(px, py, dirX, dirY, planeX, planeY);
+      this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
       if (things && things.length > 0) {
         this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
       }
@@ -4119,6 +4430,12 @@ var __RunePixel3DRuntime = (() => {
       if (stats.switchActivated) {
         this.text("OVR", 296, 2, 6728260);
       }
+      if (stats.heading !== void 0) {
+        const directions = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"];
+        const direction = directions[Math.floor(((stats.heading % 360 + 360) % 360 + 22.5) / 45) % 8];
+        this.rect(W - 48, 11, 46, 9, 658446);
+        this.text(`FACING ${direction}`, W - 45, 13, 16174148);
+      }
       if (stats.message && stats.message.length > 0) {
         const msgW = Math.min(W - 20, stats.message.length * 4 + 16);
         const msgX = Math.floor((W - msgW) / 2);
@@ -4206,7 +4523,7 @@ var __RunePixel3DRuntime = (() => {
         }
       }
     }
-    renderWalls(px, py, dirX, dirY, planeX, planeY) {
+    renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides) {
       const W = this.width;
       const H = this.height;
       const halfH = H >> 1;
@@ -4270,7 +4587,8 @@ var __RunePixel3DRuntime = (() => {
         const lineHeight = Math.floor(H / perpWallDist);
         const drawStart = Math.max(0, Math.floor(-lineHeight / 2 + halfH));
         const drawEnd = Math.min(H - 1, Math.floor(lineHeight / 2 + halfH));
-        const tex = textureList[(hit - 1) % textureList.length] || textureList[0];
+        const override = wallOverrides.find((tile) => tile.x === mapX && tile.y === mapY);
+        const tex = (override ? textureList[override.texture] : void 0) || textureList[(hit - 1) % textureList.length] || textureList[0];
         if (!tex) continue;
         let wallX;
         if (side === 0) {
@@ -4404,6 +4722,7 @@ var __RunePixel3DRuntime = (() => {
         sprites: config.sprites,
         map: config.map
       });
+      Object.assign(globalThis, { __RuneSpatialMaps: config.maps || {} });
       const spatialMap = {
         width: config.map.width,
         height: config.map.height,
@@ -4442,6 +4761,7 @@ var __RunePixel3DRuntime = (() => {
         }
         this.app.computeDerived();
       });
+      this.syncMap();
       this.persist();
     }
     get paused() {
@@ -4473,6 +4793,7 @@ var __RunePixel3DRuntime = (() => {
         this.app.invokeAction("start", []);
         this.app.computeDerived();
       });
+      this.syncMap();
       this.persist();
     }
     step(input = {}) {
@@ -4486,7 +4807,10 @@ var __RunePixel3DRuntime = (() => {
         this.app.computeDerived();
       });
       this.ticks++;
+      this.syncMap();
       this.persist();
+    }
+    syncMap() {
       const state = this.app.state;
       if (state.level_map && state.level_map !== this.currentMapName && this.config.maps?.[state.level_map]) {
         this.currentMapName = state.level_map;
@@ -4513,6 +4837,7 @@ var __RunePixel3DRuntime = (() => {
         this.app.invokeAction(action, args);
         this.app.computeDerived();
       });
+      this.syncMap();
       this.persist();
     }
     activate(action, args = []) {
@@ -4531,7 +4856,7 @@ var __RunePixel3DRuntime = (() => {
           const val = path.split(".").reduce((v, k) => v?.[k], state);
           if (Array.isArray(val)) {
             things.push(...val);
-          } else if (val && typeof val === "object") {
+          } else if (val && typeof val === "object" && typeof val.x === "number" && typeof val.y === "number" && typeof val.sprite === "string") {
             things.push(val);
           }
         }
@@ -4569,13 +4894,18 @@ var __RunePixel3DRuntime = (() => {
         story_title,
         story_body,
         message,
-        switch_activated
+        switch_activated,
+        wall_overrides: Array.isArray(state.wall_overrides) ? state.wall_overrides.flatMap((tile) => {
+          const texture = Object.keys(this.config.textures).indexOf(tile.texture);
+          return texture >= 0 ? [{ x: tile.x, y: tile.y, texture }] : [];
+        }) : []
       };
     }
     frame() {
       const stats = this.renderState();
       this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, {
         status: stats.status,
+        heading: stats.camera.angle,
         health: stats.health,
         ammo: stats.ammo,
         score: stats.score,
@@ -4586,7 +4916,7 @@ var __RunePixel3DRuntime = (() => {
         storyBody: stats.story_body,
         message: stats.message,
         switchActivated: stats.switch_activated
-      });
+      }, stats.wall_overrides);
       return this.raycaster.buffer;
     }
   };
@@ -4651,6 +4981,9 @@ var __RunePixel3DRuntime = (() => {
       height
     );
     let input = {};
+    let mouseFire = false;
+    let pendingFire = false;
+    let pendingUse = false;
     let lookAccumX = 0;
     let lookAccumY = 0;
     let previous = 0;
@@ -4661,6 +4994,9 @@ var __RunePixel3DRuntime = (() => {
     const listen = (element, name, callback) => element.addEventListener(name, callback, { signal: abort.signal });
     const clear = () => {
       input = {};
+      mouseFire = false;
+      pendingFire = false;
+      pendingUse = false;
       lookAccumX = 0;
       lookAccumY = 0;
     };
@@ -4696,6 +5032,24 @@ var __RunePixel3DRuntime = (() => {
         }
       });
     }
+    listen(canvas, "mousedown", ((event) => {
+      if (event.button !== 0 || game.app.state.status !== "playing") return;
+      unlockAudio();
+      canvas.focus();
+      mouseFire = true;
+      pendingFire = true;
+    }));
+    listen(document, "mouseup", ((event) => {
+      if (event.button === 0) mouseFire = false;
+    }));
+    listen(document, "pointerlockchange", () => {
+      if (document.pointerLockElement !== canvas) {
+        mouseFire = false;
+        pendingFire = false;
+        lookAccumX = 0;
+        lookAccumY = 0;
+      }
+    });
     listen(canvas, "click", () => {
       unlockAudio();
       canvas.focus();
@@ -4708,7 +5062,9 @@ var __RunePixel3DRuntime = (() => {
         return;
       }
       if (document.pointerLockElement !== canvas) {
-        canvas.requestPointerLock?.();
+        const lock = canvas.requestPointerLock?.();
+        lock?.catch(() => {
+        });
       }
     });
     listen(document, "mousemove", ((event) => {
@@ -4722,20 +5078,18 @@ var __RunePixel3DRuntime = (() => {
       if (keys[event.code] || ["Enter", "KeyP", "KeyM", "Space"].includes(event.code)) {
         event.preventDefault();
       }
-      if (keys[event.code]) {
-        input[keys[event.code]] = true;
-      }
-      if (!event.repeat && event.code === "Enter") {
-        if (game.app.state.status === "title" || game.app.state.status === "story") {
-          game.invoke("advance");
-        } else if (game.app.state.status !== "playing") {
-          start();
-        }
-      }
-      if (!event.repeat && event.code === "Space") {
-        if (game.app.state.status === "title" || game.app.state.status === "story") {
+      if (game.app.state.status !== "playing" && (event.code === "Enter" || keys[event.code] === "fire" || keys[event.code] === "use")) {
+        if (!event.repeat) {
+          clear();
           game.invoke("advance");
         }
+        return;
+      }
+      if (keys[event.code]) input[keys[event.code]] = true;
+      if (keys[event.code] === "use" && !event.repeat) pendingUse = true;
+      if (!event.repeat && event.code === "Escape" && document.pointerLockElement === canvas) {
+        document.exitPointerLock?.();
+        clear();
       }
       if (!event.repeat && event.code === "KeyP") {
         game.paused = !game.paused;
@@ -4761,12 +5115,19 @@ var __RunePixel3DRuntime = (() => {
       if (previous) accumulator += Math.min(now - previous, 1e3 / tickRate * 5);
       previous = now;
       while (accumulator >= 1e3 / tickRate) {
-        const controls = { ...input };
+        const controls = {
+          ...input,
+          fire: Boolean(input.fire || mouseFire || pendingFire),
+          use: Boolean(input.use || pendingUse)
+        };
+        pendingFire = false;
+        pendingUse = false;
         controls.look_x = lookAccumX;
         controls.look_y = lookAccumY;
         lookAccumX = 0;
         lookAccumY = 0;
         game.step(controls);
+        if (game.app.state.status !== "playing") clear();
         accumulator -= 1e3 / tickRate;
       }
       game.frame();
@@ -4774,7 +5135,7 @@ var __RunePixel3DRuntime = (() => {
       const state = game.app.state;
       const announce = document.querySelector("[data-pixel-status]");
       if (announce) {
-        const status = game.paused ? "Paused \u2014 press P to resume" : state.status === "title" ? "Vect Breach \u2014 Click canvas or press Enter/Space to commence mission." : state.status === "story" ? "Incoming Transmission \u2014 Click canvas or press Enter/Space to engage." : state.status === "won" ? "Mission Accomplished! All Sectors Cleared. Press Space, Click, or Enter to replay." : state.status === "gameover" ? "Agent Terminated! Press Space, Click, or Enter to restart." : state.status === "ready" ? "Click canvas or press Enter to begin mission." : "Click canvas to lock mouse look. WASD to move, Space to fire, E to use switch.";
+        const status = game.paused ? "Paused \u2014 press P to resume" : state.status === "title" ? "Vect Breach \u2014 Click canvas or press Enter/Space to commence mission." : state.status === "story" ? "Incoming Transmission \u2014 Click canvas or press Enter/Space to engage." : state.status === "won" ? "Mission Accomplished! All Sectors Cleared. Press Space, Click, or Enter to replay." : state.status === "gameover" ? "Agent Terminated! Press Space, Click, or Enter to restart." : state.status === "ready" ? "Click canvas or press Enter to begin mission." : "Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.";
         if (announce.textContent !== status) {
           announce.textContent = status;
         }

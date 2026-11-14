@@ -70,3 +70,8 @@ wave = sawtooth
 sequence = A3:80ms, F3:100ms, D3:140ms, A2:240ms
 volume = 0.24
 
+
+@Sound/guard_charge
+wave = triangle
+sequence = C4:50ms, G4:50ms, C5:100ms
+volume = 0.08

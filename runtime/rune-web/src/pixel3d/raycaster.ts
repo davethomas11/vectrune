@@ -8,6 +8,7 @@ export interface Texture {
 }
 
 export interface MapData {
+  spawn?: Camera3D;
   width: number;
   height: number;
   grid: number[]; // 0 = empty, >0 = texture index or door
@@ -31,6 +32,12 @@ export interface Thing3D {
   visible?: boolean;
 }
 
+export interface WallOverride {
+  x: number;
+  y: number;
+  texture: number; // zero-based index in the compiled texture table
+}
+
 export interface ViewmodelWeapon {
   sprite: string;
   x?: number; // screen offset
@@ -40,6 +47,7 @@ export interface ViewmodelWeapon {
 }
 
 export interface Stats3D {
+  heading?: number;
   status?: string;
   health?: number;
   ammo?: number;
@@ -109,7 +117,8 @@ export class Raycaster3D {
     things: Thing3D[] = [],
     weapon?: ViewmodelWeapon,
     flash: number = 0,
-    stats?: Stats3D
+    stats?: Stats3D,
+    wallOverrides: WallOverride[] = []
   ): Uint32Array {
     const W = this.width;
     const H = this.height;
@@ -131,7 +140,7 @@ export class Raycaster3D {
     this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY);
 
     // 2. Wall casting (DDA)
-    this.renderWalls(px, py, dirX, dirY, planeX, planeY);
+    this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
 
     // 3. Billboards (Sprites / Things) sorted by distance
     if (things && things.length > 0) {
@@ -263,6 +272,13 @@ export class Raycaster3D {
       this.text('OVR', 296, 2, 0x66aa44);
     }
 
+    if (stats.heading !== undefined) {
+      const directions = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+      const direction = directions[Math.floor((((stats.heading % 360) + 360) % 360 + 22.5) / 45) % 8];
+      this.rect(W - 48, 11, 46, 9, 0x0a0c0e);
+      this.text(`FACING ${direction}`, W - 45, 13, 0xf6cc44);
+    }
+
     // 4. In-game Interactive Message Banner
     if (stats.message && stats.message.length > 0) {
       const msgW = Math.min(W - 20, stats.message.length * 4 + 16);
@@ -391,7 +407,8 @@ export class Raycaster3D {
     dirX: number,
     dirY: number,
     planeX: number,
-    planeY: number
+    planeY: number,
+    wallOverrides: WallOverride[]
   ) {
     const W = this.width;
     const H = this.height;
@@ -471,7 +488,9 @@ export class Raycaster3D {
       const drawEnd = Math.min(H - 1, Math.floor(lineHeight / 2 + halfH));
 
       // Select texture
-      const tex = textureList[(hit - 1) % textureList.length] || textureList[0];
+      const override = wallOverrides.find(tile => tile.x === mapX && tile.y === mapY);
+      const tex = (override ? textureList[override.texture] : undefined)
+        || textureList[(hit - 1) % textureList.length] || textureList[0];
       if (!tex) continue;
 
       let wallX: number;

@@ -167,6 +167,7 @@ fn native_rasterizer_renders_scene() {
         story_body: None,
         message: None,
         switch_activated: Some(false),
+        wall_overrides: vec![],
     };
 
     let mut frame = vec![0u8; width * height * 4];
@@ -184,4 +185,82 @@ fn native_rasterizer_renders_scene() {
     let mid_idx = (100 * width + 160) * 4;
     let p_mid = u32::from_ne_bytes([frame[mid_idx], frame[mid_idx + 1], frame[mid_idx + 2], frame[mid_idx + 3]]);
     assert_ne!(p_mid, 0);
+
+    // Native presentation uses the same per-tile animated texture indices as web.
+    rasterizer.textures.push(Texture { width: 8, height: 8, pixels: vec![0xff00ff00; 64] });
+    let mut wall_state = state.clone();
+    wall_state.things.clear();
+    wall_state.weapon = None;
+    rasterizer.render(&wall_state, &mut frame);
+    let original = frame.clone();
+    let original_depth = rasterizer.z_buffer.clone();
+    wall_state.wall_overrides.push(pixel3d::raster::WallOverride { x: 3, y: 1, texture: 1 });
+    rasterizer.render(&wall_state, &mut frame);
+    assert_eq!(&frame[mid_idx..mid_idx + 4], &0xff00ff00u32.to_ne_bytes());
+    assert_eq!(rasterizer.z_buffer, original_depth);
+    wall_state.wall_overrides[0].texture = 99;
+    rasterizer.render(&wall_state, &mut frame);
+    assert_eq!(frame, original, "Unknown overrides fall back to the base wall");
+
+}
+
+#[test]
+fn all_breach_maps_connect_spawn_to_every_floor_and_objective() {
+    use std::collections::{HashSet, VecDeque};
+    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/vect_breach.rune")).unwrap();
+    let game = pixel3d::compile(&doc).unwrap();
+    let textures = game.config["textures"].as_object().unwrap();
+    let objectives: Vec<_> = ["wall/switch", "wall/exit"].iter()
+        .map(|name| textures.keys().position(|key| key == name).unwrap() + 1).collect();
+    for (name, map) in game.config["maps"].as_object().unwrap() {
+        let w = map["width"].as_u64().unwrap() as usize;
+        let h = map["height"].as_u64().unwrap() as usize;
+        let grid = map["grid"].as_array().unwrap();
+        let x = map["spawn"]["x"].as_f64().unwrap().floor() as usize;
+        let y = map["spawn"]["y"].as_f64().unwrap().floor() as usize;
+        let start = y * w + x;
+        let mut visited = HashSet::from([start]);
+        let mut queue = VecDeque::from([start]);
+        let neighbors = |i: usize| {
+            [(i % w).checked_sub(1).map(|x| i / w * w + x),
+             (i % w + 1 < w).then_some(i + 1),
+             i.checked_sub(w), (i / w + 1 < h).then_some(i + w)]
+        };
+        while let Some(i) = queue.pop_front() {
+            for n in neighbors(i).into_iter().flatten() {
+                if grid[n] == 0 && visited.insert(n) { queue.push_back(n); }
+            }
+        }
+        assert_eq!(visited.len(), grid.iter().filter(|v| **v == 0).count(), "{name}: disconnected floor");
+        for objective in &objectives {
+            let targets: Vec<_> = grid.iter().enumerate().filter(|(_, v)| **v == *objective).map(|(i, _)| i).collect();
+            assert_eq!(targets.len(), 1, "{name}: needs one terminal and one elevator");
+            assert!(neighbors(targets[0]).into_iter().flatten().any(|n| visited.contains(&n)), "{name}: unreachable objective");
+        }
+    }
+}
+
+#[test]
+fn rejects_breach_spawns_inside_walls_or_outside_the_map() {
+    let source = std::fs::read_to_string("examples/vect_breach/map.rune").unwrap();
+    for spawn in [r#"{"x":0.5,"y":0.5,"angle":0}"#, r#"{"x":99,"y":1.5,"angle":0}"#] {
+        let source = source.replacen(r#"{"x":1.5,"y":1.5,"angle":0}"#, spawn, 1);
+        let doc = parse_rune(&source).unwrap();
+        let map = doc.sections.iter().find(|s| s.path == ["Map", "e1m1"]).unwrap();
+        assert!(pixel3d::parse_map_simple(map).is_err());
+    }
+}
+
+#[tokio::test]
+async fn compiles_compact_breach_shell_and_validates_its_canvas() {
+    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/site_shell.rune")).unwrap();
+    let html = pixel3d::html(&doc).await.unwrap();
+    assert!(html.contains("THREE SECTORS. ONE WAY OUT."));
+    assert!(html.contains("__RunePixel3DRuntime.boot({"));
+    assert!(html.contains("data-rune-pixel-3d"));
+    assert!(!html.contains("/*__GAME__*/"));
+    let mut invalid = doc.clone();
+    let page = invalid.sections.iter_mut().find(|s| s.path == ["Page", "site_breach"]).unwrap();
+    page.series.insert("view".into(), vec![rune_runtime::rune_ast::Value::String("div No canvas".into())]);
+    assert!(pixel3d::html(&invalid).await.is_err());
 }

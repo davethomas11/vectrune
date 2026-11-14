@@ -105,9 +105,10 @@ Over successive releases, features were added to specific targets to solve immed
   - Define canonical lexical tokens: comments (`#`), identifiers, strings (escapes, multiline), numbers, booleans, symbols (`@`, `+`, `=`, `:`, `->`, `<-`, `<->`).
   - Define formal expression grammar with strict operator precedence (Primary, Postfix, Unary, Multiplicative, Additive, Relational, Equality, Logical AND, Logical OR, Nullish Coalescing, Ternary).
   - Define statement grammar: declarations, assignments, compound assignments, control flow (`if/else`, `while`, `for`, `match`), builtins, and block series.
-- [ ] **1.2 Cross-Platform Conformance Test Suite (`tests/conformance/`)**:
+- [-] **1.2 Cross-Platform Conformance Test Suite (`tests/conformance/`)**:
   - JSON-driven conformance test fixtures: input code snippet -> expected AST -> expected evaluated result.
   - Run identical test suites in Rust (`cargo test`) and TypeScript (`npm test` in both `rune-web` and `rune-emulator`).
+  - **Progress (2026-11-14):** The existing expression fixture catalogue now runs through native `.vect`/QuickJS and Rune-Web, with additional precedence, scientific notation, nested calls/collections, degree math, map/filter, serialization and slicing cases. Both use the typed Pratt AST in `runtime/rune-web/src/core_expression.ts`. Emulator, Rust backend and expected-AST coverage remain open.
 
 ---
 
@@ -151,8 +152,9 @@ Over successive releases, features were added to specific targets to solve immed
     vectrune> [1, 2, 3, 4].filter(it > 2)
     [3, 4]
     ```
-- [ ] **4.2 Elevate `.vect` Scripts to Full Language Parity**:
+- [-] **4.2 Elevate `.vect` Scripts to Full Language Parity**:
   - Allow `.vect` scripts to use full Rune expression syntax, collections, and state generators while preserving concise stdio syntax (`stdio ->`, `<- stdio`).
+  - **Progress (2026-11-14):** Extended scripts lower actions, for/while loops, returns, loop control and mutable collections into shared execution IR, with Rune-style assignments, reusable cached expression ASTs, math/JSON helpers and a native file-output adapter. `examples/vect_breach/generate_guards.vect` replaces the Python baker and reproduces every original sprite pixel and palette color. Existing stdio/legacy scripts remain supported; generator reproducibility and shared native/web fixtures are tested. Imports, state generators, match, Rust backend/REPL integration and full legacy-executor migration remain open. See [Vect scripts](knowledge/language/vect-scripts.md).
 
 ---
 

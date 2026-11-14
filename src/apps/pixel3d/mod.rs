@@ -299,13 +299,27 @@ pub fn parse_map_full(
         pack_color(0x111111)
     };
 
+    let spawn = parse_spawn(map_section, &grid_flat, map_width, map_height)?;
     Ok(json!({
+        "spawn": spawn,
         "width": map_width,
         "height": map_height,
         "grid": grid_flat,
         "floor": floor_color,
         "ceiling": ceil_color,
     }))
+}
+
+fn parse_spawn(section: &crate::rune_ast::Section, grid: &[usize], width: usize, height: usize) -> Result<Option<Json>> {
+    let Some(value) = section.kv.get("spawn") else { return Ok(None); };
+    let value = json_value(value);
+    let x = value.get("x").and_then(Json::as_f64).context("Map spawn needs numeric x")?;
+    let y = value.get("y").and_then(Json::as_f64).context("Map spawn needs numeric y")?;
+    let angle = value.get("angle").map(|v| v.as_f64().context("Map spawn angle must be numeric")).transpose()?.unwrap_or(0.0);
+    ensure!(x.is_finite() && y.is_finite() && angle.is_finite(), "Map spawn must be finite");
+    ensure!(x >= 0.0 && y >= 0.0 && x < width as f64 && y < height as f64, "Map spawn is outside the grid");
+    ensure!(grid[y.floor() as usize * width + x.floor() as usize] == 0, "Map spawn must be on walkable floor");
+    Ok(Some(json!({"x":x,"y":y,"angle":angle})))
 }
 
 pub fn parse_map_simple(map_section: &crate::rune_ast::Section) -> Result<Json> {
@@ -350,7 +364,9 @@ pub fn parse_map_simple(map_section: &crate::rune_ast::Section) -> Result<Json> 
         }
     }
 
+    let spawn = parse_spawn(map_section, &grid_flat, map_width, map_height)?;
     Ok(json!({
+        "spawn": spawn,
         "width": map_width,
         "height": map_height,
         "grid": grid_flat,
@@ -413,9 +429,9 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
     for section in &doc.sections {
         if section.path.first().map(String::as_str) == Some("Map") && section.path.len() >= 2 {
             let map_id = section.path[1..].join("/");
-            if let Ok(parsed) = parse_map_full(section, textures_map) {
-                maps.insert(map_id, parsed);
-            }
+            let parsed = parse_map_full(section, textures_map)
+                .with_context(|| format!("Invalid @Map/{map_id}"))?;
+            maps.insert(map_id, parsed);
         }
     }
 
@@ -481,6 +497,51 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
 
 pub async fn html(doc: &RuneDocument) -> Result<String> {
     let game = compile(doc)?;
+    if let Some(shell) = doc.get_section("App").and_then(|s| text(s, "shell")) {
+        let frontend = crate::apps::rune_web::parser::parse_rune_web_frontend(doc, shell)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let page = frontend
+            .page_views
+            .get(shell)
+            .context(format!("Unknown shell @Page/{shell}"))?;
+        fn count_canvases(node: &Json) -> usize {
+            match node {
+                Json::Object(map) => {
+                    let own = map.get("Element").is_some_and(|el| {
+                        el["tag"] == "canvas" && el["attrs"].get("data-rune-pixel-3d").is_some()
+                    }) as usize;
+                    own + map.values().map(count_canvases).sum::<usize>()
+                }
+                Json::Array(nodes) => nodes.iter().map(count_canvases).sum(),
+                _ => 0,
+            }
+        }
+        ensure!(
+            count_canvases(&serde_json::to_value(&page.view_tree)?) == 1,
+            "Pixel-3D shell must contain one canvas data-rune-pixel-3d=true"
+        );
+        let mut shell_doc = doc.clone();
+        shell_doc
+            .sections
+            .retain(|s| s.path.first().map(String::as_str) != Some("Frontend"));
+        shell_doc.sections.push(crate::rune_ast::Section {
+            path: vec!["Frontend".into()],
+            kv: HashMap::from([
+                ("type".into(), Value::String("rune-web".into())),
+                ("page".into(), Value::String(shell.into())),
+                ("path".into(), Value::String("/".into())),
+            ]),
+            series: HashMap::new(),
+            records: vec![],
+            source_file: None,
+        });
+        let html = crate::apps::rune_web::render_html_for_path(&shell_doc, "/").await?;
+        return Ok(html.replace(
+            "</body>",
+            &format!("<script>{}</script></body>", game.script),
+        ));
+    }
+
     let title = game
         .title
         .replace('&', "&amp;")

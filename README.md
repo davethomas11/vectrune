@@ -248,7 +248,7 @@ ollama pull phi4
 
 ## Doctor, check, and Rune tests
 
-The developer workflow is available in Vectrune 0.3.2, including embedded JavaScript logic tests (introduced in 0.3.2). See the [Developer section](https://vectrune.com/developer) for installation, examples, and a downloadable tested starter. `doctor`, `check`, and the initial test runner were introduced in 0.2.21.
+The developer workflow is available in Vectrune 0.3.3, including embedded JavaScript logic tests (introduced in 0.3.2). See the [Developer section](https://vectrune.com/developer) for installation, examples, and a downloadable tested starter. `doctor`, `check`, and the initial test runner were introduced in 0.2.21.
 
 ```sh
 vectrune doctor examples/testing/app.rune
@@ -368,7 +368,7 @@ cargo run --features pixel-desktop -- examples/monster_city/monster_city.rune --
 cargo run -- test examples/monster_city
 ```
 
-Use arrows/A/D to move, Space to smash, Enter to start/restart, P to pause, and F for fullscreen. M toggles music and effects in both hosts. Desktop also supports F11; Escape leaves fullscreen or closes the window. Desktop builds play through CPAL; the browser uses Web Audio. Both use the same Rune synth/sequencer and declarations. Rune Pixel is available from the latest source checkout and as a playable website game; it is absent from the published 0.3.2 CLI. The native host is opt-in while platform packaging is validated. On Debian/Ubuntu, install `libasound2-dev` before compiling the desktop feature. The default pixel target is web.
+Use arrows/A/D to move, Space to smash, Enter to start/restart, P to pause, and F for fullscreen. M toggles music and effects in both hosts. Desktop also supports F11; Escape leaves fullscreen or closes the window. Desktop builds play through CPAL; the browser uses Web Audio. Both use the same Rune synth/sequencer and declarations. Rune Pixel browser exports are included in Vectrune 0.3.3. The native host is opt-in while platform packaging is validated. On Debian/Ubuntu, install `libasound2-dev` before compiling the desktop feature. The default pixel target is web.
 
 [sound.rune](examples/monster_city/sound.rune) defines the original four-bar **Monster March** with `@Music/monster_city`, the title/shop themes **Monster Parade** / **Tiny Treasures**, menu move/confirm/purchase/denial cues, plus ten gameplay `@Sound` effects for roar, footsteps, smash, collapse, rifle/cannon fire, damage, tank explosions, victory and game over. These are the same declarations and `music.play` / `sound.play` commands used by VectRaiders and VectWorms; no audio files or downloads are needed. The native title screen plays Monster Parade immediately; browsers wait for a game interaction before starting music. Tiny Treasures plays in the shop, and Monster March plays during a rampage. Track changes keep one scheduler, browsing/buying does not restart the shop loop, music pauses on focus loss, and victory/defeat stops the level track. M or the Sound button mutes both music and effects while gameplay continues. Muting survives restart; hiding the page or replacing/removing the canvas pauses audio and stops its schedulers. The pixel audio host disables Rune-Web playback-state/DOM synchronization so music cannot rerender its surrounding shell.
 
@@ -614,3 +614,20 @@ If you see `Vectrune runtime listening on http://127.0.0.1:3000`, the server is 
 
 - If you cannot access Vectrune from your host, ensure you are binding to `0.0.0.0` and using the correct port mapping in Docker.
 - The bind address and port are logged on startup for verification
+
+### Vect Breach (0.3.3)
+
+[Play Vect Breach](https://vectrune.com/vect-breach/) or export the three-sector
+first-person shooter from the repository sources:
+
+```sh
+vectrune examples/vect_breach/vect_breach.rune -o html > vect-breach.html
+vectrune test examples/vect_breach --type logic
+vectrune examples/vect_breach/generate_guards.vect
+```
+
+WASD moves, the mouse or arrow keys aim, left click/Space fires, and E activates
+terminals and elevators. The `.vect` baker regenerates all 40 directional guard
+views without Python or Node. For a native window, build with the optional
+`pixel-desktop` feature. See [Vect scripting](knowledge/language/vect-scripts.md)
+for the shared expression syntax and current parity boundaries.

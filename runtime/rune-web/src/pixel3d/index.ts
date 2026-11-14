@@ -70,6 +70,9 @@ export function mount(
   );
 
   let input: Input3D = {};
+  let mouseFire = false;
+  let pendingFire = false;
+  let pendingUse = false;
   let lookAccumX = 0;
   let lookAccumY = 0;
   let previous = 0;
@@ -86,6 +89,9 @@ export function mount(
 
   const clear = () => {
     input = {};
+    mouseFire = false;
+    pendingFire = false;
+    pendingUse = false;
     lookAccumX = 0;
     lookAccumY = 0;
   };
@@ -125,6 +131,27 @@ export function mount(
     });
   }
 
+  // Queue short clicks until a simulation tick; keep mouse and keyboard holds separate.
+  listen(canvas, 'mousedown', ((event: MouseEvent) => {
+    if (event.button !== 0 || game.app.state.status !== 'playing') return;
+    unlockAudio();
+    canvas.focus();
+    mouseFire = true;
+    pendingFire = true;
+  }) as EventListener);
+  listen(document, 'mouseup', ((event: MouseEvent) => {
+    if (event.button === 0) mouseFire = false;
+  }) as EventListener);
+  listen(document, 'pointerlockchange', () => {
+    if (document.pointerLockElement !== canvas) {
+      // The browser queues this event: keep keys pressed after Escape intact.
+      mouseFire = false;
+      pendingFire = false;
+      lookAccumX = 0;
+      lookAccumY = 0;
+    }
+  });
+
   // Pointer lock for FPS mouse look
   listen(canvas, 'click', () => {
     unlockAudio();
@@ -138,7 +165,9 @@ export function mount(
       return;
     }
     if (document.pointerLockElement !== canvas) {
-      canvas.requestPointerLock?.();
+      const lock = canvas.requestPointerLock?.();
+      // Shooting still works when embedding or browser policy denies mouse lock.
+      lock?.catch(() => {});
     }
   });
 
@@ -154,20 +183,19 @@ export function mount(
     if (keys[event.code] || ['Enter', 'KeyP', 'KeyM', 'Space'].includes(event.code)) {
       event.preventDefault();
     }
-    if (keys[event.code]) {
-      input[keys[event.code]] = true;
-    }
-    if (!event.repeat && event.code === 'Enter') {
-      if (game.app.state.status === 'title' || game.app.state.status === 'story') {
-        game.invoke('advance');
-      } else if (game.app.state.status !== 'playing') {
-        start();
-      }
-    }
-    if (!event.repeat && event.code === 'Space') {
-      if (game.app.state.status === 'title' || game.app.state.status === 'story') {
+    if (game.app.state.status !== 'playing' &&
+        (event.code === 'Enter' || keys[event.code] === 'fire' || keys[event.code] === 'use')) {
+      if (!event.repeat) {
+        clear();
         game.invoke('advance');
       }
+      return;
+    }
+    if (keys[event.code]) input[keys[event.code]] = true;
+    if (keys[event.code] === 'use' && !event.repeat) pendingUse = true;
+    if (!event.repeat && event.code === 'Escape' && document.pointerLockElement === canvas) {
+      document.exitPointerLock?.();
+      clear();
     }
     if (!event.repeat && event.code === 'KeyP') {
       game.paused = !game.paused;
@@ -198,13 +226,20 @@ export function mount(
     previous = now;
 
     while (accumulator >= 1000 / tickRate) {
-      const controls: Input3D = { ...input };
+      const controls: Input3D = {
+        ...input,
+        fire: Boolean(input.fire || mouseFire || pendingFire),
+        use: Boolean(input.use || pendingUse),
+      };
+      pendingFire = false;
+      pendingUse = false;
       controls.look_x = lookAccumX;
       controls.look_y = lookAccumY;
       lookAccumX = 0;
       lookAccumY = 0;
 
       game.step(controls);
+      if (game.app.state.status !== 'playing') clear();
       accumulator -= 1000 / tickRate;
     }
 
@@ -226,7 +261,7 @@ export function mount(
         ? 'Agent Terminated! Press Space, Click, or Enter to restart.'
         : state.status === 'ready'
         ? 'Click canvas or press Enter to begin mission.'
-        : 'Click canvas to lock mouse look. WASD to move, Space to fire, E to use switch.';
+        : 'Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.';
       if (announce.textContent !== status) {
         announce.textContent = status;
       }

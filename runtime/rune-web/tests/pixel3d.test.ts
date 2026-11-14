@@ -126,5 +126,20 @@ describe('pixel3d raycaster rendering', () => {
     expect(rc.zBuffer[32]).toBeGreaterThan(0.5);
     expect(rc.zBuffer[32]).toBeLessThan(3.0);
   });
+  it('overrides only the addressed wall texture while preserving wall depth', () => {
+    const rc = new Raycaster3D({ ...config, textures: {
+      ...config.textures,
+      active: { width: 4, height: 4, pixels: new Uint32Array(16).fill(0xff00ff00) },
+    } });
+    const camera = { x: 1.5, y: 1.5, angle: 0 };
+    const original = Array.from(rc.render(camera));
+    const depth = Array.from(rc.zBuffer);
+    rc.render(camera, [], undefined, 0, undefined, [{ x: 3, y: 1, texture: 1 }]);
+    expect(rc.buffer[24 * 64 + 32]).toBe(0xff00ff00);
+    expect(Array.from(rc.zBuffer)).toEqual(depth);
+    expect(Array.from(rc.render(camera, [], undefined, 0, undefined, [{ x: 0, y: 0, texture: 1 }]))).toEqual(original);
+    expect(Array.from(rc.render(camera, [], undefined, 0, undefined, [{ x: 3, y: 1, texture: 99 }]))).toEqual(original);
+  });
+
 });
 

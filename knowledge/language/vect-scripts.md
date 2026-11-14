@@ -175,37 +175,63 @@ The shared `ExecProgram` IR makes it easy to add new `.vect` constructs that imm
 
 ---
 
-## Current scope and limitations
+## Extended scripts and shared expressions (unreleased)
 
-- One `.vect` file at a time
-- Interactive stdin/stdout only — no file output, transforms, or merges
-- No function definitions or subroutine calls yet
-- No list/array literals yet
-- No `import` support yet
-- Separate from `.rune` app loading and server runtimes
+Standalone scripts can now use Rune-style assignments, arrays/objects, indexed
+mutation, compound assignment, `for item, index in collection:`, `while`, and
+`action name(params):` with `return`, `break` and `continue`:
 
-### Limited builtin support
-
-Standalone `.vect` files access the full Vectrune builtin library through the shared `call_builtin` interface, which means all builtins work (including `csv.read`, `datasource`, `memory.get/set`, `validate`, etc.). The `.vect` runtime constructs a minimal `AppState` for execution, allowing any builtin that doesn't depend on app-specific routes or schemas to work seamlessly.
-
-**Direct syntax:** Builtins are recognized by name and invoked without any special `call` prefix:
 ```vect
-log "message"
-parse-json body as data
-datasource db query "SELECT ..." as result
+#!VECT
+action double(items):
+    result = []
+    for item in items:
+        result.push(item * 2)
+    return result
+
+numbers = double(range(1, 4))
+file.write("numbers.json", json.stringify(numbers))
+stdio -> "Saved {numbers.length} numbers"
 ```
 
-**Note:** In standalone mode, builtins have limited access to app-specific metadata (routes, schemas). For full functionality, embed `.vect` constructs within a `.rune` app context.
+Run `vectrune examples/vect_breach/generate_guards.vect` to regenerate all 40
+directional guard views without Python or Node. `file.write(path, text)` resolves
+relative paths beside the script, regardless of the current working directory;
+absolute paths remain absolute. `script_dir` exposes that directory. Writes
+replace the target file and report filesystem errors. Parent directories must
+already exist.
 
----
+Expressions parse once into a typed Pratt AST from
+`runtime/rune-web/src/core_expression.ts`. Rune-Web uses the same implementation
+for supported expressions, retaining its existing evaluator for specialized
+syntax. Native `.vect` execution embeds that code in QuickJS; host adapters
+provide interactive stdio and file output. Both adapters run the fixtures in
+`tests/conformance/expressions.json`.
 
-## Future integration
+The common expression surface includes array/object literals, computed member
+access, operator precedence, ternary, Rune nullish fallback (including empty
+strings), short-circuit logic, arrow predicates, `.map/.filter/.find`, slicing
+and joining. Shared utility functions include `range(start, end?, step?)`,
+`repeat(value, count)`, `keys`, `values`, `len`, `hex(value, width?)`,
+`json.stringify`, `json.parse`, `floor`, `ceil`, `round`, `pow`, `sqrt`,
+`min`, `max`, `abs`, and `clamp`. **`sin` and `cos` take degrees**, as in Rune-Web.
+`round` uses JavaScript nearest-integer rounding; the guard baker explicitly
+implements ties-to-even color quantization to preserve its original palette.
+`repeat` copies values shallowly; use a loop for independent mutable rows.
 
-- Planned: extend `.vect` to be embeddable within `.rune` app definitions
-- Planned: share more builtins between `.vect` and `.rune` contexts by decoupling AppState dependencies
-- Planned: support for function definitions and subroutine calls
+Multiline array/object/function expressions and trailing `#` comments are
+supported. Strings must close on their source line; use escaped newlines.
+Actions have local assignment scope and read globals; passed arrays/objects
+retain reference semantics. Loops retain assignments in their enclosing scope.
+Unknown calls, invalid expressions and I/O failures include the source line.
+Native extended scripts have a 128 MiB memory limit, a 120-second interrupt
+budget, a statement/loop budget and a recursion limit of 128 actions.
 
-
-
-
-
+Migration remains incremental: legacy-only programs continue through the
+existing executor, including `repeat from line` and `.vectrune` shared IR.
+Extended programs use the shared script engine. The legacy `set` syntax keeps
+its literal/interpolation behavior; prefer `name = expression` in new scripts.
+Do not mix `repeat from line` with extended constructs. Imports, state generators,
+pattern matching, REPL integration, Rust backend `run:` expressions and emulator
+migration remain work under the language-parity roadmap. The CLI host's
+`file.write` capability is not a browser filesystem API.

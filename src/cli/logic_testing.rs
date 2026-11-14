@@ -81,6 +81,15 @@ fn source(doc: &RuneDocument, test: &Section) -> Result<String> {
             .and_then(|s| s.path.get(1).map(String::as_str))
     });
 
+    let mut maps = serde_json::Map::new();
+    for section in &doc.sections {
+        if section.path.first().map(String::as_str) == Some("Map") {
+            let name = section.path[1..].join("/");
+            maps.insert(name, crate::apps::pixel3d::parse_map_simple(section)?);
+        }
+    }
+    script.push_str(&format!("\nglobalThis.__RuneSpatialMaps = {};\n", Value::Object(maps)));
+
     if let Some(map_name) = target_map {
         if let Some(map_section) = doc.sections.iter().find(|s| s.path == ["Map", map_name]) {
             if let Ok(map_json) = crate::apps::pixel3d::parse_map_simple(map_section) {

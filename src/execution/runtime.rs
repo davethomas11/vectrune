@@ -46,6 +46,12 @@ pub fn run_program_with_context<R: BufRead, W: Write>(
     input: &mut R,
     output: &mut W,
 ) -> Result<()> {
+    if requires_shared_script(&program.statements) {
+        #[cfg(not(target_arch = "wasm32"))]
+        return super::script::run(program, input, output, std::path::Path::new("."));
+        #[cfg(target_arch = "wasm32")]
+        bail!("Extended Vect scripts require the native or JavaScript script host");
+    }
     let mut pc = 0usize;
     let mut steps = 0usize;
     let max_steps = 10_000usize;
@@ -83,6 +89,9 @@ fn execute_stmt<R: BufRead, W: Write>(
     output: &mut W,
 ) -> Result<ControlFlow> {
     match stmt {
+        ExecStmt::Expression { .. } | ExecStmt::Action { .. } | ExecStmt::For { .. }
+        | ExecStmt::Return { .. } | ExecStmt::Break { .. } | ExecStmt::Continue { .. } =>
+            bail!("extended Vect statement requires shared script runtime"),
         ExecStmt::Print { text, .. } => {
             writeln!(output, "{}", interpolate_text(text, ctx))?;
             output.flush()?;
@@ -418,7 +427,11 @@ fn find_statement_index_for_line(statements: &[ExecStmt], target_line: usize) ->
 
 fn stmt_line_no(stmt: &ExecStmt) -> usize {
     match stmt {
-        ExecStmt::Print { line_no, .. }
+        ExecStmt::Expression { line_no, .. }
+        | ExecStmt::Action { line_no, .. } | ExecStmt::For { line_no, .. }
+        | ExecStmt::Return { line_no, .. } | ExecStmt::Break { line_no }
+        | ExecStmt::Continue { line_no }
+        | ExecStmt::Print { line_no, .. }
         | ExecStmt::ReadInput { line_no, .. }
         | ExecStmt::Set { line_no, .. }
         | ExecStmt::Builtin { line_no, .. }
@@ -559,3 +572,15 @@ mod tests {
 
 
 
+
+/// Preserve legacy repeat-line/NL execution while migrating extended scripts to
+/// the exact expression implementation bundled for Rune-Web.
+pub fn requires_shared_script(statements: &[ExecStmt]) -> bool {
+    statements.iter().any(|s| match s {
+        ExecStmt::Expression { .. } | ExecStmt::Action { .. } | ExecStmt::For { .. }
+        | ExecStmt::Return { .. } | ExecStmt::Break { .. } | ExecStmt::Continue { .. } => true,
+        ExecStmt::While { body, .. } => requires_shared_script(body),
+        ExecStmt::IfChain { branches, else_body, .. } => branches.iter().any(|b| requires_shared_script(&b.body)) || requires_shared_script(else_body),
+        _ => false,
+    })
+}

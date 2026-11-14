@@ -1,6 +1,8 @@
 # E1M1: Sector 01 - Perimeter Infiltration
 # Legend: # = panel wall, T = tech wall, S = switch, X = exit, . = floor
 @Map/e1m1
+# Spawn uses world tile coordinates: (1.5, 1.5), facing east (0 degrees).
+spawn = {"x":1.5,"y":1.5,"angle":0}
 floor = "#1b1918"
 ceiling = "#121417"
 legend = {"#":{"wall":"wall/panel"},"T":{"wall":"wall/tech"},"S":{"wall":"wall/switch"},"X":{"wall":"wall/exit"},".":{}}
@@ -18,6 +20,9 @@ grid:
 # E1M2: Sector 02 - The Reactor Core
 # Legend: # = reactor wall, T = tech wall, S = switch, X = exit, . = floor
 @Map/e1m2
+# Arrive in the northwest. Cross the lower service hall (row 5) to the east wing.
+# Return via the south loop (row 7) to the southwest elevator after the override.
+spawn = {"x":1.5,"y":1.5,"angle":0}
 floor = "#1c120c"
 ceiling = "#0d1014"
 legend = {"#":{"wall":"wall/reactor"},"T":{"wall":"wall/tech"},"S":{"wall":"wall/switch"},"X":{"wall":"wall/exit"},".":{}}
@@ -27,14 +32,15 @@ grid:
     "#..##..#...#...#"
     "#..#...#...#...#"
     "#..#...##.##...#"
-    "#..#.......#...#"
+    "#..#...........#"
     "#..####.####...#"
-    "X......#.......#"
+    "X..............#"
     "################"
 
 # E1M3: Sector 03 - The Command Vault
 # Legend: # = command bulkhead, T = panel wall, S = switch, X = exit, . = floor
 @Map/e1m3
+spawn = {"x":1.5,"y":1.5,"angle":0}
 floor = "#0d1622"
 ceiling = "#070c12"
 legend = {"#":{"wall":"wall/command"},"T":{"wall":"wall/panel"},"S":{"wall":"wall/switch"},"X":{"wall":"wall/exit"},".":{}}

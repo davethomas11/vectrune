@@ -57,6 +57,13 @@ fn default_health() -> i64 { 100 }
 fn default_ammo() -> i64 { 24 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WallOverride {
+    pub x: i32,
+    pub y: i32,
+    pub texture: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RenderState {
     pub camera: Camera3D,
     #[serde(default)]
@@ -82,6 +89,8 @@ pub struct RenderState {
     pub story_body: Option<String>,
     pub message: Option<String>,
     pub switch_activated: Option<bool>,
+    #[serde(default)]
+    pub wall_overrides: Vec<WallOverride>,
 }
 
 pub struct Rasterizer3D {
@@ -214,7 +223,10 @@ impl Rasterizer3D {
 
             if !self.textures.is_empty() {
                 let tex_idx = (hit.saturating_sub(1)) % self.textures.len();
-                let tex = &self.textures[tex_idx];
+                let override_texture = state.wall_overrides.iter()
+                    .find(|tile| tile.x == map_x && tile.y == map_y)
+                    .and_then(|tile| self.textures.get(tile.texture));
+                let tex = override_texture.unwrap_or(&self.textures[tex_idx]);
 
                 let mut wall_x = if side == 0 {
                     py + perp_wall_dist * ray_dir_y
@@ -550,6 +562,11 @@ impl Rasterizer3D {
         if state.switch_activated.unwrap_or(false) {
             self.draw_text("OVR", 296, 2, 0x66aa44, 1);
         }
+
+        let directions = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"];
+        let heading = ((state.camera.angle.rem_euclid(360.0) + 22.5) / 45.0).floor() as usize % 8;
+        self.draw_rect(w - 48, 11, 46, 9, 0xff0a0c0e);
+        self.draw_text(&format!("FACING {}", directions[heading]), w - 45, 13, 0xf6cc44, 1);
 
         // 4. In-game Interactive Message Banner
         if let Some(msg) = &state.message {

@@ -1,5 +1,6 @@
 #!RUNE
 import "assets.rune"
+import "guards.rune"
 import "map.rune"
 import "sound.rune"
 import "logic.rune"
@@ -17,7 +18,7 @@ port = 3020
 logic = breach
 map = e1m1
 camera = player
-things = ["enemies", "pickups"]
+things = ["enemies", "pickups", "projectiles"]
 weapon = weapon
 hud = {"health":"health","ammo":"ammo","score":"score"}
 keys = {"KeyW":"forward","KeyS":"back","KeyA":"strafe_left","KeyD":"strafe_right","ArrowLeft":"turn_left","ArrowRight":"turn_right","Space":"fire","KeyE":"use"}

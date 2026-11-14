@@ -18,9 +18,9 @@ from build_developer_starter import files, archive, DESTINATION
 
 ROUTES = ['developer', 'developer_cli', 'developer_testing', 'developer_quality', 'developer_ci', 'developer_release']
 TITLES = {
-    '': ['Developer quickstart', 'CLI reference', 'Testing Rune', 'Code quality', 'Continuous integration', 'What’s new in 0.3.2'],
-    'es': ['Inicio para desarrolladores', 'Referencia de CLI', 'Pruebas en Rune', 'Calidad del código', 'Integración continua', 'Novedades de 0.3.2'],
-    'fr': ['Démarrage développeur', 'Référence CLI', 'Tester en Rune', 'Qualité du code', 'Intégration continue', 'Nouveautés de 0.3.2'],
+    '': ['Developer quickstart', 'CLI reference', 'Testing Rune', 'Code quality', 'Continuous integration', 'What’s new in 0.3.3'],
+    'es': ['Inicio para desarrolladores', 'Referencia de CLI', 'Pruebas en Rune', 'Calidad del código', 'Integración continua', 'Novedades de 0.3.3'],
+    'fr': ['Démarrage développeur', 'Référence CLI', 'Tester en Rune', 'Qualité du code', 'Intégration continue', 'Nouveautés de 0.3.3'],
 }
 
 
@@ -57,7 +57,7 @@ def check(base, screenshots):
             for route, title in zip(ROUTES, titles):
                 page.goto(base + prefix + '/' + route + '/')
                 expect(page.locator('main h1')).to_have_text(title)
-                expect(page).to_have_title(title + ' — Vectrune 0.3.2')
+                expect(page).to_have_title(title + ' — Vectrune 0.3.3')
                 expect(page.locator('main')).to_have_attribute('data-route', route)
                 expect(page.locator('.developer-nav a[aria-current="page"]')).to_have_count(1)
                 assert '%i18n.' not in page.locator('main').inner_text()

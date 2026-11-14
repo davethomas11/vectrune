@@ -4,13 +4,17 @@ state:
     level = 1
     level_map = "e1m1"
     level_title = "SECTOR 01: PERIMETER FACILITY"
+    level_hint = "FIND TERMINAL // PRESS E TO OVERRIDE"
     story_title = "// TRANSMISSION 01: INFILTRATION //"
-    story_body = "PRIORITY ALPHA: Infiltrate outer security perimeter.|Neutralize hostile cyborg guards on patrol.|Locate the Terminal Switch to unlock the shaft.|Reach the Elevator to advance to Reactor Core."
+    story_body = "PRIORITY ALPHA: Infiltrate outer security perimeter.|Neutralize hostile cyborg guards on patrol.|Locate the Terminal Switch to unlock the shaft.|Press E at the Elevator to reach Reactor Core."
     switch_pos = {"x":6.5,"y":4.5}
     exit_pos = {"x":14.5,"y":7.5}
     switch_activated = false
+    switch_anim = 0
+    wall_overrides = []
     message = ""
     msg_timer = 0
+    use_held = false
     clock = 0
     score = 0
     health = 100
@@ -20,6 +24,7 @@ state:
     fire_cooldown = 0
     player = {"x":1.5,"y":1.5,"angle":0}
     weapon = {"sprite":"weapon/shotgun_idle","bob":0}
+    projectiles = []
     enemies = []
     pickups = []
 
@@ -63,6 +68,11 @@ action advance:
         stop
 
 action start:
+    health = 100
+    ammo = 24
+    score = 0
+    kills = 0
+    clock = 0
     status = "playing"
     call setup_level_1
     music.stop
@@ -79,20 +89,27 @@ action setup_level_1:
     level = 1
     level_map = "e1m1"
     level_title = "SECTOR 01: PERIMETER FACILITY"
+    level_hint = "FIND TERMINAL // PRESS E TO OVERRIDE"
     story_title = "// TRANSMISSION 01: INFILTRATION //"
-    story_body = "PRIORITY ALPHA: Infiltrate outer security perimeter.|Neutralize hostile cyborg guards on patrol.|Locate the Terminal Switch to unlock the shaft.|Reach the Elevator to advance to Reactor Core."
+    story_body = "PRIORITY ALPHA: Infiltrate outer security perimeter.|Neutralize hostile cyborg guards on patrol.|Locate the Terminal Switch to unlock the shaft.|Press E at the Elevator to reach Reactor Core."
     switch_pos = {"x":6.5,"y":4.5}
     exit_pos = {"x":14.5,"y":7.5}
     switch_activated = false
+    switch_anim = 0
+    wall_overrides = [{"x":7,"y":4,"texture":"wall/switch"}]
     message = ""
     msg_timer = 0
-    player = {"x":1.5,"y":1.5,"angle":0}
+    fire_cooldown = 0
+    flash = 0
+    use_held = false
+    player = map_spawn(level_map)
     weapon.sprite = "weapon/shotgun_idle"
     weapon.bob = 0
+    projectiles = []
     enemies = []
-    enemies.push({"id":1,"x":3.5,"y":4.5,"sprite":"enemy/guard_walk1","hp":3,"visible":true,"cooldown":30})
-    enemies.push({"id":2,"x":6.5,"y":3.5,"sprite":"enemy/guard_walk1","hp":3,"visible":true,"cooldown":45})
-    enemies.push({"id":3,"x":14.5,"y":5.5,"sprite":"enemy/guard_walk1","hp":4,"visible":true,"cooldown":20})
+    enemies.push({"id":1,"x":2.5,"y":4.5,"sprite":"guard3d/walk0/0","hp":3,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":30})
+    enemies.push({"id":2,"x":6.5,"y":3.5,"sprite":"guard3d/walk0/0","hp":3,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":45})
+    enemies.push({"id":3,"x":14.5,"y":5.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
     pickups = []
     pickups.push({"id":1,"x":4.5,"y":1.5,"sprite":"pickup/medkit","kind":"health","visible":true})
     pickups.push({"id":2,"x":6.5,"y":6.5,"sprite":"pickup/ammo","kind":"ammo","visible":true})
@@ -101,52 +118,66 @@ action setup_level_2:
     level = 2
     level_map = "e1m2"
     level_title = "SECTOR 02: THE REACTOR CORE"
+    level_hint = "TERMINAL: NORTHEAST // LOWER HALL EAST, THEN NORTH"
     story_title = "// TRANSMISSION 02: REACTOR HAZARD //"
-    story_body = "Elevator descended to Sub-Level 2.|CRITICAL WARNING: Reactor core radiation high.|Hostile enforcement cyborgs guarding conduits.|Locate the Coolant Override Switch at (14, 1)|and unlock the elevator to Command Vault."
+    story_body = "West lift arrival. Override terminal is northeast.|Follow the lower service hall east, then north.|Press E at the terminal to unlock the elevator.|Return southwest through the south service loop.|Press E at the elevator to enter Command Vault."
     switch_pos = {"x":14.5,"y":1.5}
     exit_pos = {"x":1.5,"y":7.5}
     switch_activated = false
+    switch_anim = 0
+    wall_overrides = [{"x":15,"y":1,"texture":"wall/switch"}]
     message = ""
     msg_timer = 0
-    player = {"x":1.5,"y":1.5,"angle":0}
+    fire_cooldown = 0
+    flash = 0
+    use_held = false
+    player = map_spawn(level_map)
     weapon.sprite = "weapon/shotgun_idle"
     weapon.bob = 0
+    projectiles = []
     enemies = []
-    enemies.push({"id":1,"x":5.5,"y":1.5,"sprite":"enemy/guard_walk1","hp":3,"visible":true,"cooldown":25})
-    enemies.push({"id":2,"x":8.5,"y":4.5,"sprite":"enemy/guard_walk1","hp":4,"visible":true,"cooldown":20})
-    enemies.push({"id":3,"x":12.5,"y":3.5,"sprite":"enemy/guard_walk1","hp":4,"visible":true,"cooldown":20})
-    enemies.push({"id":4,"x":3.5,"y":6.5,"sprite":"enemy/guard_walk1","hp":4,"visible":true,"cooldown":20})
+    enemies.push({"id":1,"x":5.5,"y":1.5,"sprite":"guard3d/walk0/0","hp":3,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":25})
+    enemies.push({"id":2,"x":9.5,"y":4.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
+    enemies.push({"id":3,"x":12.5,"y":3.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
+    enemies.push({"id":4,"x":2.5,"y":6.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
     pickups = []
-    pickups.push({"id":1,"x":3.5,"y":3.5,"sprite":"pickup/medkit","kind":"health","visible":true})
+    pickups.push({"id":1,"x":2.5,"y":3.5,"sprite":"pickup/medkit","kind":"health","visible":true})
     pickups.push({"id":2,"x":12.5,"y":5.5,"sprite":"pickup/medkit","kind":"health","visible":true})
-    pickups.push({"id":3,"x":7.5,"y":1.5,"sprite":"pickup/ammo","kind":"ammo","visible":true})
-    pickups.push({"id":4,"x":10.5,"y":6.5,"sprite":"pickup/ammo","kind":"ammo","visible":true})
+    pickups.push({"id":3,"x":6.5,"y":1.5,"sprite":"pickup/ammo","kind":"ammo","visible":true})
+    pickups.push({"id":4,"x":9.5,"y":5.5,"sprite":"pickup/ammo","kind":"ammo","visible":true})
 
 action setup_level_3:
     level = 3
     level_map = "e1m3"
     level_title = "SECTOR 03: THE COMMAND VAULT"
+    level_hint = "FIND CENTRAL TERMINAL // PRESS E TO OVERRIDE"
     story_title = "// TRANSMISSION 03: FINAL PURGE //"
     story_body = "Final sector reached: The Command Vault.|The Supreme Cyber-Commander holds central bridge.|Eliminate all heavy guards and override the|Master Terminal to unlock extraction shuttle."
     switch_pos = {"x":9.5,"y":4.5}
     exit_pos = {"x":14.5,"y":7.5}
     switch_activated = false
+    switch_anim = 0
+    wall_overrides = [{"x":9,"y":4,"texture":"wall/switch"}]
     message = ""
     msg_timer = 0
-    player = {"x":1.5,"y":1.5,"angle":0}
+    fire_cooldown = 0
+    flash = 0
+    use_held = false
+    player = map_spawn(level_map)
     weapon.sprite = "weapon/shotgun_idle"
     weapon.bob = 0
+    projectiles = []
     enemies = []
-    enemies.push({"id":1,"x":4.5,"y":1.5,"sprite":"enemy/guard_walk1","hp":4,"visible":true,"cooldown":20})
-    enemies.push({"id":2,"x":12.5,"y":1.5,"sprite":"enemy/guard_walk1","hp":4,"visible":true,"cooldown":20})
-    enemies.push({"id":3,"x":7.5,"y":4.5,"sprite":"enemy/guard_walk1","hp":8,"visible":true,"cooldown":15})
-    enemies.push({"id":4,"x":4.5,"y":6.5,"sprite":"enemy/guard_walk1","hp":4,"visible":true,"cooldown":20})
-    enemies.push({"id":5,"x":12.5,"y":6.5,"sprite":"enemy/guard_walk1","hp":4,"visible":true,"cooldown":20})
+    enemies.push({"id":1,"x":4.5,"y":1.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
+    enemies.push({"id":2,"x":12.5,"y":1.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
+    enemies.push({"id":3,"x":7.5,"y":4.5,"sprite":"guard3d/walk0/0","hp":8,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":15})
+    enemies.push({"id":4,"x":4.5,"y":5.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
+    enemies.push({"id":5,"x":12.5,"y":5.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
     pickups = []
-    pickups.push({"id":1,"x":2.5,"y":3.5,"sprite":"pickup/medkit","kind":"health","visible":true})
-    pickups.push({"id":2,"x":13.5,"y":3.5,"sprite":"pickup/medkit","kind":"health","visible":true})
+    pickups.push({"id":1,"x":3.5,"y":3.5,"sprite":"pickup/medkit","kind":"health","visible":true})
+    pickups.push({"id":2,"x":12.5,"y":3.5,"sprite":"pickup/medkit","kind":"health","visible":true})
     pickups.push({"id":3,"x":1.5,"y":6.5,"sprite":"pickup/ammo","kind":"ammo","visible":true})
-    pickups.push({"id":4,"x":13.5,"y":6.5,"sprite":"pickup/ammo","kind":"ammo","visible":true})
+    pickups.push({"id":4,"x":14.5,"y":6.5,"sprite":"pickup/ammo","kind":"ammo","visible":true})
 
 action shoot:
     stop when status != "playing"
@@ -159,14 +190,16 @@ action shoot:
     for enemy in enemies:
         if enemy.visible == true && enemy.hp > 0:
             dist = distance(player, enemy)
-            angle_diff = abs(angle_to(player, enemy) - player.angle)
+            angle_diff = abs((angle_to(player, enemy) - player.angle + 540) % 360 - 180)
             if dist < 12 && angle_diff < 16:
                 can_see = sees(player, enemy)
                 if can_see == true:
                     enemy.hp -= 2
+                    enemy.pain = 6
                     enemy.sprite = "enemy/guard_pain"
                     if enemy.hp <= 0:
-                        enemy.sprite = "enemy/guard_dead"
+                        death_facing = floor(((angle_to(enemy, player) - enemy.angle + 382.5) % 360) / 45)
+                        enemy.sprite = "guard3d/dead/" + death_facing
                         kills += 1
                         score += 250
                         sound.play "guard_death"
@@ -177,7 +210,16 @@ action tick(input):
             call advance
         stop
 
+    use_pressed = input.use == true && use_held == false
+    use_held = input.use == true
     clock += 1
+    # The lever moves down, the panel verifies, then the green state stays lit.
+    if switch_anim > 0:
+        switch_anim -= 1
+        if switch_anim <= 12:
+            wall_overrides[0].texture = "wall/switch_verify"
+        if switch_anim <= 6:
+            wall_overrides[0].texture = "wall/switch_on"
     flash = max(0, flash - 1)
     fire_cooldown = max(0, fire_cooldown - 1)
     if fire_cooldown <= 6:
@@ -187,6 +229,14 @@ action tick(input):
         msg_timer -= 1
         if msg_timer == 0:
             message = ""
+
+    # Keep the next objective visible when no interaction or combat notice is active.
+    if msg_timer <= 0:
+        message = level_hint
+        if switch_activated == true:
+            message = "ELEVATOR UNLOCKED // RETURN TO LIFT AND PRESS E"
+            if level == 2:
+                message = "RETURN SOUTHWEST VIA SOUTH LOOP // E: ELEVATOR"
 
     # Turning via keys or mouse delta
     if input.turn_left == true:
@@ -235,31 +285,68 @@ action tick(input):
                 if item.kind == "ammo":
                     ammo = min(50, ammo + 12)
 
-    # Enemy AI: Alert, approach and attack with strict Line-of-Sight
+    # Advance plasma before spawning the next volley: every shot has travel time.
+    for bolt in projectiles:
+        if bolt.visible == true:
+            bolt.life -= 1
+            next_bolt = {"x":bolt.x + bolt.vx,"y":bolt.y + bolt.vy}
+            clear_path = sees(bolt, next_bolt)
+            moved_bolt = slide(bolt.x, bolt.y, bolt.vx, bolt.vy, 0.08)
+            if clear_path == false || abs(moved_bolt.x - next_bolt.x) > 0.01 || abs(moved_bolt.y - next_bolt.y) > 0.01:
+                bolt.visible = false
+            if bolt.visible == true:
+                bolt.x = next_bolt.x
+                bolt.y = next_bolt.y
+                if distance(bolt, player) < 0.32:
+                    bolt.visible = false
+                    flash = 8
+                    health = max(0, health - 8)
+                    sound.play "player_pain"
+                    if health <= 0:
+                        status = "gameover"
+                        sound.play "player_death"
+                        music.stop
+            if bolt.life <= 0:
+                bolt.visible = false
+    projectiles = projectiles.filter(b => b.visible == true)
+
+    stop when status != "playing"
+
+    # Guards face their target, stride, flinch and telegraph each ranged attack.
     for enemy in enemies:
         if enemy.visible == true && enemy.hp > 0:
             enemy.cooldown = max(0, enemy.cooldown - 1)
+            enemy.pain = max(0, enemy.pain - 1)
+            enemy.attack = max(0, enemy.attack - 1)
             dist_to_p = distance(enemy, player)
             if dist_to_p < 11:
                 has_los = sees(enemy, player)
                 if has_los == true:
-                    enemy_angle = angle_to(enemy, player)
-                    if dist_to_p > 1.8:
-                        edx = cos(enemy_angle) * 0.04
-                        edy = sin(enemy_angle) * 0.04
+                    enemy.angle = angle_to(enemy, player)
+                    if dist_to_p > 3 && enemy.pain == 0 && enemy.attack == 0:
+                        edx = cos(enemy.angle) * 0.035
+                        edy = sin(enemy.angle) * 0.035
                         enew = slide(enemy.x, enemy.y, edx, edy, 0.25)
                         enemy.x = enew.x
                         enemy.y = enew.y
-                        enemy.sprite = "enemy/guard_walk1"
-                    if dist_to_p <= 2.2 && enemy.cooldown == 0:
-                        enemy.cooldown = 28
-                        flash = 8
-                        health = max(0, health - 8)
-                        sound.play "player_pain"
-                        if health <= 0:
-                            status = "gameover"
-                            sound.play "player_death"
-                            music.stop
+                        enemy.anim += 1
+                    if enemy.cooldown == 8:
+                        enemy.attack = 12
+                        sound.play "guard_charge"
+                    if enemy.cooldown == 0 && enemy.pain == 0:
+                        enemy.cooldown = 54
+                        enemy.attack = 6
+                        bolt_vx = cos(enemy.angle) * 0.14
+                        bolt_vy = sin(enemy.angle) * 0.14
+                        projectiles.push({"x":enemy.x,"y":enemy.y,"vx":bolt_vx,"vy":bolt_vy,"sprite":"projectile/plasma","scale":0.18,"visible":true,"life":100})
+            view_angle = (angle_to(enemy, player) - enemy.angle + 382.5) % 360
+            facing = floor(view_angle / 45)
+            frame = floor(enemy.anim / 6) % 2
+            enemy.sprite = "guard3d/walk" + frame + "/" + facing
+            if enemy.attack > 0:
+                enemy.sprite = "guard3d/attack/" + facing
+            if enemy.pain > 0:
+                enemy.sprite = "guard3d/pain/" + facing
 
     # Check Terminal Switch
     dist_to_sw = distance(player, switch_pos)
@@ -267,8 +354,10 @@ action tick(input):
         if switch_activated == false:
             message = "[E] OVERRIDE TERMINAL SWITCH"
             msg_timer = 2
-            if input.use == true || input.fire == true || dist_to_sw < 0.8:
+            if use_pressed == true:
                 switch_activated = true
+                switch_anim = 18
+                wall_overrides[0].texture = "wall/switch_press"
                 sound.play "switch_flip"
                 score += 500
                 message = "OVERRIDE ACCEPTED // ELEVATOR UNLOCKED!"
@@ -283,6 +372,10 @@ action tick(input):
                 message = "ACCESS DENIED: ACTIVATE TERMINAL SWITCH FIRST"
                 msg_timer = 45
         if switch_activated == true:
+            if msg_timer <= 2:
+                message = "[E] USE ELEVATOR"
+                msg_timer = 2
+            stop when use_pressed != true
             sound.play "victory_exit"
             if level == 3:
                 status = "won"

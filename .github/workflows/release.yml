@@ -95,6 +95,7 @@ jobs:
           BIN="target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}"
           "$BIN" --version
           "$BIN" test examples/rune_studio --json
+          "$BIN" test examples/vect_breach --type logic --json
 
       - name: Package
         shell: bash

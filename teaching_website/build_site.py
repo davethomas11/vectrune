@@ -14,7 +14,7 @@ import tempfile
 
 SITE = Path(__file__).resolve().parent
 LOCALES = [("en_us", ""), ("es", "es"), ("fr", "fr")]
-MIN_COMPILER = (0, 2, 20)
+MIN_COMPILER = (0, 3, 3)
 
 
 def check_compiler(binary):
@@ -23,7 +23,7 @@ def check_compiler(binary):
     if not version or tuple(map(int, version.groups())) < MIN_COMPILER:
         raise RuntimeError(
             f"{binary} embeds an older browser runtime ({result.stdout.strip()}). "
-            "This site requires Vectrune 0.2.20 or newer for language routing. "
+            "This site requires Vectrune 0.3.3 or newer for Pixel 3D game exports. "
             "Omit --binary to build the compiler from this checkout; "
             "do not use an older Homebrew binary to render the updated teaching templates."
         )
@@ -85,10 +85,12 @@ def build_site(destination, binary, base="/", selected_routes=None):
             shutil.copyfile(SITE / name, destination / name)
     # A stable same-origin game URL preserves localStorage across locale changes
     # and reloads; data-URI previews have opaque origins and cannot do that.
-    game = assets / "games/monster-city"
-    game.mkdir(parents=True, exist_ok=True)
-    result = subprocess.run([binary, str(SITE.parent / "examples/monster_city/site_shell.rune"), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)
-    (game / "index.html").write_text(result.stdout, encoding="utf-8")
+    for slug, entry in [("monster-city", "monster_city/site_shell.rune"),
+                        ("vect-breach", "vect_breach/site_shell.rune")]:
+        game = assets / "games" / slug
+        game.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run([binary, str(SITE.parent / "examples" / entry), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)
+        (game / "index.html").write_text(result.stdout, encoding="utf-8")
     from build_developer_starter import archive
     developer = assets / 'content/developer'
     developer.mkdir(parents=True, exist_ok=True)
@@ -138,7 +140,7 @@ def serve_site(destination, port, base="/"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", help="Use an existing compiler (0.2.20+); otherwise build this checkout")
+    parser.add_argument("--binary", help="Use an existing compiler (0.3.3+); otherwise build this checkout")
     parser.add_argument("--output", required=True)
     parser.add_argument("--base", default="/")
     parser.add_argument("--serve", action="store_true", help="Serve the generated site on localhost")

@@ -282,3 +282,10 @@ export function castRay(
   return null;
 }
 
+
+/** Map-authored spawn data, shared by browser/native game logic and logic tests. */
+export function mapSpawn(name: string): { x: number; y: number; angle: number } {
+  const map = (globalThis as any).__RuneSpatialMaps?.[name];
+  if (!map?.spawn) throw new Error(`Map ${name} has no spawn`);
+  return { ...map.spawn };
+}

@@ -333,3 +333,84 @@ pixels:
     "..........kddddddddddk.........."
     "..........kddddddddddk.........."
 
+
+# High contrast plasma with a bright core, visible at range against dark walls.
+@Sprite/projectile/plasma
+palette = base
+size = [8, 8]
+origin = [4, 4]
+pixels:
+    "..RRRR.."
+    ".RYYYYR."
+    "RYwwwwYR"
+    "RYwwwwYR"
+    "RYwwwwYR"
+    "RYwwwwYR"
+    ".RYYYYR."
+    "..RRRR.."
+
+# Animated terminal lever and verification lights.
+@Texture/wall/switch_press
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kSSSSSSSSSSSSSSk"
+    "kSyyYYYYYYyyysSk"
+    "kSykbbbbbbbbksSk"
+    "kSykbYYwbYYbksSk"
+    "kSykbYYwbYYbksSk"
+    "kSykbbbbbbbbksSk"
+    "kSSSSSSSSSSSSSSk"
+    "kSssssksskssssSk"
+    "kSsssskYYkssssSk"
+    "kSsssskYYkssssSk"
+    "kSssssksskssssSk"
+    "kSssssksskssssSk"
+    "kSssssksskssssSk"
+    "kSSSSSSSSSSSSSSk"
+    "kkkkkkkkkkkkkkkk"
+
+# Animated terminal lever and verification lights.
+@Texture/wall/switch_verify
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kSSSSSSSSSSSSSSk"
+    "kSyyYYYYYYyyysSk"
+    "kSykbbbbbbbbksSk"
+    "kSykbYYwbYYbksSk"
+    "kSykbYYwbYYbksSk"
+    "kSykbbbbbbbbksSk"
+    "kSSSSSSSSSSSSSSk"
+    "kSssssksskssssSk"
+    "kSssssksskssssSk"
+    "kSssssksskssssSk"
+    "kSsssskYYkssssSk"
+    "kSsssskYYkssssSk"
+    "kSssssksskssssSk"
+    "kSSSSSSSSSSSSSSk"
+    "kkkkkkkkkkkkkkkk"
+
+# Animated terminal lever and verification lights.
+@Texture/wall/switch_on
+palette = base
+size = [16, 16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kSSSSSSSSSSSSSSk"
+    "kSyyYYYYYYyyysSk"
+    "kSykbbbbbbbbksSk"
+    "kSykbGGwbGGbksSk"
+    "kSykbGGwbGGbksSk"
+    "kSykbbbbbbbbksSk"
+    "kSSSSSSSSSSSSSSk"
+    "kSssssksskssssSk"
+    "kSssssksskssssSk"
+    "kSssssksskssssSk"
+    "kSssssksskssssSk"
+    "kSsssskGGkssssSk"
+    "kSsssskGGkssssSk"
+    "kSSSSSSSSSSSSSSk"
+    "kkkkkkkkkkkkkkkk"

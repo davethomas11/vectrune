@@ -10,6 +10,7 @@ on:
       - 'examples/testing/**'
       - 'examples/rune_studio/**'
       - 'examples/monster_city/**'
+      - 'examples/vect_breach/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -22,6 +23,7 @@ on:
       - 'examples/testing/**'
       - 'examples/rune_studio/**'
       - 'examples/monster_city/**'
+      - 'examples/vect_breach/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -57,7 +59,7 @@ jobs:
       - name: Check compiler
         run: cargo check
       - name: Test CLI and runtime integration
-        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package
+        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package --test pixel3d_app --test integration_vect_cli --test integration_vectrune_cli
       - name: Test CLI support and deployment packaging
         run: 'cargo test --lib cli::'
       - name: Test pixel audio and persistence without an output device
@@ -81,6 +83,8 @@ jobs:
           target/debug/vectrune check examples/monster_city --deny-warnings
           target/debug/vectrune fmt examples/monster_city --check
           target/debug/vectrune test examples/monster_city --json
+      - name: Test Vect Breach game logic
+        run: target/debug/vectrune test examples/vect_breach --type logic --json
       - name: Install Linux native audio headers
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev

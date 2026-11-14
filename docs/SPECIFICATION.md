@@ -153,3 +153,38 @@ Declarative replication of data items:
 - 2D Grid: `grid COLS x ROWS at (X, Y) step (DX, DY) with { overrides }`
 - Local Templates: `local template_name = { ... }`
 - Batch Modifiers: `all { prop = val }`
+
+## 5. Shared Expression / Vect Implementation Slice (2026-11-14)
+
+`runtime/rune-web/src/core_expression.ts` implements a typed Pratt AST with the
+precedence table above. Native extended `.vect` scripts embed the same evaluator
+used by Rune-Web; they do not use JavaScript `eval` for user expressions. Parsed
+expressions and assignment targets are cached for reuse. The JSON fixtures in
+`tests/conformance/expressions.json` run against both native Vect execution and
+the Rune-Web evaluator. This is an implementation slice, not a claim that every
+runtime implements the full draft.
+
+Extended Vect supports `action name(params):` and `return expression`, local
+action assignments, reference-valued array/object parameters, `for item, index
+in expression:`, `while`, `break`, and `continue`. Arrays and objects can span
+source lines inside balanced brackets; string literals use escaped newlines.
+The canonical math surface uses **degrees for `sin`/`cos`**, and `round` rounds
+ties toward positive infinity. `range(start, end?, step?)` excludes its end;
+`range(end)` starts at zero. `repeat(value, count)` makes a shallow array.
+
+The native adapter supplies `file.write(path, text)` and `script_dir`. Relative
+output paths resolve beside the source script; absolute paths are preserved.
+Browser runtimes do not receive filesystem access from the common evaluator.
+Legacy-only Vect programs, including line jumps, retain their original executor.
+Rust backend steps, emulator expressions, imports, state generators and the REPL
+still need the migrations described in `LANGUAGE_PARITY_ROADMAP.md`.
+
+### Pixel-3D map starts
+
+An `@Map` can declare `spawn = {"x":1.5,"y":1.5,"angle":0}` in world tile
+coordinates. Integer coordinates are tile edges; `.5` places the camera at a
+tile center. Angles are degrees: east 0, south 90, west 180, north 270.
+`map_spawn("e1m2")` returns a fresh copy for game logic; Vect Breach sets
+`player = map_spawn(level_map)` when entering a sector. The compiler rejects
+non-numeric starts, out-of-bounds starts and starts inside solid tiles. Spawn
+metadata is shared by web/native play and embedded logic tests.

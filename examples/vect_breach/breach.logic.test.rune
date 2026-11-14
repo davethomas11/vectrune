@@ -74,7 +74,7 @@ run:
     assert state.status == "playing"
     invoke unlock_elevator
     invoke teleport {"x":14.5,"y":7.4}
-    invoke tick
+    invoke tick {"use":true}
     assert state.level == 2
     assert state.status == "story"
     assert state.level_map == "e1m2"
@@ -82,7 +82,7 @@ run:
     assert state.status == "playing"
     invoke unlock_elevator
     invoke teleport {"x":1.5,"y":7.4}
-    invoke tick
+    invoke tick {"use":true}
     assert state.level == 3
     assert state.status == "story"
     assert state.level_map == "e1m3"
@@ -90,5 +90,127 @@ run:
     assert state.status == "playing"
     invoke unlock_elevator
     invoke teleport {"x":14.5,"y":7.4}
-    invoke tick
+    invoke tick {"use":true}
     assert state.status == "won"
+
+@Test/VectBreach/SwitchRequiresUsePress
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    invoke teleport {"x":6.5,"y":4.5}
+    invoke tick
+    assert state.switch_activated == false
+    invoke tick {"fire":true}
+    assert state.switch_activated == false
+    invoke tick {"use":true}
+    assert state.switch_activated == true
+    assert state.score == 500
+    invoke tick {"use":true}
+    assert state.score == 500
+
+@Test/VectBreach/UseMustBePressedAtTerminal
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    invoke tick {"use":true}
+    invoke teleport {"x":6.5,"y":4.5}
+    invoke tick {"use":true}
+    assert state.switch_activated == false
+    invoke tick {"use":false}
+    invoke tick {"use":true}
+    assert state.switch_activated == true
+
+@Test/VectBreach/LevelClearsProjectiles
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    assert state.projectiles.length == 0
+    invoke setup_level_2
+    assert state.projectiles.length == 0
+    assert state.use_held == false
+
+@Test/VectBreach/RestartResetsCombat
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    invoke tick {"fire":true}
+    assert state.ammo == 23
+    invoke start
+    assert state.health == 100
+    assert state.ammo == 24
+    assert state.fire_cooldown == 0
+    assert state.flash == 0
+    assert state.score == 0
+
+@Test/VectBreach/ElevatorRequiresFreshUsePress
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    invoke unlock_elevator
+    invoke tick {"use":true}
+    invoke teleport {"x":14.5,"y":7.4}
+    invoke tick {"use":true}
+    assert state.level == 1
+    assert state.status == "playing"
+    invoke tick
+    assert state.message == "[E] USE ELEVATOR"
+    invoke tick {"fire":true}
+    assert state.level == 1
+    invoke tick {"use":true}
+    assert state.level == 2
+    assert state.status == "story"
+    assert state.wall_overrides[0].texture == "wall/switch"
+    assert state.switch_anim == 0
+
+@Test/VectBreach/LockedElevatorDoesNotAdvance
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    invoke teleport {"x":14.5,"y":7.4}
+    invoke tick {"use":true}
+    assert state.level == 1
+    assert state.status == "playing"
+    assert state.switch_activated == false
+
+@Test/VectBreach/SwitchStartsWallAnimation
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    assert state.wall_overrides[0].texture == "wall/switch"
+    invoke teleport {"x":6.5,"y":4.5}
+    invoke tick {"use":true}
+    assert state.switch_anim == 18
+    assert state.wall_overrides[0].texture == "wall/switch_press"
+    invoke tick
+    invoke tick
+    invoke tick
+    invoke tick
+    invoke tick
+    invoke tick
+    assert state.wall_overrides[0].texture == "wall/switch_verify"
+    invoke tick
+    invoke tick
+    invoke tick
+    invoke tick
+    invoke tick
+    invoke tick
+    assert state.wall_overrides[0].texture == "wall/switch_on"
+    assert state.switch_activated == true
+    assert state.score == 500
+    invoke setup_level_2
+    assert state.switch_anim == 0
+    assert state.wall_overrides[0].texture == "wall/switch"

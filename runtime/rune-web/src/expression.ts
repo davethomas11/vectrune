@@ -1,3 +1,4 @@
+import { compileCoreExpression } from './core_expression';
 // ============================================================================
 // Expression evaluation engine
 // ============================================================================
@@ -12,7 +13,7 @@ import {
   valueToString,
 } from './utils';
 import { getStorageItem, hasStorageItem } from './storage';
-import { slide as spatialSlide, sees as spatialSees } from './pixel3d/spatial';
+import { slide as spatialSlide, sees as spatialSees, mapSpawn } from './pixel3d/spatial';
 import type { Scope } from './types';
 
 const MAX_DEPTH = 64;
@@ -331,6 +332,9 @@ export function compileExpression(expr: string, depth = 0): CompiledExpr {
     return (scope: Scope) => pathFn(scope);
   }
 
+  const core = compileCoreExpression(trimmed);
+  if (core) return core;
+
   // 3. Raw source props (JSON strings)
   if (trimmed.startsWith('"')) {
     try {
@@ -398,6 +402,11 @@ export function compileExpression(expr: string, depth = 0): CompiledExpr {
   if (trimmed.startsWith('!')) {
     const inner = compileExpression(trimmed.slice(1).trim(), nextDepth);
     return (scope: Scope) => !Boolean(inner(scope));
+  }
+
+  if (trimmed.startsWith('map_spawn(') && trimmed.endsWith(')')) {
+    const name = compileExpression(trimmed.slice(10, -1), nextDepth);
+    return (scope: Scope) => mapSpawn(String(name(scope)));
   }
 
   // 7. Spatial & Game functions

@@ -7,6 +7,12 @@ use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum VectStmt {
+    Expression { line_no: usize, source: String },
+    Action { line_no: usize, name: String, params: Vec<String>, body: Vec<VectStmt> },
+    For { line_no: usize, item_name: String, index_name: Option<String>, collection: String, body: Vec<VectStmt> },
+    Return { line_no: usize, value: Option<String> },
+    Break { line_no: usize },
+    Continue { line_no: usize },
     Print { line_no: usize, text: String },
     ReadStdio { line_no: usize, var_name: String },
     /// `set <var> = <value>` — assign a literal or interpolated value.
@@ -60,11 +66,20 @@ pub fn handle_vect_file(path: &Path) -> Result<()> {
     let stdout = std::io::stdout();
     let mut input = stdin.lock();
     let mut output = stdout.lock();
-    run_program_with_io(&program, &mut input, &mut output)
+    let exec = lower_program(&program);
+    if crate::execution::runtime::requires_shared_script(&exec.statements) {
+        let absolute = std::fs::canonicalize(path)?;
+        #[cfg(not(target_arch = "wasm32"))]
+        return crate::execution::script::run(&exec, &mut input, &mut output, absolute.parent().unwrap_or(Path::new(".")));
+        #[cfg(target_arch = "wasm32")]
+        bail!("Extended Vect scripts require the native or JavaScript script host")
+    } else {
+        run_program_with_io(&program, &mut input, &mut output)
+    }
 }
 
 pub fn parse_program(source: &str) -> Result<VectProgram> {
-    let lines = collect_source_lines(source);
+    let lines = collect_source_lines(source)?;
     let mut index = 0usize;
     let statements = parse_block(&lines, &mut index, 0, false)?;
     Ok(VectProgram { statements })
@@ -91,6 +106,12 @@ fn lower_block(statements: &[VectStmt]) -> Vec<ExecStmt> {
 
 fn lower_stmt(stmt: &VectStmt) -> ExecStmt {
     match stmt {
+        VectStmt::Expression { line_no, source } => ExecStmt::Expression { line_no: *line_no, source: source.clone() },
+        VectStmt::Action { line_no, name, params, body } => ExecStmt::Action { line_no: *line_no, name: name.clone(), params: params.clone(), body: lower_block(body) },
+        VectStmt::For { line_no, item_name, index_name, collection, body } => ExecStmt::For { line_no: *line_no, item_name: item_name.clone(), index_name: index_name.clone(), collection: collection.clone(), body: lower_block(body) },
+        VectStmt::Return { line_no, value } => ExecStmt::Return { line_no: *line_no, value: value.clone() },
+        VectStmt::Break { line_no } => ExecStmt::Break { line_no: *line_no },
+        VectStmt::Continue { line_no } => ExecStmt::Continue { line_no: *line_no },
         VectStmt::Print { line_no, text } => ExecStmt::Print {
             line_no: *line_no,
             text: text.clone(),
@@ -146,23 +167,53 @@ fn lower_stmt(stmt: &VectStmt) -> ExecStmt {
     }
 }
 
-fn collect_source_lines(source: &str) -> Vec<SourceLine> {
-    source
-        .lines()
-        .enumerate()
-        .filter_map(|(idx, raw)| {
-            let trimmed_end = raw.trim_end();
-            let trimmed = trimmed_end.trim();
-            if trimmed.is_empty() || trimmed.starts_with('#') {
-                return None;
+fn identifier(name: &str) -> bool {
+    let mut chars = name.chars();
+    matches!(chars.next(), Some(c) if c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+fn collect_source_lines(source: &str) -> Result<Vec<SourceLine>> {
+    let mut lines = Vec::new();
+    let mut pending = String::new();
+    let mut brackets = Vec::new();
+    let mut start_line = 0;
+    let mut indent = 0;
+    for (index, raw) in source.lines().enumerate() {
+        let mut quote = None;
+        let mut escaped = false;
+        let mut content = String::new();
+        for ch in raw.chars() {
+            if let Some(q) = quote {
+                content.push(ch);
+                if escaped { escaped = false; }
+                else if ch == '\\' { escaped = true; }
+                else if ch == q { quote = None; }
+                continue;
             }
-            Some(SourceLine {
-                line_no: idx + 1,
-                indent: raw.chars().take_while(|c| c.is_whitespace()).count(),
-                content: trimmed.to_string(),
-            })
-        })
-        .collect()
+            if ch == '#' { break; }
+            if ch == '\"' || ch == '\'' { quote = Some(ch); }
+            if matches!(ch, '(' | '[' | '{') { brackets.push(ch); }
+            if matches!(ch, ')' | ']' | '}') {
+                let expected = match ch { ')' => '(', ']' => '[', _ => '{' };
+                if brackets.pop() != Some(expected) { bail!("mismatched bracket on line {}", index + 1); }
+            }
+            content.push(ch);
+        }
+        if quote.is_some() { bail!("unclosed string on line {}", index + 1); }
+        let trimmed = content.trim();
+        if trimmed.is_empty() { continue; }
+        if pending.is_empty() {
+            start_line = index + 1;
+            indent = raw.chars().take_while(|c| c.is_whitespace()).count();
+        } else { pending.push(' '); }
+        pending.push_str(trimmed);
+        if brackets.is_empty() {
+            lines.push(SourceLine { line_no: start_line, indent, content: std::mem::take(&mut pending) });
+        }
+    }
+    if !brackets.is_empty() { bail!("unclosed bracket starting on line {}", start_line); }
+    Ok(lines)
 }
 
 fn parse_block(
@@ -189,6 +240,42 @@ fn parse_block(
             break;
         }
 
+        if line.content.starts_with("action ") {
+            let header = line.content.strip_prefix("action ").unwrap().strip_suffix(':')
+                .ok_or_else(|| anyhow!("expected action name(params): on line {}", line.line_no))?;
+            let (name, params) = header.split_once('(').ok_or_else(|| anyhow!("expected action parameters on line {}", line.line_no))?;
+            let params = params.strip_suffix(')').ok_or_else(|| anyhow!("unclosed action parameters on line {}", line.line_no))?;
+            let params: Vec<String> = if params.trim().is_empty() { vec![] } else { params.split(',').map(|p| p.trim().to_string()).collect() };
+            if !identifier(name) || params.iter().any(|p| !identifier(p)) {
+                bail!("invalid action declaration on line {}", line.line_no);
+            }
+            let line_no = line.line_no;
+            *index += 1;
+            let body = parse_expected_indented_block(lines, index, base_indent, false, line_no)?;
+            statements.push(VectStmt::Action { line_no, name: name.into(), params, body });
+            continue;
+        }
+        if let Some(header) = line.content.strip_prefix("for ") {
+            let (names, collection) = header.strip_suffix(':').and_then(|h| h.split_once(" in "))
+                .ok_or_else(|| anyhow!("expected for item[, index] in collection: on line {}", line.line_no))?;
+            let names: Vec<_> = names.split(',').map(str::trim).collect();
+            if names.is_empty() || names.len() > 2 || names.iter().any(|n| !identifier(n)) || collection.trim().is_empty() {
+                bail!("invalid for loop on line {}", line.line_no);
+            }
+            let line_no = line.line_no;
+            *index += 1;
+            let body = parse_expected_indented_block(lines, index, base_indent, false, line_no)?;
+            statements.push(VectStmt::For { line_no, item_name: names[0].into(), index_name: names.get(1).map(|s| s.to_string()), collection: collection.trim().into(), body });
+            continue;
+        }
+        if line.content == "return" || line.content.starts_with("return ") {
+            statements.push(VectStmt::Return { line_no: line.line_no, value: line.content.strip_prefix("return ").map(str::to_string) });
+            *index += 1; continue;
+        }
+        if line.content == "break" || line.content == "continue" {
+            statements.push(if line.content == "break" { VectStmt::Break { line_no: line.line_no } } else { VectStmt::Continue { line_no: line.line_no } });
+            *index += 1; continue;
+        }
         if let Some(stmt) = parse_stdio_write(line)? {
             statements.push(stmt);
             *index += 1;
@@ -231,6 +318,11 @@ fn parse_block(
             continue;
         }
 
+        if line.content.contains('=') || (line.content.contains('(') && line.content.ends_with(')')) {
+            statements.push(VectStmt::Expression { line_no: line.line_no, source: line.content.clone() });
+            *index += 1;
+            continue;
+        }
         bail!("unsupported .vect syntax on line {}: `{}`", line.line_no, line.content);
     }
 
