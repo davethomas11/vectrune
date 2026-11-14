@@ -22,7 +22,7 @@ view:
             button data-pixel-mute=true "Sound · M"
             button data-pixel-fullscreen=true "Fullscreen"
             button data-pixel-start=true "Restart"
-        p .controls "Touch: left stick moves; hold and drag elsewhere to fire and aim; USE activates terminals and lifts. Keyboard: WASD · Mouse / ← → · Click / Space · E. Fullscreen requests landscape."
+        p .controls "Touch: left stick moves; drag elsewhere to aim; FIRE shoots; USE activates terminals and lifts. Keyboard: WASD · Mouse / ← → · Click / Space · E. Fullscreen requests landscape."
 
 @Logic/site_breach
 state:

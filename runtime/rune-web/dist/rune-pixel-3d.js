@@ -4934,7 +4934,8 @@ var __RunePixel3DRuntime = (() => {
 .rune-pixel3d-touch .move-stick{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));width:clamp(72px,24vmin,112px);height:clamp(72px,24vmin,112px);border-radius:50%;padding:0;background:radial-gradient(circle,#28465788,#0d172588);opacity:.85}
 .move-stick:before{content:'MOVE';position:absolute;left:0;right:0;top:8px;font-size:9px;letter-spacing:1px;color:#d1dce5}
 .move-stick .stick-thumb{position:absolute;left:30%;top:30%;width:40%;height:40%;border-radius:50%;background:#f6cc4499;border:2px solid #fff1b9;pointer-events:none;will-change:transform}
-.rune-pixel3d-touch .touch-use{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;background:#455521bb}
+.rune-pixel3d-touch .touch-use{position:absolute;right:max(80px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));width:48px;height:48px;border-radius:50%;background:#455521bb}
+.rune-pixel3d-touch .touch-fire{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));width:60px;height:60px;border-radius:50%;background:#8b302bbb;border-color:#ffa47c;font-size:12px}
 .rune-pixel3d-touch .touch-top{position:absolute;right:max(8px,env(safe-area-inset-right));top:max(44px,env(safe-area-inset-top));display:flex;gap:6px;pointer-events:none}
 .rune-pixel3d-touch .touch-top button{border-radius:6px;font-size:10px}
 .rune-pixel3d-touch .rotate-hint{display:none;position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);background:#0d1725dd;color:#fff1ce;border:1px solid #f6cc44;padding:10px;text-align:center;font:12px ui-monospace,monospace;max-width:70%}
@@ -4952,6 +4953,7 @@ var __RunePixel3DRuntime = (() => {
     const overlay = document.createElement("div");
     overlay.className = "rune-pixel3d-touch";
     overlay.innerHTML = `<button class="move-stick" data-touch-play aria-label="Move joystick"><span class="stick-thumb"></span></button>
+    <button class="touch-fire" data-touch-play aria-label="Fire weapon">FIRE</button>
     <button class="touch-use" data-touch-play aria-label="Use terminal or elevator">USE</button>
     <div class="touch-top"><button data-touch-play class="touch-pause" aria-label="Pause game">PAUSE</button><button class="touch-fullscreen" aria-label="Toggle fullscreen">FULL</button></div>
     <span class="rotate-hint">Rotate your device for landscape play</span>`;
@@ -4959,14 +4961,15 @@ var __RunePixel3DRuntime = (() => {
     const stick = overlay.querySelector(".move-stick");
     const thumb = overlay.querySelector(".stick-thumb");
     const use = overlay.querySelector(".touch-use");
+    const fire = overlay.querySelector(".touch-fire");
     const full = overlay.querySelector(".touch-fullscreen");
     const pause = overlay.querySelector(".touch-pause");
     const abort = new AbortController();
     function listen(target, name, handler) {
       target.addEventListener(name, handler, { signal: abort.signal, passive: false });
     }
-    let moveId = null, aimId = null, useId = null;
-    let aimX = 0;
+    let moveId = null, aimId = null, useId = null, fireId = null;
+    let aimX = 0, fireX = 0;
     function capture(target, id) {
       try {
         target.setPointerCapture(id);
@@ -5019,6 +5022,18 @@ var __RunePixel3DRuntime = (() => {
       capture(use, useId);
       bindings.use(true, true);
     });
+    listen(fire, "pointerdown", (e) => {
+      if (fireId !== null || !bindings.playing()) return;
+      activate(e);
+      if (bindings.paused()) {
+        bindings.resume();
+        return;
+      }
+      fireId = e.pointerId;
+      fireX = e.clientX;
+      capture(fire, fireId);
+      bindings.fire(true, true);
+    });
     listen(surface, "pointerdown", (e) => {
       if (!touch(e) || e.target.closest("button") || aimId !== null) return;
       activate(e);
@@ -5033,7 +5048,6 @@ var __RunePixel3DRuntime = (() => {
       aimId = e.pointerId;
       aimX = e.clientX;
       capture(surface, aimId);
-      bindings.fire(true, true);
     });
     listen(document, "pointermove", (e) => {
       if (e.pointerId === moveId) {
@@ -5045,6 +5059,11 @@ var __RunePixel3DRuntime = (() => {
         bindings.look((e.clientX - aimX) * 1200 / Math.max(1, canvas.getBoundingClientRect().width));
         aimX = e.clientX;
       }
+      if (e.pointerId === fireId) {
+        e.preventDefault();
+        bindings.look((e.clientX - fireX) * 1200 / Math.max(1, canvas.getBoundingClientRect().width));
+        fireX = e.clientX;
+      }
     });
     function end(e) {
       if (e.pointerId === moveId) {
@@ -5052,8 +5071,9 @@ var __RunePixel3DRuntime = (() => {
         bindings.move(0, 0);
         thumb.style.transform = "";
       }
-      if (e.pointerId === aimId) {
-        aimId = null;
+      if (e.pointerId === aimId) aimId = null;
+      if (e.pointerId === fireId) {
+        fireId = null;
         bindings.fire(false, false, e.type !== "pointerup");
       }
       if (e.pointerId === useId) {
@@ -5084,11 +5104,12 @@ var __RunePixel3DRuntime = (() => {
     resize.observe(surface);
     position();
     function reset() {
-      const m = moveId, a = aimId, u = useId;
-      moveId = aimId = useId = null;
+      const m = moveId, a = aimId, u = useId, f = fireId;
+      moveId = aimId = useId = fireId = null;
       release(stick, m);
       release(surface, a);
       release(use, u);
+      release(fire, f);
       thumb.style.transform = "";
       bindings.move(0, 0);
       bindings.fire(false);
@@ -5473,7 +5494,7 @@ var __RunePixel3DRuntime = (() => {
       const state = game.app.state;
       const announce = document.querySelector("[data-pixel-status]");
       if (announce) {
-        const status = game.paused ? "Paused \u2014 tap Resume or press P" : state.status === "title" ? "Vect Breach \u2014 Tap/click the game or press Enter/Space to commence mission." : state.status === "story" ? "Incoming Transmission \u2014 Tap/click the game or press Enter/Space to engage." : state.status === "won" ? "Mission Accomplished! All Sectors Cleared. Tap the game, or press Space/Enter to replay." : state.status === "gameover" ? "Agent Terminated! Tap the game, or press Space/Enter to restart." : state.status === "ready" ? "Click canvas or press Enter to begin mission." : navigator.maxTouchPoints > 0 ? "Left stick: move. Hold and drag the game: fire and aim. USE: terminal / elevator." : "Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.";
+        const status = game.paused ? "Paused \u2014 tap Resume or press P" : state.status === "title" ? "Vect Breach \u2014 Tap/click the game or press Enter/Space to commence mission." : state.status === "story" ? "Incoming Transmission \u2014 Tap/click the game or press Enter/Space to engage." : state.status === "won" ? "Mission Accomplished! All Sectors Cleared. Tap the game, or press Space/Enter to replay." : state.status === "gameover" ? "Agent Terminated! Tap the game, or press Space/Enter to restart." : state.status === "ready" ? "Click canvas or press Enter to begin mission." : navigator.maxTouchPoints > 0 ? "Left stick: move. Drag the game: aim. FIRE: shoot. USE: terminal / elevator." : "Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.";
         if (announce.textContent !== status) {
           announce.textContent = status;
         }

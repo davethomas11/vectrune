@@ -636,7 +636,7 @@ VectBreach {
     try_it = "Cliquez sur le jeu, lisez la mission, puis cliquez à nouveau pour commencer. Le plein écran facilite la visée ; Échap libère la souris."
     standalone = "Ouvrir le jeu complet ↗"
     controls_title = "Se déplacer, viser, activer"
-    controls = "WASD pour se déplacer · Souris ou flèches pour viser · Clic ou Espace pour tirer · E pour activer. Sur mobile : joystick gauche pour se déplacer ; maintenez et glissez ailleurs pour tirer et viser ; USE active terminaux et ascenseurs."
+    controls = "WASD pour se déplacer · Souris ou flèches pour viser · Clic ou Espace pour tirer · E pour activer. Sur mobile : joystick gauche pour se déplacer ; glissez ailleurs pour viser ; maintenez FIRE pour tirer ; USE active terminaux et ascenseurs."
     objective = "Trouvez le terminal de chaque secteur et appuyez sur E pour débloquer l’ascenseur. Suivez la boussole et les indications, ramassez soins et munitions, puis appuyez sur E dans l’ascenseur pour avancer."
     device = "Commandes tactiles sur téléphone et tablette. Le plein écran demande le mode paysage si disponible ; sinon, tournez l’appareil. La campagne n’est pas sauvegardée."
     source_title = "Explorez le jeu et générez ses gardes"

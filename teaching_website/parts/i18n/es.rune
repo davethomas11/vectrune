@@ -636,7 +636,7 @@ VectBreach {
     try_it = "Haz clic en el juego, lee la misión y vuelve a hacer clic para empezar. Usa pantalla completa para apuntar; Esc libera el ratón."
     standalone = "Abrir el juego completo ↗"
     controls_title = "Muévete, apunta y activa"
-    controls = "WASD para moverte · Ratón o flechas para apuntar · Clic o Espacio para disparar · E para activar. En móvil: palanca izquierda para moverte; mantén y desliza fuera de ella para disparar y apuntar; USE activa terminales y ascensores."
+    controls = "WASD para moverte · Ratón o flechas para apuntar · Clic o Espacio para disparar · E para activar. En móvil: palanca izquierda para moverte; desliza fuera de ella para apuntar; mantén FIRE para disparar; USE activa terminales y ascensores."
     objective = "Encuentra la terminal del sector y pulsa E para desbloquear el ascensor. Sigue la brújula y las indicaciones, recoge salud y munición, y pulsa E en el ascensor para avanzar."
     device = "Controles táctiles para teléfonos y tabletas. Pantalla completa solicita orientación horizontal cuando es compatible; si no, gira el dispositivo. No se guarda la campaña."
     source_title = "Explora el juego y genera sus guardias"

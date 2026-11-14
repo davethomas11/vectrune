@@ -27,6 +27,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     page.evaluate('__RunePixel3D.muted=true;__RunePixel3D.app.state.enemies=[];__RunePixel3D.app.state.pickups=[]')
     stick = page.get_by_role('button', name='Move joystick')
     use = page.get_by_role('button', name='Use terminal or elevator')
+    fire = page.get_by_role('button', name='Fire weapon')
     expect(stick).to_be_visible()
     expect(use).to_be_visible()
     client = context.new_cdp_session(page)
@@ -48,11 +49,28 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     box = canvas.bounding_box()
     aim = point(2, box['x'] + box['width']*.68, box['y'] + box['height']*.5)
     dispatch('touchStart', [move, aim])
-    page.wait_for_function('__RunePixel3D.app.state.ammo < 24')
+    page.wait_for_timeout(150)
+    assert page.evaluate('__RunePixel3D.app.state.ammo') == 24, 'Looking must not consume ammunition'
     angle = page.evaluate('__RunePixel3D.app.state.player.angle')
     aim = point(2, aim['x']-35, aim['y']+12)
     dispatch('touchMove', [move, aim])
     page.wait_for_function(f'__RunePixel3D.app.state.player.angle !== {angle}')
+    page.wait_for_timeout(300)
+    assert page.evaluate('__RunePixel3D.app.state.ammo') == 24, 'Moving and looking must not fire'
+    fx, fy = center(fire)
+    shot = point(3, fx, fy)
+    dispatch('touchStart', [move, aim, shot])
+    page.wait_for_function('__RunePixel3D.app.state.ammo < 24')
+    angle = page.evaluate('__RunePixel3D.app.state.player.angle')
+    shot = point(3, fx-15, fy-4)
+    dispatch('touchMove', [move, aim, shot])
+    page.wait_for_function(f'__RunePixel3D.app.state.player.angle !== {angle}')
+    dispatch('touchEnd', [move, aim])
+    ammo = page.evaluate('__RunePixel3D.app.state.ammo')
+    aim = point(2, aim['x']-15, aim['y'])
+    dispatch('touchMove', [move, aim])
+    page.wait_for_timeout(200)
+    assert page.evaluate('__RunePixel3D.app.state.ammo') == ammo, 'FIRE release stops shooting while aiming continues'
     dispatch('touchEnd', [move])
     dispatch('touchEnd', [])
     page.wait_for_timeout(100)
@@ -66,12 +84,16 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     dispatch('touchCancel', [])
     assert page.locator('.stick-thumb').evaluate('(e)=>e.style.transform') == ''
     page.evaluate('__RunePixel3D.app.state.fire_cooldown=0')
-    dispatch('touchStart', [aim])
+    dispatch('touchStart', [point(3, fx, fy)])
     dispatch('touchCancel', [])
     page.wait_for_timeout(100)
     ammo = page.evaluate('__RunePixel3D.app.state.ammo')
     page.wait_for_timeout(450)
     assert page.evaluate('__RunePixel3D.app.state.ammo') == ammo
+    page.evaluate('__RunePixel3D.app.state.fire_cooldown=0')
+    fire.tap()
+    page.wait_for_function(f'__RunePixel3D.app.state.ammo < {ammo}')
+    ammo = page.evaluate('__RunePixel3D.app.state.ammo')
     page.evaluate('__RunePixel3D.app.state.player={x:6.5,y:4.5,angle:0}')
     use.tap()
     page.wait_for_function('__RunePixel3D.app.state.switch_activated')
@@ -96,8 +118,9 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     page.screenshot(path='/private/tmp/vect-breach-mobile-fullscreen.png')
     client.send('Emulation.setDeviceMetricsOverride', {'width':844,'height':390,'screenWidth':844,'screenHeight':390,'deviceScaleFactor':2,'mobile':True,'screenOrientation':{'type':'landscapePrimary','angle':90}})
     page.wait_for_function('innerWidth === 844')
+    page.wait_for_function('''() => {const c=document.querySelector('canvas').getBoundingClientRect(),o=document.querySelector('.rune-pixel3d-touch').getBoundingClientRect();return Math.abs(c.width-o.width)<1&&Math.abs(c.top-o.top)<1&&Math.abs(c.left-o.left)<1;}''')
     expect(page.locator('.rotate-hint')).not_to_be_visible()
-    for control in [stick, use, page.get_by_role('button', name='Toggle fullscreen')]:
+    for control in [stick, use, fire, page.get_by_role('button', name='Toggle fullscreen')]:
         box = control.bounding_box()
         assert box['x'] >= 0 and box['y'] >= 0 and box['x']+box['width'] <= 845 and box['y']+box['height'] <= 391
     capture = client.send('Page.captureScreenshot', {'format':'png','captureBeyondViewport':False})
@@ -124,4 +147,4 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     assert not page.locator('.iframe-fullscreen-host').count()
     assert not errors, errors
     browser.close()
-print('Vect Breach mobile: two-finger movement/aim/fire, release/cancel, USE progression, fullscreen landscape request and embedded fallback pass')
+print('Vect Breach mobile: independent movement/aim/FIRE, no ammo drain from looking, release/cancel, USE progression, fullscreen landscape request and embedded fallback pass')

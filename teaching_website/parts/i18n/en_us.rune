@@ -636,7 +636,7 @@ VectBreach {
     try_it = "Click the game, read the briefing, then click again to engage. Fullscreen gives mouse aiming more room; press Esc to release the mouse."
     standalone = "Open the full game ↗"
     controls_title = "Move, aim, override"
-    controls = "WASD move · Mouse or arrows aim · Click or Space fire · E use. On mobile: left stick moves; hold and slide elsewhere to fire and aim; tap USE for terminals and elevators."
+    controls = "WASD move · Mouse or arrows aim · Click or Space fire · E use. On mobile: left stick moves; drag elsewhere to aim; hold FIRE to shoot; tap USE for terminals and elevators."
     objective = "Find each sector’s terminal and press E to unlock the elevator. Follow the compass and objective hints, collect health and ammunition, then press E at the elevator to advance."
     device = "Touch controls work on phones and tablets. Fullscreen requests landscape orientation where supported; otherwise rotate the device manually. Campaign progress is not saved."
     source_title = "Explore the game and generate its guards"

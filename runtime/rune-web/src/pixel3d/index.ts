@@ -290,7 +290,7 @@ export function mount(
         : state.status === 'ready'
         ? 'Click canvas or press Enter to begin mission.'
         : navigator.maxTouchPoints > 0
-        ? 'Left stick: move. Hold and drag the game: fire and aim. USE: terminal / elevator.'
+        ? 'Left stick: move. Drag the game: aim. FIRE: shoot. USE: terminal / elevator.'
         : 'Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.';
       if (announce.textContent !== status) {
         announce.textContent = status;
