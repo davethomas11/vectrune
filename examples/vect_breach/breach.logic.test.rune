@@ -214,3 +214,21 @@ run:
     invoke setup_level_2
     assert state.switch_anim == 0
     assert state.wall_overrides[0].texture == "wall/switch"
+
+@Test/VectBreach/AnalogTouchMovement
+type = logic
+page = breach_level
+setup:
+    invoke start
+run:
+    invoke tick {"move_y":0.5}
+    assert state.player.x > 1.53
+    assert state.player.x < 1.55
+    invoke tick {"move_x":0.5}
+    assert state.player.y > 1.52
+    assert state.player.y < 1.54
+    invoke tick {"move_y":-1}
+    assert state.player.x < 1.5
+    invoke teleport {"x":1.26,"y":1.5}
+    invoke tick {"move_y":-1}
+    assert state.player.x >= 1.25

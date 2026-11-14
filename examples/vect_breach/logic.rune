@@ -262,6 +262,16 @@ action tick(input):
     if input.strafe_right == true:
         move_strafe += 0.06
 
+    # Analog touch-stick input shares the same collision-aware movement path.
+    if input.move_y > 0:
+        move_fwd += clamp(input.move_y, 0, 1) * 0.08
+    if input.move_y < 0:
+        move_fwd += clamp(input.move_y, -1, 0) * 0.06
+    if input.move_x:
+        move_strafe += clamp(input.move_x, -1, 1) * 0.06
+    move_fwd = clamp(move_fwd, -0.06, 0.08)
+    move_strafe = clamp(move_strafe, -0.06, 0.06)
+
     if move_fwd != 0 || move_strafe != 0:
         weapon.bob += 0.3
         dx = cos(player.angle) * move_fwd - sin(player.angle) * move_strafe

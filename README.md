@@ -627,7 +627,9 @@ vectrune examples/vect_breach/generate_guards.vect
 ```
 
 WASD moves, the mouse or arrow keys aim, left click/Space fires, and E activates
-terminals and elevators. The `.vect` baker regenerates all 40 directional guard
+terminals and elevators. On mobile, use the left joystick to move, hold and drag
+elsewhere to fire and aim, and tap USE for terminals and elevators. Fullscreen
+requests landscape orientation where the browser supports it. The `.vect` baker regenerates all 40 directional guard
 views without Python or Node. For a native window, build with the optional
 `pixel-desktop` feature. See [Vect scripting](knowledge/language/vect-scripts.md)
 for the shared expression syntax and current parity boundaries.

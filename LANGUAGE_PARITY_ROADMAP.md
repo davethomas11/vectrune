@@ -154,7 +154,7 @@ Over successive releases, features were added to specific targets to solve immed
     ```
 - [-] **4.2 Elevate `.vect` Scripts to Full Language Parity**:
   - Allow `.vect` scripts to use full Rune expression syntax, collections, and state generators while preserving concise stdio syntax (`stdio ->`, `<- stdio`).
-  - **Progress (2026-11-14):** Extended scripts lower actions, for/while loops, returns, loop control and mutable collections into shared execution IR, with Rune-style assignments, reusable cached expression ASTs, math/JSON helpers and a native file-output adapter. `examples/vect_breach/generate_guards.vect` replaces the Python baker and reproduces every original sprite pixel and palette color. Existing stdio/legacy scripts remain supported; generator reproducibility and shared native/web fixtures are tested. Imports, state generators, match, Rust backend/REPL integration and full legacy-executor migration remain open. See [Vect scripts](knowledge/language/vect-scripts.md).
+  - **Progress (2026-11-14):** Extended scripts lower actions, for/while loops, returns, loop control and mutable collections into shared execution IR, with Rune-style assignments, reusable cached expression ASTs, math/JSON helpers and a native file-output adapter. `examples/vect_breach/generate_guards.vect` replaces the Python baker and reproduces the checked-in guard assets with canonicalized angles and stable coplanar-face ordering across platforms. Existing stdio/legacy scripts remain supported; generator reproducibility and shared native/web fixtures are tested. Imports, state generators, match, Rust backend/REPL integration and full legacy-executor migration remain open. See [Vect scripts](knowledge/language/vect-scripts.md).
 
 ---
 

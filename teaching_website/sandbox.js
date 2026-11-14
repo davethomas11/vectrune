@@ -384,6 +384,9 @@ window.addEventListener('message', (event) => {
         const iframes = document.querySelectorAll('iframe.example-preview');
         for (const iframe of iframes) {
             if (iframe.contentWindow === event.source) {
+                // Backdrop filters establish a fixed-position containing block.
+                // Release that block so an expanded game reaches the viewport.
+                iframe.parentElement?.classList.toggle('iframe-fullscreen-host', Boolean(event.data.is_fullscreen));
                 if (event.data.is_fullscreen) {
                     iframe.classList.add('iframe-fullscreen');
                     document.body.classList.add('has-iframe-fullscreen');

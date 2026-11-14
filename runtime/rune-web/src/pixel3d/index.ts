@@ -1,5 +1,7 @@
 import { Pixel3DEngine, type Pixel3DConfig, type Input3D } from './engine';
 import { unlockAudio } from '../audio';
+import { mountTouch } from './touch';
+import { createFullscreen } from './fullscreen';
 import type { RuneWebConfig } from '../types';
 
 let settings: Pixel3DConfig;
@@ -73,6 +75,9 @@ export function mount(
   let mouseFire = false;
   let pendingFire = false;
   let pendingUse = false;
+  let touchFire = false, touchUse = false, moveX = 0, moveY = 0;
+  let lastTouchAt = 0;
+  let touch: ReturnType<typeof mountTouch> | undefined;
   let lookAccumX = 0;
   let lookAccumY = 0;
   let previous = 0;
@@ -94,6 +99,7 @@ export function mount(
     pendingUse = false;
     lookAccumX = 0;
     lookAccumY = 0;
+    touch?.reset();
   };
 
   const start = () => {
@@ -112,6 +118,7 @@ export function mount(
   for (const button of Array.from(document.querySelectorAll('[data-pixel-pause]'))) {
     listen(button, 'click', () => {
       canvas.focus();
+      clear();
       game.paused = !game.paused;
     });
   }
@@ -120,20 +127,33 @@ export function mount(
       game.muted = !game.muted;
     });
   }
+  const surface = canvas.parentElement || canvas;
+  const fullscreen = createFullscreen(surface, () => { clear(); touch?.update(); });
   for (const button of Array.from(document.querySelectorAll('[data-pixel-fullscreen]'))) {
-    listen(button, 'click', () => {
-      const surface = canvas.parentElement || canvas;
-      if (!document.fullscreenElement) {
-        surface.requestFullscreen?.();
-      } else {
-        document.exitFullscreen?.();
-      }
-    });
+    listen(button, 'click', () => { void fullscreen.toggle().catch(() => {}); });
   }
+  touch = mountTouch(canvas, surface, {
+    playing: () => game.app.state.status === 'playing',
+    paused: () => game.paused,
+    interact: () => { lastTouchAt = Date.now(); unlockAudio(); },
+    advance: () => {
+      clear();
+      if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance');
+      else start();
+    },
+    resume: () => { clear(); game.paused = false; },
+    move: (x, y) => { moveX = x; moveY = y; },
+    look: delta => { lookAccumX += delta; },
+    fire: (held, pulse, cancel) => { touchFire = held; if (pulse) pendingFire = true; if (cancel) pendingFire = false; },
+    use: (held, pulse, cancel) => { touchUse = held; if (pulse) pendingUse = true; if (cancel) pendingUse = false; },
+    fullscreen: () => { void fullscreen.toggle().catch(() => {}); },
+    expanded: fullscreen.expanded,
+    pause: () => { clear(); game.paused = !game.paused; },
+  });
 
   // Queue short clicks until a simulation tick; keep mouse and keyboard holds separate.
   listen(canvas, 'mousedown', ((event: MouseEvent) => {
-    if (event.button !== 0 || game.app.state.status !== 'playing') return;
+    if (Date.now() - lastTouchAt < 700 || event.button !== 0 || game.app.state.status !== 'playing') return;
     unlockAudio();
     canvas.focus();
     mouseFire = true;
@@ -154,6 +174,7 @@ export function mount(
 
   // Pointer lock for FPS mouse look
   listen(canvas, 'click', () => {
+    if (Date.now() - lastTouchAt < 700) return;
     unlockAudio();
     canvas.focus();
     if (game.app.state.status !== 'playing') {
@@ -205,7 +226,7 @@ export function mount(
     }
   }) as EventListener);
 
-  listen(canvas, 'keyup', ((event: KeyboardEvent) => {
+  listen(document, 'keyup', ((event: KeyboardEvent) => {
     if (keys[event.code]) {
       input[keys[event.code]] = false;
     }
@@ -214,6 +235,10 @@ export function mount(
   listen(window, 'blur', () => {
     clear();
     game.paused = true;
+  });
+
+  listen(document, 'visibilitychange', () => {
+    if (document.hidden) { clear(); game.paused = true; }
   });
 
   listen(window, 'focus', () => {
@@ -228,8 +253,10 @@ export function mount(
     while (accumulator >= 1000 / tickRate) {
       const controls: Input3D = {
         ...input,
-        fire: Boolean(input.fire || mouseFire || pendingFire),
-        use: Boolean(input.use || pendingUse),
+        fire: Boolean(input.fire || mouseFire || touchFire || pendingFire),
+        use: Boolean(input.use || touchUse || pendingUse),
+        move_x: moveX,
+        move_y: moveY,
       };
       pendingFire = false;
       pendingUse = false;
@@ -243,6 +270,7 @@ export function mount(
       accumulator -= 1000 / tickRate;
     }
 
+    touch.update();
     game.frame();
     context.putImageData(image, 0, 0);
 
@@ -250,17 +278,19 @@ export function mount(
     const announce = document.querySelector<HTMLElement>('[data-pixel-status]');
     if (announce) {
       const status = game.paused
-        ? 'Paused — press P to resume'
+        ? 'Paused — tap Resume or press P'
         : state.status === 'title'
-        ? 'Vect Breach — Click canvas or press Enter/Space to commence mission.'
+        ? 'Vect Breach — Tap/click the game or press Enter/Space to commence mission.'
         : state.status === 'story'
-        ? 'Incoming Transmission — Click canvas or press Enter/Space to engage.'
+        ? 'Incoming Transmission — Tap/click the game or press Enter/Space to engage.'
         : state.status === 'won'
-        ? 'Mission Accomplished! All Sectors Cleared. Press Space, Click, or Enter to replay.'
+        ? 'Mission Accomplished! All Sectors Cleared. Tap the game, or press Space/Enter to replay.'
         : state.status === 'gameover'
-        ? 'Agent Terminated! Press Space, Click, or Enter to restart.'
+        ? 'Agent Terminated! Tap the game, or press Space/Enter to restart.'
         : state.status === 'ready'
         ? 'Click canvas or press Enter to begin mission.'
+        : navigator.maxTouchPoints > 0
+        ? 'Left stick: move. Hold and drag the game: fire and aim. USE: terminal / elevator.'
         : 'Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.';
       if (announce.textContent !== status) {
         announce.textContent = status;
@@ -279,6 +309,8 @@ export function mount(
     stopped = true;
     game.paused = true;
     cancelAnimationFrame(frameId);
+    fullscreen.dispose();
+    touch?.dispose();
     abort.abort();
     clear();
   };
