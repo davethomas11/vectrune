@@ -1,6 +1,7 @@
 """Build safety checks: new templates must not ship with the old locale router."""
 from pathlib import Path
 import subprocess
+import re
 import sys
 import tempfile
 import unittest
@@ -11,6 +12,14 @@ from build_site import build_site
 
 
 class TeachingBuildTests(unittest.TestCase):
+    def test_games_menu_orders_examples_by_increasing_complexity(self):
+        layout = (Path(__file__).resolve().parents[2] / 'teaching_website/parts/components/layout.rune').read_text()
+        games = layout.split('h3 "%i18n.Nav.games%"', 1)[1].split('div .nav-group:', 1)[0]
+        self.assertEqual(
+            re.findall(r'click="navigate\(\'([\w-]+)\'\)"', games),
+            ['games', 'vectworms', 'monster-city', 'vect-breach', 'rune-crypt'],
+        )
+
     def test_stale_compiler_is_rejected_before_overwriting_a_working_site(self):
         with tempfile.TemporaryDirectory() as folder:
             destination = Path(folder) / 'site'

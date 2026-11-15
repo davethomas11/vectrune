@@ -2,6 +2,13 @@
 
 Rune-Web compiles pages, reusable views, state, actions and styles from Rune into HTML and a reactive browser runtime. The teaching site's **Rune-Web guide** group sits below REST API tutorials. It extends the application-type overview; the existing counter page remains available.
 
+The teaching site's Games menu orders examples by increasing implementation
+complexity: VectRaiders, VectWorms, Monster City, Vect Breach, then Rune Crypt.
+This progresses from Rune-Web arcade games to the pixel engine, first-person
+Pixel 3D, and a dungeon RPG. The shared
+[`SidebarLayout`](../../teaching_website/parts/components/layout.rune) preserves
+this order across locales and mobile navigation; routes remain unchanged.
+
 ## Pages and components
 
 `@Frontend type = rune-web` selects a named `@Page` with `page = workshops`. The page's `view:` composes elements and `@Component` views. A component declares inputs with `props: [title, level, note?]`; a trailing `?` marks an optional prop. Named values at the call site supply each instance's content. `note ?? 'Bring your curiosity.'` provides a fallback.
