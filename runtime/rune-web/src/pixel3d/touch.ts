@@ -13,7 +13,7 @@ export interface TouchBindings {
   pause: () => void;
 }
 
-const STYLE = `
+export const STYLE = `
 .rune-pixel3d-surface{position:relative;touch-action:none;isolation:isolate}
 .rune-pixel3d-touch{position:absolute;pointer-events:none;display:none;z-index:5;user-select:none;-webkit-user-select:none;touch-action:none}
 @media (pointer:coarse),(hover:none){.rune-pixel3d-touch{display:block}}

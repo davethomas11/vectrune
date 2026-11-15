@@ -1,3 +1,4 @@
+import { mountControls } from '../input/browser';
 import { PixelEngine, type PixelConfig, type Input } from './engine';
 import { unlockAudio } from '../audio';
 import type { RuneWebConfig } from '../types';
@@ -36,7 +37,8 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   const abort = new AbortController();
   const listen = (element: EventTarget, name: string, callback: EventListener) => element.addEventListener(name, callback, { signal: abort.signal });
   const pending = new Set<string>();
-  const clear = () => { input = {}; pending.clear(); };
+  let mapped: ReturnType<typeof mountControls> | undefined;
+  const clear = () => { input = {}; pending.clear(); mapped?.clear(); };
   const pause = () => { if(game.app.state.status !== 'playing') return; unlockAudio(); game.paused = !game.paused; clear(); previous = 0; accumulator = 0; };
   const start = () => { unlockAudio(); clear(); game.activate('start'); previous = 0; accumulator = 0; canvas.focus(); };
   const mute = () => { canvas.focus(); game.muted = !game.muted; unlockAudio(); };
@@ -46,7 +48,13 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     const result = document.fullscreenElement ? document.exitFullscreen() : surface.requestFullscreen?.();
     result?.catch(() => { /* The browser may deny fullscreen; the game keeps working. */ });
   };
+  mapped = game.controls ? mountControls(canvas, game.controls, {
+    playing: () => game.app.state.status === 'playing', paused: () => game.paused,
+    resume: () => { clear(); game.paused = false; }, advance: start,
+    fullscreen, interact: unlockAudio, menuKey: code => game.key(code),
+  }) : undefined;
   listen(canvas, 'keydown', ((event: KeyboardEvent) => {
+    if (mapped) return;
     unlockAudio();
     if (!event.repeat && game.key(event.code)) { event.preventDefault(); clear(); return; }
     if (keys[event.code] || ['Enter','KeyP','KeyF','KeyM'].includes(event.code)) event.preventDefault();
@@ -60,12 +68,13 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     unlockAudio(); canvas.focus();
     const rect=canvas.getBoundingClientRect();
     game.click((event.clientX-rect.left)*width/rect.width,(event.clientY-rect.top)*height/rect.height);
-    clear();
+    if (!mapped || game.app.state.status !== 'playing') clear();
   }) as EventListener);
   for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-action]'))) {
     listen(button,'click',() => { unlockAudio(); game.activate(button.dataset.pixelAction!); clear(); canvas.focus(); });
   }
   listen(canvas, 'keyup', ((event: KeyboardEvent) => {
+    if (mapped) return;
     if (keys[event.code]) input[keys[event.code]] = false;
   }) as EventListener);
   listen(canvas, 'blur', ((event: FocusEvent) => {
@@ -77,11 +86,13 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   listen(window, 'blur', () => { clear(); game.paused = true; });
   listen(window, 'focus', () => { if(game.app.state.status !== 'playing') game.paused = false; });
   listen(document, 'visibilitychange', () => { if (document.hidden) { clear(); game.paused = true; } previous = 0; accumulator = 0; });
+  let inputButtonId = 0;
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-pixel-input]'))) {
     const key = button.dataset.pixelInput!;
-    listen(button, 'pointerdown', ((event: PointerEvent) => { event.preventDefault(); canvas.focus(); game.paused = false; button.setPointerCapture(event.pointerId); input[key] = true; pending.add(key); }) as EventListener);
-    for (const event of ['pointerup','lostpointercapture']) listen(button,event,() => { input[key] = false; });
-    listen(button,'pointercancel',() => { input[key] = false; pending.delete(key); });
+    const source = `dom:${inputButtonId++}`;
+    listen(button, 'pointerdown', ((event: PointerEvent) => { event.preventDefault(); canvas.focus(); game.paused = false; button.setPointerCapture(event.pointerId); if (game.controls) game.controls.event({ device: 'virtual', code: key, source, input: key, value: true }); else { input[key] = true; pending.add(key); } }) as EventListener);
+    for (const event of ['pointerup','lostpointercapture']) listen(button,event,() => { if (game.controls) game.controls.event({ device: 'virtual', code: key, source, input: key, value: false }); else input[key] = false; });
+    listen(button,'pointercancel',() => { if (game.controls) game.controls.event({ device: 'virtual', code: key, source, input: key, value: false, cancel: true }); else { input[key] = false; pending.delete(key); } });
   }
   for (const button of Array.from(document.querySelectorAll('[data-pixel-start]'))) listen(button,'click',start);
   for (const button of Array.from(document.querySelectorAll('[data-pixel-pause]'))) listen(button,'click',() => { canvas.focus(); pause(); });
@@ -110,11 +121,12 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     if (previous) accumulator += Math.min(now - previous, 1000 / tickRate * 5);
     previous = now;
     while (accumulator >= 1000 / tickRate) {
-      const controls = { ...input };
+      const controls = { ...input, ...mapped?.sample(1 / tickRate) };
       for (const key of pending) controls[key] = true;
       pending.clear();
       game.step(controls); accumulator -= 1000 / tickRate;
     }
+    mapped?.update();
     game.frame(); context.putImageData(image, 0, 0);
     const state = game.app.state;
     const menu = game.config.menu ? state[game.config.menu] as any : null;
@@ -158,7 +170,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     frameId = requestAnimationFrame(frame);
   };
   frameId = requestAnimationFrame(frame);
-  const dispose = () => { stopped = true; game.paused = true; cancelAnimationFrame(frameId); abort.abort(); observer.disconnect(); clear(); };
+  const dispose = () => { stopped = true; game.paused = true; cancelAnimationFrame(frameId); mapped?.dispose(); abort.abort(); observer.disconnect(); clear(); };
   listen(window,'pagehide',dispose);
   return dispose;
 }

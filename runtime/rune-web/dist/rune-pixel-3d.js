@@ -26,6 +26,420 @@ var __RunePixel3DRuntime = (() => {
     mount: () => mount
   });
 
+  // src/input/touch.ts
+  function mountControlTouch(canvas, controls, profile, options) {
+    const surface = canvas.parentElement || canvas;
+    const style = document.createElement("style");
+    style.textContent = `.rune-control-touch{position:absolute;z-index:6;pointer-events:none;display:none;user-select:none;-webkit-user-select:none;touch-action:none}@media(pointer:coarse),(hover:none){.rune-control-touch{display:block}}.rune-control-touch.is-touch{display:block}.rune-control-touch[hidden]{display:none}.rune-control-touch button{position:absolute;pointer-events:auto;touch-action:none;color:#fff;background:#172c42bb;border:2px solid #efca6a99;border-radius:50%;font:bold 11px ui-monospace,monospace;padding:4px;box-sizing:border-box;min-width:44px;min-height:44px}.rune-control-touch button:focus-visible{outline:3px solid white}.rune-control-touch .control-thumb{position:absolute;left:30%;top:30%;width:40%;height:40%;border-radius:50%;background:#efca6aaa;pointer-events:none}`;
+    document.head.append(style);
+    const overlay = document.createElement("div");
+    overlay.className = "rune-control-touch";
+    surface.append(overlay);
+    const position = getComputedStyle(surface).position;
+    if (position === "static") surface.style.position = "relative";
+    const oldTouchAction = canvas.style.touchAction;
+    canvas.style.touchAction = "none";
+    const hint = document.createElement("span");
+    hint.className = "rotate-hint";
+    hint.textContent = "Rotate your device for landscape play";
+    overlay.append(hint);
+    const abort = new AbortController();
+    function listen(target, name, fn) {
+      target.addEventListener(name, fn, { signal: abort.signal, passive: false });
+    }
+    const pointers = /* @__PURE__ */ new Map();
+    const occupied = /* @__PURE__ */ new Set();
+    function activate(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      options.interact();
+      overlay.classList.add("is-touch");
+      canvas.focus({ preventScroll: true });
+      if (!options.playing()) {
+        options.advance();
+        return false;
+      }
+      if (options.paused()) {
+        options.resume();
+        return false;
+      }
+      return true;
+    }
+    function capture(target, e, pointer) {
+      occupied.add(target);
+      pointers.set(e.pointerId, pointer);
+      try {
+        target.setPointerCapture(e.pointerId);
+      } catch {
+      }
+    }
+    function emit(id, input, value, mode, cancel = false) {
+      controls.event({ device: "virtual", code: id, source: `touch:${id}`, input, value, mode, cancel });
+    }
+    function button(label, id, anchor, offset, size) {
+      const element = document.createElement("button");
+      element.type = "button";
+      element.textContent = label;
+      element.dataset.controlTouch = id;
+      element.setAttribute("aria-label", label);
+      const [vertical, horizontal] = anchor.split("-");
+      element.style[horizontal] = `max(${offset[0]}px,env(safe-area-inset-${horizontal}))`;
+      element.style[vertical] = `max(${offset[1]}px,env(safe-area-inset-${vertical}))`;
+      element.style.width = element.style.height = `${size}px`;
+      overlay.append(element);
+      return element;
+    }
+    if (profile.joystick) {
+      let move2 = function(e, cancel = false) {
+        const rect = stick.getBoundingClientRect(), radius = rect.width * 0.36;
+        let x = e ? (e.clientX - rect.left - rect.width / 2) / radius : 0;
+        let y = e ? -(e.clientY - rect.top - rect.height / 2) / radius : 0;
+        const length = Math.hypot(x, y), deadzone = def.deadzone ?? 0.15;
+        const strength = Math.min(1, Math.max(0, (length - deadzone) / (1 - deadzone)));
+        x = length ? x / length * strength : 0;
+        y = length ? y / length * strength : 0;
+        thumb.style.transform = e ? `translate(${x * radius}px,${-y * radius}px)` : "";
+        if (def.x) emit("stick:x", def.x, x, "value", cancel);
+        if (def.y) emit("stick:y", def.y, y, "value", cancel);
+        for (const [direction, amount] of [["left", -x], ["right", x], ["up", y], ["down", -y]]) {
+          if (def[direction]) emit(`stick:${direction}`, def[direction], amount > 0.35, "button", cancel);
+        }
+      };
+      var move = move2;
+      const def = profile.joystick;
+      const stick = button("MOVE", "joystick", def.anchor || "bottom-left", [12, 12], def.size || 96);
+      stick.dataset.gameplay = "true";
+      stick.setAttribute("aria-label", "Move joystick");
+      const thumb = document.createElement("span");
+      thumb.className = "control-thumb";
+      stick.append(thumb);
+      listen(stick, "pointerdown", (e) => {
+        if (occupied.has(stick) || !activate(e)) return;
+        capture(stick, e, { target: stick, move: move2, end: (cancel) => move2(void 0, cancel) });
+        move2(e);
+      });
+    }
+    for (const [index, def] of (profile.buttons || []).entries()) {
+      const target = button(def.label, def.id, def.anchor || "bottom-right", def.offset || [12 + index * 68, 12], def.size || 56);
+      target.classList.add("touch-" + def.id);
+      if (def.aria_label) target.setAttribute("aria-label", def.aria_label);
+      if (def.input) target.dataset.gameplay = "true";
+      listen(target, "pointerdown", (e) => {
+        if (def.command) {
+          e.preventDefault();
+          e.stopPropagation();
+          options.interact();
+          canvas.focus({ preventScroll: true });
+          if (controls.command(def.command) === "host.fullscreen") options.fullscreen();
+          return;
+        }
+        if (occupied.has(target) || !activate(e)) return;
+        let lastX = e.clientX;
+        emit(def.id, def.input, true, "button");
+        capture(target, e, { target, move: (e2) => {
+          if (def.drag_x) emit(`${def.id}:look`, def.drag_x, (e2.clientX - lastX) * 1200 / Math.max(1, canvas.getBoundingClientRect().width) * (profile.look?.sensitivity ?? 1), "delta");
+          lastX = e2.clientX;
+        }, end: (cancel) => emit(def.id, def.input, false, "button", cancel) });
+      });
+      target.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, { signal: abort.signal });
+    }
+    listen(canvas, "pointerdown", (e) => {
+      if (!["touch", "pen"].includes(e.pointerType) || occupied.has(canvas)) return;
+      if (!activate(e) || !profile.look) return;
+      let lastX = e.clientX;
+      capture(canvas, e, { target: canvas, move: (e2) => {
+        emit("aim", profile.look.x, (e2.clientX - lastX) * 1200 / Math.max(1, canvas.getBoundingClientRect().width) * (profile.look.sensitivity ?? 1), "delta");
+        lastX = e2.clientX;
+      }, end: (cancel) => {
+        if (cancel) emit("aim", profile.look.x, 0, "delta", true);
+      } });
+    });
+    listen(document, "pointermove", (e) => {
+      const pointer = pointers.get(e.pointerId);
+      if (pointer) {
+        e.preventDefault();
+        pointer.move?.(e);
+      }
+    });
+    function end(e) {
+      const pointer = pointers.get(e.pointerId);
+      if (!pointer) return;
+      pointers.delete(e.pointerId);
+      occupied.delete(pointer.target);
+      pointer.end(e.type !== "pointerup");
+    }
+    for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) listen(document, name, end);
+    function reset() {
+      const active = [...pointers];
+      pointers.clear();
+      occupied.clear();
+      for (const [id, pointer] of active) {
+        pointer.end(true);
+        try {
+          pointer.target.releasePointerCapture(id);
+        } catch {
+        }
+      }
+    }
+    function update() {
+      const rect = canvas.getBoundingClientRect(), parent = surface.getBoundingClientRect();
+      Object.assign(overlay.style, { left: `${rect.left - parent.left - surface.clientLeft}px`, top: `${rect.top - parent.top - surface.clientTop}px`, width: `${rect.width}px`, height: `${rect.height}px` });
+      for (const element of Array.from(overlay.querySelectorAll("[data-gameplay]"))) element.hidden = !options.playing();
+      const expanded = options.expanded?.() || false;
+      hint.style.cssText = "position:absolute;left:25%;bottom:calc(100% + 12px);width:50%;text-align:center;color:white;background:#142432dd;font:12px monospace;padding:8px";
+      hint.hidden = !expanded || innerWidth >= innerHeight;
+      for (const def of profile.buttons || []) {
+        const target = Array.from(overlay.querySelectorAll("button")).find((b) => b.dataset.controlTouch === def.id);
+        if (def.command === "host.pause") {
+          target.textContent = options.paused() ? "RESUME" : def.label;
+          target.setAttribute("aria-label", options.paused() ? "Resume game" : def.aria_label || def.label);
+        }
+        if (def.command === "host.fullscreen") target.textContent = expanded ? "EXIT" : def.label;
+      }
+    }
+    const resize = new ResizeObserver(update);
+    resize.observe(canvas);
+    resize.observe(surface);
+    update();
+    return { reset, update, dispose() {
+      reset();
+      abort.abort();
+      resize.disconnect();
+      overlay.remove();
+      style.remove();
+      canvas.style.touchAction = oldTouchAction;
+      if (position === "static") surface.style.position = "";
+    } };
+  }
+
+  // src/input/browser.ts
+  function mountControls(canvas, controls, options) {
+    const abort = new AbortController();
+    let lastTouch = 0;
+    const send = (event) => {
+      if (controls.event(event) === "host.fullscreen") options.fullscreen();
+    };
+    function listen(target, name, handler) {
+      target.addEventListener(name, handler, { signal: abort.signal });
+    }
+    listen(canvas, "keydown", (e) => {
+      options.interact();
+      if (Object.prototype.hasOwnProperty.call(controls.profile.keys, e.code) || Object.prototype.hasOwnProperty.call(controls.profile.commands, e.code)) e.preventDefault();
+      if (!options.playing() && !controls.profile.commands[e.code]) {
+        const binding = controls.profile.keys[e.code];
+        const input = typeof binding === "string" ? binding : binding?.input;
+        if (input && options.advanceInputs?.includes(input)) {
+          if (!e.repeat) options.advance();
+          return;
+        }
+        if (!e.repeat && options.menuKey?.(e.code)) return;
+      }
+      send({ device: "keyboard", code: e.code, value: true });
+    });
+    listen(document, "keyup", (e) => send({ device: "keyboard", code: e.code, value: false }));
+    const mouseCode = (button) => ["Left", "Middle", "Right", "Back", "Forward"][button];
+    listen(canvas, "mousedown", (e) => {
+      if (Date.now() - lastTouch < 700 || !options.playing()) return;
+      options.interact();
+      canvas.focus();
+      const code = mouseCode(e.button);
+      if (code) send({ device: "mouse", code, value: true });
+    });
+    listen(document, "mouseup", (e) => {
+      const code = mouseCode(e.button);
+      if (code) send({ device: "mouse", code, value: false });
+    });
+    listen(canvas, "contextmenu", (e) => {
+      if (controls.profile.mouse.Right) e.preventDefault();
+    });
+    listen(document, "mousemove", (e) => {
+      if (!options.playing() || (options.lockedMouse ? document.pointerLockElement !== canvas : document.activeElement !== canvas)) return;
+      send({ device: "mouse", code: "MoveX", value: e.movementX });
+      send({ device: "mouse", code: "MoveY", value: e.movementY });
+    });
+    canvas.addEventListener("wheel", (e) => {
+      if (document.activeElement !== canvas || !options.playing()) return;
+      if (controls.profile.mouse.WheelX || controls.profile.mouse.WheelY) e.preventDefault();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? canvas.clientHeight : 1;
+      send({ device: "mouse", code: "WheelX", value: e.deltaX * unit });
+      send({ device: "mouse", code: "WheelY", value: e.deltaY * unit });
+    }, { signal: abort.signal, passive: false });
+    const touch = controls.profile.touch && controls.profile.touch.enabled !== false ? mountControlTouch(canvas, controls, controls.profile.touch, {
+      ...options,
+      interact() {
+        lastTouch = Date.now();
+        options.interact();
+      }
+    }) : void 0;
+    function clear() {
+      touch?.reset();
+      controls.clear();
+    }
+    listen(canvas, "blur", clear);
+    listen(window, "blur", clear);
+    listen(document, "visibilitychange", () => {
+      if (document.hidden) clear();
+    });
+    return {
+      clear,
+      recentTouch: () => Date.now() - lastTouch < 700,
+      update() {
+        touch?.update();
+      },
+      sample(dt) {
+        let pads = [];
+        try {
+          if (document.hasFocus() && document.activeElement === canvas) pads = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+        } catch {
+        }
+        for (const command of controls.gamepads(pads)) if (command === "host.fullscreen") options.fullscreen();
+        return controls.sample(dt);
+      },
+      dispose() {
+        clear();
+        touch?.dispose();
+        abort.abort();
+      }
+    };
+  }
+
+  // src/input/controller.ts
+  var InputController = class {
+    constructor(profile) {
+      this.profile = profile;
+      this.sources = /* @__PURE__ */ new Map();
+    }
+    event(event) {
+      const source = event.source || `${event.device}:${event.code}`;
+      const previous = this.sources.get(source);
+      if (event.cancel) {
+        this.sources.delete(source);
+        return;
+      }
+      let binding;
+      if (event.device === "virtual") binding = event.input ? { input: event.input, mode: event.mode } : void 0;
+      else if (event.device === "keyboard") binding = this.profile.keys[event.code];
+      else binding = this.profile[event.device][event.code];
+      const command = (event.device === "keyboard" ? this.profile.commands[event.code] : void 0) || (binding && typeof binding !== "string" ? binding.command : void 0);
+      if (command) {
+        const def2 = binding && typeof binding !== "string" ? binding : void 0;
+        const pressed = typeof event.value === "boolean" ? event.value : Number(event.value) * (def2?.invert ? -1 : 1) > (def2?.threshold ?? 0.5);
+        this.sources.set(source, { input: "", mode: "button", value: pressed, pending: false });
+        if (pressed && !previous?.value) return command;
+        return;
+      }
+      if (!binding) {
+        this.sources.delete(source);
+        return;
+      }
+      const def = typeof binding === "string" ? { input: binding } : binding;
+      if (!def.input) return;
+      const isMouseDelta = event.device === "mouse" && /^(Move|Wheel)[XY]$/.test(event.code);
+      const digitalAxis = event.device === "gamepad" && /[+-]$/.test(event.code);
+      const mode = def.mode || (isMouseDelta ? "delta" : typeof event.value === "boolean" || /^Button/.test(event.code) || digitalAxis ? "button" : "value");
+      let value = Number(event.value);
+      if (def.invert) value = -value;
+      if (event.device === "gamepad" && !/^Button/.test(event.code)) {
+        const deadzone = def.deadzone ?? 0.18;
+        value = Math.abs(value) <= deadzone ? 0 : Math.sign(value) * (Math.abs(value) - deadzone) / (1 - deadzone);
+      }
+      value *= def.scale ?? 1;
+      if (mode === "button") {
+        const down = value > (def.threshold ?? 0.5);
+        this.sources.set(source, { input: def.input, mode, value: down, pending: Boolean(previous?.pending || down && !previous?.value) });
+      } else {
+        this.sources.set(source, { input: def.input, mode, value: mode === "delta" ? Number(previous?.value || 0) + value : value, pending: false });
+      }
+    }
+    /** Queued presses survive a down/up between ticks; deltas drain exactly once. */
+    sample(dt) {
+      const buttons = /* @__PURE__ */ Object.create(null);
+      const axes = /* @__PURE__ */ Object.create(null);
+      const deltas = /* @__PURE__ */ Object.create(null);
+      for (const entry of this.sources.values()) {
+        if (!entry.input) continue;
+        if (entry.mode === "button") buttons[entry.input] = Boolean(buttons[entry.input] || entry.value || entry.pending);
+        else if (entry.mode === "value") {
+          if (Math.abs(Number(entry.value)) >= Math.abs(axes[entry.input] || 0)) axes[entry.input] = Number(entry.value);
+        } else {
+          const scale = entry.mode === "rate" ? Math.max(0, Math.min(0.25, dt)) : 1;
+          deltas[entry.input] = (deltas[entry.input] || 0) + Number(entry.value) * scale;
+        }
+        entry.pending = false;
+        if (entry.mode === "delta") entry.value = 0;
+      }
+      const result = { ...buttons, ...axes };
+      for (const [input, value] of Object.entries(deltas)) result[input] = Number(result[input] || 0) + value;
+      return result;
+    }
+    /** Browser Gamepad API or a native adapter can supply the same normalized pads. */
+    gamepads(pads) {
+      const live = /* @__PURE__ */ new Set();
+      const commands = [];
+      for (const pad of pads) {
+        if (!pad) continue;
+        for (const code of Object.keys(this.profile.gamepad)) {
+          const match = code.match(/^(Button|Axis)(\d+)([+-])?$/);
+          if (!match) continue;
+          const source = `pad:${pad.index}:${code}`;
+          live.add(source);
+          let value = match[1] === "Button" ? pad.buttons[Number(match[2])]?.value || 0 : pad.axes[Number(match[2])] || 0;
+          if (match[3]) value = Math.max(0, value * (match[3] === "-" ? -1 : 1));
+          const command = this.event({ device: "gamepad", code, value, source });
+          if (command) commands.push(command);
+        }
+      }
+      for (const source of this.sources.keys()) if (source.startsWith("pad:") && !live.has(source)) this.sources.delete(source);
+      return commands;
+    }
+    clear(keepCommands = false) {
+      if (!keepCommands) this.sources.clear();
+      else for (const [key, source] of this.sources) if (source.input) this.sources.delete(key);
+    }
+  };
+
+  // src/input/game.ts
+  var GameControls = class {
+    constructor(profile, game) {
+      this.game = game;
+      this.controller = new InputController(profile);
+    }
+    get profile() {
+      return this.controller.profile;
+    }
+    event(event) {
+      const command = this.controller.event(event);
+      return command ? this.command(command) : void 0;
+    }
+    command(command) {
+      if (command === "host.fullscreen") return command;
+      if (command !== "host.mute") this.controller.clear(true);
+      if (command === "host.pause") {
+        if (this.game.app.state.status === "playing") this.game.paused = !this.game.paused;
+      } else if (command === "host.mute") this.game.muted = !this.game.muted;
+      else if (command === "host.start") {
+        if (!this.game.key?.("Enter")) this.game.start();
+      } else if (command === "host.advance") {
+        if (this.game.app.state.status !== "playing") this.game.invoke("advance");
+      } else this.game.invoke(command);
+    }
+    gamepads(pads) {
+      return this.controller.gamepads(pads).flatMap((command) => {
+        const host = this.command(command);
+        return host ? [host] : [];
+      });
+    }
+    sample(dt) {
+      return this.controller.sample(dt);
+    }
+    clear() {
+      this.controller.clear();
+    }
+  };
+
   // src/storage.ts
   var persistent = false;
   function storageIsPersistent() {
@@ -4743,6 +5157,7 @@ var __RunePixel3DRuntime = (() => {
         navigator: null
       };
       this.app.state = JSON.parse(JSON.stringify(options.stateJson));
+      if (config.controls) this.controls = new GameControls(config.controls, this);
       configureAudioHost({
         syncPage: false,
         deferPlayback: typeof document !== "undefined"
@@ -5287,6 +5702,7 @@ var __RunePixel3DRuntime = (() => {
     let touchFire = false, touchUse = false, moveX = 0, moveY = 0;
     let lastTouchAt = 0;
     let touch;
+    let mapped;
     let lookAccumX = 0;
     let lookAccumY = 0;
     let previous = 0;
@@ -5303,6 +5719,7 @@ var __RunePixel3DRuntime = (() => {
       lookAccumX = 0;
       lookAccumY = 0;
       touch?.reset();
+      mapped?.clear();
     };
     const start = () => {
       unlockAudio();
@@ -5338,7 +5755,34 @@ var __RunePixel3DRuntime = (() => {
         });
       });
     }
-    touch = mountTouch(canvas, surface, {
+    mapped = game.controls ? mountControls(canvas, game.controls, {
+      playing: () => game.app.state.status === "playing",
+      paused: () => game.paused,
+      resume: () => {
+        clear();
+        game.paused = false;
+      },
+      advance: () => {
+        clear();
+        if (["title", "story", "gameover", "won"].includes(String(game.app.state.status))) game.invoke("advance");
+        else start();
+      },
+      fullscreen: () => {
+        void fullscreen.toggle().catch(() => {
+        });
+      },
+      interact: unlockAudio,
+      lockedMouse: true,
+      advanceInputs: ["fire", "use"],
+      expanded: fullscreen.expanded
+    }) : void 0;
+    const mappedStyle = mapped ? document.createElement("style") : void 0;
+    if (mappedStyle) {
+      mappedStyle.textContent = STYLE;
+      document.head.append(mappedStyle);
+      surface.classList.add("rune-pixel3d-surface");
+    }
+    touch = mapped ? void 0 : mountTouch(canvas, surface, {
       playing: () => game.app.state.status === "playing",
       paused: () => game.paused,
       interact: () => {
@@ -5382,6 +5826,7 @@ var __RunePixel3DRuntime = (() => {
       }
     });
     listen(canvas, "mousedown", ((event) => {
+      if (mapped) return;
       if (Date.now() - lastTouchAt < 700 || event.button !== 0 || game.app.state.status !== "playing") return;
       unlockAudio();
       canvas.focus();
@@ -5400,7 +5845,7 @@ var __RunePixel3DRuntime = (() => {
       }
     });
     listen(canvas, "click", () => {
-      if (Date.now() - lastTouchAt < 700) return;
+      if (Date.now() - lastTouchAt < 700 || mapped?.recentTouch()) return;
       unlockAudio();
       canvas.focus();
       if (game.app.state.status !== "playing") {
@@ -5418,12 +5863,14 @@ var __RunePixel3DRuntime = (() => {
       }
     });
     listen(document, "mousemove", ((event) => {
+      if (mapped) return;
       if (document.pointerLockElement === canvas) {
         lookAccumX += event.movementX;
         lookAccumY += event.movementY;
       }
     }));
     listen(canvas, "keydown", ((event) => {
+      if (mapped && event.code !== "Escape") return;
       unlockAudio();
       if (keys[event.code] || ["Enter", "KeyP", "KeyM", "Space"].includes(event.code)) {
         event.preventDefault();
@@ -5449,6 +5896,7 @@ var __RunePixel3DRuntime = (() => {
       }
     }));
     listen(document, "keyup", ((event) => {
+      if (mapped) return;
       if (keys[event.code]) {
         input[keys[event.code]] = false;
       }
@@ -5484,11 +5932,12 @@ var __RunePixel3DRuntime = (() => {
         controls.look_y = lookAccumY;
         lookAccumX = 0;
         lookAccumY = 0;
-        game.step(controls);
+        game.step(mapped ? mapped.sample(1 / tickRate) : controls);
         if (game.app.state.status !== "playing") clear();
         accumulator -= 1e3 / tickRate;
       }
-      touch.update();
+      touch?.update();
+      mapped?.update();
       game.frame();
       context.putImageData(image, 0, 0);
       const state = game.app.state;
@@ -5511,6 +5960,9 @@ var __RunePixel3DRuntime = (() => {
       cancelAnimationFrame(frameId);
       fullscreen.dispose();
       touch?.dispose();
+      mapped?.dispose();
+      mappedStyle?.remove();
+      if (mapped) surface.classList.remove("rune-pixel3d-surface");
       abort.abort();
       clear();
     };

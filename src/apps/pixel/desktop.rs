@@ -26,6 +26,8 @@ struct Host {
     context: Context,
     _audio: Output,
     deadline: Arc<Mutex<Instant>>,
+    controls: bool,
+    gamepads: crate::apps::native_controls::Gamepads,
     input: serde_json::Value,
     keys: std::collections::HashMap<String, String>,
     pending: std::collections::HashSet<String>,
@@ -46,7 +48,28 @@ impl Host {
                 .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))
         })
     }
+    fn control_event(&mut self, event: serde_json::Value) -> Result<()> {
+        *self.deadline.lock().unwrap() = Instant::now() + Duration::from_secs(2);
+        let fullscreen: bool = self.context.with(|ctx| {
+            ctx.eval(format!(
+                "__RunePixel.controls.event({event}) === 'host.fullscreen'"
+            ))
+        })?;
+        if fullscreen {
+            if let Some(window) = &self.window {
+                window.set_fullscreen(if window.fullscreen().is_some() {
+                    None
+                } else {
+                    Some(Fullscreen::Borderless(None))
+                });
+            }
+        }
+        Ok(())
+    }
     fn clear_input(&mut self) {
+        if self.controls {
+            let _ = self.js("__RunePixel.controls.clear()");
+        }
         self.pending.clear();
         self.input = serde_json::json!({"left":false,"right":false,"smash":false});
     }
@@ -61,7 +84,34 @@ impl Host {
             for key in self.pending.drain() {
                 input[&key] = true.into();
             }
-            self.js(&format!("__RunePixel.step({input})"))?;
+            if self.controls {
+                let focused = self.window.as_ref().is_some_and(|w| w.has_focus());
+                let (events, pads) = self.gamepads.poll(focused);
+                for event in events {
+                    self.control_event(event)?;
+                }
+                // Host fullscreen commands returned by gamepads must run on the window thread.
+                let fullscreen: bool = self.context.with(|ctx| {
+                    ctx.eval(format!(
+                        "__RunePixel.controls.gamepads({pads}).includes('host.fullscreen')"
+                    ))
+                })?;
+                if fullscreen {
+                    if let Some(window) = &self.window {
+                        window.set_fullscreen(if window.fullscreen().is_some() {
+                            None
+                        } else {
+                            Some(Fullscreen::Borderless(None))
+                        });
+                    }
+                }
+                self.js(&format!(
+                    "__RunePixel.step(__RunePixel.controls.sample({}))",
+                    step.as_secs_f64()
+                ))?;
+            } else {
+                self.js(&format!("__RunePixel.step({input})"))?;
+            }
             self.accumulator -= step;
         }
         *self.deadline.lock().unwrap() = Instant::now() + Duration::from_millis(250);
@@ -117,8 +167,53 @@ impl ApplicationHandler for Host {
     }
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let result = (|| -> Result<()> {
+            if self.controls {
+                *self.deadline.lock().unwrap() = Instant::now() + Duration::from_secs(2);
+                match &event {
+                    WindowEvent::KeyboardInput { event, .. } => {
+                        if let PhysicalKey::Code(key) = event.physical_key {
+                            if key != KeyCode::Escape {
+                                if event.state == ElementState::Pressed && !event.repeat {
+                                    let code = serde_json::to_string(&format!("{key:?}"))?;
+                                    let handled: bool = self.context.with(|ctx| ctx.eval(format!("Boolean(__RunePixel.app.state.status !== 'playing' && !__RunePixel.controls.profile.commands[{code}] && __RunePixel.key({code}))")))?;
+                                    if handled {
+                                        self.clear_input();
+                                        return Ok(());
+                                    }
+                                }
+
+                                self.control_event(serde_json::json!({"device":"keyboard","code":format!("{key:?}"),"value":event.state == ElementState::Pressed}))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                    WindowEvent::MouseInput { state, button, .. } => {
+                        if let Some(code) = crate::apps::native_controls::mouse_button(*button) {
+                            self.control_event(serde_json::json!({"device":"mouse","code":code,"value":*state == ElementState::Pressed}))?;
+                        }
+                        if *button != MouseButton::Left {
+                            return Ok(());
+                        }
+                    }
+                    WindowEvent::MouseWheel { delta, .. } => {
+                        let (x, y) = crate::apps::native_controls::wheel(*delta);
+                        self.control_event(
+                            serde_json::json!({"device":"mouse","code":"WheelX","value":x}),
+                        )?;
+                        self.control_event(
+                            serde_json::json!({"device":"mouse","code":"WheelY","value":y}),
+                        )?;
+                        return Ok(());
+                    }
+                    _ => {}
+                }
+            }
             match event {
                 WindowEvent::CursorMoved { position, .. } => {
+                    if self.controls {
+                        self.control_event(serde_json::json!({"device":"mouse","code":"MoveX","value":position.x - f64::from(self.cursor.0)}))?;
+                        self.control_event(serde_json::json!({"device":"mouse","code":"MoveY","value":position.y - f64::from(self.cursor.1)}))?;
+                    }
                     self.cursor = (position.x as f32, position.y as f32)
                 }
                 WindowEvent::MouseInput {
@@ -126,6 +221,14 @@ impl ApplicationHandler for Host {
                     button: MouseButton::Left,
                     ..
                 } => {
+                    if self.controls {
+                        let playing: bool = self
+                            .context
+                            .with(|ctx| ctx.eval("__RunePixel.app.state.status === 'playing'"))?;
+                        if playing {
+                            return Ok(());
+                        }
+                    }
                     if let Some(pixels) = &self.pixels {
                         if let Ok((x, y)) = pixels.window_pos_to_pixel(self.cursor) {
                             self.clear_input();
@@ -265,6 +368,9 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
     let keys: String = context.with(|ctx| ctx.eval("JSON.stringify(__RunePixel.config.keys)"))?;
     let keys = serde_json::from_str(&keys)?;
     let rate: f64 = context.with(|ctx| ctx.eval("__RunePixel.config.tickRate"))?;
+    let controls: bool = context.with(|ctx| ctx.eval("Boolean(__RunePixel.controls)"))?;
+    let wants_gamepads: bool = context.with(|ctx| ctx.eval("Boolean(__RunePixel.controls && Object.keys(__RunePixel.controls.profile.gamepad).length)"))?;
+    let gamepads = crate::apps::native_controls::Gamepads::new(wants_gamepads);
     let mut host = Host {
         title: game.title.clone(),
         width: game.width as u32,
@@ -275,6 +381,8 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
         context,
         _audio: audio,
         deadline,
+        controls,
+        gamepads,
         input: serde_json::json!({}),
         keys,
         pending: std::collections::HashSet::new(),

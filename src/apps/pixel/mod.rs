@@ -354,6 +354,14 @@ pub fn compile(doc: &RuneDocument) -> Result<Game> {
             "Scene hud needs positive max_health"
         );
     }
+    if let Some(profile) = crate::apps::game_controls::compile(doc, scene)? {
+        crate::apps::game_controls::validate_actions(&profile, |name| logic.actions.contains_key(name))?;
+        config["keys"] = json!(profile["keys"].as_object().unwrap().iter().filter_map(|(code, binding)| {
+            binding.as_str().or_else(|| binding["input"].as_str()).map(|name| (code.clone(), json!(name)))
+        }).collect::<Map<String, Json>>());
+        config["commands"] = json!(profile["commands"].as_object().unwrap().iter().filter(|(_, action)| action.as_str().is_some_and(|s| !s.starts_with("host."))).map(|(key, action)| (key.clone(), action.clone())).collect::<Map<String, Json>>());
+        config["controls"] = profile;
+    }
     let runtime = format!(
         "{}\n__RunePixelRuntime.configure({});",
         include_str!("../../../runtime/rune-web/dist/rune-pixel.js"),

@@ -59,11 +59,13 @@ jobs:
       - name: Check compiler
         run: cargo check
       - name: Test CLI and runtime integration
-        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package --test pixel3d_app --test integration_vect_cli --test integration_vectrune_cli
+        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test game_controls --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package --test pixel3d_app --test integration_vect_cli --test integration_vectrune_cli
       - name: Test CLI support and deployment packaging
         run: 'cargo test --lib cli::'
       - name: Test pixel audio and persistence without an output device
-        run: 'cargo test --lib apps::pixel::'
+        run: |
+          cargo test --lib apps::pixel::
+          cargo test --lib apps::game_controls
       - name: Check starter formatting
         run: target/debug/vectrune fmt examples/testing --check
       - name: Lint example suite
@@ -85,8 +87,8 @@ jobs:
           target/debug/vectrune test examples/monster_city --json
       - name: Test Vect Breach game logic
         run: target/debug/vectrune test examples/vect_breach --type logic --json
-      - name: Install Linux native audio headers
+      - name: Install Linux native input and audio headers
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - name: Check optional desktop pixel host
         run: cargo check --features pixel-desktop

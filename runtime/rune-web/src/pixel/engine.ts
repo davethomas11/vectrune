@@ -1,3 +1,5 @@
+import { GameControls } from '../input/game';
+import type { ControlsProfile } from '../input/types';
 import { GameSave, type Persistence } from './persistence';
 import { withContext, type RuneContext } from '../context';
 import { createLogicApp } from '../logic';
@@ -7,6 +9,7 @@ import type { RuneApp, RuneWebConfig } from '../types';
 
 export interface Sprite { width: number; height: number; origin: number[]; colors: (number | null)[]; pixels: number[] }
 export interface PixelConfig {
+  controls?: ControlsProfile;
   width: number; height: number; tickRate: number; background: number;
   sprites: Record<string, Sprite>;
   animations: Record<string, { frames: string[]; fps: number }>;
@@ -20,7 +23,7 @@ export interface PixelConfig {
   overlays?: Record<string,string>;
   rects: { x: number; y: number; width: number; height: number; color: string }[];
 }
-export interface Input { [action: string]: boolean | undefined }
+export interface Input { [action: string]: boolean | number | undefined }
 interface Entity { x: number; y: number; sprite: string; scale?: number; visible?: boolean; flip?: boolean }
 
 // Tiny portable bitmap font: the same HUD is rendered by every presentation host.
@@ -39,6 +42,7 @@ const FONT: Record<string, string> = {
 const packed = (rgb: number) => (0xff000000 | ((rgb & 255) << 16) | (rgb & 0xff00) | ((rgb >>> 16) & 255)) >>> 0;
 
 export class PixelEngine {
+  readonly controls?: GameControls;
   readonly app: RuneApp;
   readonly buffer: Uint32Array;
   private readonly context: RuneContext;
@@ -75,6 +79,7 @@ export class PixelEngine {
       initialState: JSON.parse(JSON.stringify(options.stateJson)), loadedChunks: {}, loadingChunks: {}, navigator: null };
     // Game state deliberately avoids the DOM reactive proxy. The game clock owns rendering.
     this.app.state = JSON.parse(JSON.stringify(options.stateJson));
+    if (config.controls) this.controls = new GameControls(config.controls, this);
     configureAudioHost({ syncPage: false, deferPlayback: typeof document !== 'undefined' });
     registerSounds(options.sounds); registerMusic(options.music);
     if (config.persistence) {

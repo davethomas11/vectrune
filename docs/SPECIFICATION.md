@@ -188,3 +188,15 @@ tile center. Angles are degrees: east 0, south 90, west 180, north 270.
 `player = map_spawn(level_map)` when entering a sector. The compiler rejects
 non-numeric starts, out-of-bounds starts and starts inside solid tiles. Spawn
 metadata is shared by web/native play and embedded logic tests.
+
+### Declarative game input profiles (unreleased)
+
+Pixel and Pixel 3D scenes may reference `controls = name`, resolving an imported
+`@Controls/name` section. Profiles contain `keys`, `commands`, `mouse`, `gamepad`
+mappings, a `touch` layout and optional `extends`. Physical bindings resolve to
+named boolean/numeric inputs consumed by `tick(input)` or one-shot game/host
+commands. Arrow series and JSON maps are accepted; `null` explicitly unbinds a
+control. Existing scenes without a profile retain their old input configuration.
+See [Game controls](GAME_CONTROLS.md) for the schema, inheritance, source merging,
+touch layout, native/browser parity and runnable examples. Existing Rune-Web
+`@Logic keys:` remains an action-on-keydown interface.

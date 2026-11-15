@@ -1,6 +1,7 @@
+import { mountControls } from '../input/browser';
 import { Pixel3DEngine, type Pixel3DConfig, type Input3D } from './engine';
 import { unlockAudio } from '../audio';
-import { mountTouch } from './touch';
+import { mountTouch, STYLE } from './touch';
 import { createFullscreen } from './fullscreen';
 import type { RuneWebConfig } from '../types';
 
@@ -78,6 +79,7 @@ export function mount(
   let touchFire = false, touchUse = false, moveX = 0, moveY = 0;
   let lastTouchAt = 0;
   let touch: ReturnType<typeof mountTouch> | undefined;
+  let mapped: ReturnType<typeof mountControls> | undefined;
   let lookAccumX = 0;
   let lookAccumY = 0;
   let previous = 0;
@@ -100,6 +102,7 @@ export function mount(
     lookAccumX = 0;
     lookAccumY = 0;
     touch?.reset();
+    mapped?.clear();
   };
 
   const start = () => {
@@ -132,7 +135,16 @@ export function mount(
   for (const button of Array.from(document.querySelectorAll('[data-pixel-fullscreen]'))) {
     listen(button, 'click', () => { void fullscreen.toggle().catch(() => {}); });
   }
-  touch = mountTouch(canvas, surface, {
+  mapped = game.controls ? mountControls(canvas, game.controls, {
+    playing: () => game.app.state.status === 'playing', paused: () => game.paused,
+    resume: () => { clear(); game.paused = false; },
+    advance: () => { clear(); if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance'); else start(); },
+    fullscreen: () => { void fullscreen.toggle().catch(() => {}); },
+    interact: unlockAudio, lockedMouse: true, advanceInputs: ['fire', 'use'], expanded: fullscreen.expanded,
+  }) : undefined;
+  const mappedStyle = mapped ? document.createElement('style') : undefined;
+  if (mappedStyle) { mappedStyle.textContent = STYLE; document.head.append(mappedStyle); surface.classList.add('rune-pixel3d-surface'); }
+  touch = mapped ? undefined : mountTouch(canvas, surface, {
     playing: () => game.app.state.status === 'playing',
     paused: () => game.paused,
     interact: () => { lastTouchAt = Date.now(); unlockAudio(); },
@@ -153,6 +165,7 @@ export function mount(
 
   // Queue short clicks until a simulation tick; keep mouse and keyboard holds separate.
   listen(canvas, 'mousedown', ((event: MouseEvent) => {
+    if (mapped) return;
     if (Date.now() - lastTouchAt < 700 || event.button !== 0 || game.app.state.status !== 'playing') return;
     unlockAudio();
     canvas.focus();
@@ -174,7 +187,7 @@ export function mount(
 
   // Pointer lock for FPS mouse look
   listen(canvas, 'click', () => {
-    if (Date.now() - lastTouchAt < 700) return;
+    if (Date.now() - lastTouchAt < 700 || mapped?.recentTouch()) return;
     unlockAudio();
     canvas.focus();
     if (game.app.state.status !== 'playing') {
@@ -193,6 +206,7 @@ export function mount(
   });
 
   listen(document, 'mousemove', ((event: MouseEvent) => {
+    if (mapped) return;
     if (document.pointerLockElement === canvas) {
       lookAccumX += event.movementX;
       lookAccumY += event.movementY;
@@ -200,6 +214,7 @@ export function mount(
   }) as EventListener);
 
   listen(canvas, 'keydown', ((event: KeyboardEvent) => {
+    if (mapped && event.code !== 'Escape') return;
     unlockAudio();
     if (keys[event.code] || ['Enter', 'KeyP', 'KeyM', 'Space'].includes(event.code)) {
       event.preventDefault();
@@ -227,6 +242,7 @@ export function mount(
   }) as EventListener);
 
   listen(document, 'keyup', ((event: KeyboardEvent) => {
+    if (mapped) return;
     if (keys[event.code]) {
       input[keys[event.code]] = false;
     }
@@ -265,12 +281,13 @@ export function mount(
       lookAccumX = 0;
       lookAccumY = 0;
 
-      game.step(controls);
+      game.step(mapped ? mapped.sample(1 / tickRate) : controls);
       if (game.app.state.status !== 'playing') clear();
       accumulator -= 1000 / tickRate;
     }
 
-    touch.update();
+    touch?.update();
+    mapped?.update();
     game.frame();
     context.putImageData(image, 0, 0);
 
@@ -311,6 +328,9 @@ export function mount(
     cancelAnimationFrame(frameId);
     fullscreen.dispose();
     touch?.dispose();
+    mapped?.dispose();
+    mappedStyle?.remove();
+    if (mapped) surface.classList.remove('rune-pixel3d-surface');
     abort.abort();
     clear();
   };

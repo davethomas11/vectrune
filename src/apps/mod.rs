@@ -1,3 +1,6 @@
+#[cfg(feature = "pixel-desktop")]
+pub mod native_controls;
+pub mod game_controls;
 pub mod pixel;
 pub mod pixel3d;
 pub mod dynamic_ai_web;

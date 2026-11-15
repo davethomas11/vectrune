@@ -230,6 +230,7 @@
                     <li><a href="#web-api-development-rest--graphql">Web API Development (REST & GraphQL)</a></li>
                     <li><a href="#aws-lambda-integration">AWS Lambda Integration</a></li>
                     <li><a href="#game-development">Game Development</a></li>
+                    <li><a href="#game-controls">Game Controls</a></li>
                     <li><a href="#data-source-interaction">Data Source Interaction</a></li>
                 </ul>
             </li>
@@ -596,6 +597,20 @@
                 </ul>
             </li>
         </ul>
+
+        <h3 id="game-controls">Declarative Game Controls (unreleased)</h3>
+        <p>Pixel and Pixel 3D scenes can import <code>controls.rune</code> and select <code>controls = shooter</code>. Physical devices feed named inputs to the existing <code>tick(input)</code> action.</p>
+        <pre><code>@Controls/shooter
+keys:
+    Space -&gt; fire
+    KeyE -&gt; use
+mouse:
+    Left -&gt; fire
+    MoveX -&gt; {"input":"look_x","scale":0.8}
+gamepad:
+    Button7 -&gt; fire
+    Axis0 -&gt; {"input":"move_x","deadzone":0.18}</code></pre>
+        <p>Profiles support inheritance, unbinding with <code>null</code>, analog axes, pointer deltas and configurable touch sticks/buttons. Existing scene mappings and Rune-Web <code>@Logic keys:</code> retain their behavior. See <code>docs/GAME_CONTROLS.md</code> and the <code>controls.rune</code> files in Vect Breach and Monster City. This feature requires a source build newer than 0.3.3.</p>
 
         <h3 id="data-source-interaction">4.5. Data Source Interaction</h3>
         <ul>

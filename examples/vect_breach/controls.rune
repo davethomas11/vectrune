@@ -1,0 +1,31 @@
+#!RUNE
+# Physical devices map to the input names consumed by tick(input).
+@Controls/breach
+keys:
+    KeyW -> forward
+    KeyS -> back
+    KeyA -> strafe_left
+    KeyD -> strafe_right
+    ArrowLeft -> turn_left
+    ArrowRight -> turn_right
+    Space -> fire
+    KeyE -> use
+commands:
+    Enter -> host.advance
+    KeyP -> host.pause
+    KeyM -> host.mute
+    KeyF -> host.fullscreen
+    F11 -> host.fullscreen
+mouse:
+    Left -> fire
+    MoveX -> look_x
+    MoveY -> look_y
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.18}
+    Axis1 -> {"input":"move_y","invert":true,"deadzone":0.18}
+    Axis2 -> {"input":"look_x","mode":"rate","scale":900,"deadzone":0.18}
+    Button7 -> fire
+    Button0 -> use
+    Button9 -> {"command":"host.pause"}
+    Button8 -> {"command":"host.advance"}
+touch = {"joystick":{"x":"move_x","y":"move_y","size":96},"look":{"x":"look_x","sensitivity":1},"buttons":[{"id":"fire","input":"fire","label":"FIRE","aria_label":"Fire weapon","size":60,"offset":[12,12],"drag_x":"look_x"},{"id":"use","input":"use","label":"USE","aria_label":"Use terminal or elevator","size":48,"offset":[80,18]},{"id":"pause","command":"host.pause","label":"PAUSE","aria_label":"Pause game","anchor":"top-right","offset":[72,44],"size":48},{"id":"fullscreen","command":"host.fullscreen","label":"FULL","aria_label":"Toggle fullscreen","anchor":"top-right","offset":[12,44],"size":48}]}

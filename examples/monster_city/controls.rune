@@ -1,0 +1,66 @@
+#!RUNE
+# Physical devices map to the input names consumed by tick(input).
+@Controls/monster
+keys:
+    ArrowLeft -> left
+    ArrowRight -> right
+    KeyA -> left
+    KeyD -> right
+    Space -> smash
+    ArrowDown -> defend
+    KeyS -> defend
+    KeyX -> special
+commands:
+    KeyB -> openStore
+    KeyT -> openTitle
+    PageDown -> nextStorePage
+    PageUp -> previousStorePage
+    Enter -> host.start
+    KeyP -> host.pause
+    KeyM -> host.mute
+    KeyF -> host.fullscreen
+    F11 -> host.fullscreen
+mouse:
+    Left -> smash
+    Right -> defend
+gamepad:
+    Axis0- -> left
+    Axis0+ -> right
+    Button14 -> left
+    Button15 -> right
+    Button0 -> smash
+    Button1 -> defend
+    Button2 -> special
+    Button9 -> {"command":"host.pause"}
+    Button8 -> {"command":"host.start"}
+
+touch = {
+    "joystick": {
+        "left": "left",
+        "right": "right",
+        "size": 80
+    },
+    "buttons": [
+        {
+            "id": "smash",
+            "input": "smash",
+            "label": "SMASH",
+            "size": 56,
+            "offset": [12, 12]
+        },
+        {
+            "id": "defend",
+            "input": "defend",
+            "label": "BLOCK",
+            "size": 48,
+            "offset": [76, 12]
+        },
+        {
+            "id": "special",
+            "input": "special",
+            "label": "POWER",
+            "size": 48,
+            "offset": [132, 12]
+        }
+    ]
+}

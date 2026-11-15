@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [features]
 # Native window adapter is opt-in while the pixel engine is being developed.
-pixel-desktop = ["dep:pixels", "dep:winit", "dep:cpal"]
+pixel-desktop = ["dep:pixels", "dep:winit", "dep:cpal", "dep:gilrs"]
 
 [dependencies]
 indicatif = "0.17"
@@ -61,6 +61,7 @@ rquickjs = "0.14.0"
 crossbeam-queue = "0.3"
 pixels = { version = "0.17", optional = true }
 winit = { version = "0.30", optional = true }
+gilrs = { version = "0.11.2", optional = true }
 cpal = { version = "0.18.2", optional = true }
 
 # Wasm dependencies

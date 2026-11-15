@@ -82,7 +82,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     # Cancelling either pointer releases its action; blur clears every input.
     dispatch('touchStart', [move])
     dispatch('touchCancel', [])
-    assert page.locator('.stick-thumb').evaluate('(e)=>e.style.transform') == ''
+    assert page.locator('.stick-thumb,.control-thumb').evaluate('(e)=>e.style.transform') == ''
     page.evaluate('__RunePixel3D.app.state.fire_cooldown=0')
     dispatch('touchStart', [point(3, fx, fy)])
     dispatch('touchCancel', [])
@@ -118,7 +118,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     page.screenshot(path='/private/tmp/vect-breach-mobile-fullscreen.png')
     client.send('Emulation.setDeviceMetricsOverride', {'width':844,'height':390,'screenWidth':844,'screenHeight':390,'deviceScaleFactor':2,'mobile':True,'screenOrientation':{'type':'landscapePrimary','angle':90}})
     page.wait_for_function('innerWidth === 844')
-    page.wait_for_function('''() => {const c=document.querySelector('canvas').getBoundingClientRect(),o=document.querySelector('.rune-pixel3d-touch').getBoundingClientRect();return Math.abs(c.width-o.width)<1&&Math.abs(c.top-o.top)<1&&Math.abs(c.left-o.left)<1;}''')
+    page.wait_for_function('''() => {const c=document.querySelector('canvas').getBoundingClientRect(),o=document.querySelector('.rune-pixel3d-touch,.rune-control-touch').getBoundingClientRect();return Math.abs(c.width-o.width)<1&&Math.abs(c.top-o.top)<1&&Math.abs(c.left-o.left)<1;}''')
     expect(page.locator('.rotate-hint')).not_to_be_visible()
     for control in [stick, use, fire, page.get_by_role('button', name='Toggle fullscreen')]:
         box = control.bounding_box()

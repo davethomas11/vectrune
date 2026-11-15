@@ -1,3 +1,5 @@
+import { GameControls } from '../input/game';
+import type { ControlsProfile } from '../input/types';
 import { GameSave, type Persistence } from '../pixel/persistence';
 import { withContext, type RuneContext } from '../context';
 import { createLogicApp } from '../logic';
@@ -26,6 +28,7 @@ import {
 import { setActiveMap, type SpatialMap } from './spatial';
 
 export interface Pixel3DConfig {
+  controls?: ControlsProfile;
   width: number;
   height: number;
   tickRate: number;
@@ -61,6 +64,7 @@ export interface Input3D {
 }
 
 export class Pixel3DEngine {
+  readonly controls?: GameControls;
   readonly app: RuneApp;
   readonly raycaster: Raycaster3D;
   private readonly context: RuneContext;
@@ -132,6 +136,7 @@ export class Pixel3DEngine {
     };
 
     this.app.state = JSON.parse(JSON.stringify(options.stateJson));
+    if (config.controls) this.controls = new GameControls(config.controls, this);
     configureAudioHost({
       syncPage: false,
       deferPlayback: typeof document !== 'undefined',
