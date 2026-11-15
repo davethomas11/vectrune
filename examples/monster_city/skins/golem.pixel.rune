@@ -1,6 +1,14 @@
 # GOLEM — a monster with idle, step, punch and duck poses.
 @Palette/golem
-colors = {"d":"#555773","b":"#9698ad","h":"#d1c7b9","e":"#f8c66c","k":"#252d42","a":"#b99c7b",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#b99c7b",
+    "b": "#9698ad",
+    "d": "#555773",
+    "e": "#f8c66c",
+    "h": "#d1c7b9",
+    "k": "#252d42"
+}
 
 @Sprite/golem/idle
 palette = golem

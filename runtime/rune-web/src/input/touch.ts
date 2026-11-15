@@ -3,7 +3,7 @@ import type { TouchControls } from './types';
 
 /** Profile-authored buttons and stick; each pointer owns an independent input source. */
 export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameControls, profile: TouchControls, options: {
-  playing(): boolean; paused(): boolean; resume(): void; advance(): void; interact(): void; fullscreen(): void; expanded?(): boolean;
+  playing(): boolean; paused(): boolean; resume(): void; advance(): void; interact(): void; fullscreen(): void; expanded?(): boolean; tapToAdvance?: boolean;
 }) {
   const surface = canvas.parentElement || canvas;
   const style = document.createElement('style');
@@ -23,7 +23,7 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
   const occupied = new Set<HTMLElement>();
   function activate(e: PointerEvent) {
     e.preventDefault(); e.stopPropagation(); options.interact(); overlay.classList.add('is-touch'); canvas.focus({ preventScroll: true });
-    if (!options.playing()) { options.advance(); return false; }
+    if (!options.playing()) { if (options.tapToAdvance !== false) options.advance(); return false; }
     if (options.paused()) { options.resume(); return false; }
     return true;
   }

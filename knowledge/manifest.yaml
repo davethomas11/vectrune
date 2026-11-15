@@ -4,6 +4,32 @@ purpose:
   - shared knowledge source for AI and docs
   - stable reference layer between runtime behavior and rendered docs
 pages:
+  - id: language.pixel-models
+    path: language/pixel-models.md
+    kind: page
+    title: Pixel 3D Block Models
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/pixel3d/model.rs
+      - src/apps/pixel3d/mod.rs
+      - runtime/rune-web/src/pixel3d/model.ts
+      - examples/rune_crypt/models.rune
+      - tests/pixel3d_app.rs
+  - id: runtime.pixel3d
+    path: runtime/pixel3d.md
+    kind: page
+    title: Pixel 3D Environments and Rune Crypt
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/pixel3d/
+      - runtime/rune-web/src/pixel3d/
+      - examples/rune_crypt/
+      - tests/pixel3d_app.rs
+      - tests/browser/rune_crypt.py
   - id: product.overview
     path: product/overview.md
     kind: page

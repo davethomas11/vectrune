@@ -423,6 +423,34 @@ fn formatting_is_idempotent_import_aware_and_preserves_opaque_blocks() {
     assert_eq!(fs::read_to_string(&entry).unwrap(), crlf);
 }
 
+#[test]
+fn formatting_wraps_nested_objects_at_configurable_width() {
+    let dir = tempfile::tempdir().unwrap();
+    let entry = dir.path().join("controls.rune");
+    let source = concat!(
+        "@Controls/game\r\n",
+        r#"touch = {"joystick":{"x":"move_x","y":"move_y","size":96},"buttons":[{"input":"fire","label":"SWORD","offset":[12,12]}],"label":"Keep \"quoted, [text]\" here"}"#,
+        "\r\n",
+    );
+    fs::write(&entry, &source).unwrap();
+    json(cli().arg("fmt").arg(&entry).args(["--check", "--json"]), false);
+    assert_eq!(fs::read_to_string(&entry).unwrap(), source);
+    json(cli().arg("fmt").arg(&entry).args(["--line-width", "48", "--json"]), true);
+    let formatted = fs::read_to_string(&entry).unwrap();
+    assert!(formatted.contains("touch = {\r\n    \"buttons\": [\r\n"), "{formatted}");
+    assert!(formatted.lines().all(|line| line.chars().count() <= 48), "{formatted}");
+    assert!(!formatted.replace("\r\n", "").contains('\n'));
+    json(cli().arg("fmt").arg(&entry).args(["--line-width", "48", "--check", "--json"]), true);
+    assert_eq!(fs::read_to_string(&entry).unwrap(), formatted);
+    json(cli().arg("fmt").arg(&entry).args(["--line-width", "200", "--json"]), true);
+    let wider = fs::read_to_string(&entry).unwrap();
+    assert!(wider.lines().all(|line| line.chars().count() <= 200), "{wider}");
+    assert!(wider.contains("touch = {\"buttons\""), "{wider}");
+    assert_ne!(wider, formatted);
+    json(cli().arg("fmt").arg(&entry).args(["--line-width", "200", "--check", "--json"]), true);
+    cli().arg("fmt").arg(&entry).args(["--line-width", "0"]).assert().failure();
+}
+
 #[cfg(unix)]
 #[test]
 fn watch_recovers_from_failed_assertions_missing_imports_and_atomic_saves() {

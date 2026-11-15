@@ -1,6 +1,14 @@
 # YETI — a monster with idle, step, punch and duck poses.
 @Palette/yeti
-colors = {"d":"#73869d","b":"#d8e4e8","h":"#ffffff","e":"#a9dded","k":"#283448","a":"#c4afc9",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#c4afc9",
+    "b": "#d8e4e8",
+    "d": "#73869d",
+    "e": "#a9dded",
+    "h": "#ffffff",
+    "k": "#283448"
+}
 
 @Sprite/yeti/idle
 palette = yeti

@@ -3,6 +3,58 @@
   "status": "starter",
   "examples": [
     {
+      "id": "example.game.rune-crypt",
+      "title": "Rune Crypt",
+      "summary": "Five-depth pixel-3d roguelite RPG with readable resource bars, visible choices, progressive control hints, tactical combat, and persistent training.",
+      "source_path": "examples/rune_crypt/rune_crypt.rune",
+      "companion_files": null,
+      "app_type": "pixel-3d",
+      "concepts": [
+        "procedural sky",
+        "textured floors and ceilings",
+        "authored layouts and branching exit rewards",
+        "selectable classes and shrine blessings",
+        "equipment replacement",
+        "telegraphed attacks and dodging",
+        "traps and secret caches",
+        "persistent progression",
+        "declarative game controls",
+        "portable structured HUD and accessible choice controls",
+        "full block-model enemies, loot and dungeon props",
+        "progressively taller dungeon rooms",
+        "detailed 32x32 wall varieties and lossless texture row compression",
+        "portable title banner and original state-based chiptune soundtrack",
+        "pause status screen and return-to-title restart",
+        "animated detailed sword and rune-casting sprites",
+        "sinking pixel-dissolve enemy death animations"
+      ],
+      "builtins": [],
+      "runtime_context": [],
+      "cli_workflows": [
+        "vectrune examples/rune_crypt/rune_crypt.rune -o html",
+        "vectrune test examples/rune_crypt --type logic"
+      ],
+      "test_refs": [
+        "tests/pixel3d_app.rs",
+        "tests/browser/rune_crypt.py",
+        "examples/rune_crypt/crypt.logic.test.rune",
+        "examples/rune_crypt/crypt.audio.test.rune",
+        "examples/rune_crypt/crypt.weapon.test.rune",
+        "examples/rune_crypt/crypt.death.test.rune"
+      ],
+      "related_knowledge": [
+        "runtime.pixel3d"
+      ],
+      "status": "recommended",
+      "notes": [
+        "Geometry is authored; depth-two layout and supplies vary by seed, while classes, blessings, equipment and exit rewards are player choices.",
+        "Vect Breach is preserved as a separate shooter example using the same engine.",
+        "World entities use 3D block models; the first-person sword remains a screen-space sprite. Indoor ceiling heights grow from 1.5 to 3 tiles.",
+        "Six wall designs are 32x32 and fluted pillars are 64x64; floors and ceilings are 32x32. Named row patterns compress source, not runtime pixel arrays.",
+        "Canvas clicks only focus at camp; choose a class and explicitly start. Pause / P freezes gameplay; Return to title / T keeps shards, training and class."
+      ]
+    },
+    {
       "id": "example.rest.minimal",
       "title": "Minimal REST App",
       "summary": "Smallest complete REST app example with one GET route and one POST route.",

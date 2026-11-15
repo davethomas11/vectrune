@@ -1,0 +1,62 @@
+#!RUNE
+import "rune_crypt.rune"
+
+@Test/RuneCrypt/WeaponAnimation
+type = logic
+page = crypt
+setup:
+    invoke start
+    invoke clear_weapon_targets
+run:
+    assert state.weapon.sprite == "weapon/sword"
+    invoke attack false
+    assert state.weapon_ticks == 10
+    assert state.weapon.x == 46
+    invoke tick {}
+    invoke tick {}
+    assert state.weapon.sprite == "weapon/swing"
+    assert state.weapon.x == 2
+    invoke tick {}
+    invoke tick {}
+    invoke tick {}
+    invoke tick {}
+    assert state.weapon.sprite == "weapon/sword"
+    assert state.weapon.x == -12
+    invoke tick {}
+    invoke tick {}
+    invoke tick {}
+    invoke tick {}
+    assert state.weapon.x == 34
+    invoke start
+    invoke clear_weapon_targets
+    invoke attack true
+    assert state.weapon.sprite == "weapon/cast"
+    assert state.weapon_magic == true
+    invoke start
+    assert state.weapon_ticks == 0
+    assert state.weapon.sprite == "weapon/sword"
+
+@Test/RuneCrypt/ReturnToTitle
+type = logic
+page = crypt
+run:
+    invoke select_three
+    invoke start
+    invoke return_to_title
+    assert state.status == "title"
+    assert state.hero_class == 2
+    assert state.ui.panel.selected == 2
+    assert state.level == 1
+    assert state.weapon.sprite == ""
+    assert state.music_track == "crypt_title"
+    assert state.legacy.runs == 1
+    invoke advance
+    assert state.hero_class == 2
+    assert state.max_health == 90
+    assert state.legacy.runs == 2
+
+@Logic/crypt
+action clear_weapon_targets:
+    enemies = []
+    hazards = []
+    pickups = []

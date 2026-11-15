@@ -1,0 +1,731 @@
+@Palette/crypt
+colors = {
+    ".": "transparent",
+    "a": "#d79158",
+    "b": "#43536d",
+    "c": "#7fbcc4",
+    "d": "#302c3c",
+    "g": "#6e8660",
+    "k": "#161620",
+    "l": "#786b75",
+    "m": "#3c5141",
+    "r": "#9d3b50",
+    "s": "#514958",
+    "w": "#d7ceb4",
+    "y": "#f2d58a"
+}
+
+@Texture/stone/wall
+palette = crypt
+size = [32, 32]
+patterns = {
+    "chip": "k*2 l s*3 l*2 s*7 d k l s*9 d*3 d k",
+    "edge": "k*2 l*14 k l*14 k",
+    "face": "k*2 l s*12 d k l s*12 d k",
+    "joint": "k*32",
+    "offset": "s*6 d k l s*12 d k l s*6 d k",
+    "offset_chip": "s*2 d s*3 d k l s*5 l s*6 d k l s*6 d k",
+    "offset_edge": "l*7 k l*14 k l*8 k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"face","repeat":3}
+    {"pattern":"chip"}
+    {"pattern":"face","repeat":2}
+    {"pattern":"joint"}
+    {"pattern":"offset_edge"}
+    {"pattern":"offset","repeat":2}
+    {"pattern":"offset_chip","repeat":2}
+    {"pattern":"offset","repeat":2}
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"face","repeat":2}
+    {"pattern":"chip"}
+    {"pattern":"face","repeat":3}
+    {"pattern":"joint"}
+    {"pattern":"offset_edge"}
+    {"pattern":"offset","repeat":3}
+    {"pattern":"offset_chip"}
+    {"pattern":"offset","repeat":2}
+
+@Texture/stone/pillar
+palette = crypt
+size = [64, 64]
+patterns = {
+    "cap": "k*64",
+    "carving": "d*3 s*3 l*4 w*4 l*4 d*4 l*4 w*4 l*4 d*4 l*4 w*4 l*4 d*4 l*4 s*3 d*3",
+    "chip": "d*4 s*2 l*3 w*2 l*3 s*2 d*4 s*2 l*3 d*2 l*3 s*2 d*4 s*2 l*3 w*2 l*3 s*2 d*4 s*2 l*3 w*2 l*3 s*2",
+    "crack": "d*4 s*2 l*3 w*2 l*3 s*2 d*4 s*2 l*3 w*2 l*3 s*2 d*4 s*2 l*2 k w*2 l*3 s*2 d*4 s*2 l*3 w*2 l*3 s*2",
+    "flute": "d*4 s*2 l*3 w*2 l*3 s*2 d*4 s*2 l*3 w*2 l*3 s*2 d*4 s*2 l*3 w*2 l*3 s*2 d*4 s*2 l*3 w*2 l*3 s*2",
+    "rim": "d*3 s*3 l*52 s*3 d*3"
+}
+pixels:
+    {"pattern":"cap","repeat":2}
+    {"pattern":"rim","repeat":2}
+    {"pattern":"carving","repeat":3}
+    {"pattern":"rim","repeat":2}
+    {"pattern":"flute","repeat":12}
+    {"pattern":"chip","repeat":2}
+    {"pattern":"flute","repeat":10}
+    {"pattern":"crack","repeat":3}
+    {"pattern":"flute","repeat":15}
+    {"pattern":"chip","repeat":2}
+    {"pattern":"flute","repeat":2}
+    {"pattern":"rim","repeat":2}
+    {"pattern":"carving","repeat":3}
+    {"pattern":"rim","repeat":2}
+    {"pattern":"cap","repeat":2}
+
+@Texture/stone/moss_wall
+palette = crypt
+size = [32, 32]
+patterns = {
+    "edge": "k*2 l*14 k m*6 l*8 k",
+    "face": "k*2 l s*12 d k m*2 s*10 d*2 k",
+    "joint": "k*32",
+    "moss": "k*2 l s*8 m*3 s d k m g*2 m*3 s*7 d k",
+    "offset": "s*6 d k l s*8 m*3 s d k l s*6 d k",
+    "root": "k*2 m*2 s*8 m*2 s d k m*3 s*10 d k",
+    "vine": "s*6 d k m g m s*3 m*3 s*4 d k l s*6 d k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"face","repeat":2}
+    {"pattern":"moss","repeat":2}
+    {"pattern":"root","repeat":2}
+    {"pattern":"joint"}
+    {"pattern":"offset","repeat":2}
+    {"pattern":"vine","repeat":3}
+    {"pattern":"offset","repeat":2}
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"root","repeat":3}
+    {"pattern":"face","repeat":3}
+    {"pattern":"joint"}
+    {"pattern":"offset","repeat":3}
+    {"pattern":"vine","repeat":2}
+    {"pattern":"offset","repeat":2}
+
+@Texture/stone/cracked
+palette = crypt
+size = [32, 32]
+patterns = {
+    "crack_a": "k*2 l s*4 k s*7 d k l s*12 d k",
+    "crack_b": "k*2 l s*5 k s*6 d k l s*12 d k",
+    "crack_c": "k*2 l s*6 k s*5 d k l s*12 d k",
+    "edge": "k*2 l*14 k l*14 k",
+    "face": "k*2 l s*12 d k l s*12 d k",
+    "joint": "k*32",
+    "offset": "s*6 d k l s*12 d k l s*6 d k",
+    "split": "s*6 d k l s*3 k s*8 d k l s*6 d k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"face"}
+    {"pattern":"crack_a","repeat":2}
+    {"pattern":"crack_b","repeat":2}
+    {"pattern":"crack_c"}
+    {"pattern":"joint"}
+    {"pattern":"offset","repeat":2}
+    {"pattern":"split","repeat":3}
+    {"pattern":"offset","repeat":2}
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"crack_c","repeat":2}
+    {"pattern":"crack_b","repeat":2}
+    {"pattern":"crack_a","repeat":2}
+    {"pattern":"joint"}
+    {"pattern":"offset","repeat":3}
+    {"pattern":"split","repeat":2}
+    {"pattern":"offset","repeat":2}
+
+@Texture/stone/ossuary
+palette = crypt
+size = [32, 32]
+patterns = {
+    "bone": "s*6 d k l s*3 w*6 s*3 d k l s*6 d k",
+    "edge": "k*2 l*14 k l*14 k",
+    "eyes": "k*2 l s*3 k w k*2 w k s*3 d k l s*3 k w k*2 w k s*3 d k",
+    "face": "k*2 l s*12 d k l s*12 d k",
+    "jaw": "k*2 l s*3 k*2 w*2 k*2 s*3 d k l s*3 k*2 w*2 k*2 s*3 d k",
+    "joint": "k*32",
+    "niche": "k*2 l s*3 k*6 s*3 d k l s*3 k*6 s*3 d k",
+    "offset": "s*6 d k l s*12 d k l s*6 d k",
+    "skull": "k*2 l s*3 k w*4 k s*3 d k l s*3 k w*4 k s*3 d k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"niche"}
+    {"pattern":"skull"}
+    {"pattern":"eyes"}
+    {"pattern":"jaw"}
+    {"pattern":"niche"}
+    {"pattern":"face"}
+    {"pattern":"joint"}
+    {"pattern":"offset","repeat":2}
+    {"pattern":"bone","repeat":2}
+    {"pattern":"offset","repeat":3}
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"face"}
+    {"pattern":"niche"}
+    {"pattern":"skull"}
+    {"pattern":"eyes"}
+    {"pattern":"jaw"}
+    {"pattern":"niche"}
+    {"pattern":"joint"}
+    {"pattern":"offset","repeat":3}
+    {"pattern":"bone","repeat":2}
+    {"pattern":"offset","repeat":2}
+
+@Texture/stone/floor
+palette = crypt
+size = [32, 32]
+patterns = {
+    "chip": "k l s*4 l s*12 d s*9 d*2 k",
+    "crack": "k l s*16 k s*10 d*2 k",
+    "edge": "k l*29 d k",
+    "face": "k l s*27 d*2 k",
+    "joint": "k*32",
+    "lower": "k d*30 k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"face","repeat":6}
+    {"pattern":"chip","repeat":2}
+    {"pattern":"face","repeat":7}
+    {"pattern":"crack","repeat":3}
+    {"pattern":"face","repeat":8}
+    {"pattern":"lower","repeat":3}
+    {"pattern":"joint"}
+
+@Texture/stone/moss
+palette = crypt
+size = [32, 32]
+patterns = {
+    "edge": "k l*29 d k",
+    "face": "k l s*27 d*2 k",
+    "joint": "k*32",
+    "lower": "k d*24 m*4 g*2 k",
+    "moss": "k l s*6 m*3 g*2 m*3 s*13 d*2 k",
+    "root": "k l s*5 m*2 s*2 m*4 s*11 m*3 d*2 k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"face","repeat":4}
+    {"pattern":"root","repeat":2}
+    {"pattern":"moss","repeat":3}
+    {"pattern":"root","repeat":2}
+    {"pattern":"face","repeat":12}
+    {"pattern":"root","repeat":3}
+    {"pattern":"lower","repeat":3}
+    {"pattern":"joint"}
+
+@Texture/stone/ceiling
+palette = crypt
+size = [32, 32]
+patterns = {
+    "center": "k l d*4 s*3 l d*5 s*2 d*5 l s*3 d*3 s*2 k",
+    "face": "k l d*27 s*2 k",
+    "inset": "k l d*4 s*3 l d*12 l s*3 d*3 s*2 k",
+    "joint": "k*32",
+    "rib": "k l d*4 s*3 l*2 s*10 l*2 s*3 d*3 s*2 k",
+    "rim": "k l*30 k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"rim"}
+    {"pattern":"face","repeat":4}
+    {"pattern":"rib","repeat":3}
+    {"pattern":"inset","repeat":5}
+    {"pattern":"center","repeat":4}
+    {"pattern":"inset","repeat":5}
+    {"pattern":"rib","repeat":3}
+    {"pattern":"face","repeat":4}
+    {"pattern":"rim"}
+    {"pattern":"joint"}
+
+@Texture/rune/wall
+palette = crypt
+size = [32, 32]
+patterns = {
+    "bar": "k s b*10 c*8 b*10 s k",
+    "bottom": "k s b*12 c*6 b*10 s k",
+    "chip": "k s b*4 d*2 b*22 s k",
+    "edge": "k s l*28 s k",
+    "face": "k s b*28 s k",
+    "joint": "k*32",
+    "stem": "k s b*10 c*2 b*16 s k",
+    "top": "k s b*10 c*6 b*12 s k",
+    "turn": "k s b*16 c*2 b*10 s k"
+}
+pixels:
+    {"pattern":"joint","repeat":2}
+    {"pattern":"edge"}
+    {"pattern":"face","repeat":3}
+    {"pattern":"top","repeat":2}
+    {"pattern":"stem","repeat":5}
+    {"pattern":"bar","repeat":2}
+    {"pattern":"turn","repeat":5}
+    {"pattern":"bottom","repeat":2}
+    {"pattern":"face","repeat":4}
+    {"pattern":"chip","repeat":2}
+    {"pattern":"face"}
+    {"pattern":"edge"}
+    {"pattern":"joint","repeat":2}
+
+@Texture/rune/seal
+palette = crypt
+size = [32, 32]
+patterns = {
+    "bar": "k s b*6 c*16 b*6 s k",
+    "center": "k s b*6 c*2 b*5 y*2 b*5 c*2 b*6 s k",
+    "face": "k s b*28 s k",
+    "joint": "k*32",
+    "tip": "k s b*12 y*4 b*12 s k",
+    "upper": "k s b*10 c*2 b*4 c*2 b*10 s k",
+    "wide": "k s b*8 c*2 b*8 c*2 b*8 s k"
+}
+pixels:
+    {"pattern":"joint","repeat":2}
+    {"pattern":"face","repeat":3}
+    {"pattern":"tip","repeat":2}
+    {"pattern":"upper","repeat":3}
+    {"pattern":"wide","repeat":3}
+    {"pattern":"center","repeat":2}
+    {"pattern":"bar","repeat":2}
+    {"pattern":"center","repeat":2}
+    {"pattern":"wide","repeat":3}
+    {"pattern":"upper","repeat":3}
+    {"pattern":"tip","repeat":2}
+    {"pattern":"face","repeat":3}
+    {"pattern":"joint","repeat":2}
+
+@Texture/rune/floor
+palette = crypt
+size = [32, 32]
+patterns = {
+    "bar": "k l b*7 c*12 b*8 d*2 k",
+    "edge": "k l*29 d k",
+    "face": "k l b*27 d*2 k",
+    "joint": "k*32",
+    "lower": "k d*30 k",
+    "stem": "k l b*11 c*2 b*14 d*2 k",
+    "tip": "k l b*11 c*4 b*12 d*2 k",
+    "turn": "k l b*17 c*2 b*8 d*2 k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"edge"}
+    {"pattern":"face","repeat":4}
+    {"pattern":"tip","repeat":2}
+    {"pattern":"stem","repeat":6}
+    {"pattern":"bar","repeat":2}
+    {"pattern":"turn","repeat":6}
+    {"pattern":"tip","repeat":2}
+    {"pattern":"face","repeat":5}
+    {"pattern":"lower","repeat":2}
+    {"pattern":"joint"}
+
+@Texture/rune/ceiling
+palette = crypt
+size = [32, 32]
+patterns = {
+    "face": "k b d*28 b k",
+    "heart": "k b d*8 c*2 d*3 y*2 d*3 c*2 d*8 b k",
+    "joint": "k*32",
+    "rim": "k b*30 k",
+    "side": "k b d*8 c*2 d*8 c*2 d*8 b k",
+    "top": "k b d*8 c*12 d*8 b k"
+}
+pixels:
+    {"pattern":"joint"}
+    {"pattern":"rim"}
+    {"pattern":"face","repeat":6}
+    {"pattern":"top","repeat":2}
+    {"pattern":"side","repeat":4}
+    {"pattern":"heart","repeat":4}
+    {"pattern":"side","repeat":4}
+    {"pattern":"top","repeat":2}
+    {"pattern":"face","repeat":6}
+    {"pattern":"rim"}
+    {"pattern":"joint"}
+
+@Sprite/enemy/skeleton
+palette = crypt
+size = [8, 8]
+pixels:
+    "..wwww.."
+    "..wkkw.."
+    "...ww..."
+    ".wwwwww."
+    "w.wkkw.w"
+    "..wwww.."
+    "..w..w.."
+    ".ww..ww."
+
+@Sprite/enemy/wraith
+palette = crypt
+size = [8, 8]
+pixels:
+    "...cc..."
+    "..cbbc.."
+    "..cyyc.."
+    ".cbbbbc."
+    "ccbbbbcc"
+    ".cbbbbc."
+    "..cbbc.."
+    ".c.cc.c."
+
+@Sprite/enemy/skeleton_warn
+palette = crypt
+size = [8, 8]
+pixels:
+    "..yyyy.."
+    "..ykky.."
+    "...yy..w"
+    ".yyyyy.w"
+    "y.ykkyww"
+    "..yyyy.."
+    "..y..y.."
+    ".yy..yy."
+
+@Sprite/enemy/wraith_warn
+palette = crypt
+size = [8, 8]
+pixels:
+    "...yy..."
+    "..ybby.."
+    "..ywwy.."
+    ".ybbbby."
+    "yybbbbyy"
+    ".ybbbby."
+    "..ybby.."
+    ".y.yy.y."
+
+@Sprite/enemy/warden_warn
+palette = crypt
+size = [8, 8]
+pixels:
+    ".y.yy.y."
+    "..ywwy.."
+    "..ykky.."
+    ".yyyyyy."
+    "ycyyyycy"
+    ".yyyyyy."
+    "..y..y.."
+    ".yy..yy."
+
+@Sprite/enemy/hit
+palette = crypt
+size = [8, 8]
+pixels:
+    "..rrrr.."
+    "..rwwr.."
+    "...rr..."
+    ".rrrrrr."
+    "r.rwwr.r"
+    "..rrrr.."
+    "..r..r.."
+    ".rr..rr."
+
+@Sprite/enemy/bolt
+palette = crypt
+size = [8, 8]
+pixels:
+    "...rr..."
+    "..raar.."
+    ".rayyar."
+    "raywwyar"
+    "raywwyar"
+    ".rayyar."
+    "..raar.."
+    "...rr..."
+
+@Sprite/world/warning
+palette = crypt
+size = [8, 8]
+pixels:
+    "........"
+    "...yy..."
+    "..y..y.."
+    ".y.yy.y."
+    ".y.yy.y."
+    "..y..y.."
+    "...yy..."
+    "........"
+
+@Sprite/world/trap
+palette = crypt
+size = [8, 8]
+pixels:
+    "........"
+    "........"
+    "........"
+    ".ssssss."
+    ".skkksk."
+    ".ssssss."
+    "kkkkkkkk"
+    "........"
+
+@Sprite/world/trap_warn
+palette = crypt
+size = [8, 8]
+pixels:
+    "........"
+    "...yy..."
+    "...yy..."
+    ".yyyyyy."
+    ".ykkkyk."
+    ".yyyyyy."
+    "kkkkkkkk"
+    "........"
+
+@Sprite/world/trap_active
+palette = crypt
+size = [8, 8]
+pixels:
+    "..w..w.."
+    "..w..w.."
+    ".rwr.wr."
+    ".rwwwwr."
+    ".rrrrrr."
+    ".rrrrrr."
+    "kkkkkkkk"
+    "........"
+
+@Sprite/world/chest
+palette = crypt
+size = [8, 8]
+pixels:
+    "........"
+    "..aaaa.."
+    ".ayyyya."
+    ".akkkka."
+    ".aayyaa."
+    ".ayyyya."
+    ".aaaaaa."
+    "kkkkkkkk"
+
+@Sprite/world/chest_open
+palette = crypt
+size = [8, 8]
+pixels:
+    "..aaaa.."
+    ".ayyyya."
+    ".aaaaaa."
+    ".kkkkkk."
+    ".akkkka."
+    ".aaaaaa."
+    ".aaaaaa."
+    "kkkkkkkk"
+
+@Sprite/world/crack
+palette = crypt
+size = [8, 8]
+pixels:
+    ".ssssss."
+    ".ssykss."
+    ".ssksss."
+    ".sskyss."
+    ".syksss."
+    ".ssskss."
+    ".ssssss."
+    "kkkkkkkk"
+
+@Sprite/world/tablet
+palette = crypt
+size = [8, 8]
+pixels:
+    "..ssss.."
+    ".slllls."
+    ".lkkkkl."
+    ".lklkkl."
+    ".lkkkkl."
+    ".lklkkl."
+    ".slllls."
+    "kkkkkkkk"
+
+@Sprite/world/shrine_spent
+palette = crypt
+size = [8, 8]
+pixels:
+    "...dd..."
+    "..dssd.."
+    "...ss..."
+    "...ll..."
+    "..slls.."
+    ".slllls."
+    ".ssssss."
+    "kkkkkkkk"
+
+@Sprite/enemy/warden
+palette = crypt
+size = [8, 8]
+pixels:
+    ".a.aa.a."
+    "..ayya.."
+    "..akka.."
+    ".aaaaaa."
+    "asaaaasa"
+    ".aaaaaa."
+    "..a..a.."
+    ".aa..aa."
+
+@Sprite/loot/shard
+palette = crypt
+size = [8, 8]
+pixels:
+    "........"
+    "...c...."
+    "..ccc..."
+    ".ccwcc.."
+    "..ccc..."
+    "...c...."
+    "...b...."
+    "........"
+
+@Sprite/loot/potion
+palette = crypt
+size = [8, 8]
+pixels:
+    "........"
+    "...aa..."
+    "...ww..."
+    "..wrrw.."
+    "..wrrw.."
+    "..rrrr.."
+    "...rr..."
+    "........"
+
+@Sprite/world/shrine
+palette = crypt
+size = [8, 8]
+pixels:
+    "...yy..."
+    "..yccy.."
+    "...cc..."
+    "...ll..."
+    "..slls.."
+    ".slllls."
+    ".ssssss."
+    "kkkkkkkk"
+
+@Sprite/world/stairs
+palette = crypt
+size = [8, 8]
+pixels:
+    "........"
+    "........"
+    "....ww.."
+    "...wss.."
+    "..wsss.."
+    ".wssss.."
+    "wsssss.."
+    "kkkkkkkk"
+
+@Sprite/world/heart
+palette = crypt
+size = [8, 8]
+pixels:
+    ".cc..cc."
+    "cwwccwwc"
+    "cwwwwwwc"
+    ".cwwwwc."
+    "..cwwc.."
+    "...cc..."
+    "..slls.."
+    ".ssssss."
+
+@Sprite/weapon/sword
+palette = crypt
+size = [24, 24]
+pixels:
+    "....................w..."
+    "...................ww..."
+    "..................wwl..."
+    ".................wwwl..."
+    "................wwcls..."
+    "...............wwclsk..."
+    "..............wwclsk...."
+    ".............wwclsk....."
+    "............wwclsk......"
+    "...........wwclsk......."
+    "..........wwclsk........"
+    ".........wwclsk........."
+    "........wwclsk.........."
+    ".......wwclsk..........."
+    "......wwclsk............"
+    ".....ywclsk............."
+    "...kyyyylk.............."
+    "..kyyyaysk.............."
+    "...kkayak..............."
+    ".....aaask.............."
+    ".....aassk.............."
+    "......assdk............."
+    ".......ddddk............"
+    "........ddddk..........."
+
+@Sprite/weapon/swing
+palette = crypt
+size = [24, 24]
+pixels:
+    "........................"
+    "........................"
+    "........................"
+    "........................"
+    "......................w."
+    "....................www."
+    "..................wwwls."
+    "................wwwclsk."
+    "..............wwwclsk..."
+    "............wwwclsk....."
+    "..........wwwclsk......."
+    "........wwwclsk........."
+    "......wwwclsk..........."
+    "....wwwclsk............."
+    "..ywwwclsk.............."
+    ".kyyyylsk..............."
+    "..kyyaysk..............."
+    "...kayak................"
+    "....aaask..............."
+    "....aassk..............."
+    ".....assdk.............."
+    "......ddddk............."
+    ".......ddddk............"
+    "........ddddk..........."
+
+@Sprite/weapon/cast
+palette = crypt
+size = [24, 24]
+pixels:
+    "........................"
+    "............c..........."
+    ".........c.....c........"
+    "...........ccc.........."
+    ".........ccwwwcc........"
+    "........ccwywywcc......."
+    ".......ccwwyyywwcc......"
+    ".......cwywwwwwywc......"
+    ".......ccwwyyywwcc......"
+    "........ccwywywcc......."
+    ".........ccwwwcc........"
+    "...........ccc.........."
+    "........c.......c......."
+    "..........c.c..........."
+    ".........a...a.........."
+    "........aa..aa.........."
+    "........aa.aaa.........."
+    "........aaaaas.........."
+    ".........aaass.........."
+    ".........aassk.........."
+    "..........assdk........."
+    "...........ddddk........"
+    "............ddddk......."
+    ".............ddddk......"

@@ -1,5 +1,7 @@
 //! Platform-independent pixel-3d compilation and assets.
 pub mod raster;
+pub mod model;
+pub mod hud;
 #[cfg(feature = "pixel-desktop")]
 pub mod desktop;
 
@@ -58,6 +60,65 @@ fn pack_color(rgb: u32) -> u32 {
         | ((rgb & 0xff) << 16)
         | (rgb & 0xff00)
         | ((rgb >> 16) & 0xff)
+}
+
+fn texture_runs(source: &str, width: usize, label: &str) -> Result<Vec<u8>> {
+    let mut row = Vec::with_capacity(width);
+    for token in source.split_whitespace() {
+        let (symbol, count) = if let Some((symbol, count)) = token.split_once('*') {
+            let count = count.parse::<usize>().context(format!("{label}: invalid run count"))?;
+            (symbol, count)
+        } else {
+            (token, 1)
+        };
+        ensure!(symbol.len() == 1 && symbol.is_ascii(), "{label}: runs need single ASCII palette symbols");
+        ensure!(count > 0 && count <= width - row.len(), "{label}: run exceeds row width or has zero count");
+        row.extend(std::iter::repeat_n(symbol.as_bytes()[0], count));
+    }
+    ensure!(row.len() == width, "{label}: expanded row must have {width} pixels, got {}", row.len());
+    Ok(row)
+}
+
+fn texture_rows(section: &crate::rune_ast::Section, width: usize, height: usize, label: &str) -> Result<Vec<Vec<u8>>> {
+    let patterns = section.kv.get("patterns").map(json_value).unwrap_or(json!({}));
+    let patterns = patterns.as_object().context(format!("{label}: patterns must be an object"))?;
+    let patterns: HashMap<String, Vec<u8>> = patterns.iter().map(|(name, value)| {
+        ensure!(!name.is_empty(), "{label}: pattern names cannot be empty");
+        let value = value.as_str().context(format!("{label}: pattern {name} must be a run string"))?;
+        Ok((name.clone(), texture_runs(value, width, &format!("{label} pattern {name}"))?))
+    }).collect::<Result<_>>()?;
+    let entries = section.series.get("pixels").context(format!("{label}: missing pixels:"))?;
+    let mut rows = Vec::with_capacity(height);
+    for (index, entry) in entries.iter().enumerate() {
+        let entry = json_value(entry);
+        let (row, repeat) = if let Some(row) = entry.as_str() {
+            (row.as_bytes().to_vec(), 1)
+        } else {
+            let obj = entry.as_object().context(format!("{label}: row {} must be a string or row object", index + 1))?;
+            ensure!(obj.keys().all(|k| ["row", "runs", "pattern", "repeat"].contains(&k.as_str())),
+                "{label}: unknown compressed row property");
+            ensure!(["row", "runs", "pattern"].iter().filter(|k| obj.contains_key(**k)).count() == 1,
+                "{label}: row object needs exactly one of row, runs or pattern");
+            let repeat = obj.get("repeat").map(|n| n.as_f64().context(format!("{label}: repeat must be numeric")))
+                .transpose()?.unwrap_or(1.0);
+            ensure!(repeat.is_finite() && repeat.fract() == 0.0 && repeat >= 1.0 && repeat <= height as f64,
+                "{label}: repeat must be an integer from 1 to {height}");
+            let row = if let Some(value) = obj.get("row") {
+                value.as_str().context(format!("{label}: row must be a string"))?.as_bytes().to_vec()
+            } else if let Some(value) = obj.get("runs") {
+                texture_runs(value.as_str().context(format!("{label}: runs must be a string"))?, width, label)?
+            } else {
+                let name = obj["pattern"].as_str().context(format!("{label}: pattern must be a name"))?;
+                patterns.get(name).context(format!("{label}: unknown row pattern {name}"))?.clone()
+            };
+            (row, repeat as usize)
+        };
+        ensure!(row.is_ascii() && row.len() == width, "{label}: row {} must have {width} ASCII pixels", index + 1);
+        ensure!(rows.len() + repeat <= height, "{label}: expanded rows exceed texture height {height}");
+        rows.extend(std::iter::repeat_n(row, repeat));
+    }
+    ensure!(rows.len() == height, "{label}: expected {height} expanded rows, got {}", rows.len());
+    Ok(rows)
 }
 
 /// Compile textures (@Texture), sprites (@Sprite), palettes, and map (@Map)
@@ -175,32 +236,13 @@ pub fn compile_assets(doc: &RuneDocument) -> Result<Json> {
         let palette = palettes
             .get(palette_name)
             .context(format!("{label}: unknown palette {palette_name}"))?;
-        let rows = section
-            .series
-            .get("pixels")
-            .context(format!("{label}: missing pixels:"))?;
-        ensure!(
-            rows.len() == size[1] as usize,
-            "{label}: expected {} rows, got {}",
-            size[1],
-            rows.len()
-        );
+        let rows = texture_rows(section, size[0] as usize, size[1] as usize, &label)?;
         let mut pixels = Vec::with_capacity((size[0] * size[1]) as usize);
         for (row_number, row) in rows.iter().enumerate() {
-            let row = json_value(row);
-            let row = row
-                .as_str()
-                .context(format!("{label}: pixels must be quoted rows"))?;
-            ensure!(
-                row.is_ascii() && row.len() == size[0] as usize,
-                "{label}: row {} must have {} pixels",
-                row_number + 1,
-                size[0]
-            );
-            for symbol in row.bytes() {
-                let value = palette.get(&symbol).context(format!(
+            for symbol in row {
+                let value = palette.get(symbol).context(format!(
                     "{label}: unknown palette character {} in row {}",
-                    symbol as char,
+                    *symbol as char,
                     row_number + 1
                 ))?;
                 let rgb = value.unwrap_or(0x000000);
@@ -218,9 +260,49 @@ pub fn compile_assets(doc: &RuneDocument) -> Result<Json> {
         );
     }
 
+    let mut models = Map::new();
+    for section in &doc.sections {
+        if section.path.first().map(String::as_str) != Some("Model") {
+            continue;
+        }
+        let label = section.path.join("/");
+        ensure!(section.path.len() >= 2, "Expected @Model/<name>");
+        let palette_name = text(section, "palette").context(format!("{label}: missing palette"))?;
+        let palette = palettes.get(palette_name).context(format!("{label}: unknown palette {palette_name}"))?;
+        let unit = section.kv.get("unit").map(json_value).unwrap_or(json!(0.125));
+        let unit = unit.as_f64().context(format!("{label}: unit must be numeric"))?;
+        ensure!(unit.is_finite() && unit > 0.0 && unit <= 1.0, "{label}: unit must be greater than 0 and at most 1 world tile");
+        let blocks = section.series.get("blocks").context(format!("{label}: missing blocks:"))?;
+        ensure!(!blocks.is_empty() && blocks.len() <= 256, "{label}: needs 1-256 blocks");
+        let mut compiled = Vec::new();
+        for block in blocks {
+            let block = json_value(block);
+            let object = block.as_object().context(format!("{label}: each block must be an object"))?;
+            ensure!(object.keys().all(|k| ["from", "size", "color"].contains(&k.as_str())), "{label}: unknown block property");
+            let triple = |key: &str, positive: bool| -> Result<Vec<f64>> {
+                let list = block[key].as_array().context(format!("{label}: block {key} needs three integers"))?;
+                ensure!(list.len() == 3, "{label}: block {key} needs three integers");
+                list.iter().map(|v| {
+                    let n = v.as_f64().context(format!("{label}: block {key} must contain integers"))?;
+                    ensure!(n.is_finite() && n.fract() == 0.0 && n.abs() <= 32.0 && (!positive || n > 0.0), "{label}: block {key} must contain {}integers within 32 units", if positive { "positive " } else { "" });
+                    Ok(n * unit)
+                }).collect()
+            };
+            let from = triple("from", false)?;
+            let size = triple("size", true)?;
+            let symbol = block["color"].as_str().context(format!("{label}: block color needs a palette symbol"))?;
+            ensure!(symbol.len() == 1 && symbol.is_ascii(), "{label}: block color needs one ASCII palette symbol");
+            let rgb = palette.get(&symbol.as_bytes()[0]).context(format!("{label}: unknown palette symbol {symbol}"))?
+                .context(format!("{label}: blocks cannot be transparent"))?;
+            compiled.push(json!({"from":from,"size":size,"color":pack_color(rgb)}));
+        }
+        models.insert(section.path[1..].join("/"), json!({"blocks":compiled}));
+    }
+
     Ok(json!({
         "sprites": sprites,
         "textures": textures,
+        "models": models,
     }))
 }
 
@@ -276,28 +358,39 @@ pub fn parse_map_full(
         }
     }
 
-    let floor_val = map_section.kv.get("floor").map(json_value).unwrap_or(json!("#222222"));
-    let ceiling_val = map_section.kv.get("ceiling").map(json_value).unwrap_or(json!("#111111"));
-
-    let floor_color = if let Some(s) = floor_val.as_str() {
-        if s.starts_with('#') {
-            pack_color(color(s)?.unwrap_or(0x222222))
+    let surface = |key: &str, default: u32| -> Result<Json> {
+        let Some(value) = map_section.kv.get(key) else { return Ok(json!(pack_color(default))); };
+        let value = json_value(value);
+        let name = value.as_str().context(format!("Map {key} must be #RRGGBB or a texture name"))?;
+        if name.starts_with('#') {
+            Ok(json!(pack_color(color(name)?.context("Map surfaces must be opaque")?)))
         } else {
-            pack_color(0x222222)
+            textures.get(name).cloned().context(format!("Map {key}: unknown texture {name}"))
         }
-    } else {
-        pack_color(0x222222)
     };
-
-    let ceil_color = if let Some(s) = ceiling_val.as_str() {
-        if s.starts_with('#') {
-            pack_color(color(s)?.unwrap_or(0x111111))
-        } else {
-            pack_color(0x111111)
-        }
-    } else {
-        pack_color(0x111111)
-    };
+    let floor = surface("floor", 0x222222)?;
+    let ceiling = surface("ceiling", 0x111111)?;
+    let ceiling_height = map_section.kv.get("ceiling_height")
+        .map(|value| json_value(value).as_f64().context("Map ceiling_height must be numeric"))
+        .transpose()?.unwrap_or(1.0);
+    ensure!(ceiling_height.is_finite() && ceiling_height > 0.5 && ceiling_height <= 16.0,
+        "Map ceiling_height must be greater than 0.5 and at most 16 tiles");
+    let sky = if let Some(value) = map_section.kv.get("sky") {
+        ensure!(!map_section.kv.contains_key("ceiling"), "Map sky and ceiling are mutually exclusive");
+        let value = json_value(value);
+        let obj = value.as_object().context("Map sky must be an object")?;
+        ensure!(obj.keys().all(|k| ["seed", "zenith", "horizon", "cloud", "speed"].contains(&k.as_str())), "Unknown Map sky property");
+        let seed = obj.get("seed").and_then(Json::as_f64).context("Map sky needs an unsigned integer seed")?;
+        ensure!(seed.is_finite() && seed.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(&seed), "Map sky seed must be an unsigned 32-bit integer");
+        let seed = seed as u32;
+        let sky_color = |key: &str| -> Result<u32> {
+            let s = obj.get(key).and_then(Json::as_str).context(format!("Map sky needs {key} = #RRGGBB"))?;
+            Ok(pack_color(color(s)?.context("Sky colors must be opaque")?))
+        };
+        let speed = obj.get("speed").map(|v| v.as_f64().context("Sky speed must be numeric")).transpose()?.unwrap_or(0.25);
+        ensure!(speed.is_finite() && (0.0..=10.0).contains(&speed), "Sky speed must be between 0 and 10");
+        json!({"seed":seed,"zenith":sky_color("zenith")?,"horizon":sky_color("horizon")?,"cloud":sky_color("cloud")?,"speed":speed})
+    } else { Json::Null };
 
     let spawn = parse_spawn(map_section, &grid_flat, map_width, map_height)?;
     Ok(json!({
@@ -305,8 +398,10 @@ pub fn parse_map_full(
         "width": map_width,
         "height": map_height,
         "grid": grid_flat,
-        "floor": floor_color,
-        "ceiling": ceil_color,
+        "floor": floor,
+        "ceiling": ceiling,
+        "ceilingHeight": ceiling_height,
+        "sky": sky,
     }))
 }
 
@@ -446,6 +541,7 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         "tickRate": tick_rate,
         "textures": assets_json["textures"],
         "sprites": assets_json["sprites"],
+        "models": assets_json["models"],
         "map": scene_map,
         "maps": maps,
         "camera": text(scene, "camera").unwrap_or("player"),
@@ -464,6 +560,43 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         "mouseLook": scene.kv.get("mouse_look").map(json_value).unwrap_or(json!(true)),
         "hud": scene.kv.get("hud").map(json_value).unwrap_or(Json::Null),
     });
+    if let Some(field) = text(scene, "ui") {
+        ensure!(logic.state.contains_key(field), "Scene ui references unknown state {field}");
+        config["ui"] = json!(field);
+    }
+    if let Some(value) = scene.kv.get("pause_ui") {
+        let value = json_value(value);
+        let field = value.as_str().context("Scene pause_ui must name a state field")?;
+        ensure!(logic.state.contains_key(field), "Scene pause_ui references unknown state {field}");
+        config["pauseUi"] = json!(field);
+    }
+    if let Some(value) = scene.kv.get("restart_action") {
+        let value = json_value(value);
+        let action = value.as_str().context("Scene restart_action must name an action")?;
+        ensure!(logic.actions.contains_key(action), "Scene restart_action references unknown action {action}");
+        config["restartAction"] = json!(action);
+    }
+    if let Some(value) = scene.kv.get("click_to_start") {
+        let value = json_value(value);
+        ensure!(value.is_boolean(), "Scene click_to_start must be boolean");
+        config["clickToStart"] = value;
+    }
+    if let Some(value) = scene.kv.get("persistence") {
+        let save = json_value(value);
+        let key = save["key"].as_str().context("Scene persistence needs key")?;
+        let state = save["state"].as_str().context("Scene persistence needs state")?;
+        ensure!(!key.is_empty() && key.len() <= 64 && key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'), "Persistence key must contain 1-64 letters, digits, hyphens or underscores");
+        ensure!(logic.state.contains_key(state), "Scene persistence references unknown state {state}");
+        config["persistence"] = save;
+    }
+    if let Some(value) = scene.kv.get("presentation") {
+        let presentation = json_value(value);
+        for key in ["title", "subtitle", "objective", "victory", "defeat"] {
+            ensure!(presentation[key].is_string(), "Scene presentation needs {key}");
+        }
+        ensure!(presentation["instructions"].as_array().is_some_and(|lines| lines.len() <= 5 && lines.iter().all(Json::is_string)), "Scene presentation instructions needs up to five strings");
+        config["presentation"] = presentation;
+    }
 
     if let Some(profile) = crate::apps::game_controls::compile(doc, scene)? {
         crate::apps::game_controls::validate_actions(&profile, |name| logic.actions.contains_key(name))?;

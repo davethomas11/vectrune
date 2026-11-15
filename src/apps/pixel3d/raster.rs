@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use super::model::{BlockModel, render_model};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Texture {
@@ -21,13 +22,80 @@ pub struct Sprite {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Surface {
+    Color(u32),
+    Texture(Texture),
+}
+
+impl Surface {
+    fn sample(&self, x: f64, y: f64) -> u32 {
+        match self {
+            Self::Color(color) => *color,
+            Self::Texture(tex) => {
+                let tx = (x * tex.width as f64).floor() as i64 & (tex.width as i64 - 1);
+                let ty = (y * tex.height as f64).floor() as i64 & (tex.height as i64 - 1);
+                tex.pixels[ty as usize * tex.width + tx as usize]
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Sky {
+    pub seed: u32,
+    pub zenith: u32,
+    pub horizon: u32,
+    pub cloud: u32,
+    pub speed: f64,
+}
+
+fn sky_noise(x: i64, y: i64, seed: u32) -> f64 {
+    let n = ((x & 63) as u32).wrapping_mul(374761393)
+        .wrapping_add((y as u32).wrapping_mul(668265263)).wrapping_add(seed);
+    let n = (n ^ (n >> 13)).wrapping_mul(1274126177);
+    (n ^ (n >> 16)) as f64 / 4294967295.0
+}
+
+fn mix_color(a: u32, b: u32, t: f64) -> u32 {
+    let mut color = 0xff000000;
+    for shift in [0, 8, 16] {
+        let channel = (((a >> shift) & 255) as f64 * (1.0 - t)
+            + ((b >> shift) & 255) as f64 * t).floor() as u32;
+        color |= channel << shift;
+    }
+    color
+}
+
+pub fn sky_pixel(sky: &Sky, longitude: f64, altitude: f64, time: f64) -> u32 {
+    let u = (longitude / std::f64::consts::TAU * 64.0 + time * sky.speed).rem_euclid(64.0);
+    let v = altitude * 12.0;
+    let x = u.floor() as i64;
+    let y = v.floor() as i64;
+    let fx = u - x as f64;
+    let fy = v - y as f64;
+    let sx = fx * fx * (3.0 - 2.0 * fx);
+    let sy = fy * fy * (3.0 - 2.0 * fy);
+    let a = sky_noise(x, y, sky.seed) * (1.0 - sx) + sky_noise(x + 1, y, sky.seed) * sx;
+    let b = sky_noise(x, y + 1, sky.seed) * (1.0 - sx) + sky_noise(x + 1, y + 1, sky.seed) * sx;
+    let density = ((a * (1.0 - sy) + b * sy - 0.5) * 4.0).clamp(0.0, 1.0);
+    let band = (altitude * 16.0).floor() / 16.0;
+    mix_color(mix_color(sky.horizon, sky.zenith, band), sky.cloud, density * (altitude * 5.0).min(1.0))
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MapData {
     pub width: usize,
     pub height: usize,
     pub grid: Vec<usize>,
-    pub floor: u32,
-    pub ceiling: u32,
+    pub floor: Surface,
+    pub ceiling: Surface,
+    #[serde(default = "default_ceiling_height", rename = "ceilingHeight")]
+    pub ceiling_height: f64,
+    pub sky: Option<Sky>,
 }
+
+fn default_ceiling_height() -> f64 { 1.0 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Camera3D {
@@ -40,7 +108,12 @@ pub struct Camera3D {
 pub struct Thing3D {
     pub x: f64,
     pub y: f64,
+    #[serde(default)]
     pub sprite: String,
+    pub model: Option<String>,
+    pub dissolve: Option<f64>,
+    pub z: Option<f64>,
+    pub angle: Option<f64>,
     pub scale: Option<f64>,
     pub visible: Option<bool>,
 }
@@ -65,6 +138,13 @@ pub struct WallOverride {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RenderState {
+    pub ui: Option<super::hud::GameHud>,
+    #[serde(default)]
+    pub paused: bool,
+    #[serde(default)]
+    pub time: f64,
+    pub presentation: Option<Presentation>,
+    pub hud_text: Option<String>,
     pub camera: Camera3D,
     #[serde(default)]
     pub things: Vec<Thing3D>,
@@ -93,6 +173,16 @@ pub struct RenderState {
     pub wall_overrides: Vec<WallOverride>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Presentation {
+    pub title: String,
+    pub subtitle: String,
+    pub instructions: Vec<String>,
+    pub objective: String,
+    pub victory: String,
+    pub defeat: String,
+}
+
 pub struct Rasterizer3D {
     pub width: usize,
     pub height: usize,
@@ -102,6 +192,8 @@ pub struct Rasterizer3D {
     pub map: MapData,
     pub buffer: Vec<u32>,
     pub z_buffer: Vec<f64>,
+    pub pixel_depth: Vec<f64>,
+    pub models: HashMap<String, BlockModel>,
 }
 
 impl Rasterizer3D {
@@ -122,6 +214,8 @@ impl Rasterizer3D {
             map,
             buffer: vec![0; width * height],
             z_buffer: vec![0.0; width],
+            pixel_depth: vec![f64::INFINITY; width * height],
+            models: HashMap::new(),
         }
     }
 
@@ -144,15 +238,34 @@ impl Rasterizer3D {
         let fov_scale = ((self.fov / 2.0).to_radians()).tan();
         let plane_x = -dir_y * fov_scale;
         let plane_y = dir_x * fov_scale;
-
-        // 1. Floor & Ceiling (flat colors)
-        let ceil_packed = self.map.ceiling;
-        let floor_packed = self.map.floor;
-        for y in 0..half_h {
-            self.buffer[y * w..(y + 1) * w].fill(ceil_packed);
+        self.pixel_depth.fill(f64::INFINITY);
+        if state.things.iter().any(|t| t.model.is_some() && t.visible != Some(false)) {
+            for y in 0..h {
+                if y < half_h && self.map.sky.is_some() { continue; }
+                let plane_height = if y < half_h { self.map.ceiling_height - 0.5 } else { 0.5 };
+                let distance = plane_height * h as f64 / (half_h as f64 - y as f64 - 0.5).abs();
+                self.pixel_depth[y * w..(y + 1) * w].fill(distance);
+            }
         }
+
+        // 1. Projected floor/ceiling planes and angular procedural sky.
         for y in half_h..h {
-            self.buffer[y * w..(y + 1) * w].fill(floor_packed);
+            let distance = 0.5 * h as f64 / (y as f64 - half_h as f64 + 0.5);
+            for x in 0..w {
+                let cx = 2.0 * x as f64 / w as f64 - 1.0;
+                let fx = px + distance * (dir_x + plane_x * cx);
+                let fy = py + distance * (dir_y + plane_y * cx);
+                self.buffer[y * w + x] = self.map.floor.sample(fx, fy);
+                let cy = h - y - 1;
+                self.buffer[cy * w + x] = if let Some(sky) = &self.map.sky {
+                    sky_pixel(sky, (dir_y + plane_y * cx).atan2(dir_x + plane_x * cx),
+                        (half_h as f64 - cy as f64) / half_h as f64, state.time)
+                } else {
+                    let ceiling_distance = (self.map.ceiling_height - 0.5) * h as f64 / (y as f64 - half_h as f64 + 0.5);
+                    self.map.ceiling.sample(px + ceiling_distance * (dir_x + plane_x * cx),
+                        py + ceiling_distance * (dir_y + plane_y * cx))
+                };
+            }
         }
 
         // 2. Wall Casting (DDA)
@@ -218,7 +331,11 @@ impl Rasterizer3D {
             self.z_buffer[x] = perp_wall_dist;
 
             let line_height = ((h as f64) / perp_wall_dist).floor() as i32;
-            let draw_start = ((-line_height / 2 + half_h as i32).max(0)) as usize;
+            let draw_start = if self.map.ceiling_height == 1.0 {
+                (-line_height / 2 + half_h as i32).max(0) as usize
+            } else {
+                (half_h as f64 - line_height as f64 * (self.map.ceiling_height - 0.5)).floor().max(0.0) as usize
+            };
             let draw_end = ((line_height / 2 + half_h as i32).min(h as i32 - 1)) as usize;
 
             if !self.textures.is_empty() {
@@ -245,11 +362,19 @@ impl Rasterizer3D {
                 let tex_x = (tex_x.clamp(0, tex.width as i32 - 1)) as usize;
 
                 let step = tex.height as f64 / line_height as f64;
+                let original_start = (-line_height / 2 + half_h as i32).max(0) as usize;
                 let mut tex_pos =
                     (draw_start as f64 - half_h as f64 + line_height as f64 / 2.0) * step;
 
                 for y in draw_start..=draw_end {
-                    let tex_y = (tex_pos.floor() as i32).clamp(0, tex.height as i32 - 1) as usize;
+                    if y == original_start {
+                        tex_pos = (original_start as f64 - half_h as f64 + line_height as f64 / 2.0) * step;
+                    }
+                    let tex_y = if y < original_start {
+                        (tex_pos.floor() as i32).rem_euclid(tex.height as i32) as usize
+                    } else {
+                        (tex_pos.floor() as i32).clamp(0, tex.height as i32 - 1) as usize
+                    };
                     tex_pos += step;
                     let mut color = tex.pixels[tex_y * tex.width + tex_x];
 
@@ -260,7 +385,16 @@ impl Rasterizer3D {
                         color = 0xff000000 | (b << 16) | (g << 8) | r;
                     }
                     self.buffer[y * w + x] = color;
+                    self.pixel_depth[y * w + x] = perp_wall_dist;
                 }
+            }
+        }
+
+        for thing in &state.things {
+            if thing.visible == Some(false) { continue; }
+            if let Some(name) = &thing.model {
+                let model = self.models.get(name).expect("Model references are validated by the shared runtime");
+                render_model(model, thing, &state.camera, [dir_x, dir_y], fov_scale, w, h, &mut self.buffer, &mut self.pixel_depth);
             }
         }
 
@@ -268,7 +402,7 @@ impl Rasterizer3D {
         let mut sorted: Vec<&Thing3D> = state
             .things
             .iter()
-            .filter(|t| t.visible.unwrap_or(true))
+            .filter(|t| t.visible.unwrap_or(true) && t.model.is_none())
             .collect();
         sorted.sort_by(|a, b| {
             let da = (px - a.x).powi(2) + (py - a.y).powi(2);
@@ -348,6 +482,7 @@ impl Rasterizer3D {
 
                         let color_idx = sprite.pixels[tex_y * sprite.width + tex_x];
                         if let Some(Some(rgb)) = sprite.colors.get(color_idx) {
+                            if transform_y >= self.pixel_depth[y * w + stripe] { continue; }
                             let packed = 0xff000000
                                 | ((rgb & 0xff) << 16)
                                 | (rgb & 0xff00)
@@ -480,8 +615,36 @@ impl Rasterizer3D {
     }
 
     fn render_hud(&mut self, state: &RenderState) {
+        if let Some(ui) = &state.ui {
+            super::hud::render_hud(self, ui, state.status.as_deref().unwrap_or("playing"), state.paused);
+            return;
+        }
         let w = self.width as i32;
         let h = self.height as i32;
+        if let Some(p) = &state.presentation {
+            self.draw_rect(0, 0, w, 10, 0xff0e0c0a);
+            self.draw_text(state.hud_text.as_deref().unwrap_or(&p.title), 6, 2, 0xf6cc44, 1);
+            if state.status.as_deref() != Some("playing") {
+                let bx = 18;
+                let by = 24;
+                self.draw_rect(bx, by, w - 36, h - 48, 0xff1c1210);
+                self.draw_rect(bx, by, w - 36, 2, 0xff6094b2);
+                let title = match state.status.as_deref() {
+                    Some("won") => &p.victory,
+                    Some("gameover") => &p.defeat,
+                    _ => &p.title,
+                };
+                self.draw_text(title, bx + 12, by + 14, 0xf6cc44, 2);
+                self.draw_text(&p.subtitle, bx + 12, by + 34, 0xa0b6c7, 1);
+                for (i, line) in p.instructions.iter().enumerate() {
+                    self.draw_text(line, bx + 12, by + 52 + i as i32 * 13, 0xe4e0d4, 1);
+                }
+                self.draw_text("ENTER / CLICK: BEGIN A NEW RUN", bx + 12, h - 44, 0x66aa44, 1);
+            }
+            self.draw_rect(0, h - 12, w, 12, 0xff0e0c0a);
+            self.draw_text(state.message.as_deref().filter(|s| !s.is_empty()).unwrap_or(&p.objective), 6, h - 9, 0xe4e0d4, 1);
+            return;
+        }
 
         // 1. Title Screen modal
         if state.status.as_deref() == Some("title") {

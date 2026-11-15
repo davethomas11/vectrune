@@ -1,5 +1,8 @@
 import { fastSin, fastCos } from './math';
 import type { Sprite } from '../pixel/engine';
+import { skyPixel, type Sky } from './sky';
+import { renderModel, type BlockModel } from './model';
+import { renderHud, type GameHud } from './hud';
 
 export interface Texture {
   width: number;
@@ -14,6 +17,8 @@ export interface MapData {
   grid: number[]; // 0 = empty, >0 = texture index or door
   floor: number | Texture; // color number (packed) or Texture
   ceiling: number | Texture; // color number (packed) or Texture
+  ceilingHeight?: number;
+  sky?: Sky | null;
   doors?: Record<number, { open: number; texture: number }>;
 }
 
@@ -27,7 +32,11 @@ export interface Camera3D {
 export interface Thing3D {
   x: number;
   y: number;
-  sprite: string;
+  sprite?: string;
+  model?: string;
+  dissolve?: number;
+  z?: number;
+  angle?: number;
   scale?: number;
   visible?: boolean;
 }
@@ -47,6 +56,10 @@ export interface ViewmodelWeapon {
 }
 
 export interface Stats3D {
+  ui?: GameHud;
+  paused?: boolean;
+  presentation?: Presentation;
+  hudText?: string;
   heading?: number;
   status?: string;
   health?: number;
@@ -61,12 +74,22 @@ export interface Stats3D {
   switchActivated?: boolean;
 }
 
+export interface Presentation {
+  title: string;
+  subtitle: string;
+  instructions: string[];
+  objective: string;
+  victory: string;
+  defeat: string;
+}
+
 export interface RaycasterConfig {
   width: number;
   height: number;
   fov?: number; // degrees, default 66
   textures: Record<string, Texture>;
   sprites: Record<string, Sprite>;
+  models?: Record<string, BlockModel>;
   map: MapData;
   fogColor?: number; // packed 0xAABBGGRR
   fogDist?: number; // max fog distance
@@ -98,6 +121,7 @@ export class Raycaster3D {
   readonly height: number;
   readonly buffer: Uint32Array;
   readonly zBuffer: Float64Array;
+  readonly pixelDepth: Float64Array;
   readonly fov: number;
 
   constructor(readonly config: RaycasterConfig) {
@@ -106,9 +130,15 @@ export class Raycaster3D {
     this.fov = config.fov || 66;
     this.buffer = new Uint32Array(this.width * this.height);
     this.zBuffer = new Float64Array(this.width);
+    this.pixelDepth = new Float64Array(this.width * this.height);
+    this.setMap(config.map);
   }
 
   setMap(map: MapData): void {
+    const height = map.ceilingHeight ?? 1;
+    if (!Number.isFinite(height) || height <= 0.5 || height > 16) {
+      throw new Error('Map ceilingHeight must be greater than 0.5 and at most 16 tiles');
+    }
     this.config.map = map;
   }
 
@@ -118,7 +148,8 @@ export class Raycaster3D {
     weapon?: ViewmodelWeapon,
     flash: number = 0,
     stats?: Stats3D,
-    wallOverrides: WallOverride[] = []
+    wallOverrides: WallOverride[] = [],
+    time: number = 0
   ): Uint32Array {
     const W = this.width;
     const H = this.height;
@@ -135,12 +166,27 @@ export class Raycaster3D {
     const fovScale = Math.tan(((this.fov / 2) * Math.PI) / 180);
     const planeX = -dirY * fovScale;
     const planeY = dirX * fovScale;
+    this.pixelDepth.fill(Infinity);
+    if (things.some(t => t.model && t.visible !== false)) {
+      for (let y = 0; y < H; y++) {
+        if (y < halfH && map.sky) continue;
+        const planeHeight = y < halfH ? (map.ceilingHeight ?? 1) - 0.5 : 0.5;
+        const distance = planeHeight * H / Math.abs(halfH - y - 0.5);
+        this.pixelDepth.fill(distance, y * W, (y + 1) * W);
+      }
+    }
 
     // 1. Floor & Ceiling casting
-    this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY);
+    this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
 
     // 2. Wall casting (DDA)
     this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
+    for (const thing of things) {
+      if (thing.visible === false || !thing.model) continue;
+      const model = this.config.models?.[thing.model];
+      if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
+      renderModel(model, thing, camera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+    }
 
     // 3. Billboards (Sprites / Things) sorted by distance
     if (things && things.length > 0) {
@@ -195,6 +241,29 @@ export class Raycaster3D {
   private renderHUD(stats: Stats3D) {
     const W = this.width;
     const H = this.height;
+    if (stats.ui) {
+      renderHud(this, stats.ui, stats.status || 'playing', stats.paused || false);
+      return;
+    }
+    if (stats.presentation) {
+      const p = stats.presentation;
+      this.rect(0, 0, W, 10, 0x0a0c0e);
+      this.text(stats.hudText || p.title, 6, 2, 0xf6cc44);
+      if (stats.status !== 'playing') {
+        const bx = 18, by = 24;
+        this.rect(bx, by, W - 36, H - 48, 0x10121c);
+        this.rect(bx, by, W - 36, 2, 0xb29460);
+        const title = stats.status === 'won' ? p.victory : stats.status === 'gameover' ? p.defeat : p.title;
+        this.text(title, bx + 12, by + 14, 0xf6cc44, 2);
+        this.text(p.subtitle, bx + 12, by + 34, 0xa0b6c7);
+        p.instructions.forEach((line, i) => this.text(line, bx + 12, by + 52 + i * 13, 0xe4e0d4));
+        this.text('ENTER / CLICK: BEGIN A NEW RUN', bx + 12, H - 44, 0x66aa44);
+      }
+      const message = stats.message || p.objective;
+      this.rect(0, H - 12, W, 12, 0x0a0c0e);
+      this.text(message, 6, H - 9, 0xe4e0d4);
+      return;
+    }
 
     // 1. Title Screen modal
     if (stats.status === 'title') {
@@ -330,7 +399,8 @@ export class Raycaster3D {
     dirX: number,
     dirY: number,
     planeX: number,
-    planeY: number
+    planeY: number,
+    time: number
   ) {
     const W = this.width;
     const H = this.height;
@@ -350,7 +420,7 @@ export class Raycaster3D {
         : 0xff1a1a1a
       : 0;
 
-    if (!floorIsTex && !ceilIsTex) {
+    if (!floorIsTex && !ceilIsTex && !map.sky) {
       // Solid flat colors
       for (let y = 0; y < halfH; y++) {
         this.buffer.fill(ceilColor, y * W, (y + 1) * W);
@@ -364,21 +434,30 @@ export class Raycaster3D {
     const floorTex = floorIsTex ? (map.floor as Texture) : null;
     const ceilTex = ceilIsTex ? (map.ceiling as Texture) : null;
 
-    for (let y = halfH + 1; y < H; y++) {
-      const p = y - halfH;
+    // Initialize horizon rows too; textured surfaces must never retain old pixels.
+    this.buffer.fill(ceilColor, 0, halfH * W);
+    this.buffer.fill(floorColor, halfH * W);
+    if (map.sky) {
+      for (let x = 0; x < W; x++) {
+        const cx = 2 * x / W - 1;
+        const longitude = Math.atan2(dirY + planeY * cx, dirX + planeX * cx);
+        for (let y = 0; y < halfH; y++) {
+          this.buffer[y * W + x] = skyPixel(map.sky, longitude, (halfH - y) / halfH, time);
+        }
+      }
+    }
+    for (let y = halfH; y < H; y++) {
+      const p = y - halfH + 0.5;
       const posZ = 0.5 * H;
       const rowDistance = posZ / p;
-
-      const floorStepX = (rowDistance * (planeX * 2)) / W;
-      const floorStepY = (rowDistance * (planeY * 2)) / W;
-
-      let floorX = px + rowDistance * (dirX - planeX);
-      let floorY = py + rowDistance * (dirY - planeY);
 
       const rowFloorIdx = y * W;
       const rowCeilIdx = (H - y - 1) * W;
 
       for (let x = 0; x < W; x++) {
+        const cx = 2 * x / W - 1;
+        const floorX = px + rowDistance * (dirX + planeX * cx);
+        const floorY = py + rowDistance * (dirY + planeY * cx);
         if (floorTex) {
           const tx = ((Math.floor(floorX * floorTex.width)) & (floorTex.width - 1));
           const ty = ((Math.floor(floorY * floorTex.height)) & (floorTex.height - 1));
@@ -387,16 +466,16 @@ export class Raycaster3D {
           this.buffer[rowFloorIdx + x] = floorColor;
         }
 
-        if (ceilTex) {
-          const tx = ((Math.floor(floorX * ceilTex.width)) & (ceilTex.width - 1));
-          const ty = ((Math.floor(floorY * ceilTex.height)) & (ceilTex.height - 1));
+        if (!map.sky && ceilTex) {
+          const ceilingDistance = ((map.ceilingHeight ?? 1) - 0.5) * H / p;
+          const ceilingX = px + ceilingDistance * (dirX + planeX * cx);
+          const ceilingY = py + ceilingDistance * (dirY + planeY * cx);
+          const tx = ((Math.floor(ceilingX * ceilTex.width)) & (ceilTex.width - 1));
+          const ty = ((Math.floor(ceilingY * ceilTex.height)) & (ceilTex.height - 1));
           this.buffer[rowCeilIdx + x] = ceilTex.pixels[ty * ceilTex.width + tx];
-        } else {
+        } else if (!map.sky) {
           this.buffer[rowCeilIdx + x] = ceilColor;
         }
-
-        floorX += floorStepX;
-        floorY += floorStepY;
       }
     }
   }
@@ -484,7 +563,7 @@ export class Raycaster3D {
       this.zBuffer[x] = perpWallDist;
 
       const lineHeight = Math.floor(H / perpWallDist);
-      const drawStart = Math.max(0, Math.floor(-lineHeight / 2 + halfH));
+      const drawStart = Math.max(0, Math.floor(-lineHeight * ((map.ceilingHeight ?? 1) - 0.5) + halfH));
       const drawEnd = Math.min(H - 1, Math.floor(lineHeight / 2 + halfH));
 
       // Select texture
@@ -507,10 +586,14 @@ export class Raycaster3D {
       texX = Math.max(0, Math.min(tex.width - 1, texX));
 
       const step = tex.height / lineHeight;
+      const originalStart = Math.max(0, Math.floor(-lineHeight / 2 + halfH));
       let texPos = (drawStart - halfH + lineHeight / 2) * step;
 
       for (let y = drawStart; y <= drawEnd; y++) {
-        const texY = Math.min(tex.height - 1, Math.max(0, Math.floor(texPos)));
+        if (y === originalStart) texPos = (originalStart - halfH + lineHeight / 2) * step;
+        const texY = y < originalStart
+          ? ((Math.floor(texPos) % tex.height) + tex.height) % tex.height
+          : Math.min(tex.height - 1, Math.max(0, Math.floor(texPos)));
         texPos += step;
         let color = tex.pixels[texY * tex.width + texX] ?? 0xff000000;
 
@@ -523,6 +606,7 @@ export class Raycaster3D {
         }
 
         this.buffer[y * W + x] = color;
+        this.pixelDepth[y * W + x] = perpWallDist;
       }
     }
   }
@@ -552,6 +636,7 @@ export class Raycaster3D {
     const invDet = 1.0 / (planeX * dirY - dirX * planeY);
 
     for (const thing of sorted) {
+      if (thing.model || !thing.sprite) continue;
       const sprite = this.config.sprites[thing.sprite];
       if (!sprite) continue;
 
@@ -586,7 +671,7 @@ export class Raycaster3D {
 
             const colorIdx = sprite.pixels[texY * sprite.width + texX];
             const color = sprite.colors[colorIdx];
-            if (color !== null && color !== undefined) {
+            if (color !== null && color !== undefined && transformY < this.pixelDepth[y * W + stripe]) {
               this.buffer[y * W + stripe] = packed(color);
             }
           }
@@ -646,4 +731,3 @@ export class Raycaster3D {
     }
   }
 }
-

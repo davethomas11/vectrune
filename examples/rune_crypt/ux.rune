@@ -1,0 +1,156 @@
+@Logic/crypt
+state:
+    ui = {"meters":[],"objective":"","detail":"","prompt":"","notice":"","panel":null}
+    pause_ui = {"meters":[],"objective":"","detail":"","prompt":"","notice":"","panel":null}
+    camp_locked = false
+    choice_locked = true
+    confirm_locked = true
+    train_locked = true
+    ui_summary = ""
+    ui_resources = ""
+    ui_run_status = ""
+    resources_hidden = true
+    ui_choice_one = ""
+    ui_choice_two = ""
+    ui_choice_three = ""
+    third_choice_locked = true
+    selected_one = false
+    selected_two = false
+    selected_three = false
+    learned_move = false
+    learned_sword = false
+    learned_rune = false
+    learned_dodge = false
+    context = ""
+    camp_feedback = ""
+
+action select_class(index):
+    stop when status == "playing"
+    stop when index < 0 || index > 2
+    hero_class = index
+    legacy.class = index
+    camp_feedback = ""
+    call class_label
+    call refresh_ui
+
+action confirm_choice:
+    stop when status != "playing"
+    stop when choice_locked
+    use_held = true
+    call interact_exploration true
+    call use_exit
+    call refresh_ui
+
+action select_one:
+    call select_choice 0
+
+action select_two:
+    call select_choice 1
+
+action select_three:
+    call select_choice 2
+
+action select_choice(index):
+    stop when index < 0 || index > 2 || index != floor(index)
+    if status != "playing":
+        call select_class index
+        stop
+    if distance(player, exit_pos) < 0.8 && level < 5 && remaining == 0:
+        if index < 2:
+            route_choice = index
+    if distance(player, exit_pos) >= 0.8 || level >= 5 || remaining > 0:
+        if (distance(player, shrine_pos) < 1 && shrine_used == false) || (distance(player, chest_pos) < 0.9 && chest_opened == false):
+            reward_choice = index
+    call refresh_ui
+
+action refresh_ui:
+    camp_locked = status == "playing"
+    resources_hidden = status != "playing"
+    train_locked = camp_locked || legacy.shards < 5 || legacy.rank >= 10
+    choice_locked = true
+    confirm_locked = true
+    third_choice_locked = true
+    selected_one = false
+    selected_two = false
+    selected_three = false
+    context = ""
+    ui = {"meters":[{"label":"HEALTH","value":health,"max":max_health,"color":8312492},{"label":"MANA","value":ammo,"max":mana_max,"color":8371396},{"label":"DODGE","value":dodge_rate - dodge_cooldown,"max":dodge_rate,"color":15914378}],"objective":"DEPTH " + level + "/5 - DEFEAT " + remaining + " FOES","detail":class_name + " / " + relic + " / LV " + rpg_level + " XP " + xp + "/3 / SHARDS " + legacy.shards,"prompt":"CLICK / SPACE: SWORD   Q: RUNE   SHIFT: DODGE","notice":notice_ticks > 0 ? notice : "","panel":null}
+    ui_summary = class_name + " | Relic: " + relic + " | Training rank: " + legacy.rank + " | Shards: " + legacy.shards
+    ui_resources = "Health " + health + "/" + max_health + " | Mana " + ammo + "/" + mana_max + (dodge_cooldown == 0 ? " | Dodge ready" : " | Dodge " + ceil(dodge_cooldown / 30) + "s")
+    ui_run_status = level_title + " | RPG level " + rpg_level + " | " + kills + " foes defeated"
+    if status != "playing":
+        context = "camp"
+        choice_locked = false
+        ui.meters = []
+        ui.heading = "RUNE CRYPT"
+        ui.objective = "REACH DEPTH FIVE. DEFEAT THE WARDEN. CLAIM THE HEART."
+        ui.prompt = "1 / 2 / 3: CLASS   ENTER / NEW RUN: BEGIN"
+        ui.panel = {"title":"CHOOSE YOUR CLASS","body":"Move with WASD. Aim with mouse or arrows. Your shards survive death; your run upgrades reset.","choices":["KNIGHT - ARMOR / BEST FIRST RUN","ARCANIST - STRONG MAGIC / LESS HEALTH","SCOUT - FAST MOVEMENT / FAST DODGE"],"selected":hero_class,"footer":"1 / 2 / 3: CLASS   ENTER / NEW RUN: BEGIN"}
+        if status == "gameover":
+            ui.panel.title = "YOU FELL. YOUR SHARDS ARE SAFE."
+            ui.panel.body = "Reached depth " + level + "/5. Defeated " + kills + " foes. Spend 5 shards on training, or try another class."
+        if status == "won":
+            ui.panel.title = "RUNE HEART RECLAIMED!"
+            ui.panel.body = "Five depths survived. " + kills + " foes defeated. +5 bonus shards saved. Choose your next class."
+        if status == "title":
+            ui.prompt = "1 / 2 / 3: CLASS   ENTER / NEW RUN: BEGIN"
+        if status != "title" && message:
+            ui.prompt = message
+        if camp_feedback:
+            ui.prompt = camp_feedback
+    if status == "playing":
+        if remaining == 0:
+            ui.objective = "DEPTH " + level + "/5 CLEAR - FIND THE STAIRS"
+            ui.prompt = "OPTIONAL: SEARCH CACHES / CLAIM A SHRINE"
+            if level == 5:
+                ui.objective = "VAULT CLEAR - CLAIM THE RUNE HEART"
+        if remaining > 0:
+            ui.objective += hint
+        if learned_move == false && remaining > 0:
+            ui.prompt = "FIRST: WASD / LEFT STICK TO MOVE"
+        if learned_move && learned_sword == false && remaining > 0:
+            ui.prompt = "GET CLOSE. CLICK / SPACE / SWORD TO ATTACK."
+        if learned_move && learned_sword && learned_rune == false && remaining > 0:
+            ui.prompt = "Q / RUNE: RANGED ATTACK. MANA REGENERATES."
+        if learned_move && learned_sword && learned_rune && learned_dodge == false && remaining > 0:
+            ui.prompt = "SHIFT / DODGE: EVADE. YELLOW WARNS OF ATTACKS."
+        if health <= max_health * 0.25:
+            ui.detail = "LOW HEALTH - SEEK POTIONS / GUARD / SANCTUARY"
+        if distance(player, lore_pos) < 0.9:
+            ui.prompt = "E / USE: READ TABLET - A CLUE, NOT A REQUIREMENT"
+        if distance(player, secret_pos) < 0.9 && secret_found == false:
+            ui.prompt = "E / USE: SEARCH CRACK - BONUS SHARDS AND HEALING"
+        if distance(player, shrine_pos) < 1 && shrine_used == false:
+            context = "shrine"
+            choice_locked = false
+            ui.panel = {"title":"SHRINE - ONE FREE UPGRADE","body":"Choose your upgrade, then press E / USE. This bonus lasts for the run.","choices":["BLADE - SWORD DAMAGE +2","RUNE - MAGIC +2 / MAX MANA +1","GUARD - MAX HEALTH +25 / HEAL 25"],"selected":reward_choice,"footer":"1 / 2 / 3 OR C: SELECT   E / USE: CLAIM"}
+            ui.prompt = "ENEMIES STILL MOVE. KEEP WATCH WHILE CHOOSING."
+        if distance(player, chest_pos) < 0.9 && chest_opened == false:
+            context = "chest"
+            choice_locked = false
+            ui.panel = {"title":"CHEST - CHOOSE ONE RELIC","body":"Current: " + relic + ". New equipment replaces it; effects do not stack.","choices":["FANG - FASTER SWORD SWINGS","LANTERN - FASTER MANA REGENERATION","AEGIS - ARMOR +2 / LESS DAMAGE"],"selected":reward_choice,"footer":"1 / 2 / 3 OR C: SELECT   E / USE: EQUIP"}
+            ui.prompt = "ENEMIES STILL MOVE. KEEP WATCH WHILE CHOOSING."
+        if distance(player, exit_pos) < 0.8:
+            if remaining > 0:
+                ui.prompt = "STAIRS LOCKED - DEFEAT THE REMAINING FOES"
+            if remaining == 0:
+                if level == 5:
+                    ui.prompt = "E / USE: CLAIM THE HEART AND COMPLETE THE RUN"
+                if level < 5:
+                    context = "stairs"
+                    choice_locked = false
+                    ui.panel = {"title":"DEPTH CLEARED - CHOOSE YOUR NEXT ROUTE","body":"Both routes refill mana. Sanctuary is the safer choice.","choices":["SANCTUARY - HEAL 25 BEFORE DESCENDING","CURSED - FOES +3 HP / DOUBLE KILL SHARDS"],"selected":route_choice,"footer":"1 / 2 OR C: SELECT   E / USE: DESCEND"}
+                    ui.prompt = "YOUR UPGRADES AND RELIC CARRY TO THE NEXT DEPTH"
+    ui_choice_one = "No choice nearby"
+    ui_choice_two = "No choice nearby"
+    ui_choice_three = "No choice nearby"
+    if ui.panel:
+        ui_choice_one = ui.panel.choices[0]
+        ui_choice_two = ui.panel.choices[1]
+        ui_choice_three = ui.panel.choices.length > 2 ? ui.panel.choices[2] : "Only two routes"
+        selected_one = ui.panel.selected == 0
+        selected_two = ui.panel.selected == 1
+        selected_three = ui.panel.selected == 2
+        third_choice_locked = ui.panel.choices.length < 3
+        confirm_locked = status != "playing"
+    pause_ui = {"heading":"PAUSED","meters":ui.meters,"objective":ui.objective,"detail":ui.detail,"prompt":"P: RESUME   T: RETURN TO TITLE","notice":"","panel":{"title":"YOUR RUN IS SAFE WHILE PAUSED","body":class_name + " / " + level_title + "|Level " + rpg_level + " / " + kills + " foes defeated / " + relic + "|Return to title keeps shards and training, but ends this run.","choices":[],"selected":0,"footer":"P: RESUME   T: TITLE / CHOOSE CLASS"}}

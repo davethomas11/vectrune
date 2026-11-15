@@ -1,6 +1,14 @@
 # MANTIS — a monster with idle, step, punch and duck poses.
 @Palette/mantis
-colors = {"d":"#286f67","b":"#60baa0","h":"#a8e5bb","e":"#ffe898","k":"#16383c","a":"#f3c86b",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#f3c86b",
+    "b": "#60baa0",
+    "d": "#286f67",
+    "e": "#ffe898",
+    "h": "#a8e5bb",
+    "k": "#16383c"
+}
 
 @Sprite/mantis/idle
 palette = mantis

@@ -1,0 +1,143 @@
+@Logic/crypt
+state:
+    music_track = ""
+
+action play_score(track):
+    music.stop
+    music_track = track
+    music.play track
+
+# Original minor-key title melody, with a gentle pulse beneath the class menu.
+@Music/crypt_title
+type = 8bit
+tempo = 84
+time_signature = 4/4
+bars = 4
+loop = true
+volume = 0.07
+lead:
+    A4:4 E5:8 D5:8 C5:4 B4:4 |
+    G4:4 B4:8 D5:8 E5:4 D5:4 |
+    F4:4 A4:8 C5:8 E5:4 C5:4 |
+    E4:4 G#4:4 B4:4 A4:4
+bass:
+    A2:2 E3:2 |
+    G2:2 D3:2 |
+    F2:2 C3:2 |
+    E2:2 A2:2
+drums:
+    kick:4 -:4 hihat:4 -:4 |
+    kick:4 -:4 hihat:4 -:4 |
+    kick:4 -:4 hihat:4 -:4 |
+    kick:4 hihat:4 -:4 -:4
+
+@Music/crypt_dungeon
+type = 8bit
+tempo = 104
+time_signature = 4/4
+bars = 4
+loop = true
+volume = 0.065
+lead:
+    A3:8 E4:8 -:8 C4:8 B3:4 E4:4 |
+    G3:8 D4:8 -:8 B3:8 A3:4 D4:4 |
+    F3:8 C4:8 -:8 A3:8 G3:4 C4:4 |
+    E3:8 B3:8 G#3:8 B3:8 A3:4 -:4
+bass:
+    A2:4 -:4 E2:4 A2:4 |
+    G2:4 -:4 D2:4 G2:4 |
+    F2:4 -:4 C2:4 F2:4 |
+    E2:4 B1:4 E2:4 -:4
+drums:
+    kick:4 hihat:4 snare:4 hihat:4 |
+    kick:4 hihat:4 snare:4 -:4 |
+    kick:4 hihat:4 snare:4 hihat:4 |
+    kick:4 hihat:8 hihat:8 snare:4 -:4
+
+@Music/crypt_warden
+type = 8bit
+tempo = 132
+time_signature = 4/4
+bars = 4
+loop = true
+volume = 0.075
+lead:
+    A4:8 E4:8 A4:8 Bb4:8 E5:4 C5:4 |
+    G4:8 D4:8 G4:8 Ab4:8 D5:4 B4:4 |
+    F4:8 C4:8 F4:8 G4:8 C5:4 A4:4 |
+    E4:8 B4:8 G#4:8 E5:8 B4:4 A4:4
+bass:
+    A2:8 A2:8 E2:4 A2:8 A2:8 E2:4 |
+    G2:8 G2:8 D2:4 G2:8 G2:8 D2:4 |
+    F2:8 F2:8 C2:4 F2:8 F2:8 C2:4 |
+    E2:8 E2:8 B1:4 E2:8 G#2:8 A2:4
+drums:
+    [kick,hihat]:4 [snare,hihat]:4 kick:8 hihat:8 [snare,hihat]:4 |
+    [kick,hihat]:4 [snare,hihat]:4 kick:8 kick:8 snare:4 |
+    [kick,hihat]:4 [snare,hihat]:4 kick:8 hihat:8 [snare,hihat]:4 |
+    kick:4 snare:4 kick:8 snare:8 snare:8 hihat:8
+
+@Music/crypt_victory
+type = 8bit
+tempo = 100
+time_signature = 4/4
+bars = 4
+loop = false
+volume = 0.08
+lead:
+    C5:4 E5:4 G5:4 E5:4 |
+    F5:4 A5:4 G5:2 |
+    E5:8 G5:8 C6:4 B5:4 G5:4 |
+    C6:2 -:2
+bass:
+    C3:2 G3:2 |
+    F3:2 C3:2 |
+    G2:2 G3:2 |
+    C3:2 -:2
+drums:
+    kick:4 hihat:4 snare:4 -:4 |
+    kick:4 hihat:4 snare:4 -:4 |
+    kick:4 snare:4 hihat:4 snare:4 |
+    kick:2 -:2
+
+@Sound/sword
+wave = noise
+filter = lowpass 1600 -> 120
+duration = 120ms
+volume = 0.2
+
+@Sound/rune
+wave = triangle
+sequence = E5:50ms, B5:50ms, E6:80ms
+volume = 0.2
+
+@Sound/shard
+wave = sine
+sequence = A5:50ms, E6:70ms
+volume = 0.15
+
+@Sound/warning
+wave = square
+sequence = D4:60ms, A4:100ms
+volume = 0.1
+
+@Sound/dodge
+wave = noise
+filter = lowpass 900 -> 100
+duration = 100ms
+volume = 0.1
+
+@Sound/secret
+wave = triangle
+sequence = C5:70ms, G5:70ms, C6:160ms
+volume = 0.15
+
+@Sound/blessing
+wave = triangle
+sequence = C5:80ms, E5:80ms, G5:140ms
+volume = 0.15
+
+@Sound/hurt
+wave = sawtooth
+sequence = A2:60ms, E2:60ms
+volume = 0.15

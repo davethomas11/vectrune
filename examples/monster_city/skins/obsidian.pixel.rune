@@ -1,5 +1,13 @@
 @Palette/obsidian
-colors = {"d":"#393447","b":"#625669","h":"#ffac68","e":"#ffe2a1","k":"#171e2a","a":"#e7714b",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#e7714b",
+    "b": "#625669",
+    "d": "#393447",
+    "e": "#ffe2a1",
+    "h": "#ffac68",
+    "k": "#171e2a"
+}
 
 @Sprite/obsidian/idle
 palette = obsidian

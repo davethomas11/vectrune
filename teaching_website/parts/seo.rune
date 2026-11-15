@@ -8,6 +8,11 @@ title = Learn Vectrune — Declarative Full-Stack Language & Reactive Web
 description = Master Vectrune: A single unified language for type-safe microservices, reactive Rune-Web frontends, retro arcade games, and dynamic AI workflows.
 image = /assets/rune-logo.png
 
+@SEO/rune-crypt
+title = %i18n.RuneCrypt.title% — Vectrune
+description = %i18n.RuneCrypt.description%
+image = /assets/rune-logo.png
+
 @SEO/games
 title = VectRaiders Arcade — Built with Vectrune & Rune-Web
 description = Defend the vector grid in pure retro arcade action built entirely with declarative Rune-Web — featuring a 25fps game loop ticker, 2D collisions, real-time sound synthesizer, and touch controls.
@@ -113,32 +118,32 @@ title = %i18n.RuneWebGuide.views_title% — Vectrune
 title = %i18n.RuneWebGuide.styles_title% — Vectrune
 
 @SEO/developer
-title = %i18n.Developer.start% — Vectrune 0.3.3
+title = %i18n.Developer.start% — Vectrune 0.3.4
 description = %i18n.Developer.start_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_cli
-title = %i18n.Developer.cli% — Vectrune 0.3.3
+title = %i18n.Developer.cli% — Vectrune 0.3.4
 description = %i18n.Developer.cli_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_testing
-title = %i18n.Developer.testing% — Vectrune 0.3.3
+title = %i18n.Developer.testing% — Vectrune 0.3.4
 description = %i18n.Developer.testing_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_quality
-title = %i18n.Developer.quality% — Vectrune 0.3.3
+title = %i18n.Developer.quality% — Vectrune 0.3.4
 description = %i18n.Developer.quality_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_ci
-title = %i18n.Developer.ci% — Vectrune 0.3.3
+title = %i18n.Developer.ci% — Vectrune 0.3.4
 description = %i18n.Developer.ci_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_release
-title = %i18n.Developer.release% — Vectrune 0.3.3
+title = %i18n.Developer.release% — Vectrune 0.3.4
 description = %i18n.Developer.release_intro%
 image = /assets/rune-logo.png
 

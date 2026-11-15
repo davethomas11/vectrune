@@ -231,6 +231,7 @@
                     <li><a href="#aws-lambda-integration">AWS Lambda Integration</a></li>
                     <li><a href="#game-development">Game Development</a></li>
                     <li><a href="#game-controls">Game Controls</a></li>
+                    <li><a href="#pixel3d-environments">Pixel 3D Environments</a></li>
                     <li><a href="#data-source-interaction">Data Source Interaction</a></li>
                 </ul>
             </li>
@@ -448,6 +449,7 @@
         </ul>
 
         <h2 id="command-line-interface-cli-tools">3. Command-Line Interface (CLI) Tools</h2>
+        <p><code>vectrune fmt &lt;entry-or-directory&gt; --line-width 100</code> formats Rune files and imports, wrapping top-level JSON object assignments with four-space indentation. The default width is 100 (minimum 20); individual strings, executable expressions, views and embedded code are preserved. Use <code>--check</code> to report changes without writing. Formatting reparses and compares documents before saving.</p>
         <p>Vectrune provides a powerful command-line interface for executing scripts, managing applications, and interacting with various services.</p>
 
         <h3 id="top-level-commands-options">3.1. Top-Level Commands & Options</h3>
@@ -597,6 +599,43 @@
                 </ul>
             </li>
         </ul>
+
+        <h3 id="pixel3d-environments">Pixel 3D Environments and Rune Crypt</h3>
+        <p>Pixel 3D maps now support perspective-cast floor and ceiling textures and procedurally generated, animated skies in browser and native rendering. Use a texture name for <code>floor</code> or <code>ceiling</code>, or replace the ceiling with a seeded sky:</p>
+        <pre><code>floor = stone/moss
+sky = {"seed":731,"zenith":"#202c55","horizon":"#bd8b83","cloud":"#c0bdcf","speed":0.35}</code></pre>
+        <p><code>sky</code> and an explicit <code>ceiling</code> are mutually exclusive. Define referenced textures using existing <code>@Texture</code> sections. Planes are map-wide; variable-height and per-tile open ceilings are not supported.</p>
+        <p>Rune Crypt's walls use six 32x32 designs plus 64x64 carved fluted pillars. Floors and ceilings are detailed 32x32 stone, moss and rune textures. Compress repetitive texture source with named row patterns and run-length color counts; the compiler expands them losslessly for browser and native rendering:</p>
+        <pre><code>@Texture/brick
+palette = stone
+size = [16,16]
+patterns = {"mortar":"k*16","brick":"k l s*12 l k"}
+pixels:
+    {"pattern":"mortar"}
+    {"pattern":"brick","repeat":7}
+    {"runs":"k*16"}
+    {"pattern":"brick","repeat":7}</code></pre>
+        <p>Define palette symbols <code>k</code>, <code>l</code> and <code>s</code> first. Literal pixel rows still work and may mix with compressed rows. Expanded dimensions must match exactly. This compresses authoring source, not exported pixel arrays or GPU/runtime memory. See <a href="https://github.com/davethomas11/rune/blob/main/knowledge/runtime/pixel3d.md#compact-texture-rows">compact texture rows</a>.</p>
+        <p><strong>Rune Crypt</strong> is a separate five-depth roguelite RPG with three classes, telegraphed enemies, directional dodging, chosen shrine blessings, replaceable equipment, traps, secret caches, branching exit rewards, and shard-funded permanent training. Dungeon geometry is authored. Vect Breach remains unchanged.</p>
+        <p>A large portable title banner frames class selection over the courtyard. Four original synthesized chiptunes cover the title/death menu, dungeon exploration, Warden battle and victory. Browser music waits for a user gesture; select a class to hear the title theme. Sound / M mutes music and effects; Pause suspends the score.</p>
+        <p>Canvas clicks/taps at camp only focus the game: select a class with 1/2/3 or the buttons, then explicitly begin. Pause / P shows resources and run status; Resume / P continues. Return to title / T ends the run but keeps shards, training and class. Detailed 24x24 sword and casting sprites animate wind-up, sweep, recovery and rune magic without changing combat timing.</p>
+        <p>Defeated enemies sink and dissolve into pixel fragments over one second. Rewards and defeat resolve immediately; death effects freeze while paused. Model instances support <code>dissolve</code> from 0 (solid) to 1 (gone), revealing the scene through discarded fragments in both browser and native rendering.</p>
+        <p>Its new portable HUD separates labeled health, mana and dodge bars from objectives, feedback and interaction prompts. Visible class, shrine, equipment and route panels show every effect and highlight your selection. Progressive hints teach the next control; the responsive browser shell adds accessible choice buttons and expandable help.</p>
+        <p>Bind <code>@Scene ui = ui</code> to a structured game-state object to reuse these meters and panels in browser and native rendering. Browser action buttons can pass a JSON array via <code>data-pixel-args</code> and bind text, disabled state and selection to game state. See the <a href="https://github.com/davethomas11/rune/blob/main/knowledge/runtime/pixel3d.md#structured-hud-and-accessible-shell-controls">structured HUD format</a>.</p>
+        <p>Enemies, loot, dungeon props, projectiles and stairs now use real shaded <code>@Model</code> blocks instead of camera-facing sprites. Yellow attack variants raise weapons; chests open and spikes rise. The first-person sword remains a screen-space sprite. Reuse a palette and list boxes with <code>from</code>, <code>size</code> and a palette <code>color</code>. Coordinates are <code>[x,y,z]</code> with z up; <code>unit</code> converts grid units to tiles:</p>
+        <pre><code>@Model/stairs
+palette = stone
+unit = 0.25
+blocks:
+    {"from":[-2,-2,0],"size":[4,1,1],"color":"s"}
+    {"from":[-2,-1,0],"size":[4,1,2],"color":"s"}
+    {"from":[-2,0,0],"size":[4,1,3],"color":"s"}
+    {"from":[-2,1,0],"size":[4,1,4],"color":"s"}</code></pre>
+        <p>Define a <code>@Palette/stone</code> with symbol <code>s</code>, then place <code>{"x":11.5,"y":11.5,"model":"stairs","angle":90}</code> in the scene's things. Models depth-test against walls and sprites but do not add collision or stair climbing. See <a href="https://github.com/davethomas11/rune/blob/main/knowledge/language/pixel-models.md">block-model authoring</a>.</p>
+        <p><code>@Map ceiling_height = 3</code> raises wall tops and the ceiling to three tiles while preserving floor perspective and collision. Heights default to one tile and must be greater than 0.5 and at most 16. Walls repeat their textures vertically. Rune Crypt's indoor heights grow from 1.5 tiles in the crypt to 3 in the vault; its courtyard keeps an open sky.</p>
+        <pre><code>vectrune examples/rune_crypt/rune_crypt.rune -o html &gt; rune-crypt.html
+vectrune test examples/rune_crypt --type logic</code></pre>
+        <p>Open the exported HTML. WASD moves, click/Space swings, Q casts, Shift dodges, E interacts, 1/2/3 or visible buttons select choices, and R trains between runs. E confirms your reward; Enter begins a run. C remains a cycling fallback. Enemies still move while choosing; pause to read safely. Yellow warns before red damages. See the <a href="https://github.com/davethomas11/rune/blob/main/knowledge/runtime/pixel3d.md">canonical Pixel 3D environment and progression reference</a>.</p>
 
         <h3 id="game-controls">Declarative Game Controls (unreleased)</h3>
         <p>Pixel and Pixel 3D scenes can import <code>controls.rune</code> and select <code>controls = shooter</code>. Physical devices feed named inputs to the existing <code>tick(input)</code> action.</p>

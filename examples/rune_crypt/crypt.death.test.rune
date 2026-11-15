@@ -1,0 +1,54 @@
+#!RUNE
+import "rune_crypt.rune"
+
+@Test/RuneCrypt/EnemyDeathDissolve
+type = logic
+page = crypt
+setup:
+    invoke start
+    invoke death_target
+run:
+    invoke attack false
+    assert state.enemies[0].visible == false
+    assert state.kills == 1
+    assert state.legacy.shards == 1
+    assert state.death_effects.length == 1
+    assert state.death_effects[0].model == "enemy/skeleton"
+    assert state.death_effects[0].dissolve == 0
+    invoke tick {}
+    assert state.remaining == 0
+    assert state.death_effects[0].age == 1
+    invoke age_death 15
+    assert state.death_effects[0].dissolve == 0.46153846153846156
+    assert state.death_effects[0].z < 0
+    invoke attack false
+    assert state.kills == 1
+    assert state.death_effects.length == 1
+    invoke age_death 14
+    assert state.death_effects.length == 0
+
+@Test/RuneCrypt/DeathVariantsAndRestart
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke enemy_death {"x":3,"y":2,"kind":"wraith","z":0.1,"angle":45,"scale":0.8}
+    invoke enemy_death {"x":4,"y":2,"kind":"warden","angle":90,"scale":1.1}
+    assert state.death_effects[0].model == "enemy/wraith"
+    assert state.death_effects[0].start_z == 0.1
+    assert state.death_effects[1].model == "enemy/warden"
+    assert state.death_effects[1].scale == 1.1
+    invoke start
+    assert state.death_effects.length == 0
+
+@Logic/crypt
+action death_target:
+    enemies = [{"x":2.5,"y":1.5,"kind":"skeleton","hp":1,"visible":true,"model":"enemy/skeleton_warn","cooldown":0}]
+    hazards = []
+    pickups = []
+    legacy.shards = 0
+
+action age_death(count):
+    for index in range(0, count):
+        call update_deaths

@@ -85,6 +85,28 @@ Current behavior:
 - imports are resolved relative to the importing file
 - when sections overlap, imported content is merged first and the importing file is merged after it
 
+## Formatting Rune files
+
+`vectrune fmt <entry-or-directory>` formats the entry and its imports;
+`--check` reports changes without writing and exits 1 when formatting is needed.
+`--line-width <characters>` defaults to 100 and accepts integers of at least 20.
+Long top-level JSON object assignments are expanded into four-space
+indented fields, recursively wrapping nested objects and arrays to fit the target.
+For example, format Rune Crypt's touch controls with:
+
+```bash
+vectrune fmt examples/rune_crypt --line-width 100
+vectrune fmt examples/rune_crypt --check
+```
+
+The limit is a target, not a hard cap: individual strings, comments, expressions,
+views, styles and embedded source are not split. Existing multiline JSON object
+assignments are reformatted to the selected width.
+Indented action/state expressions remain unchanged because they are executable
+source, not top-level JSON data. Line endings are preserved. Every changed file
+is reparsed and compared before any writes; semantic differences fail explicitly.
+Implementation: [`src/cli/formatting.rs`](../../src/cli/formatting.rs).
+
 ## Development mode: hot reloading with `-w` / `--watch`
 
 When running a Vectrune app in server mode (REST, GraphQL, etc.), the `-w` flag enables automatic file monitoring:

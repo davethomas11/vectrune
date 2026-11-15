@@ -1,5 +1,23 @@
 @Palette/ember
-colors = {".":"transparent","d":"#182b36","g":"#a04439","G":"#ef8053","h":"#ffe2a3","b":"#c8cc91","e":"#ffe9a9","k":"#16242d","r":"#d8876e","s":"#f7ba60","w":"#eccf9a","a":"#566c7e","c":"#8c9ca0","n":"#3d5266","o":"#9c705d","t":"#526c4e","l":"#a8b97b"}
+colors = {
+    ".": "transparent",
+    "G": "#ef8053",
+    "a": "#566c7e",
+    "b": "#c8cc91",
+    "c": "#8c9ca0",
+    "d": "#182b36",
+    "e": "#ffe9a9",
+    "g": "#a04439",
+    "h": "#ffe2a3",
+    "k": "#16242d",
+    "l": "#a8b97b",
+    "n": "#3d5266",
+    "o": "#9c705d",
+    "r": "#d8876e",
+    "s": "#f7ba60",
+    "t": "#526c4e",
+    "w": "#eccf9a"
+}
 
 @Sprite/ember/idle
 palette = ember

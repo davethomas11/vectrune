@@ -1,5 +1,23 @@
 @Palette/city
-colors = {".":"transparent","d":"#182b36","g":"#427e58","G":"#80b95e","h":"#c5dd88","b":"#c8cc91","e":"#ffe9a9","k":"#16242d","r":"#d8876e","s":"#69a899","w":"#eccf9a","a":"#566c7e","c":"#8c9ca0","n":"#3d5266","o":"#9c705d","t":"#526c4e","l":"#a8b97b"}
+colors = {
+    ".": "transparent",
+    "G": "#80b95e",
+    "a": "#566c7e",
+    "b": "#c8cc91",
+    "c": "#8c9ca0",
+    "d": "#182b36",
+    "e": "#ffe9a9",
+    "g": "#427e58",
+    "h": "#c5dd88",
+    "k": "#16242d",
+    "l": "#a8b97b",
+    "n": "#3d5266",
+    "o": "#9c705d",
+    "r": "#d8876e",
+    "s": "#69a899",
+    "t": "#526c4e",
+    "w": "#eccf9a"
+}
 
 @Sprite/tower/blue
 palette = city

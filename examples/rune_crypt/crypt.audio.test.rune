@@ -1,0 +1,68 @@
+#!RUNE
+import "rune_crypt.rune"
+
+@Test/RuneCryptAudio/TitleAndStart
+type = logic
+page = crypt
+run:
+    invoke initialize
+    assert mock.audio[0].operation == "music.stop"
+    assert mock.audio[1].operation == "music.play"
+    assert mock.audio[1].args[0] == "crypt_title"
+    invoke select_two
+    assert mock.audio.length == 2
+    invoke start
+    assert mock.audio[2].operation == "music.stop"
+    assert mock.audio[3].args[0] == "crypt_dungeon"
+    invoke start
+    assert mock.audio[4].operation == "music.stop"
+    assert mock.audio[5].args[0] == "crypt_dungeon"
+
+@Test/RuneCryptAudio/BossAndVictory
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke audio_vault_entrance
+    invoke use_exit
+    assert state.level == 5
+    assert state.music_track == "crypt_warden"
+    assert mock.audio[2].operation == "music.stop"
+    assert mock.audio[3].args[0] == "crypt_warden"
+    invoke audio_clear_vault
+    invoke use_exit
+    assert state.status == "won"
+    assert state.music_track == "crypt_victory"
+    assert mock.audio[4].operation == "music.stop"
+    assert mock.audio[5].args[0] == "crypt_victory"
+    invoke use_exit
+    assert mock.audio.length == 7
+
+@Test/RuneCryptAudio/DeathReturnsToTitleTheme
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke audio_fall
+    invoke tick
+    assert state.status == "gameover"
+    assert state.music_track == "crypt_title"
+    assert mock.audio[2].operation == "music.stop"
+    assert mock.audio[3].args[0] == "crypt_title"
+
+@Logic/crypt
+action audio_vault_entrance:
+    level = 4
+    player = {"x":11.5,"y":11.5,"angle":0}
+    remaining = 0
+
+action audio_clear_vault:
+    player = {"x":11.5,"y":11.5,"angle":0}
+    remaining = 0
+
+action audio_fall:
+    health = 0
+    enemies = []
+    hazards = []

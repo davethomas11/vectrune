@@ -1,6 +1,14 @@
 # MECHA — a monster with idle, step, punch and duck poses.
 @Palette/mecha
-colors = {"d":"#3b566b","b":"#8da7b8","h":"#d6e2e4","e":"#ffce6b","k":"#1a2839","a":"#ef886c",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#ef886c",
+    "b": "#8da7b8",
+    "d": "#3b566b",
+    "e": "#ffce6b",
+    "h": "#d6e2e4",
+    "k": "#1a2839"
+}
 
 @Sprite/mecha/idle
 palette = mecha

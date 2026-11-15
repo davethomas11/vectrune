@@ -1,6 +1,14 @@
 # DRAKE — a monster with idle, step, punch and duck poses.
 @Palette/drake
-colors = {"d":"#743e52","b":"#c76b71","h":"#ffd09a","e":"#fff0bb","k":"#30243e","a":"#ba858b",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#ba858b",
+    "b": "#c76b71",
+    "d": "#743e52",
+    "e": "#fff0bb",
+    "h": "#ffd09a",
+    "k": "#30243e"
+}
 
 @Sprite/drake/idle
 palette = drake

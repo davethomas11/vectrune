@@ -18,11 +18,17 @@ class TeachingBuildTests(unittest.TestCase):
             previous = destination / 'index.html'
             previous.write_text('Working site')
             with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'vectrune 0.2.18\n')) as command:
-                with self.assertRaisesRegex(RuntimeError, '0.3.3.*Pixel 3D'):
+                with self.assertRaisesRegex(RuntimeError, '0.3.4.*Pixel 3D'):
                     build_site(destination, Path(folder) / 'old-compiler')
                 self.assertEqual(command.call_count, 1)
             self.assertEqual(previous.read_text(), 'Working site')
             self.assertFalse((destination / 'assets').exists())
+
+    def test_previous_pixel_compiler_is_rejected_for_rune_crypt(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'vectrune 0.3.3\n')):
+                with self.assertRaisesRegex(RuntimeError, '0.3.4.*Rune Crypt'):
+                    build_site(Path(folder) / 'site', Path(folder) / 'old-compiler')
 
 
 if __name__ == '__main__':

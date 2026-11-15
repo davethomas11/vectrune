@@ -1,6 +1,14 @@
 # CORAL — a monster with idle, step, punch and duck poses.
 @Palette/coral
-colors = {"d":"#aa5267","b":"#ed929c","h":"#ffd2b0","e":"#fdf5cd","k":"#563551","a":"#bfe8d8",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#bfe8d8",
+    "b": "#ed929c",
+    "d": "#aa5267",
+    "e": "#fdf5cd",
+    "h": "#ffd2b0",
+    "k": "#563551"
+}
 
 @Sprite/coral/idle
 palette = coral

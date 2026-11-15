@@ -1,0 +1,209 @@
+@Page/crypt_cabinet
+title = Rune Crypt - The crypt remembers.
+logic = crypt_cabinet
+style = crypt_cabinet
+view:
+    main .cabinet:
+        header:
+            h1 "RUNE CRYPT"
+            p "A FIVE-DEPTH DUNGEON ADVENTURE"
+        p .intro "Choose a class. Clear each depth. Claim the Rune Heart. Shards survive every run."
+        p .music-note "Original chiptune soundtrack. Select a class to hear the title theme; Sound / M mutes music and effects."
+        div .toolbar:
+            button .primary data-pixel-start=true data-pixel-confirm="End this run and start over? Your shards are kept, but run upgrades reset." "Begin a new run"
+            button data-pixel-pause=true "Pause / P"
+            button data-pixel-fullscreen=true "Fullscreen"
+            button data-pixel-mute=true "Sound / M"
+        div .game-info data-pixel-hidden=resources_hidden:
+            p data-pixel-text=ui.objective "Your objective"
+            p data-pixel-text=ui_resources "Your resources"
+        div .game-surface:
+            canvas data-rune-pixel-3d=true tabindex=0 aria-label="Rune Crypt. C chooses class at camp, Enter begins. WASD move, mouse or arrows look, Space sword, Q rune, Shift dodge, E interact, C cycle reward or exit route, R train at camp."
+            div .pause-menu data-pixel-paused=true hidden=true role=group aria-label="Pause menu":
+                h2 "PAUSED"
+                p data-pixel-text=ui.objective "Depth status"
+                p data-pixel-text=ui_resources "Health, mana and dodge"
+                p data-pixel-text=ui_run_status "Level and defeated foes"
+                p data-pixel-text=ui_summary "Run status"
+                div .pause-actions:
+                    button data-pixel-pause=true "Resume / P"
+                    button data-pixel-restart=true "Return to title / T"
+                p "Returning to title ends this run. Saved shards and training are kept."
+        p data-pixel-status=true role=status aria-live=polite "Enter the crypt."
+        p .summary data-pixel-text=ui_summary "Your adventurer"
+        div .choices role=group aria-label="Class, upgrade or route selection" data-pixel-hidden=choice_locked:
+            button data-pixel-action=select_choice data-pixel-args="[0]" data-pixel-text=ui_choice_one data-pixel-disabled=choice_locked data-pixel-selected=selected_one "Knight - recommended"
+            button data-pixel-action=select_choice data-pixel-args="[1]" data-pixel-text=ui_choice_two data-pixel-disabled=choice_locked data-pixel-selected=selected_two "Arcanist"
+            button data-pixel-action=select_choice data-pixel-args="[2]" data-pixel-text=ui_choice_three data-pixel-disabled=third_choice_locked data-pixel-selected=selected_three "Scout"
+        div .toolbar:
+            button data-pixel-action=confirm_choice data-pixel-disabled=confirm_locked "Confirm choice / E"
+            button data-pixel-action=train data-pixel-disabled=train_locked "Train: 5 shards / R"
+        div .quick-start:
+            section:
+                h2 "1. MOVE AND FIGHT"
+                p "WASD or left stick moves. Mouse or arrows aim. Click / Space swings up close. Q casts a ranged rune."
+            section:
+                h2 "2. WATCH AND DODGE"
+                p "Yellow enemies warn before attacking. Shift / DODGE evades in your movement direction. Red traps hurt."
+            section:
+                h2 "3. INTERACT AND DESCEND"
+                p "E / USE interacts nearby. Choose visible rewards with 1 / 2 / 3, C, or the buttons above. Then confirm with E."
+        details:
+            summary "Classes, upgrades and what survives a run"
+            p "Knight is the safest first class: armor reduces damage. Arcanist trades health for magic. Scout moves and dodges faster."
+            p "Shrines give a free run upgrade. Chests replace your single relic. Sanctuary heals before the next depth; Cursed offers tougher foes and more shards."
+            p "Training costs 5 saved shards and adds permanent health and sword damage. Health, levels, blessings and relics reset on a new run. Class, training and shards are saved."
+            p "Search gold-flecked cracks for bonus caches. Read tablets for clues. All foes must be defeated before the stairs unlock."
+
+@Logic/crypt_cabinet
+state:
+    label = "Rune Crypt"
+
+@Style/crypt_cabinet
+rules:
+    :root:
+        color-scheme = dark
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #10121c
+        color = #d7ceb4
+        font-family = ui-monospace, SFMono-Regular, Consolas, monospace
+    .cabinet:
+        max-width = 1080px
+        margin = auto
+        padding = 16px
+    header:
+        display = flex
+        align-items = center
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 12px
+    h1, h2:
+        color = #f2d58a
+    h1:
+        letter-spacing = 3px
+        font-size = 28px
+    h2:
+        font-size = 14px
+    p:
+        font-size = 14px
+        line-height = 1.7
+        color = #a0b6c7
+    .game-surface:
+        display = flex
+        justify-content = center
+        background = #060709
+        border = 2px solid #786b75
+        position = relative
+        margin-top = 12px
+    .game-info:
+        background = #172133
+        padding = 4px 12px
+        margin-top = 12px
+    .game-info p:
+        color = #f2d58a
+    .choices[hidden], .game-info[hidden]:
+        display = none
+    .pause-menu[hidden]:
+        display = none
+    .pause-menu:
+        position = absolute
+        z-index = 7
+        inset = 0
+        background = #10121c
+        padding = 16px
+        border = 2px solid #f2d58a
+        text-align = center
+        display = flex
+        flex-direction = column
+        justify-content = safe center
+        overflow = auto
+        gap = 8px
+    .pause-menu p:
+        margin = 4px 0
+    .pause-menu h2:
+        margin = 0
+        font-size = 24px
+    .pause-actions:
+        display = flex
+        flex-wrap = wrap
+        justify-content = center
+        gap = 8px
+    .game-surface:has(.pause-menu:not([hidden])):
+        min-height = 520px
+    .game-surface:fullscreen:has(.pause-menu:not([hidden])):
+        min-height = 0
+    canvas:
+        display = block
+        width = 100%
+        max-width = none
+        height = auto
+        aspect-ratio = 8 / 5
+        image-rendering = pixelated
+        touch-action = none
+        cursor = crosshair
+    canvas:focus-visible, button:focus-visible:
+        outline = 3px solid #f2d58a
+        outline-offset = 2px
+    .game-surface:fullscreen:
+        border = 0
+        align-items = center
+    .game-surface:fullscreen canvas:
+        width = min(100vw, 160vh)
+        max-width = none
+        max-height = 100vh
+    .toolbar:
+        display = flex
+        flex-wrap = wrap
+        gap = 8px
+        margin-top = 12px
+    .choices, .quick-start:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(min(100%, 240px), 1fr))
+        gap = 10px
+        margin-top = 12px
+    .choices button:
+        text-align = left
+        padding = 14px
+        min-height = 64px
+        line-height = 1.5
+    button[aria-pressed=true]:
+        background = #30445c
+        border = 2px solid #f2d58a
+    button:disabled:
+        opacity = 0.55
+        cursor = not-allowed
+    button.primary:
+        background = #345e49
+        color = #ffffff
+    .intro:
+        font-size = 14px
+    .summary:
+        padding = 10px
+        background = #172133
+        color = #d7ceb4
+    button:
+        font = inherit
+        font-size = 14px
+        cursor = pointer
+        min-height = 44px
+        padding = 10px 14px
+        color = #f2d58a
+        background = #302c3c
+        border = 1px solid #786b75
+        border-radius = 4px
+    button:hover:
+        background = #514958
+    section:
+        border-top = 1px solid #514958
+        margin-top = 20px
+    details:
+        margin-top = 18px
+        padding = 14px
+        border = 1px solid #514958
+    summary:
+        cursor = pointer
+        font-size = 14px
+        min-height = 32px

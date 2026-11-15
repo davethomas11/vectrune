@@ -11,6 +11,7 @@ on:
       - 'examples/rune_studio/**'
       - 'examples/monster_city/**'
       - 'examples/vect_breach/**'
+      - 'examples/rune_crypt/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -24,6 +25,7 @@ on:
       - 'examples/rune_studio/**'
       - 'examples/monster_city/**'
       - 'examples/vect_breach/**'
+      - 'examples/rune_crypt/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -87,6 +89,10 @@ jobs:
           target/debug/vectrune test examples/monster_city --json
       - name: Test Vect Breach game logic
         run: target/debug/vectrune test examples/vect_breach --type logic --json
+      - name: Test Rune Crypt game logic
+        run: |
+          target/debug/vectrune fmt examples/rune_crypt --check
+          target/debug/vectrune test examples/rune_crypt --type logic --json
       - name: Install Linux native input and audio headers
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev

@@ -1,6 +1,14 @@
 # VOLT — a monster with idle, step, punch and duck poses.
 @Palette/volt
-colors = {"d":"#6f5326","b":"#eab83e","h":"#fff080","e":"#fff8d0","k":"#4c3525","a":"#bfffce",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#bfffce",
+    "b": "#eab83e",
+    "d": "#6f5326",
+    "e": "#fff8d0",
+    "h": "#fff080",
+    "k": "#4c3525"
+}
 
 @Sprite/volt/idle
 palette = volt

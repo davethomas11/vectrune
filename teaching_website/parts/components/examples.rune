@@ -44,6 +44,12 @@ view:
                 a .secondary-cta href="{i18n.Common.base_path}vect-breach" data-route-link=true click="navigate('vect-breach')" "%i18n.VectBreach.play%"
 
             article .example-card:
+                span .tag .tag-advanced "%i18n.RuneCrypt.badge%"
+                h3 "%i18n.RuneCrypt.title%"
+                p "%i18n.RuneCrypt.description%"
+                a .secondary-cta href="{i18n.Common.base_path}rune-crypt" data-route-link=true click="navigate('rune-crypt')" "%i18n.RuneCrypt.play%"
+
+            article .example-card:
                 span .tag .tag-advanced "%i18n.MonsterCity.badge%"
                 h3 "%i18n.MonsterCity.title%"
                 p "%i18n.MonsterCity.description%"

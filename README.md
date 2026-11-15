@@ -457,7 +457,7 @@ Each test runs suite `setup`, selected fixture `setup` blocks in list order, its
 
 ### Formatting
 
-`vectrune fmt <entry-or-directory>` formats the entry and its imports. `--check` reports needed changes and exits `1` without writing. Section headers, top-level assignment spacing, and executable-block indentation are normalized; views, CSS, embedded text, and comments are preserved. All candidates are reparsed and compared before any writes; a semantic difference makes formatting fail. The formatter is deliberately conservative and does not rewrite expressions or reorder declarations.
+`vectrune fmt <entry-or-directory>` formats the entry and its imports. `--check` reports needed changes and exits `1` without writing. `--line-width 100` (the default; minimum 20) wraps long top-level JSON object assignments, including nested objects and arrays, with four-space indentation; existing multiline JSON objects are reformatted to the selected width. Individual strings and expressions are not split, so the width is a target rather than a hard cap. Section headers, top-level assignment spacing, and executable-block indentation are normalized; views, CSS, embedded text, and comments are preserved. All candidates are reparsed and compared before any writes; a semantic difference makes formatting fail. The formatter is deliberately conservative and does not rewrite expressions or reorder declarations.
 
 ### Machine-readable reports
 
@@ -633,3 +633,62 @@ requests landscape orientation where the browser supports it. The `.vect` baker 
 views without Python or Node. For a native window, build with the optional
 `pixel-desktop` feature. See [Vect scripting](knowledge/language/vect-scripts.md)
 for the shared expression syntax and current parity boundaries.
+
+### Rune Crypt
+
+Available in **Vectrune 0.3.4**. [Play Rune Crypt](https://vectrune.com/rune-crypt/)
+or inspect and download its Rune sources on the same page.
+
+A separate pixel-3d roguelite dungeon RPG: generated drifting skies, textured
+dungeon floors and ceilings, five depths, three classes, telegraphed enemies,
+directional dodging, sword/rune combat, chosen blessings, equipment, secret
+caches, traps, branching exit rewards, and permanent shard-funded training.
+Runs select from authored layouts; Vect Breach is unchanged.
+The title screen presents class choices beneath a large logo. Original
+synthesized music changes from the title theme to dungeon exploration, the
+Warden's battle, and a victory fanfare. Select a class to unlock title music in
+the browser; Sound / M mutes music and effects together.
+
+```sh
+vectrune examples/rune_crypt/rune_crypt.rune -o html > rune-crypt.html
+vectrune test examples/rune_crypt --type logic
+```
+
+Open `rune-crypt.html`. WASD moves, click/Space swings, Q casts, E interacts,
+Shift dodges, 1/2/3 select visible class/build choices, E confirms, and R trains
+between runs. C remains a cycling fallback. Resource bars, separate objectives
+and interaction prompts, progressive hints, and clickable choice cards explain
+the next step without a wall of instructions.
+Canvas clicks/taps at camp only focus the game; choose a class and use Enter or
+Begin a new run. Pause / P shows run status and freezes combat and music.
+Resume / P continues; Return to title / T ends the run while keeping shards,
+training and class selection.
+Touch and gamepad controls are included. See
+[Pixel 3D environments and progression](knowledge/runtime/pixel3d.md).
+
+Enemies, loot, dungeon props, projectiles and stairs now use real shaded block
+models, not camera-facing sprites. Attack warnings use yellow models with
+raised weapons; chests open and trap spikes rise. The first-person sword remains
+a screen-space sprite, now with detailed 24x24 sword/slash/casting art and
+wind-up, sweep and recovery animation. Define
+palette-colored boxes in `@Model`, then place a `{"model":"stairs","x":11.5,"y":11.5}`
+thing in the scene. See [the copy-paste block-model format](knowledge/language/pixel-models.md).
+Defeated enemies sink and dissolve into pixel fragments over one second;
+rewards resolve immediately. Model instances accept `dissolve` from 0 (solid)
+to 1 (gone), with depth-correct holes in browser and native rendering.
+Models are visual props; stair climbing and collision behavior are unchanged.
+Later dungeon ceilings rise from 1.5 to 3 tiles with `@Map ceiling_height`;
+wall textures repeat vertically and floor perspective stays unchanged.
+Walls use seven detailed designs: chipped brick, moss, cracks, bone
+niches, pillars, rune panels and seals. `@Texture patterns` plus
+`{"pattern":"brick","repeat":4}` or `{"runs":"k*2 s*28 k*2","repeat":4}`
+compress repeated source rows losslessly. Existing literal rows still work;
+compiled texture arrays remain uncompressed. See
+[compact texture authoring](knowledge/runtime/pixel3d.md#compact-texture-rows).
+Pillars are 64x64; the other wall designs and floors/ceilings are 32x32.
+
+The shared engine now supports `@Scene ui = ui` for portable resource bars,
+wrapped notices, objectives and highlighted choice panels in browser and
+native rendering. See the [structured HUD format](knowledge/runtime/pixel3d.md#structured-hud-and-accessible-shell-controls).
+Optional `pause_ui`, `restart_action`, and `click_to_start` scene settings
+support portable pause screens and deliberate menu confirmation.

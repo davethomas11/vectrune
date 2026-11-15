@@ -56,7 +56,7 @@ var __RunePixel3DRuntime = (() => {
       overlay.classList.add("is-touch");
       canvas.focus({ preventScroll: true });
       if (!options.playing()) {
-        options.advance();
+        if (options.tapToAdvance !== false) options.advance();
         return false;
       }
       if (options.paused()) {
@@ -3058,8 +3058,8 @@ var __RunePixel3DRuntime = (() => {
     for (let i = 0; i < bufferSize; i += 1) {
       data[i] = Math.random() * 2 - 1;
     }
-    const noise = ctx2.createBufferSource();
-    noise.buffer = buffer;
+    const noise2 = ctx2.createBufferSource();
+    noise2.buffer = buffer;
     const filter = ctx2.createBiquadFilter();
     filter.type = filterType;
     filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
@@ -3067,11 +3067,11 @@ var __RunePixel3DRuntime = (() => {
     const gain = ctx2.createGain();
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
-    noise.connect(filter);
+    noise2.connect(filter);
     filter.connect(gain);
     gain.connect(audioOutput(ctx2));
-    noise.start(now);
-    noise.stop(now + duration + 0.01);
+    noise2.start(now);
+    noise2.stop(now + duration + 0.01);
   }
   function playCustomSound(ctx2, def, now, arg) {
     const duration = def.duration || 0.12;
@@ -3540,8 +3540,8 @@ var __RunePixel3DRuntime = (() => {
     for (let i = 0; i < bufferSize; i += 1) {
       data[i] = Math.random() * 2 - 1;
     }
-    const noise = ctx2.createBufferSource();
-    noise.buffer = buffer;
+    const noise2 = ctx2.createBufferSource();
+    noise2.buffer = buffer;
     const filter = ctx2.createBiquadFilter();
     filter.type = filterType;
     filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
@@ -3549,11 +3549,11 @@ var __RunePixel3DRuntime = (() => {
     const gain = ctx2.createGain();
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
-    noise.connect(filter);
+    noise2.connect(filter);
     filter.connect(gain);
     gain.connect(destination);
-    noise.start(now);
-    noise.stop(now + duration + 0.01);
+    noise2.start(now);
+    noise2.stop(now + duration + 0.01);
   }
 
   // src/statement.ts
@@ -4661,6 +4661,209 @@ var __RunePixel3DRuntime = (() => {
     };
   }
 
+  // src/pixel3d/sky.ts
+  function noise(x, y, seed) {
+    let n = (x & 63) * 374761393 + y * 668265263 + seed >>> 0;
+    n = Math.imul(n ^ n >>> 13, 1274126177) >>> 0;
+    return ((n ^ n >>> 16) >>> 0) / 4294967295;
+  }
+  function mix(a, b, t) {
+    let color = 4278190080;
+    for (const shift of [0, 8, 16]) {
+      color |= Math.floor((a >>> shift & 255) * (1 - t) + (b >>> shift & 255) * t) << shift;
+    }
+    return color >>> 0;
+  }
+  function skyPixel(sky, longitude, altitude, time) {
+    const u = ((longitude / (2 * Math.PI) * 64 + time * sky.speed) % 64 + 64) % 64;
+    const v = altitude * 12;
+    const x = Math.floor(u), y = Math.floor(v);
+    const fx = u - x, fy = v - y;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = noise(x, y, sky.seed) * (1 - sx) + noise(x + 1, y, sky.seed) * sx;
+    const b = noise(x, y + 1, sky.seed) * (1 - sx) + noise(x + 1, y + 1, sky.seed) * sx;
+    const density = Math.max(0, Math.min(1, (a * (1 - sy) + b * sy - 0.5) * 4));
+    const band = Math.floor(altitude * 16) / 16;
+    return mix(mix(sky.horizon, sky.zenith, band), sky.cloud, density * Math.min(1, altitude * 5));
+  }
+
+  // src/pixel3d/model.ts
+  function shade(color, factor) {
+    return (4278190080 | Math.floor((color & 255) * factor) | Math.floor((color >>> 8 & 255) * factor) << 8 | Math.floor((color >>> 16 & 255) * factor) << 16) >>> 0;
+  }
+  function fragmentNoise(x, y) {
+    const hash = Math.imul(Math.floor(x / 2), 73856093) ^ Math.imul(Math.floor(y / 2), 19349663);
+    return (Math.imul(hash ^ hash >>> 13, 1274126177) >>> 0) / 4294967296;
+  }
+  function renderModel(model, instance, camera, dirX, dirY, fovScale, width, height, buffer, depth) {
+    const scale = instance.scale ?? 1;
+    const dissolve = instance.dissolve ?? 0;
+    if (!Number.isFinite(dissolve) || dissolve < 0 || dissolve > 1) throw new Error("Model dissolve must be between 0 and 1");
+    if (!Number.isFinite(scale) || scale <= 0) throw new Error("Model scale must be finite and positive");
+    if (![instance.x, instance.y, instance.z ?? 0, instance.angle ?? 0].every(Number.isFinite)) {
+      throw new Error("Model position and angle must be finite");
+    }
+    if (dissolve === 1) return;
+    const angle = (instance.angle ?? 0) * Math.PI / 180;
+    const c = Math.cos(angle), s = Math.sin(angle);
+    const ox = camera.x - instance.x, oy = camera.y - instance.y;
+    const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (0.5 - (instance.z ?? 0)) / scale];
+    for (const block of model.blocks) {
+      const max = block.from.map((v, i) => v + block.size[i]);
+      let left = width, right = 0, top = height, bottom = 0, clipped = false;
+      for (let corner = 0; corner < 8; corner++) {
+        const lx = (corner & 1 ? max[0] : block.from[0]) * scale;
+        const ly = (corner & 2 ? max[1] : block.from[1]) * scale;
+        const z = (corner & 4 ? max[2] : block.from[2]) * scale + (instance.z ?? 0);
+        const x = instance.x + lx * c - ly * s - camera.x;
+        const y = instance.y + lx * s + ly * c - camera.y;
+        const d = x * dirX + y * dirY;
+        if (d <= 1e-3) {
+          clipped = true;
+          continue;
+        }
+        const sx = width / 2 * (1 + (-x * dirY + y * dirX) / (d * fovScale));
+        const sy = (height >> 1) - (z - 0.5) * height / d;
+        left = Math.min(left, sx);
+        right = Math.max(right, sx);
+        top = Math.min(top, sy);
+        bottom = Math.max(bottom, sy);
+      }
+      const x0 = clipped ? 0 : Math.max(0, Math.floor(left));
+      const x1 = clipped ? width : Math.min(width, Math.ceil(right));
+      const y0 = clipped ? 0 : Math.max(0, Math.floor(top));
+      const y1 = clipped ? height : Math.min(height, Math.ceil(bottom));
+      for (let x = x0; x < x1; x++) {
+        const cx = 2 * x / width - 1;
+        const rx = dirX - dirY * fovScale * cx, ry = dirY + dirX * fovScale * cx;
+        for (let y = y0; y < y1; y++) {
+          if (dissolve > 0 && fragmentNoise(x, y) < dissolve) continue;
+          const ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale, ((height >> 1) - y - 0.5) / (height * scale)];
+          let near = -Infinity, far = Infinity, face = 0, exitFace = 0, valid = true;
+          for (let axis = 0; axis < 3; axis++) {
+            if (Math.abs(ray[axis]) < 1e-12) {
+              if (origin[axis] < block.from[axis] || origin[axis] > max[axis]) valid = false;
+            } else {
+              const a = (block.from[axis] - origin[axis]) / ray[axis];
+              const b = (max[axis] - origin[axis]) / ray[axis];
+              const entry = Math.min(a, b);
+              if (entry > near) {
+                near = entry;
+                face = axis;
+              }
+              if (Math.max(a, b) < far) {
+                far = Math.max(a, b);
+                exitFace = axis;
+              }
+            }
+          }
+          const index = y * width + x;
+          const hit = near > 1e-3 ? near : far;
+          if (near <= 1e-3) face = exitFace;
+          if (valid && far >= near && hit > 1e-3 && hit < depth[index]) {
+            depth[index] = hit;
+            buffer[index] = shade(block.color, face === 2 ? 1 : face === 0 ? 0.8 : 0.65);
+          }
+        }
+      }
+    }
+  }
+
+  // src/pixel3d/hud.ts
+  function validateHud(value) {
+    if (!value || typeof value !== "object") throw new Error("Pixel-3d ui must be a HUD object");
+    const hud = value;
+    if (hud.heading !== void 0 && typeof hud.heading !== "string") throw new Error("Pixel-3d ui heading must be a string");
+    if (!Array.isArray(hud.meters) || hud.meters.length > 3 || !hud.meters.every((m) => m && typeof m.label === "string" && Number.isFinite(m.value) && Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 16777215) || !["objective", "detail", "prompt", "notice"].every((k) => typeof Reflect.get(hud, k) === "string")) {
+      throw new Error("Pixel-3d ui needs up to three valid meters and objective/detail/prompt/notice strings");
+    }
+    if (hud.panel !== null) {
+      const p = hud.panel;
+      if (!p || !["title", "body", "footer"].every((k) => typeof Reflect.get(p, k) === "string") || !Array.isArray(p.choices) || p.choices.length > 3 || !p.choices.every((c) => typeof c === "string") || !Number.isInteger(p.selected) || p.selected < 0 || p.selected >= Math.max(1, p.choices.length)) {
+        throw new Error("Pixel-3d ui panel needs title/body/footer, up to three choices, and a valid selected index");
+      }
+    }
+    return hud;
+  }
+  function wrapText(text, columns) {
+    if (!Number.isInteger(columns) || columns < 1) throw new Error("HUD wrap columns must be a positive integer");
+    const lines = [];
+    for (const paragraph of text.split("|")) {
+      let line = "";
+      for (const word of paragraph.trim().split(/\s+/)) {
+        if (line && line.length + word.length + 1 > columns) {
+          lines.push(line);
+          line = "";
+        }
+        let rest = word;
+        while (rest.length > columns) {
+          if (line) {
+            lines.push(line);
+            line = "";
+          }
+          lines.push(rest.slice(0, columns));
+          rest = rest.slice(columns);
+        }
+        line += (line ? " " : "") + rest;
+      }
+      if (line) lines.push(line);
+    }
+    return lines;
+  }
+  function renderHud(canvas, ui, status, paused) {
+    const W = canvas.width, H = canvas.height;
+    const columns = Math.max(1, Math.floor((W - 12) / 4));
+    const panelColumns = Math.max(1, Math.floor((W - 48) / 4));
+    const width = Math.floor((W - 16) / Math.max(1, ui.meters.length));
+    canvas.rect(0, 0, W, 25, 725275);
+    ui.meters.forEach((m, i) => {
+      const x = 6 + i * width;
+      canvas.text(`${m.label} ${Math.ceil(m.value)}/${Math.ceil(m.max)}`, x, 3, m.color);
+      canvas.rect(x, 11, width - 6, 5, 2569285);
+      canvas.rect(x, 11, Math.floor((width - 6) * Math.max(0, Math.min(1, m.value / m.max))), 5, m.color);
+    });
+    canvas.text(ui.detail.slice(0, columns), 6, 19, 11913694);
+    canvas.rect(0, 25, W, 11, 1515827);
+    canvas.text(ui.objective.slice(0, columns), 6, 28, 15914378);
+    const heading = (status !== "playing" || paused) && ui.heading ? ui.heading.slice(0, Math.max(1, Math.floor((W - 32) / 12))) : "";
+    if (heading) {
+      canvas.rect(16, 40, W - 32, 26, 725275);
+      canvas.text(heading, Math.floor((W - heading.length * 12) / 2), 44, 15914378, 3);
+    }
+    if (ui.notice && !ui.panel) {
+      const noticeY = heading ? 70 : 40;
+      const lines = wrapText(ui.notice, Math.max(1, Math.floor((W - 32) / 4))).slice(0, 2);
+      canvas.rect(12, noticeY, W - 24, lines.length * 8 + 8, 1515827);
+      lines.forEach((line, i) => canvas.text(line, 16, noticeY + 4 + i * 8, 15914378));
+    }
+    if (ui.panel) {
+      const p = ui.panel;
+      const camp = status !== "playing" || paused;
+      const body = wrapText(p.body, panelColumns).slice(0, camp ? 3 : 2);
+      const bh = 35 + body.length * 8 + p.choices.length * 12;
+      const by = camp ? heading ? 70 : 44 : H - bh - 18;
+      canvas.rect(16, by, W - 32, bh, 725275);
+      canvas.rect(16, by, W - 32, 2, 15914378);
+      canvas.text(p.title.slice(0, panelColumns), 24, by + 7, 15914378);
+      body.forEach((line, i) => canvas.text(line, 24, by + 18 + i * 8, 11913694));
+      p.choices.forEach((choice, i) => {
+        const y = by + 22 + body.length * 8 + i * 12;
+        if (i === p.selected) canvas.rect(22, y - 2, W - 44, 10, 3163228);
+        canvas.text(`${i === p.selected ? ">" : " "} ${i + 1} ${choice}`.slice(0, panelColumns), 24, y, i === p.selected ? 16777215 : 11913694);
+      });
+      canvas.text(p.footer.slice(0, panelColumns), 24, by + bh - 8, 8312492);
+    } else {
+      const x = W >> 1, y = H >> 1;
+      canvas.rect(x - 3, y, 2, 1, 16777215);
+      canvas.rect(x + 2, y, 2, 1, 16777215);
+      canvas.rect(x, y - 3, 1, 2, 16777215);
+      canvas.rect(x, y + 2, 1, 2, 16777215);
+    }
+    const prompt = paused && !ui.heading ? "PAUSED - P OR PAUSE BUTTON TO RESUME" : ui.prompt;
+    canvas.rect(0, H - 14, W, 14, 725275);
+    canvas.text(prompt.slice(0, columns), 6, H - 9, 16777215);
+  }
+
   // src/pixel3d/raycaster.ts
   var packed = (rgb) => (4278190080 | (rgb & 255) << 16 | rgb & 65280 | rgb >>> 16 & 255) >>> 0;
   var FONT = {
@@ -4725,11 +4928,17 @@ var __RunePixel3DRuntime = (() => {
       this.fov = config.fov || 66;
       this.buffer = new Uint32Array(this.width * this.height);
       this.zBuffer = new Float64Array(this.width);
+      this.pixelDepth = new Float64Array(this.width * this.height);
+      this.setMap(config.map);
     }
     setMap(map) {
+      const height = map.ceilingHeight ?? 1;
+      if (!Number.isFinite(height) || height <= 0.5 || height > 16) {
+        throw new Error("Map ceilingHeight must be greater than 0.5 and at most 16 tiles");
+      }
       this.config.map = map;
     }
-    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = []) {
+    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0) {
       const W = this.width;
       const H = this.height;
       const halfH = H >> 1;
@@ -4742,8 +4951,23 @@ var __RunePixel3DRuntime = (() => {
       const fovScale = Math.tan(this.fov / 2 * Math.PI / 180);
       const planeX = -dirY * fovScale;
       const planeY = dirX * fovScale;
-      this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY);
+      this.pixelDepth.fill(Infinity);
+      if (things.some((t) => t.model && t.visible !== false)) {
+        for (let y = 0; y < H; y++) {
+          if (y < halfH && map.sky) continue;
+          const planeHeight = y < halfH ? (map.ceilingHeight ?? 1) - 0.5 : 0.5;
+          const distance = planeHeight * H / Math.abs(halfH - y - 0.5);
+          this.pixelDepth.fill(distance, y * W, (y + 1) * W);
+        }
+      }
+      this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
       this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
+      for (const thing of things) {
+        if (thing.visible === false || !thing.model) continue;
+        const model = this.config.models?.[thing.model];
+        if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
+        renderModel(model, thing, camera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+      }
       if (things && things.length > 0) {
         this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
       }
@@ -4786,6 +5010,29 @@ var __RunePixel3DRuntime = (() => {
     renderHUD(stats) {
       const W = this.width;
       const H = this.height;
+      if (stats.ui) {
+        renderHud(this, stats.ui, stats.status || "playing", stats.paused || false);
+        return;
+      }
+      if (stats.presentation) {
+        const p = stats.presentation;
+        this.rect(0, 0, W, 10, 658446);
+        this.text(stats.hudText || p.title, 6, 2, 16174148);
+        if (stats.status !== "playing") {
+          const bx = 18, by = 24;
+          this.rect(bx, by, W - 36, H - 48, 1053212);
+          this.rect(bx, by, W - 36, 2, 11703392);
+          const title = stats.status === "won" ? p.victory : stats.status === "gameover" ? p.defeat : p.title;
+          this.text(title, bx + 12, by + 14, 16174148, 2);
+          this.text(p.subtitle, bx + 12, by + 34, 10532551);
+          p.instructions.forEach((line, i) => this.text(line, bx + 12, by + 52 + i * 13, 14999764));
+          this.text("ENTER / CLICK: BEGIN A NEW RUN", bx + 12, H - 44, 6728260);
+        }
+        const message = stats.message || p.objective;
+        this.rect(0, H - 12, W, 12, 658446);
+        this.text(message, 6, H - 9, 14999764);
+        return;
+      }
       if (stats.status === "title") {
         const bw = 280;
         const bh = 160;
@@ -4887,7 +5134,7 @@ var __RunePixel3DRuntime = (() => {
         this.text("PRESS FIRE, CLICK OR ENTER TO RETRY", bx + 14, by + 44, 16174148, 1);
       }
     }
-    renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY) {
+    renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time) {
       const W = this.width;
       const H = this.height;
       const halfH = H >> 1;
@@ -4896,7 +5143,7 @@ var __RunePixel3DRuntime = (() => {
       const ceilIsTex = typeof map.ceiling === "object" && map.ceiling !== null;
       const floorColor = !floorIsTex ? typeof map.floor === "number" ? (map.floor & 4278190080) === 0 ? (4278190080 | map.floor) >>> 0 : map.floor >>> 0 : 4281545523 : 0;
       const ceilColor = !ceilIsTex ? typeof map.ceiling === "number" ? (map.ceiling & 4278190080) === 0 ? (4278190080 | map.ceiling) >>> 0 : map.ceiling >>> 0 : 4279900698 : 0;
-      if (!floorIsTex && !ceilIsTex) {
+      if (!floorIsTex && !ceilIsTex && !map.sky) {
         for (let y = 0; y < halfH; y++) {
           this.buffer.fill(ceilColor, y * W, (y + 1) * W);
         }
@@ -4907,17 +5154,27 @@ var __RunePixel3DRuntime = (() => {
       }
       const floorTex = floorIsTex ? map.floor : null;
       const ceilTex = ceilIsTex ? map.ceiling : null;
-      for (let y = halfH + 1; y < H; y++) {
-        const p = y - halfH;
+      this.buffer.fill(ceilColor, 0, halfH * W);
+      this.buffer.fill(floorColor, halfH * W);
+      if (map.sky) {
+        for (let x = 0; x < W; x++) {
+          const cx = 2 * x / W - 1;
+          const longitude = Math.atan2(dirY + planeY * cx, dirX + planeX * cx);
+          for (let y = 0; y < halfH; y++) {
+            this.buffer[y * W + x] = skyPixel(map.sky, longitude, (halfH - y) / halfH, time);
+          }
+        }
+      }
+      for (let y = halfH; y < H; y++) {
+        const p = y - halfH + 0.5;
         const posZ = 0.5 * H;
         const rowDistance = posZ / p;
-        const floorStepX = rowDistance * (planeX * 2) / W;
-        const floorStepY = rowDistance * (planeY * 2) / W;
-        let floorX = px + rowDistance * (dirX - planeX);
-        let floorY = py + rowDistance * (dirY - planeY);
         const rowFloorIdx = y * W;
         const rowCeilIdx = (H - y - 1) * W;
         for (let x = 0; x < W; x++) {
+          const cx = 2 * x / W - 1;
+          const floorX = px + rowDistance * (dirX + planeX * cx);
+          const floorY = py + rowDistance * (dirY + planeY * cx);
           if (floorTex) {
             const tx = Math.floor(floorX * floorTex.width) & floorTex.width - 1;
             const ty = Math.floor(floorY * floorTex.height) & floorTex.height - 1;
@@ -4925,15 +5182,16 @@ var __RunePixel3DRuntime = (() => {
           } else {
             this.buffer[rowFloorIdx + x] = floorColor;
           }
-          if (ceilTex) {
-            const tx = Math.floor(floorX * ceilTex.width) & ceilTex.width - 1;
-            const ty = Math.floor(floorY * ceilTex.height) & ceilTex.height - 1;
+          if (!map.sky && ceilTex) {
+            const ceilingDistance = ((map.ceilingHeight ?? 1) - 0.5) * H / p;
+            const ceilingX = px + ceilingDistance * (dirX + planeX * cx);
+            const ceilingY = py + ceilingDistance * (dirY + planeY * cx);
+            const tx = Math.floor(ceilingX * ceilTex.width) & ceilTex.width - 1;
+            const ty = Math.floor(ceilingY * ceilTex.height) & ceilTex.height - 1;
             this.buffer[rowCeilIdx + x] = ceilTex.pixels[ty * ceilTex.width + tx];
-          } else {
+          } else if (!map.sky) {
             this.buffer[rowCeilIdx + x] = ceilColor;
           }
-          floorX += floorStepX;
-          floorY += floorStepY;
         }
       }
     }
@@ -4999,7 +5257,7 @@ var __RunePixel3DRuntime = (() => {
         if (perpWallDist < 1e-3) perpWallDist = 1e-3;
         this.zBuffer[x] = perpWallDist;
         const lineHeight = Math.floor(H / perpWallDist);
-        const drawStart = Math.max(0, Math.floor(-lineHeight / 2 + halfH));
+        const drawStart = Math.max(0, Math.floor(-lineHeight * ((map.ceilingHeight ?? 1) - 0.5) + halfH));
         const drawEnd = Math.min(H - 1, Math.floor(lineHeight / 2 + halfH));
         const override = wallOverrides.find((tile) => tile.x === mapX && tile.y === mapY);
         const tex = (override ? textureList[override.texture] : void 0) || textureList[(hit - 1) % textureList.length] || textureList[0];
@@ -5016,9 +5274,11 @@ var __RunePixel3DRuntime = (() => {
         if (side === 1 && rayDirY < 0) texX = tex.width - texX - 1;
         texX = Math.max(0, Math.min(tex.width - 1, texX));
         const step = tex.height / lineHeight;
+        const originalStart = Math.max(0, Math.floor(-lineHeight / 2 + halfH));
         let texPos = (drawStart - halfH + lineHeight / 2) * step;
         for (let y = drawStart; y <= drawEnd; y++) {
-          const texY = Math.min(tex.height - 1, Math.max(0, Math.floor(texPos)));
+          if (y === originalStart) texPos = (originalStart - halfH + lineHeight / 2) * step;
+          const texY = y < originalStart ? (Math.floor(texPos) % tex.height + tex.height) % tex.height : Math.min(tex.height - 1, Math.max(0, Math.floor(texPos)));
           texPos += step;
           let color = tex.pixels[texY * tex.width + texX] ?? 4278190080;
           if (side === 1) {
@@ -5028,6 +5288,7 @@ var __RunePixel3DRuntime = (() => {
             color = (4278190080 | b << 16 | g << 8 | r) >>> 0;
           }
           this.buffer[y * W + x] = color;
+          this.pixelDepth[y * W + x] = perpWallDist;
         }
       }
     }
@@ -5041,6 +5302,7 @@ var __RunePixel3DRuntime = (() => {
       })).sort((a, b) => b.dist - a.dist);
       const invDet = 1 / (planeX * dirY - dirX * planeY);
       for (const thing of sorted) {
+        if (thing.model || !thing.sprite) continue;
         const sprite = this.config.sprites[thing.sprite];
         if (!sprite) continue;
         const spriteX = thing.x - px;
@@ -5066,7 +5328,7 @@ var __RunePixel3DRuntime = (() => {
               if (texY < 0 || texY >= sprite.height) continue;
               const colorIdx = sprite.pixels[texY * sprite.width + texX];
               const color = sprite.colors[colorIdx];
-              if (color !== null && color !== void 0) {
+              if (color !== null && color !== void 0 && transformY < this.pixelDepth[y * W + stripe]) {
                 this.buffer[y * W + stripe] = packed(color);
               }
             }
@@ -5134,6 +5396,7 @@ var __RunePixel3DRuntime = (() => {
         height: config.height,
         textures: config.textures,
         sprites: config.sprites,
+        models: config.models,
         map: config.map
       });
       Object.assign(globalThis, { __RuneSpatialMaps: config.maps || {} });
@@ -5199,6 +5462,9 @@ var __RunePixel3DRuntime = (() => {
     get audioState() {
       return audioSync.getSnapshot();
     }
+    get saveStatus() {
+      return this.save?.status;
+    }
     start() {
       stopMusic();
       this._paused = false;
@@ -5242,16 +5508,21 @@ var __RunePixel3DRuntime = (() => {
       if (this.save) this.save.flush(this.app.state[this.save.config.state]);
     }
     invoke(action, args = []) {
+      if (action === this.config.restartAction) {
+        if (this.app.state.status === "playing" && !this.paused) return;
+        this.paused = false;
+        this.ticks = 0;
+      }
       if (action === "start") {
         this.start();
         return;
       }
-      this.paused = false;
-      setAudioMuted(this._muted);
+      setAudioMuted(this._muted || this._paused);
       withContext(this.context, () => {
         this.app.invokeAction(action, args);
         this.app.computeDerived();
       });
+      if (this._paused) pauseMusic();
       this.syncMap();
       this.persist();
     }
@@ -5271,10 +5542,19 @@ var __RunePixel3DRuntime = (() => {
           const val = path.split(".").reduce((v, k) => v?.[k], state);
           if (Array.isArray(val)) {
             things.push(...val);
-          } else if (val && typeof val === "object" && typeof val.x === "number" && typeof val.y === "number" && typeof val.sprite === "string") {
+          } else if (val && typeof val === "object" && typeof val.x === "number" && typeof val.y === "number" && (typeof val.sprite === "string" || typeof val.model === "string")) {
             things.push(val);
           }
         }
+      }
+      for (const thing of things) {
+        if (!thing.model || thing.visible === false) continue;
+        if (!this.config.models?.[thing.model]) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
+        if (thing.sprite) throw new Error("Pixel-3d things must use either model or sprite, not both");
+        if (!Number.isFinite(thing.dissolve ?? 0) || (thing.dissolve ?? 0) < 0 || (thing.dissolve ?? 0) > 1) {
+          throw new Error("Pixel-3d model dissolve must be between 0 and 1");
+        }
+        if (![thing.x, thing.y, thing.z ?? 0, thing.angle ?? 0, thing.scale ?? 1].every(Number.isFinite) || (thing.scale ?? 1) <= 0) throw new Error("Pixel-3d model position/angle must be finite and scale must be positive");
       }
       let weapon = void 0;
       if (this.config.weapon) {
@@ -5310,6 +5590,11 @@ var __RunePixel3DRuntime = (() => {
         story_body,
         message,
         switch_activated,
+        ui: this.paused && this.config.pauseUi && status === "playing" ? validateHud(state[this.config.pauseUi]) : this.config.ui ? validateHud(state[this.config.ui]) : void 0,
+        paused: this.paused,
+        time: this.ticks / this.config.tickRate,
+        presentation: this.config.presentation,
+        hud_text: this.app.derived.hud_text !== void 0 ? String(this.app.derived.hud_text) : state.hud_text ? String(state.hud_text) : void 0,
         wall_overrides: Array.isArray(state.wall_overrides) ? state.wall_overrides.flatMap((tile) => {
           const texture = Object.keys(this.config.textures).indexOf(tile.texture);
           return texture >= 0 ? [{ x: tile.x, y: tile.y, texture }] : [];
@@ -5330,8 +5615,12 @@ var __RunePixel3DRuntime = (() => {
         storyTitle: stats.story_title,
         storyBody: stats.story_body,
         message: stats.message,
-        switchActivated: stats.switch_activated
-      }, stats.wall_overrides);
+        switchActivated: stats.switch_activated,
+        ui: stats.ui,
+        paused: stats.paused,
+        presentation: stats.presentation,
+        hudText: stats.hud_text
+      }, stats.wall_overrides, stats.time);
       return this.raycaster.buffer;
     }
   };
@@ -5730,13 +6019,37 @@ var __RunePixel3DRuntime = (() => {
       canvas.focus();
     };
     for (const button of Array.from(document.querySelectorAll("[data-pixel-start]"))) {
-      listen(button, "click", start);
+      listen(button, "click", () => {
+        if (game.app.state.status === "playing" && button.dataset.pixelConfirm && !window.confirm(button.dataset.pixelConfirm)) return;
+        start();
+      });
+    }
+    for (const button of Array.from(document.querySelectorAll("[data-pixel-action]"))) {
+      const args = JSON.parse(button.dataset.pixelArgs || "[]");
+      if (!Array.isArray(args)) throw new Error("data-pixel-args must be a JSON array");
+      listen(button, "click", () => {
+        unlockAudio();
+        const action = button.dataset.pixelAction;
+        clear();
+        if (action) game.activate(action, args);
+        canvas.focus({ preventScroll: true });
+      });
     }
     for (const button of Array.from(document.querySelectorAll("[data-pixel-pause]"))) {
       listen(button, "click", () => {
         canvas.focus();
         clear();
         game.paused = !game.paused;
+      });
+    }
+    for (const button of Array.from(document.querySelectorAll("[data-pixel-restart]"))) {
+      const action = game.config.restartAction;
+      if (!action) throw new Error("data-pixel-restart needs Scene restart_action");
+      listen(button, "click", () => {
+        unlockAudio();
+        clear();
+        game.invoke(action);
+        canvas.focus({ preventScroll: true });
       });
     }
     for (const button of Array.from(document.querySelectorAll("[data-pixel-mute]"))) {
@@ -5774,7 +6087,8 @@ var __RunePixel3DRuntime = (() => {
       interact: unlockAudio,
       lockedMouse: true,
       advanceInputs: ["fire", "use"],
-      expanded: fullscreen.expanded
+      expanded: fullscreen.expanded,
+      tapToAdvance: game.config.clickToStart
     }) : void 0;
     const mappedStyle = mapped ? document.createElement("style") : void 0;
     if (mappedStyle) {
@@ -5790,6 +6104,7 @@ var __RunePixel3DRuntime = (() => {
         unlockAudio();
       },
       advance: () => {
+        if (game.config.clickToStart === false && game.app.state.status !== "playing") return;
         clear();
         if (["title", "story", "gameover", "won"].includes(String(game.app.state.status))) game.invoke("advance");
         else start();
@@ -5837,7 +6152,7 @@ var __RunePixel3DRuntime = (() => {
       if (event.button === 0) mouseFire = false;
     }));
     listen(document, "pointerlockchange", () => {
-      if (document.pointerLockElement !== canvas) {
+      if (!game.paused && document.pointerLockElement !== canvas) {
         mouseFire = false;
         pendingFire = false;
         lookAccumX = 0;
@@ -5849,6 +6164,7 @@ var __RunePixel3DRuntime = (() => {
       unlockAudio();
       canvas.focus();
       if (game.app.state.status !== "playing") {
+        if (game.config.clickToStart === false) return;
         if (game.app.state.status === "title" || game.app.state.status === "story") {
           game.invoke("advance");
           return;
@@ -5941,14 +6257,44 @@ var __RunePixel3DRuntime = (() => {
       game.frame();
       context.putImageData(image, 0, 0);
       const state = game.app.state;
+      for (const element of Array.from(document.querySelectorAll("[data-pixel-paused]"))) {
+        element.hidden = !game.paused || state.status !== "playing";
+      }
+      for (const button of Array.from(document.querySelectorAll("[data-pixel-pause]"))) {
+        button.textContent = game.paused ? "Resume / P" : "Pause / P";
+      }
+      for (const element of Array.from(document.querySelectorAll("[data-pixel-text], [data-pixel-disabled], [data-pixel-selected], [data-pixel-hidden]"))) {
+        const resolve = (path) => path.split(".").reduce((v, key) => v?.[key], state);
+        if (element.dataset.pixelText) {
+          const value = resolve(element.dataset.pixelText);
+          if (value === void 0) throw new Error(`Unknown data-pixel-text state: ${element.dataset.pixelText}`);
+          const text = String(value);
+          if (element.textContent !== text) element.textContent = text;
+        }
+        if (element.dataset.pixelDisabled && element instanceof HTMLButtonElement) {
+          const value = resolve(element.dataset.pixelDisabled);
+          if (typeof value !== "boolean") throw new Error("data-pixel-disabled must reference boolean state");
+          element.disabled = value;
+        }
+        if (element.dataset.pixelSelected) {
+          const value = resolve(element.dataset.pixelSelected);
+          if (typeof value !== "boolean") throw new Error("data-pixel-selected must reference boolean state");
+          element.setAttribute("aria-pressed", String(value));
+        }
+        if (element.dataset.pixelHidden) {
+          const value = resolve(element.dataset.pixelHidden);
+          if (typeof value !== "boolean") throw new Error("data-pixel-hidden must reference boolean state");
+          element.hidden = value;
+        }
+      }
       const announce = document.querySelector("[data-pixel-status]");
       if (announce) {
-        const status = game.paused ? "Paused \u2014 tap Resume or press P" : state.status === "title" ? "Vect Breach \u2014 Tap/click the game or press Enter/Space to commence mission." : state.status === "story" ? "Incoming Transmission \u2014 Tap/click the game or press Enter/Space to engage." : state.status === "won" ? "Mission Accomplished! All Sectors Cleared. Tap the game, or press Space/Enter to replay." : state.status === "gameover" ? "Agent Terminated! Tap the game, or press Space/Enter to restart." : state.status === "ready" ? "Click canvas or press Enter to begin mission." : navigator.maxTouchPoints > 0 ? "Left stick: move. Drag the game: aim. FIRE: shoot. USE: terminal / elevator." : "Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.";
+        const status = game.paused ? "Paused \u2014 tap Resume or press P" : game.config.presentation ? `${game.config.presentation.title} \u2014 ${game.config.ui ? state[game.config.ui].prompt : state.message || game.config.presentation.objective}${game.saveStatus ? ` \u2014 Progress: ${game.saveStatus}` : ""}` : state.status === "title" ? "Vect Breach \u2014 Tap/click the game or press Enter/Space to commence mission." : state.status === "story" ? "Incoming Transmission \u2014 Tap/click the game or press Enter/Space to engage." : state.status === "won" ? "Mission Accomplished! All Sectors Cleared. Tap the game, or press Space/Enter to replay." : state.status === "gameover" ? "Agent Terminated! Tap the game, or press Space/Enter to restart." : state.status === "ready" ? "Click canvas or press Enter to begin mission." : navigator.maxTouchPoints > 0 ? "Left stick: move. Drag the game: aim. FIRE: shoot. USE: terminal / elevator." : "Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.";
         if (announce.textContent !== status) {
           announce.textContent = status;
         }
       }
-      if (state.status !== "playing" && document.pointerLockElement === canvas) {
+      if ((state.status !== "playing" || game.paused) && document.pointerLockElement === canvas) {
         document.exitPointerLock?.();
       }
       frameId = requestAnimationFrame(frame);

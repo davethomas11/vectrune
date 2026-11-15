@@ -36,7 +36,18 @@ port = 3010
 @Scene/city
 logic = monster
 background = "#233449"
-hud = {"title":"MONSTER CITY","score":"score","health":"health","max_health":100,"level":"level","coins":"profile.coins","message":"power_label","energy":"energy","max_energy":100,"special":"special_label"}
+hud = {
+    "coins": "profile.coins",
+    "energy": "energy",
+    "health": "health",
+    "level": "level",
+    "max_energy": 100,
+    "max_health": 100,
+    "message": "power_label",
+    "score": "score",
+    "special": "special_label",
+    "title": "MONSTER CITY"
+}
 overlays = {"ready":"MAKE A BIG ENTRANCE","won":"CITY CONQUERED","gameover":"MONSTER DOWN"}
 controls = monster
 persistence = {"key":"monster-city-v1","state":"profile"}

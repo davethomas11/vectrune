@@ -24,10 +24,18 @@ import {
   type Thing3D,
   type ViewmodelWeapon,
   type WallOverride,
+  type Presentation,
 } from './raycaster';
 import { setActiveMap, type SpatialMap } from './spatial';
+import type { BlockModel } from './model';
+import { validateHud, type GameHud } from './hud';
 
 export interface Pixel3DConfig {
+  ui?: string;
+  pauseUi?: string;
+  restartAction?: string;
+  clickToStart?: boolean;
+  presentation?: Presentation;
   controls?: ControlsProfile;
   width: number;
   height: number;
@@ -35,6 +43,7 @@ export interface Pixel3DConfig {
   runtime?: 'hybrid' | 'js' | 'native';
   textures: Record<string, Texture>;
   sprites: Record<string, Sprite>;
+  models?: Record<string, BlockModel>;
   animations?: Record<string, { frames: string[]; fps: number }>;
   map: MapData;
   maps?: Record<string, MapData>;
@@ -95,6 +104,9 @@ export class Pixel3DEngine {
   }
 
   private save?: GameSave;
+  get saveStatus(): 'saved' | 'session' | 'recovered' | undefined {
+    return this.save?.status;
+  }
   ticks = 0;
   private currentMapName = '';
 
@@ -108,6 +120,7 @@ export class Pixel3DEngine {
       height: config.height,
       textures: config.textures,
       sprites: config.sprites,
+      models: config.models,
       map: config.map,
     });
 
@@ -209,16 +222,21 @@ export class Pixel3DEngine {
   }
 
   invoke(action: string, args: unknown[] = []): void {
+    if (action === this.config.restartAction) {
+      if (this.app.state.status === 'playing' && !this.paused) return;
+      this.paused = false;
+      this.ticks = 0;
+    }
     if (action === 'start') {
       this.start();
       return;
     }
-    this.paused = false;
-    setAudioMuted(this._muted);
+    setAudioMuted(this._muted || this._paused);
     withContext(this.context, () => {
       this.app.invokeAction(action, args);
       this.app.computeDerived();
     });
+    if (this._paused) pauseMusic();
     this.syncMap();
     this.persist();
   }
@@ -248,6 +266,11 @@ export class Pixel3DEngine {
     message?: string;
     switch_activated?: boolean;
     wall_overrides: WallOverride[];
+    time: number;
+    presentation?: Presentation;
+    hud_text?: string;
+    ui?: GameHud;
+    paused: boolean;
   } {
     const state = this.app.state as Record<string, any>;
 
@@ -265,10 +288,21 @@ export class Pixel3DEngine {
         if (Array.isArray(val)) {
           things.push(...val);
         } else if (val && typeof val === 'object' &&
-          typeof val.x === 'number' && typeof val.y === 'number' && typeof val.sprite === 'string') {
+          typeof val.x === 'number' && typeof val.y === 'number' &&
+          (typeof val.sprite === 'string' || typeof val.model === 'string')) {
           things.push(val as Thing3D);
         }
       }
+    }
+    for (const thing of things) {
+      if (!thing.model || thing.visible === false) continue;
+      if (!this.config.models?.[thing.model]) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
+      if (thing.sprite) throw new Error('Pixel-3d things must use either model or sprite, not both');
+      if (!Number.isFinite(thing.dissolve ?? 0) || (thing.dissolve ?? 0) < 0 || (thing.dissolve ?? 0) > 1) {
+        throw new Error('Pixel-3d model dissolve must be between 0 and 1');
+      }
+      if (![thing.x, thing.y, thing.z ?? 0, thing.angle ?? 0, thing.scale ?? 1].every(Number.isFinite) ||
+          (thing.scale ?? 1) <= 0) throw new Error('Pixel-3d model position/angle must be finite and scale must be positive');
     }
 
     // 3. Resolve weapon
@@ -313,6 +347,15 @@ export class Pixel3DEngine {
       story_body,
       message,
       switch_activated,
+      ui: this.paused && this.config.pauseUi && status === 'playing'
+        ? validateHud(state[this.config.pauseUi])
+        : this.config.ui ? validateHud(state[this.config.ui]) : undefined,
+      paused: this.paused,
+      time: this.ticks / this.config.tickRate,
+      presentation: this.config.presentation,
+      hud_text: this.app.derived.hud_text !== undefined
+        ? String(this.app.derived.hud_text)
+        : state.hud_text ? String(state.hud_text) : undefined,
       wall_overrides: Array.isArray(state.wall_overrides)
         ? state.wall_overrides.flatMap((tile: any) => {
             const texture = Object.keys(this.config.textures).indexOf(tile.texture);
@@ -336,8 +379,11 @@ export class Pixel3DEngine {
       storyBody: stats.story_body,
       message: stats.message,
       switchActivated: stats.switch_activated,
-    }, stats.wall_overrides);
+      ui: stats.ui,
+      paused: stats.paused,
+      presentation: stats.presentation,
+      hudText: stats.hud_text,
+    }, stats.wall_overrides, stats.time);
     return this.raycaster.buffer;
   }
 }
-

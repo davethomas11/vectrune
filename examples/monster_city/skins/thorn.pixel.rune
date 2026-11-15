@@ -1,5 +1,13 @@
 @Palette/thorn
-colors = {"d":"#426545","b":"#89ac53","h":"#ddeb8a","e":"#fff4b1","k":"#223d35","a":"#c3de76",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#c3de76",
+    "b": "#89ac53",
+    "d": "#426545",
+    "e": "#fff4b1",
+    "h": "#ddeb8a",
+    "k": "#223d35"
+}
 
 @Sprite/thorn/idle
 palette = thorn

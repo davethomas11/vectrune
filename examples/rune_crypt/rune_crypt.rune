@@ -1,0 +1,55 @@
+#!RUNE
+import "assets.rune"
+import "models.rune"
+import "maps.rune"
+import "controls.rune"
+import "logic.rune"
+import "combat.rune"
+import "exploration.rune"
+import "ux.rune"
+import "sound.rune"
+import "weapon.rune"
+import "shell.rune"
+
+@App
+name = Rune Crypt
+type = pixel-3d
+runtime = hybrid
+scene = crypt
+resolution = [320, 200]
+tick_rate = 30
+port = 3021
+shell = crypt_cabinet
+
+@Scene/crypt
+logic = crypt
+map = courtyard
+camera = player
+things = ["enemies", "pickups", "landmarks", "projectiles", "hazards", "warnings", "death_effects"]
+weapon = weapon
+controls = crypt
+ui = ui
+pause_ui = pause_ui
+restart_action = return_to_title
+click_to_start = false
+mouse_look = true
+persistence = {"key":"rune-crypt","state":"legacy"}
+presentation = {
+    "defeat": "THE CRYPT ENDURES",
+    "instructions": [
+        "WASD MOVE / MOUSE LOOK / SHIFT DODGE",
+        "CLICK SWORD / Q RUNE / E INTERACT",
+        "C CYCLES CLASS, REWARD OR EXIT ROUTE",
+        "YELLOW WARNS. RED HURTS. KEEP MOVING.",
+        "R TRAIN AT CAMP / SHARDS SURVIVE DEATH"
+    ],
+    "objective": "EXPLORE - BUILD - SURVIVE FIVE DEPTHS",
+    "subtitle": "FIVE DEPTHS. BUILD YOUR OWN LEGEND.",
+    "title": "RUNE CRYPT",
+    "victory": "HEART RECLAIMED"
+}
+
+@Page/crypt
+logic = crypt
+view:
+    canvas data-rune-pixel-3d=true

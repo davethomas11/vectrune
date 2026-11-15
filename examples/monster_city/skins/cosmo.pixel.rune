@@ -1,6 +1,14 @@
 # COSMO — a monster with idle, step, punch and duck poses.
 @Palette/cosmo
-colors = {"d":"#40386d","b":"#7a69a8","h":"#d5b8ef","e":"#a8fff0","k":"#182540","a":"#f8da94",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#f8da94",
+    "b": "#7a69a8",
+    "d": "#40386d",
+    "e": "#a8fff0",
+    "h": "#d5b8ef",
+    "k": "#182540"
+}
 
 @Sprite/cosmo/idle
 palette = cosmo

@@ -1,5 +1,16 @@
 @Palette/combat
-colors = {".":"transparent","w":"#f3ffff","b":"#65d5ed","g":"#b5ef77","o":"#f5a16b","r":"#ef767d","p":"#c4a2ef","y":"#ffe09c","d":"#283d58","a":"#99aeb8"}
+colors = {
+    ".": "transparent",
+    "a": "#99aeb8",
+    "b": "#65d5ed",
+    "d": "#283d58",
+    "g": "#b5ef77",
+    "o": "#f5a16b",
+    "p": "#c4a2ef",
+    "r": "#ef767d",
+    "w": "#f3ffff",
+    "y": "#ffe09c"
+}
 
 @Sprite/combat/block
 palette = combat

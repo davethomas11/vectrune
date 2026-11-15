@@ -1,0 +1,147 @@
+@Logic/crypt
+action class_label:
+    class_name = "KNIGHT"
+    if hero_class == 1:
+        class_name = "ARCANIST"
+    if hero_class == 2:
+        class_name = "SCOUT"
+
+action equip_class:
+    call class_label
+    if hero_class == 0:
+        armor = 2
+    if hero_class == 1:
+        max_health -= 20
+        damage -= 1
+        spell_power = 6
+        mana_max = 8
+        mana_rate = 60
+    if hero_class == 2:
+        max_health -= 10
+        move_speed = 0.09
+        attack_rate = 12
+        dodge_rate = 40
+
+action cycle_choice:
+    if status != "playing":
+        hero_class = (hero_class + 1) % 3
+        legacy.class = hero_class
+        call class_label
+        message = "CLASS " + class_name + " / ENTER: NEW RUN"
+        if hero_class == 0:
+            message = "KNIGHT: 100 HP / ARMOR 2 / C: CLASS"
+        if hero_class == 1:
+            message = "ARCANIST: 80 HP / STRONG RUNES / C: CLASS"
+        if hero_class == 2:
+            message = "SCOUT: 90 HP / FAST DODGE / C: CLASS"
+        call refresh_ui
+        stop
+    if distance(player, exit_pos) < 0.8 && level < 5 && remaining == 0:
+        route_choice = (route_choice + 1) % 2
+        notice_ticks = 0
+        call refresh_ui
+        stop
+    reward_choice = (reward_choice + 1) % 3
+    notice = "BUILD " + (reward_choice == 0 ? "BLADE" : reward_choice == 1 ? "RUNE" : "GUARD") + " / E: CLAIM AT SHRINE OR CHEST"
+    notice_ticks = 45
+    call refresh_ui
+
+action setup_exploration:
+    level_title = "ASHEN COURTYARD"
+    lore = "THE FIRST KNIGHTS LEFT THEIR BLADES HERE."
+    if level == 2:
+        level_title = "HALL OF WHISPERS"
+        lore = "WRAITHS AIM BEFORE CASTING. STRAFE THE GLOW."
+    if level == 3:
+        level_title = "THE SUNKEN OSSUARY"
+        lore = "THE GOLD CRACK HIDES THE PILGRIMS' CACHE."
+    if level == 4:
+        level_title = "THE CURSED APPROACH"
+        lore = "THE WARDEN SPLITS HIS WRATH AT HALF LIFE."
+    if level == 5:
+        level_title = "THE HEART VAULT"
+        lore = "THE HEART REMEMBERS EVERY FALLEN PILGRIM."
+    hazards = []
+    if level > 1:
+        hazards = [{"x":6.5,"y":3.5,"model":"world/trap","visible":true,"offset":0},{"x":11.5,"y":7.5,"model":"world/trap","visible":true,"offset":60}]
+    notice = level_title + " / E: READ TABLETS"
+    notice_ticks = 60
+
+action update_hazards:
+    for trap in hazards:
+        phase = (clock + trap.offset) % 120
+        trap.model = "world/trap"
+        if phase >= 70 && phase < 100:
+            trap.model = "world/trap_warn"
+        if phase >= 100:
+            trap.model = "world/trap_active"
+            if distance(player, trap) < 0.5:
+                call take_damage 12
+
+action interact_exploration(pressed):
+    if distance(player, lore_pos) < 0.9:
+        message = "E: READ THE PILGRIM TABLET"
+        if pressed:
+            lore_read = true
+            notice = lore
+            notice_ticks = 150
+    if distance(player, secret_pos) < 0.9 && secret_found == false:
+        message = "E: SEARCH THE GOLD-FLECKED CRACK"
+        if pressed:
+            secret_found = true
+            legacy.shards += 3
+            health = min(max_health, health + 15)
+            landmarks[3].model = "world/chest_open"
+            notice = "SECRET CACHE! +3 SHARDS +15 HP"
+            notice_ticks = 90
+            sound.play "secret"
+    if distance(player, shrine_pos) < 1 && shrine_used == false:
+        reward = "BLADE +2 DAMAGE"
+        if reward_choice == 1:
+            reward = "RUNE +2 POWER +1 MAX MANA"
+        if reward_choice == 2:
+            reward = "GUARD +25 MAX HP"
+        message = "E: " + reward + " / C: CHOOSE"
+        if pressed:
+            shrine_used = true
+            landmarks[0].model = "world/shrine_spent"
+            if reward_choice == 0:
+                damage += 2
+            if reward_choice == 1:
+                spell_power += 2
+                mana_max += 1
+                ammo = mana_max
+            if reward_choice == 2:
+                max_health += 25
+                health = min(max_health, health + 25)
+            notice = "SHRINE: " + reward
+            notice_ticks = 90
+            sound.play "blessing"
+    if distance(player, chest_pos) < 0.9 && chest_opened == false:
+        reward = "FANG: FAST SWORD"
+        if reward_choice == 1:
+            reward = "LANTERN: FAST MANA"
+        if reward_choice == 2:
+            reward = "AEGIS: +2 ARMOR"
+        message = "E: EQUIP " + reward + " / C: CHOOSE"
+        if pressed:
+            chest_opened = true
+            landmarks[2].model = "world/chest_open"
+            if relic == "FANG":
+                attack_rate += 3
+            if relic == "LANTERN":
+                mana_rate += 30
+            if relic == "AEGIS":
+                armor -= 2
+            relic = "FANG"
+            if reward_choice == 0:
+                attack_rate -= 3
+            if reward_choice == 1:
+                relic = "LANTERN"
+                mana_rate -= 30
+            if reward_choice == 2:
+                relic = "AEGIS"
+                armor += 2
+            notice = "EQUIPPED " + relic + " - ONE RELIC SLOT"
+            notice_ticks = 90
+            sound.play "blessing"

@@ -1,5 +1,13 @@
 @Palette/nova
-colors = {"d":"#947246","b":"#e8bf65","h":"#fff2ae","e":"#d7ffff","k":"#44354d","a":"#eca590",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#eca590",
+    "b": "#e8bf65",
+    "d": "#947246",
+    "e": "#d7ffff",
+    "h": "#fff2ae",
+    "k": "#44354d"
+}
 
 @Sprite/nova/idle
 palette = nova

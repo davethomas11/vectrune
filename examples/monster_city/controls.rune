@@ -35,32 +35,10 @@ gamepad:
     Button8 -> {"command":"host.start"}
 
 touch = {
-    "joystick": {
-        "left": "left",
-        "right": "right",
-        "size": 80
-    },
     "buttons": [
-        {
-            "id": "smash",
-            "input": "smash",
-            "label": "SMASH",
-            "size": 56,
-            "offset": [12, 12]
-        },
-        {
-            "id": "defend",
-            "input": "defend",
-            "label": "BLOCK",
-            "size": 48,
-            "offset": [76, 12]
-        },
-        {
-            "id": "special",
-            "input": "special",
-            "label": "POWER",
-            "size": 48,
-            "offset": [132, 12]
-        }
-    ]
+        {"id":"smash","input":"smash","label":"SMASH","offset":[12,12],"size":56},
+        {"id":"defend","input":"defend","label":"BLOCK","offset":[76,12],"size":48},
+        {"id":"special","input":"special","label":"POWER","offset":[132,12],"size":48}
+    ],
+    "joystick": {"left":"left","right":"right","size":80}
 }

@@ -1,0 +1,28 @@
+@Component/RuneCryptPage
+view:
+    div .page .application-guide .space-invaders-page .rune-crypt-page:
+        section .card .showcase-intro:
+            div .section-heading:
+                span .tag .tag-advanced "%i18n.RuneCrypt.badge%"
+                h1 "%i18n.RuneCrypt.title%"
+                p .lead "%i18n.RuneCrypt.description%"
+            p .showcase-try "%i18n.RuneCrypt.try_it%"
+            a .secondary-cta href="/assets/games/rune-crypt/index.html" target=_blank rel=noopener "%i18n.RuneCrypt.standalone%"
+
+        WebExample title="{i18n.RuneCrypt.title}" preview="/assets/games/rune-crypt/index.html" files="{sources ../../../examples/rune_crypt/rune_crypt.rune}" show_heading=false
+
+        section .card:
+            h2 "%i18n.RuneCrypt.controls_title%"
+            p "%i18n.RuneCrypt.controls%"
+            p "%i18n.RuneCrypt.objective%"
+            p "%i18n.RuneCrypt.device%"
+
+        details .card .showcase-notes:
+            summary "%i18n.RuneCrypt.source_title%"
+            p "%i18n.RuneCrypt.source_text%"
+            CommandBlock code="git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
+            CommandBlock code="vectrune examples/rune_crypt/rune_crypt.rune -o html > rune-crypt.html"
+            CommandBlock code="vectrune test examples/rune_crypt --type logic"
+            CommandBlock code="vectrune fmt examples/rune_crypt --line-width 100"
+            p "%i18n.RuneCrypt.native%"
+            CommandBlock code="cargo run --features pixel-desktop -- examples/rune_crypt/rune_crypt.rune --target desktop"

@@ -1,0 +1,66 @@
+@Controls/crypt
+keys:
+    KeyW -> forward
+    KeyS -> back
+    KeyA -> strafe_left
+    KeyD -> strafe_right
+    ArrowLeft -> turn_left
+    ArrowRight -> turn_right
+    Space -> fire
+    KeyQ -> spell
+    KeyE -> use
+    ShiftLeft -> dodge
+    ShiftRight -> dodge
+commands:
+    Enter -> host.advance
+    KeyR -> train
+    KeyC -> cycle_choice
+    Digit1 -> select_one
+    Digit2 -> select_two
+    Digit3 -> select_three
+    KeyP -> host.pause
+    KeyT -> return_to_title
+    KeyM -> host.mute
+    KeyF -> host.fullscreen
+    F11 -> host.fullscreen
+mouse:
+    Left -> fire
+    MoveX -> look_x
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.18}
+    Axis1 -> {"input":"move_y","invert":true,"deadzone":0.18}
+    Axis2 -> {"input":"look_x","mode":"rate","scale":900,"deadzone":0.18}
+    Button7 -> fire
+    Button6 -> spell
+    Button0 -> use
+    Button1 -> dodge
+    Button2 -> {"command":"cycle_choice"}
+    Button3 -> {"command":"train"}
+    Button9 -> {"command":"host.pause"}
+    Button8 -> {"command":"host.advance"}
+touch = {
+    "buttons": [
+        {"drag_x":"look_x","id":"fire","input":"fire","label":"SWORD","offset":[12,12],"size":60},
+        {"id":"use","input":"use","label":"USE","offset":[80,18],"size":48},
+        {"id":"spell","input":"spell","label":"RUNE","offset":[138,18],"size":48},
+        {"id":"dodge","input":"dodge","label":"DODGE","offset":[12,84],"size":48},
+        {
+            "anchor": "top-right",
+            "command": "cycle_choice",
+            "id": "build",
+            "label": "BUILD",
+            "offset": [12,36],
+            "size": 48
+        },
+        {
+            "anchor": "top-right",
+            "command": "host.pause",
+            "id": "pause",
+            "label": "PAUSE",
+            "offset": [72,36],
+            "size": 48
+        }
+    ],
+    "joystick": {"size":96,"x":"move_x","y":"move_y"},
+    "look": {"sensitivity":1,"x":"look_x"}
+}

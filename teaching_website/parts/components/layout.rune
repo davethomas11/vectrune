@@ -57,6 +57,7 @@ view:
                     a .nav-link {.active when 'builtins'} href="{i18n.Common.base_path}builtins" data-route-link=true aria-current="{activePage == 'builtins' ? 'page' : 'false'}" click="navigate('builtins')" "%i18n.Nav.builtins%"
                 div .nav-group:
                     h3 "%i18n.Nav.games%"
+                    a .nav-link {.active when 'rune-crypt'} href="{i18n.Common.base_path}rune-crypt" data-route-link=true aria-current="{activePage == 'rune-crypt' ? 'page' : 'false'}" click="navigate('rune-crypt')" "%i18n.RuneCrypt.title%"
                     a .nav-link {.active when 'games'} href="{i18n.Common.base_path}games" data-route-link=true aria-current="{activePage == 'games' or activePage == 'vectraiders' or activePage == 'space_invaders' ? 'page' : 'false'}" click="navigate('games')" "%i18n.Nav.vectraiders%"
                     a .nav-link {.active when 'vect-breach'} href="{i18n.Common.base_path}vect-breach" data-route-link=true aria-current="{activePage == 'vect-breach' ? 'page' : 'false'}" click="navigate('vect-breach')" "%i18n.Nav.vect_breach%"
                     a .nav-link {.active when 'monster-city'} href="{i18n.Common.base_path}monster-city" data-route-link=true aria-current="{activePage == 'monster-city' ? 'page' : 'false'}" click="navigate('monster-city')" "%i18n.Nav.monster_city%"
@@ -81,6 +82,7 @@ view:
                     "vectworms"       -> VectWormsPage
                     "monster-city"    -> MonsterCityPage
                     "vect-breach"     -> VectBreachPage
+                    "rune-crypt"      -> RuneCryptPage
                     "studio"          -> RuneStudioPage
                     "music"           -> RuneStudioPage
                     "examples"        -> ExampleLab

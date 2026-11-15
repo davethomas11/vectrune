@@ -1,6 +1,14 @@
 # CYCLOPS — a monster with idle, step, punch and duck poses.
 @Palette/cyclops
-colors = {"d":"#674482","b":"#ac79bd","h":"#efb8d8","e":"#fff5cd","k":"#282840","a":"#81c7c1",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#81c7c1",
+    "b": "#ac79bd",
+    "d": "#674482",
+    "e": "#fff5cd",
+    "h": "#efb8d8",
+    "k": "#282840"
+}
 
 @Sprite/cyclops/idle
 palette = cyclops

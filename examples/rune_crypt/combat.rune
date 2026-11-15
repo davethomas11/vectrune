@@ -1,0 +1,126 @@
+@Logic/crypt
+action enemy_death(foe):
+    death_model = "enemy/" + (foe.kind ? foe.kind : "skeleton")
+    death_z = foe.z ? foe.z : 0
+    death_scale = foe.scale ? foe.scale : 1
+    death_angle = foe.angle ? foe.angle : 0
+    death_effects.push({"x":foe.x,"y":foe.y,"z":death_z,"start_z":death_z,"angle":death_angle,"scale":death_scale,"model":death_model,"dissolve":0,"age":0,"visible":true})
+
+action update_deaths:
+    for remains in death_effects:
+        remains.age += 1
+        remains.z = remains.start_z - min(0.16, remains.age * 0.008)
+        remains.dissolve = clamp((remains.age - 4) / 26, 0, 1)
+        if remains.age >= 30:
+            remains.visible = false
+    death_effects = death_effects.filter(d => d.visible == true)
+
+action take_damage(amount):
+    stop when health <= 0
+    stop when invulnerable > 0
+    health = max(0, health - max(1, amount - armor))
+    invulnerable = 12
+    flash = 6
+    sound.play "hurt"
+
+action spawn_bolt(enemy, offset):
+    angle = enemy.aim + offset
+    projectiles.push({"x":enemy.x,"y":enemy.y,"z":0.5,"angle":angle,"vx":cos(angle) * 0.12,"vy":sin(angle) * 0.12,"model":"enemy/bolt","visible":true,"life":100,"damage":8 + level})
+
+action update_combat:
+    remaining = 0
+    nearest = 999
+    hint = ""
+    warnings = []
+    for bolt in projectiles:
+        if bolt.visible == true:
+            bolt.life -= 1
+            next = {"x":bolt.x + bolt.vx,"y":bolt.y + bolt.vy}
+            moved = slide(bolt.x, bolt.y, bolt.vx, bolt.vy, 0.08)
+            if sees(bolt, next) == false || abs(moved.x - next.x) > 0.01 || abs(moved.y - next.y) > 0.01:
+                bolt.visible = false
+            if bolt.visible == true:
+                bolt.x = next.x
+                bolt.y = next.y
+                if distance(bolt, player) < 0.3:
+                    bolt.visible = false
+                    call take_damage bolt.damage
+            if bolt.life <= 0:
+                bolt.visible = false
+    projectiles = projectiles.filter(b => b.visible == true)
+    for enemy in enemies:
+        if enemy.visible == true && enemy.hp > 0:
+            remaining += 1
+            dist = distance(player, enemy)
+            if dist < nearest:
+                nearest = dist
+                directions = ["E","SE","S","SW","W","NW","N","NE"]
+                heading = floor(((angle_to(player, enemy) + 382.5) % 360) / 45)
+                hint = " / HUNT " + directions[heading]
+            if !enemy.kind:
+                enemy.kind = "skeleton"
+            if !enemy.windup:
+                enemy.windup = 0
+            if !enemy.stagger:
+                enemy.stagger = 0
+            if !enemy.phase:
+                enemy.phase = 1
+            enemy.cooldown = max(0, enemy.cooldown - 1)
+            enemy.stagger = max(0, enemy.stagger - 1)
+            enemy.model = "enemy/" + enemy.kind
+            enemy.angle = angle_to(enemy, player)
+            enemy.z = 0
+            if enemy.kind == "wraith":
+                enemy.z = 0.06 + sin(clock * 6) * 0.04
+            if enemy.kind == "warden" && enemy.hp <= enemy.max_hp / 2 && enemy.phase == 1:
+                enemy.phase = 2
+                notice = "WARDEN ENRAGED - DODGE THE THREE BOLTS!"
+                notice_ticks = 90
+                enemy.cooldown = 0
+                sound.play "warning"
+            busy = enemy.windup > 0
+            if busy:
+                enemy.windup -= 1
+                enemy.model = "enemy/" + enemy.kind + "_warn"
+                if enemy.kind == "skeleton":
+                    warnings.push({"x":enemy.target.x,"y":enemy.target.y,"model":"world/warning","visible":true})
+                if enemy.windup == 0:
+                    if enemy.kind == "skeleton":
+                        if distance(player, enemy.target) < 0.65 && dist < 1.7 && sees(enemy, player):
+                            call take_damage (6 + level * 2)
+                        enemy.cooldown = 36
+                    if enemy.kind != "skeleton":
+                        call spawn_bolt enemy, 0
+                        if enemy.kind == "warden" && enemy.phase == 2:
+                            call spawn_bolt enemy, -18
+                            call spawn_bolt enemy, 18
+                        enemy.cooldown = 65
+                        if enemy.kind == "warden" && enemy.phase == 2:
+                            enemy.cooldown = 36
+            if enemy.stagger > 0 && busy == false:
+                warnings.push({"x":enemy.x,"y":enemy.y,"z":0.65,"angle":enemy.angle,"model":"enemy/hit","visible":true})
+            if busy == false && enemy.stagger == 0 && dist < 9 && sees(enemy, player):
+                angle = angle_to(enemy, player)
+                stride = 0.026 + level * 0.002
+                move = 0
+                if enemy.kind == "skeleton" && dist > 1.1:
+                    move = stride
+                if enemy.kind != "skeleton" && dist > 5:
+                    move = stride * 0.75
+                if enemy.kind == "wraith" && dist < 3:
+                    move = -stride
+                if move != 0:
+                    moved = slide(enemy.x, enemy.y, cos(angle) * move, sin(angle) * move, 0.24)
+                    enemy.x = moved.x
+                    enemy.y = moved.y
+                can_attack = enemy.kind != "skeleton" || dist < 1.5
+                if enemy.cooldown == 0 && can_attack:
+                    enemy.windup = 24
+                    if enemy.kind == "skeleton":
+                        enemy.windup = 18
+                    if enemy.kind == "warden":
+                        enemy.windup = 30
+                    enemy.aim = angle
+                    enemy.target = {"x":player.x,"y":player.y}
+                    enemy.model = "enemy/" + enemy.kind + "_warn"
+                    sound.play "warning"

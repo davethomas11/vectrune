@@ -1,0 +1,146 @@
+# All layouts are authored and connected. Depth two has two crypt variants.
+@Map/courtyard
+spawn = {"x":1.5,"y":1.5,"angle":0}
+floor = stone/moss
+sky = {"seed":731,"zenith":"#202c55","horizon":"#bd8b83","cloud":"#c0bdcf","speed":0.35}
+legend = {
+    "#": {"wall":"stone/moss_wall"},
+    ".": {},
+    "P": {"wall":"stone/pillar"},
+    "X": {"wall":"stone/cracked"}
+}
+grid:
+    "#############"
+    "#...........#"
+    "#..P.....P..#"
+    "#...........#"
+    "#....#X#....#"
+    "#....X.X....#"
+    "#...........#"
+    "#....X.X....#"
+    "#....#X#....#"
+    "#...........#"
+    "#..P.....P..#"
+    "#...........#"
+    "#############"
+
+@Map/crypt_a
+ceiling_height = 1.5
+spawn = {"x":1.5,"y":1.5,"angle":0}
+floor = stone/floor
+ceiling = stone/ceiling
+legend = {"#":{"wall":"stone/wall"},"P":{"wall":"stone/pillar"},"X":{"wall":"stone/cracked"},".":{}}
+grid:
+    "#############"
+    "#...........#"
+    "#.#X#...#X#.#"
+    "#.#.......#.#"
+    "#.#.P...P.#.#"
+    "#...........#"
+    "#....#X#....#"
+    "#...........#"
+    "#.#.P...P.#.#"
+    "#.#.......#.#"
+    "#.#X#...#X#.#"
+    "#...........#"
+    "#############"
+
+@Map/crypt_b
+ceiling_height = 1.5
+spawn = {"x":1.5,"y":1.5,"angle":90}
+floor = stone/moss
+ceiling = stone/ceiling
+legend = {
+    "#": {"wall":"stone/cracked"},
+    ".": {},
+    "M": {"wall":"stone/moss_wall"},
+    "P": {"wall":"stone/pillar"}
+}
+grid:
+    "#############"
+    "#...........#"
+    "#.###...###.#"
+    "#...........#"
+    "#...M...M...#"
+    "#...M...M...#"
+    "#.P.#...#.P.#"
+    "#...M...M...#"
+    "#...#...#...#"
+    "#...........#"
+    "#.###...###.#"
+    "#...........#"
+    "#############"
+
+@Map/vault
+ceiling_height = 3
+spawn = {"x":1.5,"y":1.5,"angle":0}
+floor = rune/floor
+ceiling = rune/ceiling
+legend = {"#":{"wall":"rune/wall"},"P":{"wall":"stone/pillar"},"S":{"wall":"rune/seal"},".":{}}
+grid:
+    "##S###S###S##"
+    "#...........#"
+    "#..P.....P..#"
+    "#...........#"
+    "#.P.......P.#"
+    "#...........#"
+    "#....P.P....#"
+    "#...........#"
+    "#.P.......P.#"
+    "#...........#"
+    "#..P.....P..#"
+    "#...........#"
+    "##S###S###S##"
+
+@Map/ossuary
+ceiling_height = 2
+spawn = {"x":1.5,"y":1.5,"angle":90}
+floor = stone/moss
+ceiling = rune/ceiling
+legend = {
+    "#": {"wall":"stone/ossuary"},
+    ".": {},
+    "P": {"wall":"stone/pillar"},
+    "X": {"wall":"stone/cracked"}
+}
+grid:
+    "#############"
+    "#...........#"
+    "#.PP...PP...#"
+    "#...........#"
+    "#.#X.....X#.#"
+    "#...........#"
+    "#.P..P.P..P.#"
+    "#...........#"
+    "#.#X.....X#.#"
+    "#...........#"
+    "#...PP...PP.#"
+    "#...........#"
+    "#############"
+
+@Map/approach
+ceiling_height = 2.5
+spawn = {"x":1.5,"y":1.5,"angle":0}
+floor = rune/floor
+ceiling = stone/ceiling
+legend = {
+    "#": {"wall":"rune/wall"},
+    ".": {},
+    "P": {"wall":"stone/pillar"},
+    "S": {"wall":"rune/seal"},
+    "X": {"wall":"stone/cracked"}
+}
+grid:
+    "#############"
+    "#...........#"
+    "#.#S#.X.#S#.#"
+    "#...........#"
+    "#.#.#...#.#.#"
+    "#...........#"
+    "#.#.S.X.S.#.#"
+    "#...........#"
+    "#.#.#...#.#.#"
+    "#...........#"
+    "#.#S#.X.#S#.#"
+    "#...........#"
+    "#############"

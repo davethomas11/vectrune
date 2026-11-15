@@ -3,6 +3,10 @@
   "status": "starter",
   "app_types": [
     {
+      "name": "pixel-3d",
+      "summary": "Pixel-art first-person games using shared Rune logic and browser or native raycasting."
+    },
+    {
       "name": "REST",
       "summary": "HTTP application mode for route-oriented APIs and optional Swagger output."
     },

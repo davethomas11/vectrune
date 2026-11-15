@@ -56,7 +56,7 @@ var __RunePixelRuntime = (() => {
       overlay.classList.add("is-touch");
       canvas.focus({ preventScroll: true });
       if (!options.playing()) {
-        options.advance();
+        if (options.tapToAdvance !== false) options.advance();
         return false;
       }
       if (options.paused()) {

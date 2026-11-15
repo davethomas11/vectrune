@@ -1,6 +1,14 @@
 # SLIME — a monster with idle, step, punch and duck poses.
 @Palette/slime
-colors = {"d":"#2b7385","b":"#5bc8c5","h":"#b8f4df","e":"#fff0aa","k":"#183844","a":"#efffbd",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#efffbd",
+    "b": "#5bc8c5",
+    "d": "#2b7385",
+    "e": "#fff0aa",
+    "h": "#b8f4df",
+    "k": "#183844"
+}
 
 @Sprite/slime/idle
 palette = slime

@@ -1,5 +1,13 @@
 @Palette/tide
-colors = {"d":"#326886","b":"#69b8ce","h":"#c7e7d9","e":"#fff0b3","k":"#203d52","a":"#ea9b7b",".":"transparent"}
+colors = {
+    ".": "transparent",
+    "a": "#ea9b7b",
+    "b": "#69b8ce",
+    "d": "#326886",
+    "e": "#fff0b3",
+    "h": "#c7e7d9",
+    "k": "#203d52"
+}
 
 @Sprite/tide/idle
 palette = tide

@@ -1,0 +1,412 @@
+@Logic/crypt
+state:
+    status = "title"
+    legacy = {"shards":0,"rank":0,"runs":0,"wins":0,"class":0}
+    hero_class = 0
+    class_name = "KNIGHT"
+    armor = 0
+    spell_power = 3
+    mana_max = 6
+    mana_rate = 90
+    move_speed = 0.075
+    attack_rate = 15
+    dodge_rate = 60
+    dodge_cooldown = 0
+    dodge_ticks = 0
+    dodge_x = 0
+    dodge_y = 0
+    invulnerable = 0
+    dodge_held = false
+    relic = "NONE"
+    route_choice = 0
+    route = 0
+    reward_choice = 0
+    chest_opened = false
+    secret_found = false
+    lore_read = false
+    chest_pos = {"x":11.5,"y":1.5}
+    secret_pos = {"x":1.5,"y":11.5}
+    lore_pos = {"x":1.5,"y":5.5}
+    level_title = "THE ASHEN COURTYARD"
+    lore = ""
+    projectiles = []
+    hazards = []
+    warnings = []
+    death_effects = []
+    remaining = 0
+    hint = ""
+    level = 1
+    level_map = "courtyard"
+    health = 100
+    max_health = 100
+    ammo = 6
+    score = 0
+    kills = 0
+    damage = 3
+    xp = 0
+    rpg_level = 1
+    clock = 0
+    run_seed = 731
+    cooldown = 0
+    flash = 0
+    use_held = false
+    spell_held = false
+    shrine_used = false
+    notice = ""
+    notice_ticks = 0
+    message = ""
+    player = {"x":1.5,"y":1.5,"angle":0}
+    weapon = {"sprite":"weapon/sword","bob":0}
+    enemies = []
+    pickups = []
+    landmarks = []
+    shrine_pos = {"x":6.5,"y":1.5}
+    exit_pos = {"x":11.5,"y":11.5}
+derive:
+    hud_text from health:
+        _ then "D" + level + " HP " + health + "/" + max_health + " MP " + ammo + " L" + rpg_level + " XP" + xp + "/3 SH" + legacy.shards + (dodge_cooldown == 0 ? " DODGE OK" : " DODGE " + ceil(dodge_cooldown / 30))
+
+action initialize:
+    hero_class = clamp(legacy.class, 0, 2)
+    call class_label
+    call setup_depth
+    status = "title"
+    message = "C: CLASS " + class_name + " / R: TRAIN 5 SHARDS"
+    player = {"x":8.5,"y":10.5,"angle":20}
+    weapon = {"sprite":"","bob":0}
+    call play_score "crypt_title"
+    call refresh_ui
+
+action return_to_title:
+    level = 1
+    camp_feedback = ""
+    call initialize
+
+action train:
+    stop when status == "playing"
+    if legacy.rank >= 10:
+        message = "TRAINING COMPLETE - RANK 10"
+        camp_feedback = message
+        call refresh_ui
+        stop
+    if legacy.shards < 5:
+        message = "TRAINING NEEDS 5 SHARDS / HAVE " + legacy.shards
+        camp_feedback = message
+        call refresh_ui
+        stop
+    legacy.shards -= 5
+    legacy.rank += 1
+    message = "LEGACY RANK " + legacy.rank + " - NEXT RUN +HP +DAMAGE"
+    camp_feedback = message
+    sound.play "blessing"
+    call refresh_ui
+
+action advance:
+    call start
+
+action start:
+    camp_feedback = ""
+    legacy.runs += 1
+    run_seed = random(1, 1000000000)
+    level = 1
+    max_health = 100 + legacy.rank * 10
+    health = max_health
+    damage = 3 + legacy.rank
+    armor = 0
+    spell_power = 3
+    mana_max = 6
+    mana_rate = 90
+    move_speed = 0.075
+    attack_rate = 15
+    dodge_rate = 60
+    relic = "NONE"
+    route = 0
+    route_choice = 0
+    reward_choice = 0
+    call equip_class
+    health = max_health
+    ammo = mana_max
+    score = 0
+    kills = 0
+    xp = 0
+    rpg_level = 1
+    clock = 0
+    status = "playing"
+    use_held = false
+    spell_held = false
+    dodge_held = false
+    learned_move = false
+    learned_sword = false
+    learned_rune = false
+    learned_dodge = false
+    call setup_depth
+    call play_score "crypt_dungeon"
+
+action setup_depth:
+    level_map = "courtyard"
+    if level == 2:
+        level_map = "crypt_a"
+        if route == 1 || random(0, 1, run_seed + level * 101) == 1:
+            level_map = "crypt_b"
+    if level == 3:
+        level_map = "ossuary"
+    if level == 4:
+        level_map = "approach"
+    if level == 5:
+        level_map = "vault"
+    player = map_spawn(level_map)
+    cooldown = 0
+    flash = 0
+    dodge_cooldown = 0
+    dodge_ticks = 0
+    invulnerable = 0
+    projectiles = []
+    warnings = []
+    death_effects = []
+    shrine_used = false
+    chest_opened = false
+    secret_found = false
+    lore_read = false
+    route_choice = 0
+    notice = ""
+    notice_ticks = 0
+    weapon = {"sprite":"weapon/sword","bob":0,"x":34,"y":-12}
+    weapon_ticks = 0
+    weapon_magic = false
+    landmarks = [{"x":6.5,"y":1.5,"model":"world/shrine","angle":180,"visible":true},{"x":11.5,"y":11.5,"model":"world/stairs","angle":0,"scale":0.7,"visible":true},{"x":11.5,"y":1.5,"model":"world/chest","angle":180,"visible":true},{"x":1.5,"y":11.5,"model":"world/crack","angle":270,"visible":true},{"x":1.5,"y":5.5,"model":"world/tablet","angle":270,"visible":true}]
+    if level == 5:
+        landmarks[1] = {"x":11.5,"y":11.5,"model":"world/heart","angle":225,"visible":true}
+    enemies = []
+    slots = [{"x":9.5,"y":3.5},{"x":3.5,"y":7.5},{"x":9.5,"y":9.5},{"x":6.5,"y":11.5},{"x":6.5,"y":5.5},{"x":3.5,"y":3.5},{"x":6.5,"y":9.5}]
+    index = 0
+    for pos in slots:
+        if index < level + 2:
+            kind = "skeleton"
+            if index % 2 == 1:
+                kind = "wraith"
+            enemy_hp = 5 + level * 2
+            if route == 1:
+                enemy_hp += 3
+            if level == 5 && index == 6:
+                kind = "warden"
+                enemy_hp = 42
+            enemy_model = "enemy/" + kind
+            facing = angle_to(pos, player)
+            enemies.push({"x":pos.x,"y":pos.y,"model":enemy_model,"angle":facing,"kind":kind,"hp":enemy_hp,"max_hp":enemy_hp,"visible":true,"cooldown":30 + index * 12,"windup":0,"stagger":0,"phase":1,"scale":0.8})
+        index += 1
+    pickups = [{"x":3.5,"y":1.5,"model":"loot/shard","kind":"shard","visible":true},{"x":1.5,"y":9.5,"model":"loot/potion","kind":"health","visible":true}]
+    supply = random(0, 1, run_seed + level * 401)
+    if supply == 1:
+        pickups.push({"x":11.5,"y":5.5,"model":"loot/potion","kind":"health","visible":true})
+    if supply == 0:
+        pickups.push({"x":11.5,"y":5.5,"model":"loot/shard","kind":"shard","visible":true})
+    call setup_exploration
+    remaining = enemies.length
+    call refresh_ui
+
+action attack(magic):
+    stop when status != "playing"
+    if cooldown > 0:
+        notice = "WEAPON RECOVERING - KEEP MOVING"
+        notice_ticks = 20
+        call refresh_ui
+        stop
+    reach = 1.35
+    power = damage
+    arc = 40
+    if magic == true:
+        if ammo <= 0:
+            notice = "NO MANA - USE YOUR SWORD WHILE MANA REGENERATES"
+            notice_ticks = 60
+            call refresh_ui
+            stop
+        learned_rune = true
+        ammo -= 1
+        reach = 9
+        power = damage + spell_power
+        arc = 12
+        sound.play "rune"
+    if magic == false:
+        learned_sword = true
+        sound.play "sword"
+    cooldown = attack_rate
+    weapon_ticks = 10
+    weapon_magic = magic
+    call animate_weapon
+    target = -1
+    nearest = reach
+    index = 0
+    for enemy in enemies:
+        if enemy.visible == true && enemy.hp > 0:
+            dist = distance(player, enemy)
+            aim = abs((angle_to(player, enemy) - player.angle + 540) % 360 - 180)
+            if dist < nearest && aim < arc && sees(player, enemy):
+                target = index
+                nearest = dist
+        index += 1
+    if target >= 0:
+        enemies[target].hp -= power
+        if magic == false:
+            enemies[target].stagger = 8
+            enemies[target].windup = 0
+            enemies[target].cooldown = max(20, enemies[target].cooldown)
+        notice = "HIT " + power + " / FOE HP " + max(0, enemies[target].hp)
+        notice_ticks = 24
+        if enemies[target].hp <= 0:
+            call enemy_death enemies[target]
+            enemies[target].visible = false
+            kills += 1
+            xp += 1
+            score += 100 * level
+            legacy.shards += 1
+            if route == 1:
+                legacy.shards += 1
+            sound.play "shard"
+            if xp >= 3:
+                xp = 0
+                rpg_level += 1
+                damage += 2
+                max_health += 10
+                health = min(max_health, health + 25)
+                notice = "LEVEL UP! +DAMAGE +HP"
+                notice_ticks = 90
+                sound.play "blessing"
+    if target < 0:
+        notice = magic == true ? "RUNE MISSED - AIM THE CROSSHAIR AT A FOE" : "SWORD MISSED - GET CLOSER TO THE FOE"
+        notice_ticks = 30
+    call refresh_ui
+
+action tick(input):
+    stop when status != "playing"
+    use_pressed = input.use == true && use_held == false
+    spell_pressed = input.spell == true && spell_held == false
+    dodge_pressed = input.dodge == true && dodge_held == false
+    use_held = input.use == true
+    spell_held = input.spell == true
+    dodge_held = input.dodge == true
+    clock += 1
+    call update_deaths
+    cooldown = max(0, cooldown - 1)
+    flash = max(0, flash - 1)
+    notice_ticks = max(0, notice_ticks - 1)
+    dodge_cooldown = max(0, dodge_cooldown - 1)
+    invulnerable = max(0, invulnerable - 1)
+    weapon_ticks = max(0, weapon_ticks - 1)
+    call animate_weapon
+    if clock % mana_rate == 0:
+        ammo = min(mana_max, ammo + 1)
+    turn = 0
+    if input.turn_left == true:
+        turn -= 4
+    if input.turn_right == true:
+        turn += 4
+    if input.look_x:
+        turn += input.look_x * 0.15
+    player.angle = ((player.angle + turn) % 360 + 360) % 360
+    fwd = 0
+    strafe = 0
+    if input.forward == true:
+        fwd += move_speed
+    if input.back == true:
+        fwd -= move_speed
+    if input.strafe_left == true:
+        strafe -= move_speed
+    if input.strafe_right == true:
+        strafe += move_speed
+    if input.move_y:
+        fwd += clamp(input.move_y, -1, 1) * move_speed
+    if input.move_x:
+        strafe += clamp(input.move_x, -1, 1) * move_speed
+    fwd = clamp(fwd, -move_speed, move_speed)
+    strafe = clamp(strafe, -move_speed, move_speed)
+    length = sqrt(fwd * fwd + strafe * strafe)
+    if length > move_speed:
+        fwd = fwd / length * move_speed
+        strafe = strafe / length * move_speed
+    dx = cos(player.angle) * fwd - sin(player.angle) * strafe
+    dy = sin(player.angle) * fwd + cos(player.angle) * strafe
+    if dodge_pressed && dodge_cooldown == 0:
+        learned_dodge = true
+        dodge_cooldown = dodge_rate
+        dodge_ticks = 8
+        invulnerable = 8
+        dodge_x = -cos(player.angle) * 0.18
+        dodge_y = -sin(player.angle) * 0.18
+        if length > 0:
+            dodge_x = dx / sqrt(dx * dx + dy * dy) * 0.18
+            dodge_y = dy / sqrt(dx * dx + dy * dy) * 0.18
+        sound.play "dodge"
+    if dodge_ticks > 0:
+        dx = dodge_x
+        dy = dodge_y
+        dodge_ticks -= 1
+    moved = slide(player.x, player.y, dx, dy, 0.25)
+    player.x = moved.x
+    player.y = moved.y
+    if fwd != 0 || strafe != 0:
+        learned_move = true
+        weapon.bob += 0.25
+    if fwd == 0 && strafe == 0:
+        weapon.bob = 0
+    if spell_pressed:
+        call attack true
+    if input.fire == true:
+        call attack false
+    for item in pickups:
+        if item.kind == "shard":
+            item.angle = clock * 3
+            item.z = 0.08 + sin(clock * 6) * 0.04
+        if item.visible == true && distance(player, item) < 0.55:
+            if item.kind == "shard":
+                legacy.shards += 2
+                item.visible = false
+                sound.play "shard"
+            if item.kind == "health" && health < max_health:
+                health = min(max_health, health + 35)
+                item.visible = false
+                sound.play "blessing"
+    call update_combat
+    call update_hazards
+    if health <= 0:
+        status = "gameover"
+        call play_score "crypt_title"
+        message = "SHARDS KEPT " + legacy.shards + " / R: TRAIN AT CAMP"
+        call refresh_ui
+        stop
+    message = level_title + " / " + class_name + " / " + relic + " / FOES " + remaining + hint
+    call interact_exploration use_pressed
+    if distance(player, exit_pos) < 0.8:
+        message = "STAIRS SEALED - DEFEAT ALL FOES"
+        if remaining == 0:
+            message = "E: SANCTUARY +25 HP / C: CHANGE ROUTE"
+            if route_choice == 1:
+                message = "E: CURSED +FOE HP +SHARDS / C: ROUTE"
+            if level == 5:
+                message = "E: CLAIM THE RUNE HEART"
+            if use_pressed:
+                call use_exit
+                stop
+    if notice_ticks > 0:
+        message = notice
+    call refresh_ui
+
+action use_exit:
+    stop when status != "playing"
+    stop when distance(player, exit_pos) >= 0.8 || remaining > 0
+    if level == 5:
+        status = "won"
+        call play_score "crypt_victory"
+        legacy.wins += 1
+        legacy.shards += 5
+        message = "HEART CLAIMED! +5 SHARDS / R: TRAIN"
+        sound.play "blessing"
+        call refresh_ui
+        stop
+    level += 1
+    route = route_choice
+    if route == 0:
+        health = min(max_health, health + 25)
+    ammo = mana_max
+    call setup_depth
+    if level == 5:
+        call play_score "crypt_warden"

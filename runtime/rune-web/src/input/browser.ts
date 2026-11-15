@@ -8,6 +8,7 @@ export function mountControls(canvas: HTMLCanvasElement, controls: GameControls,
   expanded?(): boolean;
   menuKey?(code: string): boolean;
   advanceInputs?: string[];
+  tapToAdvance?: boolean;
 }) {
   const abort = new AbortController();
   let lastTouch = 0;

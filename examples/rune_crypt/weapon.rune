@@ -1,0 +1,24 @@
+@Logic/crypt
+state:
+    weapon_ticks = 0
+    weapon_magic = false
+
+action animate_weapon:
+    weapon.sprite = "weapon/sword"
+    weapon.x = 34
+    weapon.y = -12
+    if weapon_ticks > 0 && weapon_magic == false:
+        weapon.x = -12 + (4 - min(4, weapon_ticks)) * 11
+        weapon.y = -8
+        if weapon_ticks > 4:
+            weapon.sprite = "weapon/swing"
+            weapon.x = 30 - (10 - weapon_ticks) * 14
+            weapon.y = -20
+        if weapon_ticks > 8:
+            weapon.sprite = "weapon/sword"
+            weapon.x = 46
+            weapon.y = -16
+    if weapon_ticks > 0 && weapon_magic:
+        weapon.sprite = "weapon/cast"
+        weapon.x = 16
+        weapon.y = -12 - weapon_ticks

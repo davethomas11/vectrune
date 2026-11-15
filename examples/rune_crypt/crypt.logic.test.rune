@@ -1,0 +1,512 @@
+#!RUNE
+import "rune_crypt.rune"
+
+@Logic/crypt
+action fixture(key, value):
+    if key == "shards":
+        legacy.shards = value
+    if key == "rank":
+        legacy.rank = value
+    if key == "health":
+        health = value
+    if key == "status":
+        status = value
+    if key == "enemies":
+        enemies = value
+    if key == "cooldown":
+        cooldown = value
+    if key == "x":
+        player.x = value
+    if key == "y":
+        player.y = value
+    if key == "choice":
+        reward_choice = value
+    if key == "xp":
+        xp = value
+    if key == "clock":
+        clock = value
+    if key == "hazards":
+        hazards = value
+    if key == "level":
+        level = value
+    if key == "invulnerable":
+        invulnerable = value
+    if key == "mana":
+        ammo = value
+    if key == "projectiles":
+        projectiles = value
+
+@Test/RuneCrypt/ReadableCampAndOnboarding
+type = logic
+page = crypt
+run:
+    invoke initialize
+    assert state.ui.panel.title == "CHOOSE YOUR CLASS"
+    assert state.ui.heading == "RUNE CRYPT"
+    assert state.music_track == "crypt_title"
+    assert state.ui.panel.choices.length == 3
+    assert state.ui.meters.length == 0
+    assert state.confirm_locked == true
+    assert state.ui.prompt == "1 / 2 / 3: CLASS   ENTER / NEW RUN: BEGIN"
+    invoke select_three
+    assert state.hero_class == 2
+    assert state.ui.panel.selected == 2
+    assert state.selected_three == true
+    invoke start
+    assert state.ui.meters.length == 3
+    assert state.music_track == "crypt_dungeon"
+    assert state.ui.meters[0].max == 90
+    assert state.ui.panel == null
+    assert state.ui.prompt == "FIRST: WASD / LEFT STICK TO MOVE"
+    invoke select_one
+    assert state.hero_class == 2
+    invoke tick {"forward":true}
+    assert state.ui.prompt == "GET CLOSE. CLICK / SPACE / SWORD TO ATTACK."
+    invoke attack false
+    assert state.learned_sword == true
+    assert state.learned_rune == false
+    assert state.ui.prompt == "Q / RUNE: RANGED ATTACK. MANA REGENERATES."
+    invoke fixture ["cooldown",0]
+    invoke attack true
+    assert state.learned_rune == true
+    assert state.ui.prompt == "SHIFT / DODGE: EVADE. YELLOW WARNS OF ATTACKS."
+    invoke fixture ["health",20]
+    invoke refresh_ui
+    assert state.ui.detail == "LOW HEALTH - SEEK POTIONS / GUARD / SANCTUARY"
+
+@Test/RuneCrypt/VisibleChoicesAndLockedStairs
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["x",11.5]
+    invoke fixture ["y",11.5]
+    invoke tick
+    assert state.ui.panel == null
+    assert state.ui.prompt == "STAIRS LOCKED - DEFEAT THE REMAINING FOES"
+    assert state.choice_locked == true
+    invoke select_two
+    assert state.route_choice == 0
+    invoke fixture ["enemies",[]]
+    invoke tick
+    assert state.ui.panel.choices.length == 2
+    assert state.third_choice_locked == true
+    invoke select_three
+    assert state.route_choice == 0
+    invoke select_two
+    assert state.ui.panel.selected == 1
+    invoke confirm_choice
+    assert state.level == 2
+    assert state.route == 1
+    invoke fixture ["level",1]
+    invoke setup_depth
+    invoke fixture ["x",6.5]
+    invoke fixture ["y",1.5]
+    invoke refresh_ui
+    assert state.context == "shrine"
+    assert state.ui.panel.choices.length == 3
+    invoke select_three
+    assert state.reward_choice == 2
+    assert state.ui.panel.selected == 2
+    invoke fixture ["enemies",[]]
+    invoke confirm_choice
+    assert state.max_health == 125
+    assert state.shrine_used == true
+    assert state.ui.panel == null
+
+@Test/RuneCrypt/WeaponFeedback
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["enemies",[{"x":2.5,"y":1.5,"model":"enemy/skeleton","hp":9,"visible":true,"cooldown":100}]]
+    invoke attack false
+    assert state.notice == "HIT 3 / FOE HP 6"
+    assert state.learned_rune == false
+    invoke attack false
+    assert state.notice == "WEAPON RECOVERING - KEEP MOVING"
+    invoke fixture ["cooldown",0]
+    invoke fixture ["mana",0]
+    invoke attack true
+    assert state.notice == "NO MANA - USE YOUR SWORD WHILE MANA REGENERATES"
+    assert state.ui.notice == state.notice
+
+@Test/RuneCrypt/ModelWorldAndVisualStates
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    assert state.enemies[0].model == "enemy/skeleton"
+    assert state.enemies[1].model == "enemy/wraith"
+    assert state.enemies[0].hp == 7
+    assert state.pickups[0].model == "loot/shard"
+    assert state.pickups[1].model == "loot/potion"
+    assert state.landmarks[0].model == "world/shrine"
+    assert state.landmarks[2].model == "world/chest"
+    assert state.landmarks[3].model == "world/crack"
+    assert state.landmarks[4].model == "world/tablet"
+    invoke tick
+    assert state.pickups[0].angle == 3
+    assert state.enemies[1].z > 0
+    invoke fixture ["x",6.5]
+    invoke fixture ["y",1.5]
+    invoke tick {"use":true}
+    assert state.landmarks[0].model == "world/shrine_spent"
+    invoke fixture ["x",11.5]
+    invoke tick
+    invoke tick {"use":true}
+    assert state.landmarks[2].model == "world/chest_open"
+    invoke fixture ["level",5]
+    invoke setup_depth
+    assert state.enemies[6].model == "enemy/warden"
+    assert state.landmarks[1].model == "world/heart"
+    assert state.hazards[0].model == "world/trap"
+
+@Test/RuneCrypt/StartAndRestart
+type = logic
+page = crypt
+run:
+    invoke start
+    assert state.status == "playing"
+    assert state.level == 1
+    assert state.health == 100
+    assert state.ammo == 6
+    assert state.enemies.length == 3
+    assert state.landmarks[1].model == "world/stairs"
+    invoke tick {"forward":true}
+    assert state.player.x > 1.5
+    invoke fixture ["shards",7]
+    invoke fixture ["health",0]
+    invoke tick
+    assert state.status == "gameover"
+    invoke train
+    assert state.legacy.rank == 1
+    assert state.legacy.shards == 2
+    invoke start
+    assert state.health == 110
+    assert state.damage == 4
+    assert state.level == 1
+    assert state.legacy.runs == 2
+    assert state.legacy.shards == 2
+
+@Test/RuneCrypt/SwordAndMagic
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["enemies",[{"x":2.5,"y":1.5,"model":"enemy/skeleton","hp":3,"visible":true,"cooldown":100}]]
+    invoke tick {"fire":true}
+    assert state.enemies[0].visible == false
+    assert state.kills == 1
+    assert state.legacy.shards == 1
+    assert state.ammo == 6
+    assert state.cooldown == 15
+    invoke tick {"fire":true}
+    assert state.kills == 1
+    invoke fixture ["cooldown",0]
+    invoke fixture ["enemies",[{"x":7.5,"y":1.5,"model":"enemy/wraith","hp":6,"visible":true,"cooldown":100}]]
+    invoke tick {"spell":true}
+    assert state.kills == 2
+    assert state.ammo == 5
+    invoke fixture ["cooldown",0]
+    invoke tick {"spell":true}
+    assert state.ammo == 5
+    invoke tick
+    invoke tick {"spell":true}
+    assert state.ammo == 4
+
+@Test/RuneCrypt/ShrineFreshUseAndLoot
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["enemies",[]]
+    invoke fixture ["x",3.5]
+    invoke tick
+    assert state.legacy.shards == 2
+    invoke tick
+    assert state.legacy.shards == 2
+    invoke tick {"use":true}
+    invoke fixture ["x",6.5]
+    invoke fixture ["choice",0]
+    invoke tick {"use":true}
+    assert state.shrine_used == false
+    invoke tick
+    invoke tick {"use":true}
+    assert state.shrine_used == true
+    assert state.damage == 5
+    invoke tick
+    invoke tick {"use":true}
+    assert state.damage == 5
+
+@Test/RuneCrypt/DescentAndVictory
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["x",11.5]
+    invoke fixture ["y",11.5]
+    invoke tick {"use":true}
+    assert state.level == 1
+    invoke fixture ["enemies",[]]
+    invoke tick
+    invoke tick {"use":true}
+    assert state.level == 2
+    assert state.player.x == 1.5
+    assert state.enemies.length == 4
+    assert state.shrine_used == false
+    assert state.ammo == 6
+    invoke fixture ["x",11.5]
+    invoke fixture ["y",11.5]
+    invoke fixture ["enemies",[]]
+    invoke tick {"use":true}
+    assert state.level == 2
+    invoke tick
+    invoke tick {"use":true}
+    assert state.level == 3
+    assert state.enemies.length == 5
+    assert state.level_map == "ossuary"
+    invoke fixture ["enemies",[]]
+    invoke fixture ["x",11.5]
+    invoke fixture ["y",11.5]
+    invoke tick
+    invoke tick {"use":true}
+    assert state.level == 4
+    assert state.level_map == "approach"
+    invoke fixture ["enemies",[]]
+    invoke fixture ["x",11.5]
+    invoke fixture ["y",11.5]
+    invoke tick
+    invoke tick {"use":true}
+    assert state.level == 5
+    assert state.enemies.length == 7
+    assert state.enemies[6].kind == "warden"
+    assert state.enemies[6].hp == 42
+    assert state.landmarks[1].model == "world/heart"
+    invoke fixture ["enemies",[]]
+    invoke fixture ["x",11.5]
+    invoke fixture ["y",11.5]
+    invoke tick
+    invoke tick {"use":true}
+    assert state.status == "won"
+    assert state.legacy.wins == 1
+    assert state.legacy.shards == 5
+    invoke tick {"use":true}
+    assert state.legacy.wins == 1
+    invoke start
+    assert state.level == 1
+    assert state.legacy.wins == 1
+
+@Test/RuneCrypt/TrainingAndLevelUp
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["shards",10]
+    invoke train
+    assert state.legacy.rank == 0
+    assert state.legacy.shards == 10
+    invoke fixture ["xp",2]
+    invoke fixture ["enemies",[{"x":2.5,"y":1.5,"model":"enemy/skeleton","hp":3,"visible":true,"cooldown":100}]]
+    invoke tick {"fire":true}
+    assert state.rpg_level == 2
+    assert state.damage == 5
+    assert state.max_health == 110
+    assert state.xp == 0
+    invoke fixture ["status","gameover"]
+    invoke fixture ["shards",4]
+    invoke train
+    assert state.legacy.rank == 0
+    assert state.legacy.shards == 4
+    invoke fixture ["rank",10]
+    invoke fixture ["shards",10]
+    invoke train
+    assert state.legacy.rank == 10
+    assert state.legacy.shards == 10
+
+@Test/RuneCrypt/ClassesAndReset
+type = logic
+page = crypt
+run:
+    invoke cycle_choice
+    assert state.class_name == "ARCANIST"
+    assert state.legacy.class == 1
+    invoke start
+    assert state.max_health == 80
+    assert state.spell_power == 6
+    assert state.mana_max == 8
+    assert state.mana_rate == 60
+    invoke fixture ["status","gameover"]
+    invoke cycle_choice
+    invoke start
+    assert state.class_name == "SCOUT"
+    assert state.max_health == 90
+    assert state.move_speed == 0.09
+    assert state.dodge_rate == 40
+    assert state.attack_rate == 12
+    invoke fixture ["status","gameover"]
+    invoke cycle_choice
+    invoke start
+    assert state.class_name == "KNIGHT"
+    assert state.max_health == 100
+    assert state.armor == 2
+    assert state.relic == "NONE"
+
+@Test/RuneCrypt/DodgeAndTrapTelegraph
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["enemies",[]]
+    invoke fixture ["x",6.5]
+    invoke fixture ["y",3.5]
+    invoke fixture ["hazards",[{"x":6.5,"y":3.5,"offset":0,"model":"world/trap","visible":true}]]
+    invoke fixture ["clock",69]
+    invoke tick
+    assert state.hazards[0].model == "world/trap_warn"
+    assert state.health == 100
+    invoke fixture ["clock",99]
+    invoke tick {"dodge":true,"strafe_right":true}
+    assert state.hazards[0].model == "world/trap_active"
+    assert state.health == 100
+    assert state.dodge_cooldown == 60
+    assert state.dodge_ticks == 7
+    assert state.player.y > 3.5
+    invoke tick {"dodge":true}
+    assert state.dodge_cooldown == 59
+    invoke fixture ["invulnerable",0]
+    invoke take_damage 12
+    assert state.health == 90
+    invoke take_damage 12
+    assert state.health == 90
+
+@Test/RuneCrypt/EnemyWarningsAndBossPhase
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["enemies",[{"x":2.5,"y":1.5,"kind":"skeleton","hp":10,"max_hp":10,"visible":true,"cooldown":0,"windup":0,"stagger":0,"phase":1}]]
+    invoke tick
+    assert state.enemies[0].windup == 18
+    assert state.enemies[0].model == "enemy/skeleton_warn"
+    assert state.health == 100
+    invoke tick {"fire":true}
+    assert state.enemies[0].windup == 0
+    assert state.enemies[0].stagger > 0
+    invoke fixture ["enemies",[{"x":5.5,"y":1.5,"kind":"wraith","hp":10,"max_hp":10,"visible":true,"cooldown":0,"windup":1,"stagger":0,"phase":1,"aim":180}]]
+    invoke tick
+    assert state.projectiles.length == 1
+    assert state.health == 100
+    invoke fixture ["enemies",[{"x":5.5,"y":1.5,"kind":"warden","hp":20,"max_hp":42,"visible":true,"cooldown":0,"windup":0,"stagger":0,"phase":1}]]
+    invoke tick
+    assert state.enemies[0].phase == 2
+    assert state.enemies[0].windup == 30
+    assert state.projectiles.length == 1
+    invoke fixture ["enemies",[{"x":5.5,"y":1.5,"kind":"warden","hp":20,"max_hp":42,"visible":true,"cooldown":0,"windup":1,"stagger":0,"phase":2,"aim":180}]]
+    invoke tick
+    assert state.projectiles.length == 4
+
+@Test/RuneCrypt/TelegraphsResolveAtMarkedSpot
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["enemies",[{"x":2.5,"y":1.5,"kind":"skeleton","hp":10,"visible":true,"cooldown":0,"windup":1,"stagger":0,"target":{"x":1.5,"y":1.5}}]]
+    invoke tick
+    assert state.health == 94
+    invoke fixture ["invulnerable",0]
+    invoke fixture ["y",2.4]
+    invoke fixture ["enemies",[{"x":2.5,"y":1.5,"kind":"skeleton","hp":10,"visible":true,"cooldown":0,"windup":1,"stagger":0,"target":{"x":1.5,"y":1.5}}]]
+    invoke tick
+    assert state.health == 94
+    invoke fixture ["enemies",[]]
+    invoke fixture ["x",4.5]
+    invoke fixture ["y",4.5]
+    invoke fixture ["projectiles",[{"x":4.9,"y":4.5,"vx":0.12,"vy":0,"visible":true,"life":10,"damage":9,"model":"enemy/bolt","z":0.5}]]
+    invoke tick
+    assert state.projectiles.length == 0
+    invoke fixture ["x",1.5]
+    invoke fixture ["y",1.5]
+    invoke fixture ["projectiles",[{"x":1.7,"y":1.5,"vx":-0.12,"vy":0,"visible":true,"life":10,"damage":9,"model":"enemy/bolt","z":0.5}]]
+    invoke tick {"dodge":true,"forward":true}
+    assert state.projectiles.length == 0
+    assert state.health == 94
+
+@Test/RuneCrypt/BuildChoicesAndRelicReplacement
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["enemies",[]]
+    invoke fixture ["x",6.5]
+    invoke cycle_choice
+    assert state.reward_choice == 1
+    invoke tick {"use":true}
+    assert state.spell_power == 5
+    assert state.mana_max == 7
+    assert state.shrine_used == true
+    invoke fixture ["x",11.5]
+    invoke tick
+    invoke tick {"use":true}
+    assert state.relic == "LANTERN"
+    assert state.mana_rate == 60
+    invoke tick
+    invoke tick {"use":true}
+    assert state.mana_rate == 60
+    invoke fixture ["level",2]
+    invoke setup_depth
+    invoke fixture ["enemies",[]]
+    invoke fixture ["x",11.5]
+    invoke fixture ["choice",2]
+    invoke tick
+    invoke tick {"use":true}
+    assert state.relic == "AEGIS"
+    assert state.mana_rate == 90
+    assert state.armor == 4
+    invoke start
+    assert state.relic == "NONE"
+    assert state.armor == 2
+    assert state.mana_max == 6
+
+@Test/RuneCrypt/SecretsLoreAndCursedRoute
+type = logic
+page = crypt
+setup:
+    invoke start
+run:
+    invoke fixture ["enemies",[]]
+    invoke fixture ["y",5.5]
+    invoke tick {"use":true}
+    assert state.lore_read == true
+    invoke fixture ["y",11.5]
+    invoke tick
+    invoke tick {"use":true}
+    assert state.secret_found == true
+    assert state.legacy.shards == 3
+    invoke tick
+    invoke tick {"use":true}
+    assert state.legacy.shards == 3
+    invoke fixture ["x",11.5]
+    invoke cycle_choice
+    assert state.route_choice == 1
+    invoke tick
+    invoke tick {"use":true}
+    assert state.level == 2
+    assert state.route == 1
+    assert state.level_map == "crypt_b"
+    assert state.enemies[0].hp == 12
+    assert state.projectiles.length == 0
+    invoke fixture ["enemies",[{"x":1.5,"y":2.5,"kind":"skeleton","hp":3,"visible":true,"cooldown":100}]]
+    invoke tick {"fire":true}
+    assert state.legacy.shards == 5

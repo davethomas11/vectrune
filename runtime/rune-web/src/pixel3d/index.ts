@@ -115,14 +115,38 @@ export function mount(
   };
 
   // Toolbar button listeners
-  for (const button of Array.from(document.querySelectorAll('[data-pixel-start]'))) {
-    listen(button, 'click', start);
+  for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-start]'))) {
+    listen(button, 'click', () => {
+      if (game.app.state.status === 'playing' && button.dataset.pixelConfirm && !window.confirm(button.dataset.pixelConfirm)) return;
+      start();
+    });
+  }
+  for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-action]'))) {
+    const args: unknown = JSON.parse(button.dataset.pixelArgs || '[]');
+    if (!Array.isArray(args)) throw new Error('data-pixel-args must be a JSON array');
+    listen(button, 'click', () => {
+      unlockAudio();
+      const action = button.dataset.pixelAction;
+      clear();
+      if (action) game.activate(action, args);
+      canvas.focus({ preventScroll: true });
+    });
   }
   for (const button of Array.from(document.querySelectorAll('[data-pixel-pause]'))) {
     listen(button, 'click', () => {
       canvas.focus();
       clear();
       game.paused = !game.paused;
+    });
+  }
+  for (const button of Array.from(document.querySelectorAll('[data-pixel-restart]'))) {
+    const action = game.config.restartAction;
+    if (!action) throw new Error('data-pixel-restart needs Scene restart_action');
+    listen(button, 'click', () => {
+      unlockAudio();
+      clear();
+      game.invoke(action);
+      canvas.focus({ preventScroll: true });
     });
   }
   for (const button of Array.from(document.querySelectorAll('[data-pixel-mute]'))) {
@@ -141,6 +165,7 @@ export function mount(
     advance: () => { clear(); if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance'); else start(); },
     fullscreen: () => { void fullscreen.toggle().catch(() => {}); },
     interact: unlockAudio, lockedMouse: true, advanceInputs: ['fire', 'use'], expanded: fullscreen.expanded,
+    tapToAdvance: game.config.clickToStart,
   }) : undefined;
   const mappedStyle = mapped ? document.createElement('style') : undefined;
   if (mappedStyle) { mappedStyle.textContent = STYLE; document.head.append(mappedStyle); surface.classList.add('rune-pixel3d-surface'); }
@@ -149,6 +174,7 @@ export function mount(
     paused: () => game.paused,
     interact: () => { lastTouchAt = Date.now(); unlockAudio(); },
     advance: () => {
+      if (game.config.clickToStart === false && game.app.state.status !== 'playing') return;
       clear();
       if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance');
       else start();
@@ -176,7 +202,7 @@ export function mount(
     if (event.button === 0) mouseFire = false;
   }) as EventListener);
   listen(document, 'pointerlockchange', () => {
-    if (document.pointerLockElement !== canvas) {
+    if (!game.paused && document.pointerLockElement !== canvas) {
       // The browser queues this event: keep keys pressed after Escape intact.
       mouseFire = false;
       pendingFire = false;
@@ -191,6 +217,7 @@ export function mount(
     unlockAudio();
     canvas.focus();
     if (game.app.state.status !== 'playing') {
+      if (game.config.clickToStart === false) return;
       if (game.app.state.status === 'title' || game.app.state.status === 'story') {
         game.invoke('advance');
         return;
@@ -292,10 +319,42 @@ export function mount(
     context.putImageData(image, 0, 0);
 
     const state = game.app.state as Record<string, any>;
+    for (const element of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-paused]'))) {
+      element.hidden = !game.paused || state.status !== 'playing';
+    }
+    for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-pause]'))) {
+      button.textContent = game.paused ? 'Resume / P' : 'Pause / P';
+    }
+    for (const element of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-text], [data-pixel-disabled], [data-pixel-selected], [data-pixel-hidden]'))) {
+      const resolve = (path: string) => path.split('.').reduce((v, key) => v?.[key], state);
+      if (element.dataset.pixelText) {
+        const value = resolve(element.dataset.pixelText);
+        if (value === undefined) throw new Error(`Unknown data-pixel-text state: ${element.dataset.pixelText}`);
+        const text = String(value);
+        if (element.textContent !== text) element.textContent = text;
+      }
+      if (element.dataset.pixelDisabled && element instanceof HTMLButtonElement) {
+        const value = resolve(element.dataset.pixelDisabled);
+        if (typeof value !== 'boolean') throw new Error('data-pixel-disabled must reference boolean state');
+        element.disabled = value;
+      }
+      if (element.dataset.pixelSelected) {
+        const value = resolve(element.dataset.pixelSelected);
+        if (typeof value !== 'boolean') throw new Error('data-pixel-selected must reference boolean state');
+        element.setAttribute('aria-pressed', String(value));
+      }
+      if (element.dataset.pixelHidden) {
+        const value = resolve(element.dataset.pixelHidden);
+        if (typeof value !== 'boolean') throw new Error('data-pixel-hidden must reference boolean state');
+        element.hidden = value;
+      }
+    }
     const announce = document.querySelector<HTMLElement>('[data-pixel-status]');
     if (announce) {
       const status = game.paused
         ? 'Paused — tap Resume or press P'
+        : game.config.presentation
+        ? `${game.config.presentation.title} — ${game.config.ui ? state[game.config.ui].prompt : state.message || game.config.presentation.objective}${game.saveStatus ? ` — Progress: ${game.saveStatus}` : ''}`
         : state.status === 'title'
         ? 'Vect Breach — Tap/click the game or press Enter/Space to commence mission.'
         : state.status === 'story'
@@ -313,7 +372,7 @@ export function mount(
         announce.textContent = status;
       }
     }
-    if (state.status !== 'playing' && document.pointerLockElement === canvas) {
+    if ((state.status !== 'playing' || game.paused) && document.pointerLockElement === canvas) {
       document.exitPointerLock?.();
     }
 
@@ -338,4 +397,3 @@ export function mount(
   listen(window, 'pagehide', dispose);
   return dispose;
 }
-

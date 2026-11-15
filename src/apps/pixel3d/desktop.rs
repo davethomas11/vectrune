@@ -155,7 +155,9 @@ impl Host {
             .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))
         })?;
 
-        if let Ok(state) = serde_json::from_str::<RenderState>(&state_json) {
+        {
+            let state = serde_json::from_str::<RenderState>(&state_json)
+                .context("Invalid pixel-3d render state")?;
             if let Some(map_name) = &state.level_map {
                 if map_name != &self.current_map_name {
                     if let Some(new_map) = self.maps.get(map_name) {
@@ -479,9 +481,10 @@ pub fn run(game: &Game3D, fullscreen: bool, frame_limit: Option<u64>) -> Result<
         .unwrap_or(true);
 
     // Build Rasterizer3D
-    let tex_map: HashMap<String, Texture> =
-        serde_json::from_value(game.config.get("textures").cloned().unwrap_or_default())
-            .unwrap_or_default();
+    // Keep indices in the same sorted order as the compiled JSON and web renderer.
+    let tex_map: std::collections::BTreeMap<String, Texture> =
+        serde_json::from_value(game.config["textures"].clone())
+            .context("Invalid pixel-3d textures")?;
     let textures: Vec<Texture> = tex_map.into_values().collect();
 
     let sprites: HashMap<String, Sprite> =
@@ -495,7 +498,9 @@ pub fn run(game: &Game3D, fullscreen: bool, frame_limit: Option<u64>) -> Result<
         serde_json::from_value(game.config.get("maps").cloned().unwrap_or_default())
             .unwrap_or_default();
 
-    let rasterizer = Rasterizer3D::new(game.width, game.height, 66.0, textures, sprites, map);
+    let mut rasterizer = Rasterizer3D::new(game.width, game.height, 66.0, textures, sprites, map);
+    rasterizer.models = serde_json::from_value(game.config["models"].clone())
+        .context("Invalid pixel-3d models")?;
 
     let controls: bool = context.with(|ctx| ctx.eval("Boolean(__RunePixel.controls)"))?;
     let wants_gamepads: bool = context.with(|ctx| ctx.eval("Boolean(__RunePixel.controls && Object.keys(__RunePixel.controls.profile.gamepad).length)"))?;

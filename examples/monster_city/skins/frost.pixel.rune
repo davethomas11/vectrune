@@ -1,5 +1,23 @@
 @Palette/frost
-colors = {".":"transparent","d":"#182b36","g":"#3d6d9e","G":"#80cae8","h":"#e9f8ff","b":"#c8cc91","e":"#ffe9a9","k":"#16242d","r":"#d8876e","s":"#b9e8ed","w":"#eccf9a","a":"#566c7e","c":"#8c9ca0","n":"#3d5266","o":"#9c705d","t":"#526c4e","l":"#a8b97b"}
+colors = {
+    ".": "transparent",
+    "G": "#80cae8",
+    "a": "#566c7e",
+    "b": "#c8cc91",
+    "c": "#8c9ca0",
+    "d": "#182b36",
+    "e": "#ffe9a9",
+    "g": "#3d6d9e",
+    "h": "#e9f8ff",
+    "k": "#16242d",
+    "l": "#a8b97b",
+    "n": "#3d5266",
+    "o": "#9c705d",
+    "r": "#d8876e",
+    "s": "#b9e8ed",
+    "t": "#526c4e",
+    "w": "#eccf9a"
+}
 
 @Sprite/frost/idle
 palette = frost

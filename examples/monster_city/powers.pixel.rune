@@ -1,6 +1,16 @@
 # Power supplies and effects share both presentation hosts.
 @Palette/powers
-colors = {".":"transparent","d":"#263b56","c":"#50d9ed","w":"#f3ffff","b":"#288bbd","g":"#b5ef77","y":"#ffd679","o":"#ba7849","p":"#bb99f2"}
+colors = {
+    ".": "transparent",
+    "b": "#288bbd",
+    "c": "#50d9ed",
+    "d": "#263b56",
+    "g": "#b5ef77",
+    "o": "#ba7849",
+    "p": "#bb99f2",
+    "w": "#f3ffff",
+    "y": "#ffd679"
+}
 
 @Sprite/supply/parachute
 palette = powers
