@@ -1,0 +1,38 @@
+#!RUNE
+import "app.rune"
+
+@Test/Health
+run:
+    req = { method: "GET", path: "/health" }
+    res = test-request req
+    assert res.status == 200
+    assert res.text == "OK"
+
+@Test/PathParameter
+run:
+    req = { method: "GET", path: "/greetings/Ada" }
+    res = test-request req
+    assert res.status == 200
+    assert res.body.name == "Ada"
+
+@Test/ValidGreeting
+run:
+    req = { method: "POST", path: "/greetings", body: { name: "Ada", enthusiastic: true } }
+    res = test-request req
+    assert res.status == 201
+    assert res.body.name == "Ada"
+    assert res.body.enthusiastic == true
+
+@Test/MissingField
+run:
+    req = { method: "POST", path: "/greetings", body: { name: "Ada" } }
+    res = test-request req
+    assert res.status == 400
+    assert res.text contains "enthusiastic"
+
+@Test/WrongType
+run:
+    req = { method: "POST", path: "/greetings", body: { name: "Ada", enthusiastic: "yes" } }
+    res = test-request req
+    assert res.status == 400
+    assert res.text contains "type mismatch"

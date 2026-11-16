@@ -267,6 +267,35 @@ pages:
       - src/rune_parser.rs
     status: verified
 references:
+  - id: reference.library
+    path: reference/library.json
+    kind: structured-reference
+    title: Language and Library Reference
+    audience:
+      - human
+      - ai
+      - docs-generator
+    sources:
+      - src/builtins.rs
+      - src/apps/
+      - src/main.rs
+      - runtime/rune-web/src/
+      - teaching_website/reference_inventory.py
+  - id: reference.api-docs
+    path: reference/api-docs.json
+    kind: structured-reference
+    title: API Guides
+    audience:
+      - human
+      - ai
+      - docs-generator
+    sources:
+      - src/apps/rest/
+      - src/apps/graphql/
+      - src/core/mod.rs
+      - src/builtins/builtin/
+      - teaching_website/content/docs/
+      - teaching_website/build_api_docs.py
   - id: reference.builtins
     path: reference/builtins.yaml
     kind: structured-reference
@@ -329,5 +358,6 @@ policies:
   rendered_docs_root: language/docs/
   primary_instruction_file: .github/copilot-instructions.md
 notes:
+  - The technical reference at /docs/ is built from reference/library.json and source command inventories; reference/api-docs.json supplies supporting guides.
   - Add new entries here when new knowledge pages or structured reference files are added.
   - Prefer updating existing concept pages over creating many overlapping docs.

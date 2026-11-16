@@ -22,6 +22,8 @@ It is intended to support two downstream consumers:
 - `runtime/` — CLI and execution behavior
 - `examples/` — curated teaching examples and example guidance
 - `reference/` — structured reference files for builtins, app types, runtime context, and related concepts
+- `reference/library.json` — technical dictionary of functions, syntax, declarations, configuration, and runtime behavior; native builtin coverage is checked and frontend commands/CLI help are extracted during the docs build
+- `reference/api-docs.json` — supporting API guides rendered alongside the technical reference by `teaching_website/build_api_docs.py`; examples are included from runnable source files
 
 ## Strategy and backlog ownership
 

@@ -1,0 +1,3967 @@
+{
+  "status": "alpha",
+  "categories": [
+    {
+      "id": "language",
+      "title": "Language and documents",
+      "description": "Document syntax, values, control flow, imports, and script execution."
+    },
+    {
+      "id": "native",
+      "title": "Native functions",
+      "description": "Builtins dispatched by the Rust server and native execution context."
+    },
+    {
+      "id": "collections",
+      "title": "Native collection methods",
+      "description": "Collection methods available on arrays in native request contexts."
+    },
+    {
+      "id": "declarations",
+      "title": "Application declarations",
+      "description": "Named sections consumed by the app routers and Rune-Web compiler."
+    },
+    {
+      "id": "web",
+      "title": "Rune-Web commands",
+      "description": "Commands registered in the frontend command dispatcher."
+    },
+    {
+      "id": "expressions",
+      "title": "Frontend expressions",
+      "description": "Math, random, spatial, storage, and voxel expression helpers."
+    },
+    {
+      "id": "host",
+      "title": "Browser and host APIs",
+      "description": "Storage, audio, downloads, clipboard, fullscreen, and particle operations."
+    },
+    {
+      "id": "games",
+      "title": "Pixel and 3D configuration",
+      "description": "Scene, map, asset, camera, model, and control configuration."
+    },
+    {
+      "id": "testing",
+      "title": "Testing",
+      "description": "Native request tests and headless frontend logic testing."
+    },
+    {
+      "id": "cli",
+      "title": "Command-line interface",
+      "description": "Commands and flags read from the current compiler help."
+    },
+    {
+      "id": "environment",
+      "title": "Runtime context and environment",
+      "description": "Request context, shared memory, and environment configuration."
+    }
+  ],
+  "entries": [
+    {
+      "id": "log",
+      "category": "native",
+      "name": "log",
+      "signature": "log <message...>",
+      "summary": "Expand {expression} placeholders using the current execution context and write the message to the logger.",
+      "sources": [
+        "src/builtins/builtin/logger.rs"
+      ],
+      "returns": "Stores the expanded message in ___last_exec_result___. Unknown placeholders remain unchanged.",
+      "errors": "",
+      "example": "log \"Fetching user {id}\"",
+      "parameters": [
+        {
+          "name": "message",
+          "description": "One or more message tokens; quoted text may contain spaces."
+        }
+      ],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "respond",
+      "category": "native",
+      "name": "respond",
+      "signature": "respond [status] [value...]",
+      "summary": "Finish the current request with an HTTP status and response body.",
+      "sources": [
+        "src/builtins/builtin/respond.rs"
+      ],
+      "returns": "HTTP response. Context objects are serialized as JSON text. The native REST handler uses a text/plain response body.",
+      "errors": "",
+      "example": "respond 201 body",
+      "parameters": [
+        {
+          "name": "status",
+          "description": "HTTP status integer; defaults to 200 if absent or not parseable."
+        },
+        {
+          "name": "value",
+          "description": "A context variable name or literal text; defaults to OK."
+        }
+      ],
+      "aliases": [],
+      "notes": [
+        "The OpenAPI generator does not infer every response status from these statements."
+      ],
+      "fields": []
+    },
+    {
+      "id": "parse-json",
+      "category": "native",
+      "name": "parse-json",
+      "signature": "[result =] parse-json [source]",
+      "summary": "Parse a JSON string stored in the request context.",
+      "sources": [
+        "src/builtins/builtin/parse_json.rs"
+      ],
+      "returns": "Writes parsed JSON to the assignment target, or body when unassigned, and ___last_exec_result___.",
+      "errors": "Malformed JSON raises a builtin error (HTTP 500 in a native REST request). A missing or non-string source leaves the context unchanged.",
+      "example": "payload = parse-json body",
+      "parameters": [
+        {
+          "name": "source",
+          "description": "Context variable containing a JSON string; defaults to body."
+        }
+      ],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "validate",
+      "category": "native",
+      "name": "validate",
+      "signature": "validate <value> #<Schema>\nvalidate <left> <operator> <right> \"message\"",
+      "summary": "Validate required scalar fields against a named schema, or check a comparison.",
+      "sources": [
+        "src/builtins/builtin/validate.rs"
+      ],
+      "returns": "Schema form stores the validated value in ___last_exec_result___. Validation failures finish the request with HTTP 400.",
+      "errors": "Missing field, type mismatch, or unknown schema/value. Additional properties are accepted; nested/optional schema validation is not implemented by this path.",
+      "example": "parse-json\nvalidate body #Greeting",
+      "parameters": [
+        {
+          "name": "value",
+          "description": "Context variable to validate."
+        },
+        {
+          "name": "Schema",
+          "description": "An @Schema name; supported scalar field types are string, number, bool."
+        }
+      ],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "csv-read",
+      "category": "native",
+      "name": "csv.read",
+      "signature": "rows = csv.read <filename>",
+      "summary": "Read CSV records. Relative file resolution uses the app/script path and filesystem candidates.",
+      "sources": [
+        "src/builtins/builtin/csv.rs"
+      ],
+      "returns": "Array of objects whose CSV field values are strings. Writes the assigned variable and ___last_exec_result___.",
+      "errors": "Missing filename is an error. An unreadable file logs a warning and assigns an empty array.",
+      "example": "users = csv.read \"users.csv\"",
+      "parameters": [
+        {
+          "name": "filename",
+          "description": "Filesystem path."
+        },
+        {
+          "name": "result",
+          "description": "Context data or assignment target, as shown in the signature."
+        }
+      ],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "csv-write",
+      "category": "native",
+      "name": "csv.write",
+      "signature": "csv.write <filename> <rows>",
+      "summary": "Replace a CSV file with records. Relative file resolution uses the app/script path and filesystem candidates.",
+      "sources": [
+        "src/builtins/builtin/csv.rs"
+      ],
+      "returns": "Writes a header from the first object and rows from the supplied context array.",
+      "errors": "Missing/non-array variable and write failures are errors. Values are written through their string representation path; do not assume JSON numeric values are preserved.",
+      "example": "csv.write \"users.csv\" users",
+      "parameters": [
+        {
+          "name": "filename",
+          "description": "Filesystem path."
+        },
+        {
+          "name": "rows",
+          "description": "Context data or assignment target, as shown in the signature."
+        }
+      ],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "csv-append",
+      "category": "native",
+      "name": "csv.append",
+      "signature": "csv.append <filename> <record>",
+      "summary": "Append a record to a CSV file. Relative file resolution uses the app/script path and filesystem candidates.",
+      "sources": [
+        "src/builtins/builtin/csv.rs"
+      ],
+      "returns": "Appends the context object to the target CSV file.",
+      "errors": "Requires filename and record; invalid data or file writes can fail.",
+      "example": "csv.append \"users.csv\" body",
+      "parameters": [
+        {
+          "name": "filename",
+          "description": "Filesystem path."
+        },
+        {
+          "name": "record",
+          "description": "Context data or assignment target, as shown in the signature."
+        }
+      ],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "json-read",
+      "category": "native",
+      "name": "json.read",
+      "signature": "result = json.read <filename>",
+      "summary": "Read a JSON file and parse its contents.",
+      "sources": [
+        "src/builtins/builtin/json.rs"
+      ],
+      "returns": "Parsed JSON is written to the assignment target and ___last_exec_result___.",
+      "errors": "Requires a filename and assignment target. File-read and JSON-parse failures return builtin errors.",
+      "example": "settings = json.read \"settings.json\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "load-rune",
+      "category": "native",
+      "name": "load-rune",
+      "signature": "result = load-rune <path> [as xml]",
+      "summary": "Load a Rune file or directory, resolving its top-level imports before parsing.",
+      "sources": [
+        "src/builtins.rs"
+      ],
+      "returns": "Document data in JSON form by default, or an XML string when as xml is supplied.",
+      "errors": "Requires a path; loading/parsing failure is an error. The explicit conversion form supports xml.",
+      "example": "document = load-rune \"shared.rune\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "datasource",
+      "category": "native",
+      "name": "datasource",
+      "signature": "[result =] datasource <action> <Schema> <operation arguments...>",
+      "summary": "Dispatch a schema-based database operation through a configured native MySQL or PostgreSQL source.",
+      "sources": [
+        "src/builtins/builtin/data_source.rs"
+      ],
+      "returns": "Operation-dependent result or side effect. Supported actions: create_table, fetch_all, fetch, insert, update, delete.",
+      "errors": "Unknown source, missing connection/type, unsupported connection type, and database/query failures.",
+      "example": "datasource create_table User in Users\ndatasource fetch_all User from Users into data",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Requires a native build and a reachable configured database. This entrypoint is a schema-operation dispatcher, not an arbitrary SQL query builtin."
+      ],
+      "fields": []
+    },
+    {
+      "id": "memory-set",
+      "category": "native",
+      "name": "memory.set",
+      "signature": "memory.set <key> [value]",
+      "summary": "Store a value in the process memory backend.",
+      "sources": [
+        "src/builtins/builtin/memory.rs"
+      ],
+      "returns": "Uses an exact context-variable lookup for value; otherwise stores literal text. If omitted, value uses the key token.",
+      "errors": "Missing key is a builtin error.",
+      "example": "memory.set \"user\" body",
+      "parameters": [],
+      "aliases": [
+        "set-memory"
+      ],
+      "notes": [
+        "The implemented VECTRUNE_MEMORY_BACKEND is memory. State is process-local and is lost on restart."
+      ],
+      "fields": []
+    },
+    {
+      "id": "memory-get",
+      "category": "native",
+      "name": "memory.get",
+      "signature": "result = memory.get <key>",
+      "summary": "Read a value from the process memory backend.",
+      "sources": [
+        "src/builtins/builtin/memory.rs"
+      ],
+      "returns": "Assigns the stored JSON value and ___last_exec_result___ when found. A missing key logs a warning and leaves the context unchanged; it does not assign null.",
+      "errors": "Missing key is a builtin error.",
+      "example": "user = memory.get \"user\"",
+      "parameters": [],
+      "aliases": [
+        "get-memory"
+      ],
+      "notes": [
+        "The implemented VECTRUNE_MEMORY_BACKEND is memory. State is process-local and is lost on restart."
+      ],
+      "fields": []
+    },
+    {
+      "id": "memory-del",
+      "category": "native",
+      "name": "memory.del",
+      "signature": "memory.del <key>",
+      "summary": "Delete a key from the process memory backend.",
+      "sources": [
+        "src/builtins/builtin/memory.rs"
+      ],
+      "returns": "Removes the key; no assigned result.",
+      "errors": "Missing key is a builtin error.",
+      "example": "memory.del \"user\"",
+      "parameters": [],
+      "aliases": [
+        "del-memory"
+      ],
+      "notes": [
+        "The implemented VECTRUNE_MEMORY_BACKEND is memory. State is process-local and is lost on restart."
+      ],
+      "fields": []
+    },
+    {
+      "id": "memory-clear",
+      "category": "native",
+      "name": "memory.clear",
+      "signature": "memory.clear",
+      "summary": "Remove all keys from the process memory backend.",
+      "sources": [
+        "src/builtins/builtin/memory.rs"
+      ],
+      "returns": "Clears the shared backend, not only the current request context.",
+      "errors": "",
+      "example": "memory.clear",
+      "parameters": [],
+      "aliases": [
+        "clear-memory"
+      ],
+      "notes": [
+        "The implemented VECTRUNE_MEMORY_BACKEND is memory. State is process-local and is lost on restart."
+      ],
+      "fields": []
+    },
+    {
+      "id": "append",
+      "category": "native",
+      "name": "append",
+      "signature": "[result =] append <array-path> <value>",
+      "summary": "Append a resolved value to an array in the execution context.",
+      "sources": [
+        "src/builtins/builtin/commands.rs"
+      ],
+      "returns": "Mutates the context array; an assignment target receives the updated value. Nested object paths are supported by this builtin.",
+      "errors": "Missing/non-array targets and invalid nested paths can fail.",
+      "example": "append users body",
+      "parameters": [],
+      "aliases": [
+        "memory.append"
+      ],
+      "notes": [
+        "memory.append is a dispatcher alias for append. It is not a separate atomic operation that fetches a backend key; load and store shared state explicitly."
+      ],
+      "fields": []
+    },
+    {
+      "id": "delete",
+      "category": "native",
+      "name": "delete",
+      "signature": "delete <path>",
+      "summary": "Delete a top-level context variable or nested object property.",
+      "sources": [
+        "src/builtins/builtin/context_ops.rs"
+      ],
+      "returns": "Mutates the current context. Missing targets are ignored.",
+      "errors": "Missing path is a builtin error.",
+      "example": "delete state.players.[id]",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "is-set",
+      "category": "native",
+      "name": "is-set",
+      "signature": "result = is-set <path>",
+      "summary": "Check whether a variable or resolved path exists in the execution context.",
+      "sources": [
+        "src/builtins/builtin/context_ops.rs"
+      ],
+      "returns": "Boolean. An existing null value still counts as present.",
+      "errors": "Missing path is a builtin error.",
+      "example": "exists = is-set body.name",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "func",
+      "category": "native",
+      "name": "func",
+      "signature": "func <name> <step>; <step>; ...",
+      "summary": "Register a sequence of semicolon-separated native steps in the current context.",
+      "sources": [
+        "src/builtins/builtin/function.rs"
+      ],
+      "returns": "Stores steps under func:<name>. Invocations expose positional arguments as $1, $2, ... and copy non-positional context values back to the caller.",
+      "errors": "Missing function name is a builtin error.",
+      "example": "func greet log \"hello\"; respond 200 \"OK\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "This native func facility differs from Rune-Web action declarations."
+      ],
+      "fields": []
+    },
+    {
+      "id": "to-number",
+      "category": "native",
+      "name": "to-number",
+      "signature": "result = to-number <value>",
+      "summary": "Convert a resolved number, numeric string, or boolean to a number.",
+      "sources": [
+        "src/builtins/builtin/coercion.rs"
+      ],
+      "returns": "A JSON number, or null for an unsupported/unparseable value. Booleans map to 1 and 0.",
+      "errors": "",
+      "example": "value = to-number id",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "to-string",
+      "category": "native",
+      "name": "to-string",
+      "signature": "result = to-string [value]",
+      "summary": "Convert a context value or literal token to a string.",
+      "sources": [
+        "src/builtins/builtin/coercion.rs"
+      ],
+      "returns": "Existing strings are preserved; other JSON values are serialized. No argument produces an empty string.",
+      "errors": "",
+      "example": "text = to-string body",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "to-bool",
+      "category": "native",
+      "name": "to-bool",
+      "signature": "result = to-bool [value]",
+      "summary": "Convert a context value to a boolean.",
+      "sources": [
+        "src/builtins/builtin/coercion.rs"
+      ],
+      "returns": "Strings are true only for case-insensitive true or exactly 1. Numbers are true when nonzero; null is false; objects and arrays are true. No argument is false.",
+      "errors": "",
+      "example": "enabled = to-bool input",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "uuid-v4",
+      "category": "native",
+      "name": "uuid.v4",
+      "signature": "result = uuid.v4",
+      "summary": "Generate a random version 4 UUID.",
+      "sources": [
+        "src/builtins/builtin/coercion.rs"
+      ],
+      "returns": "Hyphenated UUID string.",
+      "errors": "",
+      "example": "id = uuid.v4",
+      "parameters": [],
+      "aliases": [
+        "uuid"
+      ],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "now",
+      "category": "native",
+      "name": "now",
+      "signature": "result = now [format]",
+      "summary": "Read the current UTC time.",
+      "sources": [
+        "src/builtins/builtin/coercion.rs"
+      ],
+      "returns": "Default: RFC 3339 string. millis: Unix milliseconds. unix or seconds: Unix seconds.",
+      "errors": "",
+      "example": "timestamp = now millis",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "summarize",
+      "category": "native",
+      "name": "summarize",
+      "signature": "result = summarize <records> by <group-path> [<metric> <value-path>]",
+      "summary": "Group records into an ordered, non-mutating report.",
+      "sources": [
+        "src/builtins/builtin/summarize.rs"
+      ],
+      "returns": "Array of groups in first-occurrence order, with counts and the requested metric. Missing group fields join the null group.",
+      "errors": "Invalid syntax, non-array input, unsupported metrics, invalid paths, and non-numeric metric values can fail.",
+      "example": "report = summarize sales by region sum amount",
+      "parameters": [
+        {
+          "name": "metric",
+          "description": "sum, avg, min, max, median, distinct, first, or last. Omit for counts."
+        }
+      ],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "ws-id",
+      "category": "native",
+      "name": "ws.id",
+      "signature": "id = ws.id",
+      "summary": "Read the identifier of the current WebSocket connection.",
+      "sources": [
+        "src/builtins/builtin/ws.rs"
+      ],
+      "returns": "Connection ID string, or null outside a connection context.",
+      "errors": "",
+      "example": "id = ws.id",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Native server operation; unavailable in a wasm32 build of the Rust dispatcher."
+      ],
+      "fields": []
+    },
+    {
+      "id": "ws-send",
+      "category": "native",
+      "name": "ws.send",
+      "signature": "ws.send <path> <connection-id> <message...>",
+      "summary": "Send a message to one WebSocket connection.",
+      "sources": [
+        "src/builtins/builtin/ws.rs"
+      ],
+      "returns": "Queues a message in the process-local connection registry.",
+      "errors": "Requires a path, connection ID, and message.",
+      "example": "ws.send /chat id body",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Native server operation; unavailable in a wasm32 build of the Rust dispatcher."
+      ],
+      "fields": []
+    },
+    {
+      "id": "ws-broadcast",
+      "category": "native",
+      "name": "ws.broadcast",
+      "signature": "ws.broadcast <path> <message...>",
+      "summary": "Broadcast a message to connections registered on a WebSocket path.",
+      "sources": [
+        "src/builtins/builtin/ws.rs"
+      ],
+      "returns": "Queues the message for connections on the supplied path.",
+      "errors": "Requires a path and message.",
+      "example": "ws.broadcast /chat body",
+      "parameters": [],
+      "aliases": [
+        "broadcast-websocket"
+      ],
+      "notes": [
+        "Native server operation; unavailable in a wasm32 build of the Rust dispatcher."
+      ],
+      "fields": []
+    },
+    {
+      "id": "return",
+      "category": "language",
+      "name": "return",
+      "signature": "return <value>",
+      "summary": "Finish a native resolver or step sequence with a resolved value.",
+      "sources": [
+        "src/builtins.rs"
+      ],
+      "returns": "The native dispatcher resolves the argument and returns it with success status; GraphQL resolver handling uses that result.",
+      "errors": "",
+      "example": "return result",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "array-find",
+      "category": "collections",
+      "name": "array.find",
+      "signature": "result = <array>.find <left> <comparison> <right>",
+      "summary": "Find the first element satisfying a native comparison.",
+      "sources": [
+        "src/builtins.rs"
+      ],
+      "returns": "First matching JSON value, or null. it refers to the current element.",
+      "errors": "The native method requires a supported comparison rather than an arbitrary callback.",
+      "example": "user = users.find it.id == id",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "array-find-index",
+      "category": "collections",
+      "name": "array.find-index",
+      "signature": "index = <array>.find-index <left> <comparison> <right>",
+      "summary": "Find the index of the first matching native array element.",
+      "sources": [
+        "src/builtins.rs"
+      ],
+      "returns": "Zero-based index, or -1 when no match is found.",
+      "errors": "",
+      "example": "index = users.find-index it.id == id",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "array-max",
+      "category": "collections",
+      "name": "array.max",
+      "signature": "result = <array>.max [it.<field>]",
+      "summary": "Compute the maximum numeric element or selected object field.",
+      "sources": [
+        "src/builtins.rs"
+      ],
+      "returns": "Maximum number; an empty array returns 0. Non-numeric selected values contribute 0.",
+      "errors": "",
+      "example": "last_id = users.max it.id",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "array-remove",
+      "category": "collections",
+      "name": "array.remove",
+      "signature": "<array>.remove <index>",
+      "summary": "Remove one element by zero-based index.",
+      "sources": [
+        "src/builtins.rs"
+      ],
+      "returns": "Mutates the context array. Negative and out-of-range indices are ignored.",
+      "errors": "Missing index is a builtin error.",
+      "example": "users.remove index",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "import",
+      "category": "language",
+      "name": "import",
+      "signature": "import \"path.rune\" | import \"directory\"",
+      "summary": "Load top-level Rune imports before parsing the final document.",
+      "sources": [
+        "src/rune_parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "import \"parts\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Directories load Rune source files; import-cycle and missing-file diagnostics are handled by the loader."
+      ],
+      "fields": []
+    },
+    {
+      "id": "section",
+      "category": "language",
+      "name": "section",
+      "signature": "@Name[/path...]",
+      "summary": "Create a hierarchical named section. Section names select runtime behavior when recognized by an app; arbitrary sections can hold user data.",
+      "sources": [
+        "src/rune_parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Schema/User\nname = string",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "value",
+      "category": "language",
+      "name": "value",
+      "signature": "key = value",
+      "summary": "Declare a scalar or structured value in a section. Runtime expressions and declaration literals are parsed by different layers.",
+      "sources": [
+        "src/rune_ast.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "name = Example\nenabled = true\nsize = [320, 200]",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "record",
+      "category": "language",
+      "name": "record",
+      "signature": "+ key = value",
+      "summary": "Start a record; subsequent indented properties extend that record.",
+      "sources": [
+        "src/rune_parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Data/People\n+ name = Ada\n  role = developer",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "series",
+      "category": "language",
+      "name": "series",
+      "signature": "name:\n    item",
+      "summary": "Declare an ordered series. Executable run blocks and declarative data series share this document shape.",
+      "sources": [
+        "src/rune_parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "run:\n    log \"hello\"\n    respond 200 \"OK\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "if",
+      "category": "language",
+      "name": "if",
+      "signature": "if condition:\n    statement",
+      "summary": "Execute an indented conditional block.",
+      "sources": [
+        "src/core/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "if user == null:\n    respond 404 \"Not found\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Frontend actions also support conditionals, interpreted by the Rune-Web runtime."
+      ],
+      "fields": []
+    },
+    {
+      "id": "path-lookup",
+      "category": "language",
+      "name": "path lookup",
+      "signature": "root.field | root.[key] | array[index]",
+      "summary": "Resolve dotted or bracketed paths against the current context.",
+      "sources": [
+        "src/core/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "user = users.find it.id == id",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Path resolution differs between builtins; see the per-function entry for argument lookup behavior."
+      ],
+      "fields": []
+    },
+    {
+      "id": "comment",
+      "category": "language",
+      "name": "comment",
+      "signature": "# comment",
+      "summary": "Add a comment to Rune source. A shebang-like #!RUNE header identifies a document.",
+      "sources": [
+        "src/rune_parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "#!RUNE\n# A comment",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "vect",
+      "category": "language",
+      "name": ".vect",
+      "signature": ".vect scripts",
+      "summary": "Run imperative script syntax through the shared execution intermediate representation.",
+      "sources": [
+        "src/cli/vect.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "vectrune examples/vect/",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "The script engine supports actions, for/while loops, break/continue, return, input, print, and builtin statements. This does not imply every form is accepted in native REST run series."
+      ],
+      "fields": []
+    },
+    {
+      "id": "vectrune",
+      "category": "language",
+      "name": ".vectrune",
+      "signature": ".vectrune scripts",
+      "summary": "Compile English-style workflow definitions into the execution engine.",
+      "sources": [
+        "src/vectrune/compiler.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "vectrune examples/vectrune/",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "frontend-action",
+      "category": "language",
+      "name": "frontend action",
+      "signature": "action name(parameters):\n    statement",
+      "summary": "Declare an action in a Rune-Web @Logic or component scope.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "action add(value):\n    total += value",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "frontend-when",
+      "category": "language",
+      "name": "frontend when",
+      "signature": "<command> when <condition>",
+      "summary": "Run a registered frontend command only when its trailing condition evaluates true.",
+      "sources": [
+        "runtime/rune-web/src/builtins/index.ts"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "score++ when playing",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "frontend-loops",
+      "category": "language",
+      "name": "frontend loops",
+      "signature": "for item in collection:\n    statement",
+      "summary": "Iterate a collection in frontend action logic or view templates.",
+      "sources": [
+        "runtime/rune-web/src/logic.ts"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "for enemy in enemies:\n    enemy.x += 1",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "frontend-match",
+      "category": "language",
+      "name": "frontend match",
+      "signature": "match expression:\n    \"value\" -> Component",
+      "summary": "Select a Rune-Web view branch by an expression.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "match activePage:\n    \"home\" -> HomeContent",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "frontend-bindings",
+      "category": "language",
+      "name": "frontend bindings",
+      "signature": "value <-> state.path",
+      "summary": "Bind a frontend input or selection to reactive state.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "input type=text value <-> name",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "frontend-interpolation",
+      "category": "language",
+      "name": "frontend interpolation",
+      "signature": "\"{expression}\"",
+      "summary": "Insert an expression into frontend text or attributes.",
+      "sources": [
+        "runtime/rune-web/src/interpolation.ts"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "p \"Hello {name}\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "frontend-replication",
+      "category": "language",
+      "name": "frontend replication",
+      "signature": "count * { template } | grid(rows, columns, template)",
+      "summary": "Generate repeated state values from templates.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "items = 3 * { alive: true }",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "app",
+      "category": "declarations",
+      "name": "@App",
+      "signature": "@App",
+      "summary": "Select an application runtime and its serving or presentation configuration.",
+      "sources": [
+        "src/apps/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@App\nname = Example\ntype = REST\nport = 3000",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "type",
+          "type": "string",
+          "default": "REST",
+          "description": "REST, GraphQL, STATIC, DYNAMIC-AI-WEB, PIXEL, or PIXEL-3D; dispatch is case-insensitive."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "default": "—",
+          "description": "Application display metadata."
+        },
+        {
+          "name": "port",
+          "type": "number",
+          "default": "3000",
+          "description": "HTTP port; can be overridden by --port."
+        },
+        {
+          "name": "host",
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "HTTP bind address; can be overridden by --host."
+        },
+        {
+          "name": "swagger",
+          "type": "bool",
+          "default": "false",
+          "description": "REST: serve /openapi.json and /swagger-ui."
+        },
+        {
+          "name": "scene",
+          "type": "string",
+          "default": "required for Pixel",
+          "description": "Entry @Scene name for game apps."
+        },
+        {
+          "name": "runtime",
+          "type": "string",
+          "default": "host-dependent",
+          "description": "Selects game host behavior, including hybrid examples."
+        },
+        {
+          "name": "resolution",
+          "type": "[width, height]",
+          "default": "required for Pixel",
+          "description": "Pixel rendering resolution."
+        },
+        {
+          "name": "tick_rate",
+          "type": "number",
+          "default": "30 in Pixel 3D",
+          "description": "Simulation ticks per second."
+        },
+        {
+          "name": "shell",
+          "type": "string",
+          "default": "—",
+          "description": "Optional Rune-Web @Page shell for Pixel 3D; must contain the game canvas."
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "default": "—",
+          "description": "Application metadata; does not select a versioned docs path."
+        }
+      ]
+    },
+    {
+      "id": "route",
+      "category": "declarations",
+      "name": "@Route",
+      "signature": "@Route/<METHOD> /path",
+      "summary": "Define an HTTP endpoint and its executable steps.",
+      "sources": [
+        "src/apps/rest/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Route/GET /health\nrun:\n    respond 200 \"OK\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "The REST router registers GET, POST, PUT, DELETE, and CRUD expansion. PATCH is not registered here."
+      ],
+      "fields": [
+        {
+          "name": "run",
+          "type": "series",
+          "default": "—",
+          "description": "Ordered native request steps."
+        },
+        {
+          "name": "expect",
+          "type": "schema name",
+          "default": "—",
+          "description": "POST/PUT OpenAPI request body metadata; does not run validation."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "default": "empty",
+          "description": "Description in generated OpenAPI."
+        },
+        {
+          "name": "auth",
+          "type": "string",
+          "default": "—",
+          "description": "Named @Authentication configuration."
+        },
+        {
+          "name": "schema",
+          "type": "string",
+          "default": "—",
+          "description": "Schema used by generated data-source CRUD handlers."
+        },
+        {
+          "name": "data_source",
+          "type": "string",
+          "default": "—",
+          "description": "Configured data source for generated handlers."
+        }
+      ]
+    },
+    {
+      "id": "schema",
+      "category": "declarations",
+      "name": "@Schema",
+      "signature": "@Schema/<name>",
+      "summary": "Declare object fields for validation, generated API schemas, and GraphQL types.",
+      "sources": [
+        "src/builtins/builtin/validate.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Schema/User\nname = string\nactive = bool",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Native scalar validation supports string, number, bool. Every declared field is required; extra properties are accepted."
+      ],
+      "fields": []
+    },
+    {
+      "id": "graphql",
+      "category": "declarations",
+      "name": "@GraphQL",
+      "signature": "@GraphQL/Query[/Type] | @GraphQL/Mutation[/Type]",
+      "summary": "Declare named resolver step series with typed arguments.",
+      "sources": [
+        "src/apps/graphql/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@GraphQL/Query/Greeting\ngreeting:\n    result = { message: \"Hello\" }\n    return result",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "websocket",
+      "category": "declarations",
+      "name": "@Websocket",
+      "signature": "@Websocket/<path>",
+      "summary": "Mount a WebSocket endpoint on a REST application.",
+      "sources": [
+        "src/apps/rest/ws.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Websocket/chat\non_message:\n    ws.broadcast /chat body",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "on_connect",
+          "type": "series",
+          "default": "—",
+          "description": "Run after connection registration."
+        },
+        {
+          "name": "on_message",
+          "type": "series",
+          "default": "—",
+          "description": "Handle generic incoming text."
+        },
+        {
+          "name": "on_disconnect",
+          "type": "series",
+          "default": "—",
+          "description": "Run when receiving ends, before removal."
+        }
+      ]
+    },
+    {
+      "id": "event",
+      "category": "declarations",
+      "name": "@Event",
+      "signature": "@Event/<socket-path>/<type>",
+      "summary": "Handle a structured WebSocket message selected by its JSON type property.",
+      "sources": [
+        "src/apps/rest/ws.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "authentication",
+      "category": "declarations",
+      "name": "@Authentication",
+      "signature": "@Authentication/<name>",
+      "summary": "Configure JWT-protected routes and an optional token endpoint.",
+      "sources": [
+        "src/apps/rest/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "This is a small JWT facility. Review the implementation and configure secrets explicitly before using it in a deployed service."
+      ],
+      "fields": [
+        {
+          "name": "secret",
+          "type": "string",
+          "default": "empty",
+          "description": "Signing/verification secret."
+        },
+        {
+          "name": "token_endpoint",
+          "type": "path",
+          "default": "—",
+          "description": "Optional endpoint issuing tokens."
+        },
+        {
+          "name": "token_credentials",
+          "type": "object",
+          "default": "—",
+          "description": "Expected username and password for HTTP Basic authentication at the token endpoint."
+        },
+        {
+          "name": "token_expiry",
+          "type": "number",
+          "default": "3600",
+          "description": "Token lifetime in seconds."
+        }
+      ]
+    },
+    {
+      "id": "datasource",
+      "category": "declarations",
+      "name": "@DataSource",
+      "signature": "@DataSource/<name>",
+      "summary": "Configure a native database adapter.",
+      "sources": [
+        "src/builtins/builtin/data_source.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "type",
+          "type": "string",
+          "default": "required",
+          "description": "mysql or postgres adapter."
+        },
+        {
+          "name": "connection",
+          "type": "string",
+          "default": "required",
+          "description": "Database connection string."
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "category": "declarations",
+      "name": "@Memory",
+      "signature": "@Memory[/key]",
+      "summary": "Seed shared state from section properties or records.",
+      "sources": [
+        "src/core/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Shared memory is process-local with the implemented memory backend; it is not persistent storage."
+      ],
+      "fields": []
+    },
+    {
+      "id": "frontend",
+      "category": "declarations",
+      "name": "@Frontend",
+      "signature": "@Frontend",
+      "summary": "Mount a static or Rune-Web frontend through REST hosting.",
+      "sources": [
+        "src/apps/rest/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "type",
+          "type": "string",
+          "default": "—",
+          "description": "static or rune-web."
+        },
+        {
+          "name": "src",
+          "type": "path",
+          "default": "—",
+          "description": "Static source directory."
+        },
+        {
+          "name": "path",
+          "type": "path",
+          "default": "/",
+          "description": "Frontend mount path; %ROOT% denotes root."
+        },
+        {
+          "name": "page",
+          "type": "string",
+          "default": "—",
+          "description": "Entry @Page for Rune-Web."
+        },
+        {
+          "name": "locale",
+          "type": "string",
+          "default": "—",
+          "description": "Default locale bundle."
+        },
+        {
+          "name": "locale_paths",
+          "type": "object",
+          "default": "—",
+          "description": "Locale-to-path-prefix map."
+        }
+      ]
+    },
+    {
+      "id": "page",
+      "category": "declarations",
+      "name": "@Page",
+      "signature": "@Page/<name>",
+      "summary": "Declare a Rune-Web page, or a descriptive generated page in a dynamic AI app.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "view",
+          "type": "view tree",
+          "default": "—",
+          "description": "Indented frontend elements and components."
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "default": "—",
+          "description": "Named @Style."
+        },
+        {
+          "name": "logic",
+          "type": "string",
+          "default": "—",
+          "description": "Named @Logic."
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "default": "—",
+          "description": "Page title metadata."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "default": "—",
+          "description": "Page description metadata."
+        },
+        {
+          "name": "state",
+          "type": "block",
+          "default": "—",
+          "description": "Initial page-local state."
+        }
+      ]
+    },
+    {
+      "id": "component",
+      "category": "declarations",
+      "name": "@Component",
+      "signature": "@Component/<name>",
+      "summary": "Declare a reusable frontend view with local scope.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "props: [name, subtitle?] marks subtitle optional; undeclared props do not undergo the required-prop check."
+      ],
+      "fields": [
+        {
+          "name": "props",
+          "type": "list",
+          "default": "—",
+          "description": "Expected property names."
+        },
+        {
+          "name": "state",
+          "type": "block",
+          "default": "—",
+          "description": "Component-local state."
+        },
+        {
+          "name": "bindings",
+          "type": "block",
+          "default": "—",
+          "description": "Selection and state bindings."
+        },
+        {
+          "name": "view",
+          "type": "view tree",
+          "default": "—",
+          "description": "Component markup."
+        }
+      ]
+    },
+    {
+      "id": "logic",
+      "category": "declarations",
+      "name": "@Logic",
+      "signature": "@Logic/<name>",
+      "summary": "Declare reactive state and actions for a frontend or game scene.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "state",
+          "type": "block",
+          "default": "—",
+          "description": "Initial reactive state."
+        },
+        {
+          "name": "action",
+          "type": "declarations",
+          "default": "—",
+          "description": "Named action bodies with optional parameters."
+        },
+        {
+          "name": "locals",
+          "type": "block",
+          "default": "—",
+          "description": "Template-local values not exported as public state."
+        },
+        {
+          "name": "derived",
+          "type": "block",
+          "default": "—",
+          "description": "Derived values evaluated from state using match definitions."
+        },
+        {
+          "name": "helper",
+          "type": "declarations",
+          "default": "—",
+          "description": "Pure helper expressions with named parameters."
+        },
+        {
+          "name": "timer",
+          "type": "declaration",
+          "default": "—",
+          "description": "Periodic action ticker such as tick 40ms."
+        },
+        {
+          "name": "keys",
+          "type": "block",
+          "default": "—",
+          "description": "Keyboard key/code to action mapping."
+        }
+      ]
+    },
+    {
+      "id": "style",
+      "category": "declarations",
+      "name": "@Style",
+      "signature": "@Style/<name>",
+      "summary": "Declare design tokens, presets, selector rules, and responsive overrides.",
+      "sources": [
+        "src/apps/rune_web/css.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "tokens",
+          "type": "block",
+          "default": "—",
+          "description": "Reusable style values."
+        },
+        {
+          "name": "rules",
+          "type": "block",
+          "default": "—",
+          "description": "Selector/property rules."
+        },
+        {
+          "name": "responsive",
+          "type": "block",
+          "default": "—",
+          "description": "Rules keyed by media condition."
+        }
+      ]
+    },
+    {
+      "id": "i18n",
+      "category": "declarations",
+      "name": "@I18N",
+      "signature": "@I18N/<locale>[/namespace]",
+      "summary": "Declare translation data resolved by %i18n.path% or frontend interpolation.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "navigator",
+      "category": "declarations",
+      "name": "@Navigator",
+      "signature": "@Navigator",
+      "summary": "Synchronize a state variable with path, query, or hash navigation.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Navigator\nurl bound to activePage\nmode = path",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "url bound to",
+          "type": "state property",
+          "default": "—",
+          "description": "State variable representing the active route."
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "default": "auto",
+          "description": "path, query, hash, or auto."
+        },
+        {
+          "name": "param",
+          "type": "string",
+          "default": "page",
+          "description": "Query parameter used by query navigation."
+        }
+      ]
+    },
+    {
+      "id": "optimizer",
+      "category": "declarations",
+      "name": "@Optimizer",
+      "signature": "@Optimizer",
+      "summary": "Split named route views into lazy-loadable JSON chunks.",
+      "sources": [
+        "src/apps/rune_web/optimizer.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "dynamic_xhr",
+          "type": "string",
+          "default": "off",
+          "description": "on, auto, lazy, or off."
+        },
+        {
+          "name": "pre_load",
+          "type": "bool",
+          "default": "false",
+          "description": "Background route preload."
+        },
+        {
+          "name": "chunk_path",
+          "type": "path",
+          "default": "/assets/routes",
+          "description": "Public chunk URL prefix."
+        }
+      ]
+    },
+    {
+      "id": "seo",
+      "category": "declarations",
+      "name": "@SEO",
+      "signature": "@SEO[/route]",
+      "summary": "Declare default or route-specific metadata for title, description, and social image.",
+      "sources": [
+        "src/apps/rune_web/parser.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "default": "—",
+          "description": "Document/social title."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "default": "—",
+          "description": "Meta description."
+        },
+        {
+          "name": "image",
+          "type": "URL",
+          "default": "—",
+          "description": "Social preview image."
+        }
+      ]
+    },
+    {
+      "id": "site",
+      "category": "declarations",
+      "name": "@Site",
+      "signature": "@Site[/name]",
+      "summary": "Provide generated-site title, description, tone, style, and navigation.",
+      "sources": [
+        "src/apps/dynamic_ai_web/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "These are generation inputs for dynamic-ai-web, not ordinary Rune-Web components."
+      ],
+      "fields": []
+    },
+    {
+      "id": "content",
+      "category": "declarations",
+      "name": "@Content",
+      "signature": "@Content[/name]",
+      "summary": "Supply descriptive content to the AI generation context.",
+      "sources": [
+        "src/apps/dynamic_ai_web/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "These are generation inputs for dynamic-ai-web, not ordinary Rune-Web components."
+      ],
+      "fields": []
+    },
+    {
+      "id": "data",
+      "category": "declarations",
+      "name": "@Data",
+      "signature": "@Data[/name]",
+      "summary": "Supply structured records to generated pages and API responses.",
+      "sources": [
+        "src/apps/dynamic_ai_web/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "These are generation inputs for dynamic-ai-web, not ordinary Rune-Web components."
+      ],
+      "fields": []
+    },
+    {
+      "id": "abs",
+      "category": "expressions",
+      "name": "abs",
+      "signature": "abs(value)",
+      "summary": "Absolute numeric value.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Number.",
+      "errors": "",
+      "example": "distance = abs(delta)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "floor",
+      "category": "expressions",
+      "name": "floor",
+      "signature": "floor(value)",
+      "summary": "Round a numeric value downward.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Integer-valued number.",
+      "errors": "",
+      "example": "tile = floor(player.x)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "sqrt",
+      "category": "expressions",
+      "name": "sqrt",
+      "signature": "sqrt(value)",
+      "summary": "Compute the square root.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Number; negative input follows JavaScript NaN behavior.",
+      "errors": "",
+      "example": "root = sqrt(9)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "sin",
+      "category": "expressions",
+      "name": "sin",
+      "signature": "sin(degrees)",
+      "summary": "Sine with a degree input.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Number.",
+      "errors": "",
+      "example": "dy = sin(angle)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "cos",
+      "category": "expressions",
+      "name": "cos",
+      "signature": "cos(degrees)",
+      "summary": "Cosine with a degree input.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Number.",
+      "errors": "",
+      "example": "dx = cos(angle)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "atan2",
+      "category": "expressions",
+      "name": "atan2",
+      "signature": "atan2(dy, dx)",
+      "summary": "Compute a direction in degrees.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Angle normalized into [0, 360).",
+      "errors": "",
+      "example": "angle = atan2(dy, dx)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "clamp",
+      "category": "expressions",
+      "name": "clamp",
+      "signature": "clamp(value, minimum, maximum)",
+      "summary": "Constrain a numeric value to bounds.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Number.",
+      "errors": "",
+      "example": "health = clamp(health, 0, 100)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "min",
+      "category": "expressions",
+      "name": "min",
+      "signature": "min(value, ...)",
+      "summary": "Return the minimum numeric argument.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Number.",
+      "errors": "",
+      "example": "low = min(a, b)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "max",
+      "category": "expressions",
+      "name": "max",
+      "signature": "max(value, ...)",
+      "summary": "Return the maximum numeric argument.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Number.",
+      "errors": "",
+      "example": "high = max(a, b)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "random",
+      "category": "expressions",
+      "name": "random",
+      "signature": "random(minimum, maximum[, seed])",
+      "summary": "Generate an integer within the requested range.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Random integer; an explicit seed allows repeatability.",
+      "errors": "",
+      "example": "roll = random(1, 6, seed)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "shuffle",
+      "category": "expressions",
+      "name": "shuffle",
+      "signature": "shuffle(values[, seed])",
+      "summary": "Return a seeded shuffled copy of an array.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Array; input is not shuffled in place.",
+      "errors": "",
+      "example": "deck = shuffle(cards, seed)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "pick",
+      "category": "expressions",
+      "name": "pick",
+      "signature": "pick(values[, seed])",
+      "summary": "Choose a value from an array.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Selected value; an empty array yields null.",
+      "errors": "",
+      "example": "choice = pick(options, seed)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "collide",
+      "category": "expressions",
+      "name": "collide",
+      "signature": "collide(a, b[, width=20[, height=width]])",
+      "summary": "Check axis-aligned proximity of objects with x/y coordinates.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Boolean; invalid objects return false.",
+      "errors": "",
+      "example": "hit = collide(player, enemy, 16, 16)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "distance",
+      "category": "expressions",
+      "name": "distance",
+      "signature": "distance(a, b) | distance(ax, ay, bx, by)",
+      "summary": "Compute Euclidean distance between points.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Number.",
+      "errors": "",
+      "example": "range = distance(player, enemy)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "angle-to",
+      "category": "expressions",
+      "name": "angle_to",
+      "signature": "angle_to(a, b)",
+      "summary": "Find the direction from one point object to another.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Angle in degrees normalized into [0, 360); invalid objects return 0.",
+      "errors": "",
+      "example": "aim = angle_to(enemy, player)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "slide",
+      "category": "expressions",
+      "name": "slide",
+      "signature": "slide(x, y, dx, dy[, radius=0.25])",
+      "summary": "Move a circle through the active grid collision space with sliding.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Position object returned by the spatial runtime.",
+      "errors": "",
+      "example": "position = slide(player.x, player.y, dx, dy)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "sees",
+      "category": "expressions",
+      "name": "sees",
+      "signature": "sees(a, b) | sees(x1, y1, x2, y2)",
+      "summary": "Check line of sight through the active map.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Boolean.",
+      "errors": "",
+      "example": "visible = sees(enemy, player)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "map-spawn",
+      "category": "expressions",
+      "name": "map_spawn",
+      "signature": "map_spawn(map_name)",
+      "summary": "Read a compiled map spawn point.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Map spawn data from the current spatial configuration.",
+      "errors": "",
+      "example": "spawn = map_spawn(level)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web expression helper. Availability is not implied for native REST run blocks."
+      ],
+      "fields": []
+    },
+    {
+      "id": "storage-get",
+      "category": "host",
+      "name": "storage.get",
+      "signature": "storage.get(key[, fallback])",
+      "summary": "Read JSON-backed local storage.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Stored value or fallback.",
+      "errors": "",
+      "example": "saved = storage.get(\"progress\", null)",
+      "parameters": [],
+      "aliases": [
+        "local_storage.get",
+        "localStorage.get"
+      ],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "storage-has",
+      "category": "host",
+      "name": "storage.has",
+      "signature": "storage.has(key)",
+      "summary": "Test for a local-storage key.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Boolean.",
+      "errors": "",
+      "example": "exists = storage.has(\"progress\")",
+      "parameters": [],
+      "aliases": [
+        "local_storage.has",
+        "localStorage.has"
+      ],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "storage-set",
+      "category": "host",
+      "name": "storage.set",
+      "signature": "storage.set(key, value)",
+      "summary": "Serialize a value to local storage.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Storage side effect.",
+      "errors": "",
+      "example": "storage.set(\"progress\", progress)",
+      "parameters": [],
+      "aliases": [
+        "storage.save",
+        "local_storage.set",
+        "localStorage.set"
+      ],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "storage-remove",
+      "category": "host",
+      "name": "storage.remove",
+      "signature": "storage.remove(key)",
+      "summary": "Remove a local-storage key.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Storage side effect.",
+      "errors": "",
+      "example": "storage.remove(\"progress\")",
+      "parameters": [],
+      "aliases": [
+        "storage.delete",
+        "local_storage.remove"
+      ],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "download",
+      "category": "host",
+      "name": "download",
+      "signature": "download(filename, content)",
+      "summary": "Download text content through the browser host.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Download side effect. No assigned return contract.",
+      "errors": "",
+      "example": "download(\"save.json\", content)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "clipboard-copy",
+      "category": "host",
+      "name": "clipboard.copy",
+      "signature": "clipboard.copy(text)",
+      "summary": "Copy text using the host clipboard helper.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Clipboard side effect.",
+      "errors": "",
+      "example": "clipboard.copy(text)",
+      "parameters": [],
+      "aliases": [
+        "copy"
+      ],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "fullscreen-toggle",
+      "category": "host",
+      "name": "fullscreen.toggle",
+      "signature": "fullscreen.toggle()",
+      "summary": "Toggle fullscreen presentation and the host fallback CSS state.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Updates presentation and is_fullscreen when state is available.",
+      "errors": "",
+      "example": "fullscreen.toggle()",
+      "parameters": [],
+      "aliases": [
+        "fullscreen",
+        "toggle_fullscreen"
+      ],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "fullscreen-enter",
+      "category": "host",
+      "name": "fullscreen.enter",
+      "signature": "fullscreen.enter()",
+      "summary": "Request fullscreen presentation.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Host-dependent fullscreen side effect.",
+      "errors": "",
+      "example": "fullscreen.enter()",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "fullscreen-exit",
+      "category": "host",
+      "name": "fullscreen.exit",
+      "signature": "fullscreen.exit()",
+      "summary": "Exit fullscreen presentation.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Host-dependent fullscreen side effect.",
+      "errors": "",
+      "example": "fullscreen.exit()",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "sound-play",
+      "category": "host",
+      "name": "sound.play",
+      "signature": "sound.play(name)",
+      "summary": "Play a declared synthesized sound.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Audio side effect.",
+      "errors": "",
+      "example": "sound.play(\"shot\")",
+      "parameters": [],
+      "aliases": [
+        "play_sound"
+      ],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "music-play",
+      "category": "host",
+      "name": "music.play",
+      "signature": "music.play([name])",
+      "summary": "Start a declared or composed music track.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Audio playback side effect.",
+      "errors": "",
+      "example": "music.play(\"theme\")",
+      "parameters": [],
+      "aliases": [
+        "play_music"
+      ],
+      "notes": [
+        "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
+      ],
+      "fields": []
+    },
+    {
+      "id": "music-stop",
+      "category": "host",
+      "name": "music.stop",
+      "signature": "music.stop()",
+      "summary": "Stop current music playback.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Audio side effect.",
+      "errors": "",
+      "example": "music.stop()",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-pause",
+      "category": "host",
+      "name": "music.pause",
+      "signature": "music.pause()",
+      "summary": "Pause current music playback.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Audio side effect.",
+      "errors": "",
+      "example": "music.pause()",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-resume",
+      "category": "host",
+      "name": "music.resume",
+      "signature": "music.resume()",
+      "summary": "Resume paused music.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Audio side effect.",
+      "errors": "",
+      "example": "music.resume()",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-tempo",
+      "category": "host",
+      "name": "music.tempo",
+      "signature": "music.tempo = bpm",
+      "summary": "Set current music tempo.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Updates the audio engine tempo.",
+      "errors": "",
+      "example": "music.tempo = 140",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-volume",
+      "category": "host",
+      "name": "music.volume",
+      "signature": "music.volume = volume",
+      "summary": "Set music playback volume.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Updates audio engine volume.",
+      "errors": "",
+      "example": "music.volume = 0.5",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-compose",
+      "category": "host",
+      "name": "music.compose",
+      "signature": "music.compose(name, lead, bass, drums[, time_signature[, bars]])",
+      "summary": "Register or update a composed music track.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Audio definition side effect.",
+      "errors": "",
+      "example": "music.compose(\"song\", lead, bass, drums)",
+      "parameters": [],
+      "aliases": [
+        "music.register"
+      ],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-compose-song",
+      "category": "host",
+      "name": "music.compose_song",
+      "signature": "music.compose_song(name, config)",
+      "summary": "Register a song from a structured configuration object.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Audio definition side effect.",
+      "errors": "",
+      "example": "music.compose_song(\"song\", song)",
+      "parameters": [],
+      "aliases": [
+        "music.register_song"
+      ],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-sync-steps",
+      "category": "host",
+      "name": "music.sync_steps",
+      "signature": "music.sync_steps()",
+      "summary": "Synchronize Rune Studio step state with its song representation.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates Studio-related state.",
+      "errors": "",
+      "example": "music.sync_steps()",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-select-step",
+      "category": "host",
+      "name": "music.select_step",
+      "signature": "music.select_step(id)",
+      "summary": "Select a Rune Studio piano-roll step.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates Studio selection state.",
+      "errors": "",
+      "example": "music.select_step(id)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-delete-step",
+      "category": "host",
+      "name": "music.delete_step",
+      "signature": "music.delete_step(id)",
+      "summary": "Delete a Rune Studio step by ID.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates Studio step state.",
+      "errors": "",
+      "example": "music.delete_step(id)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-stretch-step",
+      "category": "host",
+      "name": "music.stretch_step",
+      "signature": "music.stretch_step(id, duration)",
+      "summary": "Change a Rune Studio note step duration.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates Studio step state.",
+      "errors": "",
+      "example": "music.stretch_step(id, duration)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-stack-chord-note",
+      "category": "host",
+      "name": "music.stack_chord_note",
+      "signature": "music.stack_chord_note(id, note)",
+      "summary": "Stack a note into an existing Rune Studio step.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates Studio step state.",
+      "errors": "",
+      "example": "music.stack_chord_note(id, note)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-duplicate-bar",
+      "category": "host",
+      "name": "music.duplicate_bar",
+      "signature": "music.duplicate_bar(bar)",
+      "summary": "Duplicate a Rune Studio bar.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates Studio sequence state.",
+      "errors": "",
+      "example": "music.duplicate_bar(bar)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-delete-bar",
+      "category": "host",
+      "name": "music.delete_bar",
+      "signature": "music.delete_bar(bar)",
+      "summary": "Delete a Rune Studio bar.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates Studio sequence state.",
+      "errors": "",
+      "example": "music.delete_bar(bar)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "emitter-burst",
+      "category": "host",
+      "name": "emitter.burst",
+      "signature": "<emitter>.burst(x, y[, count[, color[, speed]]])",
+      "summary": "Emit particles from a state-declared emitter.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Appends particle records, capped by the emitter maximum.",
+      "errors": "",
+      "example": "sparks.burst(player.x, player.y)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "emitter-step",
+      "category": "host",
+      "name": "emitter.step",
+      "signature": "<emitter>.step()",
+      "summary": "Advance particles, applying friction/gravity and expiring life.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates the emitter particle array.",
+      "errors": "",
+      "example": "sparks.step()",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "restore",
+      "category": "host",
+      "name": "restore",
+      "signature": "restore <path> | <path>.restore()",
+      "summary": "Restore initial state or entity start_ fields.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates the target. Entity fallback also sets alive to true.",
+      "errors": "",
+      "example": "restore enemies",
+      "parameters": [],
+      "aliases": [
+        "reset"
+      ],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "call",
+      "category": "host",
+      "name": "call",
+      "signature": "call <action>(arguments)",
+      "summary": "Invoke a named frontend action from a statement.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Action-dependent state effects.",
+      "errors": "",
+      "example": "call add(1)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "scene",
+      "category": "games",
+      "name": "@Scene",
+      "signature": "@Scene/<name>",
+      "summary": "Bind game logic, maps, assets, cameras, input, and HUD presentation.",
+      "sources": [
+        "src/apps/pixel3d/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Scene/level\nlogic = game\nmap = dungeon\ncamera = player",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "logic",
+          "type": "string",
+          "default": "required",
+          "description": "Named @Logic; Pixel 3D requires start and tick actions."
+        },
+        {
+          "name": "map",
+          "type": "string",
+          "default": "required",
+          "description": "Initial @Map name."
+        },
+        {
+          "name": "camera",
+          "type": "string",
+          "default": "player",
+          "description": "Camera state field or a declared cinematic camera."
+        },
+        {
+          "name": "things",
+          "type": "list of strings",
+          "default": "[]",
+          "description": "State collection names rendered as scene objects."
+        },
+        {
+          "name": "weapon",
+          "type": "string",
+          "default": "null",
+          "description": "Weapon state binding."
+        },
+        {
+          "name": "hud",
+          "type": "object",
+          "default": "null",
+          "description": "State-field bindings for legacy HUD values."
+        },
+        {
+          "name": "controls",
+          "type": "string",
+          "default": "—",
+          "description": "Named @Controls profile."
+        },
+        {
+          "name": "mouse_look",
+          "type": "bool",
+          "default": "true",
+          "description": "Enable mouse-look input."
+        },
+        {
+          "name": "keys",
+          "type": "object",
+          "default": "WASD / arrows / Space / E",
+          "description": "Keyboard mapping when no custom mapping is supplied."
+        },
+        {
+          "name": "world",
+          "type": "string",
+          "default": "—",
+          "description": "Voxel world state field; must exist."
+        },
+        {
+          "name": "ui",
+          "type": "string",
+          "default": "—",
+          "description": "Structured HUD state field; must exist."
+        },
+        {
+          "name": "pause_ui",
+          "type": "string",
+          "default": "—",
+          "description": "Pause HUD state field; must exist."
+        },
+        {
+          "name": "restart_action",
+          "type": "string",
+          "default": "—",
+          "description": "Action invoked for restart; must exist."
+        },
+        {
+          "name": "click_to_start",
+          "type": "bool",
+          "default": "host default",
+          "description": "Whether canvas clicks initiate play."
+        },
+        {
+          "name": "persistence",
+          "type": "object",
+          "default": "—",
+          "description": "key and state; key is 1–64 ASCII letters, digits, hyphens, or underscores."
+        },
+        {
+          "name": "presentation",
+          "type": "object",
+          "default": "—",
+          "description": "title, subtitle, objective, victory, defeat, and up to five instruction strings."
+        },
+        {
+          "name": "perspective",
+          "type": "string",
+          "default": "66 degree default FOV",
+          "description": "Named @Perspective."
+        },
+        {
+          "name": "title_scene",
+          "type": "string",
+          "default": "—",
+          "description": "Optional cinematic title @Scene."
+        },
+        {
+          "name": "heading",
+          "type": "string",
+          "default": "required for title scene",
+          "description": "Title scene headline."
+        },
+        {
+          "name": "subtitle",
+          "type": "string",
+          "default": "empty",
+          "description": "Title scene subtitle."
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "default": "PRESS ENTER TO BEGIN",
+          "description": "Title scene start prompt."
+        }
+      ]
+    },
+    {
+      "id": "map",
+      "category": "games",
+      "name": "@Map",
+      "signature": "@Map/<name>",
+      "summary": "Declare a grid environment and optional visual floor, ceiling, sky, and spawn.",
+      "sources": [
+        "src/apps/pixel3d/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "grid",
+          "type": "list/series",
+          "default": "required",
+          "description": "Tile rows."
+        },
+        {
+          "name": "legend",
+          "type": "object",
+          "default": "required",
+          "description": "Character-to-tile definitions."
+        },
+        {
+          "name": "floor",
+          "type": "color/texture",
+          "default": "compiler default",
+          "description": "Opaque #RRGGBB or compiled texture name."
+        },
+        {
+          "name": "ceiling",
+          "type": "color/texture",
+          "default": "compiler default",
+          "description": "Opaque #RRGGBB or texture; mutually exclusive with sky."
+        },
+        {
+          "name": "ceiling_height",
+          "type": "number",
+          "default": "1",
+          "description": "Greater than 0.5 and no more than 16; visual elevation."
+        },
+        {
+          "name": "sky",
+          "type": "object",
+          "default": "—",
+          "description": "Seeded sky panorama configuration."
+        },
+        {
+          "name": "spawn",
+          "type": "object",
+          "default": "—",
+          "description": "Numeric x/y and optional angle (default 0)."
+        }
+      ]
+    },
+    {
+      "id": "palette",
+      "category": "games",
+      "name": "@Palette",
+      "signature": "@Palette/<name>",
+      "summary": "Map single ASCII symbols to colors for pixel assets.",
+      "sources": [
+        "src/apps/pixel/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Palette/base\ncolors = { \"#\": \"#223344\", \".\": \"transparent\" }",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "colors",
+          "type": "object",
+          "default": "required",
+          "description": "1–256 entries mapping single ASCII characters to #RRGGBB or transparent."
+        }
+      ]
+    },
+    {
+      "id": "texture",
+      "category": "games",
+      "name": "@Texture",
+      "signature": "@Texture/<name>",
+      "summary": "Compile an opaque indexed pixel texture.",
+      "sources": [
+        "src/apps/pixel3d/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "palette",
+          "type": "string",
+          "default": "required",
+          "description": "Named @Palette."
+        },
+        {
+          "name": "size",
+          "type": "[width,height]",
+          "default": "required",
+          "description": "Pixel dimensions validated by the compiler."
+        },
+        {
+          "name": "pixels",
+          "type": "series",
+          "default": "required",
+          "description": "Literal rows; texture compilation also supports row/runs/pattern objects with repeat."
+        },
+        {
+          "name": "patterns",
+          "type": "object",
+          "default": "{} for compact textures",
+          "description": "Reusable run patterns for compact texture rows."
+        }
+      ]
+    },
+    {
+      "id": "sprite",
+      "category": "games",
+      "name": "@Sprite",
+      "signature": "@Sprite/<name>",
+      "summary": "Compile an indexed pixel sprite or animation frame.",
+      "sources": [
+        "src/apps/pixel3d/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "palette",
+          "type": "string",
+          "default": "required",
+          "description": "Named @Palette."
+        },
+        {
+          "name": "size",
+          "type": "[width,height]",
+          "default": "required",
+          "description": "Pixel dimensions validated by the compiler."
+        },
+        {
+          "name": "pixels",
+          "type": "series",
+          "default": "required",
+          "description": "Literal pixel rows matching the declared dimensions."
+        },
+        {
+          "name": "origin",
+          "type": "[x,y]",
+          "default": "asset dependent",
+          "description": "Sprite origin, when supported by the asset compiler."
+        }
+      ]
+    },
+    {
+      "id": "model",
+      "category": "games",
+      "name": "@Model",
+      "signature": "@Model/<name>",
+      "summary": "Declare a palette-colored block model. Models are visual geometry, not collision geometry.",
+      "sources": [
+        "src/apps/pixel3d/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "palette",
+          "type": "string",
+          "default": "required",
+          "description": "Named @Palette."
+        },
+        {
+          "name": "unit",
+          "type": "number",
+          "default": "0.125",
+          "description": "Model coordinate unit scale."
+        },
+        {
+          "name": "blocks",
+          "type": "series",
+          "default": "required",
+          "description": "Palette-colored box records."
+        }
+      ]
+    },
+    {
+      "id": "model-instance",
+      "category": "games",
+      "name": "model instance",
+      "signature": "model instance/<name>",
+      "summary": "Place a compiled model through a scene thing record.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/model.ts"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "model",
+          "type": "string",
+          "default": "—",
+          "description": "Compiled model name."
+        },
+        {
+          "name": "x / y / z",
+          "type": "numbers",
+          "default": "instance-dependent",
+          "description": "World position."
+        },
+        {
+          "name": "rotation",
+          "type": "number",
+          "default": "0",
+          "description": "Model rotation."
+        },
+        {
+          "name": "scale",
+          "type": "number",
+          "default": "1",
+          "description": "Model scale."
+        },
+        {
+          "name": "dissolve",
+          "type": "number",
+          "default": "0",
+          "description": "Deterministic fragment discard from 0 to 1; discarded pixels do not write depth."
+        }
+      ]
+    },
+    {
+      "id": "perspective",
+      "category": "games",
+      "name": "@Perspective",
+      "signature": "@Perspective/<name>",
+      "summary": "Declare a camera field of view.",
+      "sources": [
+        "src/apps/pixel3d/scenes.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "fov",
+          "type": "number",
+          "default": "required",
+          "description": "Finite field of view between 20 and 120 degrees."
+        }
+      ]
+    },
+    {
+      "id": "camera",
+      "category": "games",
+      "name": "@Camera",
+      "signature": "@Camera/<name>",
+      "summary": "Declare a timed cinematic camera track.",
+      "sources": [
+        "src/apps/pixel3d/scenes.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "duration",
+          "type": "number",
+          "default": "required",
+          "description": "Track duration in seconds."
+        },
+        {
+          "name": "loop",
+          "type": "bool",
+          "default": "true",
+          "description": "Whether to repeat the track."
+        },
+        {
+          "name": "points",
+          "type": "array",
+          "default": "required",
+          "description": "2–128 points, each with finite x, y, angle; optional height (default 0.5), pitch (default 0, range -85..85)."
+        }
+      ]
+    },
+    {
+      "id": "controls",
+      "category": "games",
+      "name": "@Controls",
+      "signature": "@Controls/<name>",
+      "summary": "Declare portable keyboard, pointer, touch, and gamepad controls.",
+      "sources": [
+        "src/apps/game_controls.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "@Controls/game\nkeys:\n    Space -> fire\ncommands:\n    KeyP -> host.pause",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "extends",
+          "type": "string",
+          "default": "—",
+          "description": "Parent profile name; inheritance is validated for cycles and depth."
+        },
+        {
+          "name": "keys",
+          "type": "mapping",
+          "default": "{}",
+          "description": "Keyboard code -> action input."
+        },
+        {
+          "name": "commands",
+          "type": "mapping",
+          "default": "{}",
+          "description": "Keyboard code -> host command."
+        },
+        {
+          "name": "mouse",
+          "type": "mapping",
+          "default": "{}",
+          "description": "Pointer button/axis -> action input."
+        },
+        {
+          "name": "gamepad",
+          "type": "mapping",
+          "default": "{}",
+          "description": "Button/axis -> input or host command; optional scale, invert, deadzone, mode."
+        },
+        {
+          "name": "touch",
+          "type": "object",
+          "default": "—",
+          "description": "Joystick, look surface, and buttons. Touch objects may bind visibility to boolean state paths."
+        }
+      ]
+    },
+    {
+      "id": "sound",
+      "category": "games",
+      "name": "@Sound",
+      "signature": "@Sound/<name>",
+      "summary": "Define a synthesized sound effect.",
+      "sources": [
+        "src/apps/rune_web/ast.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "wave",
+          "type": "string",
+          "default": "parser default",
+          "description": "sawtooth, square, triangle, sine, or noise."
+        },
+        {
+          "name": "freq_start",
+          "type": "number",
+          "default": "—",
+          "description": "Starting frequency in Hz."
+        },
+        {
+          "name": "freq_end",
+          "type": "number",
+          "default": "—",
+          "description": "Ending frequency in Hz."
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "default": "parser default",
+          "description": "Seconds."
+        },
+        {
+          "name": "volume",
+          "type": "number",
+          "default": "parser default",
+          "description": "Gain from 0 to 1."
+        },
+        {
+          "name": "curve",
+          "type": "string",
+          "default": "parser default",
+          "description": "linear or exponential sweep."
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "default": "—",
+          "description": "Filter type and start/end frequency."
+        },
+        {
+          "name": "notes",
+          "type": "array",
+          "default": "[]",
+          "description": "Rotating pitch list."
+        },
+        {
+          "name": "sequence",
+          "type": "array",
+          "default": "[]",
+          "description": "Frequency/duration note pairs."
+        }
+      ]
+    },
+    {
+      "id": "music",
+      "category": "games",
+      "name": "@Music",
+      "signature": "@Music/<name>",
+      "summary": "Define a chiptune or synth song.",
+      "sources": [
+        "src/apps/rune_web/ast.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "type",
+          "type": "string",
+          "default": "parser default",
+          "description": "Music chip/style."
+        },
+        {
+          "name": "tempo",
+          "type": "number",
+          "default": "parser default",
+          "description": "Beats per minute."
+        },
+        {
+          "name": "time_signature",
+          "type": "string",
+          "default": "—",
+          "description": "For example 4/4."
+        },
+        {
+          "name": "bars",
+          "type": "number",
+          "default": "—",
+          "description": "Number of measures."
+        },
+        {
+          "name": "loop",
+          "type": "bool",
+          "default": "parser default",
+          "description": "Loop the track."
+        },
+        {
+          "name": "volume",
+          "type": "number",
+          "default": "parser default",
+          "description": "Master gain."
+        },
+        {
+          "name": "lead / bass / drums",
+          "type": "note strings",
+          "default": "—",
+          "description": "Built-in tracks; custom named tracks are also supported."
+        }
+      ]
+    },
+    {
+      "id": "test",
+      "category": "testing",
+      "name": "@Test",
+      "signature": "@Test/<name>",
+      "summary": "Declare a test with run steps. Native tests use an in-process router; frontend tests use the logic harness.",
+      "sources": [
+        "src/cli/testing.rs"
+      ],
+      "returns": "A result in the CLI test report.",
+      "errors": "",
+      "example": "@Test/Health\nrun:\n    req = { path: \"/health\" }\n    res = test-request req\n    assert res.status == 200",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Test-only declaration or command; availability depends on the selected test type."
+      ],
+      "fields": []
+    },
+    {
+      "id": "testsuite",
+      "category": "testing",
+      "name": "@TestSuite",
+      "signature": "@TestSuite",
+      "summary": "Declare suite-level setup and teardown steps.",
+      "sources": [
+        "src/cli/testing.rs"
+      ],
+      "returns": "Test lifecycle configuration.",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Test-only declaration or command; availability depends on the selected test type."
+      ],
+      "fields": []
+    },
+    {
+      "id": "testfixture",
+      "category": "testing",
+      "name": "@TestFixture",
+      "signature": "@TestFixture/<name>",
+      "summary": "Declare reusable fixture setup and teardown.",
+      "sources": [
+        "src/cli/testing.rs"
+      ],
+      "returns": "Activated by a test fixtures list.",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Test-only declaration or command; availability depends on the selected test type."
+      ],
+      "fields": []
+    },
+    {
+      "id": "assert",
+      "category": "testing",
+      "name": "assert",
+      "signature": "assert <condition>",
+      "summary": "Assert a condition in a native or frontend logic test.",
+      "sources": [
+        "src/cli/testing.rs"
+      ],
+      "returns": "Records an assertion or fails the test.",
+      "errors": "",
+      "example": "assert res.status == 200",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Test-only declaration or command; availability depends on the selected test type."
+      ],
+      "fields": []
+    },
+    {
+      "id": "test-request",
+      "category": "testing",
+      "name": "test-request",
+      "signature": "response = test-request <requestVariable>",
+      "summary": "Send a request through the in-process native application router.",
+      "sources": [
+        "src/cli/testing.rs"
+      ],
+      "returns": "Response object exposing status, text and parsed body for test assertions.",
+      "errors": "",
+      "example": "req = { method: \"GET\", path: \"/health\" }\nres = test-request req",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Test-only declaration or command; availability depends on the selected test type."
+      ],
+      "fields": []
+    },
+    {
+      "id": "invoke",
+      "category": "testing",
+      "name": "invoke",
+      "signature": "invoke <action> [JSON value or JSON argument array]",
+      "summary": "Invoke a frontend action in the headless logic harness.",
+      "sources": [
+        "src/cli/logic_testing.rs"
+      ],
+      "returns": "Action effects in test state.",
+      "errors": "",
+      "example": "invoke add 1",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Test-only declaration or command; availability depends on the selected test type."
+      ],
+      "fields": []
+    },
+    {
+      "id": "body",
+      "category": "environment",
+      "name": "body",
+      "signature": "body",
+      "summary": "Raw request body, replaced by parsed JSON after an unassigned parse-json call.",
+      "sources": [
+        "src/core/mod.rs"
+      ],
+      "returns": "String initially; parsed JSON after conversion.",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "path-params",
+      "category": "environment",
+      "name": "path.params",
+      "signature": "path.params.<name>",
+      "summary": "Object containing string-valued URL parameters. Each parameter is also inserted directly into the native context.",
+      "sources": [
+        "src/core/mod.rs"
+      ],
+      "returns": "Parameter object or selected string.",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "last-exec-result",
+      "category": "environment",
+      "name": "___last_exec_result___",
+      "signature": "___last_exec_result___",
+      "summary": "Context slot written by builtins that expose a last execution result.",
+      "sources": [
+        "src/builtins.rs"
+      ],
+      "returns": "Builtin-dependent value; not every builtin writes it.",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "vectrune-memory-backend",
+      "category": "environment",
+      "name": "VECTRUNE_MEMORY_BACKEND",
+      "signature": "VECTRUNE_MEMORY_BACKEND=memory",
+      "summary": "Choose the implemented shared-memory backend.",
+      "sources": [
+        "src/memory/mod.rs"
+      ],
+      "returns": "memory is supported. Other values panic during backend initialization.",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": []
+    },
+    {
+      "id": "dynamic-ai-web-options",
+      "category": "declarations",
+      "name": "dynamic-ai-web options",
+      "signature": "@App\ntype = dynamic-ai-web",
+      "summary": "Configure the generated-site engine and its resource limits.",
+      "sources": [
+        "src/apps/dynamic_ai_web/mod.rs"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Generated content is distinct from deterministic REST run steps."
+      ],
+      "fields": [
+        {
+          "name": "engine",
+          "type": "string",
+          "default": "ollama",
+          "description": "ollama, codex, or copilot as supported by the engine."
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "default": "engine dependent",
+          "description": "Selected AI model."
+        },
+        {
+          "name": "response_target_seconds",
+          "type": "number",
+          "default": "min(timeout_seconds, 30)",
+          "description": "Response-time target."
+        },
+        {
+          "name": "timeout_seconds",
+          "type": "number",
+          "default": "120",
+          "description": "Generation timeout."
+        },
+        {
+          "name": "cache_seconds",
+          "type": "number",
+          "default": "60",
+          "description": "Cache duration."
+        },
+        {
+          "name": "max_concurrent",
+          "type": "number",
+          "default": "2",
+          "description": "Concurrent generation limit."
+        },
+        {
+          "name": "endpoint",
+          "type": "URL",
+          "default": "engine default",
+          "description": "Generation service endpoint."
+        },
+        {
+          "name": "executable",
+          "type": "path",
+          "default": "engine default",
+          "description": "CLI engine executable override."
+        },
+        {
+          "name": "cache_entries",
+          "type": "number",
+          "default": "32",
+          "description": "Maximum cached entries (1–256)."
+        },
+        {
+          "name": "generation_limit",
+          "type": "number",
+          "default": "128",
+          "description": "Saved generation limit (1–4096)."
+        },
+        {
+          "name": "generations_dir",
+          "type": "path",
+          "default": ".vectrune/generations/<app digest>",
+          "description": "Saved generated page directory."
+        }
+      ]
+    },
+    {
+      "id": "voxel-generate",
+      "name": "voxel_generate",
+      "category": "expressions",
+      "signature": "voxel_generate(seed[, biome=\"meadow\"])",
+      "summary": "Generate a seeded block world.",
+      "returns": "Voxel world state object.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/voxel.ts"
+      ],
+      "notes": [
+        "Voxel scene helper; implemented in the shared JavaScript game runtime. The legacy Rust grid rasterizer does not render voxel worlds."
+      ]
+    },
+    {
+      "id": "voxel-move",
+      "name": "voxel_move",
+      "category": "expressions",
+      "signature": "voxel_move(world, player, dx, dy[, jump=false])",
+      "summary": "Advance movement with voxel collision, gravity, jumping, and elevation.",
+      "returns": "Updated player state.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/voxel.ts"
+      ],
+      "notes": [
+        "Voxel scene helper; implemented in the shared JavaScript game runtime. The legacy Rust grid rasterizer does not render voxel worlds."
+      ]
+    },
+    {
+      "id": "voxel-target",
+      "name": "voxel_target",
+      "category": "expressions",
+      "signature": "voxel_target(world, player)",
+      "summary": "Trace the block targeted by a player camera.",
+      "returns": "Voxel hit object, or null.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/voxel.ts"
+      ],
+      "notes": [
+        "Voxel scene helper; implemented in the shared JavaScript game runtime. The legacy Rust grid rasterizer does not render voxel worlds."
+      ]
+    },
+    {
+      "id": "voxel-mine",
+      "name": "voxel_mine",
+      "category": "expressions",
+      "signature": "voxel_mine(world, player)",
+      "summary": "Mine the block targeted by a player.",
+      "returns": "Object with block and hit; mutates world occupancy.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/voxel.ts"
+      ],
+      "notes": [
+        "Voxel scene helper; implemented in the shared JavaScript game runtime. The legacy Rust grid rasterizer does not render voxel worlds."
+      ]
+    },
+    {
+      "id": "voxel-get",
+      "name": "voxel_get",
+      "category": "expressions",
+      "signature": "voxel_get(world, x, y, z)",
+      "summary": "Read block occupancy at integer coordinates.",
+      "returns": "Block identifier.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/voxel.ts"
+      ],
+      "notes": [
+        "Voxel scene helper; implemented in the shared JavaScript game runtime. The legacy Rust grid rasterizer does not render voxel worlds."
+      ]
+    },
+    {
+      "id": "voxel-fill",
+      "name": "voxel_fill",
+      "category": "expressions",
+      "signature": "voxel_fill(world, from, size, block)",
+      "summary": "Fill or carve a rectangular block region.",
+      "returns": "Mutated world object.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/voxel.ts"
+      ],
+      "notes": [
+        "Voxel scene helper; implemented in the shared JavaScript game runtime. The legacy Rust grid rasterizer does not render voxel worlds."
+      ]
+    },
+    {
+      "id": "frontend-array-any",
+      "category": "expressions",
+      "name": "frontend array.any",
+      "signature": "array.any(predicate)",
+      "summary": "Test whether any element satisfies a frontend predicate.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Boolean. The predicate uses it, or a named arrow parameter.",
+      "example": "",
+      "notes": [
+        "Frontend collection operation; native collection methods have separate entries."
+      ]
+    },
+    {
+      "id": "frontend-array-filter",
+      "category": "expressions",
+      "name": "frontend array.filter",
+      "signature": "array.filter(predicate)",
+      "summary": "Select elements satisfying a frontend predicate.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "New array; supports trailing .length.",
+      "example": "alive = enemies.filter(it.alive)",
+      "notes": [
+        "Frontend collection operation; native collection methods have separate entries."
+      ]
+    },
+    {
+      "id": "frontend-array-find",
+      "category": "expressions",
+      "name": "frontend array.find",
+      "signature": "array.find(predicate)",
+      "summary": "Read the first frontend array element satisfying a predicate.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Matching value, or JavaScript undefined when no element matches.",
+      "example": "",
+      "notes": [
+        "Frontend collection operation; native collection methods have separate entries."
+      ]
+    },
+    {
+      "id": "frontend-array-max",
+      "category": "expressions",
+      "name": "frontend array.max",
+      "signature": "array.max(selector)",
+      "summary": "Find the maximum selected value in a frontend array.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Selected value, or undefined for an empty array.",
+      "example": "",
+      "notes": [
+        "Frontend collection operation; native collection methods have separate entries."
+      ]
+    },
+    {
+      "id": "frontend-array-mask",
+      "category": "expressions",
+      "name": "frontend array.mask",
+      "signature": "array.mask(value)",
+      "summary": "Build a bitmask of positions matching a value.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Bitwise numeric mask; comparisons use the frontend string conversion.",
+      "example": "",
+      "notes": [
+        "Frontend collection operation; native collection methods have separate entries."
+      ]
+    },
+    {
+      "id": "frontend-array-push",
+      "category": "expressions",
+      "name": "frontend array.push",
+      "signature": "array.push(value)",
+      "summary": "Append to an array from a frontend action.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "Mutates the target array.",
+      "example": "",
+      "notes": [
+        "Frontend collection operation; native collection methods have separate entries."
+      ]
+    },
+    {
+      "id": "frontend-ternary",
+      "category": "language",
+      "name": "frontend ternary",
+      "signature": "condition ? yes : no",
+      "summary": "Choose an expression according to a condition.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Selected branch result."
+    },
+    {
+      "id": "frontend-nullish",
+      "category": "language",
+      "name": "frontend nullish",
+      "signature": "value ?? fallback",
+      "summary": "Use a fallback for a null or unresolved value.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Resolved value, or fallback."
+    },
+    {
+      "id": "frontend-arithmetic",
+      "category": "language",
+      "name": "frontend arithmetic",
+      "signature": "+ - * / %",
+      "summary": "Evaluate arithmetic in a frontend expression.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Numeric result or string addition where supported."
+    },
+    {
+      "id": "frontend-comparison",
+      "category": "language",
+      "name": "frontend comparison",
+      "signature": "== != < <= > >= contains",
+      "summary": "Compare frontend expression values.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Boolean. Equality and contains use frontend coercion rules; do not assume JavaScript strict equality."
+    },
+    {
+      "id": "frontend-boolean",
+      "category": "language",
+      "name": "frontend boolean",
+      "signature": "and | or | !",
+      "summary": "Combine truth values in frontend expressions.",
+      "sources": [
+        "runtime/rune-web/src/expression.ts"
+      ],
+      "returns": "Boolean/short-circuit result according to the expression interpreter."
+    },
+    {
+      "id": "vectrune-ai-model",
+      "category": "environment",
+      "name": "VECTRUNE_AI_MODEL",
+      "signature": "VECTRUNE_AI_MODEL",
+      "summary": "Default model for CLI AI and dynamic AI generation when no explicit model is configured.",
+      "sources": [
+        "src/cli/ai.rs"
+      ]
+    },
+    {
+      "id": "vectrune-ollama-url",
+      "category": "environment",
+      "name": "VECTRUNE_OLLAMA_URL",
+      "signature": "VECTRUNE_OLLAMA_URL",
+      "summary": "Override the Ollama endpoint used by native AI helpers.",
+      "sources": [
+        "src/cli/ai.rs"
+      ]
+    },
+    {
+      "id": "gemini-api-key",
+      "category": "environment",
+      "name": "GEMINI_API_KEY",
+      "signature": "GEMINI_API_KEY",
+      "summary": "API key read by the Gemini CLI AI branch.",
+      "sources": [
+        "src/cli/ai.rs"
+      ]
+    },
+    {
+      "id": "rune-file",
+      "category": "environment",
+      "name": "RUNE_FILE",
+      "signature": "RUNE_FILE",
+      "summary": "Path to the Rune entrypoint inside the Lambda runtime; defaults to rune/app.rune.",
+      "sources": [
+        "src/lambda_main.rs"
+      ]
+    },
+    {
+      "id": "aws-lambda-function-name",
+      "category": "environment",
+      "name": "AWS_LAMBDA_FUNCTION_NAME",
+      "signature": "AWS_LAMBDA_FUNCTION_NAME",
+      "summary": "AWS-provided name used as a Lambda environment detection signal.",
+      "sources": [
+        "src/main.rs"
+      ]
+    },
+    {
+      "id": "aws-lambda-runtime-api",
+      "category": "environment",
+      "name": "AWS_LAMBDA_RUNTIME_API",
+      "signature": "AWS_LAMBDA_RUNTIME_API",
+      "summary": "AWS-provided runtime endpoint used as a Lambda environment detection signal.",
+      "sources": [
+        "src/main.rs"
+      ]
+    },
+    {
+      "id": "environment-substitution",
+      "category": "language",
+      "name": "environment substitution",
+      "signature": "$NAME$",
+      "summary": "Substitute an environment variable in a Rune string configuration value.",
+      "sources": [
+        "src/rune_parser.rs"
+      ],
+      "example": "secret = $jwt_secret$"
+    },
+    {
+      "id": "hook",
+      "category": "declarations",
+      "name": "@Hook",
+      "signature": "@Hook/<name>",
+      "summary": "Declare memory observer metadata parsed by the hook infrastructure.",
+      "sources": [
+        "src/memory/hook_parser.rs"
+      ],
+      "notes": [
+        "Partial integration: memory.set still contains a signal-delivery integration placeholder. The parser/observer implementation does not mean every native write triggers a declared hook."
+      ],
+      "fields": [
+        {
+          "name": "target",
+          "type": "string",
+          "default": "required",
+          "description": "Memory key observed by this hook."
+        },
+        {
+          "name": "observer",
+          "type": "string",
+          "default": "websocket",
+          "description": "Observer transport parsed by hook infrastructure."
+        },
+        {
+          "name": "channel",
+          "type": "string",
+          "default": "—",
+          "description": "WebSocket channel configuration."
+        },
+        {
+          "name": "endpoint",
+          "type": "string",
+          "default": "—",
+          "description": "WebSocket endpoint configuration."
+        },
+        {
+          "name": "webhook_url",
+          "type": "string",
+          "default": "—",
+          "description": "Poll/webhook observer URL configuration."
+        },
+        {
+          "name": "run",
+          "type": "series",
+          "default": "—",
+          "description": "Optional custom logic steps."
+        }
+      ]
+    },
+    {
+      "id": "mock",
+      "category": "testing",
+      "name": "mock",
+      "signature": "mock.storage | mock.downloads | mock.clipboard | mock.audio",
+      "summary": "Inspect recorded host effects in a frontend logic test.",
+      "sources": [
+        "runtime/rune-web/src/testing/host.ts"
+      ],
+      "returns": "Mock snapshots; host operations are recorded without a browser or network.",
+      "example": "assert mock.downloads[0].filename == \"save.json\""
+    },
+    {
+      "id": "host-advance",
+      "category": "games",
+      "name": "host.advance",
+      "signature": "host.advance",
+      "summary": "Advance the current title/menu presentation.",
+      "sources": [
+        "src/apps/game_controls.rs"
+      ],
+      "notes": [
+        "Use as a command target in @Controls, not as an ordinary native builtin."
+      ]
+    },
+    {
+      "id": "host-pause",
+      "category": "games",
+      "name": "host.pause",
+      "signature": "host.pause",
+      "summary": "Toggle the host pause state.",
+      "sources": [
+        "src/apps/game_controls.rs"
+      ],
+      "notes": [
+        "Use as a command target in @Controls, not as an ordinary native builtin."
+      ]
+    },
+    {
+      "id": "host-mute",
+      "category": "games",
+      "name": "host.mute",
+      "signature": "host.mute",
+      "summary": "Toggle host audio mute.",
+      "sources": [
+        "src/apps/game_controls.rs"
+      ],
+      "notes": [
+        "Use as a command target in @Controls, not as an ordinary native builtin."
+      ]
+    },
+    {
+      "id": "host-fullscreen",
+      "category": "games",
+      "name": "host.fullscreen",
+      "signature": "host.fullscreen",
+      "summary": "Toggle fullscreen through the presentation host.",
+      "sources": [
+        "src/apps/game_controls.rs"
+      ],
+      "notes": [
+        "Use as a command target in @Controls, not as an ordinary native builtin."
+      ]
+    }
+  ],
+  "coverage": {
+    "native": "All names and aliases in the native is_builtin registry are checked against this catalog.",
+    "web": "Registered frontend commands, signatures, and aliases are extracted from their source definitions.",
+    "cli": "Command usage and flags are read recursively from the build compiler help.",
+    "other": "Declarations, syntax, configuration, and host APIs are curated against linked implementation files. These families are documented at different levels of detail; arbitrary user section names and internal Rust/TypeScript methods are not public dictionary entries."
+  }
+}

@@ -1,0 +1,403 @@
+{
+  "version": 1,
+  "status": "starter",
+  "sources": [
+    "src/apps/rest/mod.rs",
+    "src/core/mod.rs",
+    "src/builtins/builtin/validate.rs",
+    "src/builtins/builtin/parse_json.rs",
+    "src/builtins/builtin/respond.rs",
+    "src/apps/rest/swagger/",
+    "src/apps/graphql/",
+    "src/apps/rest/ws.rs",
+    "examples/vect_breach/"
+  ],
+  "pages": [
+    {
+      "route": "docs/getting-started",
+      "label": "Quickstart",
+      "title": "Build a REST API in Vectrune",
+      "description": "Create a declarative REST API with URL parameters, JSON validation, and generated Swagger documentation in one Rune file.",
+      "sections": [
+        {
+          "title": "1. Install and verify",
+          "paragraphs": [
+            "On macOS or Linux with Homebrew, install the CLI and confirm it is available. Windows binaries and source installation are covered in the developer quickstart."
+          ],
+          "command": "brew tap davethomas11/homebrew-vectrune\nbrew install vectrune\nvectrune --version",
+          "links": [
+            {
+              "route": "developer",
+              "label": "Installation and developer setup"
+            }
+          ]
+        },
+        {
+          "title": "2. Save this as app.rune",
+          "paragraphs": [
+            "The service uses port 3000. Stop another service using that port, or change the port field and the URLs below."
+          ],
+          "source": "teaching_website/content/docs/app.rune",
+          "links": [
+            {
+              "href": "/assets/content/docs/app.rune",
+              "label": "Download app.rune"
+            }
+          ]
+        },
+        {
+          "title": "3. Start the service",
+          "paragraphs": [
+            "Run this in the folder containing app.rune. Leave it running and open a second terminal for requests. Stop the server with Ctrl+C when finished."
+          ],
+          "command": "vectrune app.rune"
+        },
+        {
+          "title": "4. Send requests",
+          "paragraphs": [
+            "The health request returns HTTP 200 and OK. The name route returns HTTP 200 with a serialized object containing name = Ada. The POST returns HTTP 201 with the submitted object. The current REST responder serves these bodies as text, including serialized JSON; do not assume an application/json response header."
+          ],
+          "command": "curl -i http://127.0.0.1:3000/health\ncurl -i http://127.0.0.1:3000/greetings/Ada\ncurl -i http://127.0.0.1:3000/greetings -H 'Content-Type: application/json' -d '{\"name\":\"Ada\",\"enthusiastic\":true}'"
+        },
+        {
+          "title": "5. Try invalid input",
+          "paragraphs": [
+            "This request omits enthusiastic. The server returns HTTP 400 with Missing field `enthusiastic`."
+          ],
+          "command": "curl -i http://127.0.0.1:3000/greetings -H 'Content-Type: application/json' -d '{\"name\":\"Ada\"}'"
+        },
+        {
+          "title": "6. Inspect and test",
+          "paragraphs": [
+            "Open http://127.0.0.1:3000/swagger-ui in a browser. Download api.test.rune beside app.rune to run five request tests without starting a separate server."
+          ],
+          "command": "vectrune test api.test.rune --json",
+          "links": [
+            {
+              "href": "/assets/content/docs/api.test.rune",
+              "label": "Download api.test.rune"
+            },
+            {
+              "route": "docs/openapi",
+              "label": "Understand the generated API contract"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "docs/rest",
+      "label": "HTTP routing",
+      "title": "HTTP routing reference",
+      "description": "Define Vectrune REST routes, read path parameters, parse JSON request bodies, and return explicit HTTP responses.",
+      "sections": [
+        {
+          "title": "App and route declarations",
+          "paragraphs": [
+            "Declare @App with type = REST. A route section combines a method and URL, for example @Route/GET /health. Its run series executes statements in order.",
+            "The current REST router registers GET, POST, PUT, and DELETE. CRUD expands into those methods; PATCH and OPTIONS handlers are not registered by this router."
+          ],
+          "source": "teaching_website/content/docs/app.rune"
+        },
+        {
+          "title": "URL parameters",
+          "paragraphs": [
+            "Use braces in the route URL: /greetings/{name}. Parameters enter the execution context as strings, accessible directly as name or through path.params.name.",
+            "For numeric comparisons, convert a parameter deliberately with to-number. Do not assume an ID from the URL is already a JSON number."
+          ],
+          "command": "curl -i http://127.0.0.1:3000/greetings/Ada"
+        },
+        {
+          "title": "Request bodies",
+          "paragraphs": [
+            "POST and PUT handlers receive the raw request body as body. Run parse-json to replace body with its parsed JSON value, or assign parsed = parse-json body to preserve the raw body.",
+            "Each request gets a fresh execution context. Query parameters and general HTTP headers are not automatically exposed by this REST handler. Shared state requires an explicit memory or data-source operation."
+          ],
+          "links": [
+            {
+              "route": "docs/validation",
+              "label": "Validate a parsed request body"
+            }
+          ]
+        },
+        {
+          "title": "Responses and execution",
+          "paragraphs": [
+            "respond 201 body returns status 201 and serializes the context variable body. respond 404 \"Not found\" returns a literal message. A response stops the current request step sequence.",
+            "Without an explicit response, the executor can return the last computed result with HTTP 200, falling back to OK when no result is available. A builtin execution error becomes HTTP 500. Use explicit responses and validation for predictable API contracts.",
+            "The native REST handler returns a status and a string body. Object serialization does not automatically select application/json; verify the wire response before building clients that depend on response headers."
+          ]
+        }
+      ]
+    },
+    {
+      "route": "docs/validation",
+      "label": "Validation",
+      "title": "Schema validation reference",
+      "description": "Validate JSON request bodies with Vectrune schemas, required scalar fields, and explicit HTTP 400 failures.",
+      "sections": [
+        {
+          "title": "Declare a schema and validate it",
+          "paragraphs": [
+            "@Schema/Greeting declares name = string and enthusiastic = bool. Parse the request body, then call validate body #Greeting before using the input.",
+            "The expect = Greeting route metadata connects POST and PUT request bodies to the generated OpenAPI schema. Keep the explicit validate call: expect does not perform runtime validation."
+          ],
+          "source": "teaching_website/content/docs/app.rune"
+        },
+        {
+          "title": "Supported validation behavior",
+          "paragraphs": [],
+          "items": [
+            "string accepts a JSON string.",
+            "number accepts a JSON number.",
+            "bool accepts a JSON boolean; use bool in the Rune schema, not boolean.",
+            "Every field declared in the schema is required.",
+            "Additional JSON properties are not rejected by this validator.",
+            "Nested schemas, optional fields, and array constraints are not implemented by this scalar schema-validation path."
+          ]
+        },
+        {
+          "title": "Failure responses",
+          "paragraphs": [
+            "Missing fields and type mismatches return HTTP 400 and stop execution. Examples include Missing field `name` and Field `enthusiastic` type mismatch. A missing schema or value returns Validation failed.",
+            "Malformed JSON currently produces a builtin error and HTTP 500, rather than a structured HTTP 400 validation response. Account for that behavior when evaluating the API for a client-facing service.",
+            "When several fields are invalid, do not depend on which field error is returned first."
+          ]
+        },
+        {
+          "title": "Exercise valid and invalid requests",
+          "paragraphs": [
+            "The companion test file checks health, a URL parameter, valid JSON, a missing required field, and a scalar type mismatch."
+          ],
+          "source": "teaching_website/content/docs/api.test.rune",
+          "command": "vectrune test api.test.rune --json"
+        }
+      ]
+    },
+    {
+      "route": "docs/openapi",
+      "label": "OpenAPI",
+      "title": "OpenAPI and Swagger UI",
+      "description": "Generate an OpenAPI 3.0 document and interactive Swagger UI from Vectrune REST route and schema declarations.",
+      "sections": [
+        {
+          "title": "Enable generated documentation",
+          "paragraphs": [
+            "Set swagger = true under @App in a REST application. The server exposes /openapi.json and /swagger-ui."
+          ],
+          "command": "curl http://127.0.0.1:3000/openapi.json"
+        },
+        {
+          "title": "What is generated",
+          "paragraphs": [],
+          "items": [
+            "An OpenAPI 3.0.0 document with title Vectrune API and version 1.0.0. These values are currently fixed by the generator.",
+            "Route methods and URL paths, plus the route description when supplied.",
+            "Required string path parameters extracted from placeholders such as {name}.",
+            "Object schemas from @Schema sections. Declared fields are marked required.",
+            "application/json request-body schemas for POST and PUT routes with a known expect schema."
+          ]
+        },
+        {
+          "title": "Contract limits",
+          "paragraphs": [
+            "Single-route response documentation currently contains a generic HTTP 200 entry. The generator does not infer the actual 201, 400, or other responses from run statements, nor their response-body schemas.",
+            "OpenAPI describes JSON request bodies; it does not change the text response content type of the REST handler. Compare the generated contract with real responses before using it for client generation.",
+            "The bundled Swagger UI page loads its JavaScript and stylesheet from unpkg.com. A browser needs access to that CDN to display the UI. The /openapi.json document itself is served locally."
+          ],
+          "links": [
+            {
+              "route": "docs/getting-started",
+              "label": "Run the documented greeting API"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "docs/graphql",
+      "label": "GraphQL",
+      "title": "Build a GraphQL API in Vectrune",
+      "description": "Define a GraphQL greeting schema, query, and mutation with declarative Rune resolvers and test requests over HTTP.",
+      "sections": [
+        {
+          "title": "Save as graphql.rune",
+          "paragraphs": [
+            "GraphQL uses its own @App type. Run this example separately from the REST service because both examples use port 3000."
+          ],
+          "source": "teaching_website/parts/pages/examples/graphql_example.rune",
+          "links": [
+            {
+              "href": "/assets/content/docs/graphql.rune",
+              "label": "Download graphql.rune"
+            }
+          ]
+        },
+        {
+          "title": "Run and query",
+          "paragraphs": [
+            "@Schema/Greeting defines the result object. @GraphQL/Query/Greeting groups fields returning that type; return passes the resolver result back to GraphQL. The greeting query returns a message field."
+          ],
+          "command": "vectrune graphql.rune\n# In a second terminal:\ncurl http://127.0.0.1:3000/graphql -H 'Content-Type: application/json' -d '{\"query\":\"{ greeting { message } }\"}'"
+        },
+        {
+          "title": "Call a mutation",
+          "paragraphs": [
+            "@GraphQL/Mutation/Greeting declares greet(message: string). This example returns the supplied message and does not persist it."
+          ],
+          "command": "curl http://127.0.0.1:3000/graphql -H 'Content-Type: application/json' -d '{\"query\":\"mutation { greet(message: \\\"Hello\\\") { message } }\"}'"
+        },
+        {
+          "title": "Explore a stateful example",
+          "paragraphs": [
+            "The repository also includes examples/book_graphql.rune, which demonstrates books, authors, memory-backed queries, and mutations. Use that as the next step after this minimal service."
+          ],
+          "links": [
+            {
+              "route": "graphql",
+              "label": "Explore the interactive GraphQL guide"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "docs/websockets",
+      "label": "WebSockets",
+      "title": "WebSocket API reference",
+      "description": "Build a Vectrune WebSocket broadcast endpoint with connection hooks, message handlers, and a browser client.",
+      "sections": [
+        {
+          "title": "Save as websocket.rune",
+          "paragraphs": [
+            "WebSocket endpoints are mounted by the REST app. This example declares /chat and broadcasts incoming messages to connected clients on that path. Stop other port 3000 examples before starting it."
+          ],
+          "source": "teaching_website/parts/pages/examples/websocket_example.rune",
+          "links": [
+            {
+              "href": "/assets/content/docs/websocket.rune",
+              "label": "Download websocket.rune"
+            }
+          ],
+          "command": "vectrune websocket.rune"
+        },
+        {
+          "title": "Connect from a browser",
+          "paragraphs": [
+            "Open the developer console on a local HTTP page. This client connects, sends a plain text message when ready, and logs broadcasts. Open a second client to observe fan-out. An HTTPS page may block an insecure ws:// connection."
+          ],
+          "command": "const socket = new WebSocket('ws://127.0.0.1:3000/chat');\nsocket.onmessage = event => console.log(event.data);\nsocket.onopen = () => socket.send('Hello from the browser');\n// When finished:\n// socket.close();"
+        },
+        {
+          "title": "Handlers and builtins",
+          "paragraphs": [],
+          "items": [
+            "on_connect runs after registration of the connection.",
+            "on_message handles generic incoming text; body contains the message.",
+            "on_disconnect runs when the receive loop ends.",
+            "ws.id returns the current connection identifier.",
+            "ws.send takes a path, connection identifier, and message.",
+            "ws.broadcast takes a path and message, and sends to clients registered on that path."
+          ]
+        },
+        {
+          "title": "Structured messages",
+          "paragraphs": [
+            "JSON messages with a type property can dispatch to @Event sections. Start with the plain text broadcast example before adding event-specific handlers. Connection and memory registries live in the current process; multiple server processes do not share them automatically."
+          ],
+          "links": [
+            {
+              "route": "websocket",
+              "label": "Explore the interactive WebSocket guide"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "docs/runtime",
+      "label": "Language map",
+      "title": "Vectrune language and runtime map",
+      "description": "Find Vectrune documentation for language syntax, builtins, shared memory, frontend apps, CLI tools, and Pixel game runtimes.",
+      "sections": [
+        {
+          "title": "Core language and builtins",
+          "paragraphs": [
+            "Rune documents combine @Section paths, key/value data, records, and ordered run steps. The CLI also supports .vect and .vectrune script workflows.",
+            "The existing builtin catalog is a starter reference, not a complete inventory. Runtime availability differs between the native CLI, browser emulator, WebAssembly, and frontend JavaScript; check the implementation before assuming a builtin is portable."
+          ],
+          "links": [
+            {
+              "route": "documents",
+              "label": "Document syntax"
+            },
+            {
+              "route": "builtins",
+              "label": "Builtin catalog"
+            },
+            {
+              "route": "developer_cli",
+              "label": "CLI reference"
+            }
+          ]
+        },
+        {
+          "title": "Shared memory and data",
+          "paragraphs": [
+            "Memory builtins read and write state shared within a running server. Treat it as process-local state rather than durable storage. CSV, JSON, and configured data-source operations provide separate data workflows.",
+            "A fresh request context does not isolate shared memory. Decide how application state should behave before serving concurrent users."
+          ]
+        },
+        {
+          "title": "Web interfaces and deployment",
+          "paragraphs": [
+            "Rune-Web is a frontend mode mounted through @Frontend on a REST app. Static hosting, dynamic AI sites, and Lambda packaging are separate parts of the runtime surface."
+          ],
+          "links": [
+            {
+              "route": "rune_web",
+              "label": "Rune-Web frontend guide"
+            },
+            {
+              "route": "static",
+              "label": "Static hosting"
+            },
+            {
+              "route": "dynamic_ai",
+              "label": "Dynamic AI sites"
+            },
+            {
+              "route": "developer_testing",
+              "label": "Testing Rune applications"
+            }
+          ]
+        },
+        {
+          "title": "Pixel games and Vect Breach",
+          "paragraphs": [
+            "Vect Breach demonstrates the pixel-3d app type with runtime = hybrid. Its entry file imports controls, title scenes, assets, guards, maps, sound, and game logic. @Scene connects those definitions to the camera, things, weapon, HUD, and input controls.",
+            "These game declarations form a separate reference area from HTTP APIs. The repository knowledge pages for Pixel 3D, block models, and voxel worlds provide further implementation detail; a complete field-by-field game reference remains future work."
+          ],
+          "links": [
+            {
+              "route": "vect-breach",
+              "label": "Explore Vect Breach"
+            },
+            {
+              "route": "rune-crypt",
+              "label": "Explore Rune Crypt"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "maintenance": {
+    "generate": "python3 teaching_website/build_api_docs.py --output /tmp/vectrune-reference-preview",
+    "build": "python3 teaching_website/build_site.py --binary target/debug/vectrune --output /tmp/vectrune-docs-site",
+    "canonical_origin_option": "--site-url https://vectrune.com",
+    "sitemap": "/docs/sitemap.xml",
+    "migration": "Keep page slugs stable. A future docs subdomain needs a dedicated docs mount or export, updated canonical URLs, sitemap and internal links, asset hosting, and server-side 301/308 redirects from each old /docs/<slug>/ URL to its matching new page. Preserve query strings and test anchors. GitHub Pages alone cannot supply arbitrary HTTP 301 redirects; configure them at the serving proxy/CDN or host.",
+    "coverage": "Supporting API guides; the technical dictionary is maintained in knowledge/reference/library.json and source-derived command inventories."
+  }
+}

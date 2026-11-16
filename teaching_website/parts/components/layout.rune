@@ -26,6 +26,7 @@ view:
                     a .nav-link {.active when 'localization'} href="{i18n.Common.base_path}localization" data-route-link=true aria-current="{activePage == 'localization' ? 'page' : 'false'}" click="navigate('localization')" "%i18n.Nav.localization%"
                 div .nav-group:
                     h3 "%i18n.Developer.group%"
+                    a .nav-link href="{i18n.Common.base_path}docs/" "Language & API reference"
                     a .nav-link {.active when 'developer'} href="{i18n.Common.base_path}developer" data-route-link=true aria-current="{activePage == 'developer' ? 'page' : 'false'}" click="navigate('developer')" "%i18n.Developer.start%"
                     a .nav-link {.active when 'developer_cli'} href="{i18n.Common.base_path}developer_cli" data-route-link=true aria-current="{activePage == 'developer_cli' ? 'page' : 'false'}" click="navigate('developer_cli')" "%i18n.Developer.cli%"
                     a .nav-link {.active when 'developer_testing'} href="{i18n.Common.base_path}developer_testing" data-route-link=true aria-current="{activePage == 'developer_testing' ? 'page' : 'false'}" click="navigate('developer_testing')" "%i18n.Developer.testing%"

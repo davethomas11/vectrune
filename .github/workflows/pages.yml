@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "teaching_website/**"
+      - "knowledge/**"
+      - "tests/browser/test_reference_inventory.py"
       - "examples/**"
       - "runtime/rune-emulator/**"
       - "runtime/rune-web/**"
@@ -53,7 +55,9 @@ jobs:
           npm run build
 
       - name: Check teaching site compiler compatibility guard
-        run: python3 tests/browser/test_teaching_build.py
+        run: |
+          python3 tests/browser/test_teaching_build.py
+          python3 tests/browser/test_reference_inventory.py
 
       - name: Render static site
         env:

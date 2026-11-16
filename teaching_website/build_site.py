@@ -39,18 +39,23 @@ def workspace_compiler():
 def routes():
     """Use the actual navigation cases as the inventory, including aliases."""
     layout = (SITE / "parts/components/layout.rune").read_text(encoding="utf-8")
-    return sorted(set(re.findall(r'^\s*"([\w-]+)"\s*->', layout, re.MULTILINE)))
+    return sorted(set(re.findall(r'^\s*"([\w/-]+)"\s*->', layout, re.MULTILINE)))
 
 
-def build_site(destination, binary, base="/", selected_routes=None):
+def build_site(destination, binary, base="/", selected_routes=None, site_url="https://vectrune.com"):
     destination = Path(destination).resolve()
     binary = str(Path(binary).resolve())
     check_compiler(binary)
     base = "/" + base.strip("/") + "/" if base.strip("/") else "/"
-    inventory = selected_routes if selected_routes is not None else routes()
+    navigation = routes()
+    requested = selected_routes if selected_routes is not None else navigation
+    inventory = [route for route in requested if route != 'docs' and not route.startswith('docs/')]
     assets = destination / "assets"
     chunks = assets / "routes"
     chunks.mkdir(parents=True, exist_ok=True)
+    # Chunk export writes <route>.json; nested docs routes need parent folders.
+    for route in navigation:
+        (chunks / route).parent.mkdir(parents=True, exist_ok=True)
     source = (SITE / "teaching.rune").read_text(encoding="utf-8")
     with tempfile.NamedTemporaryFile(dir=SITE, suffix=".rune", delete=False) as file:
         temporary = Path(file.name)
@@ -106,7 +111,10 @@ def build_site(destination, binary, base="/", selected_routes=None):
         shutil.copytree(SITE / "pkg", assets / "pkg", dirs_exist_ok=True)
     shutil.copyfile(destination / "index.html", destination / "404.html")
     (destination / ".nojekyll").touch()
-    manifest = {"locales": [folder for _, folder in LOCALES], "routes": list(dict.fromkeys(["home", *inventory]))}
+    from build_api_docs import build_docs
+    docs_selected = None if selected_routes is None else [route for route in selected_routes if route == 'docs' or route.startswith('docs/')]
+    docs_routes = build_docs(destination, binary, base, site_url, docs_selected)
+    manifest = {"locales": [folder for _, folder in LOCALES], "routes": list(dict.fromkeys(["home", *inventory, *docs_routes]))}
     (destination / "routes.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest
 
@@ -147,12 +155,13 @@ if __name__ == "__main__":
     parser.add_argument("--binary", help="Use an existing compiler (0.3.4+); otherwise build this checkout")
     parser.add_argument("--output", required=True)
     parser.add_argument("--base", default="/")
+    parser.add_argument("--site-url", default="https://vectrune.com", help="Public site origin for docs canonical URLs and sitemap")
     parser.add_argument("--serve", action="store_true", help="Serve the generated site on localhost")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     try:
         binary = args.binary or workspace_compiler()
-        manifest = build_site(args.output, binary, args.base)
+        manifest = build_site(args.output, binary, args.base, site_url=args.site_url)
     except (RuntimeError, subprocess.CalledProcessError) as error:
         parser.exit(2, str(error) + "\n")
     print(f"Rendered {len(manifest['routes'])} routes in {len(LOCALES)} locales to {args.output}")
