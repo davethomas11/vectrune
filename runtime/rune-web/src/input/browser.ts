@@ -3,6 +3,7 @@ import { mountControlTouch } from './touch';
 
 /** Physical browser devices feed the same controller used by native hosts. */
 export function mountControls(canvas: HTMLCanvasElement, controls: GameControls, options: {
+  state?(): Record<string, unknown>;
   playing(): boolean; paused(): boolean; resume(): void; advance(): void;
   fullscreen(): void; interact(): void; lockedMouse?: boolean;
   expanded?(): boolean;

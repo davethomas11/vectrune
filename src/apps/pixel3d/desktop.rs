@@ -4,9 +4,9 @@ use super::{
     Game3D,
 };
 use crate::apps::pixel::native_audio::Output;
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, ensure, Context as _, Result};
 use pixels::{Pixels, SurfaceTexture};
-use rquickjs::{CaughtError, Context, Runtime};
+use rquickjs::{CaughtError, Context, Runtime, TypedArray};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
@@ -147,26 +147,45 @@ impl Host {
         *self.deadline.lock().unwrap() = Instant::now() + Duration::from_secs(2);
         let pixels = self.pixels.as_mut().context("Missing pixel surface")?;
 
-        // Query render state from QuickJS and rasterize natively in Rust!
-        let state_json: String = self.context.with(|ctx| {
-            ctx.eval(
+        let shared_frame: bool = self.context.with(|ctx| {
+            ctx.eval("!!__RunePixel3D.config.world")
+                .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))
+        })?;
+        if shared_frame {
+            self.context.with(|ctx| -> Result<()> {
+                let frame: TypedArray<u32> = ctx
+                    .eval("__RunePixel3D.frame()")
+                    .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))?;
+                // Do not call JS while this borrowed framebuffer is live.
+                let bytes = unsafe { frame.as_bytes() }.context("Detached voxel framebuffer")?;
+                ensure!(
+                    bytes.len() == pixels.frame_mut().len(),
+                    "Voxel framebuffer size mismatch"
+                );
+                pixels.frame_mut().copy_from_slice(bytes);
+                Ok(())
+            })?;
+        } else {
+            let state_json: String = self.context.with(|ctx| {
+                ctx.eval(
                 "__RunePixel3D.renderState ? JSON.stringify(__RunePixel3D.renderState()) : '{}'",
             )
             .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))
-        })?;
+            })?;
 
-        {
-            let state = serde_json::from_str::<RenderState>(&state_json)
-                .context("Invalid pixel-3d render state")?;
-            if let Some(map_name) = &state.level_map {
-                if map_name != &self.current_map_name {
-                    if let Some(new_map) = self.maps.get(map_name) {
-                        self.current_map_name = map_name.clone();
-                        self.rasterizer.set_map(new_map.clone());
+            {
+                let state = serde_json::from_str::<RenderState>(&state_json)
+                    .context("Invalid pixel-3d render state")?;
+                if let Some(map_name) = &state.level_map {
+                    if map_name != &self.current_map_name {
+                        if let Some(new_map) = self.maps.get(map_name) {
+                            self.current_map_name = map_name.clone();
+                            self.rasterizer.set_map(new_map.clone());
+                        }
                     }
                 }
+                self.rasterizer.render(&state, pixels.frame_mut());
             }
-            self.rasterizer.render(&state, pixels.frame_mut());
         }
 
         match pixels.render() {
@@ -499,8 +518,8 @@ pub fn run(game: &Game3D, fullscreen: bool, frame_limit: Option<u64>) -> Result<
             .unwrap_or_default();
 
     let mut rasterizer = Rasterizer3D::new(game.width, game.height, 66.0, textures, sprites, map);
-    rasterizer.models = serde_json::from_value(game.config["models"].clone())
-        .context("Invalid pixel-3d models")?;
+    rasterizer.models =
+        serde_json::from_value(game.config["models"].clone()).context("Invalid pixel-3d models")?;
 
     let controls: bool = context.with(|ctx| ctx.eval("Boolean(__RunePixel.controls)"))?;
     let wants_gamepads: bool = context.with(|ctx| ctx.eval("Boolean(__RunePixel.controls && Object.keys(__RunePixel.controls.profile.gamepad).length)"))?;

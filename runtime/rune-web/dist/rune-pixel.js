@@ -49,6 +49,16 @@ var __RunePixelRuntime = (() => {
     }
     const pointers = /* @__PURE__ */ new Map();
     const occupied = /* @__PURE__ */ new Set();
+    const visibility = /* @__PURE__ */ new Map();
+    function visible(path) {
+      if (path === void 0) return true;
+      let value = options.state?.();
+      for (const key of path.split(".")) {
+        value = value && typeof value === "object" ? Reflect.get(value, key) : void 0;
+      }
+      if (typeof value !== "boolean") throw new Error(`Touch visible must reference boolean state: ${path}`);
+      return value;
+    }
     function activate(e) {
       e.preventDefault();
       e.stopPropagation();
@@ -108,6 +118,7 @@ var __RunePixelRuntime = (() => {
       var move = move2;
       const def = profile.joystick;
       const stick = button("MOVE", "joystick", def.anchor || "bottom-left", [12, 12], def.size || 96);
+      if (def.visible !== void 0) visibility.set(stick, def.visible);
       stick.dataset.gameplay = "true";
       stick.setAttribute("aria-label", "Move joystick");
       const thumb = document.createElement("span");
@@ -119,8 +130,9 @@ var __RunePixelRuntime = (() => {
         move2(e);
       });
     }
-    for (const [index, def] of (profile.buttons || []).entries()) {
-      const target = button(def.label, def.id, def.anchor || "bottom-right", def.offset || [12 + index * 68, 12], def.size || 56);
+    for (const [index2, def] of (profile.buttons || []).entries()) {
+      const target = button(def.label, def.id, def.anchor || "bottom-right", def.offset || [12 + index2 * 68, 12], def.size || 56);
+      if (def.visible !== void 0) visibility.set(target, def.visible);
       target.classList.add("touch-" + def.id);
       if (def.aria_label) target.setAttribute("aria-label", def.aria_label);
       if (def.input) target.dataset.gameplay = "true";
@@ -149,12 +161,17 @@ var __RunePixelRuntime = (() => {
     listen(canvas, "pointerdown", (e) => {
       if (!["touch", "pen"].includes(e.pointerType) || occupied.has(canvas)) return;
       if (!activate(e) || !profile.look) return;
-      let lastX = e.clientX;
+      let lastX = e.clientX, lastY = e.clientY;
       capture(canvas, e, { target: canvas, move: (e2) => {
         emit("aim", profile.look.x, (e2.clientX - lastX) * 1200 / Math.max(1, canvas.getBoundingClientRect().width) * (profile.look.sensitivity ?? 1), "delta");
         lastX = e2.clientX;
+        if (profile.look.y) emit("aim:y", profile.look.y, (e2.clientY - lastY) * 1200 / Math.max(1, canvas.getBoundingClientRect().height) * (profile.look.sensitivity ?? 1), "delta");
+        lastY = e2.clientY;
       }, end: (cancel) => {
-        if (cancel) emit("aim", profile.look.x, 0, "delta", true);
+        if (cancel) {
+          emit("aim", profile.look.x, 0, "delta", true);
+          if (profile.look.y) emit("aim:y", profile.look.y, 0, "delta", true);
+        }
       } });
     });
     listen(document, "pointermove", (e) => {
@@ -187,7 +204,21 @@ var __RunePixelRuntime = (() => {
     function update() {
       const rect = canvas.getBoundingClientRect(), parent = surface.getBoundingClientRect();
       Object.assign(overlay.style, { left: `${rect.left - parent.left - surface.clientLeft}px`, top: `${rect.top - parent.top - surface.clientTop}px`, width: `${rect.width}px`, height: `${rect.height}px` });
-      for (const element of Array.from(overlay.querySelectorAll("[data-gameplay]"))) element.hidden = !options.playing();
+      overlay.hidden = !visible(profile.visible);
+      for (const element of Array.from(overlay.querySelectorAll("button"))) {
+        element.hidden = element.dataset.gameplay === "true" && !options.playing() || !visible(visibility.get(element));
+      }
+      for (const [id, pointer] of [...pointers]) {
+        if (overlay.hidden || pointer.target.hidden) {
+          pointers.delete(id);
+          occupied.delete(pointer.target);
+          pointer.end(true);
+          try {
+            pointer.target.releasePointerCapture(id);
+          } catch {
+          }
+        }
+      }
       const expanded = options.expanded?.() || false;
       hint.style.cssText = "position:absolute;left:25%;bottom:calc(100% + 12px);width:50%;text-align:center;color:white;background:#142432dd;font:12px monospace;padding:8px";
       hint.hidden = !expanded || innerWidth >= innerHeight;
@@ -1184,8 +1215,226 @@ var __RunePixelRuntime = (() => {
     return { ...map.spawn };
   }
 
+  // src/pixel3d/voxel.ts
+  function integer(value, min, max, label) {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
+      throw new Error(`${label} must be an integer from ${min} to ${max}`);
+    }
+    return value;
+  }
+  function validateWorld(value) {
+    if (!value || typeof value !== "object") throw new Error("Voxel world must be an object");
+    const world = value;
+    integer(world.width, 1, 48, "Voxel width");
+    integer(world.height, 1, 48, "Voxel height");
+    integer(world.depth, 1, 24, "Voxel depth");
+    if (!Array.isArray(world.materials) || world.materials.length < 1 || world.materials.length > 256 || !world.materials.every((name) => typeof name === "string" && name.length > 0) || !Array.isArray(world.cells) || world.cells.length !== world.width * world.height * world.depth || !world.cells.every((block) => Number.isInteger(block) && block >= 0 && block <= world.materials.length)) {
+      throw new Error("Voxel world needs material names and an exactly sized array of valid block IDs");
+    }
+    return world;
+  }
+  function index(world, x, y, z) {
+    return (z * world.height + y) * world.width + x;
+  }
+  function voxelGet(world, x, y, z) {
+    if (x < 0 || y < 0 || z < 0 || x >= world.width || y >= world.height || z >= world.depth) return 0;
+    return world.cells[index(world, x, y, z)];
+  }
+  function voxelRead(worldValue, xValue, yValue, zValue) {
+    const world = validateWorld(worldValue);
+    const x = integer(xValue, 0, world.width - 1, "Voxel x");
+    const y = integer(yValue, 0, world.height - 1, "Voxel y");
+    const z = integer(zValue, 0, world.depth - 1, "Voxel z");
+    return voxelGet(world, x, y, z);
+  }
+  function voxelFill(worldValue, fromValue, sizeValue, blockValue) {
+    const world = validateWorld(worldValue);
+    if (!Array.isArray(fromValue) || !Array.isArray(sizeValue) || fromValue.length !== 3 || sizeValue.length !== 3) {
+      throw new Error("Voxel fill needs from and size arrays with three integers");
+    }
+    const limits = [world.width, world.height, world.depth];
+    const from = fromValue.map((v, i) => integer(v, 0, limits[i] - 1, "Voxel fill origin"));
+    const size = sizeValue.map((v, i) => integer(v, 1, limits[i] - from[i], "Voxel fill size"));
+    const block = integer(blockValue, 0, world.materials.length, "Voxel fill block");
+    for (let z = from[2]; z < from[2] + size[2]; z++) for (let y = from[1]; y < from[1] + size[1]; y++) {
+      for (let x = from[0]; x < from[0] + size[0]; x++) world.cells[index(world, x, y, z)] = block;
+    }
+    return world;
+  }
+  function noise(x, y, seed) {
+    let hash = Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ seed;
+    hash = Math.imul(hash ^ hash >>> 13, 1274126177);
+    return (hash >>> 0) / 4294967296;
+  }
+  function voxelGenerate(seedValue, biomeValue = "meadow") {
+    const seed = integer(seedValue, 0, 4294967295, "Voxel seed");
+    if (biomeValue !== "meadow" && biomeValue !== "ember") throw new Error("Voxel biome must be meadow or ember");
+    const world = {
+      width: 20,
+      height: 20,
+      depth: 10,
+      seed,
+      biome: biomeValue,
+      materials: [
+        "miners/bedrock",
+        "miners/stone",
+        biomeValue === "ember" ? "miners/ash" : "miners/grass",
+        "miners/wood",
+        "miners/copper",
+        biomeValue === "ember" ? "miners/ember" : "miners/leaves"
+      ],
+      cells: Array(4e3).fill(0),
+      spawn: { x: 4.5, y: 4.5, z: 3, angle: 0, pitch: 0, vz: 0 }
+    };
+    const set = (x, y, z, block) => {
+      world.cells[index(world, x, y, z)] = block;
+    };
+    for (let y = 0; y < 20; y++) for (let x = 0; x < 20; x++) {
+      const camp = x < 9 && y < 9;
+      const top = camp ? 3 : 3 + Math.floor(noise(Math.floor(x / 3), Math.floor(y / 3), seed + (biomeValue === "ember" ? 137 : 0)) * 3);
+      for (let z = 0; z < top; z++) set(x, y, z, z === 0 ? 1 : z === top - 1 ? 3 : noise(x + z * 13, y, seed) > 0.87 ? 5 : 2);
+      if (!camp && x > 1 && y > 1 && x < 18 && y < 18 && noise(x, y, seed + 1) > 0.94) {
+        for (let z = top; z < top + 2; z++) set(x, y, z, 4);
+        set(x, y, top + 2, 6);
+      }
+    }
+    for (let x = 8; x < 19; x++) for (let y = 9; y <= 14; y++) {
+      const floor = x < 10 ? 3 : x < 12 ? 2 : 1;
+      for (let z = floor; z <= (x < 12 ? 8 : 3); z++) set(x, y, z, 0);
+      if (x >= 12) set(x, y, 4, 2);
+    }
+    for (let x = 12; x < 19; x++) {
+      set(x, 8, 2, noise(x, 8, seed) > 0.4 ? 5 : 2);
+      set(x, 15, 2, noise(x, 15, seed) > 0.4 ? 5 : 2);
+    }
+    for (let y = 9; y <= 14; y++) for (let z = 1; z <= 4; z++) set(19, y, z, 2);
+    for (let x = 3; x <= 5; x++) for (let y = 3; y <= 5; y++) set(x, y, 2, 1);
+    for (const [x, y, z, block] of [
+      [7, 4, 3, 4],
+      [7, 4, 4, 4],
+      [7, 5, 3, 4],
+      [8, 6, 3, 2],
+      [8, 6, 4, 2],
+      [8, 7, 3, 2],
+      [9, 6, 3, 5],
+      [9, 7, 3, 5]
+    ]) set(x, y, z, block);
+    return world;
+  }
+  function voxelRay(world, origin, ray, maxDistance) {
+    let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+    const sx = ray[0] < 0 ? -1 : 1, sy = ray[1] < 0 ? -1 : 1, sz = ray[2] < 0 ? -1 : 1;
+    const dx = Math.abs(1 / ray[0]), dy = Math.abs(1 / ray[1]), dz = Math.abs(1 / ray[2]);
+    let tx = ray[0] === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
+    let ty = ray[1] === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
+    let tz = ray[2] === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    let distance = 0, face = 2;
+    for (let iteration = 0; iteration < 256 && distance <= maxDistance; iteration++) {
+      if (x < 0 || y < 0 || z < 0 || x >= world.width || y >= world.height || z >= world.depth) break;
+      const block = world.cells[index(world, x, y, z)];
+      if (block) return { x, y, z, block, distance, face };
+      if (tx < ty && tx < tz) {
+        face = 0;
+        distance = tx;
+        tx += dx;
+        x += sx;
+      } else if (ty < tz) {
+        face = 1;
+        distance = ty;
+        ty += dy;
+        y += sy;
+      } else {
+        face = 2;
+        distance = tz;
+        tz += dz;
+        z += sz;
+      }
+    }
+    return null;
+  }
+  function voxelTarget(worldValue, playerValue) {
+    const world = validateWorld(worldValue), player = validatePlayer(playerValue, world);
+    const a = player.angle * Math.PI / 180, p = player.pitch * Math.PI / 180;
+    return voxelRay(
+      world,
+      { x: player.x, y: player.y, z: player.z + 1.25 },
+      [Math.cos(a) * Math.cos(p), Math.sin(a) * Math.cos(p), Math.sin(p)],
+      3
+    );
+  }
+  function validatePlayer(value, world) {
+    if (!value || typeof value !== "object") throw new Error("Voxel player must be an object");
+    const player = value;
+    if (![player.x, player.y, player.z, player.angle, player.pitch, player.vz].every(Number.isFinite)) {
+      throw new Error("Voxel player needs finite x, y, z, angle, pitch and vz");
+    }
+    if (player.x < 0.25 || player.y < 0.25 || player.x > world.width - 0.25 || player.y > world.height - 0.25 || player.z < 1 || player.z + 1.6 > world.depth || Math.abs(player.vz) > 0.3 || Math.abs(player.pitch) > 90) {
+      throw new Error("Voxel player must be inside movement bounds, with pitch within 90 degrees and vz within 0.3");
+    }
+    return player;
+  }
+  function voxelMine(worldValue, playerValue) {
+    const world = validateWorld(worldValue);
+    const hit = voxelTarget(world, playerValue);
+    if (!hit || hit.block === 1) return { block: 0, hit };
+    world.cells[index(world, hit.x, hit.y, hit.z)] = 0;
+    return { block: hit.block, hit };
+  }
+  function clearBody(world, x, y, z) {
+    if (x < 0.25 || y < 0.25 || x > world.width - 0.25 || y > world.height - 0.25 || z < 1 || z + 1.6 > world.depth) return false;
+    for (const dx of [-0.24, 0.24]) for (const dy of [-0.24, 0.24]) {
+      for (let bz = Math.floor(z + 1e-3); bz <= Math.floor(z + 1.599); bz++) {
+        if (voxelGet(world, Math.floor(x + dx), Math.floor(y + dy), bz)) return false;
+      }
+    }
+    return true;
+  }
+  function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false) {
+    const world = validateWorld(worldValue), p = { ...validatePlayer(playerValue, world) };
+    if (typeof dxValue !== "number" || typeof dyValue !== "number" || !Number.isFinite(dxValue) || !Number.isFinite(dyValue) || Math.hypot(dxValue, dyValue) > 1 || typeof jumpValue !== "boolean") {
+      throw new Error("Voxel movement needs finite deltas of at most one tile and a boolean jump");
+    }
+    const grounded = !clearBody(world, p.x, p.y, p.z - 0.05);
+    if (jumpValue && grounded) p.vz = 0.28;
+    p.vz = Math.max(-0.3, p.vz - 0.035);
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dxValue), Math.abs(dyValue), Math.abs(p.vz)) / 0.05));
+    for (let i = 0; i < steps; i++) {
+      for (const [axis, delta] of [["x", dxValue / steps], ["y", dyValue / steps]]) {
+        const x = p.x + (axis === "x" ? delta : 0), y = p.y + (axis === "y" ? delta : 0);
+        if (clearBody(world, x, y, p.z)) p[axis] += delta;
+        else if (grounded && delta !== 0 && clearBody(world, x, y, Math.floor(p.z) + 1)) {
+          p.z = Math.floor(p.z) + 1;
+          p[axis] += delta;
+          p.vz = 0;
+        }
+      }
+      if (clearBody(world, p.x, p.y, p.z + p.vz / steps)) p.z += p.vz / steps;
+      else {
+        if (p.vz < 0) p.z = Math.round(p.z);
+        p.vz = 0;
+      }
+    }
+    return p;
+  }
+
   // src/expression.ts
   var MAX_DEPTH = 64;
+  var voxelFunctions = {
+    voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
+    voxel_move: (world, player, dx, dy, jump) => voxelMove(world, player, dx, dy, jump),
+    voxel_target: (world, player) => voxelTarget(world, player),
+    voxel_mine: (world, player) => voxelMine(world, player),
+    voxel_get: (world, x, y, z) => voxelRead(world, x, y, z),
+    voxel_fill: (world, from, size, block) => voxelFill(world, from, size, block)
+  };
+  var voxelArity = {
+    voxel_generate: [1, 2],
+    voxel_move: [4, 5],
+    voxel_target: [2, 2],
+    voxel_mine: [2, 2],
+    voxel_get: [4, 4],
+    voxel_fill: [4, 4]
+  };
   function tryParseLiteral(expr, scope) {
     const trimmed = String(expr || "").trim();
     if (trimmed === "") return void 0;
@@ -1283,8 +1532,8 @@ var __RunePixelRuntime = (() => {
     const helper = helperDefinitions[name];
     if (!helper) return void 0;
     const helperLocals = Object.assign({}, scope || {});
-    (helper.params || []).forEach((param, index) => {
-      helperLocals[param] = args[index];
+    (helper.params || []).forEach((param, index2) => {
+      helperLocals[param] = args[index2];
     });
     for (const line of helper.body || []) {
       const trimmed = String(line || "").trim();
@@ -1479,6 +1728,15 @@ var __RunePixelRuntime = (() => {
     if (trimmed.startsWith("!")) {
       const inner = compileExpression(trimmed.slice(1).trim(), nextDepth);
       return (scope) => !Boolean(inner(scope));
+    }
+    for (const [name, fn] of Object.entries(voxelFunctions)) {
+      if (trimmed.startsWith(name + "(") && trimmed.endsWith(")")) {
+        const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ",");
+        const [required, maximum] = voxelArity[name];
+        if (parts.length < required || parts.length > maximum) throw new Error(`${name} needs ${required}-${maximum} arguments`);
+        const args = parts.map((part) => compileExpression(part, nextDepth));
+        return (scope) => fn(...args.map((arg) => arg(scope)));
+      }
     }
     if (trimmed.startsWith("map_spawn(") && trimmed.endsWith(")")) {
       const name = compileExpression(trimmed.slice(10, -1), nextDepth);
@@ -1852,9 +2110,9 @@ var __RunePixelRuntime = (() => {
     }
     if (includesTopLevel(trimmed, " + ")) {
       const cParts = splitTopLevel(trimmed, " + ").map((p) => compileExpression(p, nextDepth));
-      return (scope) => cParts.reduce((acc, fn, index) => {
+      return (scope) => cParts.reduce((acc, fn, index2) => {
         const value = fn(scope);
-        if (index === 0) return value;
+        if (index2 === 0) return value;
         if (typeof acc === "number" && typeof value === "number") return acc + value;
         return `${valueToString(acc)}${valueToString(value)}`;
       }, void 0);
@@ -3042,8 +3300,8 @@ var __RunePixelRuntime = (() => {
     for (let i = 0; i < bufferSize; i += 1) {
       data[i] = Math.random() * 2 - 1;
     }
-    const noise = ctx2.createBufferSource();
-    noise.buffer = buffer;
+    const noise2 = ctx2.createBufferSource();
+    noise2.buffer = buffer;
     const filter = ctx2.createBiquadFilter();
     filter.type = filterType;
     filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
@@ -3051,11 +3309,11 @@ var __RunePixelRuntime = (() => {
     const gain = ctx2.createGain();
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
-    noise.connect(filter);
+    noise2.connect(filter);
     filter.connect(gain);
     gain.connect(audioOutput(ctx2));
-    noise.start(now);
-    noise.stop(now + duration + 0.01);
+    noise2.start(now);
+    noise2.stop(now + duration + 0.01);
   }
   function playCustomSound(ctx2, def, now, arg) {
     const duration = def.duration || 0.12;
@@ -3524,8 +3782,8 @@ var __RunePixelRuntime = (() => {
     for (let i = 0; i < bufferSize; i += 1) {
       data[i] = Math.random() * 2 - 1;
     }
-    const noise = ctx2.createBufferSource();
-    noise.buffer = buffer;
+    const noise2 = ctx2.createBufferSource();
+    noise2.buffer = buffer;
     const filter = ctx2.createBiquadFilter();
     filter.type = filterType;
     filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
@@ -3533,11 +3791,11 @@ var __RunePixelRuntime = (() => {
     const gain = ctx2.createGain();
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
-    noise.connect(filter);
+    noise2.connect(filter);
     filter.connect(gain);
     gain.connect(destination);
-    noise.start(now);
-    noise.stop(now + duration + 0.01);
+    noise2.start(now);
+    noise2.stop(now + duration + 0.01);
   }
 
   // src/statement.ts
@@ -3592,12 +3850,12 @@ var __RunePixelRuntime = (() => {
     const scopeValue = buildScope(locals);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
-      const index = current.findIndex((item) => {
+      const index2 = current.findIndex((item) => {
         const innerScope = Object.assign({}, scopeValue, { it: item });
         return Boolean(evaluateExpression(condition, innerScope, 0));
       });
-      if (index !== -1) {
-        current[index] = value;
+      if (index2 !== -1) {
+        current[index2] = value;
       }
       return;
     } else if (finalRawKey.startsWith("[") && finalRawKey.endsWith("]")) {
@@ -3656,12 +3914,12 @@ var __RunePixelRuntime = (() => {
     const scopeValue = buildScope(locals);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
-      const index = current.findIndex((item) => {
+      const index2 = current.findIndex((item) => {
         const innerScope = Object.assign({}, scopeValue, { it: item });
         return Boolean(evaluateExpression(condition, innerScope, 0));
       });
-      if (index !== -1) {
-        current.splice(index, 1);
+      if (index2 !== -1) {
+        current.splice(index2, 1);
       }
     } else if (finalRawKey.startsWith("[") && finalRawKey.endsWith("]")) {
       const innerExpr = finalRawKey.slice(1, -1);
@@ -4637,8 +4895,8 @@ var __RunePixelRuntime = (() => {
           {},
           locals || {}
         );
-        (def.params || []).forEach((param, index) => {
-          scopedLocals[param] = args[index];
+        (def.params || []).forEach((param, index2) => {
+          scopedLocals[param] = args[index2];
         });
         executeSteps(def.steps || [], scopedLocals);
       }
@@ -5040,6 +5298,7 @@ var __RunePixelRuntime = (() => {
       });
     };
     mapped = game.controls ? mountControls(canvas, game.controls, {
+      state: () => game.app.state,
       playing: () => game.app.state.status === "playing",
       paused: () => game.paused,
       resume: () => {

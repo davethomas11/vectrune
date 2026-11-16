@@ -4,6 +4,8 @@ app_types:
   - name: pixel-3d
     summary: Pixel-art first-person games using shared Rune logic and browser or native raycasting.
     behavior:
+      - "Unreleased @Scene world binds solid voxel occupancy from state. Seeded biome generation, box fill/carving, mining, gravity, jumping and elevation are opt-in; legacy grid games are unchanged."
+      - "Voxel scenes share JavaScript rendering in browser and QuickJS native windows, with per-pixel model depth and camera pitch; the Rust rasterizer remains grid-only."
       - "@Map floor and ceiling accept opaque hex colors or compiled @Texture names."
       - "@Texture pixels accepts literal rows or row/runs/pattern objects with repeat; named run patterns compress source and expand losslessly at compile time."
       - "@Map ceiling_height sets uniform wall and ceiling elevation in world tiles, default 1, greater than 0.5 and at most 16; floor and collision remain unchanged."
@@ -20,7 +22,9 @@ app_types:
       - src/apps/pixel3d/
       - runtime/rune-web/src/pixel3d/
       - examples/rune_crypt/
+      - examples/rune_miners/
       - knowledge/runtime/pixel3d.md
+      - knowledge/runtime/voxel-worlds.md
   - name: REST
     summary: HTTP application mode for route-oriented APIs and optional Swagger output.
     sources:

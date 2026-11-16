@@ -3,6 +3,7 @@ import type { Sprite } from '../pixel/engine';
 import { skyPixel, type Sky } from './sky';
 import { renderModel, type BlockModel } from './model';
 import { renderHud, type GameHud } from './hud';
+import { renderVoxels, type VoxelWorld } from './voxel';
 
 export interface Texture {
   width: number;
@@ -27,6 +28,8 @@ export interface Camera3D {
   y: number;
   angle: number; // in degrees
   height?: number; // default 0.5
+  z?: number; // voxel feet elevation
+  pitch?: number;
 }
 
 export interface Thing3D {
@@ -91,6 +94,7 @@ export interface RaycasterConfig {
   sprites: Record<string, Sprite>;
   models?: Record<string, BlockModel>;
   map: MapData;
+  world?: VoxelWorld;
   fogColor?: number; // packed 0xAABBGGRR
   fogDist?: number; // max fog distance
 }
@@ -167,7 +171,7 @@ export class Raycaster3D {
     const planeX = -dirY * fovScale;
     const planeY = dirX * fovScale;
     this.pixelDepth.fill(Infinity);
-    if (things.some(t => t.model && t.visible !== false)) {
+    if (!this.config.world && things.some(t => t.model && t.visible !== false)) {
       for (let y = 0; y < H; y++) {
         if (y < halfH && map.sky) continue;
         const planeHeight = y < halfH ? (map.ceilingHeight ?? 1) - 0.5 : 0.5;
@@ -177,19 +181,24 @@ export class Raycaster3D {
     }
 
     // 1. Floor & Ceiling casting
-    this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
-
-    // 2. Wall casting (DDA)
-    this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
+    if (this.config.world) {
+      renderVoxels(this.config.world, camera, this.config.textures, map.sky, this.fov,
+        W, H, this.buffer, this.pixelDepth, time);
+      this.zBuffer.fill(Infinity);
+    } else {
+      this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
+      this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
+    }
     for (const thing of things) {
       if (thing.visible === false || !thing.model) continue;
       const model = this.config.models?.[thing.model];
       if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
-      renderModel(model, thing, camera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+      const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : { x: camera.x, y: camera.y };
+      renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
     }
 
     // 3. Billboards (Sprites / Things) sorted by distance
-    if (things && things.length > 0) {
+    if (!this.config.world && things && things.length > 0) {
       this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
     }
 

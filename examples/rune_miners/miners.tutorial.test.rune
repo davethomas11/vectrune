@@ -1,0 +1,80 @@
+#!RUNE
+import "rune_miners.rune"
+
+@Test/RuneMiners/GuidedBattleHoldsWindowsWithoutCosts
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke begin_battle
+run:
+    assert state.tutorial_step == "strike"
+    invoke choice_two
+    assert state.tutorial_step == "strike"
+    invoke choice_one
+    assert state.tutorial_step == "guard"
+    assert state.enemy_hp == 48
+    assert state.focus == 2
+    invoke guard
+    assert state.defense_used == false
+    invoke practice_ticks 100
+    assert state.battle_clock == 40
+    assert state.health == 60
+    invoke guard
+    assert state.tutorial_step == "skill"
+    assert state.phase == "player"
+    invoke choice_two
+    assert state.tutorial_step == "dodge"
+    invoke practice_ticks 100
+    assert state.battle_clock == 44
+    invoke guard
+    assert state.tutorial_step == "dodge"
+    invoke dodge
+    assert state.tutorial_step == ""
+    assert state.tutorial_done == true
+    assert state.phase == "player"
+    assert state.enemy_hp == 48
+    assert state.health == 60
+    assert state.focus == 2
+    assert state.herbs == 2
+    invoke choice_one
+    assert state.enemy_hp == 44
+    invoke practice_ticks 50
+    assert state.health == 44
+
+@Test/RuneMiners/OptionalPracticeReturnsToExplorationAndSkipWorks
+type = logic
+page = miners
+setup:
+    invoke start
+run:
+    invoke combat_help
+    assert state.tutorial_step == "strike"
+    assert state.player.x == 4.5
+    invoke inventory
+    assert state.menu == ""
+    invoke skip_tutorial
+    assert state.phase == "explore"
+    assert state.tutorial_done == true
+    assert state.enemy_hp == 48
+    invoke begin_battle
+    assert state.tutorial_step == ""
+    invoke combat_help
+    assert state.tutorial_step == "strike"
+    invoke choice_one
+    invoke flee
+    assert state.tutorial_step == ""
+    assert state.phase == "explore"
+    invoke start
+    assert state.tutorial_done == false
+    invoke begin_battle
+    invoke skip_tutorial
+    assert state.phase == "player"
+    invoke choice_one
+    invoke practice_ticks 50
+    assert state.health == 44
+
+@Logic/miners
+action practice_ticks(count):
+    for index in range(0, count):
+        call tick {}

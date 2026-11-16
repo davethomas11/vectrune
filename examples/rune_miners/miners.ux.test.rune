@@ -1,0 +1,83 @@
+#!RUNE
+import "rune_miners.rune"
+
+@Test/RuneMiners/HudPresetsAndTextSurviveFreshExpeditions
+type = logic
+page = miners
+setup:
+    invoke start
+run:
+    assert state.hud_preset == 0
+    assert state.ui.textScale == 1
+    assert state.title_hidden == true
+    assert state.play_hidden == false
+    invoke cycle_hud
+    assert state.hud_preset == 1
+    assert state.ui.detail == ""
+    assert state.ui.objective != ""
+    invoke cycle_hud
+    assert state.hud_preset == 2
+    assert state.ui.objective == ""
+    assert state.ui.meters.length == 1
+    assert state.ui.prompt != ""
+    invoke toggle_text
+    assert state.ui.textScale == 2
+    assert state.pause_ui.textScale == 2
+    invoke start
+    assert state.hud_preset == 2
+    assert state.large_text == true
+    invoke return_to_title
+    assert state.title_hidden == false
+    assert state.play_hidden == true
+    assert state.hud_preset == 2
+    invoke cycle_hud
+    assert state.hud_preset == 0
+
+@Test/RuneMiners/MinimalHudNeverHidesPracticeOrDefense
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke cycle_hud
+    invoke cycle_hud
+    invoke toggle_text
+    invoke begin_battle
+run:
+    assert state.ui.objective == "SAFE PRACTICE"
+    assert state.ui.prompt == "1: STRIKE / G SKIP"
+    assert state.ui.meters.length == 3
+    invoke choice_one
+    invoke practice_ticks 100
+    assert state.ui.prompt == "SHIFT: GUARD NOW!"
+    invoke skip_tutorial
+    invoke choice_one
+    invoke practice_ticks 40
+    assert state.ui.prompt == "SHIFT: GUARD NOW!"
+    assert state.ui.objective == "GUARDIAN ATTACKING"
+    invoke guard
+    assert state.ui.prompt == "DEFENSE READY"
+    assert state.health == 60
+
+@Test/RuneMiners/ContextualActionsAndMenuExplanations
+type = logic
+page = miners
+setup:
+    invoke start
+run:
+    assert state.actions_hidden == false
+    invoke inventory
+    assert state.actions_hidden == true
+    assert state.pages_hidden == true
+    invoke choice_one
+    assert state.pages_hidden == false
+    invoke close_menu
+    invoke workbench
+    assert state.menu_one_locked == true
+    assert state.menu_one_help == "Tool: mine twice as fast / Need 2 more timber, 3 stone, 0 copper."
+    invoke close_menu
+    invoke leave_camp
+    invoke refresh_ui
+    assert state.actions_hidden == true
+    assert state.camp_locked == true
+    invoke flee
+    assert state.actions_hidden == false

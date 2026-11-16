@@ -49,6 +49,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     result?.catch(() => { /* The browser may deny fullscreen; the game keeps working. */ });
   };
   mapped = game.controls ? mountControls(canvas, game.controls, {
+    state: () => game.app.state,
     playing: () => game.app.state.status === 'playing', paused: () => game.paused,
     resume: () => { clear(); game.paused = false; }, advance: start,
     fullscreen, interact: unlockAudio, menuKey: code => game.key(code),

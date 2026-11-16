@@ -18,6 +18,7 @@ describe('structured pixel3d HUD', () => {
     expect(validateHud(ui)).toBe(ui);
     for (const invalid of [
       null, {}, { ...ui, prompt: 1 }, { ...ui, heading: 42 }, { ...ui, meters: Array(4).fill(ui.meters[0]) },
+      ...[0, 1.5, 3, '2', null].map(textScale => ({ ...ui, textScale })),
       ...[NaN, Infinity, 0, -1].map(max => ({ ...ui, meters: [{ ...ui.meters[0], max }] })),
       { ...ui, meters: [{ ...ui.meters[0], value: Infinity }] },
       { ...ui, meters: [{ ...ui.meters[0], color: 0x1000000 }] },
@@ -25,6 +26,35 @@ describe('structured pixel3d HUD', () => {
     ]) expect(() => validateHud(invalid)).toThrow();
     expect(wrapText('short words | abcdefghijk', 5)).toEqual(['short', 'words', 'abcde', 'fghij', 'k']);
     expect(() => wrapText('text', 0)).toThrow('positive integer');
+  });
+  it('wraps larger text inside the framebuffer and preserves all menu choices', () => {
+    const calls: Array<{ text: string; x: number; y: number; scale: number }> = [];
+    const canvas = { width: 320, height: 200, rect() {},
+      text(text: string, x: number, y: number, _color?: number, scale = 1) { calls.push({ text, x, y, scale }); } };
+    const enlarged: GameHud = { ...ui, textScale: 2, meters: [
+      ui.meters[0], { ...ui.meters[0], label: 'GUARDIAN' }, { ...ui.meters[0], label: 'IMPACT' },
+    ], objective: 'YOUR TURN', prompt: 'SHIFT GUARD / Q DODGE NOW!' };
+    expect(validateHud(enlarged)).toBe(enlarged);
+    renderHud(canvas, enlarged, 'playing', false);
+    expect(calls.some(c => c.text.includes('GUARD'))).toBe(true);
+    expect(calls.some(c => c.text.startsWith('I '))).toBe(true);
+    expect(calls.every(c => c.scale === 2 && c.x >= 0 && c.x + c.text.length * 8 <= 320 && c.y >= 0 && c.y + 10 <= 200)).toBe(true);
+    calls.length = 0;
+    renderHud(canvas, { ...enlarged, meters: [ui.meters[0]], objective: 'WORKBENCH',
+      panel: { title: 'RECIPES', body: 'A very long description '.repeat(30),
+        choices: ['PICK', 'BLADE', 'MAIL'], selected: 1, footer: 'N NEXT / I CLOSE' },
+    }, 'playing', false);
+    for (const choice of ['1 PICK', '2 BLADE', '3 MAIL']) expect(calls.some(c => c.text.includes(choice))).toBe(true);
+    expect(calls.every(c => c.y + 10 <= 200)).toBe(true);
+  });
+  it('does not draw empty objective or prompt strips in minimal HUDs', () => {
+    const rectangles: number[][] = [];
+    renderHud({ width: 320, height: 200, text() {},
+      rect(...args: number[]) { rectangles.push(args); } },
+    { ...ui, objective: '', detail: '', notice: '', prompt: '' }, 'playing', false);
+    expect(rectangles.some(r => r[0] === 0 && r[1] === 0 && r[3] === 18)).toBe(true);
+    expect(rectangles.some(r => r[0] === 0 && r[1] === 25)).toBe(false);
+    expect(rectangles.some(r => r[0] === 0 && r[1] === 186)).toBe(false);
   });
   it('fills exact meter proportions, highlights selection, and keeps prompts separate', () => {
     const rc = new Raycaster3D({ width: 320, height: 200, textures: {}, sprites: {},

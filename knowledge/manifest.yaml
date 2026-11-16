@@ -4,6 +4,19 @@ purpose:
   - shared knowledge source for AI and docs
   - stable reference layer between runtime behavior and rendered docs
 pages:
+  - id: runtime.voxel-worlds
+    path: runtime/voxel-worlds.md
+    kind: page
+    title: Voxel Worlds and Rune Miners
+    audience:
+      - ai
+      - human
+    sources:
+      - runtime/rune-web/src/pixel3d/voxel.ts
+      - src/apps/pixel3d/desktop.rs
+      - examples/rune_miners/
+      - tests/rune_miners_app.rs
+      - tests/browser/rune_miners.py
   - id: language.pixel-models
     path: language/pixel-models.md
     kind: page

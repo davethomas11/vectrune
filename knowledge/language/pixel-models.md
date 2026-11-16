@@ -87,9 +87,14 @@ top/bottom full color, local x faces 80%, local y faces 65%.
 Models share perspective and per-pixel depth with walls and sprites. A stair
 can cover a sprite's feet while leaving its head visible. Floors and indoor
 ceiling planes clip model geometry; outdoor sky has no ceiling plane. The
-current camera eye remains fixed at half a tile above the floor.
+grid-map camera eye remains fixed at half a tile above the floor.
 `@Map ceiling_height` raises both the ceiling clipping plane and wall tops;
 see [room heights](../runtime/pixel3d.md#room-height).
+
+Opt-in [voxel scenes](../runtime/voxel-worlds.md) instead use player feet
+elevation plus a 1.25-tile eye offset and pitched camera rays. Place model
+origins at the appropriate terrain elevation using instance `z`; models share
+voxel depth occlusion but remain visual, non-colliding props.
 
 For moving creatures, face the model's authored forward axis toward its
 target by updating `angle`. Rune Crypt authors enemies facing local `+x`.

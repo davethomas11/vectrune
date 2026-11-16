@@ -1,0 +1,62 @@
+#!RUNE
+import "assets.rune"
+import "models.rune"
+import "controls.rune"
+import "logic.rune"
+import "inventory.rune"
+import "tutorial.rune"
+import "ux.rune"
+import "shell.rune"
+
+@App
+name = Rune Miners
+type = pixel-3d
+runtime = hybrid
+scene = miners
+resolution = [320, 200]
+tick_rate = 30
+port = 3022
+shell = miners_cabinet
+
+@Scene/miners
+logic = miners
+map = atmosphere
+world = world
+camera = view_camera
+things = ["landmarks", "foes", "effects", "target_marker", "mining_effects"]
+weapon = weapon
+controls = miners
+ui = ui
+pause_ui = pause_ui
+restart_action = return_to_title
+click_to_start = false
+mouse_look = true
+presentation = {
+    "defeat": "BACK TO THE CAMPFIRE",
+    "instructions": [
+        "WASD MOVE / MOUSE LOOK / ARROWS AIM",
+        "CLICK OR E MINE / SPACE JUMP",
+        "1 CRAFT PICK / 2 CRAFT BLADE / R RECRUIT",
+        "BATTLE: 1 STRIKE / 2 SKILL / 3 MEND",
+        "SHIFT GUARD / Q DODGE ON THE FINAL BEAT"
+    ],
+    "objective": "MINE - CRAFT - RECRUIT - RECLAIM THE HEART",
+    "subtitle": "A SMALL CAMP. A WORLD BELOW.",
+    "title": "RUNE MINERS",
+    "victory": "THE MINE IS YOURS"
+}
+
+# The atmosphere map supplies a sky; voxel occupancy comes from state.world.
+@Map/atmosphere
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+floor = "#343b39"
+sky = {"seed":319,"zenith":"#386575","horizon":"#c5dbb0","cloud":"#e0e6cd","speed":0.1}
+
+@Page/miners
+logic = miners
+view:
+    canvas data-rune-pixel-3d=true

@@ -1,0 +1,105 @@
+@Logic/miners
+state:
+    tutorial_done = false
+    tutorial_step = ""
+    tutorial_return = false
+    tutorial_label = ""
+    tutorial_hidden = true
+
+action combat_help:
+    stop when status != "playing"
+    if phase == "enemy":
+        notice = "Finish this defense first; H opens a safe practice battle."
+        call refresh_ui
+        stop
+    tutorial_return = phase == "explore"
+    call close_menu
+    if phase == "explore":
+        call begin_battle
+    tutorial_done = false
+    tutorial_step = "strike"
+    notice = "PRACTICE: choose Strike / 1. No health, herbs or guardian rewards are at risk."
+    call refresh_ui
+
+action skip_tutorial:
+    stop when tutorial_step == ""
+    tutorial_step = ""
+    tutorial_done = true
+    phase = "player"
+    battle_clock = 0
+    defense = ""
+    defense_used = false
+    foes[0].model = "miners/guardian"
+    foes[0].scale = 1
+    notice = "Real battle ready. Strike builds focus; skill spends 2. H replays practice."
+    if tutorial_return:
+        phase = "explore"
+        notice = "Practice complete. Find the guardian when you are ready."
+        tutorial_return = false
+    call refresh_ui
+
+action tutorial_action(kind):
+    if tutorial_step == "strike":
+        if kind != "strike":
+            notice = "Practice step 1: press 1 / Strike. Strikes build focus."
+            stop
+        tutorial_step = "guard"
+        phase = "enemy"
+        battle_clock = 0
+        defense_used = false
+        defense = ""
+        notice = "Watch the bar fill. The first guard window waits for you."
+        stop
+    if tutorial_step == "skill":
+        if kind != "skill":
+            notice = "Practice step 3: press 2 / Skill. It spends 2 focus for a stronger hit."
+            stop
+        tutorial_step = "dodge"
+        phase = "enemy"
+        battle_clock = 0
+        defense_used = false
+        defense = ""
+        notice = "Dodge has a tighter window. Wait for DODGE NOW; practice will hold it open."
+
+action tutorial_tick(input):
+    if phase == "enemy":
+        battle_clock = min(tutorial_step == "guard" ? 40 : 44, battle_clock + 1)
+        foes[0].model = battle_clock >= 40 ? "miners/guardian_warn" : "miners/guardian"
+        if input.guard && !guard_held:
+            call defend "guard"
+        if input.dodge && !dodge_held:
+            call defend "dodge"
+    guard_held = !!input.guard
+    dodge_held = !!input.dodge
+
+action tutorial_defend(kind):
+    required_tick = tutorial_step == "guard" ? 40 : 44
+    required_kind = tutorial_step == "guard" ? "guard" : "dodge"
+    if kind != required_kind || battle_clock < required_tick:
+        notice = "Practice: wait for " + required_kind + " NOW, then press again. No penalty."
+        stop
+    phase = "player"
+    battle_clock = 0
+    foes[0].model = "miners/guardian"
+    if tutorial_step == "guard":
+        tutorial_step = "skill"
+        notice = "Guard learned! It reduces damage and builds focus. Now choose Skill / 2."
+        stop
+    call skip_tutorial
+    if phase == "player":
+        notice = "Practice complete! Real battle begins on your next action. H replays; B retreats."
+
+action refresh_tutorial:
+    tutorial_hidden = tutorial_step == ""
+    tutorial_label = "Strike builds focus. Skill spends 2 focus. Mend uses one herb. Guard late with Shift; dodge later with Q. H replays safe practice."
+    if tutorial_step != "":
+        tutorial_label = tutorial_step == "strike" ? "Choose Strike / 1 to begin. Strikes build focus for skills. Practice never costs health, focus or herbs." : (tutorial_step == "skill" ? "Guard learned! It reduces damage and builds focus. Now choose Skill / 2 for a stronger attack." : (tutorial_step == "guard" ? "Watch the impact bar. When it turns green and says GUARD NOW, press Shift / Guard. This practice window stays open; early presses can be retried." : "Watch the bar fill further to DODGE NOW, then press Q / Dodge. Dodges avoid all damage but need later timing. This practice window also stays open."))
+        ui.objective = "COMBAT PRACTICE - NO DAMAGE OR COSTS"
+        ui.detail = tutorial_step == "strike" ? "STRIKES BUILD FOCUS | G SKIP | H REPLAY" : (tutorial_step == "skill" ? "SKILLS SPEND 2 FOCUS FOR MORE DAMAGE | G SKIP" : (tutorial_step == "guard" ? "GUARD REDUCES DAMAGE / EARLY? TRY AGAIN | G SKIP" : "DODGE AVOIDS DAMAGE / EARLY? TRY AGAIN | G SKIP"))
+        ui.notice = ""
+        ui.panel = null
+        ui.prompt = tutorial_step == "strike" ? "STEP 1: PRESS 1 / STRIKE" : (tutorial_step == "skill" ? "STEP 3: PRESS 2 / SKILL" : (battle_clock < (tutorial_step == "guard" ? 40 : 44) ? "WAIT... WATCH THE IMPACT BAR FILL" : (tutorial_step == "guard" ? "STEP 2: SHIFT / GUARD NOW! WINDOW IS HELD" : "STEP 4: Q / DODGE NOW! WINDOW IS HELD")))
+        one_locked = tutorial_step != "strike"
+        two_locked = tutorial_step != "skill"
+        three_locked = true
+        defense_locked = phase != "enemy"

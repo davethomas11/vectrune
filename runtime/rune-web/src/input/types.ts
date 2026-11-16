@@ -10,6 +10,7 @@ export interface InputBinding {
 }
 export type Binding = string | InputBinding | null;
 export interface TouchButton {
+  visible?: string;
   id: string;
   input?: string;
   command?: string;
@@ -21,9 +22,10 @@ export interface TouchButton {
   drag_x?: string;
 }
 export interface TouchControls {
+  visible?: string;
   enabled?: boolean;
-  joystick?: { x?: string; y?: string; left?: string; right?: string; up?: string; down?: string; deadzone?: number; size?: number; anchor?: 'bottom-left' | 'bottom-right' };
-  look?: { x: string; sensitivity?: number };
+  joystick?: { visible?: string; x?: string; y?: string; left?: string; right?: string; up?: string; down?: string; deadzone?: number; size?: number; anchor?: 'bottom-left' | 'bottom-right' };
+  look?: { x: string; y?: string; sensitivity?: number };
   buttons?: TouchButton[];
 }
 export interface ControlsProfile {

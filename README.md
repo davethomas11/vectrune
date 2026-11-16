@@ -634,6 +634,43 @@ views without Python or Node. For a native window, build with the optional
 `pixel-desktop` feature. See [Vect scripting](knowledge/language/vect-scripts.md)
 for the shared expression syntax and current parity boundaries.
 
+### Rune Miners (unreleased)
+
+A small first expedition into a true 3D block world: seeded Meadow/Ember
+biomes, mineable timber/stone/copper, a terraced cave, six recipes and four gear slots,
+recruitable Mira, and a guardian battle with turn choices and timed guard/dodge.
+The opt-in engine path adds voxel occupancy, gravity, jumping, pitch and volume
+fill/carving while preserving the existing games.
+
+```sh
+vectrune examples/rune_miners/rune_miners.rune -o html > rune-miners.html
+vectrune test examples/rune_miners --type logic
+```
+
+Requires a current source build, not the released 0.3.4 compiler. Open the HTML:
+WASD moves, mouse/arrows aim, click/E mines, Space jumps. Gather 3 timber,
+3 stone and 2 copper, then use 1/2 to craft at camp and R to recruit Mira.
+Descend east then south to find the guardian. Battle uses 1/2/3 for actions;
+Shift guards or Q dodges on the final beat of the impact bar.
+Gold block frames show mining targets and yields; chip bursts confirm hits.
+Objectives track remaining materials, a cyan flag marks camp, and torch posts
+lead into the cave. A wider battle view exposes the guardian's raised-arm
+warning while unavailable action buttons explain the current turn at a glance.
+The ivory/gold guardian stands out from cave stone. First combat teaches
+Strike, Guard, Skill and Dodge without damage or costs; practice defense windows
+wait for you. G skips and H replays practice. I opens the backpack/equipment,
+K the camp workbench; 1/2/3 choose, N/V page and I closes. Craft picks, a blade,
+armor, a health charm or herb bundles; gear auto-equips and can be swapped
+outside combat. Menus freeze exploration; crafting requires camp.
+The redesigned task-focused shell includes **O** for Guided/Compact/Minimal HUD
+presets and **U** for larger HUD text, also available in Pause. Essential combat
+cues stay visible. Scrollable recipe cards explain missing materials; menus
+release mouse capture and keep Close reachable on mobile. Touch controls adapt
+to exploration, player turns and defense. Display preferences last until reload.
+Browser, gamepad and touch controls are included; native windows use the shared
+JavaScript voxel renderer. No portals, player building or saved worlds yet.
+See [voxel APIs and scope](knowledge/runtime/voxel-worlds.md).
+
 ### Rune Crypt
 
 Available in **Vectrune 0.3.4**. [Play Rune Crypt](https://vectrune.com/rune-crypt/)

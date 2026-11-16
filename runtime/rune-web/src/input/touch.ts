@@ -3,6 +3,7 @@ import type { TouchControls } from './types';
 
 /** Profile-authored buttons and stick; each pointer owns an independent input source. */
 export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameControls, profile: TouchControls, options: {
+  state?(): Record<string, unknown>;
   playing(): boolean; paused(): boolean; resume(): void; advance(): void; interact(): void; fullscreen(): void; expanded?(): boolean; tapToAdvance?: boolean;
 }) {
   const surface = canvas.parentElement || canvas;
@@ -21,6 +22,16 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
   type Pointer = { target: HTMLElement; move?(e: PointerEvent): void; end(cancel: boolean): void };
   const pointers = new Map<number, Pointer>();
   const occupied = new Set<HTMLElement>();
+  const visibility = new Map<HTMLElement, string>();
+  function visible(path: string | undefined): boolean {
+    if (path === undefined) return true;
+    let value: unknown = options.state?.();
+    for (const key of path.split('.')) {
+      value = value && typeof value === 'object' ? Reflect.get(value, key) : undefined;
+    }
+    if (typeof value !== 'boolean') throw new Error(`Touch visible must reference boolean state: ${path}`);
+    return value;
+  }
   function activate(e: PointerEvent) {
     e.preventDefault(); e.stopPropagation(); options.interact(); overlay.classList.add('is-touch'); canvas.focus({ preventScroll: true });
     if (!options.playing()) { if (options.tapToAdvance !== false) options.advance(); return false; }
@@ -45,6 +56,7 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
   if (profile.joystick) {
     const def = profile.joystick;
     const stick = button('MOVE', 'joystick', def.anchor || 'bottom-left', [12, 12], def.size || 96);
+    if (def.visible !== undefined) visibility.set(stick, def.visible);
     stick.dataset.gameplay = 'true'; stick.setAttribute('aria-label', 'Move joystick');
     const thumb = document.createElement('span'); thumb.className = 'control-thumb'; stick.append(thumb);
     function move(e?: PointerEvent, cancel = false) {
@@ -68,6 +80,7 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
   }
   for (const [index, def] of (profile.buttons || []).entries()) {
     const target = button(def.label, def.id, def.anchor || 'bottom-right', def.offset || [12 + index * 68, 12], def.size || 56);
+    if (def.visible !== undefined) visibility.set(target, def.visible);
     target.classList.add('touch-' + def.id);
     if (def.aria_label) target.setAttribute('aria-label', def.aria_label);
     if (def.input) target.dataset.gameplay = 'true';
@@ -90,10 +103,17 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
   listen(canvas, 'pointerdown', e => {
     if (!['touch', 'pen'].includes(e.pointerType) || occupied.has(canvas)) return;
     if (!activate(e) || !profile.look) return;
-    let lastX = e.clientX;
+    let lastX = e.clientX, lastY = e.clientY;
     capture(canvas, e, { target: canvas, move: e => {
       emit('aim', profile.look!.x, (e.clientX - lastX) * 1200 / Math.max(1, canvas.getBoundingClientRect().width) * (profile.look!.sensitivity ?? 1), 'delta'); lastX = e.clientX;
-    }, end: cancel => { if (cancel) emit('aim', profile.look!.x, 0, 'delta', true); } });
+      if (profile.look!.y) emit('aim:y', profile.look!.y, (e.clientY - lastY) * 1200 / Math.max(1, canvas.getBoundingClientRect().height) * (profile.look!.sensitivity ?? 1), 'delta');
+      lastY = e.clientY;
+    }, end: cancel => {
+      if (cancel) {
+        emit('aim', profile.look!.x, 0, 'delta', true);
+        if (profile.look!.y) emit('aim:y', profile.look!.y, 0, 'delta', true);
+      }
+    } });
   });
   listen(document, 'pointermove', e => { const pointer = pointers.get(e.pointerId); if (pointer) { e.preventDefault(); pointer.move?.(e); } });
   function end(e: PointerEvent) {
@@ -110,7 +130,16 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
   function update() {
     const rect = canvas.getBoundingClientRect(), parent = surface.getBoundingClientRect();
     Object.assign(overlay.style, { left: `${rect.left - parent.left - surface.clientLeft}px`, top: `${rect.top - parent.top - surface.clientTop}px`, width: `${rect.width}px`, height: `${rect.height}px` });
-    for (const element of Array.from(overlay.querySelectorAll<HTMLElement>('[data-gameplay]'))) element.hidden = !options.playing();
+    overlay.hidden = !visible(profile.visible);
+    for (const element of Array.from(overlay.querySelectorAll<HTMLButtonElement>('button'))) {
+      element.hidden = (element.dataset.gameplay === 'true' && !options.playing()) || !visible(visibility.get(element));
+    }
+    for (const [id, pointer] of [...pointers]) {
+      if (overlay.hidden || pointer.target.hidden) {
+        pointers.delete(id); occupied.delete(pointer.target); pointer.end(true);
+        try { pointer.target.releasePointerCapture(id); } catch { /* Already released. */ }
+      }
+    }
     const expanded = options.expanded?.() || false;
     hint.style.cssText = 'position:absolute;left:25%;bottom:calc(100% + 12px);width:50%;text-align:center;color:white;background:#142432dd;font:12px monospace;padding:8px';
     hint.hidden = !expanded || innerWidth >= innerHeight;

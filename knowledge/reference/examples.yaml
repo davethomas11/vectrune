@@ -1,6 +1,48 @@
 version: 1
 status: starter
 examples:
+  - id: example.game.rune-miners
+    title: Rune Miners
+    summary: Unreleased small voxel RPG expedition with mineable terrain, seeded biome variants, crafting, one recruit and turn-based guardian combat with timed defense.
+    source_path: examples/rune_miners/rune_miners.rune
+    app_type: pixel-3d
+    concepts:
+      - solid 3D terrain and terraced caves
+      - seeded Meadow and Ember biome variants
+      - volume fill and carving tools
+      - mining, six crafting recipes and four equipment slots
+      - companion recruitment
+      - turn combat with timed guard and dodge
+      - portable HUD, pause and touch camera pitch
+      - block selection frames and dissolving mining chips
+      - remaining-material objectives and available-action buttons
+      - camp flag, torch trail and readable guardian warning poses
+      - contrasting guardian palette and safe guided combat practice
+      - paged backpack/workbench overlays with camp-only crafting
+      - Guided, Compact and Minimal HUD presets with larger text
+      - task-focused action docks and context-sensitive touch visibility
+      - viewport-bounded recipe cards with shortfall explanations
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune examples/rune_miners/rune_miners.rune -o html
+      - vectrune test examples/rune_miners --type logic
+    test_refs:
+      - runtime/rune-web/tests/voxel.test.ts
+      - tests/rune_miners_app.rs
+      - tests/browser/rune_miners.py
+      - examples/rune_miners/miners.logic.test.rune
+      - examples/rune_miners/miners.inventory.test.rune
+      - examples/rune_miners/miners.tutorial.test.rune
+      - examples/rune_miners/miners.ux.test.rune
+    related_knowledge:
+      - runtime.voxel-worlds
+      - language.pixel-models
+    status: experimental
+    notes:
+      - Requires a build from current source; not in the published 0.3.4 compiler.
+      - Bounded 20x20x10 starter generator combines seeded terrain with guaranteed camp resources and a fixed terraced entrance.
+      - No portals, player building or saved worlds yet. Native voxel rendering uses shared JavaScript, not the Rust grid rasterizer.
   - id: example.game.rune-crypt
     title: Rune Crypt
     summary: Five-depth pixel-3d roguelite RPG with readable resource bars, visible choices, progressive control hints, tactical combat, and persistent training.

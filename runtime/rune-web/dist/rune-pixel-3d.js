@@ -49,6 +49,16 @@ var __RunePixel3DRuntime = (() => {
     }
     const pointers = /* @__PURE__ */ new Map();
     const occupied = /* @__PURE__ */ new Set();
+    const visibility = /* @__PURE__ */ new Map();
+    function visible(path) {
+      if (path === void 0) return true;
+      let value = options.state?.();
+      for (const key of path.split(".")) {
+        value = value && typeof value === "object" ? Reflect.get(value, key) : void 0;
+      }
+      if (typeof value !== "boolean") throw new Error(`Touch visible must reference boolean state: ${path}`);
+      return value;
+    }
     function activate(e) {
       e.preventDefault();
       e.stopPropagation();
@@ -108,6 +118,7 @@ var __RunePixel3DRuntime = (() => {
       var move = move2;
       const def = profile.joystick;
       const stick = button("MOVE", "joystick", def.anchor || "bottom-left", [12, 12], def.size || 96);
+      if (def.visible !== void 0) visibility.set(stick, def.visible);
       stick.dataset.gameplay = "true";
       stick.setAttribute("aria-label", "Move joystick");
       const thumb = document.createElement("span");
@@ -119,8 +130,9 @@ var __RunePixel3DRuntime = (() => {
         move2(e);
       });
     }
-    for (const [index, def] of (profile.buttons || []).entries()) {
-      const target = button(def.label, def.id, def.anchor || "bottom-right", def.offset || [12 + index * 68, 12], def.size || 56);
+    for (const [index2, def] of (profile.buttons || []).entries()) {
+      const target = button(def.label, def.id, def.anchor || "bottom-right", def.offset || [12 + index2 * 68, 12], def.size || 56);
+      if (def.visible !== void 0) visibility.set(target, def.visible);
       target.classList.add("touch-" + def.id);
       if (def.aria_label) target.setAttribute("aria-label", def.aria_label);
       if (def.input) target.dataset.gameplay = "true";
@@ -149,12 +161,17 @@ var __RunePixel3DRuntime = (() => {
     listen(canvas, "pointerdown", (e) => {
       if (!["touch", "pen"].includes(e.pointerType) || occupied.has(canvas)) return;
       if (!activate(e) || !profile.look) return;
-      let lastX = e.clientX;
+      let lastX = e.clientX, lastY = e.clientY;
       capture(canvas, e, { target: canvas, move: (e2) => {
         emit("aim", profile.look.x, (e2.clientX - lastX) * 1200 / Math.max(1, canvas.getBoundingClientRect().width) * (profile.look.sensitivity ?? 1), "delta");
         lastX = e2.clientX;
+        if (profile.look.y) emit("aim:y", profile.look.y, (e2.clientY - lastY) * 1200 / Math.max(1, canvas.getBoundingClientRect().height) * (profile.look.sensitivity ?? 1), "delta");
+        lastY = e2.clientY;
       }, end: (cancel) => {
-        if (cancel) emit("aim", profile.look.x, 0, "delta", true);
+        if (cancel) {
+          emit("aim", profile.look.x, 0, "delta", true);
+          if (profile.look.y) emit("aim:y", profile.look.y, 0, "delta", true);
+        }
       } });
     });
     listen(document, "pointermove", (e) => {
@@ -187,7 +204,21 @@ var __RunePixel3DRuntime = (() => {
     function update() {
       const rect = canvas.getBoundingClientRect(), parent = surface.getBoundingClientRect();
       Object.assign(overlay.style, { left: `${rect.left - parent.left - surface.clientLeft}px`, top: `${rect.top - parent.top - surface.clientTop}px`, width: `${rect.width}px`, height: `${rect.height}px` });
-      for (const element of Array.from(overlay.querySelectorAll("[data-gameplay]"))) element.hidden = !options.playing();
+      overlay.hidden = !visible(profile.visible);
+      for (const element of Array.from(overlay.querySelectorAll("button"))) {
+        element.hidden = element.dataset.gameplay === "true" && !options.playing() || !visible(visibility.get(element));
+      }
+      for (const [id, pointer] of [...pointers]) {
+        if (overlay.hidden || pointer.target.hidden) {
+          pointers.delete(id);
+          occupied.delete(pointer.target);
+          pointer.end(true);
+          try {
+            pointer.target.releasePointerCapture(id);
+          } catch {
+          }
+        }
+      }
       const expanded = options.expanded?.() || false;
       hint.style.cssText = "position:absolute;left:25%;bottom:calc(100% + 12px);width:50%;text-align:center;color:white;background:#142432dd;font:12px monospace;padding:8px";
       hint.hidden = !expanded || innerWidth >= innerHeight;
@@ -1200,8 +1231,291 @@ var __RunePixel3DRuntime = (() => {
     return { ...map.spawn };
   }
 
+  // src/pixel3d/sky.ts
+  function noise(x, y, seed) {
+    let n = (x & 63) * 374761393 + y * 668265263 + seed >>> 0;
+    n = Math.imul(n ^ n >>> 13, 1274126177) >>> 0;
+    return ((n ^ n >>> 16) >>> 0) / 4294967295;
+  }
+  function mix(a, b, t) {
+    let color = 4278190080;
+    for (const shift of [0, 8, 16]) {
+      color |= Math.floor((a >>> shift & 255) * (1 - t) + (b >>> shift & 255) * t) << shift;
+    }
+    return color >>> 0;
+  }
+  function skyPixel(sky, longitude, altitude, time) {
+    const u = ((longitude / (2 * Math.PI) * 64 + time * sky.speed) % 64 + 64) % 64;
+    const v = altitude * 12;
+    const x = Math.floor(u), y = Math.floor(v);
+    const fx = u - x, fy = v - y;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = noise(x, y, sky.seed) * (1 - sx) + noise(x + 1, y, sky.seed) * sx;
+    const b = noise(x, y + 1, sky.seed) * (1 - sx) + noise(x + 1, y + 1, sky.seed) * sx;
+    const density = Math.max(0, Math.min(1, (a * (1 - sy) + b * sy - 0.5) * 4));
+    const band = Math.floor(altitude * 16) / 16;
+    return mix(mix(sky.horizon, sky.zenith, band), sky.cloud, density * Math.min(1, altitude * 5));
+  }
+
+  // src/pixel3d/voxel.ts
+  function integer(value, min, max, label) {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
+      throw new Error(`${label} must be an integer from ${min} to ${max}`);
+    }
+    return value;
+  }
+  function validateWorld(value) {
+    if (!value || typeof value !== "object") throw new Error("Voxel world must be an object");
+    const world = value;
+    integer(world.width, 1, 48, "Voxel width");
+    integer(world.height, 1, 48, "Voxel height");
+    integer(world.depth, 1, 24, "Voxel depth");
+    if (!Array.isArray(world.materials) || world.materials.length < 1 || world.materials.length > 256 || !world.materials.every((name) => typeof name === "string" && name.length > 0) || !Array.isArray(world.cells) || world.cells.length !== world.width * world.height * world.depth || !world.cells.every((block) => Number.isInteger(block) && block >= 0 && block <= world.materials.length)) {
+      throw new Error("Voxel world needs material names and an exactly sized array of valid block IDs");
+    }
+    return world;
+  }
+  function index(world, x, y, z) {
+    return (z * world.height + y) * world.width + x;
+  }
+  function voxelGet(world, x, y, z) {
+    if (x < 0 || y < 0 || z < 0 || x >= world.width || y >= world.height || z >= world.depth) return 0;
+    return world.cells[index(world, x, y, z)];
+  }
+  function voxelRead(worldValue, xValue, yValue, zValue) {
+    const world = validateWorld(worldValue);
+    const x = integer(xValue, 0, world.width - 1, "Voxel x");
+    const y = integer(yValue, 0, world.height - 1, "Voxel y");
+    const z = integer(zValue, 0, world.depth - 1, "Voxel z");
+    return voxelGet(world, x, y, z);
+  }
+  function voxelFill(worldValue, fromValue, sizeValue, blockValue) {
+    const world = validateWorld(worldValue);
+    if (!Array.isArray(fromValue) || !Array.isArray(sizeValue) || fromValue.length !== 3 || sizeValue.length !== 3) {
+      throw new Error("Voxel fill needs from and size arrays with three integers");
+    }
+    const limits = [world.width, world.height, world.depth];
+    const from = fromValue.map((v, i) => integer(v, 0, limits[i] - 1, "Voxel fill origin"));
+    const size = sizeValue.map((v, i) => integer(v, 1, limits[i] - from[i], "Voxel fill size"));
+    const block = integer(blockValue, 0, world.materials.length, "Voxel fill block");
+    for (let z = from[2]; z < from[2] + size[2]; z++) for (let y = from[1]; y < from[1] + size[1]; y++) {
+      for (let x = from[0]; x < from[0] + size[0]; x++) world.cells[index(world, x, y, z)] = block;
+    }
+    return world;
+  }
+  function noise2(x, y, seed) {
+    let hash = Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ seed;
+    hash = Math.imul(hash ^ hash >>> 13, 1274126177);
+    return (hash >>> 0) / 4294967296;
+  }
+  function voxelGenerate(seedValue, biomeValue = "meadow") {
+    const seed = integer(seedValue, 0, 4294967295, "Voxel seed");
+    if (biomeValue !== "meadow" && biomeValue !== "ember") throw new Error("Voxel biome must be meadow or ember");
+    const world = {
+      width: 20,
+      height: 20,
+      depth: 10,
+      seed,
+      biome: biomeValue,
+      materials: [
+        "miners/bedrock",
+        "miners/stone",
+        biomeValue === "ember" ? "miners/ash" : "miners/grass",
+        "miners/wood",
+        "miners/copper",
+        biomeValue === "ember" ? "miners/ember" : "miners/leaves"
+      ],
+      cells: Array(4e3).fill(0),
+      spawn: { x: 4.5, y: 4.5, z: 3, angle: 0, pitch: 0, vz: 0 }
+    };
+    const set = (x, y, z, block) => {
+      world.cells[index(world, x, y, z)] = block;
+    };
+    for (let y = 0; y < 20; y++) for (let x = 0; x < 20; x++) {
+      const camp = x < 9 && y < 9;
+      const top = camp ? 3 : 3 + Math.floor(noise2(Math.floor(x / 3), Math.floor(y / 3), seed + (biomeValue === "ember" ? 137 : 0)) * 3);
+      for (let z = 0; z < top; z++) set(x, y, z, z === 0 ? 1 : z === top - 1 ? 3 : noise2(x + z * 13, y, seed) > 0.87 ? 5 : 2);
+      if (!camp && x > 1 && y > 1 && x < 18 && y < 18 && noise2(x, y, seed + 1) > 0.94) {
+        for (let z = top; z < top + 2; z++) set(x, y, z, 4);
+        set(x, y, top + 2, 6);
+      }
+    }
+    for (let x = 8; x < 19; x++) for (let y = 9; y <= 14; y++) {
+      const floor = x < 10 ? 3 : x < 12 ? 2 : 1;
+      for (let z = floor; z <= (x < 12 ? 8 : 3); z++) set(x, y, z, 0);
+      if (x >= 12) set(x, y, 4, 2);
+    }
+    for (let x = 12; x < 19; x++) {
+      set(x, 8, 2, noise2(x, 8, seed) > 0.4 ? 5 : 2);
+      set(x, 15, 2, noise2(x, 15, seed) > 0.4 ? 5 : 2);
+    }
+    for (let y = 9; y <= 14; y++) for (let z = 1; z <= 4; z++) set(19, y, z, 2);
+    for (let x = 3; x <= 5; x++) for (let y = 3; y <= 5; y++) set(x, y, 2, 1);
+    for (const [x, y, z, block] of [
+      [7, 4, 3, 4],
+      [7, 4, 4, 4],
+      [7, 5, 3, 4],
+      [8, 6, 3, 2],
+      [8, 6, 4, 2],
+      [8, 7, 3, 2],
+      [9, 6, 3, 5],
+      [9, 7, 3, 5]
+    ]) set(x, y, z, block);
+    return world;
+  }
+  function voxelRay(world, origin, ray, maxDistance) {
+    let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+    const sx = ray[0] < 0 ? -1 : 1, sy = ray[1] < 0 ? -1 : 1, sz = ray[2] < 0 ? -1 : 1;
+    const dx = Math.abs(1 / ray[0]), dy = Math.abs(1 / ray[1]), dz = Math.abs(1 / ray[2]);
+    let tx = ray[0] === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
+    let ty = ray[1] === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
+    let tz = ray[2] === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    let distance = 0, face = 2;
+    for (let iteration = 0; iteration < 256 && distance <= maxDistance; iteration++) {
+      if (x < 0 || y < 0 || z < 0 || x >= world.width || y >= world.height || z >= world.depth) break;
+      const block = world.cells[index(world, x, y, z)];
+      if (block) return { x, y, z, block, distance, face };
+      if (tx < ty && tx < tz) {
+        face = 0;
+        distance = tx;
+        tx += dx;
+        x += sx;
+      } else if (ty < tz) {
+        face = 1;
+        distance = ty;
+        ty += dy;
+        y += sy;
+      } else {
+        face = 2;
+        distance = tz;
+        tz += dz;
+        z += sz;
+      }
+    }
+    return null;
+  }
+  function voxelTarget(worldValue, playerValue) {
+    const world = validateWorld(worldValue), player = validatePlayer(playerValue, world);
+    const a = player.angle * Math.PI / 180, p = player.pitch * Math.PI / 180;
+    return voxelRay(
+      world,
+      { x: player.x, y: player.y, z: player.z + 1.25 },
+      [Math.cos(a) * Math.cos(p), Math.sin(a) * Math.cos(p), Math.sin(p)],
+      3
+    );
+  }
+  function validatePlayer(value, world) {
+    if (!value || typeof value !== "object") throw new Error("Voxel player must be an object");
+    const player = value;
+    if (![player.x, player.y, player.z, player.angle, player.pitch, player.vz].every(Number.isFinite)) {
+      throw new Error("Voxel player needs finite x, y, z, angle, pitch and vz");
+    }
+    if (player.x < 0.25 || player.y < 0.25 || player.x > world.width - 0.25 || player.y > world.height - 0.25 || player.z < 1 || player.z + 1.6 > world.depth || Math.abs(player.vz) > 0.3 || Math.abs(player.pitch) > 90) {
+      throw new Error("Voxel player must be inside movement bounds, with pitch within 90 degrees and vz within 0.3");
+    }
+    return player;
+  }
+  function voxelMine(worldValue, playerValue) {
+    const world = validateWorld(worldValue);
+    const hit = voxelTarget(world, playerValue);
+    if (!hit || hit.block === 1) return { block: 0, hit };
+    world.cells[index(world, hit.x, hit.y, hit.z)] = 0;
+    return { block: hit.block, hit };
+  }
+  function clearBody(world, x, y, z) {
+    if (x < 0.25 || y < 0.25 || x > world.width - 0.25 || y > world.height - 0.25 || z < 1 || z + 1.6 > world.depth) return false;
+    for (const dx of [-0.24, 0.24]) for (const dy of [-0.24, 0.24]) {
+      for (let bz = Math.floor(z + 1e-3); bz <= Math.floor(z + 1.599); bz++) {
+        if (voxelGet(world, Math.floor(x + dx), Math.floor(y + dy), bz)) return false;
+      }
+    }
+    return true;
+  }
+  function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false) {
+    const world = validateWorld(worldValue), p = { ...validatePlayer(playerValue, world) };
+    if (typeof dxValue !== "number" || typeof dyValue !== "number" || !Number.isFinite(dxValue) || !Number.isFinite(dyValue) || Math.hypot(dxValue, dyValue) > 1 || typeof jumpValue !== "boolean") {
+      throw new Error("Voxel movement needs finite deltas of at most one tile and a boolean jump");
+    }
+    const grounded = !clearBody(world, p.x, p.y, p.z - 0.05);
+    if (jumpValue && grounded) p.vz = 0.28;
+    p.vz = Math.max(-0.3, p.vz - 0.035);
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dxValue), Math.abs(dyValue), Math.abs(p.vz)) / 0.05));
+    for (let i = 0; i < steps; i++) {
+      for (const [axis, delta] of [["x", dxValue / steps], ["y", dyValue / steps]]) {
+        const x = p.x + (axis === "x" ? delta : 0), y = p.y + (axis === "y" ? delta : 0);
+        if (clearBody(world, x, y, p.z)) p[axis] += delta;
+        else if (grounded && delta !== 0 && clearBody(world, x, y, Math.floor(p.z) + 1)) {
+          p.z = Math.floor(p.z) + 1;
+          p[axis] += delta;
+          p.vz = 0;
+        }
+      }
+      if (clearBody(world, p.x, p.y, p.z + p.vz / steps)) p.z += p.vz / steps;
+      else {
+        if (p.vz < 0) p.z = Math.round(p.z);
+        p.vz = 0;
+      }
+    }
+    return p;
+  }
+  function renderVoxels(world, camera, textures, sky, fov, width, height, buffer, depth, time) {
+    const eye = (camera.z ?? 0) + 1.25, a = camera.angle * Math.PI / 180, p = (camera.pitch ?? 0) * Math.PI / 180;
+    const ca = Math.cos(a), sa = Math.sin(a), cp = Math.cos(p), sp = Math.sin(p);
+    const scale = Math.tan(fov * Math.PI / 360);
+    const materialTextures = world.materials.map((name) => {
+      const texture = textures[name];
+      if (!texture) throw new Error(`Unknown voxel material texture: ${name}`);
+      return texture;
+    });
+    if (![camera.x, camera.y, eye, camera.angle, camera.pitch ?? 0].every(Number.isFinite) || camera.x < 0 || camera.y < 0 || camera.x >= world.width || camera.y >= world.height || eye < 0 || eye >= world.depth || Math.abs(camera.pitch ?? 0) > 85) {
+      throw new Error("Voxel camera must be finite, inside the world, with pitch between -85 and 85 degrees");
+    }
+    const origin = { x: camera.x, y: camera.y, z: eye }, ray = [0, 0, 0];
+    const maxDistance = Math.hypot(world.width, world.height, world.depth);
+    for (let x = 0; x < width; x++) {
+      const u = (2 * x / width - 1) * scale;
+      for (let y = 0; y < height; y++) {
+        const v = (height / 2 - y - 0.5) / height;
+        ray[0] = ca * cp - sa * u - ca * sp * v;
+        ray[1] = sa * cp + ca * u - sa * sp * v;
+        ray[2] = sp + cp * v;
+        const i = y * width + x;
+        const hit = voxelRay(world, origin, ray, maxDistance);
+        if (!hit) {
+          depth[i] = Infinity;
+          buffer[i] = sky ? skyPixel(sky, Math.atan2(ray[1], ray[0]), Math.max(0, Math.min(1, ray[2])), time) : 4281608224;
+        } else {
+          depth[i] = hit.distance;
+          const texture = materialTextures[hit.block - 1];
+          const pointU = hit.face === 0 ? camera.y + ray[1] * hit.distance : camera.x + ray[0] * hit.distance;
+          const pointV = hit.face === 2 ? camera.y + ray[1] * hit.distance : eye + ray[2] * hit.distance;
+          const tx = Math.floor((pointU % 1 + 1) % 1 * texture.width);
+          const ty = Math.floor((pointV % 1 + 1) % 1 * texture.height);
+          const color = texture.pixels[ty * texture.width + tx], factor = hit.face === 2 ? 1 : hit.face === 0 ? 0.8 : 0.65;
+          buffer[i] = (4278190080 | Math.floor((color & 255) * factor) | Math.floor((color >>> 8 & 255) * factor) << 8 | Math.floor((color >>> 16 & 255) * factor) << 16) >>> 0;
+        }
+      }
+    }
+  }
+
   // src/expression.ts
   var MAX_DEPTH = 64;
+  var voxelFunctions = {
+    voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
+    voxel_move: (world, player, dx, dy, jump) => voxelMove(world, player, dx, dy, jump),
+    voxel_target: (world, player) => voxelTarget(world, player),
+    voxel_mine: (world, player) => voxelMine(world, player),
+    voxel_get: (world, x, y, z) => voxelRead(world, x, y, z),
+    voxel_fill: (world, from, size, block) => voxelFill(world, from, size, block)
+  };
+  var voxelArity = {
+    voxel_generate: [1, 2],
+    voxel_move: [4, 5],
+    voxel_target: [2, 2],
+    voxel_mine: [2, 2],
+    voxel_get: [4, 4],
+    voxel_fill: [4, 4]
+  };
   function tryParseLiteral(expr, scope) {
     const trimmed = String(expr || "").trim();
     if (trimmed === "") return void 0;
@@ -1299,8 +1613,8 @@ var __RunePixel3DRuntime = (() => {
     const helper = helperDefinitions[name];
     if (!helper) return void 0;
     const helperLocals = Object.assign({}, scope || {});
-    (helper.params || []).forEach((param, index) => {
-      helperLocals[param] = args[index];
+    (helper.params || []).forEach((param, index2) => {
+      helperLocals[param] = args[index2];
     });
     for (const line of helper.body || []) {
       const trimmed = String(line || "").trim();
@@ -1495,6 +1809,15 @@ var __RunePixel3DRuntime = (() => {
     if (trimmed.startsWith("!")) {
       const inner = compileExpression(trimmed.slice(1).trim(), nextDepth);
       return (scope) => !Boolean(inner(scope));
+    }
+    for (const [name, fn] of Object.entries(voxelFunctions)) {
+      if (trimmed.startsWith(name + "(") && trimmed.endsWith(")")) {
+        const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ",");
+        const [required, maximum] = voxelArity[name];
+        if (parts.length < required || parts.length > maximum) throw new Error(`${name} needs ${required}-${maximum} arguments`);
+        const args = parts.map((part) => compileExpression(part, nextDepth));
+        return (scope) => fn(...args.map((arg) => arg(scope)));
+      }
     }
     if (trimmed.startsWith("map_spawn(") && trimmed.endsWith(")")) {
       const name = compileExpression(trimmed.slice(10, -1), nextDepth);
@@ -1868,9 +2191,9 @@ var __RunePixel3DRuntime = (() => {
     }
     if (includesTopLevel(trimmed, " + ")) {
       const cParts = splitTopLevel(trimmed, " + ").map((p) => compileExpression(p, nextDepth));
-      return (scope) => cParts.reduce((acc, fn, index) => {
+      return (scope) => cParts.reduce((acc, fn, index2) => {
         const value = fn(scope);
-        if (index === 0) return value;
+        if (index2 === 0) return value;
         if (typeof acc === "number" && typeof value === "number") return acc + value;
         return `${valueToString(acc)}${valueToString(value)}`;
       }, void 0);
@@ -3058,8 +3381,8 @@ var __RunePixel3DRuntime = (() => {
     for (let i = 0; i < bufferSize; i += 1) {
       data[i] = Math.random() * 2 - 1;
     }
-    const noise2 = ctx2.createBufferSource();
-    noise2.buffer = buffer;
+    const noise3 = ctx2.createBufferSource();
+    noise3.buffer = buffer;
     const filter = ctx2.createBiquadFilter();
     filter.type = filterType;
     filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
@@ -3067,11 +3390,11 @@ var __RunePixel3DRuntime = (() => {
     const gain = ctx2.createGain();
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
-    noise2.connect(filter);
+    noise3.connect(filter);
     filter.connect(gain);
     gain.connect(audioOutput(ctx2));
-    noise2.start(now);
-    noise2.stop(now + duration + 0.01);
+    noise3.start(now);
+    noise3.stop(now + duration + 0.01);
   }
   function playCustomSound(ctx2, def, now, arg) {
     const duration = def.duration || 0.12;
@@ -3540,8 +3863,8 @@ var __RunePixel3DRuntime = (() => {
     for (let i = 0; i < bufferSize; i += 1) {
       data[i] = Math.random() * 2 - 1;
     }
-    const noise2 = ctx2.createBufferSource();
-    noise2.buffer = buffer;
+    const noise3 = ctx2.createBufferSource();
+    noise3.buffer = buffer;
     const filter = ctx2.createBiquadFilter();
     filter.type = filterType;
     filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
@@ -3549,11 +3872,11 @@ var __RunePixel3DRuntime = (() => {
     const gain = ctx2.createGain();
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
-    noise2.connect(filter);
+    noise3.connect(filter);
     filter.connect(gain);
     gain.connect(destination);
-    noise2.start(now);
-    noise2.stop(now + duration + 0.01);
+    noise3.start(now);
+    noise3.stop(now + duration + 0.01);
   }
 
   // src/statement.ts
@@ -3608,12 +3931,12 @@ var __RunePixel3DRuntime = (() => {
     const scopeValue = buildScope(locals);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
-      const index = current.findIndex((item) => {
+      const index2 = current.findIndex((item) => {
         const innerScope = Object.assign({}, scopeValue, { it: item });
         return Boolean(evaluateExpression(condition, innerScope, 0));
       });
-      if (index !== -1) {
-        current[index] = value;
+      if (index2 !== -1) {
+        current[index2] = value;
       }
       return;
     } else if (finalRawKey.startsWith("[") && finalRawKey.endsWith("]")) {
@@ -3672,12 +3995,12 @@ var __RunePixel3DRuntime = (() => {
     const scopeValue = buildScope(locals);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
-      const index = current.findIndex((item) => {
+      const index2 = current.findIndex((item) => {
         const innerScope = Object.assign({}, scopeValue, { it: item });
         return Boolean(evaluateExpression(condition, innerScope, 0));
       });
-      if (index !== -1) {
-        current.splice(index, 1);
+      if (index2 !== -1) {
+        current.splice(index2, 1);
       }
     } else if (finalRawKey.startsWith("[") && finalRawKey.endsWith("]")) {
       const innerExpr = finalRawKey.slice(1, -1);
@@ -4653,38 +4976,12 @@ var __RunePixel3DRuntime = (() => {
           {},
           locals || {}
         );
-        (def.params || []).forEach((param, index) => {
-          scopedLocals[param] = args[index];
+        (def.params || []).forEach((param, index2) => {
+          scopedLocals[param] = args[index2];
         });
         executeSteps(def.steps || [], scopedLocals);
       }
     };
-  }
-
-  // src/pixel3d/sky.ts
-  function noise(x, y, seed) {
-    let n = (x & 63) * 374761393 + y * 668265263 + seed >>> 0;
-    n = Math.imul(n ^ n >>> 13, 1274126177) >>> 0;
-    return ((n ^ n >>> 16) >>> 0) / 4294967295;
-  }
-  function mix(a, b, t) {
-    let color = 4278190080;
-    for (const shift of [0, 8, 16]) {
-      color |= Math.floor((a >>> shift & 255) * (1 - t) + (b >>> shift & 255) * t) << shift;
-    }
-    return color >>> 0;
-  }
-  function skyPixel(sky, longitude, altitude, time) {
-    const u = ((longitude / (2 * Math.PI) * 64 + time * sky.speed) % 64 + 64) % 64;
-    const v = altitude * 12;
-    const x = Math.floor(u), y = Math.floor(v);
-    const fx = u - x, fy = v - y;
-    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-    const a = noise(x, y, sky.seed) * (1 - sx) + noise(x + 1, y, sky.seed) * sx;
-    const b = noise(x, y + 1, sky.seed) * (1 - sx) + noise(x + 1, y + 1, sky.seed) * sx;
-    const density = Math.max(0, Math.min(1, (a * (1 - sy) + b * sy - 0.5) * 4));
-    const band = Math.floor(altitude * 16) / 16;
-    return mix(mix(sky.horizon, sky.zenith, band), sky.cloud, density * Math.min(1, altitude * 5));
   }
 
   // src/pixel3d/model.ts
@@ -4705,9 +5002,11 @@ var __RunePixel3DRuntime = (() => {
     }
     if (dissolve === 1) return;
     const angle = (instance.angle ?? 0) * Math.PI / 180;
+    const eye = camera.height ?? 0.5, pitch = (camera.pitch ?? 0) * Math.PI / 180;
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
     const c = Math.cos(angle), s = Math.sin(angle);
     const ox = camera.x - instance.x, oy = camera.y - instance.y;
-    const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (0.5 - (instance.z ?? 0)) / scale];
+    const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - (instance.z ?? 0)) / scale];
     for (const block of model.blocks) {
       const max = block.from.map((v, i) => v + block.size[i]);
       let left = width, right = 0, top = height, bottom = 0, clipped = false;
@@ -4717,13 +5016,14 @@ var __RunePixel3DRuntime = (() => {
         const z = (corner & 4 ? max[2] : block.from[2]) * scale + (instance.z ?? 0);
         const x = instance.x + lx * c - ly * s - camera.x;
         const y = instance.y + lx * s + ly * c - camera.y;
-        const d = x * dirX + y * dirY;
+        const forward = x * dirX + y * dirY;
+        const d = forward * cp + (z - eye) * sp;
         if (d <= 1e-3) {
           clipped = true;
           continue;
         }
         const sx = width / 2 * (1 + (-x * dirY + y * dirX) / (d * fovScale));
-        const sy = (height >> 1) - (z - 0.5) * height / d;
+        const sy = (height >> 1) - ((z - eye) * cp - forward * sp) * height / d;
         left = Math.min(left, sx);
         right = Math.max(right, sx);
         top = Math.min(top, sy);
@@ -4735,10 +5035,12 @@ var __RunePixel3DRuntime = (() => {
       const y1 = clipped ? height : Math.min(height, Math.ceil(bottom));
       for (let x = x0; x < x1; x++) {
         const cx = 2 * x / width - 1;
-        const rx = dirX - dirY * fovScale * cx, ry = dirY + dirX * fovScale * cx;
         for (let y = y0; y < y1; y++) {
           if (dissolve > 0 && fragmentNoise(x, y) < dissolve) continue;
-          const ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale, ((height >> 1) - y - 0.5) / (height * scale)];
+          const v = ((height >> 1) - y - 0.5) / height;
+          const rx = dirX * cp - dirY * fovScale * cx - dirX * sp * v;
+          const ry = dirY * cp + dirX * fovScale * cx - dirY * sp * v;
+          const ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale, (sp + cp * v) / scale];
           let near = -Infinity, far = Infinity, face = 0, exitFace = 0, valid = true;
           for (let axis = 0; axis < 3; axis++) {
             if (Math.abs(ray[axis]) < 1e-12) {
@@ -4757,12 +5059,12 @@ var __RunePixel3DRuntime = (() => {
               }
             }
           }
-          const index = y * width + x;
+          const index2 = y * width + x;
           const hit = near > 1e-3 ? near : far;
           if (near <= 1e-3) face = exitFace;
-          if (valid && far >= near && hit > 1e-3 && hit < depth[index]) {
-            depth[index] = hit;
-            buffer[index] = shade(block.color, face === 2 ? 1 : face === 0 ? 0.8 : 0.65);
+          if (valid && far >= near && hit > 1e-3 && hit < depth[index2]) {
+            depth[index2] = hit;
+            buffer[index2] = shade(block.color, face === 2 ? 1 : face === 0 ? 0.8 : 0.65);
           }
         }
       }
@@ -4774,6 +5076,9 @@ var __RunePixel3DRuntime = (() => {
     if (!value || typeof value !== "object") throw new Error("Pixel-3d ui must be a HUD object");
     const hud = value;
     if (hud.heading !== void 0 && typeof hud.heading !== "string") throw new Error("Pixel-3d ui heading must be a string");
+    if (hud.textScale !== void 0 && hud.textScale !== 1 && hud.textScale !== 2) {
+      throw new Error("Pixel-3d ui textScale must be 1 or 2");
+    }
     if (!Array.isArray(hud.meters) || hud.meters.length > 3 || !hud.meters.every((m) => m && typeof m.label === "string" && Number.isFinite(m.value) && Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 16777215) || !["objective", "detail", "prompt", "notice"].every((k) => typeof Reflect.get(hud, k) === "string")) {
       throw new Error("Pixel-3d ui needs up to three valid meters and objective/detail/prompt/notice strings");
     }
@@ -4811,11 +5116,16 @@ var __RunePixel3DRuntime = (() => {
     return lines;
   }
   function renderHud(canvas, ui, status, paused) {
+    if (ui.textScale === 2) {
+      renderLargeHud(canvas, ui, status, paused);
+      return;
+    }
     const W = canvas.width, H = canvas.height;
     const columns = Math.max(1, Math.floor((W - 12) / 4));
     const panelColumns = Math.max(1, Math.floor((W - 48) / 4));
     const width = Math.floor((W - 16) / Math.max(1, ui.meters.length));
-    canvas.rect(0, 0, W, 25, 725275);
+    const topHeight = ui.detail ? 25 : ui.meters.length ? 18 : 0;
+    if (topHeight) canvas.rect(0, 0, W, topHeight, 725275);
     ui.meters.forEach((m, i) => {
       const x = 6 + i * width;
       canvas.text(`${m.label} ${Math.ceil(m.value)}/${Math.ceil(m.max)}`, x, 3, m.color);
@@ -4823,12 +5133,72 @@ var __RunePixel3DRuntime = (() => {
       canvas.rect(x, 11, Math.floor((width - 6) * Math.max(0, Math.min(1, m.value / m.max))), 5, m.color);
     });
     canvas.text(ui.detail.slice(0, columns), 6, 19, 11913694);
-    canvas.rect(0, 25, W, 11, 1515827);
-    canvas.text(ui.objective.slice(0, columns), 6, 28, 15914378);
+    if (ui.objective) {
+      canvas.rect(0, topHeight, W, 11, 1515827);
+      canvas.text(ui.objective.slice(0, columns), 6, topHeight + 3, 15914378);
+    }
     const heading = (status !== "playing" || paused) && ui.heading ? ui.heading.slice(0, Math.max(1, Math.floor((W - 32) / 12))) : "";
     if (heading) {
       canvas.rect(16, 40, W - 32, 26, 725275);
       canvas.text(heading, Math.floor((W - heading.length * 12) / 2), 44, 15914378, 3);
+    }
+    function renderLargeHud(canvas2, ui2, status2, paused2) {
+      const W2 = canvas2.width, H2 = canvas2.height;
+      const columns2 = Math.max(1, Math.floor((W2 - 12) / 8));
+      const text = (value, x, y, color = 16777215) => canvas2.text(value, x, y, color, 2);
+      let top = 0;
+      if (ui2.meters.length) {
+        const width2 = Math.floor((W2 - 12) / ui2.meters.length);
+        canvas2.rect(0, 0, W2, 23, 725275);
+        ui2.meters.forEach((meter, i) => {
+          const x = 6 + i * width2;
+          const label = `${meter.label} ${Math.ceil(meter.value)}/${Math.ceil(meter.max)}`;
+          const available = Math.max(1, Math.floor((width2 - 6) / 8));
+          const short = `${meter.label.slice(0, 1)} ${Math.ceil(meter.value)}/${Math.ceil(meter.max)}`;
+          text((label.length <= available ? label : short).slice(0, available), x, 3, meter.color);
+          canvas2.rect(x, 16, width2 - 6, 4, 2569285);
+          canvas2.rect(x, 16, Math.floor((width2 - 6) * Math.max(0, Math.min(1, meter.value / meter.max))), 4, meter.color);
+        });
+        top = 23;
+      }
+      const strip = (value, color) => {
+        if (!value) return;
+        const lines = wrapText(value, columns2).slice(0, 2);
+        canvas2.rect(0, top, W2, lines.length * 12 + 6, 1515827);
+        lines.forEach((line, i) => text(line, 6, top + 3 + i * 12, color));
+        top += lines.length * 12 + 6;
+      };
+      strip(ui2.objective, 15914378);
+      if (ui2.heading && (status2 !== "playing" || paused2)) strip(ui2.heading, 15914378);
+      if (ui2.meters.length < 3 && !ui2.panel) strip(ui2.detail, 11913694);
+      const prompt2 = paused2 && !ui2.heading ? "PAUSED - P TO RESUME" : ui2.prompt;
+      const promptLines = wrapText(prompt2, columns2).slice(0, 2);
+      const bottom = H2 - promptLines.length * 12 - 6;
+      if (ui2.panel) {
+        const panel = ui2.panel;
+        const rows = Math.max(0, Math.floor((bottom - top - 8) / 12));
+        const title = wrapText(panel.title, columns2).slice(0, 1);
+        const footer = wrapText(panel.footer, columns2).slice(0, 1);
+        const choices = panel.choices.map((choice, i) => `${i === panel.selected ? ">" : " "} ${i + 1} ${choice}`.slice(0, columns2));
+        const bodyRows = Math.max(0, rows - title.length - footer.length - choices.length);
+        const lines = [...title, ...wrapText(panel.body, columns2).slice(0, bodyRows), ...choices, ...footer].slice(0, rows);
+        canvas2.rect(0, top, W2, lines.length * 12 + 8, 725275);
+        lines.forEach((line, i) => text(line, 6, top + 4 + i * 12, i === 0 ? 15914378 : 11913694));
+      } else {
+        const noticeRows = Math.max(0, Math.min(2, Math.floor((bottom - top - 40) / 12)));
+        const lines = wrapText(ui2.notice, columns2).slice(0, noticeRows);
+        if (lines.length) {
+          canvas2.rect(0, top, W2, lines.length * 12 + 6, 1515827);
+          lines.forEach((line, i) => text(line, 6, top + 3 + i * 12, 15914378));
+        }
+        if (status2 === "playing" && !paused2) {
+          const x = W2 >> 1, y = H2 >> 1;
+          canvas2.rect(x - 3, y, 7, 1, 16777215);
+          canvas2.rect(x, y - 3, 1, 7, 16777215);
+        }
+      }
+      canvas2.rect(0, bottom, W2, H2 - bottom, 725275);
+      promptLines.forEach((line, i) => text(line, 6, bottom + 3 + i * 12));
     }
     if (ui.notice && !ui.panel) {
       const noticeY = heading ? 70 : 40;
@@ -4860,8 +5230,10 @@ var __RunePixel3DRuntime = (() => {
       canvas.rect(x, y + 2, 1, 2, 16777215);
     }
     const prompt = paused && !ui.heading ? "PAUSED - P OR PAUSE BUTTON TO RESUME" : ui.prompt;
-    canvas.rect(0, H - 14, W, 14, 725275);
-    canvas.text(prompt.slice(0, columns), 6, H - 9, 16777215);
+    if (prompt) {
+      canvas.rect(0, H - 14, W, 14, 725275);
+      canvas.text(prompt.slice(0, columns), 6, H - 9, 16777215);
+    }
   }
 
   // src/pixel3d/raycaster.ts
@@ -4952,7 +5324,7 @@ var __RunePixel3DRuntime = (() => {
       const planeX = -dirY * fovScale;
       const planeY = dirX * fovScale;
       this.pixelDepth.fill(Infinity);
-      if (things.some((t) => t.model && t.visible !== false)) {
+      if (!this.config.world && things.some((t) => t.model && t.visible !== false)) {
         for (let y = 0; y < H; y++) {
           if (y < halfH && map.sky) continue;
           const planeHeight = y < halfH ? (map.ceilingHeight ?? 1) - 0.5 : 0.5;
@@ -4960,15 +5332,32 @@ var __RunePixel3DRuntime = (() => {
           this.pixelDepth.fill(distance, y * W, (y + 1) * W);
         }
       }
-      this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
-      this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
+      if (this.config.world) {
+        renderVoxels(
+          this.config.world,
+          camera,
+          this.config.textures,
+          map.sky,
+          this.fov,
+          W,
+          H,
+          this.buffer,
+          this.pixelDepth,
+          time
+        );
+        this.zBuffer.fill(Infinity);
+      } else {
+        this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
+        this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
+      }
       for (const thing of things) {
         if (thing.visible === false || !thing.model) continue;
         const model = this.config.models?.[thing.model];
         if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
-        renderModel(model, thing, camera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+        const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : { x: camera.x, y: camera.y };
+        renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
       }
-      if (things && things.length > 0) {
+      if (!this.config.world && things && things.length > 0) {
         this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
       }
       if (weapon && weapon.sprite) {
@@ -5534,6 +5923,10 @@ var __RunePixel3DRuntime = (() => {
     }
     renderState() {
       const state = this.app.state;
+      if (this.config.world) {
+        const world = validateWorld(state[this.config.world]);
+        this.raycaster.config.world = world;
+      }
       const camVal = this.config.camera.split(".").reduce((v, k) => v?.[k], state);
       const camera = camVal || { x: 2.5, y: 2.5, angle: 0 };
       const things = [];
@@ -5548,6 +5941,9 @@ var __RunePixel3DRuntime = (() => {
         }
       }
       for (const thing of things) {
+        if (this.config.world && thing.sprite && thing.visible !== false) {
+          throw new Error("Voxel world entities must use block models rather than billboard sprites");
+        }
         if (!thing.model || thing.visible === false) continue;
         if (!this.config.models?.[thing.model]) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
         if (thing.sprite) throw new Error("Pixel-3d things must use either model or sprite, not both");
@@ -5998,6 +6394,7 @@ var __RunePixel3DRuntime = (() => {
     let accumulator = 0;
     let stopped = false;
     let frameId = 0;
+    let menuOpen = false;
     const abort = new AbortController();
     const listen = (element, name, callback) => element.addEventListener(name, callback, { signal: abort.signal });
     const clear = () => {
@@ -6069,6 +6466,7 @@ var __RunePixel3DRuntime = (() => {
       });
     }
     mapped = game.controls ? mountControls(canvas, game.controls, {
+      state: () => game.app.state,
       playing: () => game.app.state.status === "playing",
       paused: () => game.paused,
       resume: () => {
@@ -6187,6 +6585,15 @@ var __RunePixel3DRuntime = (() => {
     }));
     listen(canvas, "keydown", ((event) => {
       if (mapped && event.code !== "Escape") return;
+      if (event.code === "Escape" && !event.repeat) {
+        const menu = document.querySelector("[data-pixel-menu]:not([hidden])");
+        if (menu?.dataset.pixelMenuClose) {
+          event.preventDefault();
+          clear();
+          game.activate(menu.dataset.pixelMenuClose);
+          return;
+        }
+      }
       unlockAudio();
       if (keys[event.code] || ["Enter", "KeyP", "KeyM", "Space"].includes(event.code)) {
         event.preventDefault();
@@ -6287,6 +6694,12 @@ var __RunePixel3DRuntime = (() => {
           element.hidden = value;
         }
       }
+      const nextMenuOpen = document.querySelector("[data-pixel-menu]:not([hidden])") !== null;
+      if (nextMenuOpen !== menuOpen) {
+        clear();
+        menuOpen = nextMenuOpen;
+        if (!menuOpen) canvas.focus({ preventScroll: true });
+      }
       const announce = document.querySelector("[data-pixel-status]");
       if (announce) {
         const status = game.paused ? "Paused \u2014 tap Resume or press P" : game.config.presentation ? `${game.config.presentation.title} \u2014 ${game.config.ui ? state[game.config.ui].prompt : state.message || game.config.presentation.objective}${game.saveStatus ? ` \u2014 Progress: ${game.saveStatus}` : ""}` : state.status === "title" ? "Vect Breach \u2014 Tap/click the game or press Enter/Space to commence mission." : state.status === "story" ? "Incoming Transmission \u2014 Tap/click the game or press Enter/Space to engage." : state.status === "won" ? "Mission Accomplished! All Sectors Cleared. Tap the game, or press Space/Enter to replay." : state.status === "gameover" ? "Agent Terminated! Tap the game, or press Space/Enter to restart." : state.status === "ready" ? "Click canvas or press Enter to begin mission." : navigator.maxTouchPoints > 0 ? "Left stick: move. Drag the game: aim. FIRE: shoot. USE: terminal / elevator." : "Click canvas to lock mouse look. WASD to move, left click / Space to fire, E to use switch.";
@@ -6294,7 +6707,7 @@ var __RunePixel3DRuntime = (() => {
           announce.textContent = status;
         }
       }
-      if ((state.status !== "playing" || game.paused) && document.pointerLockElement === canvas) {
+      if ((state.status !== "playing" || game.paused || menuOpen) && document.pointerLockElement === canvas) {
         document.exitPointerLock?.();
       }
       frameId = requestAnimationFrame(frame);

@@ -14,9 +14,22 @@ import {
 } from './utils';
 import { getStorageItem, hasStorageItem } from './storage';
 import { slide as spatialSlide, sees as spatialSees, mapSpawn } from './pixel3d/spatial';
+import { voxelGenerate, voxelMove, voxelTarget, voxelMine, voxelRead, voxelFill } from './pixel3d/voxel';
 import type { Scope } from './types';
 
 const MAX_DEPTH = 64;
+const voxelFunctions: Record<string, (...args: unknown[]) => unknown> = {
+  voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
+  voxel_move: (world, player, dx, dy, jump) => voxelMove(world, player, dx, dy, jump),
+  voxel_target: (world, player) => voxelTarget(world, player),
+  voxel_mine: (world, player) => voxelMine(world, player),
+  voxel_get: (world, x, y, z) => voxelRead(world, x, y, z),
+  voxel_fill: (world, from, size, block) => voxelFill(world, from, size, block),
+};
+const voxelArity: Record<string, [number, number]> = {
+  voxel_generate: [1, 2], voxel_move: [4, 5], voxel_target: [2, 2], voxel_mine: [2, 2],
+  voxel_get: [4, 4], voxel_fill: [4, 4],
+};
 
 // ---------------------------------------------------------------------------
 // tryParseLiteral — attempt to parse expr as a literal value
@@ -404,6 +417,15 @@ export function compileExpression(expr: string, depth = 0): CompiledExpr {
     return (scope: Scope) => !Boolean(inner(scope));
   }
 
+  for (const [name, fn] of Object.entries(voxelFunctions)) {
+    if (trimmed.startsWith(name + '(') && trimmed.endsWith(')')) {
+      const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ',');
+      const [required, maximum] = voxelArity[name];
+      if (parts.length < required || parts.length > maximum) throw new Error(`${name} needs ${required}-${maximum} arguments`);
+      const args = parts.map(part => compileExpression(part, nextDepth));
+      return (scope: Scope) => fn(...args.map(arg => arg(scope)));
+    }
+  }
   if (trimmed.startsWith('map_spawn(') && trimmed.endsWith(')')) {
     const name = compileExpression(trimmed.slice(10, -1), nextDepth);
     return (scope: Scope) => mapSpawn(String(name(scope)));

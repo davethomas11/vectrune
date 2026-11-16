@@ -39,6 +39,38 @@ pixels:
 "##;
 
 #[test]
+fn native_hud_supports_large_text_and_empty_strips() {
+    use pixel3d::hud::{render_hud, GameHud};
+    let hud = serde_json::json!({
+        "textScale": 2,
+        "meters": [{"label":"HEALTH","value":30,"max":60,"color":8312492}],
+        "objective":"YOUR TURN", "detail":"", "prompt":"SHIFT GUARD / Q DODGE NOW!",
+        "notice":"", "panel":null
+    });
+    for scale in [serde_json::json!(0), serde_json::json!(3), serde_json::json!(1.5), serde_json::Value::Null] {
+        let mut invalid = hud.clone();
+        invalid["textScale"] = scale;
+        assert!(serde_json::from_value::<GameHud>(invalid).is_err());
+    }
+    let mut ui: GameHud = serde_json::from_value(hud).unwrap();
+    let map = serde_json::from_value(serde_json::json!({
+        "width":1,"height":1,"grid":[0],"floor":0,"ceiling":0
+    })).unwrap();
+    let mut raster = Rasterizer3D::new(320, 200, 66.0, vec![], HashMap::new(), map);
+    render_hud(&mut raster, &ui, "playing", false);
+    let large = raster.buffer.clone();
+    ui.text_scale = Some(1);
+    render_hud(&mut raster, &ui, "playing", false);
+    assert_ne!(large, raster.buffer);
+    raster.buffer.fill(0);
+    ui.objective.clear();
+    ui.prompt.clear();
+    render_hud(&mut raster, &ui, "playing", false);
+    assert_eq!(raster.buffer[25 * 320], 0);
+    assert_eq!(raster.buffer[186 * 320], 0);
+}
+
+#[test]
 fn compiles_3d_textures_and_sprites() {
     let doc = parse_rune(ASSETS_3D).unwrap();
     let assets = pixel3d::compile_assets(&doc).unwrap();

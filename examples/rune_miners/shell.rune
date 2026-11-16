@@ -1,0 +1,288 @@
+@Page/miners_cabinet
+title = Rune Miners - A small camp. A world below.
+logic = miners_cabinet
+style = miners_cabinet
+view:
+    main .cabinet:
+        header .masthead:
+            h1 "RUNE MINERS"
+            p "A small camp. A world below."
+        div .title-actions data-pixel-hidden=title_hidden:
+            p "Mine timber, stone and copper. Craft your first gear, recruit Mira, then follow the torches into the cave."
+            button data-pixel-start=true data-pixel-confirm="Start a fresh expedition? Terrain, gear and party will reset." "Begin expedition / Enter"
+            button data-pixel-action=cycle_biome data-pixel-disabled=config_locked "Change biome / C"
+            button data-pixel-action=new_seed data-pixel-disabled=config_locked "New seed / N"
+        div .toolbar .utility-bar:
+            button data-pixel-pause=true "Pause / P"
+            button data-pixel-fullscreen=true "Fullscreen"
+            button data-pixel-action=cycle_hud data-pixel-text=hud_label "HUD: Guided / O"
+            button data-pixel-action=toggle_text data-pixel-text=text_label data-pixel-selected=large_text "Text: Standard / U"
+        p .preference-note data-pixel-text=hud_description "Choose your HUD style."
+        div .expedition-heading data-pixel-hidden=play_hidden:
+            p .eyebrow data-pixel-text=location_label "Safe camp"
+            p .next-goal data-pixel-text=journey_label data-pixel-hidden=goal_hidden "Your next step"
+        div .toolbar .exploration-actions data-pixel-hidden=play_hidden:
+            button data-pixel-action=inventory data-pixel-disabled=backpack_locked "Backpack / I"
+            button data-pixel-action=workbench data-pixel-disabled=camp_locked data-pixel-hidden=exploration_hidden "Workbench / K"
+            button data-pixel-action=combat_help data-pixel-hidden=exploration_hidden "Combat practice / H"
+            button data-pixel-action=flee data-pixel-text=flee_label "Return to camp / B"
+        div .game-surface:
+            canvas data-rune-pixel-3d=true tabindex=0 aria-label="Rune Miners. WASD move, mouse or arrows aim, E or click mines, Space jumps. 1, 2, 3 craft at camp or choose a battle action. R recruits Mira. Shift guards and Q dodges on the final beat."
+            div .backpack-menu data-pixel-menu=true data-pixel-menu-close=close_menu data-pixel-hidden=menu_hidden hidden=true role=group aria-label="Backpack and camp workbench":
+                div .toolbar .menu-heading:
+                    h2 data-pixel-text=menu_title "Backpack"
+                    button data-pixel-action=close_menu "Close / I"
+                div .equipment-slots:
+                    p "TOOL"
+                    p data-pixel-text=tool_label "Hand pick"
+                    p "WEAPON"
+                    p data-pixel-text=weapon_label "Training blade"
+                    p "ARMOR"
+                    p data-pixel-text=armor_label "Work clothes"
+                    p "CHARM"
+                    p data-pixel-text=charm_label "No charm"
+                p data-pixel-text=summary "Resources and party"
+                p .menu-hint data-pixel-text=menu_hint "Choose an item."
+                p data-pixel-text=notice role=status "Choose a recipe or item."
+                div .item-list:
+                    div .item-card:
+                        button data-pixel-action=menu_one_action data-pixel-text=menu_one data-pixel-disabled=menu_one_locked "Choice 1"
+                        p data-pixel-text=menu_one_help "Item effect"
+                    div .item-card:
+                        button data-pixel-action=menu_two_action data-pixel-text=menu_two data-pixel-disabled=menu_two_locked "Choice 2"
+                        p data-pixel-text=menu_two_help "Item effect"
+                    div .item-card:
+                        button data-pixel-action=menu_three_action data-pixel-text=menu_three data-pixel-disabled=menu_three_locked "Choice 3"
+                        p data-pixel-text=menu_three_help "Item effect"
+                div .toolbar data-pixel-hidden=pages_hidden:
+                    button data-pixel-action=menu_previous "Previous / V"
+                    button data-pixel-action=menu_next "Next / N"
+                p data-pixel-text=menu_footer "1 / 2 / 3 choose"
+            div .pause-menu data-pixel-menu=true data-pixel-paused=true hidden=true:
+                h2 "EXPEDITION PAUSED"
+                p data-pixel-text=pause_ui.panel.body "Your status"
+                p data-pixel-text=summary "Resources"
+                button data-pixel-pause=true "Resume / P"
+                button data-pixel-action=cycle_hud data-pixel-text=hud_label "HUD: Guided / O"
+                button data-pixel-action=toggle_text data-pixel-text=text_label data-pixel-selected=large_text "Text: Standard / U"
+                p data-pixel-text=hud_description "Display preferences"
+                button data-pixel-restart=true "Return to title / T"
+                p "Returning to title resets terrain, inventory and party. There is no save system yet."
+        p .input-status data-pixel-status=true role=status aria-live=polite "Ready for an expedition."
+        div .expedition-readout data-pixel-hidden=play_hidden:
+            p data-pixel-text=summary data-pixel-hidden=resources_hidden "Resources and party"
+            p .feedback data-pixel-text=feedback role=status "Aim at a nearby block to mine."
+        div .toolbar .action-dock data-pixel-hidden=actions_hidden:
+            button data-pixel-action=choice_one data-pixel-text=one_label data-pixel-disabled=one_locked "Craft pick / Strike"
+            button data-pixel-action=choice_two data-pixel-text=two_label data-pixel-disabled=two_locked "Craft blade / Skill"
+            button data-pixel-action=choice_three data-pixel-text=three_label data-pixel-disabled=three_locked "Rest / Mend"
+            button data-pixel-action=recruit data-pixel-disabled=recruit_locked data-pixel-hidden=camp_locked "Recruit Mira / R"
+        div .toolbar .defense-dock data-pixel-hidden=enemy_actions_hidden:
+            button data-pixel-action=guard data-pixel-text=guard_label data-pixel-disabled=defense_locked "Guard / Shift"
+            button data-pixel-action=dodge data-pixel-text=dodge_label data-pixel-disabled=defense_locked "Dodge / Q"
+        div .battle-coach data-pixel-hidden=battle_locked:
+            button data-pixel-action=skip_tutorial data-pixel-hidden=tutorial_hidden "Skip practice / G"
+            p .battle-help data-pixel-text=tutorial_label "Combat guide"
+        details:
+            summary "How to play"
+            p "Camp is the workbench and Mira near your spawn. Timber stands east of camp; gray blocks yield stone and gold-flecked blocks yield copper. Aim up or down with the mouse or Up/Down arrows. Hold click/E to mine repeatedly."
+            p "A gold frame identifies the block in reach; the bottom prompt names its yield. Bedrock is protected. Chips burst from mined blocks, and the objective counts only the materials you still need, including already-crafted gear."
+            p "Gather 3 timber, 3 stone and 2 copper. Return to camp, craft the pick and blade, then recruit Mira. Rest at camp restores health and focus, and supplies at least two herbs without discarding crafted extras."
+            p "The cyan flag marks camp. Follow the torch posts south past camp, then east into the cave. Its terraced floor descends automatically; Space jumps and one-block ledges auto-step. Approach the stone guardian to enter battle."
+            p "B or Return to camp rescues you from deep mining pits and retreats from combat. Gear and resources are kept. The camp stands on protected bedrock."
+            p "Battle pauses exploration. Strike builds focus; Skill spends 2 focus; Mend uses one herb. After each action, wait for the impact bar: Shift guards in the final ten ticks, Q dodges in the final six. Press once, not early or held."
+            p "Mira adds 4 damage to your attacks. Guard reduces damage and earns focus; dodge avoids all damage but has a tighter window. Retreat keeps gear but resets the guardian."
+            p "The first encounter teaches Strike, Guard, Skill and Dodge without damage or costs; its defense windows wait for you. G skips practice; H replays it. Real combat still requires timing."
+            p "I opens your backpack and equipment slots. K opens the camp workbench. Use 1/2/3 to select, N/V to turn pages, I to close. Menus freeze exploration; equipment cannot change during combat or an enemy wind-up."
+            p "Crafting equips gear automatically. Stone/copper picks speed mining; a copper blade raises damage; copper mail reduces damage by 3; a heart charm adds 20 maximum health (rest to heal). Herb bundles craft two herbs, up to six carried. Recipes show W timber / S stone / C copper costs."
+            p "Meadow and Ember biomes vary by seed. This is a small first slice: one cave, one recruit, six recipes, one guardian. Portals, building and saved worlds are future work."
+            p "Customize your HUD with O: Guided shows goals, resources and hints; Compact keeps the next goal; Minimal keeps health and targeting. Combat timing and practice instructions remain visible in every preset. U toggles larger in-game text. Preferences survive fresh expeditions in this page, but are not saved when the page is reloaded."
+
+@Logic/miners_cabinet
+state:
+    label = "Rune Miners"
+
+@Style/miners_cabinet
+rules:
+    :root:
+        color-scheme = dark
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #14282e
+        color = #d7e4cf
+        font-family = system-ui, sans-serif
+    .cabinet:
+        max-width = 1000px
+        margin = auto
+        padding = 12px
+    h1, h2:
+        color = #ecbc68
+    p:
+        line-height = 1.5
+    .masthead:
+        display = flex
+        align-items = baseline
+        justify-content = space-between
+        gap = 12px
+        flex-wrap = wrap
+    .masthead h1:
+        margin = 0
+        font-size = 24px
+        letter-spacing = 2px
+    .masthead p:
+        margin = 0
+        color = #adc3bd
+    .utility-bar:
+        border-bottom = 1px solid #45656a
+        padding-bottom = 10px
+    .preference-note:
+        font-size = 13px
+        color = #adc3bd
+        margin = 4px 0
+    .expedition-heading:
+        border-left = 3px solid #ecbc68
+        padding = 4px 12px
+        margin = 12px 0
+    .eyebrow:
+        color = #adc3bd
+        font-size = 12px
+        letter-spacing = 1px
+        margin = 0
+    .next-goal:
+        margin = 4px 0
+        color = #ffe0a6
+        font-weight = 700
+    .input-status:
+        position = absolute
+        width = 1px
+        height = 1px
+        overflow = hidden
+        clip-path = inset(50%)
+        white-space = nowrap
+    .expedition-readout p:
+        margin = 6px 0
+    .feedback:
+        color = #ffe0a6
+    .feedback:empty:
+        display = none
+    .action-dock, .defense-dock:
+        position = sticky
+        bottom = 0
+        z-index = 5
+        background = #14282e
+        padding = 10px 0
+        border-top = 2px solid #ecbc68
+    .defense-dock button:
+        flex = 1
+        font-weight = 700
+    .toolbar:
+        display = flex
+        flex-wrap = wrap
+        gap = 8px
+        margin = 12px 0
+    button:
+        min-height = 44px
+        font-size = 14px
+        padding = 10px 14px
+        color = #d7e4cf
+        background = #29474d
+        border = 1px solid #668b82
+        border-radius = 4px
+        cursor = pointer
+    button:disabled:
+        opacity = 0.45
+        cursor = default
+    button:focus-visible:
+        outline = 3px solid #ecbc68
+        outline-offset = 3px
+    body:has([data-pixel-action="toggle_text"][aria-pressed="true"]):
+        font-size = 18px
+    body:has([data-pixel-action="toggle_text"][aria-pressed="true"]) button:
+        font-size = 16px
+    body:has([data-pixel-action="toggle_text"][aria-pressed="true"]) .item-card p, body:has([data-pixel-action="toggle_text"][aria-pressed="true"]) .equipment-slots p:
+        font-size = 16px
+    .game-surface:
+        position = relative
+        background = #0a171b
+    canvas:
+        display = block
+        width = 100%
+        image-rendering = pixelated
+        aspect-ratio = 8 / 5
+    .pause-menu:
+        position = fixed
+        inset = 12px
+        max-width = 720px
+        margin = auto
+        z-index = 30
+        padding = 20px
+        background = #14282e
+        overflow = auto
+        text-align = center
+    .backpack-menu:
+        position = fixed
+        inset = 12px
+        max-width = 720px
+        margin = auto
+        z-index = 20
+        padding = 16px
+        background = #14282e
+        overflow = auto
+        overscroll-behavior = contain
+    .backpack-menu .toolbar:
+        justify-content = center
+    .item-list:
+        display = grid
+        gap = 10px
+    .item-card:
+        border = 1px solid #45656a
+        padding = 10px
+        background = #1b353b
+    .item-card button:
+        width = 100%
+        text-align = left
+        font-weight = 700
+    .item-card p:
+        margin = 6px 0 0
+        font-size = 14px
+    .menu-hint:
+        color = #adc3bd
+        font-size = 13px
+    .backpack-menu p:
+        overflow-wrap = anywhere
+    .backpack-menu .menu-heading:
+        position = sticky
+        top = -16px
+        background = #14282e
+        justify-content = space-between
+        align-items = center
+        margin-top = 0
+        padding = 8px 0
+    .menu-heading h2:
+        margin = 0
+        font-size = 18px
+    .equipment-slots:
+        display = grid
+        grid-template-columns = 80px 1fr
+        gap = 4px 12px
+        border = 1px solid #668b82
+        padding = 8px
+    .equipment-slots p:
+        margin = 0
+        font-size = 13px
+    [hidden]:
+        display = none !important
+    body:has(.backpack-menu:not([hidden])), body:has(.pause-menu:not([hidden])):
+        overflow = hidden
+    .game-surface:fullscreen:
+        width = 100vw
+        height = 100vh
+    .game-surface:fullscreen canvas:
+        width = 100%
+        height = 100%
+        object-fit = contain
+    details:
+        padding = 12px
+        border = 1px solid #668b82

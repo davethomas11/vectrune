@@ -86,6 +86,7 @@ export function mount(
   let accumulator = 0;
   let stopped = false;
   let frameId = 0;
+  let menuOpen = false;
 
   const abort = new AbortController();
   const listen = (
@@ -160,6 +161,7 @@ export function mount(
     listen(button, 'click', () => { void fullscreen.toggle().catch(() => {}); });
   }
   mapped = game.controls ? mountControls(canvas, game.controls, {
+    state: () => game.app.state,
     playing: () => game.app.state.status === 'playing', paused: () => game.paused,
     resume: () => { clear(); game.paused = false; },
     advance: () => { clear(); if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance'); else start(); },
@@ -242,6 +244,15 @@ export function mount(
 
   listen(canvas, 'keydown', ((event: KeyboardEvent) => {
     if (mapped && event.code !== 'Escape') return;
+    if (event.code === 'Escape' && !event.repeat) {
+      const menu = document.querySelector<HTMLElement>('[data-pixel-menu]:not([hidden])');
+      if (menu?.dataset.pixelMenuClose) {
+        event.preventDefault();
+        clear();
+        game.activate(menu.dataset.pixelMenuClose);
+        return;
+      }
+    }
     unlockAudio();
     if (keys[event.code] || ['Enter', 'KeyP', 'KeyM', 'Space'].includes(event.code)) {
       event.preventDefault();
@@ -349,6 +360,12 @@ export function mount(
         element.hidden = value;
       }
     }
+    const nextMenuOpen = document.querySelector('[data-pixel-menu]:not([hidden])') !== null;
+    if (nextMenuOpen !== menuOpen) {
+      clear();
+      menuOpen = nextMenuOpen;
+      if (!menuOpen) canvas.focus({ preventScroll: true });
+    }
     const announce = document.querySelector<HTMLElement>('[data-pixel-status]');
     if (announce) {
       const status = game.paused
@@ -372,7 +389,7 @@ export function mount(
         announce.textContent = status;
       }
     }
-    if ((state.status !== 'playing' || game.paused) && document.pointerLockElement === canvas) {
+    if ((state.status !== 'playing' || game.paused || menuOpen) && document.pointerLockElement === canvas) {
       document.exitPointerLock?.();
     }
 

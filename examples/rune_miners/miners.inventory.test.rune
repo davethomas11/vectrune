@@ -1,0 +1,160 @@
+#!RUNE
+import "rune_miners.rune"
+
+@Test/RuneMiners/BackpackFreezesExplorationAndCloses
+type = logic
+page = miners
+setup:
+    invoke start
+run:
+    invoke inventory
+    assert state.menu == "inventory"
+    assert state.menu_hidden == false
+    invoke tick {"forward":true,"mine":true}
+    assert state.player.x == 4.5
+    assert state.timber == 0
+    invoke choice_one
+    assert state.menu == "equipment"
+    invoke menu_next
+    assert state.menu_page == 1
+    invoke menu_previous
+    assert state.menu_page == 0
+    invoke inventory
+    assert state.menu == ""
+    invoke tick {"forward":true}
+    assert state.player.x > 4.5
+
+@Test/RuneMiners/SixRecipesConsumeCostsAndEquip
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke stocked_camp
+run:
+    invoke workbench
+    assert state.menu == "craft"
+    invoke menu_one_action
+    assert state.owned.stone_pick == true
+    assert state.equipment.tool == "stone_pick"
+    assert state.mining_rate == 9
+    assert state.timber == 18
+    assert state.stone == 17
+    invoke menu_one_action
+    assert state.timber == 18
+    invoke menu_two_action
+    assert state.equipment.weapon == "copper_blade"
+    assert state.copper == 18
+    invoke menu_three_action
+    assert state.equipment.armor == "copper_mail"
+    assert state.armor == 3
+    invoke menu_next
+    invoke menu_one_action
+    assert state.equipment.charm == "heart_charm"
+    assert state.max_health == 80
+    assert state.health == 60
+    invoke menu_two_action
+    assert state.equipment.tool == "copper_pick"
+    assert state.mining_rate == 6
+    invoke menu_three_action
+    assert state.herbs == 4
+    invoke menu_three_action
+    assert state.herbs == 6
+    assert state.menu_three_locked == true
+    invoke menu_three_action
+    assert state.herbs == 6
+    invoke close_menu
+    invoke choice_three
+    assert state.health == 80
+    assert state.herbs == 6
+
+@Test/RuneMiners/CraftingValidationAndEquipmentSwap
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke stocked_camp
+run:
+    invoke craft 4
+    assert state.copper == 20
+    assert state.owned.copper_pick != true
+    invoke craft -1
+    invoke craft 6
+    invoke craft 1.5
+    assert state.timber == 20
+    invoke craft 0
+    invoke craft 1
+    invoke craft 3
+    invoke inventory
+    invoke choice_one
+    invoke equip_item 0
+    assert state.equipment.tool == "hand_pick"
+    assert state.mining_rate == 18
+    assert state.pick == true
+    invoke equip_item 1
+    assert state.equipment.weapon == "training_blade"
+    assert state.blade == true
+    invoke equip_item 8
+    assert state.equipment.charm == "none"
+    assert state.max_health == 60
+    invoke equip_item 5
+    assert state.equipment.armor == "work_clothes"
+    invoke close_menu
+    invoke leave_camp
+    invoke workbench
+    assert state.menu == ""
+    invoke craft 2
+    assert state.owned.copper_mail != true
+    invoke start
+    assert state.equipment.tool == "hand_pick"
+    assert state.owned.stone_pick != true
+    assert state.max_health == 60
+    assert state.menu == ""
+
+@Test/RuneMiners/EquipmentAppliesToCombatAndCannotSwapMidFight
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke stocked_camp
+    invoke craft 1
+    invoke craft 2
+    invoke ready_fight
+    invoke begin_battle
+run:
+    invoke choice_one
+    assert state.enemy_hp == 39
+    invoke inventory
+    assert state.menu == ""
+    invoke tick_battle 50
+    assert state.health == 47
+    invoke inventory
+    invoke choice_one
+    assert state.menu == "equipment"
+    invoke equip_item 1
+    assert state.equipment.weapon == "copper_blade"
+    invoke tick {"guard":true}
+    assert state.phase == "player"
+    invoke close_menu
+    invoke choice_one
+    invoke tick_battle 40
+    invoke guard
+    invoke tick_battle 10
+    assert state.health == 46
+
+@Logic/miners
+action stocked_camp:
+    timber = 20
+    stone = 20
+    copper = 20
+
+action leave_camp:
+    player.x = 10
+    player.y = 10
+
+action ready_fight:
+    tutorial_done = true
+    player = {"x":14.5,"y":12.5,"z":1,"angle":0,"pitch":0,"vz":0}
+
+action tick_battle(count):
+    for index in range(0, count):
+        call tick {}

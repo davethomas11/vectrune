@@ -1,0 +1,92 @@
+@Logic/miners
+state:
+    hud_preset = 0
+    large_text = false
+    hud_label = "HUD: Guided / O"
+    text_label = "Text: Standard / U"
+    hud_description = ""
+    title_hidden = false
+    play_hidden = true
+    actions_hidden = true
+    enemy_actions_hidden = true
+    exploration_hidden = true
+    resources_hidden = false
+    goal_hidden = false
+    backpack_locked = true
+    pages_hidden = true
+    menu_hint = ""
+    location_label = ""
+    journey_label = ""
+    feedback = ""
+    guard_label = ""
+    dodge_label = ""
+    flee_label = ""
+    touch_ready = false
+    touch_explore = false
+    touch_choices = false
+    touch_defense = false
+    touch_bag = false
+    touch_rescue = false
+
+action cycle_hud:
+    hud_preset = (hud_preset + 1) % 3
+    call refresh_ui
+
+action toggle_text:
+    large_text = !large_text
+    call refresh_ui
+
+action refresh_ux:
+    title_hidden = status == "playing"
+    play_hidden = status != "playing"
+    exploration_hidden = status != "playing" || phase != "explore"
+    resources_hidden = hud_preset != 0 && phase == "explore"
+    goal_hidden = hud_preset == 2 && phase == "explore"
+    backpack_locked = status != "playing" || phase == "enemy" || tutorial_step != ""
+    touch_ready = status == "playing" && menu == ""
+    touch_explore = touch_ready && phase == "explore"
+    touch_choices = touch_ready && (phase == "player" || (phase == "explore" && !camp_locked))
+    touch_defense = touch_ready && phase == "enemy"
+    touch_bag = touch_ready && !backpack_locked
+    touch_rescue = touch_explore && camp_locked
+    actions_hidden = status != "playing" || menu != "" || phase == "enemy" || (phase == "explore" && camp_locked)
+    enemy_actions_hidden = status != "playing" || phase != "enemy" || menu != ""
+    pages_hidden = menu != "equipment" && menu != "craft"
+    hud_label = "HUD: " + (hud_preset == 0 ? "Guided" : (hud_preset == 1 ? "Compact" : "Minimal")) + " / O"
+    text_label = large_text ? "Text: Larger / U" : "Text: Standard / U"
+    hud_description = hud_preset == 0 ? "Guided: next goal, resources and control hints." : (hud_preset == 1 ? "Compact: next goal and health; resources stay in your backpack." : "Minimal: health and targeting only. Battle timing and practice instructions always stay visible.")
+    location_label = phase == "explore" ? (camp_locked ? "THE EXPEDITION / B returns to camp" : "SAFE CAMP / Craft, recruit or rest") : (tutorial_step != "" ? "COMBAT PRACTICE / No damage or costs" : "STONEHEART GUARDIAN / Turn-based encounter")
+    journey_label = phase == "explore" ? objective : ui.objective
+    feedback = notice_ticks > 0 || phase != "explore" || menu != "" ? notice : ""
+    guard_label = battle_clock < 40 ? "Guard: wait for green / Shift" : "Guard now / Shift"
+    dodge_label = battle_clock < 44 ? "Dodge: wait for final beat / Q" : "Dodge now / Q"
+    flee_label = phase == "explore" ? "Return to camp / B" : "Retreat to camp / B"
+    menu_hint = menu == "inventory" ? "Choose equipment to change gear. Crafting is available only at camp." : (menu == "equipment" ? "Equipped items and uncrafted items are disabled. You can change gear outside battle." : "W = timber / S = stone / C = copper. Dim recipes need materials or are already crafted. Crafting equips gear automatically.")
+    if menu == "craft":
+        menu_hint = menu_hint + " N/V turns recipe pages."
+    ui.textScale = large_text ? 2 : 1
+    if status == "playing" && menu == "":
+        if phase == "explore":
+            ui.notice = notice_ticks > 0 ? notice : ""
+            if hud_preset != 0:
+                ui.detail = ""
+            if hud_preset == 2:
+                ui.objective = ""
+            if large_text:
+                ui.detail = ""
+                ui.prompt = target_name != "" ? "E / CLICK: " + target_name : "AIM AT A NEARBY BLOCK"
+                if target_name == "BEDROCK":
+                    ui.prompt = "BEDROCK / CANNOT MINE"
+                if hud_preset != 2:
+                    ui.objective = !pick || !blade ? "GATHER GEAR / K WORKBENCH" : (!companion ? "CAMP: R RECRUIT MIRA" : "FOLLOW TORCHES TO THE CAVE")
+        if phase != "explore":
+            ui.notice = tutorial_step != "" ? "" : notice
+            if large_text:
+                ui.objective = phase == "player" ? "YOUR TURN / FOCUS " + focus + " / HERBS " + herbs : "GUARDIAN ATTACKING"
+                ui.prompt = phase == "player" ? "1 STRIKE / 2 SKILL / 3 MEND" : (defense_used ? (defense == "" ? "EARLY! WAIT FOR IMPACT" : "DEFENSE READY") : (battle_clock < 40 ? "WAIT... WATCH THE BAR" : (battle_clock < 44 ? "SHIFT: GUARD NOW!" : "SHIFT GUARD / Q DODGE NOW!")))
+                if tutorial_step != "":
+                    ui.objective = "SAFE PRACTICE"
+                    ui.prompt = tutorial_step == "strike" ? "1: STRIKE / G SKIP" : (tutorial_step == "skill" ? "2: SKILL / G SKIP" : (battle_clock < (tutorial_step == "guard" ? 40 : 44) ? "WAIT... WATCH THE BAR" : (tutorial_step == "guard" ? "SHIFT: GUARD NOW!" : "Q: DODGE NOW!")))
+    pause_ui.textScale = large_text ? 2 : 1
+    pause_ui.heading = "PAUSED"
+    pause_ui.prompt = "P RESUME / O HUD / U TEXT"

@@ -1,0 +1,157 @@
+@Palette/guardian
+colors = {"a":"#ffb34e","c":"#55ffff","l":"#fff0cc","s":"#f6c982","y":"#ffffff"}
+
+@Palette/miners
+colors = {
+    ".": "transparent",
+    "a": "#ab7950",
+    "b": "#73573d",
+    "c": "#50b9bc",
+    "g": "#668b55",
+    "k": "#172b30",
+    "l": "#687e82",
+    "m": "#395c45",
+    "r": "#ad5148",
+    "s": "#485964",
+    "w": "#d7e4cf",
+    "y": "#ecbc68"
+}
+
+@Texture/miners/bedrock
+palette = miners
+size = [16,16]
+patterns = {"row":"k*4 s*3 k*5 s*4","crack":"s*2 k*5 s*4 k*5"}
+pixels:
+    {"pattern":"row","repeat":8}
+    {"pattern":"crack","repeat":8}
+
+@Texture/miners/stone
+palette = miners
+size = [16,16]
+patterns = {
+    "a": "s*3 l*4 s*6 k s*2",
+    "b": "s*2 l*2 s*6 k s*5",
+    "c": "l s*7 k*2 s*4 l*2",
+    "d": "s*5 k s*4 l*3 s*3",
+    "e": "s*4 k s*6 l*2 s*3",
+    "f": "s*8 l*3 s*5"
+}
+pixels:
+    {"pattern":"a","repeat":2}
+    {"pattern":"b","repeat":3}
+    {"pattern":"c"}
+    {"pattern":"d","repeat":3}
+    {"pattern":"e","repeat":3}
+    {"pattern":"f","repeat":2}
+    {"pattern":"a","repeat":2}
+
+@Texture/miners/grass
+palette = miners
+size = [16,16]
+patterns = {"row":"m g*3 m g*5 l g*5","detail":"g*2 l g*3 m g*4 m g*4"}
+pixels:
+    {"pattern":"row","repeat":3}
+    {"pattern":"detail"}
+    {"pattern":"row","repeat":3}
+    {"pattern":"detail"}
+    {"pattern":"row","repeat":3}
+    {"pattern":"detail"}
+    {"pattern":"row","repeat":3}
+    {"pattern":"detail"}
+
+@Texture/miners/wood
+palette = miners
+size = [16,16]
+patterns = {"bark":"k a b*4 a b*3 k b*4 a","knot":"k a b*3 k a*3 k b*5 a"}
+pixels:
+    {"pattern":"bark","repeat":5}
+    {"pattern":"knot","repeat":3}
+    {"pattern":"bark","repeat":8}
+
+@Texture/miners/copper
+palette = miners
+size = [16,16]
+patterns = {
+    "ore": "s*2 a y*2 a s*3 l s*2 a*2 s*2",
+    "rock": "s*3 l s*5 k s*6",
+    "vein": "l s a*3 s*4 a y a s*4"
+}
+pixels:
+    {"pattern":"rock","repeat":3}
+    {"pattern":"ore","repeat":3}
+    {"pattern":"rock","repeat":2}
+    {"pattern":"vein","repeat":3}
+    {"pattern":"rock","repeat":3}
+    {"pattern":"ore","repeat":2}
+
+@Texture/miners/leaves
+palette = miners
+size = [16,16]
+patterns = {
+    "a": "m*2 g*4 m*2 g*2 l g*3 m*2",
+    "b": "g*3 m*2 g*5 m*3 g*3",
+    "c": "m g*2 l g*4 m*2 g*5 m",
+    "d": "g*4 m*3 g*3 l g*3 m*2"
+}
+pixels:
+    {"pattern":"a","repeat":2}
+    {"pattern":"b","repeat":2}
+    {"pattern":"c","repeat":2}
+    {"pattern":"d","repeat":2}
+    {"pattern":"b","repeat":2}
+    {"pattern":"a","repeat":2}
+    {"pattern":"d","repeat":2}
+    {"pattern":"c","repeat":2}
+
+@Texture/miners/ash
+palette = miners
+size = [16,16]
+patterns = {
+    "a": "s*3 l s*5 r s*6",
+    "b": "s*2 l*2 s*6 r*2 s*4",
+    "c": "s*7 r s*3 l s*4",
+    "d": "l s*4 r*2 s*9"
+}
+pixels:
+    {"pattern":"a","repeat":4}
+    {"pattern":"b","repeat":3}
+    {"pattern":"c","repeat":4}
+    {"pattern":"d","repeat":3}
+    {"pattern":"a","repeat":2}
+
+@Texture/miners/ember
+palette = miners
+size = [16,16]
+patterns = {
+    "a": "r*3 a r*5 y r*6",
+    "b": "r*4 a*2 r*4 y*2 r*4",
+    "c": "r*7 y r*3 a r*4",
+    "d": "a r*4 y*2 r*9"
+}
+pixels:
+    {"pattern":"a","repeat":3}
+    {"pattern":"b","repeat":3}
+    {"pattern":"c","repeat":4}
+    {"pattern":"d","repeat":3}
+    {"pattern":"a","repeat":3}
+
+@Sprite/miners/pick
+palette = miners
+size = [16,16]
+pixels:
+    "................"
+    "................"
+    "....lllllll....."
+    "...lwwwwwwwll..."
+    "..ll...a...ll..."
+    ".ll....a....l..."
+    ".......a........"
+    ".......b........"
+    ".......b........"
+    ".......b........"
+    ".......a........"
+    ".......a........"
+    ".......b........"
+    ".......b........"
+    "......bbb......."
+    "......bbb......."

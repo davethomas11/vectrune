@@ -1,0 +1,299 @@
+#!RUNE
+import "rune_miners.rune"
+
+@Test/RuneMiners/SeedAndFreshRun
+type = logic
+page = miners
+run:
+    invoke start
+    assert state.world.width == 20
+    assert state.world.depth == 10
+    assert state.player.z == 3
+    invoke add_resources
+    invoke recruit
+    assert state.companion == true
+    invoke start
+    assert state.timber == 0
+    assert state.companion == false
+    assert state.foes[0].visible == true
+    assert state.health == 60
+
+@Test/RuneMiners/CraftingAndRecruitment
+type = logic
+page = miners
+setup:
+    invoke start
+run:
+    invoke choice_one
+    assert state.pick == false
+    invoke add_resources
+    invoke choice_one
+    assert state.pick == true
+    assert state.timber == 1
+    assert state.stone == 0
+    invoke choice_one
+    assert state.timber == 1
+    invoke choice_two
+    assert state.blade == true
+    assert state.timber == 0
+    assert state.copper == 0
+    invoke recruit
+    assert state.companion == true
+    assert state.landmarks[1].visible == false
+    invoke outside_camp
+    invoke choice_three
+    assert state.health == 20
+    invoke recruit
+    assert state.companion == true
+    invoke flee
+    assert state.player.x == 4.5
+    assert state.player.z == 3
+    invoke choice_three
+    assert state.health == 60
+
+@Test/RuneMiners/MiningConsumesRealBlocksOnce
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke face_timber
+run:
+    invoke mine
+    assert state.timber == 1
+    assert state.world.cells[1687] == 0
+    invoke mine
+    assert state.timber == 1
+    invoke clear_cooldown
+    invoke mine
+    assert state.timber == 1
+
+@Test/RuneMiners/TimedDefenseAndVictory
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke add_resources
+    invoke choice_one
+    invoke choice_two
+    invoke recruit
+    invoke cave_position
+    invoke begin_battle
+run:
+    invoke choice_two
+    assert state.enemy_hp == 29
+    assert state.phase == "enemy"
+    invoke age_battle 40
+    invoke guard
+    assert state.defense == "guard"
+    invoke age_battle 10
+    assert state.health == 56
+    assert state.focus == 1
+    assert state.phase == "player"
+    invoke choice_one
+    assert state.enemy_hp == 16
+    invoke age_battle 44
+    invoke dodge
+    invoke age_battle 6
+    assert state.health == 56
+    invoke choice_two
+    assert state.status == "won"
+    assert state.enemy_hp == 0
+    assert state.foes[0].visible == false
+    assert state.effects.length == 1
+    invoke age_battle 30
+    assert state.effects.length == 0
+
+@Test/RuneMiners/EarlyDefenseAndRetreat
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke cave_position
+    invoke begin_battle
+run:
+    invoke choice_one
+    invoke guard
+    assert state.defense_used == true
+    assert state.defense == ""
+    invoke age_battle 44
+    invoke dodge
+    assert state.defense == ""
+    invoke age_battle 6
+    assert state.health == 44
+    invoke choice_one
+    invoke flee
+    assert state.phase == "explore"
+    assert state.player.z == 3
+    assert state.enemy_hp == 48
+
+@Test/RuneMiners/MovementUsesDegreesAndCaveElevation
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke face_south
+run:
+    invoke tick {"forward":true}
+    assert state.player.y > 4.5
+    assert state.player.x < 4.501
+    invoke tick {"look_down":true}
+    assert state.player.pitch == -2
+    invoke cave_position
+    invoke tick {}
+    assert state.phase == "player"
+    assert state.player.angle == 0
+
+@Test/RuneMiners/InsufficientResourcesAndDefeat
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke cave_position
+    invoke begin_battle
+    invoke exhausted
+run:
+    invoke choice_two
+    assert state.phase == "player"
+    assert state.enemy_hp == 48
+    invoke choice_three
+    assert state.phase == "player"
+    assert state.health == 16
+    invoke choice_one
+    invoke age_battle 50
+    assert state.health == 0
+    assert state.status == "gameover"
+    invoke advance
+    assert state.health == 60
+    assert state.status == "playing"
+
+@Test/RuneMiners/SignedAnalogLookAndMovement
+type = logic
+page = miners
+setup:
+    invoke start
+run:
+    invoke tick {"look_x":-10,"look_y":10}
+    assert state.player.angle == -1.2
+    assert state.player.pitch == -1.2
+    invoke face_south
+    invoke tick {"move_y":-0.5}
+    assert state.player.y < 4.5
+    assert state.player.x < 4.501
+
+@Test/RuneMiners/TargetFeedbackAndCleanup
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke face_timber
+run:
+    invoke refresh_ui
+    assert state.target_name == "TIMBER +1"
+    assert state.target_marker.length == 1
+    assert state.target_marker[0].x == 7.5
+    assert state.ui.prompt == "CLICK/E: MINE TIMBER +1 | B CAMP"
+    invoke mine
+    assert state.mining_effects.length == 1
+    assert state.mining_effects[0].age == 0
+    invoke age_battle 6
+    assert state.mining_effects[0].dissolve == 0.5
+    invoke age_battle 6
+    assert state.mining_effects.length == 0
+    invoke return_to_title
+    assert state.target_marker.length == 0
+    assert state.mining_effects.length == 0
+
+@Test/RuneMiners/ObjectivesAndAvailableActions
+type = logic
+page = miners
+setup:
+    invoke start
+run:
+    assert state.ui.objective == "GATHER: 3 TIMBER / 3 STONE / 2 COPPER LEFT"
+    assert state.one_locked == true
+    assert state.two_locked == true
+    assert state.recruit_locked == false
+    invoke add_resources
+    invoke refresh_ui
+    assert state.ui.objective == "CAMP: CRAFT YOUR STONE PICK / 1"
+    assert state.one_locked == false
+    assert state.two_locked == false
+    invoke choice_one
+    assert state.ui.objective == "CAMP: CRAFT YOUR COPPER BLADE / 2"
+    assert state.one_locked == true
+    invoke choice_two
+    assert state.ui.objective == "CAMP: RECRUIT MIRA / R"
+    invoke recruit
+    assert state.ui.objective == "FOLLOW THE TORCHES TO THE GUARDIAN"
+    assert state.recruit_locked == true
+    invoke outside_camp
+    invoke refresh_ui
+    assert state.three_locked == true
+    invoke start
+    invoke choice_two
+    assert state.feedback == "Copper blade needs 1 timber, 0 stone, 2 copper."
+    invoke age_battle 91
+    assert state.feedback == ""
+
+@Test/RuneMiners/BattleReadability
+type = logic
+page = miners
+setup:
+    invoke start
+    invoke cave_position
+    invoke begin_battle
+run:
+    assert state.ui.panel == null
+    assert state.target_marker.length == 0
+    assert state.view_camera.x == 12.1
+    assert state.defense_locked == true
+    invoke choice_one
+    assert state.one_locked == true
+    assert state.defense_locked == false
+    assert state.ui.prompt == "WAIT... DO NOT DEFEND YET"
+    invoke age_battle 40
+    assert state.foes[0].model == "miners/guardian_warn"
+    assert state.ui.prompt == "SHIFT / GUARD NOW!"
+    invoke guard
+    assert state.defense_locked == true
+    assert state.ui.prompt == "DEFENSE READY - WAIT FOR IMPACT"
+    invoke age_battle 10
+    assert state.foes[0].model == "miners/guardian"
+    assert state.ui.meters[2].value == 0
+    assert state.one_locked == false
+    assert state.ui.panel == null
+    invoke flee
+    assert state.view_camera.x == state.player.x
+
+@Logic/miners
+action add_resources:
+    timber = 3
+    stone = 3
+    copper = 2
+
+action outside_camp:
+    player.x = 10
+    player.y = 10
+    health = 20
+
+action face_timber:
+    player = {"x":5.5,"y":4.5,"z":3,"angle":0,"pitch":0,"vz":0}
+
+action clear_cooldown:
+    mine_cooldown = 0
+
+action cave_position:
+    tutorial_done = true
+    player = {"x":14.5,"y":12.5,"z":1,"angle":0,"pitch":0,"vz":0}
+
+action face_south:
+    player.angle = 90
+
+action exhausted:
+    health = 16
+    focus = 0
+    herbs = 0
+
+action age_battle(count):
+    for index in range(0, count):
+        call tick {}

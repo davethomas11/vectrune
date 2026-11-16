@@ -564,6 +564,16 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         ensure!(logic.state.contains_key(field), "Scene ui references unknown state {field}");
         config["ui"] = json!(field);
     }
+    if let Some(value) = scene.kv.get("world") {
+        let field = value
+            .as_str()
+            .context("Scene world must name a voxel state field")?;
+        ensure!(
+            logic.state.contains_key(field),
+            "Scene world references unknown state {field}"
+        );
+        config["world"] = json!(field);
+    }
     if let Some(value) = scene.kv.get("pause_ui") {
         let value = json_value(value);
         let field = value.as_str().context("Scene pause_ui must name a state field")?;

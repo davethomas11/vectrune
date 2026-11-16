@@ -3,6 +3,11 @@
 `@App type = pixel-3d` uses shared Rune game logic with a browser raycaster or
 the optional native desktop rasterizer. Vect Breach remains a separate example.
 
+Unreleased opt-in `@Scene world` adds solid voxel terrain, elevation, mining,
+seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](voxel-worlds.md)
+for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.
+The grid-map semantics below remain unchanged.
+
 ## Textured floors and ceilings
 
 `@Map floor` and `ceiling` accept an opaque `"#RRGGBB"` color or an existing
@@ -177,6 +182,18 @@ above the panel outside `playing` or while paused. It is ignored during active p
 `heading = "RUNE CRYPT"` fits; longer headings are clipped to the banner width.
 Invalid bound state reports an error rather than falling back to another HUD.
 
+**Unreleased customization:** optional `textScale` accepts `1` (default) or `2`.
+For example, `ui.textScale = 2` enlarges the bitmap text without changing world
+resolution. The larger layout wraps objectives/prompts to two lines, abbreviates
+meter labels when necessary (H health, G guardian, I impact in Rune Miners), and
+reserves panel space for choices/footer before body text. With three meters it
+omits secondary detail to keep the scene visible; put essential turn resources
+in a short objective or panel. Keep text concise: overflow still has bounded
+line limits. Browser/shared QuickJS and native Rust HUDs support both sizes.
+Set `pause_ui.textScale` separately if a pause HUD is bound.
+Empty detail/objective/prompt strings remove their unused strips, allowing
+game-authored compact/minimal presets without hiding essential meters.
+
 The HUD separates resources, detail, objective, notice, and bottom interaction
 prompt. Panel bodies and notices word-wrap; `|` introduces a paragraph break.
 Panels replace notices but never the objective or prompt. At the example's
@@ -197,9 +214,44 @@ the element's `hidden` property. Invalid bindings report errors. These bind to
 the **game** state, not the shell's separate logic state. Action buttons clear
 held inputs and return focus to the canvas without unpausing; only starting a
 new run or the explicit pause/resume controls resume play.
+An **unreleased** opt-in `data-pixel-menu=true` on a shell menu clears held
+inputs on opening/closing and releases pointer lock while visible, so the
+mouse can select items. Bind its visibility with `data-pixel-hidden` or
+`data-pixel-paused`; the game remains responsible for freezing simulation.
+Optional `data-pixel-menu-close=close_menu` invokes that game action when
+Escape is pressed with the canvas focused. Closing returns focus to the
+canvas; click the scene to recapture mouse look. Menus are not automatic
+focus-trapped dialogs.
 `data-pixel-confirm="End this run?"` on a `data-pixel-start` button requests
 browser confirmation before restarting an active run; it does not affect
 starting from camp or programmatic `start()`.
+
+### Context-sensitive touch controls (unreleased)
+
+In an `@Controls` touch object, the whole overlay, joystick and individual
+buttons can each declare `"visible":"state.path"`. It resolves a **boolean
+game-state path**, not an expression or a literal boolean. Missing/nonboolean
+values report an error. Omitting it preserves existing controls. The input
+compiler validates path syntax; browser hosts resolve it against current
+state in both Pixel and Pixel 3D games.
+
+```rune
+touch = {
+    "visible": "touch_ready",
+    "joystick": {"x":"move_x","y":"move_y","visible":"exploring"},
+    "buttons": [
+        {"id":"mine","input":"mine","label":"MINE","visible":"exploring"},
+        {"id":"guard","input":"guard","label":"GUARD","visible":"defending"}
+    ]
+}
+```
+
+Declare/update those boolean state fields in game logic. Hiding an overlay
+or control cancels its active pointers and releases held inputs; it does not
+silently resume a held joystick/mining input when shown again. This is a
+browser touch presentation feature, not a change to native keyboard/gamepads.
+Rune Miners uses it for exploration-only movement/mining, turn choices, and
+enemy-turn defense, and hides the entire touch overlay while menus are open.
 
 ### Pause screens and deliberate start
 

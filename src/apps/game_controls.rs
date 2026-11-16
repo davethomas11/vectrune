@@ -53,6 +53,13 @@ fn fields(v: &Json, allowed: &[&str], label: &str) -> Result<()> {
     }
     Ok(())
 }
+fn visibility(v: &Json) -> Result<()> {
+    if let Some(path) = v.get("visible") {
+        ensure!(path.as_str().is_some_and(|s| s.split('.').all(|part| input(&json!(part)))),
+            "Touch visible must name a boolean state path");
+    }
+    Ok(())
+}
 fn number(v: &Json, key: &str, min: f64, max: f64) -> Result<()> {
     if let Some(n) = v.get(key) {
         ensure!(
@@ -167,7 +174,8 @@ fn validate(profile: &Json) -> Result<()> {
         }
     }
     if let Some(touch) = profile.get("touch").filter(|v| !v.is_null()) {
-        fields(touch, &["enabled", "joystick", "look", "buttons"], "touch")?;
+        fields(touch, &["enabled", "joystick", "look", "buttons", "visible"], "touch")?;
+        visibility(touch)?;
         if let Some(enabled) = touch.get("enabled") {
             ensure!(enabled.is_boolean(), "Touch enabled must be boolean");
         }
@@ -175,10 +183,11 @@ fn validate(profile: &Json) -> Result<()> {
             fields(
                 stick,
                 &[
-                    "x", "y", "left", "right", "up", "down", "deadzone", "size", "anchor",
+                    "x", "y", "left", "right", "up", "down", "deadzone", "size", "anchor", "visible",
                 ],
                 "joystick",
             )?;
+            visibility(stick)?;
             for key in ["x", "y", "left", "right", "up", "down"] {
                 if let Some(v) = stick.get(key) {
                     ensure!(input(v), "Invalid joystick {key} input");
@@ -200,8 +209,11 @@ fn validate(profile: &Json) -> Result<()> {
             }
         }
         if let Some(look) = touch.get("look") {
-            fields(look, &["x", "sensitivity"], "touch look")?;
+            fields(look, &["x", "y", "sensitivity"], "touch look")?;
             ensure!(input(&look["x"]), "Touch look needs an x input");
+            if let Some(y) = look.get("y") {
+                ensure!(input(y), "Touch look y must name an input");
+            }
             number(look, "sensitivity", -100., 100.)?;
         }
         if let Some(buttons) = touch.get("buttons") {
@@ -220,9 +232,11 @@ fn validate(profile: &Json) -> Result<()> {
                         "offset",
                         "size",
                         "drag_x",
+                        "visible",
                     ],
                     "touch button",
                 )?;
+                visibility(button)?;
                 ensure!(
                     input(&button["id"]) && ids.insert(button["id"].as_str().unwrap()),
                     "Touch button needs a unique id"
@@ -312,8 +326,10 @@ fn validate(profile: &Json) -> Result<()> {
             }
         }
     }
-    if let Some(name) = profile["touch"]["look"]["x"].as_str() {
-        channel(name, true)?;
+    for key in ["x", "y"] {
+        if let Some(name) = profile["touch"]["look"][key].as_str() {
+            channel(name, true)?;
+        }
     }
     if let Some(buttons) = profile["touch"]["buttons"].as_array() {
         for button in buttons {
@@ -459,6 +475,38 @@ mod tests {
                 "@Scene/game\ncontrols = test\n@Controls/test\n{body}\n"
             ));
             assert!(compile(&d, &d.sections[0]).is_err(), "{body}");
+        }
+    }
+    #[test]
+    fn touch_visibility_accepts_state_paths_and_rejects_non_paths() {
+        let source = "@Scene/game\ncontrols = test\n@Controls/test\ntouch = {\"visible\":\"touch.ready\",\"joystick\":{\"x\":\"move_x\",\"visible\":\"exploring\"},\"buttons\":[{\"id\":\"guard\",\"input\":\"guard\",\"label\":\"Guard\",\"visible\":\"enemy_turn\"}]}\n";
+        let d = doc(source);
+        let profile = compile(&d, &d.sections[0]).unwrap().unwrap();
+        assert_eq!(profile["touch"]["visible"], "touch.ready");
+        assert_eq!(profile["touch"]["joystick"]["visible"], "exploring");
+        assert_eq!(profile["touch"]["buttons"][0]["visible"], "enemy_turn");
+        for invalid in ["true", "\"\"", "\"touch..ready\"", "\"a + b\""] {
+            for path in ["\"touch.ready\"", "\"exploring\"", "\"enemy_turn\""] {
+                let d = doc(&source.replace(path, invalid));
+                assert!(compile(&d, &d.sections[0]).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn touch_vertical_look_is_optional_and_numeric() {
+        let source = "@Scene/game\ncontrols = test\n@Controls/test\ntouch = {\"look\":{\"x\":\"look_x\",\"y\":\"look_y\",\"sensitivity\":1}}\n";
+        let d = doc(source);
+        assert_eq!(
+            compile(&d, &d.sections[0]).unwrap().unwrap()["touch"]["look"]["y"],
+            "look_y"
+        );
+        for body in [
+            source.replace("\"y\":\"look_y\"", "\"y\":false"),
+            format!("{source}keys = {{\"KeyY\":\"look_y\"}}\n"),
+        ] {
+            let d = doc(&body);
+            assert!(compile(&d, &d.sections[0]).is_err());
         }
     }
 }

@@ -32,7 +32,7 @@ function fragmentNoise(x: number, y: number): number {
 /** Ray/box rendering keeps block faces pixel crisp and uses the raycaster's depth convention. */
 export function renderModel(
   model: BlockModel, instance: ModelInstance,
-  camera: { x: number; y: number }, dirX: number, dirY: number, fovScale: number,
+  camera: { x: number; y: number; height?: number; pitch?: number }, dirX: number, dirY: number, fovScale: number,
   width: number, height: number, buffer: Uint32Array, depth: Float64Array
 ): void {
   const scale = instance.scale ?? 1;
@@ -44,9 +44,11 @@ export function renderModel(
   }
   if (dissolve === 1) return;
   const angle = (instance.angle ?? 0) * Math.PI / 180;
+  const eye = camera.height ?? .5, pitch = (camera.pitch ?? 0) * Math.PI / 180;
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
   const c = Math.cos(angle), s = Math.sin(angle);
   const ox = camera.x - instance.x, oy = camera.y - instance.y;
-  const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (0.5 - (instance.z ?? 0)) / scale];
+  const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - (instance.z ?? 0)) / scale];
   for (const block of model.blocks) {
     const max = block.from.map((v, i) => v + block.size[i]);
     let left = width, right = 0, top = height, bottom = 0, clipped = false;
@@ -56,10 +58,11 @@ export function renderModel(
       const z = (corner & 4 ? max[2] : block.from[2]) * scale + (instance.z ?? 0);
       const x = instance.x + lx * c - ly * s - camera.x;
       const y = instance.y + lx * s + ly * c - camera.y;
-      const d = x * dirX + y * dirY;
+      const forward = x * dirX + y * dirY;
+      const d = forward * cp + (z - eye) * sp;
       if (d <= 0.001) { clipped = true; continue; }
       const sx = width / 2 * (1 + (-x * dirY + y * dirX) / (d * fovScale));
-      const sy = (height >> 1) - (z - 0.5) * height / d;
+      const sy = (height >> 1) - ((z - eye) * cp - forward * sp) * height / d;
       left = Math.min(left, sx); right = Math.max(right, sx);
       top = Math.min(top, sy); bottom = Math.max(bottom, sy);
     }
@@ -69,11 +72,13 @@ export function renderModel(
     const y1 = clipped ? height : Math.min(height, Math.ceil(bottom));
     for (let x = x0; x < x1; x++) {
       const cx = 2 * x / width - 1;
-      const rx = dirX - dirY * fovScale * cx, ry = dirY + dirX * fovScale * cx;
       for (let y = y0; y < y1; y++) {
         // Stable two-pixel fragments share one mask across all faces, leaving real depth holes.
         if (dissolve > 0 && fragmentNoise(x, y) < dissolve) continue;
-        const ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale, ((height >> 1) - y - 0.5) / (height * scale)];
+        const v = ((height >> 1) - y - .5) / height;
+        const rx = dirX * cp - dirY * fovScale * cx - dirX * sp * v;
+        const ry = dirY * cp + dirX * fovScale * cx - dirY * sp * v;
+        const ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale, (sp + cp * v) / scale];
         let near = -Infinity, far = Infinity, face = 0, exitFace = 0, valid = true;
         for (let axis = 0; axis < 3; axis++) {
           if (Math.abs(ray[axis]) < 1e-12) {

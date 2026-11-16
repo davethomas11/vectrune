@@ -1,0 +1,444 @@
+@Logic/miners
+state:
+    status = "title"
+    seed = 319
+    biome = "meadow"
+    world = null
+    player = {"x":4.5,"y":4.5,"z":3,"angle":0,"pitch":0,"vz":0}
+    view_camera = {"x":4.5,"y":4.5,"z":3,"angle":0,"pitch":0,"vz":0}
+    landmarks = []
+    foes = []
+    effects = []
+    target_marker = []
+    mining_effects = []
+    target_name = ""
+    target_prompt = ""
+    notice_ticks = 0
+    impact_flash = 0
+    one_locked = true
+    two_locked = true
+    three_locked = true
+    recruit_locked = true
+    defense_locked = true
+    route_hint = ""
+    weapon = {"sprite":"miners/pick","bob":0}
+    health = 60
+    max_health = 60
+    timber = 0
+    stone = 0
+    copper = 0
+    herbs = 2
+    pick = false
+    blade = false
+    companion = false
+    focus = 2
+    phase = "explore"
+    enemy_hp = 48
+    battle_clock = 0
+    defense = ""
+    defense_used = false
+    mine_cooldown = 0
+    guard_held = false
+    dodge_held = false
+    jump_held = false
+    death_age = 0
+    notice = ""
+    summary = ""
+    one_label = "Craft pick / 1"
+    two_label = "Craft blade / 2"
+    three_label = "Rest / 3"
+    camp_locked = true
+    battle_locked = true
+    config_locked = false
+    ui = {"meters":[],"objective":"","detail":"","prompt":"","notice":"","panel":null}
+    pause_ui = {"meters":[],"objective":"","detail":"","prompt":"","notice":"","panel":null}
+
+action initialize:
+    call setup_world
+    status = "title"
+    notice = "Choose a biome and seed, then begin."
+    call refresh_ui
+
+action setup_world:
+    call reset_inventory
+    tutorial_done = false
+    tutorial_step = ""
+    tutorial_return = false
+    world = voxel_generate(seed, biome)
+    player = {"x":4.5,"y":4.5,"z":3,"angle":0,"pitch":0,"vz":0}
+    landmarks = [{"x":3.5,"y":3.5,"z":3,"model":"miners/bench"},{"x":5.5,"y":3.5,"z":3,"model":"miners/mira"}]
+    array.push(landmarks, {"x":3.5,"y":5.5,"z":3,"model":"miners/beacon"})
+    array.push(landmarks, {"x":7.5,"y":8.5,"z":3,"model":"miners/torch"})
+    array.push(landmarks, {"x":10.5,"y":10.5,"z":2,"model":"miners/torch"})
+    array.push(landmarks, {"x":12.5,"y":10.5,"z":1,"model":"miners/torch"})
+    foes = [{"x":16.5,"y":12.5,"z":1,"angle":180,"model":"miners/guardian","visible":true}]
+    effects = []
+    target_marker = []
+    mining_effects = []
+    notice_ticks = 0
+    impact_flash = 0
+    death_age = 0
+    health = 60
+    timber = 0
+    stone = 0
+    copper = 0
+    herbs = 2
+    pick = false
+    blade = false
+    companion = false
+    focus = 2
+    phase = "explore"
+    enemy_hp = 48
+    battle_clock = 0
+    defense = ""
+    defense_used = false
+    mine_cooldown = 0
+    guard_held = false
+    dodge_held = false
+    jump_held = false
+    weapon = {"sprite":"miners/pick","bob":0}
+
+action start:
+    call setup_world
+    status = "playing"
+    notice = "Aim at the timber ahead. A gold frame marks the block you will mine."
+    notice_ticks = 150
+    call refresh_ui
+
+action return_to_title:
+    call initialize
+
+action advance:
+    stop when status == "playing"
+    call start
+
+action cycle_biome:
+    stop when status == "playing"
+    biome = biome == "meadow" ? "ember" : "meadow"
+    call initialize
+
+action new_seed:
+    if menu != "":
+        call menu_next
+        stop
+    stop when status == "playing"
+    seed = random(1, 2147483646)
+    call initialize
+
+action choice_one:
+    if menu != "":
+        call menu_choose 0
+        stop
+    notice_ticks = 90
+    if phase == "explore":
+        call craft_pick
+    if phase != "explore":
+        call battle_action "strike"
+    call refresh_ui
+
+action choice_two:
+    if menu != "":
+        call menu_choose 1
+        stop
+    notice_ticks = 90
+    if phase == "explore":
+        call craft_blade
+    if phase != "explore":
+        call battle_action "skill"
+    call refresh_ui
+
+action choice_three:
+    if menu != "":
+        call menu_choose 2
+        stop
+    notice_ticks = 90
+    if phase == "explore":
+        call rest
+    if phase != "explore":
+        call battle_action "mend"
+    call refresh_ui
+
+action camp_check:
+    camp_locked = status != "playing" || phase != "explore" || distance(player, world.spawn) > 3 || abs(player.z - 3) > 0.5
+
+action craft_pick:
+    call craft 0
+    notice_ticks = 90
+
+action craft_blade:
+    call craft 1
+    notice_ticks = 90
+
+action recruit:
+    notice_ticks = 120
+    call camp_check
+    if camp_locked:
+        notice = "Mira waits at camp. Return to recruit her."
+    if !camp_locked && !companion:
+        companion = true
+        landmarks[1].visible = false
+        notice = "Mira joined! She follows off-screen and adds 4 damage each attack."
+        notice_ticks = 120
+        call refresh_ui
+        stop
+    if !camp_locked && companion:
+        notice = "Mira is ready. Find the cave east, then south of camp."
+    call refresh_ui
+
+action rest:
+    call camp_check
+    if camp_locked:
+        notice = "Rest is available at camp, outside combat."
+        stop
+    health = max_health
+    herbs = max(2, herbs)
+    focus = 2
+    notice = "Rested. Health, two herbs and focus restored."
+
+action mine:
+    stop when status != "playing" || phase != "explore" || menu != "" || mine_cooldown > 0
+    result = voxel_mine(world, player)
+    mine_cooldown = mining_rate
+    if result.block == 0:
+        notice = "Aim closer to a block. Bedrock cannot be mined."
+    if result.block == 2:
+        stone += 1
+        notice = "+1 stone"
+    if result.block == 4:
+        timber += 1
+        notice = "+1 timber"
+    if result.block == 5:
+        copper += 1
+        notice = "+1 copper"
+    if result.block == 3 || result.block == 6:
+        notice = "Cleared. Soil and leaves do not provide crafting materials."
+    notice_ticks = 45
+    if result.block > 0:
+        mining_effects = [{"x":result.hit.x + 0.5,"y":result.hit.y + 0.5,"z":result.hit.z,"model":"miners/chips","dissolve":0,"age":0}]
+    call refresh_ui
+
+action update_target:
+    target_marker = []
+    target_name = ""
+    target_prompt = "AIM AT A BLOCK WITHIN 3 TILES | B CAMP"
+    stop when status != "playing" || phase != "explore" || menu != ""
+    target = voxel_target(world, player)
+    if target != null:
+        target_name = target.block == 1 ? "BEDROCK" : (target.block == 2 ? "STONE +1" : (target.block == 4 ? "TIMBER +1" : (target.block == 5 ? "COPPER +1" : "SOIL / LEAVES")))
+        target_prompt = target.block == 1 ? "BEDROCK - PROTECTED | B CAMP" : "CLICK/E: MINE " + target_name + " | B CAMP"
+        if target.block != 1:
+            target_marker = [{"x":target.x + 0.5,"y":target.y + 0.5,"z":target.z - 0.01,"model":"miners/target","scale":1.02}]
+
+action begin_battle:
+    stop when phase != "explore" || status != "playing" || foes[0].visible == false
+    phase = "player"
+    target_marker = []
+    mining_effects = []
+    enemy_hp = 48
+    focus = 2
+    battle_clock = 0
+    player.angle = atan2(foes[0].y - player.y, foes[0].x - player.x)
+    player.pitch = -5
+    player.vz = 0
+    notice = "Stoneheart Guardian! Choose an action, then time your defense."
+    if !tutorial_done:
+        tutorial_step = "strike"
+        notice = "PRACTICE FIRST: choose Strike / 1. No damage or costs. G skips; H replays."
+    call refresh_ui
+
+action battle_action(kind):
+    stop when status != "playing" || phase == "explore"
+    if kind != "strike" && kind != "skill" && kind != "mend":
+        notice = "Choose Strike, Skill or Mend."
+        stop
+    if phase != "player":
+        notice = "Enemy turn. Watch the impact bar and defend."
+        stop
+    if tutorial_step != "":
+        call tutorial_action kind
+        call refresh_ui
+        stop
+    damage = 0
+    if kind == "strike":
+        damage = equipment.weapon == "copper_blade" ? 9 : 4
+        focus = min(4, focus + 1)
+    if kind == "skill":
+        if focus < 2:
+            notice = "Skill needs 2 focus. Strike or time a guard to earn focus."
+            stop
+        focus -= 2
+        damage = equipment.weapon == "copper_blade" ? 15 : 8
+    if kind == "mend":
+        if herbs < 1:
+            notice = "No herbs left. Strike or use a skill."
+            stop
+        herbs -= 1
+        health = min(max_health, health + 24)
+    if damage > 0 && companion:
+        damage += 4
+    enemy_hp = max(0, enemy_hp - damage)
+    impact_flash = 8
+    if enemy_hp == 0:
+        foes[0].visible = false
+        effects = [{"x":16.5,"y":12.5,"z":1,"model":"miners/guardian","dissolve":0}]
+        array.push(landmarks, {"x":16.5,"y":12.5,"z":1,"model":"miners/heart"})
+        phase = "explore"
+        status = "won"
+        notice = "Rune Heart reclaimed. A camp became a party. A miner became a hero."
+        call refresh_ui
+        stop
+    phase = "enemy"
+    battle_clock = 0
+    defense = ""
+    defense_used = false
+    notice = damage > 0 ? "Hit for " + damage + ". Guardian winds up. Wait for GUARD NOW." : "Mended. Guardian winds up."
+    call refresh_ui
+
+action defend(kind):
+    stop when status != "playing" || phase != "enemy" || defense_used
+    if tutorial_step != "":
+        call tutorial_defend kind
+        call refresh_ui
+        stop
+    defense_used = true
+    if kind == "guard" && battle_clock >= 40 && battle_clock < 50:
+        defense = "guard"
+        notice = "Perfect guard! Reduced damage and +1 focus."
+    if kind == "dodge" && battle_clock >= 44 && battle_clock < 50:
+        defense = "dodge"
+        notice = "Perfect dodge! No damage."
+    if defense == "":
+        notice = "Too early! One defense attempt per attack. Wait for the final beat."
+    call refresh_ui
+
+action guard:
+    call defend "guard"
+
+action dodge:
+    call defend "dodge"
+
+action flee:
+    stop when status != "playing"
+    player = {"x":4.5,"y":4.5,"z":3,"angle":0,"pitch":0,"vz":0}
+    phase = "explore"
+    menu = ""
+    tutorial_step = ""
+    tutorial_return = false
+    enemy_hp = 48
+    foes[0].scale = 1
+    foes[0].model = "miners/guardian"
+    target_marker = []
+    notice = "Returned to camp. Inventory and gear are kept; the guardian recovers."
+    notice_ticks = 120
+    call refresh_ui
+
+action tick(input):
+    stop when menu != ""
+    if effects.length > 0:
+        death_age += 1
+        effects[0].dissolve = min(1, death_age / 30)
+        effects[0].z = 1 - death_age / 150
+        if death_age >= 30:
+            effects = []
+    stop when status != "playing"
+    if tutorial_step != "":
+        call tutorial_tick input
+        call refresh_ui
+        stop
+    notice_ticks = max(0, notice_ticks - 1)
+    impact_flash = max(0, impact_flash - 1)
+    if mining_effects.length > 0:
+        mining_effects[0].age += 1
+        mining_effects[0].z += 0.025
+        mining_effects[0].angle = mining_effects[0].age * 9
+        mining_effects[0].dissolve = mining_effects[0].age / 12
+        if mining_effects[0].age >= 12:
+            mining_effects = []
+    mine_cooldown = max(0, mine_cooldown - 1)
+    weapon.x = mine_cooldown > 0 ? sin(mine_cooldown * 10) * 20 : impact_flash * 2
+    weapon.y = mine_cooldown > 0 ? -sin(mine_cooldown * 10) * 10 : -impact_flash * 2
+    if phase == "explore":
+        player.angle += (input.look_x ? input.look_x : 0) * 0.12 + ((input.turn_right ? 1 : 0) - (input.turn_left ? 1 : 0)) * 3
+        player.pitch = clamp(player.pitch - (input.look_y ? input.look_y : 0) * 0.12 + ((input.look_up ? 1 : 0) - (input.look_down ? 1 : 0)) * 2, -65, 65)
+        forward = clamp((input.forward ? 1 : 0) - (input.back ? 1 : 0) + (input.move_y ? input.move_y : 0), -1, 1)
+        side = clamp((input.strafe_right ? 1 : 0) - (input.strafe_left ? 1 : 0) + (input.move_x ? input.move_x : 0), -1, 1)
+        magnitude = max(1, sqrt(forward * forward + side * side))
+        dx = (cos(player.angle) * forward - sin(player.angle) * side) * 0.085 / magnitude
+        dy = (sin(player.angle) * forward + cos(player.angle) * side) * 0.085 / magnitude
+        player = voxel_move(world, player, dx, dy, !!input.jump && !jump_held)
+        if input.mine:
+            call mine
+        if foes[0].visible && distance(player, foes[0]) < 2.7 && abs(player.z - foes[0].z) < 1:
+            call begin_battle
+    if phase == "enemy":
+        battle_clock += 1
+        foes[0].model = battle_clock >= 40 ? "miners/guardian_warn" : "miners/guardian"
+        foes[0].scale = 1 + sin(battle_clock * 3.6) * 0.08
+        if input.guard && !guard_held:
+            call defend "guard"
+        if input.dodge && !dodge_held:
+            call defend "dodge"
+        if battle_clock >= 50:
+            damage_taken = max(0, (defense == "dodge" ? 0 : (defense == "guard" ? 4 : 16)) - armor)
+            health = max(0, health - damage_taken)
+            if defense == "guard":
+                focus = min(4, focus + 1)
+            notice = "Impact: " + damage_taken + " damage. Your turn."
+            phase = "player"
+            foes[0].scale = 1
+            foes[0].model = "miners/guardian"
+            if health == 0:
+                status = "gameover"
+                notice = "The guardian holds the mine. Begin a fresh expedition to try again."
+    guard_held = !!input.guard
+    dodge_held = !!input.dodge
+    jump_held = !!input.jump
+    call refresh_ui
+
+action refresh_ui:
+    call camp_check
+    call update_target
+    view_camera = player
+    if phase == "player" || phase == "enemy" || status == "won" || status == "gameover":
+        view_camera = {"x":12.1,"y":12.5,"z":1,"angle":0,"pitch":-5,"vz":0}
+    config_locked = status == "playing"
+    battle_locked = status != "playing" || phase == "explore"
+    one_locked = status != "playing" || (phase == "explore" ? camp_locked || pick || timber < 2 || stone < 3 : phase != "player")
+    two_locked = status != "playing" || (phase == "explore" ? camp_locked || blade || timber < 1 || copper < 2 : phase != "player" || focus < 2)
+    three_locked = status != "playing" || (phase == "explore" ? camp_locked : phase != "player" || herbs < 1)
+    recruit_locked = camp_locked || companion
+    defense_locked = status != "playing" || phase != "enemy" || defense_used
+    summary = "Timber " + timber + " | Stone " + stone + " | Copper " + copper + " | Herbs " + herbs + " | " + (companion ? "Mira recruited" : "Mira waits at camp")
+    one_label = phase == "explore" ? (pick ? "Stone pick crafted" : "Craft pick: 2 timber + 3 stone / 1") : "Strike / 1"
+    two_label = phase == "explore" ? (blade ? "Copper blade crafted" : "Craft blade: 1 timber + 2 copper / 2") : "Skill: 2 focus / 2"
+    three_label = phase == "explore" ? "Rest at camp / 3" : "Mend: 1 herb / 3"
+    need_timber = max(0, (pick ? 0 : 2) + (blade ? 0 : 1) - timber)
+    need_stone = max(0, (pick ? 0 : 3) - stone)
+    need_copper = max(0, (blade ? 0 : 2) - copper)
+    objective = "GATHER: " + need_timber + " TIMBER / " + need_stone + " STONE / " + need_copper + " COPPER LEFT"
+    if need_timber + need_stone + need_copper == 0:
+        objective = !pick ? "CAMP: CRAFT YOUR STONE PICK / 1" : (!blade ? "CAMP: CRAFT YOUR COPPER BLADE / 2" : (!companion ? "CAMP: RECRUIT MIRA / R" : "FOLLOW THE TORCHES TO THE GUARDIAN"))
+    route_hint = player.y < 9 ? "CAVE PATH: SOUTH PAST CAMP, THEN EAST" : "CAVE PATH: EAST INTO THE TERRACED ENTRANCE"
+    if !pick || !blade || !companion:
+        route_hint = camp_locked ? "B: RETURN TO CAMP TO CRAFT / RECRUIT" : "AT CAMP: 1 PICK / 2 BLADE / R MIRA"
+    ui = {"meters":[{"label":"HEALTH","value":health,"max":max_health,"color":6728533}],"objective":objective,"detail":"WOOD " + timber + " STONE " + stone + " COPPER " + copper + " | " + route_hint,"prompt":target_prompt,"notice":notice_ticks > 0 ? notice : "","panel":null}
+    if phase == "player" || phase == "enemy":
+        ui.objective = phase == "player" ? "YOUR TURN - CHOOSE AN ACTION" : "GUARDIAN TURN - WATCH THE IMPACT BAR"
+        ui.meters = [{"label":"HEALTH","value":health,"max":max_health,"color":6728533},{"label":"GUARDIAN","value":enemy_hp,"max":48,"color":11358536},{"label":"IMPACT","value":phase == "enemy" ? battle_clock : 0,"max":50,"color":battle_clock >= 40 ? 8312492 : 15514728}]
+        ui.detail = "FOCUS " + focus + "/4 | HERBS " + herbs + " | " + (companion ? "MIRA: +4 DAMAGE" : "SOLO")
+        ui.prompt = phase == "player" ? "1 STRIKE +FOCUS | 2 SKILL -2 | 3 MEND | B RETREAT" : (defense_used ? (defense == "" ? "EARLY! WAIT FOR IMPACT - NEXT TURN SOON" : "DEFENSE READY - WAIT FOR IMPACT") : (battle_clock < 40 ? "WAIT... DO NOT DEFEND YET" : (battle_clock < 44 ? "SHIFT / GUARD NOW!" : "SHIFT GUARD OR Q DODGE NOW!")))
+        ui.notice = phase == "player" ? notice : (defense_used ? notice : (battle_clock < 40 ? "STONEHEART WINDS UP... ONE DEFENSE ATTEMPT." : "NOW! ARMS UP - GUARD OR DODGE!"))
+    if status != "playing":
+        ui.heading = "RUNE MINERS"
+        ui.objective = status == "won" ? "RUNE HEART RECLAIMED" : (status == "gameover" ? "EXPEDITION ENDED" : "A SMALL CAMP. A WORLD BELOW.")
+        ui.prompt = "ENTER BEGIN | C BIOME | N NEW SEED"
+        ui.meters = []
+        ui.panel = {"title":biome + " / SEED " + seed,"body":"Mine timber, stone and copper. Craft at camp. Recruit Mira. Descend east into the cave and reclaim the Rune Heart.","choices":[],"selected":0,"footer":"A FRESH RUN RESETS TERRAIN, INVENTORY AND PARTY"}
+        if status == "won" || status == "gameover":
+            ui.panel.title = status == "won" ? "EXPEDITION COMPLETE" : "THE GUARDIAN HOLDS THE MINE"
+            ui.panel.body = notice
+            ui.panel.footer = "ENTER: FRESH EXPEDITION / SAME SEED"
+    call refresh_inventory
+    call refresh_tutorial
+    pause_ui = {"meters":[],"objective":"PAUSED - EXPEDITION STATUS","detail":summary,"prompt":"P RESUME | T RETURN TO TITLE","notice":"Restart resets this expedition. No save data yet.","panel":{"title":biome + " / SEED " + seed,"body":"Health " + health + "/" + max_health + " | " + gear_summary,"choices":[],"selected":0,"footer":"MINE - CRAFT - RECRUIT - RECLAIM"}}
+    call refresh_ux

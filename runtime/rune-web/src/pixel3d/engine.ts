@@ -29,9 +29,11 @@ import {
 import { setActiveMap, type SpatialMap } from './spatial';
 import type { BlockModel } from './model';
 import { validateHud, type GameHud } from './hud';
+import { validateWorld } from './voxel';
 
 export interface Pixel3DConfig {
   ui?: string;
+  world?: string;
   pauseUi?: string;
   restartAction?: string;
   clickToStart?: boolean;
@@ -273,6 +275,10 @@ export class Pixel3DEngine {
     paused: boolean;
   } {
     const state = this.app.state as Record<string, any>;
+    if (this.config.world) {
+      const world = validateWorld(state[this.config.world]);
+      this.raycaster.config.world = world;
+    }
 
     // 1. Resolve camera
     const camVal = this.config.camera
@@ -295,6 +301,9 @@ export class Pixel3DEngine {
       }
     }
     for (const thing of things) {
+      if (this.config.world && thing.sprite && thing.visible !== false) {
+        throw new Error('Voxel world entities must use block models rather than billboard sprites');
+      }
       if (!thing.model || thing.visible === false) continue;
       if (!this.config.models?.[thing.model]) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
       if (thing.sprite) throw new Error('Pixel-3d things must use either model or sprite, not both');

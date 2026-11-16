@@ -1,0 +1,151 @@
+@Controls/miners
+keys:
+    KeyW -> forward
+    KeyS -> back
+    KeyA -> strafe_left
+    KeyD -> strafe_right
+    ArrowLeft -> turn_left
+    ArrowRight -> turn_right
+    ArrowUp -> look_up
+    ArrowDown -> look_down
+    Space -> jump
+    KeyE -> mine
+    ShiftLeft -> guard
+    ShiftRight -> guard
+    KeyQ -> dodge
+commands:
+    Enter -> host.advance
+    Digit1 -> choice_one
+    Digit2 -> choice_two
+    Digit3 -> choice_three
+    KeyR -> recruit
+    KeyB -> flee
+    KeyC -> cycle_biome
+    KeyN -> new_seed
+    KeyI -> inventory
+    KeyK -> workbench
+    KeyV -> menu_previous
+    KeyH -> combat_help
+    KeyG -> skip_tutorial
+    KeyO -> cycle_hud
+    KeyU -> toggle_text
+    KeyP -> host.pause
+    KeyT -> return_to_title
+    KeyF -> host.fullscreen
+    KeyM -> host.mute
+mouse:
+    Left -> mine
+    MoveX -> look_x
+    MoveY -> look_y
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.18}
+    Axis1 -> {"input":"move_y","invert":true,"deadzone":0.18}
+    Axis2 -> {"input":"look_x","mode":"rate","scale":700,"deadzone":0.18}
+    Axis3 -> {"input":"look_y","mode":"rate","scale":700,"deadzone":0.18}
+    Button0 -> guard
+    Button1 -> dodge
+    Button2 -> mine
+    Button3 -> {"command":"choice_one"}
+    Button4 -> {"command":"choice_two"}
+    Button5 -> {"command":"choice_three"}
+    Button6 -> {"command":"recruit"}
+    Button9 -> {"command":"host.pause"}
+    Button8 -> {"command":"host.advance"}
+    Button10 -> {"command":"flee"}
+    Button11 -> {"command":"menu_next"}
+    Button12 -> {"command":"inventory"}
+    Button13 -> {"command":"workbench"}
+    Button14 -> {"command":"menu_previous"}
+    Button15 -> {"command":"skip_tutorial"}
+touch = {
+    "buttons": [
+        {
+            "id": "mine",
+            "input": "mine",
+            "label": "MINE",
+            "offset": [8,12],
+            "size": 44,
+            "visible": "touch_explore"
+        },
+        {
+            "id": "guard",
+            "input": "guard",
+            "label": "GUARD",
+            "offset": [68,12],
+            "size": 48,
+            "visible": "touch_defense"
+        },
+        {
+            "id": "dodge",
+            "input": "dodge",
+            "label": "DODGE",
+            "offset": [12,12],
+            "size": 48,
+            "visible": "touch_defense"
+        },
+        {
+            "id": "jump",
+            "input": "jump",
+            "label": "JUMP",
+            "offset": [56,12],
+            "size": 44,
+            "visible": "touch_explore"
+        },
+        {
+            "anchor": "top-right",
+            "command": "choice_one",
+            "id": "one",
+            "label": "1",
+            "offset": [8,80],
+            "size": 44,
+            "visible": "touch_choices"
+        },
+        {
+            "anchor": "top-right",
+            "command": "choice_two",
+            "id": "two",
+            "label": "2",
+            "offset": [56,80],
+            "size": 44,
+            "visible": "touch_choices"
+        },
+        {
+            "anchor": "top-right",
+            "command": "choice_three",
+            "id": "three",
+            "label": "3",
+            "offset": [104,80],
+            "size": 44,
+            "visible": "touch_choices"
+        },
+        {
+            "anchor": "top-right",
+            "command": "flee",
+            "id": "camp",
+            "label": "CAMP",
+            "offset": [8,80],
+            "size": 44,
+            "visible": "touch_rescue"
+        },
+        {
+            "anchor": "bottom-left",
+            "command": "host.pause",
+            "id": "pause",
+            "label": "PAUSE",
+            "offset": [96,12],
+            "size": 44
+        },
+        {
+            "anchor": "bottom-right",
+            "command": "inventory",
+            "id": "bag",
+            "label": "BAG",
+            "offset": [104,12],
+            "size": 44,
+            "visible": "touch_bag"
+        }
+    ],
+    "joystick": {"size":80,"visible":"touch_explore","x":"move_x","y":"move_y"},
+    "look": {"sensitivity":1,"x":"look_x","y":"look_y"},
+    "visible": "touch_ready"
+}
