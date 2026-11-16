@@ -1,6 +1,6 @@
 # Vectrune Overview
 
-Vectrune is a small DSL and runtime for structured data, HTTP applications, automation, and data transformation.
+Vectrune is a declarative language and runtime for structured data, HTTP applications, reactive interfaces, automation, and pixel games.
 It aims for mass adoption by making common application workflows easier to read, easier to trust, and easier to ship.
 
 ## Positioning
@@ -26,7 +26,16 @@ Common use cases in this repository include:
 - working with CSV and JSON-backed data flows
 - using schema validation in request handlers
 - packaging Vectrune apps for AWS Lambda
-- building interactive or stateful examples such as worm-game style flows
+- building reactive Rune-Web interfaces with components, state, actions, forms, and localization
+- building browser pixel games and Pixel 3D environments with shared game logic, input, and synthesized audio; native desktop hosting is opt-in
+- exploring complete applications such as Rune Studio, Vect Breach, Rune Crypt, and Monster City
+
+## Public entry points
+
+- `README.md` introduces the project, provides a complete greeting API quickstart, and links to runnable examples and live applications.
+- [vectrune.com](https://vectrune.com/) provides the interactive learning site.
+- [vectrune.com/docs/](https://vectrune.com/docs/) provides the searchable language and library reference, including runtime availability and implementation limits.
+- The repository is alpha; examples on `main` may use features ahead of the latest release.
 
 Current near-term adoption priority:
 - make REST-style API creation the fastest path to first success
