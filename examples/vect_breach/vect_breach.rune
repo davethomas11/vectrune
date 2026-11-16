@@ -1,5 +1,6 @@
 #!RUNE
 import "controls.rune"
+import "title.rune"
 import "assets.rune"
 import "guards.rune"
 import "map.rune"
@@ -16,6 +17,7 @@ tick_rate = 30
 port = 3020
 
 @Scene/breach_level
+title_scene = breach_title
 logic = breach
 map = e1m1
 camera = player

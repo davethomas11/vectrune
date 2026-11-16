@@ -30,8 +30,22 @@ import { setActiveMap, type SpatialMap } from './spatial';
 import type { BlockModel } from './model';
 import { validateHud, type GameHud } from './hud';
 import { validateWorld } from './voxel';
+import { sampleCamera, type CameraTrack } from './camera';
+
+export interface TitleScene {
+  things?: string[];
+  map: MapData;
+  camera: CameraTrack;
+  fov: number;
+  heading: string;
+  subtitle: string;
+  prompt: string;
+}
 
 export interface Pixel3DConfig {
+  fov?: number;
+  cameraTrack?: CameraTrack;
+  titleScene?: TitleScene;
   ui?: string;
   world?: string;
   pauseUi?: string;
@@ -105,11 +119,22 @@ export class Pixel3DEngine {
     return audioSync.getSnapshot();
   }
 
+  /** The desktop host shares this renderer for features beyond its fixed-eye rasterizer. */
+  get usesSharedRenderer(): boolean {
+    if (this.config.world || this.config.cameraTrack ||
+        (this.config.titleScene && this.app.state.status === 'title') ||
+        (this.config.fov !== undefined && this.config.fov !== 66)) return true;
+    const camera = this.config.camera.split('.').reduce((v, key) => v?.[key], this.app.state as Record<string, any>) as Camera3D | undefined;
+    return !!camera && ((camera.height ?? .5) !== .5 || (camera.pitch ?? 0) !== 0);
+  }
+
   private save?: GameSave;
   get saveStatus(): 'saved' | 'session' | 'recovered' | undefined {
     return this.save?.status;
   }
   ticks = 0;
+  presentationTicks = 0;
+  private wasTitle = false;
   private currentMapName = '';
 
   constructor(readonly config: Pixel3DConfig, options: RuneWebConfig) {
@@ -118,6 +143,7 @@ export class Pixel3DEngine {
     }
 
     this.raycaster = new Raycaster3D({
+      fov: config.fov,
       width: config.width,
       height: config.height,
       textures: config.textures,
@@ -172,7 +198,7 @@ export class Pixel3DEngine {
       }
       this.app.computeDerived();
     });
-    this.syncMap();
+    this.syncScene();
     this.persist();
   }
 
@@ -181,11 +207,12 @@ export class Pixel3DEngine {
     this._paused = false;
     setAudioMuted(this._muted);
     this.ticks = 0;
+    this.presentationTicks = 0;
     withContext(this.context, () => {
       this.app.invokeAction('start', []);
       this.app.computeDerived();
     });
-    this.syncMap();
+    this.syncScene();
     this.persist();
   }
 
@@ -201,12 +228,16 @@ export class Pixel3DEngine {
       this.app.computeDerived();
     });
     this.ticks++;
-    this.syncMap();
+    this.syncScene();
+    if (this.wasTitle) this.presentationTicks++;
     this.persist();
   }
 
-  private syncMap(): void {
+  private syncScene(): void {
     const state = this.app.state as Record<string, any>;
+    const title = state.status === 'title';
+    if (title && !this.wasTitle) this.presentationTicks = 0;
+    this.wasTitle = title;
     if (state.level_map && state.level_map !== this.currentMapName && this.config.maps?.[state.level_map]) {
       this.currentMapName = state.level_map;
       const newMap = this.config.maps[state.level_map];
@@ -239,7 +270,7 @@ export class Pixel3DEngine {
       this.app.computeDerived();
     });
     if (this._paused) pauseMusic();
-    this.syncMap();
+    this.syncScene();
     this.persist();
   }
 
@@ -251,6 +282,8 @@ export class Pixel3DEngine {
   }
 
   renderState(): {
+    title_scene?: TitleScene;
+    presentation_time: number;
     camera: Camera3D;
     things: Thing3D[];
     weapon?: ViewmodelWeapon;
@@ -275,21 +308,25 @@ export class Pixel3DEngine {
     paused: boolean;
   } {
     const state = this.app.state as Record<string, any>;
-    if (this.config.world) {
-      const world = validateWorld(state[this.config.world]);
-      this.raycaster.config.world = world;
-    }
+    const titleScene = state.status === 'title' ? this.config.titleScene : undefined;
+    this.raycaster.config.world = !titleScene && this.config.world ? validateWorld(state[this.config.world]) : undefined;
+    this.raycaster.setMap(titleScene?.map ?? (this.config.maps?.[this.currentMapName] || this.config.map));
+    this.raycaster.fov = titleScene?.fov ?? this.config.fov ?? 66;
+    const presentationTime = this.presentationTicks / this.config.tickRate;
 
     // 1. Resolve camera
     const camVal = this.config.camera
       .split('.')
       .reduce((v, k) => v?.[k], state) as Camera3D;
-    const camera: Camera3D = camVal || { x: 2.5, y: 2.5, angle: 0 };
+    const track = titleScene?.camera ?? this.config.cameraTrack;
+    const camera: Camera3D = track ? sampleCamera(track, titleScene ? presentationTime : this.ticks / this.config.tickRate)
+      : camVal || { x: 2.5, y: 2.5, angle: 0 };
 
     // 2. Resolve things
     const things: Thing3D[] = [];
-    if (this.config.things) {
-      for (const path of this.config.things) {
+    const thingPaths = titleScene?.things ?? this.config.things;
+    if (thingPaths) {
+      for (const path of thingPaths) {
         const val = path.split('.').reduce((v, k) => v?.[k], state);
         if (Array.isArray(val)) {
           things.push(...val);
@@ -301,7 +338,7 @@ export class Pixel3DEngine {
       }
     }
     for (const thing of things) {
-      if (this.config.world && thing.sprite && thing.visible !== false) {
+      if (!titleScene && this.config.world && thing.sprite && thing.visible !== false) {
         throw new Error('Voxel world entities must use block models rather than billboard sprites');
       }
       if (!thing.model || thing.visible === false) continue;
@@ -340,10 +377,12 @@ export class Pixel3DEngine {
     const switch_activated = Boolean(state.switch_activated);
 
     return {
+      title_scene: titleScene,
+      presentation_time: presentationTime,
       camera,
       things,
-      weapon,
-      flash,
+      weapon: titleScene ? undefined : weapon,
+      flash: titleScene ? 0 : flash,
       status,
       health,
       ammo,
@@ -376,6 +415,8 @@ export class Pixel3DEngine {
   frame(): Uint32Array {
     const stats = this.renderState();
     this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, {
+      titleScene: stats.title_scene,
+      presentationTime: stats.presentation_time,
       status: stats.status,
       heading: stats.camera.angle,
       health: stats.health,
@@ -392,7 +433,7 @@ export class Pixel3DEngine {
       paused: stats.paused,
       presentation: stats.presentation,
       hudText: stats.hud_text,
-    }, stats.wall_overrides, stats.time);
+    }, stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time);
     return this.raycaster.buffer;
   }
 }

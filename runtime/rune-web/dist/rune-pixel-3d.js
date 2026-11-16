@@ -4984,8 +4984,101 @@ var __RunePixel3DRuntime = (() => {
     };
   }
 
+  // src/pixel3d/grid.ts
+  var shade = (c, f) => (4278190080 | Math.floor((c & 255) * f) | Math.floor((c >>> 8 & 255) * f) << 8 | Math.floor((c >>> 16 & 255) * f) << 16) >>> 0;
+  var pack = (c) => (4278190080 | (c & 255) << 16 | c & 65280 | c >>> 16 & 255) >>> 0;
+  function sample(surface, u, v) {
+    if (typeof surface === "number") return (surface | 4278190080) >>> 0;
+    const x = Math.floor(u * surface.width) & surface.width - 1;
+    const y = Math.floor(v * surface.height) & surface.height - 1;
+    return surface.pixels[y * surface.width + x];
+  }
+  function renderGrid(map, camera, textures, overrides, things, sprites, fov, width, height, buffer, depth, time) {
+    const eye = camera.height ?? 0.5, pitch = (camera.pitch ?? 0) * Math.PI / 180;
+    if (![camera.x, camera.y, camera.angle, eye, pitch].every(Number.isFinite) || eye <= 0 || Math.abs(pitch) > 85 * Math.PI / 180) {
+      throw new Error("Grid camera must be finite, above the floor, with pitch between -85 and 85 degrees");
+    }
+    const angle = camera.angle * Math.PI / 180, dx = Math.cos(angle), dy = Math.sin(angle);
+    const cp = Math.cos(pitch), sp = Math.sin(pitch), scale = Math.tan(fov * Math.PI / 360);
+    const top = map.ceilingHeight ?? 1;
+    const tiles = new Map(overrides.map((o) => [o.y * map.width + o.x, o.texture]));
+    const billboards = things.filter((t) => t.sprite && !t.model && t.visible !== false);
+    for (let y = 0; y < height; y++) {
+      const v = ((height >> 1) - y - 0.5) / height;
+      for (let x = 0; x < width; x++) {
+        const u = (2 * x / width - 1) * scale;
+        const rx = dx * (cp - sp * v) - dy * u, ry = dy * (cp - sp * v) + dx * u, rz = sp + cp * v;
+        let hit = Infinity;
+        let color = sample(map.ceiling, 0, 0);
+        const plane = rz < -1e-10 ? -eye / rz : !map.sky && rz > 1e-10 ? (top - eye) / rz : Infinity;
+        if (plane > 0 && Number.isFinite(plane)) {
+          hit = plane;
+          color = sample(rz < 0 ? map.floor : map.ceiling, camera.x + rx * hit, camera.y + ry * hit);
+        }
+        let mx = Math.floor(camera.x), my = Math.floor(camera.y), enter = 0, side = 2;
+        const sx = rx < 0 ? -1 : 1, sy = ry < 0 ? -1 : 1;
+        const tx = Math.abs(1 / rx), ty = Math.abs(1 / ry);
+        let nextX = rx === 0 ? Infinity : (rx < 0 ? camera.x - mx : mx + 1 - camera.x) * tx;
+        let nextY = ry === 0 ? Infinity : (ry < 0 ? camera.y - my : my + 1 - camera.y) * ty;
+        for (let steps = 0; steps < map.width + map.height + 4 && enter < hit; steps++) {
+          if (mx < 0 || my < 0 || mx >= map.width || my >= map.height) break;
+          const cell = my * map.width + mx, wall = map.grid[cell];
+          const exit = Math.min(nextX, nextY);
+          if (wall > 0) {
+            const a = rz === 0 ? -Infinity : (0 - eye) / rz;
+            const b = rz === 0 ? Infinity : (top - eye) / rz;
+            const near = Math.max(enter, Math.min(a, b), 1e-4);
+            const far = Math.min(exit, Math.max(a, b));
+            if ((rz !== 0 || eye <= top) && near <= far && near < hit) {
+              hit = near;
+              const hx = camera.x + rx * hit, hy = camera.y + ry * hit, hz = eye + rz * hit;
+              const face = near > enter + 1e-8 ? 2 : side;
+              const tex = textures[tiles.get(cell) ?? wall - 1];
+              color = tex ? shade(sample(tex, face === 0 ? hy : hx, face === 2 ? hy : 1 - hz), face === 2 ? 1 : face === 0 ? 1 : 0.75) : 4281545523;
+              break;
+            }
+          }
+          if (nextX < nextY) {
+            enter = nextX;
+            nextX += tx;
+            mx += sx;
+            side = 0;
+          } else {
+            enter = nextY;
+            nextY += ty;
+            my += sy;
+            side = 1;
+          }
+        }
+        if (!Number.isFinite(hit) && map.sky) {
+          color = skyPixel(map.sky, Math.atan2(ry, rx), Math.max(0, Math.min(1, rz * 2)), time);
+        }
+        for (const thing of billboards) {
+          const sprite = sprites[thing.sprite];
+          if (!sprite) continue;
+          const forward = (thing.x - camera.x) * dx + (thing.y - camera.y) * dy;
+          const t = forward / (rx * dx + ry * dy);
+          if (t <= 1e-3 || t >= hit) continue;
+          const size = thing.scale ?? 1;
+          const across = (camera.x + rx * t - thing.x) * -dy + (camera.y + ry * t - thing.y) * dx;
+          const su = across / (size * sprite.width / sprite.height) + 0.5;
+          const sv = 1 - (eye + rz * t - (thing.z ?? 0)) / size;
+          if (su < 0 || su >= 1 || sv < 0 || sv >= 1) continue;
+          const c = sprite.colors[sprite.pixels[Math.floor(sv * sprite.height) * sprite.width + Math.floor(su * sprite.width)]];
+          if (c !== null && c !== void 0) {
+            color = pack(c);
+            hit = t;
+          }
+        }
+        const index2 = y * width + x;
+        buffer[index2] = color;
+        depth[index2] = hit;
+      }
+    }
+  }
+
   // src/pixel3d/model.ts
-  function shade(color, factor) {
+  function shade2(color, factor) {
     return (4278190080 | Math.floor((color & 255) * factor) | Math.floor((color >>> 8 & 255) * factor) << 8 | Math.floor((color >>> 16 & 255) * factor) << 16) >>> 0;
   }
   function fragmentNoise(x, y) {
@@ -5064,7 +5157,7 @@ var __RunePixel3DRuntime = (() => {
           if (near <= 1e-3) face = exitFace;
           if (valid && far >= near && hit > 1e-3 && hit < depth[index2]) {
             depth[index2] = hit;
-            buffer[index2] = shade(block.color, face === 2 ? 1 : face === 0 ? 0.8 : 0.65);
+            buffer[index2] = shade2(block.color, face === 2 ? 1 : face === 0 ? 0.8 : 0.65);
           }
         }
       }
@@ -5318,8 +5411,10 @@ var __RunePixel3DRuntime = (() => {
       const px = camera.x;
       const py = camera.y;
       const ang = camera.angle;
-      const dirX = fastCos(ang);
-      const dirY = fastSin(ang);
+      const pitched = !this.config.world && ((camera.height ?? 0.5) !== 0.5 || (camera.pitch ?? 0) !== 0);
+      const freeCamera = pitched || !!this.config.world;
+      const dirX = freeCamera ? Math.cos(ang * Math.PI / 180) : fastCos(ang);
+      const dirY = freeCamera ? Math.sin(ang * Math.PI / 180) : fastSin(ang);
       const fovScale = Math.tan(this.fov / 2 * Math.PI / 180);
       const planeX = -dirY * fovScale;
       const planeY = dirX * fovScale;
@@ -5346,6 +5441,22 @@ var __RunePixel3DRuntime = (() => {
           time
         );
         this.zBuffer.fill(Infinity);
+      } else if (pitched) {
+        renderGrid(
+          map,
+          camera,
+          Object.values(this.config.textures),
+          wallOverrides,
+          things,
+          this.config.sprites,
+          this.fov,
+          W,
+          H,
+          this.buffer,
+          this.pixelDepth,
+          time
+        );
+        this.zBuffer.fill(Infinity);
       } else {
         this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
         this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
@@ -5354,10 +5465,10 @@ var __RunePixel3DRuntime = (() => {
         if (thing.visible === false || !thing.model) continue;
         const model = this.config.models?.[thing.model];
         if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
-        const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : { x: camera.x, y: camera.y };
+        const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
         renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
       }
-      if (!this.config.world && things && things.length > 0) {
+      if (!this.config.world && !pitched && things && things.length > 0) {
         this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
       }
       if (weapon && weapon.sprite) {
@@ -5399,6 +5510,30 @@ var __RunePixel3DRuntime = (() => {
     renderHUD(stats) {
       const W = this.width;
       const H = this.height;
+      if (stats.titleScene) {
+        const title = stats.titleScene;
+        const scale = Math.max(1, Math.min(4, Math.floor((W - 32) / (title.heading.length * 4))));
+        const left = Math.floor((W - (title.heading.length * 4 - 1) * scale) / 2);
+        const top = Math.floor(H * 0.18);
+        const pulse = 0.6 + 0.4 * Math.sin((stats.presentationTime ?? 0) * 2);
+        for (const [radius, color] of [[3, 1060157], [2, 1594219], [1, 3316907]]) {
+          for (const [ox, oy] of [[-radius, 0], [radius, 0], [0, -radius], [0, radius]]) {
+            this.text(title.heading, left + ox, top + oy, color, scale);
+          }
+        }
+        const channel = Math.floor(205 + 50 * pulse);
+        this.text(title.heading, left, top, channel << 16 | 65535, scale);
+        const centered = (text, y, color) => this.text(
+          text,
+          Math.max(4, Math.floor((W - text.length * 4) / 2)),
+          y,
+          color
+        );
+        centered(title.subtitle, top + 5 * scale + 12, 10340050);
+        this.rect(0, H - 23, W, 23, 528152);
+        centered(title.prompt, H - 15, 10873068);
+        return;
+      }
       if (stats.ui) {
         renderHud(this, stats.ui, stats.status || "playing", stats.paused || false);
         return;
@@ -5769,6 +5904,27 @@ var __RunePixel3DRuntime = (() => {
     }
   };
 
+  // src/pixel3d/camera.ts
+  function sampleCamera(track, seconds) {
+    const points = track.points, n = points.length;
+    const progress = track.loop ? (seconds / track.duration % 1 + 1) % 1 : Math.max(0, Math.min(1, seconds / track.duration));
+    const at = progress * (track.loop ? n : n - 1);
+    const segment = Math.min(Math.floor(at), track.loop ? n - 1 : n - 2), t = at - segment;
+    const point = (i) => points[track.loop ? (i + n) % n : Math.max(0, Math.min(n - 1, i))];
+    const result = {};
+    for (const key of ["x", "y", "height", "angle", "pitch"]) {
+      const values = [-1, 0, 1, 2].map((i) => point(segment + i)[key] ?? (key === "height" ? 0.5 : 0));
+      if (key === "angle") {
+        for (let i = 1; i < 4; i++) values[i] = values[i - 1] + ((values[i] - values[i - 1] + 540) % 360 + 360) % 360 - 180;
+      }
+      const [a, b, c, d] = values;
+      result[key] = 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
+    }
+    result.height = Math.max(0.05, result.height);
+    result.pitch = Math.max(-85, Math.min(85, result.pitch));
+    return result;
+  }
+
   // src/pixel3d/engine.ts
   var Pixel3DEngine = class {
     constructor(config, options) {
@@ -5776,11 +5932,14 @@ var __RunePixel3DRuntime = (() => {
       this._paused = false;
       this._muted = false;
       this.ticks = 0;
+      this.presentationTicks = 0;
+      this.wasTitle = false;
       this.currentMapName = "";
       if (typeof window === "undefined") {
         Object.assign(globalThis, { window: globalThis });
       }
       this.raycaster = new Raycaster3D({
+        fov: config.fov,
         width: config.width,
         height: config.height,
         textures: config.textures,
@@ -5828,7 +5987,7 @@ var __RunePixel3DRuntime = (() => {
         }
         this.app.computeDerived();
       });
-      this.syncMap();
+      this.syncScene();
       this.persist();
     }
     get paused() {
@@ -5851,6 +6010,12 @@ var __RunePixel3DRuntime = (() => {
     get audioState() {
       return audioSync.getSnapshot();
     }
+    /** The desktop host shares this renderer for features beyond its fixed-eye rasterizer. */
+    get usesSharedRenderer() {
+      if (this.config.world || this.config.cameraTrack || this.config.titleScene && this.app.state.status === "title" || this.config.fov !== void 0 && this.config.fov !== 66) return true;
+      const camera = this.config.camera.split(".").reduce((v, key) => v?.[key], this.app.state);
+      return !!camera && ((camera.height ?? 0.5) !== 0.5 || (camera.pitch ?? 0) !== 0);
+    }
     get saveStatus() {
       return this.save?.status;
     }
@@ -5859,11 +6024,12 @@ var __RunePixel3DRuntime = (() => {
       this._paused = false;
       setAudioMuted(this._muted);
       this.ticks = 0;
+      this.presentationTicks = 0;
       withContext(this.context, () => {
         this.app.invokeAction("start", []);
         this.app.computeDerived();
       });
-      this.syncMap();
+      this.syncScene();
       this.persist();
     }
     step(input = {}) {
@@ -5877,11 +6043,15 @@ var __RunePixel3DRuntime = (() => {
         this.app.computeDerived();
       });
       this.ticks++;
-      this.syncMap();
+      this.syncScene();
+      if (this.wasTitle) this.presentationTicks++;
       this.persist();
     }
-    syncMap() {
+    syncScene() {
       const state = this.app.state;
+      const title = state.status === "title";
+      if (title && !this.wasTitle) this.presentationTicks = 0;
+      this.wasTitle = title;
       if (state.level_map && state.level_map !== this.currentMapName && this.config.maps?.[state.level_map]) {
         this.currentMapName = state.level_map;
         const newMap = this.config.maps[state.level_map];
@@ -5912,7 +6082,7 @@ var __RunePixel3DRuntime = (() => {
         this.app.computeDerived();
       });
       if (this._paused) pauseMusic();
-      this.syncMap();
+      this.syncScene();
       this.persist();
     }
     activate(action, args = []) {
@@ -5923,15 +6093,18 @@ var __RunePixel3DRuntime = (() => {
     }
     renderState() {
       const state = this.app.state;
-      if (this.config.world) {
-        const world = validateWorld(state[this.config.world]);
-        this.raycaster.config.world = world;
-      }
+      const titleScene = state.status === "title" ? this.config.titleScene : void 0;
+      this.raycaster.config.world = !titleScene && this.config.world ? validateWorld(state[this.config.world]) : void 0;
+      this.raycaster.setMap(titleScene?.map ?? (this.config.maps?.[this.currentMapName] || this.config.map));
+      this.raycaster.fov = titleScene?.fov ?? this.config.fov ?? 66;
+      const presentationTime = this.presentationTicks / this.config.tickRate;
       const camVal = this.config.camera.split(".").reduce((v, k) => v?.[k], state);
-      const camera = camVal || { x: 2.5, y: 2.5, angle: 0 };
+      const track = titleScene?.camera ?? this.config.cameraTrack;
+      const camera = track ? sampleCamera(track, titleScene ? presentationTime : this.ticks / this.config.tickRate) : camVal || { x: 2.5, y: 2.5, angle: 0 };
       const things = [];
-      if (this.config.things) {
-        for (const path of this.config.things) {
+      const thingPaths = titleScene?.things ?? this.config.things;
+      if (thingPaths) {
+        for (const path of thingPaths) {
           const val = path.split(".").reduce((v, k) => v?.[k], state);
           if (Array.isArray(val)) {
             things.push(...val);
@@ -5941,7 +6114,7 @@ var __RunePixel3DRuntime = (() => {
         }
       }
       for (const thing of things) {
-        if (this.config.world && thing.sprite && thing.visible !== false) {
+        if (!titleScene && this.config.world && thing.sprite && thing.visible !== false) {
           throw new Error("Voxel world entities must use block models rather than billboard sprites");
         }
         if (!thing.model || thing.visible === false) continue;
@@ -5970,10 +6143,12 @@ var __RunePixel3DRuntime = (() => {
       const message = state.message ? String(state.message) : void 0;
       const switch_activated = Boolean(state.switch_activated);
       return {
+        title_scene: titleScene,
+        presentation_time: presentationTime,
         camera,
         things,
-        weapon,
-        flash,
+        weapon: titleScene ? void 0 : weapon,
+        flash: titleScene ? 0 : flash,
         status,
         health,
         ammo,
@@ -6000,6 +6175,8 @@ var __RunePixel3DRuntime = (() => {
     frame() {
       const stats = this.renderState();
       this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, {
+        titleScene: stats.title_scene,
+        presentationTime: stats.presentation_time,
         status: stats.status,
         heading: stats.camera.angle,
         health: stats.health,
@@ -6016,7 +6193,7 @@ var __RunePixel3DRuntime = (() => {
         paused: stats.paused,
         presentation: stats.presentation,
         hudText: stats.hud_text
-      }, stats.wall_overrides, stats.time);
+      }, stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time);
       return this.raycaster.buffer;
     }
   };

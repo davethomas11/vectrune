@@ -108,11 +108,11 @@ are not implemented.
 
 `@Map ceiling_height = 3` raises the ceiling and wall tops to three world
 tiles above the floor. It defaults to `1` and must be numeric, greater than
-`0.5` (the fixed camera eye height), and at most `16`. Fractional heights are
+`0.5` (the default camera eye height), and at most `16`. Fractional heights are
 supported. Browser and native renderers project the ceiling texture at its
 actual elevation and extend wall textures by repeating vertically, rather
-than stretching the stonework. Floor perspective, eye height, and x/y
-collision stay unchanged.
+than stretching the stonework. The default camera eye height and x/y collision stay unchanged.
+Explicit elevated cameras are described below.
 
 ```rune
 @Map/vault
@@ -450,3 +450,71 @@ Sources: [compiler](../../src/apps/pixel3d/mod.rs),
 [logic scenarios](../../examples/rune_crypt/crypt.logic.test.rune),
 [browser regressions](../../tests/browser/rune_crypt.py),
 [compiler/raster tests](../../tests/pixel3d_app.rs).
+
+## Declarative cameras and cinematic title scenes (unreleased)
+
+Vect Breach's [title scene](../../examples/vect_breach/title.rune) demonstrates
+an elevated, pitched camera tour of its actual first level, with glowing bitmap
+lettering. The game scene opts in with `title_scene = breach_title`; its normal
+`camera = player`, briefing, controls, combat and run state are preserved.
+
+```rune
+@Perspective/tour_view
+fov = 76
+
+@Camera/tour
+duration = 24
+loop = true
+points = [
+    {"x":2,"y":2,"height":4,"angle":0,"pitch":-35},
+    {"x":6,"y":2,"height":3,"angle":90,"pitch":-25},
+    {"x":6,"y":6,"height":4,"angle":180,"pitch":-35},
+    {"x":2,"y":6,"height":2,"angle":270,"pitch":-15}
+]
+
+@Scene/breach_title
+map = e1m1
+things = ["enemies", "pickups"]
+camera = tour
+perspective = tour_view
+sky = {"seed":731,"zenith":"#050b1c","horizon":"#25445c","cloud":"#28435a","speed":0.2}
+heading = VECT BREACH
+subtitle = CYBERNETIC SECTOR INFILTRATION
+prompt = PRESS ENTER OR CLICK TO BEGIN MISSION
+```
+
+`@Perspective` declares horizontal `fov` in degrees, from 20 through 120;
+omitting it preserves 66 degrees. Both game and title scenes can reference it.
+A scene's `camera` can reference an `@Camera` track or retain a legacy state
+path. Tracks require a positive duration in seconds and 2–128 points containing
+finite `x`, `y`, and `angle`. Optional `height` defaults to 0.5 tiles above the
+floor (allowed 0.05–256); optional `pitch` defaults to zero, from -85 through
+85 degrees. Negative pitch looks down. This height is independent of voxel
+camera feet elevation `z`.
+
+Tracks use smooth cubic interpolation and shortest-path angles. `loop` defaults
+to true and joins the final point back to the first with continuous motion;
+false holds the final point after the duration. Cubic paths can overshoot their
+points: author routes with clearance from walls and map boundaries. Height and
+pitch are clamped to keep the interpolated eye above the floor and pitch within
+85 degrees. Tracks are visual cameras; they do not move the player, perform
+collision avoidance, or implement third-person following yet.
+
+A title scene activates only for game `status = "title"`. Its independent
+presentation clock advances at the app tick rate, freezes when paused, and
+resets on reentry. Vect Breach already freezes combat in this state. The title
+scene hides the weapon, damage flash, and gameplay HUD; `heading`, `subtitle`
+and `prompt` supply its overlay. Enter/click use the existing start/briefing
+flow and never wait for the camera path. `things` selects game-state entity
+collections, defaulting to the game scene's bindings. A scene-local `sky` uses
+the normal map sky schema and opens the roof without changing the gameplay
+map. The opaque floor remains in place; wall height comes from the map.
+
+Grid cameras now support true height and pitch: finite-height wall columns
+have visible tops, and floors, ceilings, billboards and block models share
+per-pixel depth. Open sky permits views above the walls; opaque ceilings still
+occlude indoor views. Browser and desktop use the shared JavaScript renderer
+for these cameras and title scenes (as voxel worlds do). Ordinary grid games
+retain their existing browser/native rendering paths. Desktop titles with a
+custom perspective or camera track also use the shared renderer. The standalone
+Rust `Rasterizer3D` API retains its fixed-eye camera interface.

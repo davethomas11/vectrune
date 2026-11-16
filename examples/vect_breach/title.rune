@@ -1,0 +1,28 @@
+# Reuse the actual level, with an open roof for the camera tour.
+@Perspective/breach_cinematic
+fov = 76
+
+@Camera/breach_flyover
+duration = 36
+loop = true
+# Absolute height above the floor; positive pitch looks up, negative looks down.
+points = [
+    {"x":3.0,"y":3.0,"height":5.0,"angle":15,"pitch":-38},
+    {"x":6.0,"y":2.0,"height":3.8,"angle":50,"pitch":-30},
+    {"x":10.0,"y":3.0,"height":2.8,"angle":65,"pitch":-22},
+    {"x":13.0,"y":5.0,"height":3.5,"angle":150,"pitch":-30},
+    {"x":10.0,"y":6.5,"height":5.2,"angle":195,"pitch":-42},
+    {"x":6.0,"y":6.5,"height":3.2,"angle":240,"pitch":-25},
+    {"x":2.0,"y":5.0,"height":1.5,"angle":280,"pitch":-10},
+    {"x":2.0,"y":2.0,"height":2.6,"angle":335,"pitch":-24}
+]
+
+@Scene/breach_title
+map = e1m1
+things = ["enemies", "pickups"]
+camera = breach_flyover
+perspective = breach_cinematic
+sky = {"seed":731,"zenith":"#050b1c","horizon":"#25445c","cloud":"#28435a","speed":0.2}
+heading = VECT BREACH
+subtitle = CYBERNETIC SECTOR INFILTRATION
+prompt = PRESS ENTER OR CLICK TO BEGIN MISSION

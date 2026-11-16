@@ -2,6 +2,7 @@
 pub mod raster;
 pub mod model;
 pub mod hud;
+mod scenes;
 #[cfg(feature = "pixel-desktop")]
 pub mod desktop;
 
@@ -616,6 +617,8 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         config["commands"] = json!(profile["commands"].as_object().unwrap().iter().filter(|(_, action)| action.as_str().is_some_and(|s| !s.starts_with("host."))).map(|(key, action)| (key.clone(), action.clone())).collect::<Map<String, Json>>());
         config["controls"] = profile;
     }
+    scenes::compile(doc, scene, &mut config)?;
+
     let runtime = format!(
         "{}\n__RunePixel3DRuntime.configure({});",
         include_str!("../../../runtime/rune-web/dist/rune-pixel-3d.js"),

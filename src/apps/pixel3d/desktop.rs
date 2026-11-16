@@ -148,7 +148,7 @@ impl Host {
         let pixels = self.pixels.as_mut().context("Missing pixel surface")?;
 
         let shared_frame: bool = self.context.with(|ctx| {
-            ctx.eval("!!__RunePixel3D.config.world")
+            ctx.eval("__RunePixel3D.usesSharedRenderer")
                 .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))
         })?;
         if shared_frame {
@@ -157,10 +157,10 @@ impl Host {
                     .eval("__RunePixel3D.frame()")
                     .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))?;
                 // Do not call JS while this borrowed framebuffer is live.
-                let bytes = unsafe { frame.as_bytes() }.context("Detached voxel framebuffer")?;
+                let bytes = unsafe { frame.as_bytes() }.context("Detached shared framebuffer")?;
                 ensure!(
                     bytes.len() == pixels.frame_mut().len(),
-                    "Voxel framebuffer size mismatch"
+                    "Shared framebuffer size mismatch"
                 );
                 pixels.frame_mut().copy_from_slice(bytes);
                 Ok(())

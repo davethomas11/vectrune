@@ -1,4 +1,5 @@
 import { fastSin, fastCos } from './math';
+import { renderGrid } from './grid';
 import type { Sprite } from '../pixel/engine';
 import { skyPixel, type Sky } from './sky';
 import { renderModel, type BlockModel } from './model';
@@ -59,6 +60,8 @@ export interface ViewmodelWeapon {
 }
 
 export interface Stats3D {
+  titleScene?: { heading: string; subtitle: string; prompt: string };
+  presentationTime?: number;
   ui?: GameHud;
   paused?: boolean;
   presentation?: Presentation;
@@ -126,7 +129,7 @@ export class Raycaster3D {
   readonly buffer: Uint32Array;
   readonly zBuffer: Float64Array;
   readonly pixelDepth: Float64Array;
-  readonly fov: number;
+  fov: number;
 
   constructor(readonly config: RaycasterConfig) {
     this.width = config.width;
@@ -163,9 +166,11 @@ export class Raycaster3D {
     const py = camera.y;
     const ang = camera.angle;
 
-    // View direction vector and camera plane
-    const dirX = fastCos(ang);
-    const dirY = fastSin(ang);
+    const pitched = !this.config.world && ((camera.height ?? .5) !== .5 || (camera.pitch ?? 0) !== 0);
+    // Pitched terrain and models use the same unquantized camera basis.
+    const freeCamera = pitched || !!this.config.world;
+    const dirX = freeCamera ? Math.cos(ang * Math.PI / 180) : fastCos(ang);
+    const dirY = freeCamera ? Math.sin(ang * Math.PI / 180) : fastSin(ang);
     // plane is perpendicular to dir, length determines FOV
     const fovScale = Math.tan(((this.fov / 2) * Math.PI) / 180);
     const planeX = -dirY * fovScale;
@@ -185,6 +190,10 @@ export class Raycaster3D {
       renderVoxels(this.config.world, camera, this.config.textures, map.sky, this.fov,
         W, H, this.buffer, this.pixelDepth, time);
       this.zBuffer.fill(Infinity);
+    } else if (pitched) {
+      renderGrid(map, camera, Object.values(this.config.textures), wallOverrides, things, this.config.sprites,
+        this.fov, W, H, this.buffer, this.pixelDepth, time);
+      this.zBuffer.fill(Infinity);
     } else {
       this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
       this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
@@ -193,12 +202,12 @@ export class Raycaster3D {
       if (thing.visible === false || !thing.model) continue;
       const model = this.config.models?.[thing.model];
       if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
-      const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : { x: camera.x, y: camera.y };
+      const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
       renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
     }
 
     // 3. Billboards (Sprites / Things) sorted by distance
-    if (!this.config.world && things && things.length > 0) {
+    if (!this.config.world && !pitched && things && things.length > 0) {
       this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
     }
 
@@ -250,6 +259,26 @@ export class Raycaster3D {
   private renderHUD(stats: Stats3D) {
     const W = this.width;
     const H = this.height;
+    if (stats.titleScene) {
+      const title = stats.titleScene;
+      const scale = Math.max(1, Math.min(4, Math.floor((W - 32) / (title.heading.length * 4))));
+      const left = Math.floor((W - (title.heading.length * 4 - 1) * scale) / 2);
+      const top = Math.floor(H * .18);
+      const pulse = .6 + .4 * Math.sin((stats.presentationTime ?? 0) * 2);
+      for (const [radius, color] of [[3, 0x102d3d], [2, 0x18536b], [1, 0x329cab]]) {
+        for (const [ox, oy] of [[-radius, 0], [radius, 0], [0, -radius], [0, radius]]) {
+          this.text(title.heading, left + ox, top + oy, color, scale);
+        }
+      }
+      const channel = Math.floor(205 + 50 * pulse);
+      this.text(title.heading, left, top, (channel << 16) | 0xffff, scale);
+      const centered = (text: string, y: number, color: number) => this.text(text,
+        Math.max(4, Math.floor((W - text.length * 4) / 2)), y, color);
+      centered(title.subtitle, top + 5 * scale + 12, 0x9dc6d2);
+      this.rect(0, H - 23, W, 23, 0x080f18);
+      centered(title.prompt, H - 15, 0xa5e8ec);
+      return;
+    }
     if (stats.ui) {
       renderHud(this, stats.ui, stats.status || 'playing', stats.paused || false);
       return;

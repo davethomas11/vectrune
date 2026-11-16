@@ -750,3 +750,64 @@ async fn compiles_compact_breach_shell_and_validates_its_canvas() {
     page.series.insert("view".into(), vec![rune_runtime::rune_ast::Value::String("div No canvas".into())]);
     assert!(pixel3d::html(&invalid).await.is_err());
 }
+
+#[test]
+fn breach_title_scene_camera_and_start_are_independent_of_gameplay() {
+    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/vect_breach.rune")).unwrap();
+    let game = pixel3d::compile(&doc).unwrap();
+    assert_eq!(game.config["titleScene"]["camera"]["duration"], 36.0);
+    assert_eq!(game.config["titleScene"]["fov"], 76.0);
+    assert!(game.config["titleScene"]["map"]["sky"].is_object());
+    assert!(game.config["map"]["sky"].is_null());
+    let runtime = rquickjs::Runtime::new().unwrap();
+    let context = rquickjs::Context::full(&runtime).unwrap();
+    context.with(|ctx| {
+        ctx.eval::<(), _>(game.script.as_str()).unwrap();
+        assert!(ctx.eval::<bool, _>(r#"(() => {
+            const g = __RunePixel3D, s = g.app.state;
+            const initial = JSON.stringify(s);
+            const camera = JSON.stringify(g.renderState().camera);
+            for (let i = 0; i < 90; i++) g.step({});
+            if (JSON.stringify(s) !== initial) throw Error('Title simulation changed game state');
+            if (JSON.stringify(g.renderState().camera) === camera) throw Error('Camera did not move');
+            if (!g.usesSharedRenderer) throw Error('Title renderer not shared');
+            if (g.renderState().weapon !== undefined) throw Error('Title weapon visible');
+            const time = g.renderState().presentation_time;
+            g.paused = true; g.step({});
+            if (g.renderState().presentation_time !== time) throw Error('Paused camera moved');
+            g.paused = false;
+            for (const seconds of [0, 4.5, 9, 13.5, 18, 22.5, 27, 31.5, 35.99]) {
+                g.presentationTicks = seconds * g.config.tickRate;
+                const frame = g.frame();
+                if (frame.length !== 320 * 200 || frame.some(p => (p >>> 24) !== 255)) throw Error('Invalid frame');
+            }
+            g.invoke('advance');
+            if (s.status !== 'story' || g.renderState().title_scene) throw Error('Briefing skipped');
+            if (g.usesSharedRenderer) throw Error('Gameplay renderer changed');
+            if (g.raycaster.fov !== 66 || g.raycaster.config.map.sky) throw Error('Title perspective leaked');
+            if (g.renderState().camera !== s.player) throw Error('Camera did not return to player');
+            g.invoke('advance');
+            if (s.status !== 'playing' || s.health !== 100 || s.ammo !== 24 || s.clock !== 0) throw Error('Run changed');
+            s.status = 'won'; g.invoke('advance'); g.step({});
+            return s.status === 'title' && g.presentationTicks === 1;
+        })()"#).unwrap());
+    });
+}
+
+#[test]
+fn declarative_camera_and_perspective_reject_invalid_values() {
+    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/vect_breach.rune")).unwrap();
+    for (kind, key, value) in [
+        ("Perspective", "fov", serde_json::json!(0)),
+        ("Camera", "duration", serde_json::json!(0)),
+        ("Camera", "loop", serde_json::json!("yes")),
+        ("Camera", "points", serde_json::json!([])),
+        ("Camera", "points", serde_json::json!([{"x":1,"y":2,"angle":0,"pitch":90},{"x":2,"y":2,"angle":0}])),
+        ("Camera", "points", serde_json::json!([{"x":1,"y":2,"angle":0,"height":0},{"x":2,"y":2,"angle":0}])),
+    ] {
+        let mut invalid = doc.clone();
+        let section = invalid.sections.iter_mut().find(|s| s.path.first().map(String::as_str) == Some(kind)).unwrap();
+        section.kv.insert(key.into(), rune_runtime::rune_ast::Value::String(value.to_string()));
+        assert!(pixel3d::compile(&invalid).is_err(), "accepted invalid {kind} {key}");
+    }
+}
