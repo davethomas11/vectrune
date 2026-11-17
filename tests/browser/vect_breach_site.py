@@ -58,6 +58,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
         page.wait_for_function('document.documentElement.scrollWidth <= innerWidth')
         assert frame.evaluate('document.documentElement.scrollWidth <= innerWidth')
         assert frame.get_by_role('button', name='Fullscreen', exact=True).evaluate('(b)=>b.getBoundingClientRect().bottom<=innerHeight')
+    page.get_by_role('tab', name='Source code', exact=True).click()
     files = page.locator('.source-file summary').all_text_contents()
     for required in ['site_shell.rune', 'vect_breach.rune', 'logic.rune', 'map.rune', 'sound.rune', 'guards.rune']:
         assert any(name.strip().endswith(required) for name in files), (required, files)

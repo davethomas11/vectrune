@@ -172,6 +172,8 @@ Examples {
     lab_description = "Explora ejemplos reales del repositorio: lee el código, prueba una API o juega con una aplicación Rune-Web."
     run_label = "Código y ejecución"
     play_label = "Probar y ver código"
+    game_tab = "Juego"
+    source_tab = "Código fuente"
     source_label = "Ver código fuente"
     filter_files = "Filtrar archivos…"
     no_files = "No hay archivos coincidentes."

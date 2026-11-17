@@ -28,6 +28,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     assert frame.evaluate('__RunePixel.saveStatus')=='saved'
     assert frame.evaluate('__RunePixel.app.state.profile.coins')==180
     assert frame.evaluate('__RunePixel.app.state.profile.skin')=='ember'
+    page.get_by_role('tab', name='Source code', exact=True).click()
     files=page.locator('.source-file summary').all_text_contents()
     for required in ['site_shell.rune','monster_city.rune','combat.rune','powers.rune','skins/nova.pixel.rune']:
         assert any(name.strip().endswith(required) for name in files),(required,files)

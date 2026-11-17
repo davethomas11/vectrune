@@ -23,6 +23,8 @@ def check(base):
             for route, folder, entry in EXAMPLES:
                 page.set_viewport_size({'width': 1440, 'height': 1000})
                 page.locator(f'.sidebar [data-on-click="navigate(\'{route}\')"]').click()
+                if route != 'studio':
+                    page.locator('[data-example-tab=source]').click()
                 files = page.locator('.source-file')
                 root = ROOT / 'examples' / folder
                 expected = [f'{entry}.rune'] + sorted(str(p.relative_to(root)) for p in (root / 'parts').rglob('*.rune'))

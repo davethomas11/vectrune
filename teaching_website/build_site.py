@@ -90,14 +90,17 @@ def build_site(destination, binary, base="/", selected_routes=None, site_url="ht
             shutil.copyfile(SITE / name, destination / name)
     # A stable same-origin game URL preserves localStorage across locale changes
     # and reloads; data-URI previews have opaque origins and cannot do that.
-    for slug, entry in [("monster-city", "monster_city/site_shell.rune"),
+    for slug, entry in [("vectraiders", "space_invaders/space_invaders.rune"),
+                        ("vectworms", "vectworms/vectworms.rune"),
+                        ("tic-tac-toe", "tic_tac_toe/tic_tac_toe.rune"),
+                        ("monster-city", "monster_city/site_shell.rune"),
                         ("vect-breach", "vect_breach/site_shell.rune"),
                         ("rune-crypt", "rune_crypt/rune_crypt.rune"),
                         ("skybound-2", "skybound_2/skybound_2.rune")]:
         game = assets / "games" / slug
         game.mkdir(parents=True, exist_ok=True)
         result = subprocess.run([binary, str(SITE.parent / "examples" / entry), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)
-        if not re.search(r'"controls"\s*:\s*\{', result.stdout):
+        if slug not in {"vectraiders", "vectworms", "tic-tac-toe"} and not re.search(r'"controls"\s*:\s*\{', result.stdout):
             raise RuntimeError(f"{binary} did not compile {slug}'s @Controls profile. "
                                "Build the compiler from this checkout (omit --binary).")
         (game / "index.html").write_text(result.stdout, encoding="utf-8")

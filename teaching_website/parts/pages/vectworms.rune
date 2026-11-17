@@ -9,7 +9,7 @@ view:
 
             p .showcase-try "%i18n.VectWorms.try_it%"
 
-        WebExample title="{i18n.VectWorms.title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" files="{sources ../../../examples/vectworms/vectworms.rune}" show_heading=false
+        WebExample game=true title="{i18n.VectWorms.title}" preview="/assets/games/vectworms/index.html" files="{sources ../../../examples/vectworms/vectworms.rune}" show_heading=false
 
         details .card .showcase-notes:
             summary "%i18n.Guide.how_it_works%"

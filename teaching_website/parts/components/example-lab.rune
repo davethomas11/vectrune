@@ -62,41 +62,47 @@ view:
 
 @Component/TicTacToeExample
 view:
-    WebExample title="{i18n.Lab.tic}" preview="{preview ../../../examples/tic_tac_toe/tic_tac_toe.rune}" files="{sources ../../../examples/tic_tac_toe/tic_tac_toe.rune}"
+    WebExample game=true title="{i18n.Lab.tic}" preview="/assets/games/tic-tac-toe/index.html" files="{sources ../../../examples/tic_tac_toe/tic_tac_toe.rune}"
 
 @Component/SpaceInvadersExample
 view:
     div .space-invaders-page:
-        WebExample title="{i18n.Lab.invaders_title}" preview="{preview ../../../examples/space_invaders/space_invaders.rune}" files="{sources ../../../examples/space_invaders/space_invaders.rune}"
+        WebExample game=true title="{i18n.Lab.invaders_title}" preview="/assets/games/vectraiders/index.html" files="{sources ../../../examples/space_invaders/space_invaders.rune}"
 
 @Component/VectWormsExample
 view:
     div .space-invaders-page:
-        WebExample title="{i18n.Lab.worms_title}" preview="{preview ../../../examples/vectworms/vectworms.rune}" files="{sources ../../../examples/vectworms/vectworms.rune}"
+        WebExample game=true title="{i18n.Lab.worms_title}" preview="/assets/games/vectworms/index.html" files="{sources ../../../examples/vectworms/vectworms.rune}"
 
 @Component/WebExample
-props: [title, preview, files, show_heading?]
+props: [title, preview, files, show_heading?, game?]
 view:
-    section .card .web-example:
+    section .card .web-example data-game="{game ?? false}" data-active-tab=game:
         if show_heading ?? true:
             div .section-heading:
                 span .tag .tag-practical "%i18n.Examples.live_preview%"
                 h2 "{title}"
                 p "%i18n.Examples.web_hint%"
-        iframe .example-preview src="{preview}" title="{title}" allow="fullscreen; autoplay" allowfullscreen=true sandbox="allow-scripts allow-same-origin allow-downloads allow-modals allow-pointer-lock allow-orientation-lock"
-        details .example-source open=true:
-            summary "%i18n.Examples.source_label%"
-            div .source-tools:
-                input .source-filter type=search aria-label="%i18n.Examples.filter_files%" placeholder="%i18n.Examples.filter_files%"
-                span .source-count role=status aria-live=polite
-            p .source-empty hidden=true "%i18n.Examples.no_files%"
-            for file in files:
-                details .source-file:
-                    summary "{file.path}"
-                    div .source-actions:
-                        button .source-copy type=button data-copied="%i18n.Examples.copied%" data-failed="%i18n.Examples.copy_failed%" "%i18n.Examples.copy_source%"
-                        button .source-download type=button "%i18n.Examples.download_source%"
-                    ExampleSource code="{file.code}"
+        if game ?? false:
+            div .example-tabs role=tablist aria-label="{title}":
+                button type=button role=tab data-example-tab=game aria-selected=true "%i18n.Examples.game_tab%"
+                button type=button role=tab data-example-tab=source aria-selected=false tabindex=-1 "%i18n.Examples.source_tab%"
+        div .example-game-panel:
+            iframe .example-preview src="{preview}" title="{title}" allow="fullscreen; autoplay" allowfullscreen=true sandbox="allow-scripts allow-same-origin allow-downloads allow-modals allow-pointer-lock allow-orientation-lock"
+        div .example-source-panel:
+            details .example-source open=true:
+                summary "%i18n.Examples.source_label%"
+                div .source-tools:
+                    input .source-filter type=search aria-label="%i18n.Examples.filter_files%" placeholder="%i18n.Examples.filter_files%"
+                    span .source-count role=status aria-live=polite
+                p .source-empty hidden=true "%i18n.Examples.no_files%"
+                for file in files:
+                    details .source-file:
+                        summary "{file.path}"
+                        div .source-actions:
+                            button .source-copy type=button data-copied="%i18n.Examples.copied%" data-failed="%i18n.Examples.copy_failed%" "%i18n.Examples.copy_source%"
+                            button .source-download type=button "%i18n.Examples.download_source%"
+                        ExampleSource code="{file.code}"
 
 @Component/ExampleSource
 props: [code]
