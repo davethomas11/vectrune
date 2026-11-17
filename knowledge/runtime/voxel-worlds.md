@@ -66,7 +66,7 @@ QuickJS desktop hosts; they are not server run-block builtins.
 |---|---|
 | `voxel_get(world, x, y, z)` | Reads an integer block ID; coordinates must be in bounds. |
 | `voxel_fill(world, from, size, block)` | Mutates a box volume and returns the world. `from` and `size` are `[x,y,z]` integer triples, sizes positive. Block 0 carves air. Validates the entire box before writing; this is an authoring tool, not player mining. |
-| `voxel_move(world, player, dx, dy[, jump])` | Returns updated player position and vertical velocity. Finite horizontal deltas must total at most one tile; jump defaults false. |
+| `voxel_move(world, player, dx, dy[, jump[, options]])` | Returns updated player position and vertical velocity. Finite horizontal deltas must total at most one tile; jump defaults false. Optional platformer tuning is described below. |
 | `voxel_target(world, player)` | Returns nearest block within three tiles, or `null`. Hit fields: `x`, `y`, `z`, `block`, `distance`, `face` (x=0, y=1, z=2). |
 | `voxel_mine(world, player)` | Removes the targeted cell in place, returning `{block, hit}`. Block 0 means miss or protected bedrock (ID 1). Rewards/cooldowns are game logic, not engine side effects. |
 
@@ -81,7 +81,7 @@ if result.block == 5:
 
 Player fields are finite `x`, `y`, `z` (feet), `angle` (degrees),
 `pitch` (degrees, positive looks up, within 90 degrees), and `vz` (within
--0.3 through 0.3). Player position must fit inside movement bounds.
+-1 through 1). Player position must fit inside movement bounds.
 Movement uses a 0.48-tile-wide,
 1.6-tile-high collision body, gravity and swept small steps. Supported
 one-block ledges auto-step when grounded with headroom; jump adds an impulse.
@@ -89,6 +89,21 @@ Pass jump on its press edge and call movement once per 30 Hz game tick.
 World edges and z below one tile are solid movement boundaries.
 Camera eye is feet z + 1.25; it must remain inside the volume.
 Rendering accepts pitch -85 through 85; Rune Miners clamps to -65 through 65.
+
+For platform games, the optional sixth argument accepts `jumpSpeed` (greater
+than zero, at most 1), `gravity` (greater than zero, at most 0.3), and boolean
+`autoStep`. Defaults remain `0.28`, `0.035`, and `true`. Gravity is applied
+before each tick's vertical movement; falling speed is capped at 0.3 tiles per
+tick. Unknown options and invalid values report errors. For example,
+[Skybound](../../examples/skybound/skybound.rune) uses:
+
+```rune
+player = voxel_move(world, player, dx, dy, jump_pressed, {"jumpSpeed":0.44,"gravity":0.035,"autoStep":false})
+```
+
+This creates an approximately 2.5-tile jump and requires jumping onto ledges.
+It preserves the existing swept collision body and headroom checks. Air control,
+acceleration, press edges, enemies, fall recovery, and checkpoints are game logic.
 
 Voxel terrain uses per-pixel 3-axis DDA, tiled material textures, face shading,
 real cave floors/ceilings and depth occlusion shared with `@Model` entities.

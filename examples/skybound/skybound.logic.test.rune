@@ -1,0 +1,145 @@
+#!RUNE
+import "skybound.rune"
+
+@Test/Skybound/TitleAndFreshRun
+type = logic
+page = skybound
+run:
+    invoke initialize
+    assert state.status == "title"
+    assert state.coins.length == 12
+    assert state.world.cells.length == 12544
+    invoke tick {}
+    assert state.checkpoint_active == false
+    invoke start
+    invoke tick {}
+    assert state.status == "playing"
+    assert state.checkpoint_active == false
+    assert state.player.z == 3
+    assert state.camera.x < state.player.x
+    assert state.avatar.model == "sky/hero"
+
+@Test/Skybound/CollectEachCoinOnce
+type = logic
+page = skybound
+setup:
+    invoke start
+    invoke at_first_coin
+run:
+    invoke tick {}
+    assert state.collected == 1
+    assert state.coins[0].visible == false
+    invoke tick {}
+    assert state.collected == 1
+    assert state.checkpoint.x == 7
+    invoke lose_heart
+    assert state.collected == 1
+    assert state.hearts == 2
+    assert state.player.x == 7
+
+@Test/Skybound/JumpAndPressEdge
+type = logic
+page = skybound
+setup:
+    invoke start
+run:
+    invoke tick {"jump":true}
+    assert state.player.z > 3.3
+    assert state.player.vz > 0.3
+    invoke age 40
+    assert state.player.z == 3
+    invoke hold_jump
+    assert state.player.z == 3
+    invoke tick {}
+    invoke tick {"jump":true}
+    assert state.player.z > 3.3
+
+@Test/Skybound/StompAndContactDamage
+type = logic
+page = skybound
+setup:
+    invoke start
+run:
+    invoke above_bug
+    invoke tick {}
+    assert state.enemies[0].visible == false
+    assert state.player.vz > 0
+    assert state.hearts == 3
+    invoke touching_bug
+    invoke tick {}
+    assert state.hearts == 2
+    assert state.enemies[1].visible == true
+    invoke touching_bug
+    invoke tick {}
+    assert state.hearts == 2
+
+@Test/Skybound/CheckpointIsStableAndRestoresHearts
+type = logic
+page = skybound
+setup:
+    invoke start
+    invoke lose_heart
+    invoke at_flag
+run:
+    invoke tick {}
+    assert state.checkpoint_active == true
+    assert state.hearts == 3
+    invoke tick {"forward":true}
+    assert state.checkpoint.x == 20
+    invoke fall
+    invoke tick {}
+    assert state.hearts == 2
+    assert state.player.x == 20
+    assert state.player.z == 6
+    assert state.checkpoint.x == 20
+    invoke tick {}
+    assert state.hearts == 2
+
+@Test/Skybound/OutcomesAndRestart
+type = logic
+page = skybound
+setup:
+    invoke start
+run:
+    invoke lose_heart
+    invoke lose_heart
+    invoke lose_heart
+    assert state.status == "gameover"
+    invoke tick {"forward":true}
+    assert state.player.x == 7
+    invoke advance
+    assert state.status == "playing"
+    assert state.hearts == 3
+    invoke at_goal
+    invoke tick {}
+    assert state.status == "won"
+    invoke start
+    assert state.collected == 0
+    assert state.checkpoint_active == false
+    assert state.enemies[0].visible == true
+
+@Logic/skybound
+action at_first_coin:
+    player.x = 8.5
+
+action age(count):
+    for index in range(0, count):
+        call tick {"jump": true}
+
+action hold_jump:
+    call tick {"jump": true}
+
+action above_bug:
+    player = {"x": 15, "y": 10.5, "z": 4.9, "angle": 0, "pitch": 0, "vz": -0.2}
+
+action touching_bug:
+    player = {"x": 21, "y": 12.5, "z": 5, "angle": 0, "pitch": 0, "vz": 0}
+
+action at_flag:
+    player = {"x": 19, "y": 18, "z": 6, "angle": 0, "pitch": 0, "vz": 0}
+
+action fall:
+    player = {"x": 17, "y": 15, "z": 1.2, "angle": 0, "pitch": 0, "vz": 0}
+
+action at_goal:
+    player = {"x": 6.5, "y": 20, "z": 8, "angle": 0, "pitch": 0, "vz": 0}

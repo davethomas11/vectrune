@@ -1,8 +1,13 @@
+import type { Sprite } from '../pixel/engine';
+
 export interface HudMeter {
   label: string;
   value: number;
   max: number;
   color: number;
+  icon?: string;
+  emptyIcon?: string;
+  display?: 'counter' | 'pips' | 'bar';
 }
 export interface HudPanel {
   title: string;
@@ -12,6 +17,8 @@ export interface HudPanel {
   footer: string;
 }
 export interface GameHud {
+  style?: 'floating';
+  noticeIcon?: string;
   heading?: string;
   textScale?: 1 | 2;
   meters: HudMeter[];
@@ -22,18 +29,27 @@ export interface GameHud {
   panel: HudPanel | null;
 }
 
-export function validateHud(value: unknown): GameHud {
+export function validateHud(value: unknown, sprites: Record<string, Sprite> = {}): GameHud {
   if (!value || typeof value !== 'object') throw new Error('Pixel-3d ui must be a HUD object');
   const hud = value as GameHud;
+  if (hud.style !== undefined && hud.style !== 'floating') throw new Error('Pixel-3d ui style must be floating');
   if (hud.heading !== undefined && typeof hud.heading !== 'string') throw new Error('Pixel-3d ui heading must be a string');
   if (hud.textScale !== undefined && hud.textScale !== 1 && hud.textScale !== 2) {
     throw new Error('Pixel-3d ui textScale must be 1 or 2');
   }
   if (!Array.isArray(hud.meters) || hud.meters.length > 3 ||
       !hud.meters.every(m => m && typeof m.label === 'string' && Number.isFinite(m.value) &&
-        Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 0xffffff) ||
+        Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 0xffffff &&
+        (m.display === undefined || ['counter', 'pips', 'bar'].includes(m.display)) &&
+        (m.display !== 'pips' || (Number.isInteger(m.max) && m.max <= 8 && m.icon !== undefined && m.emptyIcon !== undefined))) ||
       !['objective', 'detail', 'prompt', 'notice'].every(k => typeof Reflect.get(hud, k) === 'string')) {
     throw new Error('Pixel-3d ui needs up to three valid meters and objective/detail/prompt/notice strings');
+  }
+  for (const name of [hud.noticeIcon, ...hud.meters.flatMap(m => [m.icon, m.emptyIcon])]) {
+    if (name === undefined) continue;
+    if (typeof name !== 'string' || !name || !Object.prototype.hasOwnProperty.call(sprites, name)) {
+      throw new Error(`Pixel-3d ui references unknown sprite: ${String(name)}`);
+    }
   }
   if (hud.panel !== null) {
     const p = hud.panel;
@@ -72,7 +88,77 @@ export function wrapText(text: string, columns: number): string[] {
   return lines;
 }
 
-export function renderHud(canvas: CanvasHud, ui: GameHud, status: string, paused: boolean): void {
+/** Pixel icons and outlined lettering float directly over the world, in every host. */
+function renderFloatingHud(canvas: CanvasHud, ui: GameHud, status: string, paused: boolean, sprites: Record<string, Sprite>): void {
+  const W = canvas.width, H = canvas.height, ink = 0x172b3d, gold = 0xffda85;
+  const text = (value: string, x: number, y: number, color = 0xffffff, scale = 1) => {
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) canvas.text(value, x + dx, y + dy, ink, scale);
+    canvas.text(value, x, y, color, scale);
+  };
+  const asset = (name: string): Sprite => {
+    if (!Object.prototype.hasOwnProperty.call(sprites, name)) throw new Error(`Pixel-3d ui references unknown sprite: ${name}`);
+    return sprites[name];
+  };
+  const icon = (name: string, x: number, y: number, scale = 2) => {
+    const sprite = asset(name);
+    for (let sy = 0; sy < sprite.height; sy++) for (let sx = 0; sx < sprite.width; sx++) {
+      const color = sprite.colors[sprite.pixels[sy * sprite.width + sx]];
+      if (color !== null && color !== undefined) canvas.rect(x + sx * scale, y + sy * scale, scale, scale, color);
+    }
+  };
+  const slot = Math.floor((W - 16) / Math.max(1, ui.meters.length));
+  ui.meters.forEach((meter, i) => {
+    const x = 8 + i * slot, columns = Math.max(1, Math.floor((slot - 4) / 4));
+    text(meter.label.slice(0, columns), x, 6, gold);
+    if (meter.display === 'pips') {
+      const full = asset(meter.icon!), empty = asset(meter.emptyIcon!);
+      const count = Math.ceil(meter.max), pipWidth = Math.max(full.width, empty.width);
+      const scale = slot >= count * (pipWidth * 2 + 3) ? 2 : 1;
+      for (let pip = 0; pip < count; pip++) icon(pip < Math.ceil(meter.value) ? meter.icon! : meter.emptyIcon!, x + pip * (scale * pipWidth + 3), 14, scale);
+    } else {
+      if (meter.icon) icon(meter.icon, x, 14);
+      const number = `${Math.max(0, Math.ceil(meter.value))}/${Math.ceil(meter.max)}`;
+      const left = x + (meter.icon ? asset(meter.icon).width * 2 + 7 : 0);
+      const scale = number.length * 8 <= slot - (left - x) - 4 ? 2 : 1;
+      text(number, left, 18, 0xfff2cf, scale);
+      if (meter.display === 'bar') {
+        const barWidth = Math.max(0, slot - (left - x) - 4);
+        canvas.rect(left, 30, barWidth, 2, ink);
+        canvas.rect(left, 30, Math.floor(barWidth * Math.max(0, Math.min(1, meter.value / meter.max))), 2, meter.color);
+      }
+    }
+  });
+  const columns = Math.max(1, Math.floor((W - 16) / 4));
+  const top = ui.meters.length ? 39 : 8;
+  text(ui.detail.slice(0, columns), 8, top, 0xbcebdc);
+  if (ui.objective) text(ui.objective.slice(0, columns), 8, top + 10, gold);
+  if (ui.heading && (status !== 'playing' || paused)) {
+    const heading = ui.heading.slice(0, Math.max(1, Math.floor((W - 32) / 8)));
+    text(heading, Math.floor((W - heading.length * 8) / 2), top + 26, gold, 2);
+  }
+  if (ui.panel) {
+    const p = ui.panel, panelColumns = Math.max(1, Math.floor((W - 48) / 4));
+    const body = wrapText(p.body, panelColumns).slice(0, 4);
+    const y = Math.max(top + 45, Math.floor((H - (48 + body.length * 9 + p.choices.length * 12)) / 2));
+    text(p.title.slice(0, panelColumns), 24, y, gold);
+    body.forEach((line, i) => text(line, 24, y + 14 + i * 9, 0xe3eee9));
+    p.choices.forEach((choice, i) => text(`${i === p.selected ? '>' : ' '} ${i + 1} ${choice}`.slice(0, panelColumns), 24, y + 19 + body.length * 9 + i * 12, i === p.selected ? gold : 0xe3eee9));
+    text(p.footer.slice(0, panelColumns), 24, y + 25 + body.length * 9 + p.choices.length * 12, 0x8af1cf);
+  } else if (ui.notice) {
+    const lines = wrapText(ui.notice, columns - 5).slice(0, 2);
+    const y = top + 25;
+    if (ui.noticeIcon) icon(ui.noticeIcon, 8, y - 2, 1);
+    const left = ui.noticeIcon ? 8 + asset(ui.noticeIcon).width + 6 : 8;
+    lines.forEach((line, i) => text(line, left, y + i * 9, gold));
+  }
+  if (ui.prompt) text(ui.prompt.slice(0, columns), 8, H - 12, 0xe3eee9);
+}
+
+export function renderHud(canvas: CanvasHud, ui: GameHud, status: string, paused: boolean, sprites: Record<string, Sprite> = {}): void {
+  if (ui.style === 'floating') {
+    renderFloatingHud(canvas, ui, status, paused, sprites);
+    return;
+  }
   if (ui.textScale === 2) {
     renderLargeHud(canvas, ui, status, paused);
     return;

@@ -96,6 +96,27 @@ pub struct MusicDefinition {
     /// Dynamic or custom instrument tracks (e.g. "chords", "arp", "lead2")
     #[serde(default)]
     pub tracks: HashMap<String, String>,
+    /// Reusable, bar-aligned sections and their ordered song form.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub sections: HashMap<String, MusicSection>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub arrangement: Vec<MusicCue>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub instruments: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MusicSection {
+    pub bars: f64,
+    #[serde(flatten)]
+    pub tracks: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum MusicCue {
+    Section(String),
+    Repeat { section: String, repeat: f64 },
 }
 
 /// Optimizer configuration from `@Optimizer`.

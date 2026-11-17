@@ -66,3 +66,9 @@ view:
                 h3 "%i18n.Examples.worms_title%"
                 p "%i18n.Examples.worms_desc%"
                 a .secondary-cta href=#app click="navigate('vectworms')" "%i18n.VectWorms.play_label%"
+
+            article .example-card:
+                span .tag .tag-advanced "%i18n.SkyboundTwo.badge%"
+                h3 "%i18n.SkyboundTwo.title%"
+                p "%i18n.SkyboundTwo.description%"
+                a .secondary-cta href="{i18n.Common.base_path}skybound-2" data-route-link=true click="navigate('skybound-2')" "%i18n.SkyboundTwo.play%"

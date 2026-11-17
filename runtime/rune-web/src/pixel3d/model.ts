@@ -51,7 +51,8 @@ export function renderModel(
   const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - (instance.z ?? 0)) / scale];
   for (const block of model.blocks) {
     const max = block.from.map((v, i) => v + block.size[i]);
-    let left = width, right = 0, top = height, bottom = 0, clipped = false;
+    let left = width, right = 0, top = height, bottom = 0, clipped = false, frontCorners = 0;
+    let outsideLeft = 0, outsideRight = 0, outsideTop = 0, outsideBottom = 0;
     for (let corner = 0; corner < 8; corner++) {
       const lx = (corner & 1 ? max[0] : block.from[0]) * scale;
       const ly = (corner & 2 ? max[1] : block.from[1]) * scale;
@@ -60,12 +61,26 @@ export function renderModel(
       const y = instance.y + lx * s + ly * c - camera.y;
       const forward = x * dirX + y * dirY;
       const d = forward * cp + (z - eye) * sp;
+      const side = -x * dirY + y * dirX;
+      const up = (z - eye) * cp - forward * sp;
+      // Test homogeneous frustum planes before perspective division. This also
+      // rejects off-screen boxes crossing the near plane, whose projected bounds
+      // otherwise conservatively cover the whole framebuffer.
+      if (side < -d * fovScale - 1e-9) outsideLeft++;
+      if (side > d * fovScale + 1e-9) outsideRight++;
+      if (up > d * ((height >> 1) / height) + 1e-9) outsideTop++;
+      if (up < -d * ((height - (height >> 1)) / height) - 1e-9) outsideBottom++;
       if (d <= 0.001) { clipped = true; continue; }
-      const sx = width / 2 * (1 + (-x * dirY + y * dirX) / (d * fovScale));
-      const sy = (height >> 1) - ((z - eye) * cp - forward * sp) * height / d;
+      frontCorners++;
+      const sx = width / 2 * (1 + side / (d * fovScale));
+      const sy = (height >> 1) - up * height / d;
       left = Math.min(left, sx); right = Math.max(right, sx);
       top = Math.min(top, sy); bottom = Math.max(bottom, sy);
     }
+    // A box wholly behind the near plane cannot contribute a visible hit.
+    // Only boxes crossing that plane need the conservative full-screen bounds.
+    if (frontCorners === 0 || outsideLeft === 8 || outsideRight === 8 || outsideTop === 8 || outsideBottom === 8) continue;
+    const colorX = shade(block.color, .8), colorY = shade(block.color, .65), colorZ = shade(block.color, 1);
     const x0 = clipped ? 0 : Math.max(0, Math.floor(left));
     const x1 = clipped ? width : Math.min(width, Math.ceil(right));
     const y0 = clipped ? 0 : Math.max(0, Math.floor(top));
@@ -78,14 +93,17 @@ export function renderModel(
         const v = ((height >> 1) - y - .5) / height;
         const rx = dirX * cp - dirY * fovScale * cx - dirX * sp * v;
         const ry = dirY * cp + dirX * fovScale * cx - dirY * sp * v;
-        const ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale, (sp + cp * v) / scale];
+        const rayX = (rx * c + ry * s) / scale;
+        const rayY = (-rx * s + ry * c) / scale;
+        const rayZ = (sp + cp * v) / scale;
         let near = -Infinity, far = Infinity, face = 0, exitFace = 0, valid = true;
         for (let axis = 0; axis < 3; axis++) {
-          if (Math.abs(ray[axis]) < 1e-12) {
+          const component = axis === 0 ? rayX : axis === 1 ? rayY : rayZ;
+          if (Math.abs(component) < 1e-12) {
             if (origin[axis] < block.from[axis] || origin[axis] > max[axis]) valid = false;
           } else {
-            const a = (block.from[axis] - origin[axis]) / ray[axis];
-            const b = (max[axis] - origin[axis]) / ray[axis];
+            const a = (block.from[axis] - origin[axis]) / component;
+            const b = (max[axis] - origin[axis]) / component;
             const entry = Math.min(a, b);
             if (entry > near) { near = entry; face = axis; }
             if (Math.max(a, b) < far) { far = Math.max(a, b); exitFace = axis; }
@@ -96,7 +114,7 @@ export function renderModel(
         if (near <= 0.001) face = exitFace;
         if (valid && far >= near && hit > 0.001 && hit < depth[index]) {
           depth[index] = hit;
-          buffer[index] = shade(block.color, face === 2 ? 1 : face === 0 ? 0.8 : 0.65);
+          buffer[index] = face === 2 ? colorZ : face === 0 ? colorX : colorY;
         }
       }
     }

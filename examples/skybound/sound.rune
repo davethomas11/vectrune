@@ -1,0 +1,53 @@
+@Sound/sky_jump
+wave = triangle
+sequence = C4:40ms, G4:40ms, C5:60ms
+volume = 0.1
+
+@Sound/sky_coin
+wave = sine
+sequence = B5:40ms, E6:90ms
+volume = 0.12
+
+@Sound/sky_stomp
+wave = square
+sequence = G3:40ms, C4:60ms
+volume = 0.08
+
+@Sound/sky_hurt
+wave = triangle
+sequence = E4:70ms, C4:70ms, G3:100ms
+volume = 0.12
+
+@Sound/sky_checkpoint
+wave = sine
+sequence = C5:80ms, E5:80ms, G5:140ms
+volume = 0.12
+
+@Sound/sky_win
+wave = triangle
+sequence = C5:100ms, E5:100ms, G5:100ms, C6:250ms
+volume = 0.13
+
+# An original, looping major-key miniature; no downloaded assets.
+@Music/sky_theme
+type = 8bit
+tempo = 126
+time_signature = 4/4
+bars = 4
+loop = true
+volume = 0.045
+lead:
+    C5:8 E5:8 G5:4 E5:8 C5:8 D5:4 |
+    E5:8 G5:8 A5:4 G5:4 E5:4 |
+    F5:8 A5:8 G5:4 E5:8 D5:8 C5:4 |
+    D5:8 E5:8 G5:4 D5:4 C5:4
+bass:
+    C3:4 G3:4 C3:4 G3:4 |
+    A2:4 E3:4 A2:4 E3:4 |
+    F2:4 C3:4 F2:4 C3:4 |
+    G2:4 D3:4 C3:2
+drums:
+    kick:4 hihat:4 snare:4 hihat:4 |
+    kick:4 hihat:4 snare:4 hihat:4 |
+    kick:4 hihat:4 snare:4 hihat:4 |
+    kick:4 hihat:4 snare:4 -:4

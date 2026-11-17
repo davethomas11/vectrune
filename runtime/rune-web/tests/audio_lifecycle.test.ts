@@ -42,6 +42,36 @@ beforeEach(async () => {
 afterEach(() => { audio.stopMusic(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('shared audio lifecycle', () => {
+  it('lets the final arranged note ring out before stopping a one-shot song', () => {
+    audio.configureAudioHost({syncPage:false});
+    audio.registerMusic({fanfare:{tempo:120,loop_track:false,
+      sections:{verse:{bars:1,lead:'D5:1'},coda:{bars:1,lead:'A5:1'}},arrangement:['verse','coda']}});
+    audio.playMusic('fanfare');
+    Context.instances[0].currentTime=1.9; vi.advanceTimersByTime(25);
+    expect(sync.audioSync.getSnapshot().isPlaying).toBe(true);
+    Context.instances[0].currentTime=4.1; vi.advanceTimersByTime(25);
+    expect(sync.audioSync.getSnapshot().isPlaying).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it('plays arranged brass/strings/bells, and keeps section boundaries through pause and looping', () => {
+    audio.configureAudioHost({syncPage:false});
+    audio.registerMusic({odyssey:{tempo:120,loop_track:true,
+      sections:{verse:{bars:1,lead:'D5:1',harmony:'[D4,F#4,A4]:1'},bridge:{bars:1,lead:'A5:1',bells:'D6:1'}},
+      arrangement:['verse',{section:'bridge',repeat:2},'verse'],
+      instruments:{lead:'brass',harmony:'strings',bells:'bell'}}});
+    audio.playMusic('odyssey');
+    const context=Context.instances[0];
+    expect(sync.audioSync.getSnapshot().totalBars).toBe(4);
+    expect(context.oscillators.some(o=>o.type==='sawtooth')).toBe(true);
+    expect(context.oscillators.some(o=>o.type==='triangle')).toBe(true);
+    context.currentTime=1.9; vi.advanceTimersByTime(25);
+    expect(context.oscillators.some(o=>o.type==='sine')).toBe(true);
+    audio.pauseMusic(); context.currentTime=3.1; audio.resumeMusic();
+    expect(vi.getTimerCount()).toBe(1);
+    context.currentTime=9.2; vi.advanceTimersByTime(25);
+    expect(sync.audioSync.getSnapshot().isPlaying).toBe(true);
+    expect(sync.audioSync.getSnapshot().totalBars).toBe(4);
+  });
   it('keeps title and shop audio idle until a user starts playback', () => {
     audio.configureAudioHost({syncPage:false}); audio.stopMusic();
     expect(sync.audioSync.getSnapshot().isPlaying).toBe(false);

@@ -1,4 +1,19 @@
 @I18N/en_us
+SkyboundTwo {
+    title = "Skybound 2"
+    badge = "Pixel 3D platform adventure"
+    description = "Take flight as Nix, a lantern moth, across seven sky worlds. Squish 45 creatures, explore hidden seed islands, and face two bosses to bring back the dawn."
+    play = "Play Skybound 2"
+    try_it = "Choose a destination on the Lantern Atlas, then press Enter. Hold jump while falling to glide. Open the full game for more room."
+    standalone = "Open the full game in a new tab"
+    controls_title = "A small moth. A wide sky."
+    controls = "WASD or arrows move; Space jumps and glides; Shift runs; Q / E orbit the camera; R centers it. Land on creatures from above and hold jump for a higher bounce."
+    objective = "Rekindle seven lanterns, discover optional seed detours, and defeat Kilnback and the Tempest Regent. Lantern progress and best seed counts save automatically in this browser."
+    device = "Keyboard, controller and touch controls are supported. P pauses; B returns to the atlas from Pause. Escape exits fullscreen. Enable sound to hear the original arranged score."
+    source_title = "Explore the Rune source"
+    source_text = "Levels, creatures, block models, pixel HUD artwork, controls and music are authored in Rune. Browse the files above, or build and test the game locally with Vectrune 0.3.5 or newer."
+}
+
 RuneCrypt {
     title = "Rune Crypt"
     badge = "Pixel 3D roguelite RPG"

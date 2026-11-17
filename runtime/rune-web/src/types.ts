@@ -185,6 +185,9 @@ export interface MusicDefinition {
   bass?: string | null;
   drums?: string | null;
   tracks?: Record<string, string | { instrument?: string; notes?: string; volume?: number; pan?: number; muted?: boolean }> | null;
+  sections?: Record<string, { bars: number; [channel: string]: string | number }>;
+  arrangement?: Array<string | { section: string; repeat: number }>;
+  instruments?: Record<string, string>;
 }
 
 /** Configuration passed to boot(). */

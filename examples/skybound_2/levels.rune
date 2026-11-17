@@ -1,0 +1,440 @@
+@Logic/beyond
+action blank_world:
+    world = {
+        "width": 48,
+        "height": 40,
+        "depth": 20,
+        "seed": 2702,
+        "biome": "meadow",
+        "materials": [
+            "beyond/moss",
+            "beyond/stone",
+            "beyond/kiln",
+            "beyond/tide",
+            "beyond/storm",
+            "beyond/gold",
+            "beyond/canopy",
+            "beyond/aurora",
+            "beyond/emberglass",
+            "beyond/soil",
+            "beyond/kiln_wall",
+            "beyond/moonstone",
+            "beyond/bark",
+            "beyond/ice_cliff",
+            "beyond/glassbrick",
+            "beyond/stormstone"
+        ],
+        "cells": [],
+        "spawn": player
+    }
+    world.cells = repeat(0, 38400)
+
+action island(x, y, width, height, top, material):
+    # Match the island's exposed lower course to its surface biome.
+    base = material == 1 ? 10 : (material == 3 ? 11 : (material == 4 ? 12 : (material == 7 ? 13 : (material == 8 ? 14 : (material == 9 ? 15 : (material == 5 ? 16 : 2))))))
+    if width >= 5 && height >= 5 && top >= 4:
+        world = voxel_fill(world, [x+1, y+1, top-3], [width-2, height-2, 1], base)
+    world = voxel_fill(world, [x, y, top-2], [width, height, 1], base)
+    world = voxel_fill(world, [x, y, top-1], [width, height, 1], material)
+
+action seed(x, y, z):
+    seeds.push(
+        {
+            "x": x,
+            "y": y,
+            "z": z + 0.45,
+            "base": z + 0.45,
+            "model": "beyond/seed",
+            "angle": 0,
+            "visible": true
+        }
+    )
+
+action build_level:
+    call blank_world
+    seeds = []
+    scenery = []
+    enemies = []
+    boss.visible = false
+    boss_hp = 0
+    goal.visible = !stages[selected].boss
+    if selected == 0:
+        # REEDWAKE REACH: 8 main islands plus a guarded seed detour.
+        player = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+        checkpoint = {"x": 7, "y": 9, "z": 3, "angle": 0}
+        yaw = 20
+        call island 5, 7, 7, 7, 3, 1
+        call island 13, 8, 5, 4, 4, 1
+        call island 19, 10, 7, 5, 5, 1
+        call island 18, 17, 6, 5, 5, 1
+        call island 10, 19, 7, 4, 6, 1
+        call island 11, 25, 5, 7, 7, 1
+        call island 18, 27, 7, 5, 8, 1
+        call island 26, 27, 8, 8, 9, 1
+        beacon = {"x": 21, "y": 18, "z": 5}
+        goal = {"x": 30, "y": 30, "z": 9, "model": "beyond/relic", "visible": true}
+        call seed 8.5, 9, 3
+        call seed 10, 9, 3
+        call seed 14, 9, 4
+        call seed 16, 9, 4
+        call seed 21, 11, 5
+        call seed 22, 13, 5
+        call seed 21, 18.5, 5
+        call seed 19, 20, 5
+        call seed 14, 20, 6
+        call seed 11.5, 21.5, 6
+        call seed 13, 26, 7
+        call seed 14, 28, 7
+        call seed 19, 28, 8
+        call seed 22, 30, 8
+        call seed 27, 30, 9
+        call seed 30, 32, 9
+        scenery.push({"x": 6, "y": 12, "z": 3, "model": "beyond/reed"})
+        scenery.push({"x": 23, "y": 20, "z": 5, "model": "beyond/reed"})
+        scenery.push({"x": 15, "y": 29, "z": 7, "model": "beyond/reed"})
+        scenery.push({"x": 31, "y": 33, "z": 9, "model": "beyond/reed"})
+        # Irregular landing shelf and optional stepping-stone seed detour.
+        call island 18, 21, 3, 3, 5, 1
+        call island 8, 16, 3, 3, 4, 1
+        call island 4, 19, 3, 3, 5, 1
+        call seed 9.5, 17.5, 4
+        call seed 5, 20, 5
+        call seed 6, 21, 5
+        call creature 15.5, 10.4, 4, "grub", "x", 1
+        call creature 22.2, 12.8, 5, "grub", "x", 1.3
+        call creature 20.5, 21.8, 5, "grub", "y", 0.6
+        call creature 13.3, 20.5, 6, "grub", "x", 1.5
+        call creature 21, 29.5, 8, "grub", "x", 1.5
+        call creature 5.5, 20.5, 5, "grub", "x", 0.5
+        scenery.push({"x": 4.4, "y": 21.6, "z": 5, "model": "beyond/reed"})
+    if selected == 1:
+        # THE CINDERWORKS: 6 main islands plus a guarded seed detour.
+        player = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+        checkpoint = {"x": 7, "y": 9, "z": 3, "angle": 0}
+        yaw = 20
+        call island 5, 7, 7, 7, 3, 3
+        call island 13, 8, 5, 4, 4, 3
+        call island 20, 7, 5, 7, 5, 3
+        call island 27, 10, 5, 5, 6, 3
+        call island 29, 18, 7, 5, 7, 3
+        call island 36, 17, 10, 15, 7, 3
+        beacon = {"x": 40, "y": 20, "z": 7}
+        boss = {"x": 41, "y": 27, "z": 7, "model": "beyond/kilnback", "visible": true, "angle": 180}
+        boss_hp = 3
+        boss_max = 3
+        boss_phase = "idle"
+        arena = {
+            "min_x": 37.5,
+            "max_x": 44.5,
+            "min_y": 18.5,
+            "max_y": 30.5,
+            "gate_x": 37,
+            "gate_y": 22
+        }
+        call seed 8, 9, 3
+        call seed 10, 9, 3
+        call seed 14, 9, 4
+        call seed 15, 11, 4
+        call seed 21, 9, 5
+        call seed 23, 11, 5
+        call seed 28, 11, 6
+        call seed 30, 13, 6
+        call seed 31, 18, 7
+        call seed 32, 21, 7
+        call seed 37, 20, 7
+        call seed 40, 20, 7
+        call seed 44, 23, 7
+        call seed 39, 29, 7
+        call seed 44, 30, 7
+        scenery.push({"x": 20.5, "y": 7.5, "z": 5, "model": "beyond/chimney"})
+        scenery.push({"x": 34, "y": 22, "z": 7, "model": "beyond/chimney"})
+        scenery.push({"x": 45, "y": 31, "z": 7, "model": "beyond/chimney"})
+        scenery.push({"x": 45, "y": 18, "z": 7, "model": "beyond/chimney"})
+        # Irregular landing shelf and optional stepping-stone seed detour.
+        call island 21, 12, 3, 4, 5, 3
+        call island 26, 3, 3, 3, 5, 3
+        call island 31, 3, 4, 3, 6, 9
+        call seed 27.5, 4.5, 5
+        call seed 32, 4.5, 6
+        call seed 34, 4.5, 6
+        call creature 15.5, 10.6, 4, "crab", "x", 1
+        call creature 22.4, 12.4, 5, "crab", "y", 1.5
+        call creature 29.5, 12.7, 6, "grub", "x", 1.2
+        call creature 32.5, 21, 7, "crab", "x", 1.6
+        call creature 27.5, 4.5, 5, "crab", "x", 0.5
+        call creature 33, 4.5, 6, "hopper", "x", 0.8
+        scenery.push({"x": 31.4, "y": 5.6, "z": 6, "model": "beyond/chimney"})
+    if selected == 2:
+        # MOONGLASS TIDE: 8 main islands plus a guarded seed detour.
+        player = {"x": 8, "y": 24, "z": 3, "angle": 270, "pitch": 0, "vz": 0}
+        checkpoint = {"x": 8, "y": 24, "z": 3, "angle": 270}
+        yaw = 270
+        call island 5, 21, 7, 8, 3, 4
+        call island 7, 13, 3, 6, 4, 4
+        call island 8, 4, 8, 7, 5, 4
+        call island 17, 7, 6, 4, 6, 4
+        call island 19, 13, 8, 7, 7, 4
+        call island 28, 16, 6, 4, 8, 4
+        call island 31, 22, 5, 6, 9, 4
+        call island 38, 23, 8, 9, 10, 4
+        beacon = {"x": 12, "y": 8, "z": 5}
+        goal = {"x": 41, "y": 27, "z": 10, "model": "beyond/relic", "visible": true}
+        call seed 8, 24, 3
+        call seed 8, 22, 3
+        call seed 8, 17, 4
+        call seed 9, 14, 4
+        call seed 10, 9, 5
+        call seed 13, 8, 5
+        call seed 19, 8, 6
+        call seed 21, 9, 6
+        call seed 22, 14, 7
+        call seed 24, 17, 7
+        call seed 29, 17, 8
+        call seed 32, 18, 8
+        call seed 33, 23, 9
+        call seed 32, 26, 9
+        call seed 39, 26, 10
+        call seed 42, 29, 10
+        scenery.push({"x": 6, "y": 26, "z": 3, "model": "beyond/crystal"})
+        scenery.push({"x": 14, "y": 6, "z": 5, "model": "beyond/crystal"})
+        scenery.push({"x": 25, "y": 19, "z": 7, "model": "beyond/crystal"})
+        scenery.push({"x": 35, "y": 27, "z": 9, "model": "beyond/crystal"})
+        scenery.push({"x": 43, "y": 30, "z": 10, "model": "beyond/crystal"})
+        # Irregular landing shelf and optional stepping-stone seed detour.
+        call island 23, 6, 3, 3, 6, 4
+        call island 28, 6, 3, 3, 7, 4
+        call island 32, 7, 3, 3, 8, 4
+        call seed 29.5, 7.5, 7
+        call seed 33, 8, 8
+        call seed 34, 8.5, 8
+        call creature 8.5, 15.8, 4, "grub", "y", 1.5
+        call creature 12, 7, 5, "hopper", "x", 1.5
+        call creature 21, 9.2, 6, "grub", "x", 1.5
+        call creature 23, 17.5, 7, "hopper", "y", 1.3
+        call creature 33.5, 25.3, 9, "hopper", "y", 1.5
+        call creature 33.5, 8.5, 8, "hopper", "x", 0.5
+        scenery.push({"x": 32.4, "y": 9.6, "z": 8, "model": "beyond/crystal"})
+    if selected == 3:
+        # SUNKEN CANOPY: 8 main islands plus a guarded seed detour.
+        player = {"x": 7, "y": 31, "z": 3, "angle": 270, "pitch": 0, "vz": 0}
+        checkpoint = {"x": 7, "y": 31, "z": 3, "angle": 270}
+        yaw = 270
+        call island 5, 28, 7, 8, 3, 7
+        call island 8, 20, 4, 6, 4, 7
+        call island 8, 11, 7, 7, 5, 7
+        call island 17, 15, 6, 4, 6, 7
+        call island 25, 15, 8, 6, 7, 7
+        call island 29, 23, 4, 6, 8, 7
+        call island 35, 26, 6, 4, 8, 7
+        call island 36, 32, 9, 6, 9, 7
+        beacon = {"x": 28, "y": 18, "z": 7}
+        goal = {"x": 39, "y": 35, "z": 9, "model": "beyond/relic", "visible": true}
+        call seed 8, 31, 3
+        call seed 8, 29, 3
+        call seed 9, 24, 4
+        call seed 9, 21, 4
+        call seed 11, 16, 5
+        call seed 13, 14, 5
+        call seed 18, 16, 6
+        call seed 21, 17, 6
+        call seed 26, 18, 7
+        call seed 29, 19, 7
+        call seed 30, 24, 8
+        call seed 30, 27, 8
+        call seed 36, 27, 8
+        call seed 39, 28, 8
+        call seed 39, 33, 9
+        call seed 41, 36, 9
+        scenery.push({"x": 5, "y": 34, "z": 3, "model": "beyond/lantern_tree"})
+        scenery.push({"x": 9, "y": 17, "z": 5, "model": "beyond/lantern_tree"})
+        scenery.push({"x": 22, "y": 18, "z": 6, "model": "beyond/lantern_tree"})
+        scenery.push({"x": 26, "y": 20, "z": 7, "model": "beyond/lantern_tree"})
+        scenery.push({"x": 40, "y": 29, "z": 8, "model": "beyond/lantern_tree"})
+        scenery.push({"x": 42, "y": 37, "z": 9, "model": "beyond/lantern_tree"})
+        # Irregular landing shelf and optional stepping-stone seed detour.
+        call island 12, 11, 3, 3, 5, 7
+        call island 3, 13, 3, 3, 5, 7
+        call island 2, 7, 4, 4, 6, 7
+        call seed 4.5, 14.5, 5
+        call seed 3, 8.5, 6
+        call seed 5, 9.5, 6
+        call creature 9.6, 22.8, 4, "grub", "y", 1.4
+        call creature 11, 14, 5, "hopper", "x", 1.5
+        call creature 20.5, 17.5, 6, "grub", "x", 1.4
+        call creature 30, 18.7, 7, "hopper", "x", 1.1
+        call creature 31.5, 27.5, 8, "grub", "y", 0.5
+        call creature 39, 28, 8, "grub", "x", 1.2
+        call creature 4, 9, 6, "hopper", "x", 0.9
+        scenery.push({"x": 2.4, "y": 10.6, "z": 6, "model": "beyond/lantern_tree"})
+    if selected == 4:
+        # AURORA CAUSEWAY: 9 main islands plus a guarded seed detour.
+        player = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+        checkpoint = {"x": 7, "y": 9, "z": 3, "angle": 0}
+        yaw = 20
+        call island 5, 7, 7, 7, 3, 8
+        call island 13, 10, 6, 4, 4, 8
+        call island 21, 9, 6, 5, 5, 8
+        call island 29, 12, 6, 4, 6, 8
+        call island 31, 18, 8, 6, 7, 8
+        call island 23, 22, 6, 3, 8, 8
+        call island 15, 23, 6, 5, 9, 8
+        call island 18, 30, 4, 6, 10, 8
+        call island 24, 31, 9, 7, 11, 8
+        beacon = {"x": 34, "y": 21, "z": 7}
+        goal = {"x": 27, "y": 34, "z": 11, "model": "beyond/relic", "visible": true}
+        call seed 8, 9, 3
+        call seed 10, 10, 3
+        call seed 14, 11, 4
+        call seed 17, 12, 4
+        call seed 22, 11, 5
+        call seed 25, 12, 5
+        call seed 30, 13, 6
+        call seed 33, 14, 6
+        call seed 34, 19, 7
+        call seed 34, 22, 7
+        call seed 27, 23, 8
+        call seed 24, 23, 8
+        call seed 19, 25, 9
+        call seed 16, 25, 9
+        call seed 19, 31, 10
+        call seed 19, 34, 10
+        call seed 25, 34, 11
+        call seed 29, 36, 11
+        scenery.push({"x": 6, "y": 12, "z": 3, "model": "beyond/aurora_spire"})
+        scenery.push({"x": 26, "y": 13, "z": 5, "model": "beyond/aurora_spire"})
+        scenery.push({"x": 36, "y": 23, "z": 7, "model": "beyond/aurora_spire"})
+        scenery.push({"x": 16, "y": 27, "z": 9, "model": "beyond/aurora_spire"})
+        scenery.push({"x": 30, "y": 37, "z": 11, "model": "beyond/aurora_spire"})
+        # Irregular landing shelf and optional stepping-stone seed detour.
+        call island 33, 23, 4, 3, 7, 8
+        call island 26, 3, 3, 3, 6, 8
+        call island 31, 3, 3, 3, 7, 8
+        call seed 27.5, 4.5, 6
+        call seed 32, 4, 7
+        call seed 33, 5, 7
+        call creature 15.7, 12, 4, "grub", "x", 1.5
+        call creature 25.3, 11.5, 5, "hopper", "y", 0.8
+        call creature 33.7, 14.5, 6, "hopper", "y", 0.4
+        call creature 35.5, 23.5, 7, "grub", "y", 1.1
+        call creature 24.5, 23.5, 8, "hopper", "y", 0.3
+        call creature 20.5, 34.5, 10, "grub", "y", 0.5
+        call creature 32.5, 4.5, 7, "hopper", "x", 0.5
+        scenery.push({"x": 31.4, "y": 5.6, "z": 7, "model": "beyond/aurora_spire"})
+    if selected == 5:
+        # EMBERGLASS RELAY: 8 main islands plus a guarded seed detour.
+        player = {"x": 7, "y": 8, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+        checkpoint = {"x": 7, "y": 8, "z": 3, "angle": 0}
+        yaw = 20
+        call island 5, 6, 7, 7, 3, 9
+        call island 13, 8, 6, 4, 4, 3
+        call island 21, 10, 6, 4, 5, 9
+        call island 23, 16, 8, 6, 6, 3
+        call island 15, 20, 6, 4, 7, 9
+        call island 7, 22, 6, 4, 8, 3
+        call island 10, 28, 4, 6, 9, 9
+        call island 16, 30, 10, 8, 10, 9
+        beacon = {"x": 26, "y": 19, "z": 6}
+        goal = {"x": 20, "y": 33, "z": 10, "model": "beyond/relic", "visible": true}
+        call seed 8, 8, 3
+        call seed 10, 9, 3
+        call seed 14, 9, 4
+        call seed 17, 10, 4
+        call seed 22, 11, 5
+        call seed 25, 12, 5
+        call seed 26, 17, 6
+        call seed 26, 20, 6
+        call seed 20, 21, 7
+        call seed 16, 21, 7
+        call seed 11, 23, 8
+        call seed 8, 24, 8
+        call seed 11, 29, 9
+        call seed 11, 32, 9
+        call seed 17, 33, 10
+        call seed 22, 35, 10
+        scenery.push({"x": 5.5, "y": 6.5, "z": 3, "model": "beyond/chimney"})
+        scenery.push({"x": 18, "y": 11, "z": 4, "model": "beyond/crystal"})
+        scenery.push({"x": 28, "y": 21, "z": 6, "model": "beyond/chimney"})
+        scenery.push({"x": 12, "y": 25, "z": 8, "model": "beyond/crystal"})
+        scenery.push({"x": 23, "y": 36, "z": 10, "model": "beyond/relay"})
+        # Irregular landing shelf and optional stepping-stone seed detour.
+        call island 25, 20, 3, 4, 6, 3
+        call island 30, 9, 3, 3, 6, 9
+        call island 35, 8, 4, 4, 7, 3
+        call seed 31.5, 10.5, 6
+        call seed 36, 9.5, 7
+        call seed 38, 10.5, 7
+        call creature 15.7, 10.5, 4, "crab", "x", 1.6
+        call creature 24, 12, 5, "hopper", "x", 1.2
+        call creature 28, 19, 6, "crab", "y", 1.5
+        call creature 17, 22, 7, "hopper", "x", 0.7
+        call creature 10, 24, 8, "crab", "x", 1.4
+        call creature 11.8, 31, 9, "hopper", "y", 1.5
+        call creature 37, 10, 7, "crab", "x", 0.9
+        scenery.push({"x": 35.4, "y": 11.6, "z": 7, "model": "beyond/relay"})
+    if selected == 6:
+        # THE STORM ROOST: 7 main islands plus a guarded seed detour.
+        player = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+        checkpoint = {"x": 7, "y": 9, "z": 3, "angle": 0}
+        yaw = 20
+        call island 5, 7, 7, 7, 3, 5
+        call island 13, 9, 5, 4, 4, 5
+        call island 20, 10, 7, 4, 5, 5
+        call island 24, 16, 4, 5, 6, 5
+        call island 30, 19, 6, 3, 7, 5
+        call island 38, 18, 7, 4, 8, 5
+        call island 32, 24, 14, 14, 8, 5
+        beacon = {"x": 41, "y": 25, "z": 8}
+        boss = {"x": 39, "y": 31, "z": 8, "model": "beyond/regent", "visible": true, "angle": 270}
+        boss_hp = 4
+        boss_max = 4
+        boss_phase = "idle"
+        arena = {
+            "min_x": 33.5,
+            "max_x": 44.5,
+            "min_y": 25.5,
+            "max_y": 36.5,
+            "gate_x": 33,
+            "gate_y": 26.5
+        }
+        call seed 9, 9, 3
+        call seed 14, 10, 4
+        call seed 16, 10, 4
+        call seed 21, 11, 5
+        call seed 24, 12.5, 5
+        call seed 25, 17, 6
+        call seed 26, 19, 6
+        call seed 31, 20, 7
+        call seed 34, 20, 7
+        call seed 39, 20, 8
+        call seed 42, 20, 8
+        call seed 41, 25, 8
+        call seed 34, 26, 8
+        call seed 44, 36, 8
+        scenery.push({"x": 5.5, "y": 7.5, "z": 3, "model": "beyond/crystal"})
+        scenery.push({"x": 27, "y": 20, "z": 6, "model": "beyond/aurora_spire"})
+        scenery.push({"x": 43, "y": 21, "z": 8, "model": "beyond/crystal"})
+        scenery.push({"x": 32.5, "y": 24.5, "z": 8, "model": "beyond/crystal"})
+        scenery.push({"x": 45, "y": 37, "z": 8, "model": "beyond/aurora_spire"})
+        # Irregular landing shelf and optional stepping-stone seed detour.
+        call island 24, 12, 3, 3, 5, 5
+        call island 16, 16, 3, 3, 5, 5
+        call island 15, 22, 4, 4, 6, 5
+        call seed 17.5, 17.5, 5
+        call seed 16, 23.5, 6
+        call seed 18, 24.5, 6
+        call creature 15.5, 11, 4, "crab", "x", 1
+        call creature 23.5, 12, 5, "hopper", "x", 1.5
+        call creature 26, 18.3, 6, "crab", "y", 1.1
+        call creature 32.5, 20.5, 7, "hopper", "x", 1.5
+        call creature 41, 20, 8, "crab", "x", 1.6
+        call creature 17, 24, 6, "hopper", "x", 0.9
+        scenery.push({"x": 15.4, "y": 25.6, "z": 6, "model": "beyond/crystal"})
+    world.spawn = {
+        "x": player.x,
+        "y": player.y,
+        "z": player.z,
+        "angle": player.angle,
+        "pitch": 0,
+        "vz": 0
+    }
+    scenery.push({"x": beacon.x, "y": beacon.y, "z": beacon.z, "model": "beyond/beacon"})

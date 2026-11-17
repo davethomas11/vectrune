@@ -1,0 +1,305 @@
+@Page/beyond_cabinet
+title = Skybound 2 - Beyond the Concept
+logic = beyond_cabinet
+style = beyond_cabinet
+view:
+    main .cabinet:
+        header .masthead:
+            div:
+                p .eyebrow "A LANTERN-MOTH ODYSSEY / PIXEL 3D"
+                h1 "SKYBOUND II"
+                p .subtitle "BEYOND THE CONCEPT"
+            p .story "The dawn has gone missing. A little moth carries the last light."
+        section .game-card:
+            div .toolbar:
+                span .progress data-pixel-text=progress_label "0 / 7 LANTERNS RESTORED"
+                div .buttons:
+                    button data-pixel-pause=true "Pause / P"
+                    button data-pixel-mute=true "Sound / M"
+                    button data-pixel-fullscreen=true "Fullscreen / F"
+            div .game-surface:
+                canvas data-rune-pixel-3d=true tabindex=0 aria-label="Skybound 2. On the atlas use 1 through 7 to select and Enter to explore. WASD moves Nix, Space jumps, hold Space to glide, Q and E orbit the camera."
+                div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
+                    h2 "WINGS AT REST"
+                    p "The archipelago can wait."
+                    button data-pixel-pause=true "Resume flight / P"
+                    button data-pixel-restart=true "Return to atlas / B"
+            p .status data-pixel-status=true role=status aria-live=polite "A small light. A wider world."
+        section .atlas data-pixel-hidden=map_hidden aria-label="World map destinations":
+            div .section-title:
+                h2 "THE LANTERN ATLAS"
+                p "Seven lights. One connected journey."
+            div .route:
+                button .destination data-pixel-action=select_stage data-pixel-args="[0]" data-pixel-selected=node_one_selected:
+                    span .number "01 / THE AWAKENING"
+                    strong "Reedwake Reach"
+                    span "Reeds, ruins & a first flight"
+                button .destination data-pixel-action=select_stage data-pixel-args="[1]" data-pixel-selected=node_two_selected data-pixel-disabled=node_two_locked:
+                    span .number "02 / THE FURNACE"
+                    strong "The Cinderworks"
+                    span "Boss / Kilnback"
+                button .destination data-pixel-action=select_stage data-pixel-args="[2]" data-pixel-selected=node_three_selected data-pixel-disabled=node_three_locked:
+                    span .number "03 / THE CROSSING"
+                    strong "Moonglass Tide"
+                    span "Moonlit crystal causeways"
+                button .destination data-pixel-action=select_stage data-pixel-args="[3]" data-pixel-selected=node_four_selected data-pixel-disabled=node_four_locked:
+                    span .number "04 / THE TREETOPS"
+                    strong "Sunken Canopy"
+                    span "Lantern groves & long glides"
+                button .destination data-pixel-action=select_stage data-pixel-args="[4]" data-pixel-selected=node_five_selected data-pixel-disabled=node_five_locked:
+                    span .number "05 / THE NORTHERN LIGHTS"
+                    strong "Aurora Causeway"
+                    span "An icy staircase through the sky"
+                button .destination data-pixel-action=select_stage data-pixel-args="[5]" data-pixel-selected=node_six_selected data-pixel-disabled=node_six_locked:
+                    span .number "06 / THE TWILIGHT RELAY"
+                    strong "Emberglass Relay"
+                    span "Furnaces, glass & a winding ascent"
+                button .destination data-pixel-action=select_stage data-pixel-args="[6]" data-pixel-selected=node_seven_selected data-pixel-disabled=node_seven_locked:
+                    span .number "07 / THE STOLEN DAWN"
+                    strong "The Storm Roost"
+                    span "Boss / The Tempest Regent"
+            div .destination-detail:
+                div:
+                    h3 data-pixel-text=stage_name "REEDWAKE REACH"
+                    p data-pixel-text=stage_subtitle "The first lantern waits beyond the reeds."
+                    p .stamp data-pixel-text=selected_status "NEW DESTINATION"
+                button .primary data-pixel-start=true data-pixel-disabled=enter_locked "Explore destination / Enter"
+        section .outcome data-pixel-hidden=result_hidden:
+            h2 data-pixel-text=outcome_title "A LANTERN REKINDLED"
+            p data-pixel-text=outcome_body "Your next destination is waiting."
+            p data-pixel-text=seed_label "Amber seeds"
+            button .primary data-pixel-start=true data-pixel-text=primary_label "Return to atlas / Enter"
+            button data-pixel-action=show_map "Lantern atlas / B"
+        section .guide:
+            div .character:
+                p .eyebrow "MEET YOUR COURIER"
+                h2 "NIX, THE LANTERN MOTH"
+                p "Six tiny feet. Two paper wings. One stubborn spark. Nix carries the dawn between islands that have forgotten the sun."
+                p "WASD or arrows move. Space jumps; keep it held on the way down to spread your wings and glide. Shift runs. Q / E orbit, R centers."
+            div:
+                p .eyebrow "LISTEN FOR THE LIGHT"
+                h2 "A THEME WORTH HUMMING"
+                p "An original adventure score follows Nix across the atlas: warm brass, soft strings, sparkling bells and restless percussion. The same little melody grows with the journey."
+                p "Boss tells matter. Dodge Kilnback's marked charge, then stomp its blue core. Jump the Regent's red shockwave and land on its lowered crown."
+        footer:
+            p "RUNE / PIXEL-3D / SKYBOUND II"
+            p "Lanterns and best seed counts save automatically. Keyboard, controller & touch."
+
+@Logic/beyond_cabinet
+state:
+    label = "Skybound 2"
+
+@Style/beyond_cabinet
+rules:
+    :root:
+        color-scheme = dark
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #102735
+        color = #efe8cd
+        font-family = system-ui, sans-serif
+    .cabinet:
+        max-width = 1180px
+        margin = auto
+        padding = clamp(16px, 3vw, 40px)
+    .masthead:
+        display = flex
+        align-items = center
+        justify-content = space-between
+        gap = 24px
+        flex-wrap = wrap
+        margin-bottom = 24px
+    .eyebrow:
+        color = #71baad
+        font-size = 10px
+        font-weight = 800
+        letter-spacing = 2px
+    h1:
+        margin = 6px 0 2px
+        font-size = clamp(32px, 6vw, 68px)
+        letter-spacing = -2px
+        line-height = 1.1
+    .subtitle:
+        margin = 0
+        color = #ffd574
+        font-size = 11px
+        letter-spacing = 5px
+    .story:
+        color = #b6c8c6
+        max-width = 255px
+        line-height = 1.7
+        font-size = 14px
+    .game-card:
+        overflow = hidden
+        border = 1px solid #42606c
+        border-radius = 14px
+        background = #192f40
+        box-shadow = 0 16px 50px #08192388
+    .toolbar:
+        display = flex
+        align-items = center
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 10px
+        padding = 10px 14px
+    .progress:
+        color = #ffd574
+        font-size = 11px
+        letter-spacing = 1px
+        font-weight = 800
+    .buttons:
+        display = flex
+        gap = 6px
+        flex-wrap = wrap
+    button:
+        border = 1px solid #4b6b77
+        border-radius = 6px
+        background = #243e50
+        color = #efe8cd
+        padding = 10px 12px
+        min-height = 44px
+        cursor = pointer
+        font = inherit
+        font-size = 12px
+        font-weight = 700
+    button:hover:
+        background = #365567
+    button:disabled:
+        opacity = 0.45
+        cursor = default
+    button:focus-visible:
+        outline = 3px solid #ffd574
+        outline-offset = 3px
+    .game-surface:
+        position = relative
+    canvas:
+        display = block
+        width = 100%
+        height = auto
+        aspect-ratio = 8 / 5
+        image-rendering = pixelated
+        touch-action = none
+        outline-offset = -3px
+    .status:
+        text-align = center
+        font-size = 11px
+        color = #b0c6c9
+        padding = 0 10px
+    .section-title:
+        display = flex
+        flex-wrap = wrap
+        justify-content = space-between
+        align-items = center
+        gap = 12px
+        margin-top = 30px
+    .section-title h2:
+        font-size = 13px
+        letter-spacing = 2px
+    .section-title p:
+        color = #a4bfc0
+        font-size = 12px
+    .route:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(215px, 1fr))
+        gap = 12px
+    .destination:
+        text-align = left
+        padding = 18px
+        display = flex
+        flex-direction = column
+        gap = 10px
+        background = #1b3444
+    .destination strong:
+        font-size = 17px
+    .destination span:
+        font-size = 11px
+        color = #a7c4c5
+    .destination .number:
+        color = #ffd574
+        font-size = 9px
+        letter-spacing = 1px
+    .destination[aria-pressed=true]:
+        border-color = #7dd4bc
+        background = #254c50
+        box-shadow = inset 0 3px #7dd4bc
+    .destination-detail:
+        display = flex
+        justify-content = space-between
+        align-items = center
+        flex-wrap = wrap
+        gap = 18px
+        margin-top = 16px
+        border-left = 3px solid #ffd574
+        padding = 10px 20px
+    .destination-detail h3:
+        margin = 0
+        font-size = 14px
+        letter-spacing = 1px
+    .destination-detail p:
+        font-size = 12px
+        color = #b8cdca
+    .destination-detail .stamp:
+        color = #81cbb6
+        font-size = 10px
+        letter-spacing = 1px
+    .primary:
+        background = #ffd574
+        color = #192e43
+        border-color = #ffd574
+        padding = 14px 22px
+        font-size = 13px
+    .primary:hover:
+        background = #f9efce
+    .outcome:
+        border = 1px solid #63887d
+        background = #203e43
+        padding = 24px
+        margin-top = 24px
+        border-radius = 10px
+    .outcome h2:
+        color = #ffd574
+        font-size = 20px
+    .outcome p:
+        color = #c5d7cd
+        font-size = 14px
+        line-height = 1.7
+    .guide:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(250px, 1fr))
+        gap = 40px
+        margin-top = 40px
+    .guide h2:
+        font-size = 15px
+        letter-spacing = 1px
+    .guide p:
+        color = #b3c8c6
+        line-height = 1.8
+        font-size = 13px
+    footer:
+        display = flex
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 12px
+        border-top = 1px solid #36515e
+        margin-top = 30px
+        padding-top = 16px
+        font-size = 10px
+        color = #88aaa9
+        letter-spacing = 1px
+    .pause-menu:
+        position = absolute
+        inset = 0
+        display = flex
+        flex-direction = column
+        justify-content = center
+        align-items = center
+        padding = 20px
+        gap = 12px
+        background = #132b3cee
+        color = #efe8cd
+    .pause-menu h2:
+        color = #ffd574
+    [hidden]:
+        display = none !important

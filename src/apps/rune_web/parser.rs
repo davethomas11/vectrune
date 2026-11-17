@@ -430,7 +430,7 @@ pub fn parse_rune_web_frontend(
             } else {
                 continue;
             };
-            music.insert(music_name, parse_music_section(section));
+            music.insert(music_name, parse_music_section(section)?);
         }
     }
 
@@ -608,7 +608,7 @@ fn parse_sound_section(section: &crate::rune_ast::Section) -> SoundDefinition {
     }
 }
 
-fn parse_music_section(section: &crate::rune_ast::Section) -> MusicDefinition {
+fn parse_music_section(section: &crate::rune_ast::Section) -> Result<MusicDefinition, ParseError> {
     let music_type = section.kv.get("type")
         .or_else(|| section.kv.get("style"))
         .and_then(|v| v.as_str())
@@ -698,7 +698,7 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> MusicDefinition {
     let mut tracks = HashMap::new();
     for (k, v) in &section.kv {
         let key_str = k.to_lowercase();
-        if !matches!(key_str.as_str(), "type" | "style" | "tempo" | "bpm" | "loop" | "loop_track" | "volume" | "time_signature" | "meter" | "bars" | "measures" | "lead" | "melody" | "bass" | "drums" | "percussion") {
+        if !matches!(key_str.as_str(), "type" | "style" | "tempo" | "bpm" | "loop" | "loop_track" | "volume" | "time_signature" | "meter" | "bars" | "measures" | "lead" | "melody" | "bass" | "drums" | "percussion" | "sections" | "arrangement" | "instruments") {
             if let Some(s) = v.as_str() {
                 let trimmed = s.trim();
                 if !trimmed.is_empty() {
@@ -736,7 +736,58 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> MusicDefinition {
         }
     }
 
-    MusicDefinition {
+    // Some generic Rune section values retain JSON array/object source text.
+    let music_json = |v: &Value| v.as_str().and_then(|s| serde_json::from_str(s).ok()).unwrap_or_else(|| v.to_json());
+    let sections: HashMap<String, MusicSection> = section.kv.get("sections")
+        .map(|v| serde_json::from_value(music_json(v))).transpose()
+        .map_err(|e| ParseError(format!("Music sections need named objects with bars and note tracks: {e}")))?
+        .unwrap_or_default();
+    let arrangement: Vec<MusicCue> = section.kv.get("arrangement")
+        .map(|v| serde_json::from_value(music_json(v))).transpose()
+        .map_err(|e| ParseError(format!("Music arrangement needs section names or {{section, repeat}}: {e}")))?
+        .unwrap_or_default();
+    let instruments: HashMap<String, String> = section.kv.get("instruments")
+        .map(|v| serde_json::from_value(music_json(v))).transpose()
+        .map_err(|e| ParseError(format!("Music instruments need channel-to-instrument names: {e}")))?
+        .unwrap_or_default();
+    for instrument in instruments.values() {
+        if !matches!(instrument.as_str(), "square" | "sine" | "triangle" | "bass" | "sawtooth" | "synth" | "pluck" | "drums" | "brass" | "strings" | "bell") {
+            return Err(ParseError(format!("Unknown music instrument: {instrument}")));
+        }
+    }
+    if !sections.is_empty() || !arrangement.is_empty() {
+        if sections.is_empty() || sections.len() > 32 || arrangement.is_empty() || arrangement.len() > 128 {
+            return Err(ParseError("Music needs 1-32 sections and 1-128 arrangement entries".into()));
+        }
+        if lead.is_some() || bass.is_some() || drums.is_some() || !tracks.is_empty() || bars.is_some() {
+            return Err(ParseError("Arranged music declares bars and note tracks inside sections".into()));
+        }
+        for (name, part) in &sections {
+            if name.is_empty() || !part.bars.is_finite() || part.bars.fract() != 0.0 || !(1.0..=64.0).contains(&part.bars) || part.tracks.is_empty() || part.tracks.len() > 16 {
+                return Err(ParseError(format!("Music section {name} needs 1-64 integer bars and 1-16 tracks")));
+            }
+        }
+        let mut total_bars = 0.0;
+        for cue in &arrangement {
+            let (name, repeat) = match cue {
+                MusicCue::Section(name) => (name, 1.0),
+                MusicCue::Repeat { section, repeat } => (section, *repeat),
+            };
+            let part = sections.get(name).ok_or_else(|| ParseError(format!("Unknown music section: {name}")))?;
+            if !repeat.is_finite() || repeat.fract() != 0.0 || !(1.0..=16.0).contains(&repeat) {
+                return Err(ParseError("Music section repeat must be an integer from 1 to 16".into()));
+            }
+            total_bars += part.bars * repeat;
+        }
+        if total_bars > 512.0 {
+            return Err(ParseError("Music arrangement exceeds 512 bars".into()));
+        }
+        if !matches!(time_signature.as_deref().unwrap_or("4/4"), "4/4" | "3/4") {
+            return Err(ParseError("Arranged music supports 4/4 or 3/4 time".into()));
+        }
+    }
+
+    Ok(MusicDefinition {
         music_type,
         tempo,
         time_signature,
@@ -747,7 +798,10 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> MusicDefinition {
         bass,
         drums,
         tracks,
-    }
+        sections,
+        arrangement,
+        instruments,
+    })
 }
 
 fn parse_state_block(section: &crate::rune_ast::Section) -> HashMap<String, String> {
@@ -1829,7 +1883,7 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
 
                         // Collect all lines until the next key assignment or end
                         let mut value_lines = vec![val_start.to_string()];
-                        let mut bracket_depth: i32 = val_start.chars().map(|c| match c { '[' | '{' => 1, ']' | '}' => -1, _ => 0 }).sum();
+                        let mut bracket_depth = crate::rune_parser::expression_depth(val_start);
                         i += 1;
 
                         while i < state_items.len() {
@@ -1846,7 +1900,7 @@ fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefini
                                     if bracket_depth <= 0 && next_trimmed.contains('=') && !next_trimmed.starts_with('{') && !next_trimmed.starts_with('[') {
                                         break;
                                     }
-                                    let delta: i32 = next_trimmed.chars().map(|c| match c { '[' | '{' => 1, ']' | '}' => -1, _ => 0 }).sum();
+                                    let delta = crate::rune_parser::expression_depth(next_trimmed);
                                     bracket_depth += delta;
                                     value_lines.push(next_s.clone());
                                     i += 1;
@@ -2030,7 +2084,7 @@ fn parse_action_steps(items: &[Value]) -> Result<Vec<ActionStep>, ParseError> {
 
     for item in items {
         match item {
-            Value::String(s) => steps.push(ActionStep::Statement(s.clone())),
+            Value::String(s) => steps.push(ActionStep::Statement(s.lines().map(str::trim).collect::<Vec<_>>().join(" "))),
             Value::Map(map) => {
                 for (key, value) in map {
                     let trimmed = key.trim();

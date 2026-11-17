@@ -22,6 +22,9 @@ function mix(a: number, b: number, t: number): number {
 
 /** Periodic, world-aligned clouds: no panorama assets or random frame flicker. */
 export function skyPixel(sky: Sky, longitude: number, altitude: number, time: number): number {
+  // Below-horizon voxel rays clamp to altitude zero. Clouds have zero weight
+  // there, so their noise/interpolation cannot affect the opaque horizon color.
+  if (altitude === 0) return (0xff000000 | sky.horizon) >>> 0;
   const u = ((longitude / (2 * Math.PI) * 64 + time * sky.speed) % 64 + 64) % 64;
   const v = altitude * 12;
   const x = Math.floor(u), y = Math.floor(v);

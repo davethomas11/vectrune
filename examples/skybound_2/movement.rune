@@ -1,0 +1,110 @@
+@Logic/beyond
+action tick(input):
+    ticks += 1
+    if phase == "map":
+        avatar.z = scenery[selected].z+1+sin(ticks*3)*0.15
+        avatar.angle = 30 + sin(ticks) * 15
+        map_direction = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+        if map_direction != 0 && !map_held:
+            call select_stage (selected + map_direction + stages.length) % stages.length
+        map_held = map_direction != 0
+    stop when phase != "playing"
+    notice_ticks = max(0, notice_ticks - 1)
+    invulnerable = max(0, invulnerable - 1)
+    yaw += ((input.orbit_right ? 1 : 0) - (input.orbit_left ? 1 : 0) + (input.orbit ? input.orbit : 0)) * 3
+    forward = clamp((input.forward ? 1 : 0) - (input.back ? 1 : 0) + (input.move_y ? input.move_y : 0), -1, 1)
+    side = clamp((input.right ? 1 : 0) - (input.left ? 1 : 0) + (input.move_x ? input.move_x : 0), -1, 1)
+    magnitude = max(1, sqrt(forward * forward + side * side))
+    speed = input.run ? 0.23 : 0.18
+    target_x = (cos(yaw) * forward - sin(yaw) * side) * speed / magnitude
+    target_y = (sin(yaw) * forward + cos(yaw) * side) * speed / magnitude
+    velocity_x += (target_x - velocity_x) * 0.45
+    velocity_y += (target_y - velocity_y) * 0.45
+    if abs(velocity_x) + abs(velocity_y) > 0.02:
+        player.angle = atan2(velocity_y, velocity_x)
+    gliding = !!input.jump && player.vz < 0 && player.z > 1.5
+    if gliding:
+        player.vz = max(-0.07, player.vz)
+    previous_z = player.z
+    player = voxel_move(
+        world,
+        player,
+        velocity_x,
+        velocity_y,
+        !!input.jump && !jump_held,
+        {"jumpSpeed": 0.44, "gravity": 0.035, "autoStep": false}
+    )
+    if player.z > previous_z && !!input.jump && !jump_held:
+        sound.play "beyond_jump"
+    jump_held = !!input.jump
+    if player.z < 1.3:
+        call lose_heart
+    if phase != "playing":
+        call refresh_ui
+        stop
+    call tick_enemies previous_z
+    if phase != "playing":
+        call refresh_ui
+        stop
+    for item in seeds:
+        item.angle = ticks * 5
+        item.z = item.base + sin(ticks * 4) * 0.12
+        item_distance = distance(player, item)
+        if item.visible && item_distance < 0.75 && abs(player.z + 0.7 - item.z) < 1:
+            item.visible = false
+            collected += 1
+            sound.play "beyond_seed"
+    beacon_distance = distance(player, beacon)
+    if !checkpoint_active && beacon_distance < 1.5 && abs(player.z - beacon.z) < 0.3:
+        call save_checkpoint
+    if stages[selected].boss && !boss_active && boss_hp > 0 && player.x > arena.gate_x && player.y > arena.gate_y && player.z >= boss.z:
+        call awaken_boss
+    if boss_active:
+        call tick_boss previous_z
+    if goal.visible:
+        goal.angle = ticks * 3
+        goal_distance = distance(player, goal)
+        if goal_distance < 1 && abs(player.z - goal.z) < 0.4:
+            call clear_stage
+    call update_view
+    call refresh_ui
+
+action save_checkpoint:
+    checkpoint_active = true
+    checkpoint = {"x": beacon.x, "y": beacon.y, "z": beacon.z, "angle": selected == 2 ? 0: 90}
+    hearts = 4
+    sound.play "beyond_beacon"
+    notice = "Beacon lit. Hearts restored."
+    notice_ticks = 100
+
+action snap_camera:
+    camera = {
+        "x": clamp(player.x - cos(yaw) * 7, 0.3, world.width - 0.3),
+        "y": clamp(player.y - sin(yaw) * 7, 0.3, world.height - 0.3),
+        "z": player.z + 3.3,
+        "angle": yaw,
+        "pitch": -21
+    }
+    avatar.scale = 1
+    call update_view
+
+action center_camera:
+    stop when phase != "playing"
+    yaw = player.angle
+    call update_view
+
+action update_view:
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z
+    avatar.angle = player.angle
+    avatar.model = gliding || abs(player.vz) > 0.05 ? "beyond/nix_glide" : (abs(velocity_x) + abs(velocity_y) > 0.02 && ticks % 12 < 6 ? "beyond/nix_step" : "beyond/nix")
+    avatar.visible = invulnerable == 0 || ticks % 6 < 3
+    view_distance = boss_active ? 9 : 7
+    camera.x += (clamp(player.x - cos(yaw) * view_distance, 0.3, world.width - 0.3) - camera.x) * 0.3
+    camera.y += (clamp(player.y - sin(yaw) * view_distance, 0.3, world.height - 0.3) - camera.y) * 0.3
+    camera.z += (player.z + (boss_active ? 4.3 : 3.3) - camera.z) * 0.15
+    focus_x = boss_active ? (player.x + boss.x) / 2 : player.x
+    focus_y = boss_active ? (player.y + boss.y) / 2 : player.y
+    camera.angle = atan2(focus_y - camera.y, focus_x - camera.x)
+    camera.pitch = boss_active ? -24 : -21

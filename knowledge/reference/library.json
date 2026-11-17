@@ -3271,6 +3271,24 @@
           "type": "note strings",
           "default": "—",
           "description": "Built-in tracks; custom named tracks are also supported."
+        },
+        {
+          "name": "sections",
+          "type": "object",
+          "default": "—",
+          "description": "Reusable named sections: each has integer bars (1-64) and channel-to-note-string fields. Missing/short channels are padded with rests; overlong phrases are rejected. Use with arrangement instead of top-level tracks/bars."
+        },
+        {
+          "name": "arrangement",
+          "type": "array",
+          "default": "—",
+          "description": "Ordered section names or {section, repeat} cues; repeat accepts integers 1-16. Up to 32 sections, 128 cues and 512 expanded bars in 4/4 or 3/4. loop repeats the full arrangement."
+        },
+        {
+          "name": "instruments",
+          "type": "object",
+          "default": "channel defaults",
+          "description": "Channel-to-synth-voice map. Supports square, sine, triangle, bass, sawtooth, synth, pluck, drums, brass, strings and bell. Works with legacy tracks and arranged sections in browser/native hosts."
         }
       ]
     },
@@ -3560,13 +3578,14 @@
       "id": "voxel-move",
       "name": "voxel_move",
       "category": "expressions",
-      "signature": "voxel_move(world, player, dx, dy[, jump=false])",
+      "signature": "voxel_move(world, player, dx, dy[, jump=false[, options]])",
       "summary": "Advance movement with voxel collision, gravity, jumping, and elevation.",
       "returns": "Updated player state.",
       "sources": [
         "runtime/rune-web/src/pixel3d/voxel.ts"
       ],
       "notes": [
+        "Optional movement settings: jumpSpeed in (0, 1], gravity in (0, 0.3], autoStep boolean. Defaults: 0.28, 0.035, true. Falling speed is capped at 0.3 tiles per tick.",
         "Voxel scene helper; implemented in the shared JavaScript game runtime. The legacy Rust grid rasterizer does not render voxel worlds."
       ]
     },

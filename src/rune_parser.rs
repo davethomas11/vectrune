@@ -601,11 +601,24 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
 
                 if let Some((_, path)) = series_stack.last().cloned() {
                     // Compute the target list safely
+                    let logic_expression = sec.path.first().is_some_and(|part| part == "Logic");
                     let maybe_list = resolve_series_path_mut(&mut sec.series, &path, false);
 
                     if let Some(list) = maybe_list {
+                        // Logic expressions may span lines inside balanced containers/calls.
+                        // Keep them as one statement, including arrays and method calls.
+                        if logic_expression && expression_depth(line) > 0 {
+                            let mut statement = line.trim().to_string();
+                            while expression_depth(&statement) > 0 {
+                                if lines.peek().is_none_or(|next| next.starts_with('@')) { break; }
+                                statement.push('\n');
+                                statement.push_str(lines.next().unwrap().trim_end());
+                            }
+                            list.push(Value::String(statement));
+                            continue;
+                        }
                         // Robust handling: object assignment at any point in series
-                        if is_object_assignment_line(line) {
+                        if !logic_expression && is_object_assignment_line(line) {
                             let mut assignment = line.trim().to_string();
                             let mut depth: i32 = assignment.chars().map(|c| match c { '{' => 1, '}' => -1, _ => 0 }).sum();
                             while depth > 0 {
@@ -886,6 +899,67 @@ fn looks_like_object_literal_start(value_raw: &str) -> bool {
 
     let rest = trimmed[1..].trim_start();
     rest.is_empty() || rest.starts_with('"') || rest.starts_with('}')
+}
+
+/// Quote-aware tokens for continuation boundaries and formatter equivalence.
+/// Whitespace is insignificant between tokens, but never within quoted strings.
+pub(crate) fn expression_tokens(source: &str) -> Vec<&str> {
+    let mut tokens = Vec::new();
+    let mut chars = source.char_indices().peekable();
+    while let Some((start, ch)) = chars.next() {
+        if ch.is_whitespace() { continue; }
+        let mut end = start + ch.len_utf8();
+        if ch == '"' || ch == '\'' || ch == '`' {
+            let mut escaped = false;
+            for (index, next) in chars.by_ref() {
+                end = index + next.len_utf8();
+                if escaped { escaped = false; }
+                else if next == '\\' { escaped = true; }
+                else if next == ch { break; }
+            }
+        } else if ch.is_ascii_digit() || (ch == '.' && chars.peek().is_some_and(|(_, next)| next.is_ascii_digit())) {
+            let bytes = source.as_bytes();
+            if ch == '0' && bytes.get(end).is_some_and(|byte| matches!(byte, b'x' | b'X' | b'b' | b'B' | b'o' | b'O')) {
+                end += 1;
+                while bytes.get(end).is_some_and(|byte| byte.is_ascii_hexdigit() || *byte == b'_') { end += 1; }
+            } else {
+                while bytes.get(end).is_some_and(u8::is_ascii_digit) { end += 1; }
+                if ch != '.' && bytes.get(end) == Some(&b'.') {
+                    end += 1;
+                    while bytes.get(end).is_some_and(u8::is_ascii_digit) { end += 1; }
+                }
+                if bytes.get(end).is_some_and(|byte| matches!(byte, b'e' | b'E')) {
+                    end += 1;
+                    if bytes.get(end).is_some_and(|byte| matches!(byte, b'+' | b'-')) { end += 1; }
+                    while bytes.get(end).is_some_and(u8::is_ascii_digit) { end += 1; }
+                }
+            }
+            while chars.peek().is_some_and(|(index, _)| *index < end) { chars.next(); }
+        } else if ch.is_alphanumeric() || ch == '_' || ch == '$' {
+            while let Some(&(index, next)) = chars.peek() {
+                if !next.is_alphanumeric() && next != '_' && next != '$' { break; }
+                end = index + next.len_utf8();
+                chars.next();
+            }
+        } else if let Some(&(index, next)) = chars.peek() {
+            if matches!((ch, next), ('=', '=') | ('!', '=') | ('<', '=') | ('>', '=') |
+                ('&', '&') | ('|', '|') | ('+', '=') | ('-', '=') | ('*', '=') | ('/', '=') |
+                ('+', '+') | ('-', '-') | ('=', '>') | ('?', '?') | ('?', '.')) {
+                end = index + next.len_utf8();
+                chars.next();
+            }
+        }
+        tokens.push(&source[start..end]);
+    }
+    tokens
+}
+
+pub(crate) fn expression_depth(source: &str) -> i32 {
+    expression_tokens(source).iter().map(|token| match *token {
+        "{" | "[" | "(" => 1,
+        "}" | "]" | ")" => -1,
+        _ => 0,
+    }).sum()
 }
 
 fn is_object_assignment_line(line: &str) -> bool {

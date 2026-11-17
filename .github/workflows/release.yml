@@ -101,6 +101,8 @@ jobs:
           "$BIN" test examples/rune_studio --json
           "$BIN" test examples/vect_breach --type logic --json
           "$BIN" test examples/rune_crypt --type logic --json
+          "$BIN" test examples/skybound --type logic --json
+          "$BIN" test examples/skybound_2 --type logic --json
 
       - name: Package
         shell: bash

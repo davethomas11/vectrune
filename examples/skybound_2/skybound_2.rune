@@ -1,0 +1,130 @@
+#!RUNE
+import "assets.rune"
+import "hud.rune"
+import "sound.rune"
+import "campaign.rune"
+import "levels.rune"
+import "movement.rune"
+import "enemies.rune"
+import "bosses.rune"
+import "ux.rune"
+import "controls.rune"
+import "shell.rune"
+
+@App
+name = Skybound 2 - Beyond the Concept
+type = pixel-3d
+runtime = hybrid
+scene = beyond
+resolution = [432,270]
+tick_rate = 30
+port = 3024
+shell = beyond_cabinet
+
+@Perspective/beyond
+fov = 78
+
+@Scene/beyond
+logic = beyond
+map = atlas
+world = world
+camera = camera
+perspective = beyond
+things = ["avatar","seeds","enemies","scenery","goal","boss","hazards"]
+controls = beyond
+ui = ui
+pause_ui = pause_ui
+restart_action = show_map
+click_to_start = false
+mouse_look = false
+persistence = {"key":"skybound-2","state":"saga"}
+presentation = {
+    "defeat": "EVEN MOTHS NEED ANOTHER TRY",
+    "instructions": [
+        "WASD MOVE / SPACE JUMP",
+        "HOLD SPACE WHILE FALLING TO GLIDE",
+        "SHIFT RUN / Q E CAMERA / R CENTER",
+        "P PAUSE / B RETURN TO ATLAS"
+    ],
+    "objective": "RESTORE THE SEVEN SKY LANTERNS",
+    "subtitle": "BEYOND THE CONCEPT",
+    "title": "SKYBOUND 2",
+    "victory": "THE SKY REMEMBERS YOUR LIGHT"
+}
+
+@Map/atlas
+floor = "#142f47"
+sky = {"seed":2701,"zenith":"#142d48","horizon":"#769ca8","cloud":"#b2c6c1","speed":0.1}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Map/reedwake
+floor = "#84adb2"
+sky = {"seed":2702,"zenith":"#426c91","horizon":"#d5d9b4","cloud":"#f1e8c7","speed":0.16}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Map/kiln
+floor = "#bb856d"
+sky = {"seed":2703,"zenith":"#654b74","horizon":"#e8aa7e","cloud":"#edc7a4","speed":0.22}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Map/tide
+floor = "#545b8f"
+sky = {"seed":2704,"zenith":"#252d5b","horizon":"#9ba9cf","cloud":"#c2c3e3","speed":0.12}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Map/storm
+floor = "#586676"
+sky = {"seed":2705,"zenith":"#17283f","horizon":"#6c8a9d","cloud":"#b2c1c5","speed":0.6}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Page/beyond
+logic = beyond
+view:
+    canvas data-rune-pixel-3d=true
+
+@Map/canopy
+floor = "#9bc5a1"
+sky = {"seed":2706,"zenith":"#204953","horizon":"#9bc5a1","cloud":"#d6dfbc","speed":0.13}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Map/aurora
+floor = "#b8e1d8"
+sky = {"seed":2707,"zenith":"#29445e","horizon":"#b8e1d8","cloud":"#e6f5d9","speed":0.2}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Map/emberglass
+floor = "#d89fa0"
+sky = {"seed":2708,"zenith":"#563e66","horizon":"#d89fa0","cloud":"#f0c0a1","speed":0.25}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."

@@ -1,0 +1,53 @@
+@Controls/beyond
+keys:
+    KeyW -> forward
+    ArrowUp -> forward
+    KeyS -> back
+    ArrowDown -> back
+    KeyA -> left
+    ArrowLeft -> left
+    KeyD -> right
+    ArrowRight -> right
+    Space -> jump
+    ShiftLeft -> run
+    ShiftRight -> run
+    KeyQ -> orbit_left
+    KeyE -> orbit_right
+commands:
+    Enter -> advance
+    KeyP -> host.pause
+    KeyF -> host.fullscreen
+    KeyM -> host.mute
+    KeyR -> center_camera
+    KeyB -> show_map
+    Digit1 -> choose_one
+    Digit2 -> choose_two
+    Digit3 -> choose_three
+    Digit4 -> choose_four
+    Digit5 -> choose_five
+    Digit6 -> choose_six
+    Digit7 -> choose_seven
+    KeyN -> next_stage
+    KeyV -> previous_stage
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.18}
+    Axis1 -> {"input":"move_y","invert":true,"deadzone":0.18}
+    Axis2 -> {"input":"orbit","deadzone":0.18}
+    Button0 -> jump
+    Button2 -> run
+    Button4 -> orbit_left
+    Button5 -> orbit_right
+    Button8 -> {"command":"advance"}
+    Button9 -> {"command":"host.pause"}
+    Button14 -> {"command":"previous_stage"}
+    Button15 -> {"command":"next_stage"}
+touch = {
+    "buttons": [
+        {"id":"jump","input":"jump","label":"FLY","offset":[12,16],"size":64},
+        {"id":"run","input":"run","label":"RUN","offset":[88,16],"size":48},
+        {"id":"orbit_left","input":"orbit_left","label":"CAM <","offset":[72,92],"size":48},
+        {"id":"orbit_right","input":"orbit_right","label":"CAM >","offset":[12,92],"size":48}
+    ],
+    "joystick": {"size":84,"x":"move_x","y":"move_y"},
+    "visible": "touch_ready"
+}

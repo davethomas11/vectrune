@@ -1245,6 +1245,7 @@ var __RunePixel3DRuntime = (() => {
     return color >>> 0;
   }
   function skyPixel(sky, longitude, altitude, time) {
+    if (altitude === 0) return (4278190080 | sky.horizon) >>> 0;
     const u = ((longitude / (2 * Math.PI) * 64 + time * sky.speed) % 64 + 64) % 64;
     const v = altitude * 12;
     const x = Math.floor(u), y = Math.floor(v);
@@ -1258,6 +1259,29 @@ var __RunePixel3DRuntime = (() => {
   }
 
   // src/pixel3d/voxel.ts
+  var chunkScratch = /* @__PURE__ */ new WeakMap();
+  function prepareVoxelChunks(world) {
+    const width = Math.ceil(world.width / 4), height = Math.ceil(world.height / 4);
+    const length = width * height * Math.ceil(world.depth / 4);
+    let chunks = chunkScratch.get(world);
+    if (!chunks || chunks.width !== width || chunks.height !== height || chunks.occupied.length !== length) {
+      chunks = { width, height, occupied: new Uint8Array(length), count: 0 };
+      chunkScratch.set(world, chunks);
+    }
+    chunks.occupied.fill(0);
+    chunks.count = 0;
+    let cell = 0;
+    for (let z = 0; z < world.depth; z++) for (let y = 0; y < world.height; y++) {
+      const row = ((z >> 2) * height + (y >> 2)) * width;
+      for (let x = 0; x < world.width; x++, cell++) {
+        if (world.cells[cell] && !chunks.occupied[row + (x >> 2)]) {
+          chunks.occupied[row + (x >> 2)] = 1;
+          chunks.count++;
+        }
+      }
+    }
+    return chunks;
+  }
   function integer(value, min, max, label) {
     if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
       throw new Error(`${label} must be an integer from ${min} to ${max}`);
@@ -1363,33 +1387,97 @@ var __RunePixel3DRuntime = (() => {
     ]) set(x, y, z, block);
     return world;
   }
-  function voxelRay(world, origin, ray, maxDistance) {
+  function chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance) {
+    let ex = Number.isFinite(tx) ? tx + (sx > 0 ? 3 - (x & 3) : x & 3) * dx : Infinity;
+    let ey = Number.isFinite(ty) ? ty + (sy > 0 ? 3 - (y & 3) : y & 3) * dy : Infinity;
+    let ez = Number.isFinite(tz) ? tz + (sz > 0 ? 3 - (z & 3) : z & 3) * dz : Infinity;
+    x >>= 2;
+    y >>= 2;
+    z >>= 2;
+    const width = chunks.width, height = chunks.height, depth = chunks.occupied.length / (width * height);
+    const stepX = dx * 4, stepY = dy * 4, stepZ = dz * 4;
+    let entry = 0;
+    while (x >= 0 && y >= 0 && z >= 0 && x < width && y < height && z < depth) {
+      if (chunks.occupied[(z * height + y) * width + x]) return entry;
+      const next = Math.min(ex, ey, ez);
+      if (!Number.isFinite(next) || next > maxDistance) return Infinity;
+      const tolerance = 1e-9 * Math.max(1, next);
+      if ((Math.abs(ex - next) <= tolerance ? 1 : 0) + (Math.abs(ey - next) <= tolerance ? 1 : 0) + (Math.abs(ez - next) <= tolerance ? 1 : 0) > 1) return entry;
+      entry = next;
+      if (ex < ey && ex < ez) {
+        x += sx;
+        ex += stepX;
+      } else if (ey < ez) {
+        y += sy;
+        ey += stepY;
+      } else {
+        z += sz;
+        ez += stepZ;
+      }
+    }
+    return Infinity;
+  }
+  function voxelRay(world, origin, ray, maxDistance, output, chunks) {
     let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+    const width = world.width, height = world.height, depth = world.depth, cells = world.cells;
     const sx = ray[0] < 0 ? -1 : 1, sy = ray[1] < 0 ? -1 : 1, sz = ray[2] < 0 ? -1 : 1;
+    const stepY = sy * width, stepZ = sz * width * height;
+    let cellIndex = (z * height + y) * width + x;
     const dx = Math.abs(1 / ray[0]), dy = Math.abs(1 / ray[1]), dz = Math.abs(1 / ray[2]);
     let tx = ray[0] === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
     let ty = ray[1] === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
     let tz = ray[2] === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    if (chunks && (ray[0] !== 0 || ray[1] !== 0 || ray[2] !== 0)) {
+      if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
+      const entry = chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance);
+      if (!Number.isFinite(entry)) return null;
+      const beforeEntry = entry - 1e-9 * Math.max(1, entry);
+      while (tx < beforeEntry) {
+        x += sx;
+        tx += dx;
+      }
+      while (ty < beforeEntry) {
+        y += sy;
+        ty += dy;
+      }
+      while (tz < beforeEntry) {
+        z += sz;
+        tz += dz;
+      }
+      cellIndex = (z * height + y) * width + x;
+    }
     let distance = 0, face = 2;
     for (let iteration = 0; iteration < 256 && distance <= maxDistance; iteration++) {
-      if (x < 0 || y < 0 || z < 0 || x >= world.width || y >= world.height || z >= world.depth) break;
-      const block = world.cells[index(world, x, y, z)];
-      if (block) return { x, y, z, block, distance, face };
+      if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) break;
+      const block = cells[cellIndex];
+      if (block) {
+        if (!output) return { x, y, z, block, distance, face };
+        output.x = x;
+        output.y = y;
+        output.z = z;
+        output.block = block;
+        output.distance = distance;
+        output.face = face;
+        return output;
+      }
       if (tx < ty && tx < tz) {
         face = 0;
         distance = tx;
         tx += dx;
         x += sx;
+        cellIndex += sx;
       } else if (ty < tz) {
         face = 1;
         distance = ty;
         ty += dy;
         y += sy;
+        cellIndex += stepY;
       } else {
         face = 2;
         distance = tz;
         tz += dz;
         z += sz;
+        cellIndex += stepZ;
       }
     }
     return null;
@@ -1410,8 +1498,8 @@ var __RunePixel3DRuntime = (() => {
     if (![player.x, player.y, player.z, player.angle, player.pitch, player.vz].every(Number.isFinite)) {
       throw new Error("Voxel player needs finite x, y, z, angle, pitch and vz");
     }
-    if (player.x < 0.25 || player.y < 0.25 || player.x > world.width - 0.25 || player.y > world.height - 0.25 || player.z < 1 || player.z + 1.6 > world.depth || Math.abs(player.vz) > 0.3 || Math.abs(player.pitch) > 90) {
-      throw new Error("Voxel player must be inside movement bounds, with pitch within 90 degrees and vz within 0.3");
+    if (player.x < 0.25 || player.y < 0.25 || player.x > world.width - 0.25 || player.y > world.height - 0.25 || player.z < 1 || player.z + 1.6 > world.depth || Math.abs(player.vz) > 1 || Math.abs(player.pitch) > 90) {
+      throw new Error("Voxel player must be inside movement bounds, with pitch within 90 degrees and vz within 1");
     }
     return player;
   }
@@ -1431,20 +1519,27 @@ var __RunePixel3DRuntime = (() => {
     }
     return true;
   }
-  function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false) {
+  function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false, movementValue = {}) {
     const world = validateWorld(worldValue), p = { ...validatePlayer(playerValue, world) };
+    if (!movementValue || typeof movementValue !== "object" || Array.isArray(movementValue) || Object.keys(movementValue).some((key) => !["jumpSpeed", "gravity", "autoStep"].includes(key))) {
+      throw new Error("Voxel movement options accept jumpSpeed, gravity and autoStep");
+    }
+    const { jumpSpeed = 0.28, gravity = 0.035, autoStep = true } = movementValue;
+    if (!Number.isFinite(jumpSpeed) || jumpSpeed <= 0 || jumpSpeed > 1 || !Number.isFinite(gravity) || gravity <= 0 || gravity > 0.3 || typeof autoStep !== "boolean") {
+      throw new Error("Voxel movement needs jumpSpeed in (0, 1], gravity in (0, 0.3] and boolean autoStep");
+    }
     if (typeof dxValue !== "number" || typeof dyValue !== "number" || !Number.isFinite(dxValue) || !Number.isFinite(dyValue) || Math.hypot(dxValue, dyValue) > 1 || typeof jumpValue !== "boolean") {
       throw new Error("Voxel movement needs finite deltas of at most one tile and a boolean jump");
     }
     const grounded = !clearBody(world, p.x, p.y, p.z - 0.05);
-    if (jumpValue && grounded) p.vz = 0.28;
-    p.vz = Math.max(-0.3, p.vz - 0.035);
+    if (jumpValue && grounded) p.vz = jumpSpeed;
+    p.vz = Math.max(-0.3, p.vz - gravity);
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dxValue), Math.abs(dyValue), Math.abs(p.vz)) / 0.05));
     for (let i = 0; i < steps; i++) {
       for (const [axis, delta] of [["x", dxValue / steps], ["y", dyValue / steps]]) {
         const x = p.x + (axis === "x" ? delta : 0), y = p.y + (axis === "y" ? delta : 0);
         if (clearBody(world, x, y, p.z)) p[axis] += delta;
-        else if (grounded && delta !== 0 && clearBody(world, x, y, Math.floor(p.z) + 1)) {
+        else if (autoStep && grounded && delta !== 0 && clearBody(world, x, y, Math.floor(p.z) + 1)) {
           p.z = Math.floor(p.z) + 1;
           p[axis] += delta;
           p.vz = 0;
@@ -1471,19 +1566,23 @@ var __RunePixel3DRuntime = (() => {
       throw new Error("Voxel camera must be finite, inside the world, with pitch between -85 and 85 degrees");
     }
     const origin = { x: camera.x, y: camera.y, z: eye }, ray = [0, 0, 0];
+    const hitOutput = { x: 0, y: 0, z: 0, block: 0, distance: 0, face: 0 };
     const maxDistance = Math.hypot(world.width, world.height, world.depth);
-    for (let x = 0; x < width; x++) {
-      const u = (2 * x / width - 1) * scale;
-      for (let y = 0; y < height; y++) {
-        const v = (height / 2 - y - 0.5) / height;
+    const occupancy = prepareVoxelChunks(world);
+    const chunks = occupancy.count < occupancy.occupied.length * 0.6 ? occupancy : void 0;
+    const horizon = sky ? (4278190080 | sky.horizon) >>> 0 : 4281608224;
+    for (let y = 0; y < height; y++) {
+      const v = (height / 2 - y - 0.5) / height;
+      for (let x = 0; x < width; x++) {
+        const u = (2 * x / width - 1) * scale;
         ray[0] = ca * cp - sa * u - ca * sp * v;
         ray[1] = sa * cp + ca * u - sa * sp * v;
         ray[2] = sp + cp * v;
         const i = y * width + x;
-        const hit = voxelRay(world, origin, ray, maxDistance);
+        const hit = occupancy.count === 0 ? null : voxelRay(world, origin, ray, maxDistance, hitOutput, chunks);
         if (!hit) {
           depth[i] = Infinity;
-          buffer[i] = sky ? skyPixel(sky, Math.atan2(ray[1], ray[0]), Math.max(0, Math.min(1, ray[2])), time) : 4281608224;
+          buffer[i] = sky && ray[2] > 0 ? skyPixel(sky, Math.atan2(ray[1], ray[0]), Math.min(1, ray[2]), time) : horizon;
         } else {
           depth[i] = hit.distance;
           const texture = materialTextures[hit.block - 1];
@@ -1502,7 +1601,7 @@ var __RunePixel3DRuntime = (() => {
   var MAX_DEPTH = 64;
   var voxelFunctions = {
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
-    voxel_move: (world, player, dx, dy, jump) => voxelMove(world, player, dx, dy, jump),
+    voxel_move: (world, player, dx, dy, jump, movement) => voxelMove(world, player, dx, dy, jump, movement),
     voxel_target: (world, player) => voxelTarget(world, player),
     voxel_mine: (world, player) => voxelMine(world, player),
     voxel_get: (world, x, y, z) => voxelRead(world, x, y, z),
@@ -1510,7 +1609,7 @@ var __RunePixel3DRuntime = (() => {
   };
   var voxelArity = {
     voxel_generate: [1, 2],
-    voxel_move: [4, 5],
+    voxel_move: [4, 6],
     voxel_target: [2, 2],
     voxel_mine: [2, 2],
     voxel_get: [4, 4],
@@ -3159,6 +3258,57 @@ var __RunePixel3DRuntime = (() => {
   };
   var audioSync = new AudioSyncEngine();
 
+  // src/music_arrangement.ts
+  function compileMusicArrangement(def, parse) {
+    if (!Object.keys(def.sections ?? {}).length && !def.arrangement?.length) return null;
+    const parts = def.sections ?? {}, form = def.arrangement ?? [];
+    if (!Object.keys(parts).length || Object.keys(parts).length > 32 || !form.length || form.length > 128)
+      throw new Error("Music needs 1-32 sections and 1-128 arrangement entries");
+    if (def.lead || def.bass || def.drums || Object.keys(def.tracks ?? {}).length || def.bars != null)
+      throw new Error("Arranged music declares bars and note tracks inside sections");
+    if (!["4/4", "3/4"].includes(def.time_signature ?? "4/4")) throw new Error("Arranged music supports 4/4 or 3/4 time");
+    const beatsPerBar = def.time_signature === "3/4" ? 3 : 4;
+    const channels = /* @__PURE__ */ new Set();
+    const parsed = /* @__PURE__ */ Object.create(null);
+    for (const [name, part] of Object.entries(parts)) {
+      const tracks = Object.entries(part).filter(([key]) => key !== "bars");
+      if (!name || !Number.isInteger(part.bars) || part.bars < 1 || part.bars > 64 || !tracks.length || tracks.length > 16)
+        throw new Error(`Music section ${name} needs 1-64 integer bars and 1-16 tracks`);
+      parsed[name] = /* @__PURE__ */ Object.create(null);
+      for (const [channel, notes] of tracks) {
+        if (typeof notes !== "string") throw new Error(`Music section ${name}/${channel} needs note text`);
+        const events = parse(notes);
+        const duration = events.reduce((sum, e) => sum + e.beats, 0);
+        if (!Number.isFinite(duration) || duration > part.bars * beatsPerBar + 1e-8)
+          throw new Error(`Music section ${name}/${channel} exceeds its declared bars`);
+        parsed[name][channel] = events;
+        channels.add(channel);
+      }
+    }
+    const result = { bars: 0, tracks: /* @__PURE__ */ Object.create(null), sections: [] };
+    for (const channel of channels) result.tracks[channel] = [];
+    for (const cue of form) {
+      const name = typeof cue === "string" ? cue : cue.section;
+      const repeat = typeof cue === "string" ? 1 : cue.repeat;
+      if (!Object.prototype.hasOwnProperty.call(parts, name)) throw new Error(`Unknown music section: ${name}`);
+      if (!Number.isInteger(repeat) || repeat < 1 || repeat > 16) throw new Error("Music section repeat must be an integer from 1 to 16");
+      for (let i = 0; i < repeat; i++) {
+        const beats = parts[name].bars * beatsPerBar;
+        if (result.bars + parts[name].bars > 512) throw new Error("Music arrangement exceeds 512 bars");
+        result.sections.push({ name, startBeat: result.bars * beatsPerBar, beats });
+        result.bars += parts[name].bars;
+        for (const channel of channels) {
+          const events = parsed[name][channel] ?? [];
+          const duration = events.reduce((sum, e) => sum + e.beats, 0);
+          const offset = result.tracks[channel].length;
+          result.tracks[channel].push(...events.map((e, index2) => ({ ...e, stepId: offset + index2 })));
+          if (duration < beats) result.tracks[channel].push({ stepId: -1, pitch: 0, beats: beats - duration, isRest: true, isDrum: false });
+        }
+      }
+    }
+    return result;
+  }
+
   // src/audio.ts
   var audioCtx = null;
   var stepIndex = 0;
@@ -3195,6 +3345,7 @@ var __RunePixel3DRuntime = (() => {
   }
   var registeredSounds = {};
   var registeredMusic = {};
+  var arrangements = /* @__PURE__ */ new Map();
   function registerSounds(definitions) {
     if (!definitions) return;
     for (const [key, val] of Object.entries(definitions)) {
@@ -3204,7 +3355,11 @@ var __RunePixel3DRuntime = (() => {
   function registerMusic(definitions) {
     if (!definitions) return;
     for (const [key, val] of Object.entries(definitions)) {
-      registeredMusic[key.toLowerCase()] = val;
+      const name = key.toLowerCase();
+      const arrangement = compileMusicArrangement(val, parseTrackPattern);
+      if (arrangement) arrangements.set(name, arrangement);
+      else arrangements.delete(name);
+      registeredMusic[name] = arrangement ? { ...val, bars: arrangement.bars } : val;
     }
   }
   function getAudioContext() {
@@ -3572,6 +3727,21 @@ var __RunePixel3DRuntime = (() => {
         }
       }
     }
+    const arrangement = arrangements.get(key);
+    if (arrangement) {
+      tracksState = /* @__PURE__ */ Object.create(null);
+      for (const [channel, events] of Object.entries(arrangement.tracks)) {
+        tracksState[channel] = {
+          events,
+          index: 0,
+          nextBeat: 0,
+          instrument: channel === "drums" ? "drums" : channel === "bass" ? "triangle" : "square"
+        };
+      }
+    }
+    for (const [channel, instrument] of Object.entries(def.instruments ?? {})) {
+      if (Object.prototype.hasOwnProperty.call(tracksState, channel)) tracksState[channel].instrument = instrument;
+    }
     const beatsPerBar = def.time_signature?.startsWith("3/") ? 3 : 4;
     let maxTrackBeats = 0;
     for (const track of Object.values(tracksState)) {
@@ -3745,7 +3915,7 @@ var __RunePixel3DRuntime = (() => {
         allFinished = false;
       }
     }
-    if (allFinished && !musicLoop) {
+    if (allFinished && !musicLoop && ctx2.currentTime >= musicStartTime + songTotalBeats * secondsPerBeat) {
       stopMusic();
     }
   }
@@ -3803,7 +3973,23 @@ var __RunePixel3DRuntime = (() => {
       const osc = ctx2.createOscillator();
       const gain = ctx2.createGain();
       const inst = instrumentOverride || (channel === "bass" ? "triangle" : "square");
-      if (inst === "sawtooth" || inst === "synth") {
+      if (inst === "brass" || inst === "strings" || inst === "bell") {
+        const length = Math.max(0.06, durationSec * (inst === "bell" ? 1.25 : 0.94));
+        const attack = Math.min(length * 0.25, inst === "strings" ? 0.09 : 0.018);
+        osc.type = inst === "brass" ? "sawtooth" : inst === "strings" ? "triangle" : "sine";
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(1e-3, time);
+        gain.gain.linearRampToValueAtTime((inst === "strings" ? 0.11 : 0.23) * chordGainMultiplier, time + attack);
+        gain.gain.exponentialRampToValueAtTime(1e-3, time + length);
+        const filter = ctx2.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(Math.min(9e3, freq * (inst === "brass" ? 5 : 3)), time);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(destination);
+        osc.start(time);
+        osc.stop(time + length + 0.015);
+      } else if (inst === "sawtooth" || inst === "synth") {
         osc.type = "sawtooth";
         osc.frequency.setValueAtTime(freq, time);
         const noteSoundLen = Math.min(durationSec * 0.88, 0.4);
@@ -5102,7 +5288,8 @@ var __RunePixel3DRuntime = (() => {
     const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - (instance.z ?? 0)) / scale];
     for (const block of model.blocks) {
       const max = block.from.map((v, i) => v + block.size[i]);
-      let left = width, right = 0, top = height, bottom = 0, clipped = false;
+      let left = width, right = 0, top = height, bottom = 0, clipped = false, frontCorners = 0;
+      let outsideLeft = 0, outsideRight = 0, outsideTop = 0, outsideBottom = 0;
       for (let corner = 0; corner < 8; corner++) {
         const lx = (corner & 1 ? max[0] : block.from[0]) * scale;
         const ly = (corner & 2 ? max[1] : block.from[1]) * scale;
@@ -5111,17 +5298,26 @@ var __RunePixel3DRuntime = (() => {
         const y = instance.y + lx * s + ly * c - camera.y;
         const forward = x * dirX + y * dirY;
         const d = forward * cp + (z - eye) * sp;
+        const side = -x * dirY + y * dirX;
+        const up = (z - eye) * cp - forward * sp;
+        if (side < -d * fovScale - 1e-9) outsideLeft++;
+        if (side > d * fovScale + 1e-9) outsideRight++;
+        if (up > d * ((height >> 1) / height) + 1e-9) outsideTop++;
+        if (up < -d * ((height - (height >> 1)) / height) - 1e-9) outsideBottom++;
         if (d <= 1e-3) {
           clipped = true;
           continue;
         }
-        const sx = width / 2 * (1 + (-x * dirY + y * dirX) / (d * fovScale));
-        const sy = (height >> 1) - ((z - eye) * cp - forward * sp) * height / d;
+        frontCorners++;
+        const sx = width / 2 * (1 + side / (d * fovScale));
+        const sy = (height >> 1) - up * height / d;
         left = Math.min(left, sx);
         right = Math.max(right, sx);
         top = Math.min(top, sy);
         bottom = Math.max(bottom, sy);
       }
+      if (frontCorners === 0 || outsideLeft === 8 || outsideRight === 8 || outsideTop === 8 || outsideBottom === 8) continue;
+      const colorX = shade2(block.color, 0.8), colorY = shade2(block.color, 0.65), colorZ = shade2(block.color, 1);
       const x0 = clipped ? 0 : Math.max(0, Math.floor(left));
       const x1 = clipped ? width : Math.min(width, Math.ceil(right));
       const y0 = clipped ? 0 : Math.max(0, Math.floor(top));
@@ -5133,14 +5329,17 @@ var __RunePixel3DRuntime = (() => {
           const v = ((height >> 1) - y - 0.5) / height;
           const rx = dirX * cp - dirY * fovScale * cx - dirX * sp * v;
           const ry = dirY * cp + dirX * fovScale * cx - dirY * sp * v;
-          const ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale, (sp + cp * v) / scale];
+          const rayX = (rx * c + ry * s) / scale;
+          const rayY = (-rx * s + ry * c) / scale;
+          const rayZ = (sp + cp * v) / scale;
           let near = -Infinity, far = Infinity, face = 0, exitFace = 0, valid = true;
           for (let axis = 0; axis < 3; axis++) {
-            if (Math.abs(ray[axis]) < 1e-12) {
+            const component = axis === 0 ? rayX : axis === 1 ? rayY : rayZ;
+            if (Math.abs(component) < 1e-12) {
               if (origin[axis] < block.from[axis] || origin[axis] > max[axis]) valid = false;
             } else {
-              const a = (block.from[axis] - origin[axis]) / ray[axis];
-              const b = (max[axis] - origin[axis]) / ray[axis];
+              const a = (block.from[axis] - origin[axis]) / component;
+              const b = (max[axis] - origin[axis]) / component;
               const entry = Math.min(a, b);
               if (entry > near) {
                 near = entry;
@@ -5157,7 +5356,7 @@ var __RunePixel3DRuntime = (() => {
           if (near <= 1e-3) face = exitFace;
           if (valid && far >= near && hit > 1e-3 && hit < depth[index2]) {
             depth[index2] = hit;
-            buffer[index2] = shade2(block.color, face === 2 ? 1 : face === 0 ? 0.8 : 0.65);
+            buffer[index2] = face === 2 ? colorZ : face === 0 ? colorX : colorY;
           }
         }
       }
@@ -5165,15 +5364,22 @@ var __RunePixel3DRuntime = (() => {
   }
 
   // src/pixel3d/hud.ts
-  function validateHud(value) {
+  function validateHud(value, sprites = {}) {
     if (!value || typeof value !== "object") throw new Error("Pixel-3d ui must be a HUD object");
     const hud = value;
+    if (hud.style !== void 0 && hud.style !== "floating") throw new Error("Pixel-3d ui style must be floating");
     if (hud.heading !== void 0 && typeof hud.heading !== "string") throw new Error("Pixel-3d ui heading must be a string");
     if (hud.textScale !== void 0 && hud.textScale !== 1 && hud.textScale !== 2) {
       throw new Error("Pixel-3d ui textScale must be 1 or 2");
     }
-    if (!Array.isArray(hud.meters) || hud.meters.length > 3 || !hud.meters.every((m) => m && typeof m.label === "string" && Number.isFinite(m.value) && Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 16777215) || !["objective", "detail", "prompt", "notice"].every((k) => typeof Reflect.get(hud, k) === "string")) {
+    if (!Array.isArray(hud.meters) || hud.meters.length > 3 || !hud.meters.every((m) => m && typeof m.label === "string" && Number.isFinite(m.value) && Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 16777215 && (m.display === void 0 || ["counter", "pips", "bar"].includes(m.display)) && (m.display !== "pips" || Number.isInteger(m.max) && m.max <= 8 && m.icon !== void 0 && m.emptyIcon !== void 0)) || !["objective", "detail", "prompt", "notice"].every((k) => typeof Reflect.get(hud, k) === "string")) {
       throw new Error("Pixel-3d ui needs up to three valid meters and objective/detail/prompt/notice strings");
+    }
+    for (const name of [hud.noticeIcon, ...hud.meters.flatMap((m) => [m.icon, m.emptyIcon])]) {
+      if (name === void 0) continue;
+      if (typeof name !== "string" || !name || !Object.prototype.hasOwnProperty.call(sprites, name)) {
+        throw new Error(`Pixel-3d ui references unknown sprite: ${String(name)}`);
+      }
     }
     if (hud.panel !== null) {
       const p = hud.panel;
@@ -5208,7 +5414,75 @@ var __RunePixel3DRuntime = (() => {
     }
     return lines;
   }
-  function renderHud(canvas, ui, status, paused) {
+  function renderFloatingHud(canvas, ui, status, paused, sprites) {
+    const W = canvas.width, H = canvas.height, ink = 1518397, gold = 16767621;
+    const text = (value, x, y, color = 16777215, scale = 1) => {
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) canvas.text(value, x + dx, y + dy, ink, scale);
+      canvas.text(value, x, y, color, scale);
+    };
+    const asset = (name) => {
+      if (!Object.prototype.hasOwnProperty.call(sprites, name)) throw new Error(`Pixel-3d ui references unknown sprite: ${name}`);
+      return sprites[name];
+    };
+    const icon = (name, x, y, scale = 2) => {
+      const sprite = asset(name);
+      for (let sy = 0; sy < sprite.height; sy++) for (let sx = 0; sx < sprite.width; sx++) {
+        const color = sprite.colors[sprite.pixels[sy * sprite.width + sx]];
+        if (color !== null && color !== void 0) canvas.rect(x + sx * scale, y + sy * scale, scale, scale, color);
+      }
+    };
+    const slot = Math.floor((W - 16) / Math.max(1, ui.meters.length));
+    ui.meters.forEach((meter, i) => {
+      const x = 8 + i * slot, columns2 = Math.max(1, Math.floor((slot - 4) / 4));
+      text(meter.label.slice(0, columns2), x, 6, gold);
+      if (meter.display === "pips") {
+        const full = asset(meter.icon), empty = asset(meter.emptyIcon);
+        const count = Math.ceil(meter.max), pipWidth = Math.max(full.width, empty.width);
+        const scale = slot >= count * (pipWidth * 2 + 3) ? 2 : 1;
+        for (let pip = 0; pip < count; pip++) icon(pip < Math.ceil(meter.value) ? meter.icon : meter.emptyIcon, x + pip * (scale * pipWidth + 3), 14, scale);
+      } else {
+        if (meter.icon) icon(meter.icon, x, 14);
+        const number = `${Math.max(0, Math.ceil(meter.value))}/${Math.ceil(meter.max)}`;
+        const left = x + (meter.icon ? asset(meter.icon).width * 2 + 7 : 0);
+        const scale = number.length * 8 <= slot - (left - x) - 4 ? 2 : 1;
+        text(number, left, 18, 16773839, scale);
+        if (meter.display === "bar") {
+          const barWidth = Math.max(0, slot - (left - x) - 4);
+          canvas.rect(left, 30, barWidth, 2, ink);
+          canvas.rect(left, 30, Math.floor(barWidth * Math.max(0, Math.min(1, meter.value / meter.max))), 2, meter.color);
+        }
+      }
+    });
+    const columns = Math.max(1, Math.floor((W - 16) / 4));
+    const top = ui.meters.length ? 39 : 8;
+    text(ui.detail.slice(0, columns), 8, top, 12381148);
+    if (ui.objective) text(ui.objective.slice(0, columns), 8, top + 10, gold);
+    if (ui.heading && (status !== "playing" || paused)) {
+      const heading = ui.heading.slice(0, Math.max(1, Math.floor((W - 32) / 8)));
+      text(heading, Math.floor((W - heading.length * 8) / 2), top + 26, gold, 2);
+    }
+    if (ui.panel) {
+      const p = ui.panel, panelColumns = Math.max(1, Math.floor((W - 48) / 4));
+      const body = wrapText(p.body, panelColumns).slice(0, 4);
+      const y = Math.max(top + 45, Math.floor((H - (48 + body.length * 9 + p.choices.length * 12)) / 2));
+      text(p.title.slice(0, panelColumns), 24, y, gold);
+      body.forEach((line, i) => text(line, 24, y + 14 + i * 9, 14937833));
+      p.choices.forEach((choice, i) => text(`${i === p.selected ? ">" : " "} ${i + 1} ${choice}`.slice(0, panelColumns), 24, y + 19 + body.length * 9 + i * 12, i === p.selected ? gold : 14937833));
+      text(p.footer.slice(0, panelColumns), 24, y + 25 + body.length * 9 + p.choices.length * 12, 9105871);
+    } else if (ui.notice) {
+      const lines = wrapText(ui.notice, columns - 5).slice(0, 2);
+      const y = top + 25;
+      if (ui.noticeIcon) icon(ui.noticeIcon, 8, y - 2, 1);
+      const left = ui.noticeIcon ? 8 + asset(ui.noticeIcon).width + 6 : 8;
+      lines.forEach((line, i) => text(line, left, y + i * 9, gold));
+    }
+    if (ui.prompt) text(ui.prompt.slice(0, columns), 8, H - 12, 14937833);
+  }
+  function renderHud(canvas, ui, status, paused, sprites = {}) {
+    if (ui.style === "floating") {
+      renderFloatingHud(canvas, ui, status, paused, sprites);
+      return;
+    }
     if (ui.textScale === 2) {
       renderLargeHud(canvas, ui, status, paused);
       return;
@@ -5535,7 +5809,7 @@ var __RunePixel3DRuntime = (() => {
         return;
       }
       if (stats.ui) {
-        renderHud(this, stats.ui, stats.status || "playing", stats.paused || false);
+        renderHud(this, stats.ui, stats.status || "playing", stats.paused || false, this.config.sprites);
         return;
       }
       if (stats.presentation) {
@@ -6161,7 +6435,7 @@ var __RunePixel3DRuntime = (() => {
         story_body,
         message,
         switch_activated,
-        ui: this.paused && this.config.pauseUi && status === "playing" ? validateHud(state[this.config.pauseUi]) : this.config.ui ? validateHud(state[this.config.ui]) : void 0,
+        ui: this.paused && this.config.pauseUi && status === "playing" ? validateHud(state[this.config.pauseUi], this.config.sprites) : this.config.ui ? validateHud(state[this.config.ui], this.config.sprites) : void 0,
         paused: this.paused,
         time: this.ticks / this.config.tickRate,
         presentation: this.config.presentation,
@@ -6418,7 +6692,7 @@ var __RunePixel3DRuntime = (() => {
     const doc = surface.ownerDocument;
     const element = surface;
     const orientation = screen.orientation;
-    let fallback = false, locked = false, busy = false, disposed = false;
+    let fallback = false, locked = false, busy = false, disposed = false, exitRequested = false;
     const expanded = () => fallback || doc.fullscreenElement === surface || doc.webkitFullscreenElement === surface;
     const notifyParent = (value) => {
       if (window.parent !== window) window.parent.postMessage({ type: "toggle_fullscreen", is_fullscreen: value }, "*");
@@ -6445,17 +6719,30 @@ var __RunePixel3DRuntime = (() => {
     doc.addEventListener("fullscreenchange", onChange);
     doc.addEventListener("webkitfullscreenchange", onChange);
     async function exit() {
+      if (doc.pointerLockElement && surface.contains(doc.pointerLockElement)) doc.exitPointerLock?.();
       if (fallback) fallbackMode(false);
       if (doc.fullscreenElement === surface) await doc.exitFullscreen();
       else if (doc.webkitFullscreenElement === surface) await doc.webkitExitFullscreen?.();
       unlock();
       changed();
     }
+    const onEscape = (event) => {
+      if (event.code !== "Escape" || event.repeat || !expanded() && !busy) return;
+      exitRequested = true;
+      event.preventDefault();
+      event.stopPropagation();
+      void exit().catch(() => {
+        unlock();
+        changed();
+      });
+    };
+    doc.addEventListener("keydown", onEscape, true);
     return {
       expanded,
       async toggle() {
         if (busy || disposed) return;
         busy = true;
+        exitRequested = false;
         try {
           if (expanded()) {
             await exit();
@@ -6466,9 +6753,9 @@ var __RunePixel3DRuntime = (() => {
             else if (element.webkitRequestFullscreen) await element.webkitRequestFullscreen();
             else fallbackMode(true);
           } catch {
-            fallbackMode(true);
+            if (!disposed && !exitRequested) fallbackMode(true);
           }
-          if (disposed) {
+          if (disposed || exitRequested) {
             await exit();
             return;
           }
@@ -6490,6 +6777,7 @@ var __RunePixel3DRuntime = (() => {
         disposed = true;
         doc.removeEventListener("fullscreenchange", onChange);
         doc.removeEventListener("webkitfullscreenchange", onChange);
+        doc.removeEventListener("keydown", onEscape, true);
         void exit().catch(() => {
           unlock();
           fallbackMode(false);
@@ -6747,7 +7035,7 @@ var __RunePixel3DRuntime = (() => {
         start();
         return;
       }
-      if (document.pointerLockElement !== canvas) {
+      if (game.config.mouseLook !== false && document.pointerLockElement !== canvas) {
         const lock = canvas.requestPointerLock?.();
         lock?.catch(() => {
         });

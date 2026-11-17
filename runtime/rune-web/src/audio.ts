@@ -5,6 +5,7 @@
 
 import type { SoundDefinition, MusicDefinition } from './types';
 import { audioSync } from './audio_sync';
+import { compileMusicArrangement, type MusicArrangement } from './music_arrangement';
 
 let audioCtx: AudioContext | null = null;
 let stepIndex = 0;
@@ -48,6 +49,7 @@ function audioOutput(ctx: AudioContext): GainNode {
 
 const registeredSounds: Record<string, SoundDefinition> = {};
 const registeredMusic: Record<string, MusicDefinition> = {};
+const arrangements = new Map<string, MusicArrangement>();
 
 export function registerSounds(definitions?: Record<string, SoundDefinition>): void {
   if (!definitions) return;
@@ -59,7 +61,11 @@ export function registerSounds(definitions?: Record<string, SoundDefinition>): v
 export function registerMusic(definitions?: Record<string, MusicDefinition>): void {
   if (!definitions) return;
   for (const [key, val] of Object.entries(definitions)) {
-    registeredMusic[key.toLowerCase()] = val;
+    const name = key.toLowerCase();
+    const arrangement = compileMusicArrangement(val, parseTrackPattern);
+    if (arrangement) arrangements.set(name, arrangement);
+    else arrangements.delete(name);
+    registeredMusic[name] = arrangement ? { ...val, bars: arrangement.bars } : val;
   }
 }
 
@@ -544,6 +550,18 @@ export function playMusic(trackName: string): void {
     }
   }
 
+  const arrangement = arrangements.get(key);
+  if (arrangement) {
+    tracksState = Object.create(null);
+    for (const [channel, events] of Object.entries(arrangement.tracks)) {
+      tracksState[channel] = { events, index: 0, nextBeat: 0,
+        instrument: channel === 'drums' ? 'drums' : channel === 'bass' ? 'triangle' : 'square' };
+    }
+  }
+  for (const [channel, instrument] of Object.entries(def.instruments ?? {})) {
+    if (Object.prototype.hasOwnProperty.call(tracksState, channel)) tracksState[channel].instrument = instrument;
+  }
+
   const beatsPerBar = def.time_signature?.startsWith('3/') ? 3 : 4;
   let maxTrackBeats = 0;
   for (const track of Object.values(tracksState)) {
@@ -760,7 +778,8 @@ function scheduleMusicTicks(): void {
     }
   }
 
-  if (allFinished && !musicLoop) {
+  // Scheduling the final note is not the end of its audible duration.
+  if (allFinished && !musicLoop && ctx.currentTime >= musicStartTime + songTotalBeats * secondsPerBeat) {
     stopMusic();
   }
 }
@@ -842,7 +861,22 @@ function scheduleTrackNote(
 
     const inst = instrumentOverride || (channel === 'bass' ? 'triangle' : 'square');
 
-    if (inst === 'sawtooth' || inst === 'synth') {
+    if (inst === 'brass' || inst === 'strings' || inst === 'bell') {
+      // Portable voices: ordinary oscillators, filters and gain envelopes also
+      // work through the native audio bridge. No samples or browser-only nodes.
+      const length = Math.max(.06, durationSec * (inst === 'bell' ? 1.25 : .94));
+      const attack = Math.min(length * .25, inst === 'strings' ? .09 : .018);
+      osc.type = inst === 'brass' ? 'sawtooth' : inst === 'strings' ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+      gain.gain.setValueAtTime(.001, time);
+      gain.gain.linearRampToValueAtTime((inst === 'strings' ? .11 : .23) * chordGainMultiplier, time + attack);
+      gain.gain.exponentialRampToValueAtTime(.001, time + length);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(Math.min(9000, freq * (inst === 'brass' ? 5 : 3)), time);
+      osc.connect(filter); filter.connect(gain); gain.connect(destination);
+      osc.start(time); osc.stop(time + length + .015);
+    } else if (inst === 'sawtooth' || inst === 'synth') {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(freq, time);
       const noteSoundLen = Math.min(durationSec * 0.88, 0.4);

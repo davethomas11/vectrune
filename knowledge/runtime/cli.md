@@ -92,6 +92,12 @@ Current behavior:
 `--line-width <characters>` defaults to 100 and accepts integers of at least 20.
 Long top-level JSON object assignments are expanded into four-space
 indented fields, recursively wrapping nested objects and arrays to fit the target.
+Logic objects, arrays and calls containing collections also wrap, including
+dynamic values such as HUD meters and enemy definitions. Balanced logic
+expressions continue across lines; quoted brackets do not affect continuation.
+Formatting checks the parsed document and logic tokens before writing, preserving
+quoted text and executable expressions. Long strings, scalar expressions and
+opaque view/style/source blocks can exceed the target width.
 For example, format Rune Crypt's touch controls with:
 
 ```bash

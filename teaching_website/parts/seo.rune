@@ -156,3 +156,8 @@ image = /assets/rune-logo.png
 title = %i18n.VectBreach.title% — Vectrune
 description = %i18n.VectBreach.description%
 image = /assets/rune-logo.png
+
+@SEO/skybound-2
+title = %i18n.SkyboundTwo.title% — Vectrune
+description = %i18n.SkyboundTwo.description%
+image = /assets/rune-logo.png

@@ -1,0 +1,58 @@
+@Logic/beyond
+# Patrol endpoints are authored on solid ground, away from island edges.
+action creature(x, y, z, kind, axis, reach):
+    enemies.push(
+        {
+            "x": x,
+            "y": y,
+            "z": z,
+            "home_x": x,
+            "home_y": y,
+            "floor": z,
+            "kind": kind,
+            "axis": axis,
+            "reach": reach,
+            "direction": 1,
+            "clock": enemies.length * 17,
+            "speed": kind == "crab" ? 0.055: 0.032,
+            "model": "beyond/" + kind,
+            "angle": axis == "x" ? 0: 90,
+            "visible": true,
+            "flat": 0
+        }
+    )
+
+action tick_enemies(previous_z):
+    for enemy in enemies:
+        if enemy.visible && enemy.flat > 0:
+            enemy.flat -= 1
+            if enemy.flat == 0:
+                enemy.visible = false
+        if enemy.visible && enemy.flat == 0:
+            enemy.clock += 1
+            if enemy.axis == "x":
+                enemy.x = clamp(enemy.x + enemy.direction * enemy.speed, enemy.home_x - enemy.reach, enemy.home_x + enemy.reach)
+                if abs(enemy.x - enemy.home_x) >= enemy.reach - 0.000001:
+                    enemy.direction = -enemy.direction
+                enemy.angle = enemy.direction > 0 ? 0 : 180
+            if enemy.axis == "y":
+                enemy.y = clamp(enemy.y + enemy.direction * enemy.speed, enemy.home_y - enemy.reach, enemy.home_y + enemy.reach)
+                if abs(enemy.y - enemy.home_y) >= enemy.reach - 0.000001:
+                    enemy.direction = -enemy.direction
+                enemy.angle = enemy.direction > 0 ? 90 : 270
+            hop = enemy.clock % 84
+            enemy.z = enemy.floor + (enemy.kind == "hopper" && hop < 36 ? sin(hop * 5) * 0.8 : 0)
+            enemy_distance = distance(player, enemy)
+            if phase == "playing" && enemy_distance < 0.82 && player.z >= enemy.z - 0.25 && player.z < enemy.z + 0.85:
+                if player.vz <= 0 && previous_z > player.z + 0.001 && previous_z >= enemy.z + 0.25:
+                    enemy.model = "beyond/squashed"
+                    enemy.z = enemy.floor + 0.02
+                    enemy.flat = 24
+                    player.z = max(player.z, enemy.z + 0.65)
+                    player.vz = jump_held ? 0.46 : 0.36
+                    squished += 1
+                    sound.play "beyond_stomp"
+                    notice = "SQUISH! Hold jump for a higher bounce."
+                    notice_ticks = 65
+                if enemy.flat == 0 && invulnerable == 0:
+                    call lose_heart

@@ -1,4 +1,19 @@
 @I18N/fr
+SkyboundTwo {
+    title = "Skybound 2"
+    badge = "Aventure de plateformes Pixel 3D"
+    description = "Envolez-vous avec Nix, un papillon-lanterne, à travers sept mondes célestes. Écrasez 45 créatures, explorez des îles cachées et affrontez deux boss pour ramener l’aube."
+    play = "Jouer à Skybound 2"
+    try_it = "Choisissez une destination dans l’Atlas des Lanternes, puis appuyez sur Entrée. Maintenez le saut pendant la chute pour planer. Ouvrez le jeu complet pour plus d’espace."
+    standalone = "Ouvrir le jeu complet dans un nouvel onglet"
+    controls_title = "Un petit papillon. Un ciel immense."
+    controls = "WASD ou flèches pour avancer ; Espace pour sauter et planer ; Shift pour courir ; Q / E pour tourner la caméra ; R pour la recentrer. Écrasez les créatures par-dessus et maintenez le saut pour rebondir plus haut."
+    objective = "Rallumez sept lanternes, trouvez les détours à graines et battez Kilnback et le Régent de la Tempête. La progression et les records de graines sont sauvegardés dans ce navigateur."
+    device = "Clavier, manette et commandes tactiles sont pris en charge. P met en pause ; B revient à l’atlas depuis la pause. Échap quitte le plein écran. Activez le son pour écouter la musique originale."
+    source_title = "Explorez le code Rune"
+    source_text = "Niveaux, créatures, modèles, icônes de l’interface, commandes et musique sont écrits en Rune. Parcourez les fichiers ou compilez et testez le jeu avec Vectrune 0.3.5 ou une version ultérieure."
+}
+
 RuneCrypt {
     title = "Rune Crypt"
     badge = "RPG roguelite Pixel 3D"

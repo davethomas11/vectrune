@@ -1,0 +1,103 @@
+# HUD artwork is game-owned. Dots are transparent; edit rows and palette colors freely.
+@Palette/beyond_hud
+colors = {
+    "+": "#fff2cf",
+    ".": "transparent",
+    "b": "#fa7667",
+    "d": "#9a7089",
+    "k": "#172b3d",
+    "r": "#ff7192",
+    "s": "#53dbc4",
+    "t": "#53dbc4",
+    "y": "#ffd174"
+}
+
+@Sprite/beyond/hud/heart
+palette = beyond_hud
+size = [9, 8]
+origin = [0,0]
+pixels:
+    "..kk.kk.."
+    ".krrkrrk."
+    "kr++rrrrk"
+    "krrrrrrrk"
+    ".krrrrrk."
+    "..krrrk.."
+    "...krk..."
+    "....k...."
+
+@Sprite/beyond/hud/seed
+palette = beyond_hud
+size = [9, 10]
+origin = [0,0]
+pixels:
+    ".....kk.."
+    "....kssk."
+    "...kssk.."
+    "..k+ykk.."
+    ".k++yyyk."
+    "ky+yyyyyk"
+    "kyyyyyyyk"
+    ".kyyyyyk."
+    "..kyyyk.."
+    "...kkk..."
+
+@Sprite/beyond/hud/bug
+palette = beyond_hud
+size = [9, 9]
+origin = [0,0]
+pixels:
+    "..k...k.."
+    ".kskkksk."
+    ".kktttkk."
+    "kst+t+tsk"
+    ".ktttttk."
+    "kstttttsk"
+    ".kktttkk."
+    ".kskkksk."
+    "..k...k.."
+
+@Sprite/beyond/hud/lantern
+palette = beyond_hud
+size = [9, 10]
+origin = [0,0]
+pixels:
+    "...kkk..."
+    "..kyyyk.."
+    ".kykkkyk."
+    "kyyyyyyyk"
+    "kyk+k+kyk"
+    "kyk+++kyk"
+    "kyk+++kyk"
+    "kyyyyyyyk"
+    ".kkyyykk."
+    "...kkk..."
+
+@Sprite/beyond/hud/boss
+palette = beyond_hud
+size = [9, 9]
+origin = [0,0]
+pixels:
+    ".k.....k."
+    "kbk...kbk"
+    "kbbkkkbbk"
+    "kbbbbbbbk"
+    "kb++b++bk"
+    "kbbbbbbbk"
+    ".kbbkbbk."
+    "..kbbbk.."
+    "...kkk..."
+
+@Sprite/beyond/hud/heart_empty
+palette = beyond_hud
+size = [9, 8]
+origin = [0,0]
+pixels:
+    "..kk.kk.."
+    ".kddkddk."
+    "kdkkdkkdk"
+    "kdkkkkkdk"
+    ".kdkkkdk."
+    "..kdkdk.."
+    "...kdk..."
+    "....k...."

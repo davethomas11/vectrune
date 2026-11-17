@@ -1036,33 +1036,97 @@ var __RuneWeb = (() => {
     ]) set(x, y, z, block);
     return world;
   }
-  function voxelRay(world, origin, ray, maxDistance) {
+  function chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance) {
+    let ex = Number.isFinite(tx) ? tx + (sx > 0 ? 3 - (x & 3) : x & 3) * dx : Infinity;
+    let ey = Number.isFinite(ty) ? ty + (sy > 0 ? 3 - (y & 3) : y & 3) * dy : Infinity;
+    let ez = Number.isFinite(tz) ? tz + (sz > 0 ? 3 - (z & 3) : z & 3) * dz : Infinity;
+    x >>= 2;
+    y >>= 2;
+    z >>= 2;
+    const width = chunks.width, height = chunks.height, depth = chunks.occupied.length / (width * height);
+    const stepX = dx * 4, stepY = dy * 4, stepZ = dz * 4;
+    let entry = 0;
+    while (x >= 0 && y >= 0 && z >= 0 && x < width && y < height && z < depth) {
+      if (chunks.occupied[(z * height + y) * width + x]) return entry;
+      const next = Math.min(ex, ey, ez);
+      if (!Number.isFinite(next) || next > maxDistance) return Infinity;
+      const tolerance = 1e-9 * Math.max(1, next);
+      if ((Math.abs(ex - next) <= tolerance ? 1 : 0) + (Math.abs(ey - next) <= tolerance ? 1 : 0) + (Math.abs(ez - next) <= tolerance ? 1 : 0) > 1) return entry;
+      entry = next;
+      if (ex < ey && ex < ez) {
+        x += sx;
+        ex += stepX;
+      } else if (ey < ez) {
+        y += sy;
+        ey += stepY;
+      } else {
+        z += sz;
+        ez += stepZ;
+      }
+    }
+    return Infinity;
+  }
+  function voxelRay(world, origin, ray, maxDistance, output, chunks) {
     let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+    const width = world.width, height = world.height, depth = world.depth, cells = world.cells;
     const sx = ray[0] < 0 ? -1 : 1, sy = ray[1] < 0 ? -1 : 1, sz = ray[2] < 0 ? -1 : 1;
+    const stepY = sy * width, stepZ = sz * width * height;
+    let cellIndex = (z * height + y) * width + x;
     const dx = Math.abs(1 / ray[0]), dy = Math.abs(1 / ray[1]), dz = Math.abs(1 / ray[2]);
     let tx = ray[0] === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
     let ty = ray[1] === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
     let tz = ray[2] === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    if (chunks && (ray[0] !== 0 || ray[1] !== 0 || ray[2] !== 0)) {
+      if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
+      const entry = chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance);
+      if (!Number.isFinite(entry)) return null;
+      const beforeEntry = entry - 1e-9 * Math.max(1, entry);
+      while (tx < beforeEntry) {
+        x += sx;
+        tx += dx;
+      }
+      while (ty < beforeEntry) {
+        y += sy;
+        ty += dy;
+      }
+      while (tz < beforeEntry) {
+        z += sz;
+        tz += dz;
+      }
+      cellIndex = (z * height + y) * width + x;
+    }
     let distance = 0, face = 2;
     for (let iteration = 0; iteration < 256 && distance <= maxDistance; iteration++) {
-      if (x < 0 || y < 0 || z < 0 || x >= world.width || y >= world.height || z >= world.depth) break;
-      const block = world.cells[index(world, x, y, z)];
-      if (block) return { x, y, z, block, distance, face };
+      if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) break;
+      const block = cells[cellIndex];
+      if (block) {
+        if (!output) return { x, y, z, block, distance, face };
+        output.x = x;
+        output.y = y;
+        output.z = z;
+        output.block = block;
+        output.distance = distance;
+        output.face = face;
+        return output;
+      }
       if (tx < ty && tx < tz) {
         face = 0;
         distance = tx;
         tx += dx;
         x += sx;
+        cellIndex += sx;
       } else if (ty < tz) {
         face = 1;
         distance = ty;
         ty += dy;
         y += sy;
+        cellIndex += stepY;
       } else {
         face = 2;
         distance = tz;
         tz += dz;
         z += sz;
+        cellIndex += stepZ;
       }
     }
     return null;
@@ -1083,8 +1147,8 @@ var __RuneWeb = (() => {
     if (![player.x, player.y, player.z, player.angle, player.pitch, player.vz].every(Number.isFinite)) {
       throw new Error("Voxel player needs finite x, y, z, angle, pitch and vz");
     }
-    if (player.x < 0.25 || player.y < 0.25 || player.x > world.width - 0.25 || player.y > world.height - 0.25 || player.z < 1 || player.z + 1.6 > world.depth || Math.abs(player.vz) > 0.3 || Math.abs(player.pitch) > 90) {
-      throw new Error("Voxel player must be inside movement bounds, with pitch within 90 degrees and vz within 0.3");
+    if (player.x < 0.25 || player.y < 0.25 || player.x > world.width - 0.25 || player.y > world.height - 0.25 || player.z < 1 || player.z + 1.6 > world.depth || Math.abs(player.vz) > 1 || Math.abs(player.pitch) > 90) {
+      throw new Error("Voxel player must be inside movement bounds, with pitch within 90 degrees and vz within 1");
     }
     return player;
   }
@@ -1104,20 +1168,27 @@ var __RuneWeb = (() => {
     }
     return true;
   }
-  function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false) {
+  function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false, movementValue = {}) {
     const world = validateWorld(worldValue), p = { ...validatePlayer(playerValue, world) };
+    if (!movementValue || typeof movementValue !== "object" || Array.isArray(movementValue) || Object.keys(movementValue).some((key) => !["jumpSpeed", "gravity", "autoStep"].includes(key))) {
+      throw new Error("Voxel movement options accept jumpSpeed, gravity and autoStep");
+    }
+    const { jumpSpeed = 0.28, gravity = 0.035, autoStep = true } = movementValue;
+    if (!Number.isFinite(jumpSpeed) || jumpSpeed <= 0 || jumpSpeed > 1 || !Number.isFinite(gravity) || gravity <= 0 || gravity > 0.3 || typeof autoStep !== "boolean") {
+      throw new Error("Voxel movement needs jumpSpeed in (0, 1], gravity in (0, 0.3] and boolean autoStep");
+    }
     if (typeof dxValue !== "number" || typeof dyValue !== "number" || !Number.isFinite(dxValue) || !Number.isFinite(dyValue) || Math.hypot(dxValue, dyValue) > 1 || typeof jumpValue !== "boolean") {
       throw new Error("Voxel movement needs finite deltas of at most one tile and a boolean jump");
     }
     const grounded = !clearBody(world, p.x, p.y, p.z - 0.05);
-    if (jumpValue && grounded) p.vz = 0.28;
-    p.vz = Math.max(-0.3, p.vz - 0.035);
+    if (jumpValue && grounded) p.vz = jumpSpeed;
+    p.vz = Math.max(-0.3, p.vz - gravity);
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dxValue), Math.abs(dyValue), Math.abs(p.vz)) / 0.05));
     for (let i = 0; i < steps; i++) {
       for (const [axis, delta] of [["x", dxValue / steps], ["y", dyValue / steps]]) {
         const x = p.x + (axis === "x" ? delta : 0), y = p.y + (axis === "y" ? delta : 0);
         if (clearBody(world, x, y, p.z)) p[axis] += delta;
-        else if (grounded && delta !== 0 && clearBody(world, x, y, Math.floor(p.z) + 1)) {
+        else if (autoStep && grounded && delta !== 0 && clearBody(world, x, y, Math.floor(p.z) + 1)) {
           p.z = Math.floor(p.z) + 1;
           p[axis] += delta;
           p.vz = 0;
@@ -1136,7 +1207,7 @@ var __RuneWeb = (() => {
   var MAX_DEPTH = 64;
   var voxelFunctions = {
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
-    voxel_move: (world, player, dx, dy, jump) => voxelMove(world, player, dx, dy, jump),
+    voxel_move: (world, player, dx, dy, jump, movement) => voxelMove(world, player, dx, dy, jump, movement),
     voxel_target: (world, player) => voxelTarget(world, player),
     voxel_mine: (world, player) => voxelMine(world, player),
     voxel_get: (world, x, y, z) => voxelRead(world, x, y, z),
@@ -1144,7 +1215,7 @@ var __RuneWeb = (() => {
   };
   var voxelArity = {
     voxel_generate: [1, 2],
-    voxel_move: [4, 5],
+    voxel_move: [4, 6],
     voxel_target: [2, 2],
     voxel_mine: [2, 2],
     voxel_get: [4, 4],

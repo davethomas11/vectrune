@@ -227,7 +227,7 @@ export function mount(
       start();
       return;
     }
-    if (document.pointerLockElement !== canvas) {
+    if (game.config.mouseLook !== false && document.pointerLockElement !== canvas) {
       const lock = canvas.requestPointerLock?.();
       // Shooting still works when embedding or browser policy denies mouse lock.
       lock?.catch(() => {});

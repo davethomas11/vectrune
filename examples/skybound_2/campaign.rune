@@ -1,0 +1,348 @@
+@Logic/beyond
+state:
+    status = "title"
+    phase = "map"
+    saga = {
+        "unlocked": 1,
+        "cleared": [false, false, false, false, false, false, false],
+        "best": [0, 0, 0, 0, 0, 0, 0]
+    }
+    stages = [
+        {
+            "name": "REEDWAKE REACH",
+            "map": "reedwake",
+            "subtitle": "The first lantern waits beyond the reeds.",
+            "hint": "Stomp grubs! Hold jump to glide or bounce higher.",
+            "boss": false
+        },
+        {
+            "name": "THE CINDERWORKS",
+            "map": "kiln",
+            "subtitle": "A sleeping furnace guards the second light.",
+            "hint": "Bait Kilnback's charge. Stomp the open blue core.",
+            "boss": true
+        },
+        {
+            "name": "MOONGLASS TIDE",
+            "map": "tide",
+            "subtitle": "Crystal causeways beneath a lavender moon.",
+            "hint": "Climb north, then turn east. Glide the long crossing.",
+            "boss": false
+        },
+        {
+            "name": "SUNKEN CANOPY",
+            "map": "canopy",
+            "subtitle": "Lantern trees rise through a sea of green.",
+            "hint": "Climb the treetops, then glide around the eastern boughs.",
+            "boss": false
+        },
+        {
+            "name": "AURORA CAUSEWAY",
+            "map": "aurora",
+            "subtitle": "Follow the northern lights across a staircase of ice.",
+            "hint": "Trace the glowing switchbacks. The highest lantern waits south.",
+            "boss": false
+        },
+        {
+            "name": "EMBERGLASS RELAY",
+            "map": "emberglass",
+            "subtitle": "Warm furnaces and cold crystal share the twilight.",
+            "hint": "Circle the relay, then climb the final glass towers.",
+            "boss": false
+        },
+        {
+            "name": "THE STORM ROOST",
+            "map": "storm",
+            "subtitle": "The Tempest Regent has swallowed the dawn.",
+            "hint": "Jump the red shockwave. Stomp the lowered crown.",
+            "boss": true
+        }
+    ]
+    selected = 0
+    world = null
+    level_map = "atlas"
+    player = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    avatar = {"x": 7, "y": 9, "z": 3, "angle": 0, "model": "beyond/nix"}
+    camera = {"x": 0.5, "y": 6.6, "z": 6.3, "angle": 20, "pitch": -21}
+    checkpoint = {"x": 7, "y": 9, "z": 3, "angle": 0}
+    checkpoint_active = false
+    beacon = {"x": 21, "y": 18, "z": 5}
+    goal = {"x": 7, "y": 21, "z": 6, "model": "beyond/relic", "visible": false}
+    seeds = []
+    enemies = []
+    squished = 0
+    scenery = []
+    hazards = []
+    boss = {"x": 24, "y": 17, "z": 5, "model": "beyond/kilnback", "visible": false, "angle": 180}
+    boss_active = false
+    boss_hp = 0
+    boss_max = 3
+    boss_phase = "idle"
+    boss_clock = 0
+    arena = {"min_x": 37.5, "max_x": 44.5, "min_y": 18.5, "max_y": 30.5, "gate_x": 37, "gate_y": 22}
+    boss_origin = {"x": 24, "y": 17}
+    boss_aim = {"x": 24, "y": 17}
+    boss_hit_lock = 0
+    ring_radius = 0
+    hearts = 4
+    collected = 0
+    ticks = 0
+    yaw = 20
+    velocity_x = 0
+    velocity_y = 0
+    jump_held = false
+    map_held = false
+    gliding = false
+    invulnerable = 0
+    notice = ""
+    notice_ticks = 0
+    music_track = ""
+    touch_ready = false
+    map_hidden = false
+    result_hidden = true
+    enter_locked = false
+    node_one_locked = false
+    node_two_locked = true
+    node_three_locked = true
+    node_four_locked = true
+    node_seven_locked = true
+    node_six_locked = true
+    node_five_locked = true
+    node_one_selected = true
+    node_two_selected = false
+    node_three_selected = false
+    node_four_selected = false
+    node_seven_selected = false
+    node_six_selected = false
+    node_five_selected = false
+    stage_name = "REEDWAKE REACH"
+    stage_subtitle = ""
+    selected_status = ""
+    progress_label = "0 / 7 LANTERNS RESTORED"
+    seed_label = ""
+    outcome_title = ""
+    outcome_body = ""
+    primary_label = "Enter destination / Enter"
+    ui = {"meters": [], "objective": "", "detail": "", "prompt": "", "notice": "", "panel": null}
+    pause_ui = {
+        "meters": [],
+        "objective": "",
+        "detail": "",
+        "prompt": "",
+        "notice": "",
+        "panel": null
+    }
+
+action initialize:
+    # Four-destination saves keep their old finale at the new last destination.
+    if saga.cleared.length == 4:
+        if saga.best.length != 4:
+            saga.best = [0, 0, 0, 0]
+        old_final = saga.cleared[3]
+        saga.cleared = [
+            saga.cleared[0],
+            saga.cleared[1],
+            saga.cleared[2],
+            false,
+            false,
+            false,
+            old_final
+        ]
+        saga.best = [saga.best[0], saga.best[1], saga.best[2], 0, 0, 0, saga.best[3]]
+        if old_final:
+            saga.unlocked = 7
+    saga.unlocked = clamp(saga.unlocked, 1, 7)
+    if saga.cleared.length != 7:
+        saga.cleared = [false, false, false, false, false, false, false]
+    if saga.best.length != 7:
+        saga.best = [0, 0, 0, 0, 0, 0, 0]
+    selected = clamp(saga.unlocked - 1, 0, 6)
+    selection_found = false
+    for index in range(0, stages.length):
+        if !selection_found && !saga.cleared[index] && index < saga.unlocked:
+            selected = index
+            selection_found = true
+    call show_map
+
+action play_score(track):
+    if music_track != track:
+        music.stop
+        music.play track
+        music_track = track
+
+action show_map:
+    music_track = ""
+    phase = "map"
+    status = "title"
+    level_map = "atlas"
+    boss_active = false
+    boss.visible = false
+    hazards = []
+    enemies = []
+    seeds = []
+    goal.visible = false
+    ticks = 0
+    call blank_world
+    call island 6, 7, 4, 4, 3, 1
+    call island 14, 7, 4, 4, 4, 3
+    call island 22, 7, 4, 4, 5, 4
+    call island 22, 15, 4, 4, 5, 7
+    call island 14, 15, 4, 4, 6, 8
+    call island 6, 15, 4, 4, 6, 9
+    call island 6, 23, 4, 4, 7, 5
+    scenery = [
+        {"x": 8, "y": 9, "z": 3, "model": "beyond/node"},
+        {"x": 16, "y": 9, "z": 4, "model": "beyond/node"},
+        {"x": 24, "y": 9, "z": 5, "model": "beyond/node"},
+        {"x": 24, "y": 17, "z": 5, "model": "beyond/node"},
+        {"x": 16, "y": 17, "z": 6, "model": "beyond/node"},
+        {"x": 8, "y": 17, "z": 6, "model": "beyond/node"},
+        {"x": 8, "y": 25, "z": 7, "model": "beyond/node"}
+    ]
+    for index in range(0, stages.length):
+        if index >= saga.unlocked:
+            scenery[index].model = "beyond/lock"
+        if saga.cleared[index]:
+            scenery[index].model = "beyond/beacon"
+    # Follow the serpentine route across all seven atlas islands.
+    for route in range(0, stages.length - 1):
+        for dot in range(1, 6):
+            fraction = dot / 6
+            scenery.push(
+                {
+                    "x": scenery[route].x + (scenery[route + 1].x - scenery[route].x) * fraction,
+                    "y": scenery[route].y + (scenery[route + 1].y - scenery[route].y) * fraction,
+                    "z": scenery[route].z + (scenery[route + 1].z - scenery[route].z) * fraction + 0.2,
+                    "model": "beyond/spark",
+                    "scale": 0.5
+                }
+            )
+    camera = {"x": 0.5, "y": 0.5, "z": 14, "angle": 43, "pitch": -31}
+    call select_stage selected
+    call play_score "beyond_atlas"
+    call refresh_ui
+
+action select_stage(index):
+    stop when phase != "map"
+    selected = clamp(index, 0, stages.length - 1)
+    avatar.x = scenery[selected].x
+    avatar.y = scenery[selected].y
+    avatar.z = scenery[selected].z+1
+    avatar.angle = 30
+    avatar.model = "beyond/nix_glide"
+    avatar.scale = 0.65
+    avatar.visible = true
+    call refresh_ui
+
+action next_stage:
+    call select_stage (selected + 1) % stages.length
+
+action previous_stage:
+    call select_stage (selected + stages.length - 1) % stages.length
+
+action choose_one:
+    call select_stage 0
+
+action choose_two:
+    call select_stage 1
+
+action choose_three:
+    call select_stage 2
+
+action choose_four:
+    call select_stage 3
+
+action choose_five:
+    call select_stage 4
+
+action choose_six:
+    call select_stage 5
+
+action choose_seven:
+    call select_stage 6
+
+action start:
+    music_track = ""
+    entry_phase = phase
+    if entry_phase == "map" && selected >= saga.unlocked:
+        call play_score "beyond_atlas"
+        stop
+    if entry_phase == "map" || entry_phase == "failed":
+        call enter_stage
+    if entry_phase == "result":
+        call show_map
+
+action advance:
+    stop when phase == "playing"
+    call start
+
+action enter_stage:
+    stop when selected >= saga.unlocked
+    phase = "playing"
+    status = "playing"
+    level_map = stages[selected].map
+    hearts = 4
+    collected = 0
+    squished = 0
+    ticks = 0
+    yaw = 20
+    velocity_x = 0
+    velocity_y = 0
+    jump_held = false
+    invulnerable = 0
+    checkpoint_active = false
+    boss_active = false
+    boss_phase = "idle"
+    boss_clock = 0
+    boss_hit_lock = 0
+    hazards = []
+    gliding = false
+    call build_level
+    notice = stages[selected].hint
+    notice_ticks = 180
+    call snap_camera
+    call play_score "beyond_"+stages[selected].map
+    call refresh_ui
+
+action clear_stage:
+    stop when phase != "playing"
+    saga.cleared[selected] = true
+    saga.best[selected] = max(saga.best[selected], collected)
+    saga.unlocked = min(stages.length, max(saga.unlocked, selected + 2))
+    phase = "result"
+    status = "won"
+    boss_active = false
+    hazards = []
+    music.stop
+    music_track = ""
+    sound.play "beyond_clear"
+    outcome_title = selected == 6 ? "DAWN BELONGS TO EVERYONE" : "A LANTERN REKINDLED"
+    outcome_body = selected == 6 ? "Nix returns the stolen dawn to the archipelago. Revisit any island to gather every amber seed." : "Another route opens on the atlas. Your lanterns and best seed counts are saved."
+    call refresh_ui
+
+action lose_heart:
+    stop when phase != "playing"
+    hearts -= 1
+    sound.play "beyond_hurt"
+    if hearts <= 0:
+        phase = "failed"
+        status = "gameover"
+        music.stop
+        music_track = ""
+        outcome_title = "EVEN SMALL LIGHTS RETURN"
+        outcome_body = "Try this destination again. Your restored lanterns and best seed counts are safe."
+    player = {
+        "x": checkpoint.x,
+        "y": checkpoint.y,
+        "z": checkpoint.z,
+        "angle": checkpoint.angle,
+        "pitch": 0,
+        "vz": 0
+    }
+    velocity_x = 0
+    velocity_y = 0
+    invulnerable = 75
+    yaw = checkpoint.angle
+    notice = "Back at your beacon. Seeds gathered this attempt are safe."
+    notice_ticks = 100
+    call snap_camera

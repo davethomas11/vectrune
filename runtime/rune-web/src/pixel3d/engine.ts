@@ -396,8 +396,8 @@ export class Pixel3DEngine {
       message,
       switch_activated,
       ui: this.paused && this.config.pauseUi && status === 'playing'
-        ? validateHud(state[this.config.pauseUi])
-        : this.config.ui ? validateHud(state[this.config.ui]) : undefined,
+        ? validateHud(state[this.config.pauseUi], this.config.sprites)
+        : this.config.ui ? validateHud(state[this.config.ui], this.config.sprites) : undefined,
       paused: this.paused,
       time: this.ticks / this.config.tickRate,
       presentation: this.config.presentation,

@@ -1,0 +1,92 @@
+@Logic/beyond
+action awaken_boss:
+    boss_active = true
+    if !checkpoint_active:
+        call save_checkpoint
+    notice = selected == 1 ? "KILNBACK WAKES! Dodge the charge, then jump on the blue core." : "THE TEMPEST REGENT! Jump its red wave. Stomp when the crown lowers."
+    notice_ticks = 150
+    call boss_telegraph
+    call play_score selected == 1 ? "beyond_kiln_boss" : "beyond_storm_boss"
+
+action boss_telegraph:
+    boss_phase = "telegraph"
+    boss_clock = 0
+    boss_aim = {
+        "x": clamp(player.x, arena.min_x, arena.max_x),
+        "y": clamp(player.y, arena.min_y, arena.max_y)
+    }
+    boss_origin = {"x": boss.x, "y": boss.y}
+    boss.angle = atan2(boss_aim.y - boss.y, boss_aim.x - boss.x)
+    hazards = [
+        {
+            "x": boss_aim.x,
+            "y": boss_aim.y,
+            "z": boss.z + 0.02,
+            "model": "beyond/warning",
+            "scale": 0.7
+        }
+    ]
+    if selected == 6:
+        hazards = [
+            {"x": boss.x, "y": boss.y, "z": boss.z + 0.02, "model": "beyond/ring", "scale": 0.6}
+        ]
+    sound.play "beyond_warning"
+
+action tick_boss(previous_z):
+    boss_clock += 1
+    boss_hit_lock = max(0, boss_hit_lock - 1)
+    boss.model = selected == 1 ? "beyond/kilnback" : "beyond/regent"
+    if boss_phase == "telegraph":
+        if boss_clock >= (boss_hp <= 1 ? 28 : 42):
+            boss_phase = "attack"
+            boss_clock = 0
+            ring_radius = 0.5
+            hazards = []
+    if boss_phase == "attack":
+        if selected == 1:
+            progress = min(1, boss_clock / 18)
+            boss.x = boss_origin.x + (boss_aim.x - boss_origin.x) * progress
+            boss.y = boss_origin.y + (boss_aim.y - boss_origin.y) * progress
+            if boss_clock >= 18:
+                boss_phase = "rest"
+                boss_clock = 0
+        if selected == 6:
+            ring_radius = 0.5 + boss_clock * (boss_hp <= 2 ? 0.23 : 0.18)
+            hazards = [
+                {
+                    "x": boss.x,
+                    "y": boss.y,
+                    "z": boss.z + 0.03,
+                    "model": "beyond/ring",
+                    "scale": ring_radius
+                }
+            ]
+            ring_distance = distance(player, boss)
+            if abs(ring_distance - ring_radius) < 0.55 && player.z < boss.z + 0.65 && invulnerable == 0:
+                call lose_heart
+            if boss_clock >= 52:
+                boss_phase = "rest"
+                boss_clock = 0
+                hazards = []
+    if boss_phase == "rest":
+        boss.model = selected == 1 ? "beyond/kilnback_open" : "beyond/regent_open"
+        if boss_clock >= 100:
+            call boss_telegraph
+    if boss_phase == "stagger" && boss_clock >= 36:
+        call boss_telegraph
+    boss_distance = distance(player, boss)
+    if boss_distance < 1.25 && abs(player.z - boss.z) < 2.1:
+        if boss_phase == "rest" && boss_hit_lock == 0 && player.vz < 0 && previous_z >= boss.z + 1:
+            boss_hp -= 1
+            boss_hit_lock = 45
+            boss_phase = "stagger"
+            boss_clock = 0
+            player.vz = 0.36
+            sound.play "beyond_stomp"
+            notice = boss_hp > 0 ? "A clean hit! Watch for the next attack." : "The lantern is free!"
+            notice_ticks = 90
+            if boss_hp <= 0:
+                boss.visible = false
+                call clear_stage
+        if boss_phase != "stagger" && invulnerable == 0 && player.z < boss.z + 1.2:
+            call lose_heart

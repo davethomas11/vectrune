@@ -22,10 +22,51 @@ describe('structured pixel3d HUD', () => {
       ...[NaN, Infinity, 0, -1].map(max => ({ ...ui, meters: [{ ...ui.meters[0], max }] })),
       { ...ui, meters: [{ ...ui.meters[0], value: Infinity }] },
       { ...ui, meters: [{ ...ui.meters[0], color: 0x1000000 }] },
+      { ...ui, style: 'unknown' }, { ...ui, meters: [{ ...ui.meters[0], icon: 'unknown' }] },
       { ...ui, panel: { title: 'CHOOSE', body: '', choices: ['ONE'], selected: 1, footer: '' } },
     ]) expect(() => validateHud(invalid)).toThrow();
     expect(wrapText('short words | abcdefghijk', 5)).toEqual(['short', 'words', 'abcde', 'fghij', 'k']);
     expect(() => wrapText('text', 0)).toThrow('positive integer');
+  });
+  it('floats heart icons over the world and empties one heart when health drops', () => {
+    const sprites = {
+      'custom/full': { width: 3, height: 2, origin: [0, 0], colors: [null, 0xff7192], pixels: [0, 1, 0, 1, 1, 1] },
+      'custom/empty': { width: 3, height: 2, origin: [0, 0], colors: [null], pixels: [0, 0, 0, 0, 0, 0] },
+    };
+    const rc = new Raycaster3D({ width: 432, height: 270, textures: {}, sprites: {},
+      map: { width: 1, height: 1, grid: [0], floor: 0, ceiling: 0 } });
+    const floating: GameHud = { ...ui, style: 'floating', notice: '', objective: '', detail: '', prompt: '',
+      meters: [{ label: 'NIX', icon: 'custom/full', emptyIcon: 'custom/empty', display: 'pips', value: 4, max: 4, color: 0x00ff00 }] };
+    expect(validateHud(floating, sprites)).toBe(floating);
+    expect(() => validateHud(floating)).toThrow('unknown sprite');
+    expect(() => validateHud({ ...floating, noticeIcon: 'missing' }, sprites)).toThrow('missing');
+    const draw = (health: number) => {
+      rc.buffer.fill(0xff123456);
+      renderHud(rc, { ...floating, meters: [{ ...floating.meters[0], value: health }] }, 'playing', false, sprites);
+      expect(rc.buffer[0]).toBe(0xff123456);
+      expect(rc.buffer[14 * 432 + 8]).toBe(0xff123456);
+      expect(rc.buffer[35 * 432 + 10]).toBe(0xff123456);
+      expect(rc.buffer[135 * 432 + 216]).toBe(0xff123456);
+      return rc.buffer.filter(pixel => pixel === 0xff9271ff).length;
+    };
+    const full = draw(4), damaged = draw(3), empty = draw(0);
+    expect(full).toBeGreaterThan(damaged);
+    expect(damaged).toBeGreaterThan(0);
+    expect(empty).toBe(0);
+  });
+  it('uses asset dimensions and palette colors for arbitrary counter and notice icons', () => {
+    const rectangles: number[][] = [], labels: Array<[string, number]> = [];
+    const sprites = { 'my/badge': { width: 11, height: 1, origin: [0, 0], colors: [null, 0x123abc], pixels: [...Array(10).fill(0), 1] } };
+    const canvas = { width: 432, height: 270,
+      rect(...args: number[]) { rectangles.push(args); },
+      text(value: string, x: number) { labels.push([value, x]); } };
+    const custom: GameHud = { ...ui, style: 'floating', noticeIcon: 'my/badge',
+      meters: [{ label: 'BADGE', icon: 'my/badge', value: 1, max: 4, color: 0xff0000 }] };
+    expect(validateHud(custom, sprites)).toBe(custom);
+    renderHud(canvas, custom, 'playing', false, sprites);
+    expect(rectangles).toContainEqual([28, 14, 2, 2, 0x123abc]);
+    expect(rectangles).toContainEqual([18, 62, 1, 1, 0x123abc]);
+    expect(labels).toContainEqual(['1/4', 37]);
   });
   it('wraps larger text inside the framebuffer and preserves all menu choices', () => {
     const calls: Array<{ text: string; x: number; y: number; scale: number }> = [];
@@ -99,6 +140,12 @@ describe('structured pixel3d HUD', () => {
 });
 
 describe('pixel3d deterministic math', () => {
+  it('returns the exact opaque horizon color at zero altitude for every sky time and heading', () => {
+    const sky: Sky = {seed:731,zenith:0xff123456,horizon:0xffabcdef,cloud:0xff987654,speed:.3};
+    for (const heading of [-Math.PI, 0, Math.PI/2, Math.PI]) {
+      for (const time of [0, .5, 100, 100000]) expect(skyPixel(sky, heading, 0, time)).toBe(0xffabcdef);
+    }
+  });
   it('quantizes 360 degrees to 4096 angle units accurately', () => {
     expect(degToIndex(0)).toBe(0);
     expect(degToIndex(360)).toBe(0);
@@ -265,6 +312,37 @@ describe('pixel3d raycaster rendering', () => {
   });
 
   describe('pixel3d block models', () => {
+    it('culls rear/off-screen boxes before scanning pixels and retains visible near-plane crossings', () => {
+      let coordinateReads = 0;
+      const from = new Proxy([-.5, -.5, 0] as [number, number, number], {
+        get(target, key, receiver) {
+          if (key === '0' || key === '1' || key === '2') coordinateReads++;
+          return Reflect.get(target, key, receiver);
+        },
+      });
+      const model: BlockModel = { blocks: [{ from, size: [1, 1, 1], color: 0xffabcdef }] };
+      const buffer = new Uint32Array(64 * 48), depth = new Float64Array(64 * 48).fill(Infinity);
+      const camera = { x: 0, y: 0, height: .5 };
+      const draw = (x: number, y: number) => renderModel(model, { x, y }, camera,
+        1, 0, Math.tan(33 * Math.PI / 180), 64, 48, buffer, depth);
+      draw(-3, 0);
+      expect(buffer.every(pixel => pixel === 0)).toBe(true);
+      // Count geometry reads instead of asserting an unstable wall-clock threshold.
+      expect(coordinateReads).toBeLessThan(100);
+      for (const [x, y] of [[.2, 10], [.2, -10]]) {
+        coordinateReads = 0;
+        draw(x, y);
+        expect(buffer.every(pixel => pixel === 0)).toBe(true);
+        expect(coordinateReads).toBeLessThan(100);
+      }
+      draw(.2, .8);
+      expect(buffer.some(pixel => pixel !== 0)).toBe(true);
+      expect(buffer.some(pixel => pixel === 0)).toBe(true);
+      buffer.fill(0); depth.fill(Infinity);
+      draw(0, 0);
+      expect(buffer.every(pixel => pixel !== 0)).toBe(true);
+      expect(depth.every(distance => Number.isFinite(distance) && distance > 0)).toBe(true);
+    });
     const model: BlockModel = { blocks: [{ from: [-0.5, -0.5, 0], size: [1, 1, 1], color: 0xff804020 }] };
     it('dissolves stable pixel fragments without leaving depth occlusion', () => {
       const render = (dissolve?: number) => {

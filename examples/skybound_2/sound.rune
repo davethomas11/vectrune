@@ -1,0 +1,539 @@
+# Original Nix leitmotif: a rising fifth, a quick answer, then a singable descent.
+# Sections are reusable musical phrases. Arrangement cues repeat whole sections.
+
+@Music/beyond_atlas
+type = synth
+tempo = 108
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"brass","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | A2:4 E3:4 A2:4 E3:4",
+        "harmony": "[C4,E4,G4]:1 | [A3,C4,E4]:1",
+        "lead": "A4:8 B4:8 C5:4 E5:4 G5:4 | F5:8 E5:8 D5:4 B4:4 G4:4"
+    },
+    "chorus": {
+        "arp": "C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8 | F3:8 A3:8 C4:8 C4:8 A3:8 F3:8 A3:8 C4:8 | G3:8 B3:8 D4:8 D4:8 B3:8 G3:8 B3:8 D4:8",
+        "bars": 4,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | A2:4 E3:4 A2:4 E3:4 | F2:4 C3:4 F2:4 C3:4 | G2:4 D3:4 G2:4 D3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,E4,G4]:1 | [A3,C4,E4]:1 | [F3,A3,C4]:1 | [G3,B3,D4]:1",
+        "lead": "G5:2 E5:8 D5:8 C5:4 | A5:4 G5:8 E5:8 D5:4 E5:4 | F5:8 E5:8 D5:4 C5:8 D5:8 E5:4 | D5:4 B4:4 C5:2"
+    },
+    "coda": {
+        "arp": "C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | A2:4 E3:4 A2:4 E3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,E4,G4]:1 | [A3,C4,E4]:1",
+        "lead": "C5:8 D5:8 E5:4 G5:4 E5:4 | D5:4 B4:4 C5:2"
+    },
+    "intro": {
+        "arp": "C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | A2:4 E3:4 A2:4 E3:4",
+        "harmony": "[C4,E4,G4]:1 | [A3,C4,E4]:1",
+        "lead": "C5:4 G4:4 C5:4 E5:4 | D5:8 E5:8 G5:4 D5:4 G4:4"
+    },
+    "verse": {
+        "arp": "C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8 | F3:8 A3:8 C4:8 C4:8 A3:8 F3:8 A3:8 C4:8 | G3:8 B3:8 D4:8 D4:8 B3:8 G3:8 B3:8 D4:8",
+        "bars": 4,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | A2:4 E3:4 A2:4 E3:4 | F2:4 C3:4 F2:4 C3:4 | G2:4 D3:4 G2:4 D3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,E4,G4]:1 | [A3,C4,E4]:1 | [F3,A3,C4]:1 | [G3,B3,D4]:1",
+        "lead": "C5:8 G4:8 A4:4 C5:4 E5:4 | D5:8 E5:8 G5:4 E5:4 D5:4 | C5:8 G4:8 A4:4 C5:8 D5:8 E5:4 | D5:4 B4:4 G4:4 -:4"
+    }
+}
+arrangement = ["intro","verse","chorus","bridge","chorus","coda"]
+
+@Music/beyond_reedwake
+type = synth
+tempo = 128
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"brass","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8 | B3:8 D4:8 F#4:8 F#4:8 D4:8 B3:8 D4:8 F#4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | B2:4 F#3:4 B2:4 F#3:4",
+        "harmony": "[D4,F#4,A4]:1 | [B3,D4,F#4]:1",
+        "lead": "B4:8 C#5:8 D5:4 F#5:4 A5:4 | G5:8 F#5:8 E5:4 C#5:4 A4:4"
+    },
+    "chorus": {
+        "arp": "D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8 | B3:8 D4:8 F#4:8 F#4:8 D4:8 B3:8 D4:8 F#4:8 | G3:8 B3:8 D4:8 D4:8 B3:8 G3:8 B3:8 D4:8 | A3:8 C#4:8 E4:8 E4:8 C#4:8 A3:8 C#4:8 E4:8",
+        "bars": 4,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | B2:4 F#3:4 B2:4 F#3:4 | G2:4 D3:4 G2:4 D3:4 | A2:4 E3:4 A2:4 E3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F#4,A4]:1 | [B3,D4,F#4]:1 | [G3,B3,D4]:1 | [A3,C#4,E4]:1",
+        "lead": "A5:2 F#5:8 E5:8 D5:4 | B5:4 A5:8 F#5:8 E5:4 F#5:4 | G5:8 F#5:8 E5:4 D5:8 E5:8 F#5:4 | E5:4 C#5:4 D5:2"
+    },
+    "coda": {
+        "arp": "D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8 | B3:8 D4:8 F#4:8 F#4:8 D4:8 B3:8 D4:8 F#4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | B2:4 F#3:4 B2:4 F#3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F#4,A4]:1 | [B3,D4,F#4]:1",
+        "lead": "D5:8 E5:8 F#5:4 A5:4 F#5:4 | E5:4 C#5:4 D5:2"
+    },
+    "intro": {
+        "arp": "D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8 | B3:8 D4:8 F#4:8 F#4:8 D4:8 B3:8 D4:8 F#4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | B2:4 F#3:4 B2:4 F#3:4",
+        "harmony": "[D4,F#4,A4]:1 | [B3,D4,F#4]:1",
+        "lead": "D5:4 A4:4 D5:4 F#5:4 | E5:8 F#5:8 A5:4 E5:4 A4:4"
+    },
+    "verse": {
+        "arp": "D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8 | B3:8 D4:8 F#4:8 F#4:8 D4:8 B3:8 D4:8 F#4:8 | G3:8 B3:8 D4:8 D4:8 B3:8 G3:8 B3:8 D4:8 | A3:8 C#4:8 E4:8 E4:8 C#4:8 A3:8 C#4:8 E4:8",
+        "bars": 4,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | B2:4 F#3:4 B2:4 F#3:4 | G2:4 D3:4 G2:4 D3:4 | A2:4 E3:4 A2:4 E3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F#4,A4]:1 | [B3,D4,F#4]:1 | [G3,B3,D4]:1 | [A3,C#4,E4]:1",
+        "lead": "D5:8 A4:8 B4:4 D5:4 F#5:4 | E5:8 F#5:8 A5:4 F#5:4 E5:4 | D5:8 A4:8 B4:4 D5:8 E5:8 F#5:4 | E5:4 C#5:4 A4:4 -:4"
+    }
+}
+arrangement = ["intro","verse","chorus","verse",{"section":"bridge","repeat":2},{"section":"chorus","repeat":2},"coda"]
+
+@Music/beyond_kiln
+type = synth
+tempo = 148
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"brass","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1",
+        "lead": "G#4:8 A#4:8 C5:4 D#5:4 G5:4 | F5:8 D#5:8 D5:4 A#4:4 G4:4"
+    },
+    "chorus": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8 | F3:8 G#3:8 C4:8 C4:8 G#3:8 F3:8 G#3:8 C4:8 | G3:8 A#3:8 D4:8 D4:8 A#3:8 G3:8 A#3:8 D4:8",
+        "bars": 4,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4 | F2:4 C3:4 F2:4 C3:4 | G2:4 D3:4 G2:4 D3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1 | [F3,G#3,C4]:1 | [G3,A#3,D4]:1",
+        "lead": "G5:2 D#5:8 D5:8 C5:4 | G#5:4 G5:8 D#5:8 D5:4 D#5:4 | F5:8 D#5:8 D5:4 C5:8 D5:8 D#5:4 | D5:4 A#4:4 C5:2"
+    },
+    "coda": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1",
+        "lead": "C5:8 D5:8 D#5:4 G5:4 D#5:4 | D5:4 A#4:4 C5:2"
+    },
+    "intro": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1",
+        "lead": "C5:4 G4:4 C5:4 D#5:4 | D5:8 D#5:8 G5:4 D5:4 G4:4"
+    },
+    "verse": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8 | F3:8 G#3:8 C4:8 C4:8 G#3:8 F3:8 G#3:8 C4:8 | G3:8 A#3:8 D4:8 D4:8 A#3:8 G3:8 A#3:8 D4:8",
+        "bars": 4,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4 | F2:4 C3:4 F2:4 C3:4 | G2:4 D3:4 G2:4 D3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1 | [F3,G#3,C4]:1 | [G3,A#3,D4]:1",
+        "lead": "C5:8 G4:8 G#4:4 C5:4 D#5:4 | D5:8 D#5:8 G5:4 D#5:4 D5:4 | C5:8 G4:8 G#4:4 C5:8 D5:8 D#5:4 | D5:4 A#4:4 G4:4 -:4"
+    }
+}
+arrangement = ["intro","verse","chorus","verse",{"section":"bridge","repeat":2},{"section":"chorus","repeat":2},"coda"]
+
+@Music/beyond_tide
+type = synth
+tempo = 116
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"bell","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "F4:8 A4:8 C5:8 C5:8 A4:8 F4:8 A4:8 C5:8 | D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8",
+        "bars": 2,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | D3:4 A3:4 D3:4 A3:4",
+        "harmony": "[F4,A4,C5]:1 | [D4,F4,A4]:1",
+        "lead": "D5:8 E5:8 F5:4 A5:4 C6:4 | A#5:8 A5:8 G5:4 E5:4 C5:4"
+    },
+    "chorus": {
+        "arp": "F4:8 A4:8 C5:8 C5:8 A4:8 F4:8 A4:8 C5:8 | D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | A#3:8 D4:8 F4:8 F4:8 D4:8 A#3:8 D4:8 F4:8 | C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8",
+        "bars": 4,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | D3:4 A3:4 D3:4 A3:4 | A#2:4 F3:4 A#2:4 F3:4 | C3:4 G3:4 C3:4 G3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[F4,A4,C5]:1 | [D4,F4,A4]:1 | [A#3,D4,F4]:1 | [C4,E4,G4]:1",
+        "lead": "C6:2 A5:8 G5:8 F5:4 | D6:4 C6:8 A5:8 G5:4 A5:4 | A#5:8 A5:8 G5:4 F5:8 G5:8 A5:4 | G5:4 E5:4 F5:2"
+    },
+    "coda": {
+        "arp": "F4:8 A4:8 C5:8 C5:8 A4:8 F4:8 A4:8 C5:8 | D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8",
+        "bars": 2,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | D3:4 A3:4 D3:4 A3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[F4,A4,C5]:1 | [D4,F4,A4]:1",
+        "lead": "F5:8 G5:8 A5:4 C6:4 A5:4 | G5:4 E5:4 F5:2"
+    },
+    "intro": {
+        "arp": "F4:8 A4:8 C5:8 C5:8 A4:8 F4:8 A4:8 C5:8 | D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8",
+        "bars": 2,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | D3:4 A3:4 D3:4 A3:4",
+        "harmony": "[F4,A4,C5]:1 | [D4,F4,A4]:1",
+        "lead": "F5:4 C5:4 F5:4 A5:4 | G5:8 A5:8 C6:4 G5:4 C5:4"
+    },
+    "verse": {
+        "arp": "F4:8 A4:8 C5:8 C5:8 A4:8 F4:8 A4:8 C5:8 | D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | A#3:8 D4:8 F4:8 F4:8 D4:8 A#3:8 D4:8 F4:8 | C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8",
+        "bars": 4,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | D3:4 A3:4 D3:4 A3:4 | A#2:4 F3:4 A#2:4 F3:4 | C3:4 G3:4 C3:4 G3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[F4,A4,C5]:1 | [D4,F4,A4]:1 | [A#3,D4,F4]:1 | [C4,E4,G4]:1",
+        "lead": "F5:8 C5:8 D5:4 F5:4 A5:4 | G5:8 A5:8 C6:4 A5:4 G5:4 | F5:8 C5:8 D5:4 F5:8 G5:8 A5:4 | G5:4 E5:4 C5:4 -:4"
+    }
+}
+arrangement = ["intro","verse","chorus","verse",{"section":"bridge","repeat":2},{"section":"chorus","repeat":2},"coda"]
+
+@Music/beyond_storm
+type = synth
+tempo = 156
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"brass","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1",
+        "lead": "Bb4:8 C5:8 D5:4 F5:4 A5:4 | G5:8 F5:8 E5:4 C5:4 A4:4"
+    },
+    "chorus": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8 | G3:8 Bb3:8 D4:8 D4:8 Bb3:8 G3:8 Bb3:8 D4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8",
+        "bars": 4,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4 | G2:4 D3:4 G2:4 D3:4 | A2:4 E3:4 A2:4 E3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1 | [G3,Bb3,D4]:1 | [A3,C4,E4]:1",
+        "lead": "A5:2 F5:8 E5:8 D5:4 | Bb5:4 A5:8 F5:8 E5:4 F5:4 | G5:8 F5:8 E5:4 D5:8 E5:8 F5:4 | E5:4 C5:4 D5:2"
+    },
+    "coda": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1",
+        "lead": "D5:8 E5:8 F5:4 A5:4 F5:4 | E5:4 C5:4 D5:2"
+    },
+    "intro": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1",
+        "lead": "D5:4 A4:4 D5:4 F5:4 | E5:8 F5:8 A5:4 E5:4 A4:4"
+    },
+    "verse": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8 | G3:8 Bb3:8 D4:8 D4:8 Bb3:8 G3:8 Bb3:8 D4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8",
+        "bars": 4,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4 | G2:4 D3:4 G2:4 D3:4 | A2:4 E3:4 A2:4 E3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1 | [G3,Bb3,D4]:1 | [A3,C4,E4]:1",
+        "lead": "D5:8 A4:8 Bb4:4 D5:4 F5:4 | E5:8 F5:8 A5:4 F5:4 E5:4 | D5:8 A4:8 Bb4:4 D5:8 E5:8 F5:4 | E5:4 C5:4 A4:4 -:4"
+    }
+}
+arrangement = ["intro","verse","chorus","verse",{"section":"bridge","repeat":2},{"section":"chorus","repeat":2},"coda"]
+
+@Sound/beyond_jump
+wave = triangle
+sequence = D4:30ms, A4:40ms, D5:70ms
+volume = 0.1
+
+@Sound/beyond_seed
+wave = sine
+sequence = A5:45ms, D6:85ms
+volume = 0.15
+
+@Sound/beyond_hurt
+wave = triangle
+sequence = D4:70ms, A3:80ms, D3:100ms
+volume = 0.13
+
+@Sound/beyond_beacon
+wave = sine
+sequence = D5:70ms, F#5:70ms, A5:120ms
+volume = 0.13
+
+@Sound/beyond_stomp
+wave = square
+sequence = D3:40ms, A3:60ms, D4:70ms
+volume = 0.08
+
+@Sound/beyond_warning
+wave = triangle
+sequence = D3:80ms, D3:80ms, A3:100ms
+volume = 0.1
+
+@Sound/beyond_clear
+wave = triangle
+sequence = D5:80ms, F#5:80ms, A5:80ms, D6:250ms
+volume = 0.17
+
+@Sound/beyond_flutter
+wave = sine
+sequence = A4:40ms, E5:50ms, A5:70ms
+volume = 0.09
+
+@Music/beyond_kiln_boss
+type = synth
+tempo = 164
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"brass","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1",
+        "lead": "G#4:8 A#4:8 C5:4 D#5:4 G5:4 | F5:8 D#5:8 D5:4 A#4:4 G4:4"
+    },
+    "chorus": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8 | F3:8 G#3:8 C4:8 C4:8 G#3:8 F3:8 G#3:8 C4:8 | G3:8 A#3:8 D4:8 D4:8 A#3:8 G3:8 A#3:8 D4:8",
+        "bars": 4,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4 | F2:4 C3:4 F2:4 C3:4 | G2:4 D3:4 G2:4 D3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1 | [F3,G#3,C4]:1 | [G3,A#3,D4]:1",
+        "lead": "G5:2 D#5:8 D5:8 C5:4 | G#5:4 G5:8 D#5:8 D5:4 D#5:4 | F5:8 D#5:8 D5:4 C5:8 D5:8 D#5:4 | D5:4 A#4:4 C5:2"
+    },
+    "coda": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1",
+        "lead": "C5:8 D5:8 D#5:4 G5:4 D#5:4 | D5:4 A#4:4 C5:2"
+    },
+    "intro": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8",
+        "bars": 2,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1",
+        "lead": "C5:4 G4:4 C5:4 D#5:4 | D5:8 D#5:8 G5:4 D5:4 G4:4"
+    },
+    "verse": {
+        "arp": "C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8 | G#3:8 C4:8 D#4:8 D#4:8 C4:8 G#3:8 C4:8 D#4:8 | F3:8 G#3:8 C4:8 C4:8 G#3:8 F3:8 G#3:8 C4:8 | G3:8 A#3:8 D4:8 D4:8 A#3:8 G3:8 A#3:8 D4:8",
+        "bars": 4,
+        "bass": "C3:4 G3:4 C3:4 G3:4 | G#2:4 D#3:4 G#2:4 D#3:4 | F2:4 C3:4 F2:4 C3:4 | G2:4 D3:4 G2:4 D3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[C4,D#4,G4]:1 | [G#3,C4,D#4]:1 | [F3,G#3,C4]:1 | [G3,A#3,D4]:1",
+        "lead": "C5:8 G4:8 G#4:4 C5:4 D#5:4 | D5:8 D#5:8 G5:4 D#5:4 D5:4 | C5:8 G4:8 G#4:4 C5:8 D5:8 D#5:4 | D5:4 A#4:4 G4:4 -:4"
+    }
+}
+arrangement = ["intro",{"section":"verse","repeat":2},"chorus","bridge",{"section":"chorus","repeat":2}]
+
+
+@Music/beyond_storm_boss
+type = synth
+tempo = 172
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"brass","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1",
+        "lead": "Bb4:8 C5:8 D5:4 F5:4 A5:4 | G5:8 F5:8 E5:4 C5:4 A4:4"
+    },
+    "chorus": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8 | G3:8 Bb3:8 D4:8 D4:8 Bb3:8 G3:8 Bb3:8 D4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8",
+        "bars": 4,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4 | G2:4 D3:4 G2:4 D3:4 | A2:4 E3:4 A2:4 E3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1 | [G3,Bb3,D4]:1 | [A3,C4,E4]:1",
+        "lead": "A5:2 F5:8 E5:8 D5:4 | Bb5:4 A5:8 F5:8 E5:4 F5:4 | G5:8 F5:8 E5:4 D5:8 E5:8 F5:4 | E5:4 C5:4 D5:2"
+    },
+    "coda": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1",
+        "lead": "D5:8 E5:8 F5:4 A5:4 F5:4 | E5:4 C5:4 D5:2"
+    },
+    "intro": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8",
+        "bars": 2,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1",
+        "lead": "D5:4 A4:4 D5:4 F5:4 | E5:8 F5:8 A5:4 E5:4 A4:4"
+    },
+    "verse": {
+        "arp": "D4:8 F4:8 A4:8 A4:8 F4:8 D4:8 F4:8 A4:8 | Bb3:8 D4:8 F4:8 F4:8 D4:8 Bb3:8 D4:8 F4:8 | G3:8 Bb3:8 D4:8 D4:8 Bb3:8 G3:8 Bb3:8 D4:8 | A3:8 C4:8 E4:8 E4:8 C4:8 A3:8 C4:8 E4:8",
+        "bars": 4,
+        "bass": "D3:4 A3:4 D3:4 A3:4 | Bb2:4 F3:4 Bb2:4 F3:4 | G2:4 D3:4 G2:4 D3:4 | A2:4 E3:4 A2:4 E3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[D4,F4,A4]:1 | [Bb3,D4,F4]:1 | [G3,Bb3,D4]:1 | [A3,C4,E4]:1",
+        "lead": "D5:8 A4:8 Bb4:4 D5:4 F5:4 | E5:8 F5:8 A5:4 F5:4 E5:4 | D5:8 A4:8 Bb4:4 D5:8 E5:8 F5:4 | E5:4 C5:4 A4:4 -:4"
+    }
+}
+arrangement = ["intro",{"section":"verse","repeat":2},"chorus","bridge",{"section":"chorus","repeat":2}]
+
+
+# Expanded campaign / CANOPY
+@Music/beyond_canopy
+type = synth
+tempo = 124
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"pluck","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8",
+        "bars": 2,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1",
+        "lead": "E5:8 F#5:8 G5:4 B5:4 D6:4 | C6:8 B5:8 A5:4 F#5:4 D5:4"
+    },
+    "chorus": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8 | C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8",
+        "bars": 4,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4 | C3:4 G3:4 C3:4 G3:4 | D3:4 A3:4 D3:4 A3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1 | [C4,E4,G4]:1 | [D4,F#4,A4]:1",
+        "lead": "D6:2 B5:8 A5:8 G5:4 | E6:4 D6:8 B5:8 A5:4 B5:4 | C6:8 B5:8 A5:4 G5:8 A5:8 B5:4 | A5:4 F#5:4 G5:2"
+    },
+    "coda": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8",
+        "bars": 2,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1",
+        "lead": "G5:8 A5:8 B5:4 D6:4 B5:4 | A5:4 F#5:4 G5:2"
+    },
+    "intro": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8",
+        "bars": 2,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1",
+        "lead": "G5:4 D5:4 G5:4 B5:4 | A5:8 B5:8 D6:4 A5:4 D5:4"
+    },
+    "verse": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8 | C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8",
+        "bars": 4,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4 | C3:4 G3:4 C3:4 G3:4 | D3:4 A3:4 D3:4 A3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1 | [C4,E4,G4]:1 | [D4,F#4,A4]:1",
+        "lead": "G5:8 D5:8 E5:4 G5:4 B5:4 | A5:8 B5:8 D6:4 B5:4 A5:4 | G5:8 D5:8 E5:4 G5:8 A5:8 B5:4 | A5:4 F#5:4 D5:4 -:4"
+    }
+}
+arrangement = ["intro","verse","chorus","verse",{"section":"bridge","repeat":2},{"section":"chorus","repeat":2},"coda"]
+
+
+# Expanded campaign / AURORA
+@Music/beyond_aurora
+type = synth
+tempo = 108
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"bell","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8",
+        "bars": 2,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1",
+        "lead": "E5:8 F#5:8 G5:4 B5:4 D6:4 | C6:8 B5:8 A5:4 F#5:4 D5:4"
+    },
+    "chorus": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8 | C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8",
+        "bars": 4,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4 | C3:4 G3:4 C3:4 G3:4 | D3:4 A3:4 D3:4 A3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1 | [C4,E4,G4]:1 | [D4,F#4,A4]:1",
+        "lead": "D6:2 B5:8 A5:8 G5:4 | E6:4 D6:8 B5:8 A5:4 B5:4 | C6:8 B5:8 A5:4 G5:8 A5:8 B5:4 | A5:4 F#5:4 G5:2"
+    },
+    "coda": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8",
+        "bars": 2,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1",
+        "lead": "G5:8 A5:8 B5:4 D6:4 B5:4 | A5:4 F#5:4 G5:2"
+    },
+    "intro": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8",
+        "bars": 2,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1",
+        "lead": "G5:4 D5:4 G5:4 B5:4 | A5:8 B5:8 D6:4 A5:4 D5:4"
+    },
+    "verse": {
+        "arp": "G4:8 B4:8 D5:8 D5:8 B4:8 G4:8 B4:8 D5:8 | E4:8 G4:8 B4:8 B4:8 G4:8 E4:8 G4:8 B4:8 | C4:8 E4:8 G4:8 G4:8 E4:8 C4:8 E4:8 G4:8 | D4:8 F#4:8 A4:8 A4:8 F#4:8 D4:8 F#4:8 A4:8",
+        "bars": 4,
+        "bass": "G3:4 D4:4 G3:4 D4:4 | E3:4 B3:4 E3:4 B3:4 | C3:4 G3:4 C3:4 G3:4 | D3:4 A3:4 D3:4 A3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[G4,B4,D5]:1 | [E4,G4,B4]:1 | [C4,E4,G4]:1 | [D4,F#4,A4]:1",
+        "lead": "G5:8 D5:8 E5:4 G5:4 B5:4 | A5:8 B5:8 D6:4 B5:4 A5:4 | G5:8 D5:8 E5:4 G5:8 A5:8 B5:4 | A5:4 F#5:4 D5:4 -:4"
+    }
+}
+arrangement = ["intro","verse","chorus","verse",{"section":"bridge","repeat":2},{"section":"chorus","repeat":2},"coda"]
+
+
+# Expanded campaign / EMBERGLASS
+@Music/beyond_emberglass
+type = synth
+tempo = 142
+time_signature = 4/4
+loop = true
+volume = 0.11
+instruments = {"lead":"brass","harmony":"strings","arp":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "bridge": {
+        "arp": "F4:8 G#4:8 C5:8 C5:8 G#4:8 F4:8 G#4:8 C5:8 | C#4:8 F4:8 G#4:8 G#4:8 F4:8 C#4:8 F4:8 G#4:8",
+        "bars": 2,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | C#3:4 G#3:4 C#3:4 G#3:4",
+        "harmony": "[F4,G#4,C5]:1 | [C#4,F4,G#4]:1",
+        "lead": "C#5:8 D#5:8 F5:4 G#5:4 C6:4 | A#5:8 G#5:8 G5:4 D#5:4 C5:4"
+    },
+    "chorus": {
+        "arp": "F4:8 G#4:8 C5:8 C5:8 G#4:8 F4:8 G#4:8 C5:8 | C#4:8 F4:8 G#4:8 G#4:8 F4:8 C#4:8 F4:8 G#4:8 | A#3:8 C#4:8 F4:8 F4:8 C#4:8 A#3:8 C#4:8 F4:8 | C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8",
+        "bars": 4,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | C#3:4 G#3:4 C#3:4 G#3:4 | A#2:4 F3:4 A#2:4 F3:4 | C3:4 G3:4 C3:4 G3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[F4,G#4,C5]:1 | [C#4,F4,G#4]:1 | [A#3,C#4,F4]:1 | [C4,D#4,G4]:1",
+        "lead": "C6:2 G#5:8 G5:8 F5:4 | C#6:4 C6:8 G#5:8 G5:4 G#5:4 | A#5:8 G#5:8 G5:4 F5:8 G5:8 G#5:4 | G5:4 D#5:4 F5:2"
+    },
+    "coda": {
+        "arp": "F4:8 G#4:8 C5:8 C5:8 G#4:8 F4:8 G#4:8 C5:8 | C#4:8 F4:8 G#4:8 G#4:8 F4:8 C#4:8 F4:8 G#4:8",
+        "bars": 2,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | C#3:4 G#3:4 C#3:4 G#3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[F4,G#4,C5]:1 | [C#4,F4,G#4]:1",
+        "lead": "F5:8 G5:8 G#5:4 C6:4 G#5:4 | G5:4 D#5:4 F5:2"
+    },
+    "intro": {
+        "arp": "F4:8 G#4:8 C5:8 C5:8 G#4:8 F4:8 G#4:8 C5:8 | C#4:8 F4:8 G#4:8 G#4:8 F4:8 C#4:8 F4:8 G#4:8",
+        "bars": 2,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | C#3:4 G#3:4 C#3:4 G#3:4",
+        "harmony": "[F4,G#4,C5]:1 | [C#4,F4,G#4]:1",
+        "lead": "F5:4 C5:4 F5:4 G#5:4 | G5:8 G#5:8 C6:4 G5:4 C5:4"
+    },
+    "verse": {
+        "arp": "F4:8 G#4:8 C5:8 C5:8 G#4:8 F4:8 G#4:8 C5:8 | C#4:8 F4:8 G#4:8 G#4:8 F4:8 C#4:8 F4:8 G#4:8 | A#3:8 C#4:8 F4:8 F4:8 C#4:8 A#3:8 C#4:8 F4:8 | C4:8 D#4:8 G4:8 G4:8 D#4:8 C4:8 D#4:8 G4:8",
+        "bars": 4,
+        "bass": "F3:4 C4:4 F3:4 C4:4 | C#3:4 G#3:4 C#3:4 G#3:4 | A#2:4 F3:4 A#2:4 F3:4 | C3:4 G3:4 C3:4 G3:4",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 hihat:4",
+        "harmony": "[F4,G#4,C5]:1 | [C#4,F4,G#4]:1 | [A#3,C#4,F4]:1 | [C4,D#4,G4]:1",
+        "lead": "F5:8 C5:8 C#5:4 F5:4 G#5:4 | G5:8 G#5:8 C6:4 G#5:4 G5:4 | F5:8 C5:8 C#5:4 F5:8 G5:8 G#5:4 | G5:4 D#5:4 C5:4 -:4"
+    }
+}
+arrangement = ["intro","verse","chorus","verse",{"section":"bridge","repeat":2},{"section":"chorus","repeat":2},"coda"]

@@ -20,14 +20,14 @@ import type { Scope } from './types';
 const MAX_DEPTH = 64;
 const voxelFunctions: Record<string, (...args: unknown[]) => unknown> = {
   voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
-  voxel_move: (world, player, dx, dy, jump) => voxelMove(world, player, dx, dy, jump),
+  voxel_move: (world, player, dx, dy, jump, movement) => voxelMove(world, player, dx, dy, jump, movement),
   voxel_target: (world, player) => voxelTarget(world, player),
   voxel_mine: (world, player) => voxelMine(world, player),
   voxel_get: (world, x, y, z) => voxelRead(world, x, y, z),
   voxel_fill: (world, from, size, block) => voxelFill(world, from, size, block),
 };
 const voxelArity: Record<string, [number, number]> = {
-  voxel_generate: [1, 2], voxel_move: [4, 5], voxel_target: [2, 2], voxel_mine: [2, 2],
+  voxel_generate: [1, 2], voxel_move: [4, 6], voxel_target: [2, 2], voxel_mine: [2, 2],
   voxel_get: [4, 4], voxel_fill: [4, 4],
 };
 

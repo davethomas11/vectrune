@@ -1,4 +1,19 @@
 @I18N/es
+SkyboundTwo {
+    title = "Skybound 2"
+    badge = "Aventura de plataformas Pixel 3D"
+    description = "Vuela con Nix, una polilla farol, por siete mundos celestes. Aplasta 45 criaturas, explora islas ocultas y vence a dos jefes para recuperar el amanecer."
+    play = "Jugar a Skybound 2"
+    try_it = "Elige un destino en el Atlas de Faroles y pulsa Enter. Mantén el salto al caer para planear. Abre el juego completo para tener más espacio."
+    standalone = "Abrir el juego completo en otra pestaña"
+    controls_title = "Una pequeña polilla. Un cielo inmenso."
+    controls = "WASD o flechas para moverte; Espacio para saltar y planear; Shift para correr; Q / E para girar la cámara; R para centrarla. Aplasta criaturas desde arriba y mantén el salto para rebotar más alto."
+    objective = "Enciende siete faroles, descubre desvíos con semillas y vence a Kilnback y al Regente de la Tempestad. El progreso y los récords de semillas se guardan en este navegador."
+    device = "Compatible con teclado, mando y controles táctiles. P pausa; B vuelve al atlas desde la pausa. Escape sale de pantalla completa. Activa el sonido para escuchar la banda sonora original."
+    source_title = "Explora el código Rune"
+    source_text = "Los niveles, criaturas, modelos, iconos de la interfaz, controles y música están escritos en Rune. Explora los archivos o compila y prueba el juego con Vectrune 0.3.5 o posterior."
+}
+
 RuneCrypt {
     title = "Rune Crypt"
     badge = "RPG roguelite Pixel 3D"

@@ -280,7 +280,7 @@ export class Raycaster3D {
       return;
     }
     if (stats.ui) {
-      renderHud(this, stats.ui, stats.status || 'playing', stats.paused || false);
+      renderHud(this, stats.ui, stats.status || 'playing', stats.paused || false, this.config.sprites);
       return;
     }
     if (stats.presentation) {

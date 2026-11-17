@@ -1150,33 +1150,97 @@ var __RuneWeb = (() => {
     ]) set(x, y, z, block);
     return world;
   }
-  function voxelRay(world, origin, ray, maxDistance) {
+  function chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance) {
+    let ex = Number.isFinite(tx) ? tx + (sx > 0 ? 3 - (x & 3) : x & 3) * dx : Infinity;
+    let ey = Number.isFinite(ty) ? ty + (sy > 0 ? 3 - (y & 3) : y & 3) * dy : Infinity;
+    let ez = Number.isFinite(tz) ? tz + (sz > 0 ? 3 - (z & 3) : z & 3) * dz : Infinity;
+    x >>= 2;
+    y >>= 2;
+    z >>= 2;
+    const width = chunks.width, height = chunks.height, depth = chunks.occupied.length / (width * height);
+    const stepX = dx * 4, stepY = dy * 4, stepZ = dz * 4;
+    let entry = 0;
+    while (x >= 0 && y >= 0 && z >= 0 && x < width && y < height && z < depth) {
+      if (chunks.occupied[(z * height + y) * width + x]) return entry;
+      const next = Math.min(ex, ey, ez);
+      if (!Number.isFinite(next) || next > maxDistance) return Infinity;
+      const tolerance = 1e-9 * Math.max(1, next);
+      if ((Math.abs(ex - next) <= tolerance ? 1 : 0) + (Math.abs(ey - next) <= tolerance ? 1 : 0) + (Math.abs(ez - next) <= tolerance ? 1 : 0) > 1) return entry;
+      entry = next;
+      if (ex < ey && ex < ez) {
+        x += sx;
+        ex += stepX;
+      } else if (ey < ez) {
+        y += sy;
+        ey += stepY;
+      } else {
+        z += sz;
+        ez += stepZ;
+      }
+    }
+    return Infinity;
+  }
+  function voxelRay(world, origin, ray, maxDistance, output, chunks) {
     let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+    const width = world.width, height = world.height, depth = world.depth, cells = world.cells;
     const sx = ray[0] < 0 ? -1 : 1, sy = ray[1] < 0 ? -1 : 1, sz = ray[2] < 0 ? -1 : 1;
+    const stepY = sy * width, stepZ = sz * width * height;
+    let cellIndex = (z * height + y) * width + x;
     const dx = Math.abs(1 / ray[0]), dy = Math.abs(1 / ray[1]), dz = Math.abs(1 / ray[2]);
     let tx = ray[0] === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
     let ty = ray[1] === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
     let tz = ray[2] === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    if (chunks && (ray[0] !== 0 || ray[1] !== 0 || ray[2] !== 0)) {
+      if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
+      const entry = chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance);
+      if (!Number.isFinite(entry)) return null;
+      const beforeEntry = entry - 1e-9 * Math.max(1, entry);
+      while (tx < beforeEntry) {
+        x += sx;
+        tx += dx;
+      }
+      while (ty < beforeEntry) {
+        y += sy;
+        ty += dy;
+      }
+      while (tz < beforeEntry) {
+        z += sz;
+        tz += dz;
+      }
+      cellIndex = (z * height + y) * width + x;
+    }
     let distance = 0, face = 2;
     for (let iteration = 0; iteration < 256 && distance <= maxDistance; iteration++) {
-      if (x < 0 || y < 0 || z < 0 || x >= world.width || y >= world.height || z >= world.depth) break;
-      const block = world.cells[index(world, x, y, z)];
-      if (block) return { x, y, z, block, distance, face };
+      if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) break;
+      const block = cells[cellIndex];
+      if (block) {
+        if (!output) return { x, y, z, block, distance, face };
+        output.x = x;
+        output.y = y;
+        output.z = z;
+        output.block = block;
+        output.distance = distance;
+        output.face = face;
+        return output;
+      }
       if (tx < ty && tx < tz) {
         face = 0;
         distance = tx;
         tx += dx;
         x += sx;
+        cellIndex += sx;
       } else if (ty < tz) {
         face = 1;
         distance = ty;
         ty += dy;
         y += sy;
+        cellIndex += stepY;
       } else {
         face = 2;
         distance = tz;
         tz += dz;
         z += sz;
+        cellIndex += stepZ;
       }
     }
     return null;
@@ -1197,8 +1261,8 @@ var __RuneWeb = (() => {
     if (![player.x, player.y, player.z, player.angle, player.pitch, player.vz].every(Number.isFinite)) {
       throw new Error("Voxel player needs finite x, y, z, angle, pitch and vz");
     }
-    if (player.x < 0.25 || player.y < 0.25 || player.x > world.width - 0.25 || player.y > world.height - 0.25 || player.z < 1 || player.z + 1.6 > world.depth || Math.abs(player.vz) > 0.3 || Math.abs(player.pitch) > 90) {
-      throw new Error("Voxel player must be inside movement bounds, with pitch within 90 degrees and vz within 0.3");
+    if (player.x < 0.25 || player.y < 0.25 || player.x > world.width - 0.25 || player.y > world.height - 0.25 || player.z < 1 || player.z + 1.6 > world.depth || Math.abs(player.vz) > 1 || Math.abs(player.pitch) > 90) {
+      throw new Error("Voxel player must be inside movement bounds, with pitch within 90 degrees and vz within 1");
     }
     return player;
   }
@@ -1218,20 +1282,27 @@ var __RuneWeb = (() => {
     }
     return true;
   }
-  function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false) {
+  function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false, movementValue = {}) {
     const world = validateWorld(worldValue), p = { ...validatePlayer(playerValue, world) };
+    if (!movementValue || typeof movementValue !== "object" || Array.isArray(movementValue) || Object.keys(movementValue).some((key) => !["jumpSpeed", "gravity", "autoStep"].includes(key))) {
+      throw new Error("Voxel movement options accept jumpSpeed, gravity and autoStep");
+    }
+    const { jumpSpeed = 0.28, gravity = 0.035, autoStep = true } = movementValue;
+    if (!Number.isFinite(jumpSpeed) || jumpSpeed <= 0 || jumpSpeed > 1 || !Number.isFinite(gravity) || gravity <= 0 || gravity > 0.3 || typeof autoStep !== "boolean") {
+      throw new Error("Voxel movement needs jumpSpeed in (0, 1], gravity in (0, 0.3] and boolean autoStep");
+    }
     if (typeof dxValue !== "number" || typeof dyValue !== "number" || !Number.isFinite(dxValue) || !Number.isFinite(dyValue) || Math.hypot(dxValue, dyValue) > 1 || typeof jumpValue !== "boolean") {
       throw new Error("Voxel movement needs finite deltas of at most one tile and a boolean jump");
     }
     const grounded = !clearBody(world, p.x, p.y, p.z - 0.05);
-    if (jumpValue && grounded) p.vz = 0.28;
-    p.vz = Math.max(-0.3, p.vz - 0.035);
+    if (jumpValue && grounded) p.vz = jumpSpeed;
+    p.vz = Math.max(-0.3, p.vz - gravity);
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dxValue), Math.abs(dyValue), Math.abs(p.vz)) / 0.05));
     for (let i = 0; i < steps; i++) {
       for (const [axis, delta] of [["x", dxValue / steps], ["y", dyValue / steps]]) {
         const x = p.x + (axis === "x" ? delta : 0), y = p.y + (axis === "y" ? delta : 0);
         if (clearBody(world, x, y, p.z)) p[axis] += delta;
-        else if (grounded && delta !== 0 && clearBody(world, x, y, Math.floor(p.z) + 1)) {
+        else if (autoStep && grounded && delta !== 0 && clearBody(world, x, y, Math.floor(p.z) + 1)) {
           p.z = Math.floor(p.z) + 1;
           p[axis] += delta;
           p.vz = 0;
@@ -1250,7 +1321,7 @@ var __RuneWeb = (() => {
   var MAX_DEPTH = 64;
   var voxelFunctions = {
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
-    voxel_move: (world, player, dx, dy, jump) => voxelMove(world, player, dx, dy, jump),
+    voxel_move: (world, player, dx, dy, jump, movement) => voxelMove(world, player, dx, dy, jump, movement),
     voxel_target: (world, player) => voxelTarget(world, player),
     voxel_mine: (world, player) => voxelMine(world, player),
     voxel_get: (world, x, y, z) => voxelRead(world, x, y, z),
@@ -1258,7 +1329,7 @@ var __RuneWeb = (() => {
   };
   var voxelArity = {
     voxel_generate: [1, 2],
-    voxel_move: [4, 5],
+    voxel_move: [4, 6],
     voxel_target: [2, 2],
     voxel_mine: [2, 2],
     voxel_get: [4, 4],
@@ -2907,6 +2978,57 @@ var __RuneWeb = (() => {
   };
   var audioSync = new AudioSyncEngine();
 
+  // src/music_arrangement.ts
+  function compileMusicArrangement(def, parse) {
+    if (!Object.keys(def.sections ?? {}).length && !def.arrangement?.length) return null;
+    const parts = def.sections ?? {}, form = def.arrangement ?? [];
+    if (!Object.keys(parts).length || Object.keys(parts).length > 32 || !form.length || form.length > 128)
+      throw new Error("Music needs 1-32 sections and 1-128 arrangement entries");
+    if (def.lead || def.bass || def.drums || Object.keys(def.tracks ?? {}).length || def.bars != null)
+      throw new Error("Arranged music declares bars and note tracks inside sections");
+    if (!["4/4", "3/4"].includes(def.time_signature ?? "4/4")) throw new Error("Arranged music supports 4/4 or 3/4 time");
+    const beatsPerBar = def.time_signature === "3/4" ? 3 : 4;
+    const channels = /* @__PURE__ */ new Set();
+    const parsed = /* @__PURE__ */ Object.create(null);
+    for (const [name, part] of Object.entries(parts)) {
+      const tracks = Object.entries(part).filter(([key]) => key !== "bars");
+      if (!name || !Number.isInteger(part.bars) || part.bars < 1 || part.bars > 64 || !tracks.length || tracks.length > 16)
+        throw new Error(`Music section ${name} needs 1-64 integer bars and 1-16 tracks`);
+      parsed[name] = /* @__PURE__ */ Object.create(null);
+      for (const [channel, notes] of tracks) {
+        if (typeof notes !== "string") throw new Error(`Music section ${name}/${channel} needs note text`);
+        const events = parse(notes);
+        const duration = events.reduce((sum, e) => sum + e.beats, 0);
+        if (!Number.isFinite(duration) || duration > part.bars * beatsPerBar + 1e-8)
+          throw new Error(`Music section ${name}/${channel} exceeds its declared bars`);
+        parsed[name][channel] = events;
+        channels.add(channel);
+      }
+    }
+    const result = { bars: 0, tracks: /* @__PURE__ */ Object.create(null), sections: [] };
+    for (const channel of channels) result.tracks[channel] = [];
+    for (const cue of form) {
+      const name = typeof cue === "string" ? cue : cue.section;
+      const repeat = typeof cue === "string" ? 1 : cue.repeat;
+      if (!Object.prototype.hasOwnProperty.call(parts, name)) throw new Error(`Unknown music section: ${name}`);
+      if (!Number.isInteger(repeat) || repeat < 1 || repeat > 16) throw new Error("Music section repeat must be an integer from 1 to 16");
+      for (let i = 0; i < repeat; i++) {
+        const beats = parts[name].bars * beatsPerBar;
+        if (result.bars + parts[name].bars > 512) throw new Error("Music arrangement exceeds 512 bars");
+        result.sections.push({ name, startBeat: result.bars * beatsPerBar, beats });
+        result.bars += parts[name].bars;
+        for (const channel of channels) {
+          const events = parsed[name][channel] ?? [];
+          const duration = events.reduce((sum, e) => sum + e.beats, 0);
+          const offset = result.tracks[channel].length;
+          result.tracks[channel].push(...events.map((e, index2) => ({ ...e, stepId: offset + index2 })));
+          if (duration < beats) result.tracks[channel].push({ stepId: -1, pitch: 0, beats: beats - duration, isRest: true, isDrum: false });
+        }
+      }
+    }
+    return result;
+  }
+
   // src/audio.ts
   var audioCtx = null;
   var stepIndex = 0;
@@ -2925,6 +3047,7 @@ var __RuneWeb = (() => {
   }
   var registeredSounds = {};
   var registeredMusic = {};
+  var arrangements = /* @__PURE__ */ new Map();
   function registerSounds(definitions) {
     if (!definitions) return;
     for (const [key, val] of Object.entries(definitions)) {
@@ -2934,7 +3057,11 @@ var __RuneWeb = (() => {
   function registerMusic(definitions) {
     if (!definitions) return;
     for (const [key, val] of Object.entries(definitions)) {
-      registeredMusic[key.toLowerCase()] = val;
+      const name = key.toLowerCase();
+      const arrangement = compileMusicArrangement(val, parseTrackPattern);
+      if (arrangement) arrangements.set(name, arrangement);
+      else arrangements.delete(name);
+      registeredMusic[name] = arrangement ? { ...val, bars: arrangement.bars } : val;
     }
   }
   function getAudioContext() {
@@ -3302,6 +3429,21 @@ var __RuneWeb = (() => {
         }
       }
     }
+    const arrangement = arrangements.get(key);
+    if (arrangement) {
+      tracksState = /* @__PURE__ */ Object.create(null);
+      for (const [channel, events] of Object.entries(arrangement.tracks)) {
+        tracksState[channel] = {
+          events,
+          index: 0,
+          nextBeat: 0,
+          instrument: channel === "drums" ? "drums" : channel === "bass" ? "triangle" : "square"
+        };
+      }
+    }
+    for (const [channel, instrument] of Object.entries(def.instruments ?? {})) {
+      if (Object.prototype.hasOwnProperty.call(tracksState, channel)) tracksState[channel].instrument = instrument;
+    }
     const beatsPerBar = def.time_signature?.startsWith("3/") ? 3 : 4;
     let maxTrackBeats = 0;
     for (const track of Object.values(tracksState)) {
@@ -3475,7 +3617,7 @@ var __RuneWeb = (() => {
         allFinished = false;
       }
     }
-    if (allFinished && !musicLoop) {
+    if (allFinished && !musicLoop && ctx2.currentTime >= musicStartTime + songTotalBeats * secondsPerBeat) {
       stopMusic();
     }
   }
@@ -3533,7 +3675,23 @@ var __RuneWeb = (() => {
       const osc = ctx2.createOscillator();
       const gain = ctx2.createGain();
       const inst = instrumentOverride || (channel === "bass" ? "triangle" : "square");
-      if (inst === "sawtooth" || inst === "synth") {
+      if (inst === "brass" || inst === "strings" || inst === "bell") {
+        const length = Math.max(0.06, durationSec * (inst === "bell" ? 1.25 : 0.94));
+        const attack = Math.min(length * 0.25, inst === "strings" ? 0.09 : 0.018);
+        osc.type = inst === "brass" ? "sawtooth" : inst === "strings" ? "triangle" : "sine";
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(1e-3, time);
+        gain.gain.linearRampToValueAtTime((inst === "strings" ? 0.11 : 0.23) * chordGainMultiplier, time + attack);
+        gain.gain.exponentialRampToValueAtTime(1e-3, time + length);
+        const filter = ctx2.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(Math.min(9e3, freq * (inst === "brass" ? 5 : 3)), time);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(destination);
+        osc.start(time);
+        osc.stop(time + length + 0.015);
+      } else if (inst === "sawtooth" || inst === "synth") {
         osc.type = "sawtooth";
         osc.frequency.setValueAtTime(freq, time);
         const noteSoundLen = Math.min(durationSec * 0.88, 0.4);

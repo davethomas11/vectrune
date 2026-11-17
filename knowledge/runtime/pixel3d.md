@@ -8,6 +8,254 @@ seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](vo
 for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.
 The grid-map semantics below remain unchanged.
 
+## Skybound: third-person platforming (v0.3.5)
+
+[Skybound](../../examples/skybound/skybound.rune) is an original, Mario-inspired
+3D platform game built in Rune: six floating islands, twelve collectible coins,
+three patrolling bugs to stomp, three hearts, a blue checkpoint flag, and a
+golden summit star. Coins are optional for victory and remain collected after a
+fall. Reaching the flag refills hearts; losing all three ends the run. A new
+adventure resets everything. Progress is session-only.
+
+Build the current CLI from source, then export a self-contained browser game:
+
+```sh
+cargo build --bin vectrune
+target/debug/vectrune examples/skybound/skybound.rune -o html > skybound.html
+target/debug/vectrune test examples/skybound --type logic
+```
+
+Open `skybound.html`, then select **Begin adventure** or press Enter with the
+canvas focused. WASD/arrows move relative to the camera; Space jumps; Shift
+runs; Q/E orbit; R centers the camera behind the character. P pauses, F toggles
+fullscreen, M toggles sound. Gamepad left stick moves, A jumps, X runs, and
+right stick/shoulders orbit. Touch has a movement stick, jump/run buttons and
+camera buttons. Jump near the edge for wide gaps; land on bugs from above to
+bounce. The authored course is fully traversable at walking speed.
+
+The scene binds `camera` separately from its visible `avatar` model. Game
+logic smooths the elevated orbit camera and acceleration, implements press-edge
+jumping, and animates the character, coins and enemies. Camera placement is
+bounded to the voxel volume and looks toward the player; the open course is
+authored with camera clearance. This is an example of a game-authored follow
+camera, rather than a general camera collision solver. `mouse_look = false`
+keeps the pointer free in browser and desktop hosts.
+
+Skybound uses [optional voxel movement tuning](voxel-worlds.md#volume-tools-and-movement)
+for a higher jump arc and to disable automatic ledge stepping. Existing voxel
+games retain their movement defaults. Models, voxel depth, synthesized effects,
+and the original chiptune use the shared browser/QuickJS runtime. The source
+includes logic scenarios; `tests/browser/skybound.py` traverses the full course
+with real inputs and checks desktop/mobile controls, and `tests/skybound_app.rs`
+checks QuickJS rendering without opening a window.
+
+## Skybound 2: Beyond the Concept (v0.3.5)
+
+[Skybound 2](../../examples/skybound_2/skybound_2.rune) is a separate campaign;
+the original Skybound sources and exported game remain intact. Its protagonist
+is **Nix, a lantern moth** with six feet, antennae, folding wings and a glowing
+abdomen. Hold jump while descending to glide. Movement, camera orbit, running,
+keyboard/controller/touch controls and a portable HUD build on the first game.
+
+Its art uses sixteen 16x16 palette textures with authored grass tufts, ceramic
+seams, moonstone veins, leaf patterns and ice facets. Each biome pairs its
+walking surface with a matching lower cliff material. Code-native block models
+add patterned ivory wings, reflective eyes and a lantern abdomen to Nix, with
+alternating walking feet and a spread-wing glide pose. Lantern cages, branching
+crystals, layered trees and segmented boss armor share the same palette style;
+the bosses expose bright cyan cores during recovery. Models contain at most 37
+boxes and continue to use the CPU renderer.
+
+All seven destinations now mix broad landing areas, slim ledges, elongated
+islands and connected shelves, with tapered undersides on larger islands.
+Two bonus stepping stones in each world form an optional three-seed detour.
+The campaign contains 45 squashable creatures: slow reed grubs, faster ember
+crabs and crystal hoppers with a periodic jump. Patrol endpoints stay on solid
+ground, with room to land before engaging. Descend onto a creature to flatten
+it and bounce; holding jump gives a higher bounce. Side contact costs a heart
+and returns Nix to the current checkpoint. Flattened creatures become harmless
+immediately and disappear after a short delay. A per-attempt HUD counter tracks
+stomps; defeated creatures stay defeated through checkpoint respawns and reset
+when entering a destination again. Boss arenas retain their dedicated encounters.
+
+The 3D **Lantern Atlas** connects seven authored destinations, unlocked in order:
+
+| Destination | Challenge |
+| --- | --- |
+| Reedwake Reach | Eight reed islands, first flights, a beacon checkpoint and an extended southern ascent. |
+| The Cinderworks | Six furnace platforms, a longer approach and **Kilnback**, a charging ceramic beetle. |
+| Moonglass Tide | Eight crystal islands winding north, east and south, with a high eastern summit. |
+| Sunken Canopy | Eight treetop islands, hanging lantern groves and broad glide crossings. |
+| Aurora Causeway | Nine icy switchbacks climbing to the highest lantern in the campaign. |
+| Emberglass Relay | Eight alternating furnace/glass islands around a winding relay route. |
+| The Storm Roost | A seven-island final ascent and **the Tempest Regent**, a mechanical storm owl. |
+
+Select with 1-7, arrows, N/V, controller D-pad or destination buttons; Enter
+or controller Back/View enters. In a level, WASD/arrows move, Space/controller A
+jumps and glides, Shift/controller X runs, Q/E/right stick/shoulders orbit,
+and R centers the camera. Touch has MOVE, FLY, RUN and camera buttons.
+Escape exits fullscreen, including CSS fallback fullscreen in restricted embeds
+and when focus stays on a toolbar button; it also releases the game's mouse lock.
+**P pauses; B or Return to atlas leaves the attempt from Pause.** Returning to
+the atlas resets the current attempt. Four hearts and amber seeds belong to
+the attempt; restored lanterns and best seed counts from completed destinations
+persist with the separate `skybound-2` save key. Completed stages remain
+replayable, including after the ending. The four original levels have longer
+approaches or exits, and level volumes now span 48 x 40 x 20 tiles. Each new
+destination has its own layout, material, sky, props, seed trail, checkpoint
+and variation of Nix's theme.
+
+**Existing four-level saves migrate automatically:** the old Storm Roost clear
+and best score move to slot seven, while the first three slots stay intact.
+Players who finished the original campaign can enter all three new destinations;
+players who had unlocked the old finale continue at Sunken Canopy. Completed
+lanterns and best scores are preserved, and the atlas selects the first available
+uncleared destination. Browser storage restrictions fall back
+to session saves; native hosts use the existing game save directory.
+
+Kilnback marks a target, charges to that locked position, then opens its blue
+core. Dodge the charge and land on the open core from above three times.
+The Regent telegraphs an expanding red ground wave; jump or glide over it,
+then stomp its lowered crown during recovery, four times. Both have an armored
+phase, a distinct recovery model, stagger protection and faster late attacks.
+Boss cameras widen and frame both combatants. Beacons refill hearts, and boss
+arenas provide a nearby checkpoint. Falling/contact costs a heart; defeat
+retries the selected stage while preserving campaign progress.
+
+```sh
+cargo build --bin vectrune
+target/debug/vectrune examples/skybound_2/skybound_2.rune -o html > skybound-2.html
+target/debug/vectrune test examples/skybound_2 --type logic
+python3 tests/browser/skybound_2.py
+```
+
+The browser regression traverses the entire campaign and defeats both bosses
+with movement/jump inputs, without changing player positions or progress.
+It also samples actual synthesized audio, reloads campaign saves, and checks
+keyboard, controller and touch glide. `tests/skybound_2_app.rs` compiles the
+score and renders each destination in QuickJS without opening a window.
+
+### Reusable music sections and arrangements
+
+The sequel's ten original arrangements share Nix's rising-fifth leitmotif:
+an atlas theme, seven exploration scores, and two faster boss variations.
+Brass leads, string harmony, plucked arpeggios and bells use the same synth in
+browser and native hosts, with no downloaded audio. The shared music engine
+now supports reusable named sections and ordered/repeated song forms:
+
+```rune
+@Music/flight
+tempo = 128
+time_signature = 4/4
+loop = true
+volume = 0.1
+instruments = {"lead":"brass","harmony":"strings","bells":"bell"}
+sections = {
+    "verse":{"bars":1,"lead":"D5:4 A4:4 B4:4 D5:4","harmony":"[D4,F#4,A4]:1"},
+    "chorus":{"bars":2,"lead":"A5:1 D5:1","bells":"D6:1 A5:1"},
+    "bridge":{"bars":1,"harmony":"[G4,B4,D5]:1"}
+}
+arrangement = ["verse",{"section":"chorus","repeat":2},{"section":"bridge","repeat":2},"chorus"]
+```
+
+Each section declares integer `bars` (1-64) and channel-to-note-string fields;
+channel names are arbitrary, with `lead`, `bass` and `drums` retaining their
+defaults. Short or absent channels are padded with rests so all section
+boundaries align. Phrases exceeding their section duration fail during runtime
+registration, before playback. Compiler checks reject missing names, invalid
+repeats or metadata, unknown instruments and ambiguous forms. Repeats accept
+integers 1-16; there may be 1-32 sections, 1-128 cues and at most 512 expanded
+bars, in `4/4` or `3/4`. Section channels accept up to 16 tracks per section.
+Use either legacy top-level `lead`/`bass`/`drums`/custom tracks and `bars`, or
+`sections` plus `arrangement`; put all arranged note content inside sections.
+
+`instruments` maps channels to `square`, `sine`, `triangle`, `bass`, `sawtooth`,
+`synth`, `pluck`, `drums`, or the new `brass`, `strings`, and `bell` voices.
+It also works on legacy songs. Arrangements expand once at registration and
+share the existing hardware-clock scheduler, pause, resume, mute and looping.
+`loop = true` repeats the complete arrangement. Non-looping scores let the
+final note finish before stopping. Existing songs retain their syntax and
+instrument defaults. See [the complete score](../../examples/skybound_2/sound.rune),
+`runtime/rune-web/src/music_arrangement.ts`, and `tests/music_arrangement.rs`.
+
+## Camera movement performance (v0.3.5)
+
+The shared JavaScript block-model renderer now rejects boxes wholly behind the
+camera near plane before scanning pixels. Previously any behind-camera corner
+selected conservative full-screen bounds, including when **all eight corners**
+were behind the camera. Camera orbit could consequently trigger a full-frame
+ray/box scan for every hidden model block. Boxes crossing the near plane and
+views from inside models keep their conservative rendering.
+
+Homogeneous side, top and bottom frustum tests also reject boxes entirely
+outside the view, including off-screen boxes that cross the near plane. This
+avoids unnecessary full-frame scans for nearby scenery during camera orbit.
+
+Model rays use scalar components instead of temporary arrays per pixel, and
+face colors are shaded once per block. Terrain rendering reuses a scratch hit
+record, while gameplay targeting continues to return independent hit objects.
+Voxel traversal advances a flattened cell index along with its x/y/z position
+instead of recalculating the index at every cell. These changes apply to browser
+and shared QuickJS rendering, including the original Skybound and voxel games.
+They preserve resolution, simulation timing and model/terrain depth semantics.
+
+`tests/browser/pixel3d_performance.py` measures 80 CPU render calls around each
+of three 40-angle camera orbits in Skybound 2. Its reports contain median, p95,
+worst-case timings, optional Chromium CPU samples and sampled color/depth
+buffer hashes. Compare exports of the same game on the same browser/machine:
+
+```sh
+python3 tests/browser/pixel3d_performance.py --html before.html --output before.json --profile
+python3 tests/browser/pixel3d_performance.py --html after.html --output after.json --profile --compare before.json
+```
+
+Local headless Chromium measurements at 432x270, with CPU profiling enabled:
+
+| Orbit | Median before / after | p95 before / after |
+| --- | --- | --- |
+| Reedwake start | 37.9 / 25.4 ms | 108.7 / 30.1 ms |
+| Canopy trees | 69.6 / 26.5 ms | 151.7 / 32.5 ms |
+| Storm arena | 35.2 / 25.2 ms | 121.0 / 34.5 ms |
+
+All 24 sampled color/depth hash pairs matched. These are renderer measurements,
+excluding simulation and browser presentation, and are reports rather than CI
+timing thresholds. Regression tests check behind-camera geometry access counts,
+near-plane/inside-model visibility, DDA traversal in both directions, and hit
+record ownership. After these changes, voxel traversal is the dominant sampled
+cost.
+
+### Empty-space acceleration and contiguous terrain writes
+
+A second CPU pass adds a 4x4x4 occupancy grid for sparse voxel worlds. Coarse
+traversal rejects empty rays and advances toward the first potentially occupied
+chunk; fine DDA still resolves the final voxel, face and depth. Near-coincident
+chunk boundaries conservatively use fine traversal. Prefix clock increments
+retain the original floating-point additions so sampled depth buffers remain
+bit-exact, including edge and corner hits.
+
+Occupancy buffers are reused but **rebuilt each rendered frame**, so mining,
+`voxel_fill`, direct cell edits, cell-array replacement and resized volumes are
+immediately reflected. Dense volumes retain regular DDA. Terrain color/depth
+buffers are written in row order, and below-horizon sky pixels use the exact
+opaque horizon color without cloud noise or longitude calculations.
+
+Fresh local Chromium measurements at 432x270, without CPU profiling:
+
+| Orbit | Median before / after | p95 before / after |
+| --- | --- | --- |
+| Reedwake start | 24.6 / 16.0 ms | 29.3 / 21.4 ms |
+| Canopy trees | 26.1 / 15.8 ms | 31.0 / 21.2 ms |
+| Storm arena | 25.1 / 14.8 ms | 34.3 / 20.7 ms |
+
+The same 24 sampled color/depth hash pairs matched. Seeded traversal tests
+compare accelerated and ordinary hits exactly across 12,000 rays, non-aligned
+volumes, both directions, tied boundaries and very small direction components.
+Geometry-read tests verify that empty regions are skipped without unstable
+wall-clock assertions. These remain CPU renderers in browser and QuickJS.
+A future GPU backend should explicitly retain CPU fallback for unavailable
+adapters, initialization failures and device/context loss; GPU fallback is not
+implemented by this CPU optimization pass.
+
 ## Textured floors and ceilings
 
 `@Map floor` and `ceiling` accept an opaque `"#RRGGBB"` color or an existing
@@ -193,6 +441,34 @@ line limits. Browser/shared QuickJS and native Rust HUDs support both sizes.
 Set `pause_ui.textScale` separately if a pause HUD is bound.
 Empty detail/objective/prompt strings remove their unused strips, allowing
 game-authored compact/minimal presets without hiding essential meters.
+
+**Floating icon HUD (browser/shared QuickJS):** set `style = "floating"` on the
+HUD object to draw directly over the world, with outlined text and pixel icons
+instead of opaque background strips or a crosshair. Meter `icon` and `emptyIcon`
+fields reference ordinary Rune `@Sprite` assets; the HUD's optional `noticeIcon`
+does the same. Sprite palettes own every pixel's color, outline and transparency.
+There are no built-in icon names or renderer-owned icon artwork. Unknown sprite
+references report an error.
+
+Meters default to `display = "counter"`. Use `display = "pips"` with `icon` and
+`emptyIcon` to show up to eight full/empty resource icons, or `display = "bar"`
+for an icon counter with a compact bar. Pips require an integer maximum of 1–8.
+The layout uses the actual sprite dimensions and draws at integer scale; small
+icons around 8–12 pixels work well. Meter `color` controls bar fill; icon colors
+come from their palettes.
+
+For example, Skybound 2's [hud.rune](../../examples/skybound_2/hud.rune) owns its
+six HUD sprites and palette. Its [UX logic](../../examples/skybound_2/ux.rune)
+selects the resources and display modes:
+
+```rune
+{"label":"NIX","icon":"beyond/hud/heart","emptyIcon":"beyond/hud/heart_empty","display":"pips","value":hearts,"max":4,"color":16740754}
+```
+
+Edit the Rune sprite's `pixels:` rows to redraw it, or its `@Palette` colors to
+recolor it. Import the asset file from the game's entry point as usual. The same
+assets work in the normal and pause HUDs, browser exports and shared QuickJS
+desktop host. The standalone Rust rasterizer retains the standard meter layout.
 
 The HUD separates resources, detail, objective, notice, and bottom interaction
 prompt. Panel bodies and notices word-wrap; `|` introduces a paragraph break.

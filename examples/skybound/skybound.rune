@@ -1,0 +1,60 @@
+#!RUNE
+import "assets.rune"
+import "logic.rune"
+import "controls.rune"
+import "sound.rune"
+import "shell.rune"
+
+@App
+name = Skybound
+type = pixel-3d
+runtime = hybrid
+scene = skybound
+resolution = [384,240]
+tick_rate = 30
+port = 3023
+shell = skybound_cabinet
+
+@Perspective/platformer
+fov = 76
+
+@Scene/skybound
+logic = skybound
+map = sky
+world = world
+camera = camera
+perspective = platformer
+things = ["avatar","coins","enemies","scenery","goal"]
+controls = skybound
+ui = ui
+pause_ui = pause_ui
+restart_action = return_to_title
+click_to_start = false
+mouse_look = false
+presentation = {
+    "defeat": "ONE MORE TRY?",
+    "instructions": [
+        "WASD / ARROWS MOVE - SPACE JUMPS",
+        "SHIFT RUN - Q / E ORBIT CAMERA",
+        "JUMP ON PURPLE BUGS TO BOUNCE",
+        "BLUE FLAG SAVES YOUR CHECKPOINT"
+    ],
+    "objective": "COLLECT COINS AND REACH THE SUMMIT STAR",
+    "subtitle": "A LITTLE ADVENTURE ABOVE THE CLOUDS",
+    "title": "SKYBOUND",
+    "victory": "YOU REACHED THE SUMMIT!"
+}
+
+@Map/sky
+floor = "#91c7db"
+sky = {"seed":42,"zenith":"#427cc4","horizon":"#c9edf0","cloud":"#fff4dc","speed":0.18}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Page/skybound
+logic = skybound
+view:
+    canvas data-rune-pixel-3d=true

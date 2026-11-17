@@ -1,0 +1,198 @@
+@Page/skybound_cabinet
+title = Skybound - Cloudstep Isles
+logic = skybound_cabinet
+style = skybound_cabinet
+view:
+    main .cabinet:
+        header .masthead:
+            div:
+                p .eyebrow "PIXEL 3D / WORLD 01"
+                h1 "SKYBOUND"
+            p .tagline "A little adventure above the clouds."
+        section .game-card:
+            div .toolbar:
+                span .level "01 / CLOUDSTEP ISLES"
+                div .buttons:
+                    button data-pixel-pause=true "Pause / P"
+                    button data-pixel-mute=true "Sound / M"
+                    button data-pixel-fullscreen=true "Fullscreen / F"
+            div .game-surface:
+                canvas data-rune-pixel-3d=true tabindex=0 aria-label="Skybound 3D platform adventure. WASD or arrows move, Space jumps, Shift runs, Q and E orbit the camera. Reach the golden star."
+                div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
+                    h2 "TAKE A BREATHER"
+                    p "Your next leap can wait."
+                    button data-pixel-pause=true "Resume adventure / P"
+                    button data-pixel-restart=true "Return to title / T"
+            div .launch data-pixel-hidden=title_hidden:
+                button .primary data-pixel-start=true "Begin adventure / Enter"
+                p "Six floating islands. Twelve golden coins. One summit star."
+            p .status data-pixel-status=true role=status aria-live=polite "Ready for an adventure."
+        section .guide aria-label="How to play":
+            div:
+                h2 "01 / MAKE THE LEAP"
+                p "WASD or arrows move relative to the camera. Space jumps; hold Shift to run. Jump near the edge to cross the widest gaps."
+            div:
+                h2 "02 / FIND YOUR ANGLE"
+                p "Q / E orbit the camera. R centers it behind you. On a controller, use the left stick to move, A to jump and the right stick to orbit."
+            div:
+                h2 "03 / AIM HIGH"
+                p "Stomp purple bugs from above. The blue flag saves your checkpoint and refills your hearts. Collect coins, then reach the golden star!"
+        footer:
+            p "MADE WITH RUNE / PIXEL-3D"
+            p "Keyboard, controller & touch. P pauses. M toggles sound."
+
+@Logic/skybound_cabinet
+state:
+    label = "Skybound"
+
+@Style/skybound_cabinet
+rules:
+    :root:
+        color-scheme = light
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #eef2e6
+        color = #263d59
+        font-family = system-ui, sans-serif
+    .cabinet:
+        max-width = 1120px
+        margin = auto
+        padding = clamp(16px, 3vw, 40px)
+    .masthead:
+        display = flex
+        align-items = end
+        justify-content = space-between
+        gap = 16px
+        flex-wrap = wrap
+        margin-bottom = 24px
+    .eyebrow:
+        margin = 0 0 8px
+        font-size = 11px
+        font-weight = 800
+        letter-spacing = 3px
+        color = #547760
+    h1:
+        margin = 0
+        font-size = clamp(36px, 7vw, 72px)
+        letter-spacing = -3px
+        line-height = 1
+        font-weight = 900
+    .tagline:
+        max-width = 230px
+        margin = 0
+        color = #547760
+        font-size = 16px
+        line-height = 1.5
+    .game-card:
+        overflow = hidden
+        background = #263d59
+        border = 4px solid #263d59
+        border-radius = 16px
+        box-shadow = 0 12px 0 #d9dfcd
+    .toolbar:
+        display = flex
+        align-items = center
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 10px
+        padding = 12px
+        color = #fff4d6
+    .level:
+        font-size = 11px
+        font-weight = 800
+        letter-spacing = 2px
+    .buttons:
+        display = flex
+        flex-wrap = wrap
+        gap = 6px
+    button:
+        cursor = pointer
+        border = 1px solid #718195
+        border-radius = 6px
+        background = #344e6b
+        color = #fff4d6
+        padding = 10px 12px
+        min-height = 44px
+        font = inherit
+        font-size = 12px
+        font-weight = 700
+    button:hover:
+        background = #45617f
+    button:focus-visible:
+        outline = 3px solid #ffe18a
+        outline-offset = 3px
+    .game-surface:
+        position = relative
+        background = #427cc4
+    canvas:
+        display = block
+        width = 100%
+        height = auto
+        aspect-ratio = 8 / 5
+        image-rendering = pixelated
+        touch-action = none
+        outline-offset = -3px
+    .launch:
+        display = flex
+        align-items = center
+        justify-content = center
+        flex-wrap = wrap
+        gap = 8px 20px
+        padding = 16px
+        color = #d2dedf
+        font-size = 13px
+    .primary:
+        background = #ffe18a
+        border-color = #ffe18a
+        color = #263d59
+        padding = 14px 24px
+        font-size = 14px
+    .primary:hover:
+        background = #fff4d6
+    .status:
+        color = #bac9d3
+        font-size = 11px
+        padding = 0 16px 8px
+        text-align = center
+    .guide:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(230px, 1fr))
+        gap = 24px
+        margin-top = 40px
+    .guide h2:
+        font-size = 12px
+        letter-spacing = 1px
+    .guide p:
+        font-size = 13px
+        line-height = 1.7
+        color = #546b6f
+    footer:
+        display = flex
+        flex-wrap = wrap
+        justify-content = space-between
+        gap = 12px
+        margin-top = 24px
+        border-top = 1px solid #ccd6c6
+        padding-top = 16px
+        font-size = 10px
+        letter-spacing = 1px
+        color = #547760
+    .pause-menu:
+        position = absolute
+        inset = 0
+        display = flex
+        flex-direction = column
+        justify-content = center
+        align-items = center
+        gap = 12px
+        padding = 20px
+        background = #263d59ed
+        color = #fff4d6
+    .pause-menu h2:
+        margin = 0
+    .pause-menu p:
+        margin = 0 0 10px
+    [hidden]:
+        display = none !important

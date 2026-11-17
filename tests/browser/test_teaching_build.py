@@ -17,7 +17,7 @@ class TeachingBuildTests(unittest.TestCase):
         games = layout.split('h3 "%i18n.Nav.games%"', 1)[1].split('div .nav-group:', 1)[0]
         self.assertEqual(
             re.findall(r'click="navigate\(\'([\w-]+)\'\)"', games),
-            ['games', 'vectworms', 'monster-city', 'vect-breach', 'rune-crypt'],
+            ['games', 'vectworms', 'monster-city', 'vect-breach', 'rune-crypt', 'skybound-2'],
         )
 
     def test_stale_compiler_is_rejected_before_overwriting_a_working_site(self):
@@ -27,16 +27,16 @@ class TeachingBuildTests(unittest.TestCase):
             previous = destination / 'index.html'
             previous.write_text('Working site')
             with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'vectrune 0.2.18\n')) as command:
-                with self.assertRaisesRegex(RuntimeError, '0.3.4.*Pixel 3D'):
+                with self.assertRaisesRegex(RuntimeError, '0.3.5.*Skybound 2'):
                     build_site(destination, Path(folder) / 'old-compiler')
                 self.assertEqual(command.call_count, 1)
             self.assertEqual(previous.read_text(), 'Working site')
             self.assertFalse((destination / 'assets').exists())
 
-    def test_previous_pixel_compiler_is_rejected_for_rune_crypt(self):
+    def test_previous_pixel_compiler_is_rejected_for_skybound(self):
         with tempfile.TemporaryDirectory() as folder:
-            with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'vectrune 0.3.3\n')):
-                with self.assertRaisesRegex(RuntimeError, '0.3.4.*Rune Crypt'):
+            with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'vectrune 0.3.4\n')):
+                with self.assertRaisesRegex(RuntimeError, '0.3.5.*Skybound 2'):
                     build_site(Path(folder) / 'site', Path(folder) / 'old-compiler')
 
 

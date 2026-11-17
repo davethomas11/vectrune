@@ -1,0 +1,334 @@
+@Logic/skybound
+state:
+    status = "title"
+    world = null
+    player = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    camera = {"x": 0.422, "y": 6.606, "z": 6.3, "angle": 20, "pitch": -21}
+    avatar = {"x": 7, "y": 9, "z": 3, "angle": 0, "model": "sky/hero"}
+    goal = {"x": 6.5, "y": 20, "z": 8.5, "angle": 0, "model": "sky/star"}
+    coins = []
+    enemies = []
+    scenery = []
+    checkpoint = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint_active = false
+    hearts = 3
+    collected = 0
+    total_coins = 12
+    ticks = 0
+    yaw = 20
+    velocity_x = 0
+    velocity_y = 0
+    jump_held = false
+    invulnerable = 0
+    notice = ""
+    notice_ticks = 0
+    touch_ready = false
+    title_hidden = false
+    ui = {"meters": [], "objective": "", "detail": "", "prompt": "", "notice": "", "panel": null}
+    pause_ui = {
+        "meters": [],
+        "objective": "",
+        "detail": "",
+        "prompt": "",
+        "notice": "",
+        "panel": null
+    }
+
+action initialize:
+    call setup_course
+    status = "title"
+    call refresh_ui
+
+action setup_course:
+    player = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint = {"x": 7, "y": 9, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint_active = false
+    hearts = 3
+    collected = 0
+    ticks = 0
+    yaw = 20
+    velocity_x = 0
+    velocity_y = 0
+    jump_held = false
+    invulnerable = 0
+    notice = "Follow the golden coins. Jump the gaps!"
+    notice_ticks = 150
+    world = {
+        "width": 28,
+        "height": 28,
+        "depth": 16,
+        "seed": 42,
+        "biome": "meadow",
+        "materials": ["sky/grass", "sky/clay", "sky/violet", "sky/gold"],
+        "cells": [],
+        "spawn": player
+    }
+    world.cells = repeat(0, 12544)
+    # Six solid islands, separated by real gaps. x/y are horizontal; z is up.
+    call island 5, 7, 6, 6, 3, 1
+    call island 13, 8, 4, 4, 4, 1
+    call island 19, 10, 4, 5, 5, 1
+    call island 18, 17, 5, 5, 6, 3
+    call island 11, 18, 5, 4, 7, 1
+    call island 5, 18, 4, 5, 8, 4
+    coins = []
+    call coin 8.5, 9, 3
+    call coin 10, 9, 3
+    call coin 13.5, 9, 4
+    call coin 15.5, 9, 4
+    call coin 19.5, 11.5, 5
+    call coin 21, 13.5, 5
+    call coin 21, 17.5, 6
+    call coin 19, 19, 6
+    call coin 15, 20, 7
+    call coin 12, 20, 7
+    call coin 8, 20, 8
+    call coin 6, 21.5, 8
+    enemies = [
+        {
+            "x": 15,
+            "y": 10.5,
+            "z": 4,
+            "home": 15,
+            "axis": "x",
+            "model": "sky/bug",
+            "angle": 0,
+            "visible": true
+        },
+        {
+            "x": 21,
+            "y": 12.5,
+            "z": 5,
+            "home": 12.5,
+            "axis": "y",
+            "model": "sky/bug",
+            "angle": 90,
+            "visible": true
+        },
+        {
+            "x": 13.5,
+            "y": 20.5,
+            "z": 7,
+            "home": 13.5,
+            "axis": "x",
+            "model": "sky/bug",
+            "angle": 0,
+            "visible": true
+        }
+    ]
+    scenery = [
+        {"x": 19, "y": 18, "z": 6, "model": "sky/flag"},
+        {"x": 5.8, "y": 7.8, "z": 3, "model": "sky/flower"},
+        {"x": 6.5, "y": 12, "z": 3, "model": "sky/flower"},
+        {"x": 16, "y": 8.5, "z": 4, "model": "sky/flower"},
+        {"x": 22, "y": 14, "z": 5, "model": "sky/flower"},
+        {"x": 11.5, "y": 18.5, "z": 7, "model": "sky/flower"}
+    ]
+    camera = {"x": 0.422, "y": 6.606, "z": 6.3, "angle": 20, "pitch": -21}
+    call update_view
+
+action island(x, y, width, height, top, material):
+    world = voxel_fill(world, [x, y, top-2], [width, height, 1], 2)
+    world = voxel_fill(world, [x, y, top-1], [width, height, 1], material)
+
+action coin(x, y, z):
+    coins.push(
+        {
+            "x": x,
+            "y": y,
+            "z": z + 0.45,
+            "base": z + 0.45,
+            "angle": 0,
+            "model": "sky/coin",
+            "visible": true
+        }
+    )
+
+action start:
+    call setup_course
+    status = "playing"
+    music.stop
+    music.play "sky_theme"
+    call refresh_ui
+
+action advance:
+    stop when status == "playing"
+    call start
+
+action return_to_title:
+    music.stop
+    call initialize
+
+action center_camera:
+    yaw = player.angle
+    call update_view
+
+action tick(input):
+    stop when status != "playing"
+    ticks += 1
+    notice_ticks = max(0, notice_ticks - 1)
+    invulnerable = max(0, invulnerable - 1)
+    yaw += ((input.orbit_right ? 1 : 0) - (input.orbit_left ? 1 : 0) + (input.orbit ? input.orbit : 0)) * 3
+    forward = clamp((input.forward ? 1 : 0) - (input.back ? 1 : 0) + (input.move_y ? input.move_y : 0), -1, 1)
+    side = clamp((input.right ? 1 : 0) - (input.left ? 1 : 0) + (input.move_x ? input.move_x : 0), -1, 1)
+    magnitude = max(1, sqrt(forward * forward + side * side))
+    speed = input.run ? 0.23 : 0.18
+    target_x = (cos(yaw) * forward - sin(yaw) * side) * speed / magnitude
+    target_y = (sin(yaw) * forward + cos(yaw) * side) * speed / magnitude
+    velocity_x += (target_x - velocity_x) * 0.45
+    velocity_y += (target_y - velocity_y) * 0.45
+    if abs(velocity_x) + abs(velocity_y) > 0.02:
+        player.angle = atan2(velocity_y, velocity_x)
+    previous_z = player.z
+    player = voxel_move(
+        world,
+        player,
+        velocity_x,
+        velocity_y,
+        !!input.jump && !jump_held,
+        {"jumpSpeed": 0.44, "gravity": 0.035, "autoStep": false}
+    )
+    if player.z > previous_z && !!input.jump && !jump_held:
+        sound.play "sky_jump"
+    jump_held = !!input.jump
+    if player.z < 1.3:
+        call lose_heart
+    for item in coins:
+        item.angle = ticks * 6
+        item.z = item.base + sin(ticks * 6) * 0.12
+        coin_distance = distance(player, item)
+        if item.visible && coin_distance < 0.7 && abs(player.z + 0.7 - item.z) < 1:
+            item.visible = false
+            collected += 1
+            sound.play "sky_coin"
+    for enemy in enemies:
+        if enemy.visible:
+            patrol = sin(ticks * 2) * 0.65
+            if enemy.axis == "x":
+                enemy.x = enemy.home + patrol
+                enemy.angle = cos(ticks * 2) >= 0 ? 0 : 180
+            if enemy.axis == "y":
+                enemy.y = enemy.home + patrol
+                enemy.angle = cos(ticks * 2) >= 0 ? 90 : 270
+            enemy_distance = distance(player, enemy)
+            if enemy_distance < 0.7 && abs(player.z - enemy.z) < 1.1:
+                if player.vz < 0 && previous_z >= enemy.z + 0.7:
+                    enemy.visible = false
+                    player.vz = 0.36
+                    sound.play "sky_stomp"
+                    notice = "Nice stomp!"
+                    notice_ticks = 45
+                if enemy.visible && invulnerable == 0:
+                    call lose_heart
+    flag_distance = distance(player, scenery[0])
+    if !checkpoint_active && flag_distance < 1.3 && abs(player.z - 6) < 0.25:
+        checkpoint_active = true
+        checkpoint = {"x": 20, "y": 19, "z": 6, "angle": 180, "pitch": 0, "vz": 0}
+        hearts = 3
+        sound.play "sky_checkpoint"
+        notice = "Checkpoint! Hearts refilled."
+        notice_ticks = 120
+    goal.angle = ticks * 3
+    goal.z = 8.5 + sin(ticks * 4) * 0.2
+    goal_distance = distance(player, goal)
+    if goal_distance < 1 && abs(player.z - 8) < 0.3:
+        status = "won"
+        music.stop
+        sound.play "sky_win"
+        notice = "Summit reached! " + collected + " / " + total_coins + " coins."
+    call update_view
+    call refresh_ui
+
+action lose_heart:
+    stop when status != "playing"
+    hearts -= 1
+    sound.play "sky_hurt"
+    if hearts <= 0:
+        status = "gameover"
+        music.stop
+    # Copy fields so walking never moves the saved checkpoint.
+    player = {
+        "x": checkpoint.x,
+        "y": checkpoint.y,
+        "z": checkpoint.z,
+        "angle": checkpoint.angle,
+        "pitch": 0,
+        "vz": 0
+    }
+    velocity_x = 0
+    velocity_y = 0
+    invulnerable = 60
+    notice = checkpoint_active ? "Back at the flag. Your coins are safe." : "Mind the gap! Time your jump near the edge."
+    notice_ticks = 120
+    yaw = checkpoint.angle
+    camera = {
+        "x": clamp(player.x - cos(yaw) * 7, 0.3, 27.7),
+        "y": clamp(player.y - sin(yaw) * 7, 0.3, 27.7),
+        "z": player.z + 3.3,
+        "angle": yaw,
+        "pitch": -21
+    }
+
+action update_view:
+    # The avatar and camera are independent scene bindings: true third person.
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z
+    avatar.angle = player.angle
+    avatar.model = abs(velocity_x) + abs(velocity_y) > 0.02 && ticks % 12 < 6 ? "sky/hero_run" : "sky/hero"
+    avatar.visible = invulnerable == 0 || ticks % 6 < 3
+    camera.x += (clamp(player.x - cos(yaw) * 7, 0.3, 27.7) - camera.x) * 0.3
+    camera.y += (clamp(player.y - sin(yaw) * 7, 0.3, 27.7) - camera.y) * 0.3
+    camera.z += (player.z + 3.3 - camera.z) * 0.15
+    camera.angle = atan2(player.y - camera.y, player.x - camera.x)
+
+action refresh_ui:
+    touch_ready = status == "playing"
+    title_hidden = status == "playing"
+    ui = {
+        "meters": [
+            {"label": "HEARTS", "value": hearts, "max": 3, "color": 16214136},
+            {"label": "COINS", "value": collected, "max": total_coins, "color": 16769418}
+        ],
+        "objective": checkpoint_active ? "CLIMB WEST TO THE SUMMIT STAR": "FOLLOW THE COINS TO THE BLUE FLAG",
+        "detail": "SKYBOUND / CLOUDSTEP ISLES",
+        "prompt": "SPACE JUMP / SHIFT RUN / Q E CAMERA",
+        "notice": notice_ticks > 0 ? notice: "",
+        "panel": null
+    }
+    if status == "title":
+        ui.heading = "SKYBOUND"
+        ui.objective = "CLOUDSTEP ISLES / A 3D PLATFORM ADVENTURE"
+        ui.prompt = "ENTER OR BEGIN ADVENTURE"
+        ui.panel = {
+            "title": "THE SKY IS YOUR PLAYGROUND",
+            "body": "Jump between floating islands.|Collect coins. Stomp purple bugs.|The blue flag saves your checkpoint.",
+            "choices": [],
+            "selected": 0,
+            "footer": "REACH THE GOLDEN SUMMIT STAR"
+        }
+    if status == "won" || status == "gameover":
+        ui.heading = status == "won" ? "SUMMIT REACHED!" : "TRY AGAIN!"
+        ui.prompt = "ENTER TO PLAY AGAIN"
+        ui.panel = {
+            "title": status == "won" ? "YOU DID IT!": "KEEP ON JUMPING",
+            "body": status == "won" ? collected + " / " + total_coins + " coins collected.|Can you find every coin?": "Every great adventure takes practice.|Run and jump near the edge for longer leaps.",
+            "choices": [],
+            "selected": 0,
+            "footer": "BEGIN ADVENTURE FOR A FRESH RUN"
+        }
+    pause_ui = {
+        "heading": "TAKE A BREATHER",
+        "meters": ui.meters,
+        "objective": ui.objective,
+        "detail": "SKYBOUND",
+        "prompt": "P TO RESUME / T TO TITLE",
+        "notice": "",
+        "panel": {
+            "title": "ADVENTURE PAUSED",
+            "body": "Your progress is safe while paused.|WASD move. Space jump. Shift run.|Q / E orbit. R centers the camera.",
+            "choices": [],
+            "selected": 0,
+            "footer": "RETURNING TO TITLE RESETS THE COURSE"
+        }
+    }

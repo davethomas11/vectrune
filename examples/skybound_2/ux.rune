@@ -1,0 +1,140 @@
+@Logic/beyond
+action refresh_ui:
+    touch_ready = phase == "playing"
+    map_hidden = phase != "map"
+    result_hidden = phase != "result" && phase != "failed"
+    enter_locked = phase == "map" && selected >= saga.unlocked
+    node_one_locked = false
+    node_two_locked = saga.unlocked < 2
+    node_three_locked = saga.unlocked < 3
+    node_four_locked = saga.unlocked < 4
+    node_one_selected = selected == 0
+    node_two_selected = selected == 1
+    node_three_selected = selected == 2
+    node_four_selected = selected == 3
+    node_seven_locked = saga.unlocked < 7
+    node_seven_selected = selected == 6
+    node_six_locked = saga.unlocked < 6
+    node_six_selected = selected == 5
+    node_five_locked = saga.unlocked < 5
+    node_five_selected = selected == 4
+    stage_name = stages[selected].name
+    stage_subtitle = stages[selected].subtitle
+    selected_status = selected >= saga.unlocked ? "LOCKED / restore the previous lantern": (saga.cleared[selected] ? "LANTERN RESTORED / best " + saga.best[selected] + " seeds": "NEW DESTINATION / awaiting your light")
+    restored = 0
+    for lit in saga.cleared:
+        if lit:
+            restored += 1
+    progress_label = restored + " / 7 LANTERNS RESTORED"
+    seed_label = collected + " / " + seeds.length + " AMBER SEEDS"
+    primary_label = phase == "failed" ? "Try destination again / Enter" : "Return to atlas / Enter"
+    ui = {
+        "style": "floating",
+        "noticeIcon": "beyond/hud/lantern",
+        "meters": [
+            {
+                "label": "NIX",
+                "icon": "beyond/hud/heart",
+                "emptyIcon": "beyond/hud/heart_empty",
+                "display": "pips",
+                "value": hearts,
+                "max": 4,
+                "color": 16740754
+            },
+            {
+                "label": "AMBER SEEDS",
+                "icon": "beyond/hud/seed",
+                "value": collected,
+                "max": max(1, seeds.length),
+                "color": 16766068
+            },
+            {
+                "label": "SQUISHED",
+                "icon": "beyond/hud/bug",
+                "value": squished,
+                "max": max(1, enemies.length),
+                "color": 5495748
+            }
+        ],
+        "objective": boss_active ? (boss_phase == "rest" ? "CORE OPEN - JUMP ON THE BOSS!": (selected == 1 ? "DODGE THE CHARGE / WAIT FOR BLUE CORE": "JUMP THE RED WAVE / WAIT FOR THE CROWN")): "FOLLOW THE SEEDS / REKINDLE THE LANTERN",
+        "detail": stage_name,
+        "prompt": "SPACE JUMP / HOLD TO GLIDE / Q E CAMERA",
+        "notice": notice_ticks > 0 ? notice: "",
+        "panel": null
+    }
+    if boss_active:
+        ui.meters = [
+            {
+                "label": "NIX",
+                "icon": "beyond/hud/heart",
+                "emptyIcon": "beyond/hud/heart_empty",
+                "display": "pips",
+                "value": hearts,
+                "max": 4,
+                "color": 16740754
+            },
+            {
+                "label": "AMBER SEEDS",
+                "icon": "beyond/hud/seed",
+                "value": collected,
+                "max": max(1, seeds.length),
+                "color": 16766068
+            },
+            {
+                "icon": "beyond/hud/boss",
+                "display": "bar",
+                "label": selected == 1 ? "KILNBACK": "REGENT",
+                "value": boss_hp,
+                "max": boss_max,
+                "color": 16414311
+            }
+        ]
+        ui.detail = selected == 1 ? "KILNBACK / THE WALKING FURNACE" : "THE TEMPEST REGENT / KEEPER OF DAWN"
+    if phase == "playing" && !boss_active:
+        ui.detail = stage_name
+    if phase == "map":
+        ui = {
+            "style": "floating",
+            "noticeIcon": "beyond/hud/lantern",
+            "meters": [
+                {
+                    "label": "SKY LANTERNS",
+                    "icon": "beyond/hud/lantern",
+                    "value": restored,
+                    "max": 7,
+                    "color": 16766068
+                }
+            ],
+            "objective": stage_name,
+            "detail": "SKYBOUND II / " + progress_label,
+            "prompt": enter_locked ? "RESTORE THE PREVIOUS LANTERN TO UNLOCK": "1-7 CHOOSE / ENTER EXPLORE",
+            "notice": "",
+            "panel": null
+        }
+    if phase == "result" || phase == "failed":
+        ui.heading = phase == "result" ? "LANTERN RESTORED" : "LIGHT THE WAY"
+        ui.prompt = phase == "result" ? "ENTER TO RETURN TO THE ATLAS" : "ENTER TO TRY THIS DESTINATION AGAIN"
+        ui.panel = {
+            "title": phase == "result" ? "NICELY FLOWN, NIX": "YOUR JOURNEY CONTINUES",
+            "body": phase == "result" ? seed_label + ".|" + progress_label + ".": "Restored lanterns are saved.|Retry this destination or return to the atlas.",
+            "choices": [],
+            "selected": 0,
+            "footer": "B / RETURN TO ATLAS"
+        }
+    pause_ui = {
+        "style": "floating",
+        "noticeIcon": "beyond/hud/lantern",
+        "heading": "WINGS AT REST",
+        "meters": ui.meters,
+        "objective": ui.objective,
+        "detail": stage_name,
+        "prompt": "P RESUME / B ATLAS",
+        "notice": "",
+        "panel": {
+            "title": "ADVENTURE PAUSED",
+            "body": "Space jumps. Hold it while falling to glide.|Q / E orbit. R centers the camera.|Stomp creatures. Hold jump for a higher bounce.|Leaving resets this attempt; lanterns stay saved.",
+            "choices": [],
+            "selected": 0,
+            "footer": "YOUR LIGHT WILL WAIT"
+        }
+    }

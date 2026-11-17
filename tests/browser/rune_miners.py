@@ -270,7 +270,8 @@ with tempfile.TemporaryDirectory(prefix="rune-miners-") as folder, sync_playwrig
     expect(phone.locator('[data-control-touch=one]')).not_to_be_visible()
     phone.wait_for_function("__RunePixel3D.app.state.battle_clock===40")
     phone.locator('[data-control-touch=guard]').tap()
-    assert phone.evaluate("__RunePixel3D.app.state.tutorial_step") == "skill"
+    # Touch input is consumed by the next fixed simulation tick, not the DOM tap.
+    phone.wait_for_function('__RunePixel3D.app.state.tutorial_step === "skill"')
     assert phone.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     assert not errors, errors
     mobile.close()

@@ -451,6 +451,27 @@ fn formatting_wraps_nested_objects_at_configurable_width() {
     cli().arg("fmt").arg(&entry).args(["--line-width", "0"]).assert().failure();
 }
 
+#[test]
+fn formatting_wraps_executable_collections_without_changing_tokens() {
+    let dir = tempfile::tempdir().unwrap();
+    let entry = dir.path().join("game.rune");
+    fs::write(&entry, concat!(
+        "@Logic/game\nstate:\n    count = 2\n    items = []\n",
+        "    labels = [{\"name\":\"literal { bracket\",\"value\":1},{\"name\":\"second\",\"value\":2}]\n",
+        "action update:\n",
+        "    ui = {\"meters\":[{\"label\":\"NIX\",\"value\":count,\"max\":max(1, count),\"icon\":\"heart\"}],\"notice\":count == 2 ? \"quoted, [text]\" : \"other\"}\n",
+        "    if count == 2:\n",
+        "        items.push({\"value\":count + 1,\"nested\":[1,2,3],\"label\":\"keep \\\"quotes\\\"\"})\n",
+    )).unwrap();
+    json(cli().arg("fmt").arg(&entry).args(["--line-width", "60", "--json"]), true);
+    let formatted = fs::read_to_string(&entry).unwrap();
+    assert!(formatted.contains("    ui = {\n"), "{formatted}");
+    assert!(formatted.contains("        items.push(\n"), "{formatted}");
+    assert!(formatted.lines().all(|line| line.chars().count() <= 60), "{formatted}");
+    json(cli().arg("fmt").arg(&entry).args(["--line-width", "60", "--check", "--json"]), true);
+    assert_eq!(fs::read_to_string(&entry).unwrap(), formatted);
+}
+
 #[cfg(unix)]
 #[test]
 fn watch_recovers_from_failed_assertions_missing_imports_and_atomic_saves() {
