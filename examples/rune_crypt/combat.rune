@@ -4,7 +4,20 @@ action enemy_death(foe):
     death_z = foe.z ? foe.z : 0
     death_scale = foe.scale ? foe.scale : 1
     death_angle = foe.angle ? foe.angle : 0
-    death_effects.push({"x":foe.x,"y":foe.y,"z":death_z,"start_z":death_z,"angle":death_angle,"scale":death_scale,"model":death_model,"dissolve":0,"age":0,"visible":true})
+    death_effects.push(
+        {
+            "x": foe.x,
+            "y": foe.y,
+            "z": death_z,
+            "start_z": death_z,
+            "angle": death_angle,
+            "scale": death_scale,
+            "model": death_model,
+            "dissolve": 0,
+            "age": 0,
+            "visible": true
+        }
+    )
 
 action update_deaths:
     for remains in death_effects:
@@ -25,7 +38,20 @@ action take_damage(amount):
 
 action spawn_bolt(enemy, offset):
     angle = enemy.aim + offset
-    projectiles.push({"x":enemy.x,"y":enemy.y,"z":0.5,"angle":angle,"vx":cos(angle) * 0.12,"vy":sin(angle) * 0.12,"model":"enemy/bolt","visible":true,"life":100,"damage":8 + level})
+    projectiles.push(
+        {
+            "x": enemy.x,
+            "y": enemy.y,
+            "z": 0.5,
+            "angle": angle,
+            "vx": cos(angle) * 0.12,
+            "vy": sin(angle) * 0.12,
+            "model": "enemy/bolt",
+            "visible": true,
+            "life": 100,
+            "damage": 8 + level
+        }
+    )
 
 action update_combat:
     remaining = 0
@@ -35,7 +61,7 @@ action update_combat:
     for bolt in projectiles:
         if bolt.visible == true:
             bolt.life -= 1
-            next = {"x":bolt.x + bolt.vx,"y":bolt.y + bolt.vy}
+            next = {"x": bolt.x + bolt.vx, "y": bolt.y + bolt.vy}
             moved = slide(bolt.x, bolt.y, bolt.vx, bolt.vy, 0.08)
             if sees(bolt, next) == false || abs(moved.x - next.x) > 0.01 || abs(moved.y - next.y) > 0.01:
                 bolt.visible = false
@@ -54,7 +80,7 @@ action update_combat:
             dist = distance(player, enemy)
             if dist < nearest:
                 nearest = dist
-                directions = ["E","SE","S","SW","W","NW","N","NE"]
+                directions = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"]
                 heading = floor(((angle_to(player, enemy) + 382.5) % 360) / 45)
                 hint = " / HUNT " + directions[heading]
             if !enemy.kind:
@@ -83,7 +109,14 @@ action update_combat:
                 enemy.windup -= 1
                 enemy.model = "enemy/" + enemy.kind + "_warn"
                 if enemy.kind == "skeleton":
-                    warnings.push({"x":enemy.target.x,"y":enemy.target.y,"model":"world/warning","visible":true})
+                    warnings.push(
+                        {
+                            "x": enemy.target.x,
+                            "y": enemy.target.y,
+                            "model": "world/warning",
+                            "visible": true
+                        }
+                    )
                 if enemy.windup == 0:
                     if enemy.kind == "skeleton":
                         if distance(player, enemy.target) < 0.65 && dist < 1.7 && sees(enemy, player):
@@ -98,7 +131,16 @@ action update_combat:
                         if enemy.kind == "warden" && enemy.phase == 2:
                             enemy.cooldown = 36
             if enemy.stagger > 0 && busy == false:
-                warnings.push({"x":enemy.x,"y":enemy.y,"z":0.65,"angle":enemy.angle,"model":"enemy/hit","visible":true})
+                warnings.push(
+                    {
+                        "x": enemy.x,
+                        "y": enemy.y,
+                        "z": 0.65,
+                        "angle": enemy.angle,
+                        "model": "enemy/hit",
+                        "visible": true
+                    }
+                )
             if busy == false && enemy.stagger == 0 && dist < 9 && sees(enemy, player):
                 angle = angle_to(enemy, player)
                 stride = 0.026 + level * 0.002
@@ -121,6 +163,6 @@ action update_combat:
                     if enemy.kind == "warden":
                         enemy.windup = 30
                     enemy.aim = angle
-                    enemy.target = {"x":player.x,"y":player.y}
+                    enemy.target = {"x": player.x, "y": player.y}
                     enemy.model = "enemy/" + enemy.kind + "_warn"
                     sound.play "warning"

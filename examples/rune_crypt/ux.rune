@@ -1,7 +1,14 @@
 @Logic/crypt
 state:
-    ui = {"meters":[],"objective":"","detail":"","prompt":"","notice":"","panel":null}
-    pause_ui = {"meters":[],"objective":"","detail":"","prompt":"","notice":"","panel":null}
+    ui = {"meters": [], "objective": "", "detail": "", "prompt": "", "notice": "", "panel": null}
+    pause_ui = {
+        "meters": [],
+        "objective": "",
+        "detail": "",
+        "prompt": "",
+        "notice": "",
+        "panel": null
+    }
     camp_locked = false
     choice_locked = true
     confirm_locked = true
@@ -74,7 +81,23 @@ action refresh_ui:
     selected_two = false
     selected_three = false
     context = ""
-    ui = {"meters":[{"label":"HEALTH","value":health,"max":max_health,"color":8312492},{"label":"MANA","value":ammo,"max":mana_max,"color":8371396},{"label":"DODGE","value":dodge_rate - dodge_cooldown,"max":dodge_rate,"color":15914378}],"objective":"DEPTH " + level + "/5 - DEFEAT " + remaining + " FOES","detail":class_name + " / " + relic + " / LV " + rpg_level + " XP " + xp + "/3 / SHARDS " + legacy.shards,"prompt":"CLICK / SPACE: SWORD   Q: RUNE   SHIFT: DODGE","notice":notice_ticks > 0 ? notice : "","panel":null}
+    ui = {
+        "meters": [
+            {"label": "HEALTH", "value": health, "max": max_health, "color": 8312492},
+            {"label": "MANA", "value": ammo, "max": mana_max, "color": 8371396},
+            {
+                "label": "DODGE",
+                "value": dodge_rate - dodge_cooldown,
+                "max": dodge_rate,
+                "color": 15914378
+            }
+        ],
+        "objective": "DEPTH " + level + "/5 - DEFEAT " + remaining + " FOES",
+        "detail": class_name + " / " + relic + " / LV " + rpg_level + " XP " + xp + "/3 / SHARDS " + legacy.shards,
+        "prompt": "CLICK / SPACE: SWORD   Q: RUNE   SHIFT: DODGE",
+        "notice": notice_ticks > 0 ? notice: "",
+        "panel": null
+    }
     ui_summary = class_name + " | Relic: " + relic + " | Training rank: " + legacy.rank + " | Shards: " + legacy.shards
     ui_resources = "Health " + health + "/" + max_health + " | Mana " + ammo + "/" + mana_max + (dodge_cooldown == 0 ? " | Dodge ready" : " | Dodge " + ceil(dodge_cooldown / 30) + "s")
     ui_run_status = level_title + " | RPG level " + rpg_level + " | " + kills + " foes defeated"
@@ -85,7 +108,17 @@ action refresh_ui:
         ui.heading = "RUNE CRYPT"
         ui.objective = "REACH DEPTH FIVE. DEFEAT THE WARDEN. CLAIM THE HEART."
         ui.prompt = "1 / 2 / 3: CLASS   ENTER / NEW RUN: BEGIN"
-        ui.panel = {"title":"CHOOSE YOUR CLASS","body":"Move with WASD. Aim with mouse or arrows. Your shards survive death; your run upgrades reset.","choices":["KNIGHT - ARMOR / BEST FIRST RUN","ARCANIST - STRONG MAGIC / LESS HEALTH","SCOUT - FAST MOVEMENT / FAST DODGE"],"selected":hero_class,"footer":"1 / 2 / 3: CLASS   ENTER / NEW RUN: BEGIN"}
+        ui.panel = {
+            "title": "CHOOSE YOUR CLASS",
+            "body": "Move with WASD. Aim with mouse or arrows. Your shards survive death; your run upgrades reset.",
+            "choices": [
+                "KNIGHT - ARMOR / BEST FIRST RUN",
+                "ARCANIST - STRONG MAGIC / LESS HEALTH",
+                "SCOUT - FAST MOVEMENT / FAST DODGE"
+            ],
+            "selected": hero_class,
+            "footer": "1 / 2 / 3: CLASS   ENTER / NEW RUN: BEGIN"
+        }
         if status == "gameover":
             ui.panel.title = "YOU FELL. YOUR SHARDS ARE SAFE."
             ui.panel.body = "Reached depth " + level + "/5. Defeated " + kills + " foes. Spend 5 shards on training, or try another class."
@@ -123,12 +156,32 @@ action refresh_ui:
         if distance(player, shrine_pos) < 1 && shrine_used == false:
             context = "shrine"
             choice_locked = false
-            ui.panel = {"title":"SHRINE - ONE FREE UPGRADE","body":"Choose your upgrade, then press E / USE. This bonus lasts for the run.","choices":["BLADE - SWORD DAMAGE +2","RUNE - MAGIC +2 / MAX MANA +1","GUARD - MAX HEALTH +25 / HEAL 25"],"selected":reward_choice,"footer":"1 / 2 / 3 OR C: SELECT   E / USE: CLAIM"}
+            ui.panel = {
+                "title": "SHRINE - ONE FREE UPGRADE",
+                "body": "Choose your upgrade, then press E / USE. This bonus lasts for the run.",
+                "choices": [
+                    "BLADE - SWORD DAMAGE +2",
+                    "RUNE - MAGIC +2 / MAX MANA +1",
+                    "GUARD - MAX HEALTH +25 / HEAL 25"
+                ],
+                "selected": reward_choice,
+                "footer": "1 / 2 / 3 OR C: SELECT   E / USE: CLAIM"
+            }
             ui.prompt = "ENEMIES STILL MOVE. KEEP WATCH WHILE CHOOSING."
         if distance(player, chest_pos) < 0.9 && chest_opened == false:
             context = "chest"
             choice_locked = false
-            ui.panel = {"title":"CHEST - CHOOSE ONE RELIC","body":"Current: " + relic + ". New equipment replaces it; effects do not stack.","choices":["FANG - FASTER SWORD SWINGS","LANTERN - FASTER MANA REGENERATION","AEGIS - ARMOR +2 / LESS DAMAGE"],"selected":reward_choice,"footer":"1 / 2 / 3 OR C: SELECT   E / USE: EQUIP"}
+            ui.panel = {
+                "title": "CHEST - CHOOSE ONE RELIC",
+                "body": "Current: " + relic + ". New equipment replaces it; effects do not stack.",
+                "choices": [
+                    "FANG - FASTER SWORD SWINGS",
+                    "LANTERN - FASTER MANA REGENERATION",
+                    "AEGIS - ARMOR +2 / LESS DAMAGE"
+                ],
+                "selected": reward_choice,
+                "footer": "1 / 2 / 3 OR C: SELECT   E / USE: EQUIP"
+            }
             ui.prompt = "ENEMIES STILL MOVE. KEEP WATCH WHILE CHOOSING."
         if distance(player, exit_pos) < 0.8:
             if remaining > 0:
@@ -139,7 +192,16 @@ action refresh_ui:
                 if level < 5:
                     context = "stairs"
                     choice_locked = false
-                    ui.panel = {"title":"DEPTH CLEARED - CHOOSE YOUR NEXT ROUTE","body":"Both routes refill mana. Sanctuary is the safer choice.","choices":["SANCTUARY - HEAL 25 BEFORE DESCENDING","CURSED - FOES +3 HP / DOUBLE KILL SHARDS"],"selected":route_choice,"footer":"1 / 2 OR C: SELECT   E / USE: DESCEND"}
+                    ui.panel = {
+                        "title": "DEPTH CLEARED - CHOOSE YOUR NEXT ROUTE",
+                        "body": "Both routes refill mana. Sanctuary is the safer choice.",
+                        "choices": [
+                            "SANCTUARY - HEAL 25 BEFORE DESCENDING",
+                            "CURSED - FOES +3 HP / DOUBLE KILL SHARDS"
+                        ],
+                        "selected": route_choice,
+                        "footer": "1 / 2 OR C: SELECT   E / USE: DESCEND"
+                    }
                     ui.prompt = "YOUR UPGRADES AND RELIC CARRY TO THE NEXT DEPTH"
     ui_choice_one = "No choice nearby"
     ui_choice_two = "No choice nearby"
@@ -153,4 +215,18 @@ action refresh_ui:
         selected_three = ui.panel.selected == 2
         third_choice_locked = ui.panel.choices.length < 3
         confirm_locked = status != "playing"
-    pause_ui = {"heading":"PAUSED","meters":ui.meters,"objective":ui.objective,"detail":ui.detail,"prompt":"P: RESUME   T: RETURN TO TITLE","notice":"","panel":{"title":"YOUR RUN IS SAFE WHILE PAUSED","body":class_name + " / " + level_title + "|Level " + rpg_level + " / " + kills + " foes defeated / " + relic + "|Return to title keeps shards and training, but ends this run.","choices":[],"selected":0,"footer":"P: RESUME   T: TITLE / CHOOSE CLASS"}}
+    pause_ui = {
+        "heading": "PAUSED",
+        "meters": ui.meters,
+        "objective": ui.objective,
+        "detail": ui.detail,
+        "prompt": "P: RESUME   T: RETURN TO TITLE",
+        "notice": "",
+        "panel": {
+            "title": "YOUR RUN IS SAFE WHILE PAUSED",
+            "body": class_name + " / " + level_title + "|Level " + rpg_level + " / " + kills + " foes defeated / " + relic + "|Return to title keeps shards and training, but ends this run.",
+            "choices": [],
+            "selected": 0,
+            "footer": "P: RESUME   T: TITLE / CHOOSE CLASS"
+        }
+    }

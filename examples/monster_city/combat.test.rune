@@ -166,18 +166,20 @@ action prepareCombat:
     for building in buildings:
         building.hp = 1000
 action highCombatShot:
-    shots = [{"x":20,"y":130,"sprite":"bullet","vx":0,"life":10,"damage":7}]
+    shots = [{"x": 20, "y": 130, "sprite": "bullet", "vx": 0, "life": 10, "damage": 7}]
 action lowCombatShot:
-    shots = [{"x":20,"y":166,"sprite":"bullet","vx":0,"life":10,"damage":7}]
+    shots = [{"x": 20, "y": 166, "sprite": "bullet", "vx": 0, "life": 10, "damage": 7}]
 action heavyCombatShot:
-    shots = [{"x":20,"y":166,"sprite":"shell","vx":0,"life":10,"damage":100}]
+    shots = [{"x": 20, "y": 166, "sprite": "shell", "vx": 0, "life": 10, "damage": 100}]
 action emptyCombatEnergy:
     energy = 0
     special_cooldown = 0
 action almostFullCombatEnergy:
     energy = 99
 action combatAirTarget:
-    aircraft = [{"x":150,"y":45,"sprite":"plane","scale":2,"hp":3,"vx":1,"kind":"plane"}]
+    aircraft = [
+        {"x": 150, "y": 45, "sprite": "plane", "scale": 2, "hp": 3, "vx": 1, "kind": "plane"}
+    ]
 action equipVoltForCombat:
     profile.skin = "volt"
     call resetCombat

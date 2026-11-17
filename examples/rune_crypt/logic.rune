@@ -1,7 +1,7 @@
 @Logic/crypt
 state:
     status = "title"
-    legacy = {"shards":0,"rank":0,"runs":0,"wins":0,"class":0}
+    legacy = {"shards": 0, "rank": 0, "runs": 0, "wins": 0, "class": 0}
     hero_class = 0
     class_name = "KNIGHT"
     armor = 0
@@ -24,9 +24,9 @@ state:
     chest_opened = false
     secret_found = false
     lore_read = false
-    chest_pos = {"x":11.5,"y":1.5}
-    secret_pos = {"x":1.5,"y":11.5}
-    lore_pos = {"x":1.5,"y":5.5}
+    chest_pos = {"x": 11.5, "y": 1.5}
+    secret_pos = {"x": 1.5, "y": 11.5}
+    lore_pos = {"x": 1.5, "y": 5.5}
     level_title = "THE ASHEN COURTYARD"
     lore = ""
     projectiles = []
@@ -55,13 +55,13 @@ state:
     notice = ""
     notice_ticks = 0
     message = ""
-    player = {"x":1.5,"y":1.5,"angle":0}
-    weapon = {"sprite":"weapon/sword","bob":0}
+    player = {"x": 1.5, "y": 1.5, "angle": 0}
+    weapon = {"sprite": "weapon/sword", "bob": 0}
     enemies = []
     pickups = []
     landmarks = []
-    shrine_pos = {"x":6.5,"y":1.5}
-    exit_pos = {"x":11.5,"y":11.5}
+    shrine_pos = {"x": 6.5, "y": 1.5}
+    exit_pos = {"x": 11.5, "y": 11.5}
 derive:
     hud_text from health:
         _ then "D" + level + " HP " + health + "/" + max_health + " MP " + ammo + " L" + rpg_level + " XP" + xp + "/3 SH" + legacy.shards + (dodge_cooldown == 0 ? " DODGE OK" : " DODGE " + ceil(dodge_cooldown / 30))
@@ -72,8 +72,8 @@ action initialize:
     call setup_depth
     status = "title"
     message = "C: CLASS " + class_name + " / R: TRAIN 5 SHARDS"
-    player = {"x":8.5,"y":10.5,"angle":20}
-    weapon = {"sprite":"","bob":0}
+    player = {"x": 8.5, "y": 10.5, "angle": 20}
+    weapon = {"sprite": "", "bob": 0}
     call play_score "crypt_title"
     call refresh_ui
 
@@ -170,14 +170,28 @@ action setup_depth:
     route_choice = 0
     notice = ""
     notice_ticks = 0
-    weapon = {"sprite":"weapon/sword","bob":0,"x":34,"y":-12}
+    weapon = {"sprite": "weapon/sword", "bob": 0, "x": 34, "y": -12}
     weapon_ticks = 0
     weapon_magic = false
-    landmarks = [{"x":6.5,"y":1.5,"model":"world/shrine","angle":180,"visible":true},{"x":11.5,"y":11.5,"model":"world/stairs","angle":0,"scale":0.7,"visible":true},{"x":11.5,"y":1.5,"model":"world/chest","angle":180,"visible":true},{"x":1.5,"y":11.5,"model":"world/crack","angle":270,"visible":true},{"x":1.5,"y":5.5,"model":"world/tablet","angle":270,"visible":true}]
+    landmarks = [
+        {"x": 6.5, "y": 1.5, "model": "world/shrine", "angle": 180, "visible": true},
+        {"x": 11.5, "y": 11.5, "model": "world/stairs", "angle": 0, "scale": 0.7, "visible": true},
+        {"x": 11.5, "y": 1.5, "model": "world/chest", "angle": 180, "visible": true},
+        {"x": 1.5, "y": 11.5, "model": "world/crack", "angle": 270, "visible": true},
+        {"x": 1.5, "y": 5.5, "model": "world/tablet", "angle": 270, "visible": true}
+    ]
     if level == 5:
-        landmarks[1] = {"x":11.5,"y":11.5,"model":"world/heart","angle":225,"visible":true}
+        landmarks[1] = {"x": 11.5, "y": 11.5, "model": "world/heart", "angle": 225, "visible": true}
     enemies = []
-    slots = [{"x":9.5,"y":3.5},{"x":3.5,"y":7.5},{"x":9.5,"y":9.5},{"x":6.5,"y":11.5},{"x":6.5,"y":5.5},{"x":3.5,"y":3.5},{"x":6.5,"y":9.5}]
+    slots = [
+        {"x": 9.5, "y": 3.5},
+        {"x": 3.5, "y": 7.5},
+        {"x": 9.5, "y": 9.5},
+        {"x": 6.5, "y": 11.5},
+        {"x": 6.5, "y": 5.5},
+        {"x": 3.5, "y": 3.5},
+        {"x": 6.5, "y": 9.5}
+    ]
     index = 0
     for pos in slots:
         if index < level + 2:
@@ -192,14 +206,33 @@ action setup_depth:
                 enemy_hp = 42
             enemy_model = "enemy/" + kind
             facing = angle_to(pos, player)
-            enemies.push({"x":pos.x,"y":pos.y,"model":enemy_model,"angle":facing,"kind":kind,"hp":enemy_hp,"max_hp":enemy_hp,"visible":true,"cooldown":30 + index * 12,"windup":0,"stagger":0,"phase":1,"scale":0.8})
+            enemies.push(
+                {
+                    "x": pos.x,
+                    "y": pos.y,
+                    "model": enemy_model,
+                    "angle": facing,
+                    "kind": kind,
+                    "hp": enemy_hp,
+                    "max_hp": enemy_hp,
+                    "visible": true,
+                    "cooldown": 30 + index * 12,
+                    "windup": 0,
+                    "stagger": 0,
+                    "phase": 1,
+                    "scale": 0.8
+                }
+            )
         index += 1
-    pickups = [{"x":3.5,"y":1.5,"model":"loot/shard","kind":"shard","visible":true},{"x":1.5,"y":9.5,"model":"loot/potion","kind":"health","visible":true}]
+    pickups = [
+        {"x": 3.5, "y": 1.5, "model": "loot/shard", "kind": "shard", "visible": true},
+        {"x": 1.5, "y": 9.5, "model": "loot/potion", "kind": "health", "visible": true}
+    ]
     supply = random(0, 1, run_seed + level * 401)
     if supply == 1:
-        pickups.push({"x":11.5,"y":5.5,"model":"loot/potion","kind":"health","visible":true})
+        pickups.push({"x": 11.5, "y": 5.5, "model": "loot/potion", "kind": "health", "visible": true})
     if supply == 0:
-        pickups.push({"x":11.5,"y":5.5,"model":"loot/shard","kind":"shard","visible":true})
+        pickups.push({"x": 11.5, "y": 5.5, "model": "loot/shard", "kind": "shard", "visible": true})
     call setup_exploration
     remaining = enemies.length
     call refresh_ui

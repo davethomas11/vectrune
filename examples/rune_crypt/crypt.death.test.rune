@@ -44,7 +44,17 @@ run:
 
 @Logic/crypt
 action death_target:
-    enemies = [{"x":2.5,"y":1.5,"kind":"skeleton","hp":1,"visible":true,"model":"enemy/skeleton_warn","cooldown":0}]
+    enemies = [
+        {
+            "x": 2.5,
+            "y": 1.5,
+            "kind": "skeleton",
+            "hp": 1,
+            "visible": true,
+            "model": "enemy/skeleton_warn",
+            "cooldown": 0
+        }
+    ]
     hazards = []
     pickups = []
     legacy.shards = 0

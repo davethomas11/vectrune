@@ -1,7 +1,15 @@
 # Temporary powers are gameplay state, never part of the saved profile.
 @Logic/monster
 state:
-    power_defs = [{"id":"atomic","name":"ATOMIC BREATH","ticks":120,"charge":60},{"id":"shield","name":"FORCE FIELD","ticks":180,"charge":0},{"id":"electric","name":"ELECTRIC STORM","ticks":240,"charge":0},{"id":"giant","name":"BIGGER JUICE","ticks":300,"charge":0},{"id":"speed","name":"SUPER SPEED","ticks":300,"charge":0},{"id":"baby","name":"BABY KAJU","ticks":600,"charge":0},{"id":"aftershock","name":"AFTERSHOCK","ticks":30,"charge":0}]
+    power_defs = [
+        {"id": "atomic", "name": "ATOMIC BREATH", "ticks": 120, "charge": 60},
+        {"id": "shield", "name": "FORCE FIELD", "ticks": 180, "charge": 0},
+        {"id": "electric", "name": "ELECTRIC STORM", "ticks": 240, "charge": 0},
+        {"id": "giant", "name": "BIGGER JUICE", "ticks": 300, "charge": 0},
+        {"id": "speed", "name": "SUPER SPEED", "ticks": 300, "charge": 0},
+        {"id": "baby", "name": "BABY KAJU", "ticks": 600, "charge": 0},
+        {"id": "aftershock", "name": "AFTERSHOCK", "ticks": 30, "charge": 0}
+    ]
     power = ""
     power_name = ""
     power_label = ""
@@ -47,7 +55,16 @@ action tickSupplies:
             choices = level < 5 ? ["shield", "speed", "baby"] : ["atomic", "shield", "electric", "giant", "speed", "baby", "aftershock"]
             kind = pick(choices, city_seed + drop_number * 131)
             landing_x = clamp(monster.x + random(-20, 90, city_seed + drop_number * 97), 12, 340)
-            crates.push({"x":landing_x,"y":26,"sprite":"supply/parachute","scale":2,"kind":kind,"life":600})
+            crates.push(
+                {
+                    "x": landing_x,
+                    "y": 26,
+                    "sprite": "supply/parachute",
+                    "scale": 2,
+                    "kind": kind,
+                    "life": 600
+                }
+            )
     for crate in crates:
         crate.y = min(154, crate.y + 1.8)
         crate.life -= 1
@@ -80,7 +97,15 @@ action grantPower(kind):
         move_speed = 4.5
     if power == "baby":
         baby_x = max(0, monster.x - 20)
-        companion = [{"x":baby_x,"y":166,"sprite":profile.skin + "/walk","scale":1,"flip":monster.flip}]
+        companion = [
+            {
+                "x": baby_x,
+                "y": 166,
+                "sprite": profile.skin + "/walk",
+                "scale": 1,
+                "flip": monster.flip
+            }
+        ]
     if power == "aftershock":
         sound.play("power_aftershock")
         center = monster.x + monster.scale * 8
@@ -102,34 +127,65 @@ action updatePowers:
     center = monster.x + monster.scale * 8
     direction = monster.flip ? -1 : 1
     if power == "shield":
-        power_fx.push({"x":monster.x - 12,"y":monster.y - 12,"sprite":"power/shield","scale":3})
+        power_fx.push({"x": monster.x - 12, "y": monster.y - 12, "sprite": "power/shield", "scale": 3})
     if power == "atomic":
         if charge_ticks > 0:
-            power_fx.push({"x":monster.x + (monster.flip ? -10 : 34),"y":monster.y + 6,"sprite":"power/charge","scale":2})
+            power_fx.push(
+                {
+                    "x": monster.x + (monster.flip ? -10: 34),
+                    "y": monster.y + 6,
+                    "sprite": "power/charge",
+                    "scale": 2
+                }
+            )
         if charge_ticks == 0:
             if clock % 12 == 0:
                 sound.play("power_breath")
             for segment in [0, 1, 2]:
                 beam_x = monster.flip ? monster.x - 54 * (segment + 1) : monster.x + 36 + 54 * segment
-                power_fx.push({"x":beam_x,"y":monster.y + 18,"sprite":"power/breath","scale":3,"flip":monster.flip})
+                power_fx.push(
+                    {
+                        "x": beam_x,
+                        "y": monster.y + 18,
+                        "sprite": "power/breath",
+                        "scale": 3,
+                        "flip": monster.flip
+                    }
+                )
             strike_x = center + direction * 100
             shots = shots.filter(s => abs(s.x - strike_x) > 100)
             if clock % 6 == 0:
                 call powerStrike strike_x, 100, 1, false
     if power == "electric":
-        power_fx.push({"x":monster.x - 12,"y":monster.y - 12,"sprite":"power/electric","scale":3})
+        power_fx.push({"x": monster.x - 12, "y": monster.y - 12, "sprite": "power/electric", "scale": 3})
         shots = shots.filter(s => abs(s.x - center) > 42)
         call powerStrike center, 38, 999, true
         stop when status != "playing"
         if clock % 12 == 0:
             sound.play("power_zap")
             for side in [-1, 1]:
-                power_fx.push({"x":center + (side < 0 ? -100 : 20),"y":130,"sprite":"power/bolt","scale":3,"flip":side < 0})
+                power_fx.push(
+                    {
+                        "x": center + (side < 0 ? -100: 20),
+                        "y": 130,
+                        "sprite": "power/bolt",
+                        "scale": 3,
+                        "flip": side < 0
+                    }
+                )
             call powerStrike center, 120, 2, true
     if power == "giant":
         call powerStrike center, 48, 999, false
     if power == "speed" && clock % 2 == 0:
-        power_fx.push({"x":monster.x - direction * 18,"y":monster.y + 48,"sprite":"power/speed","scale":3,"flip":monster.flip})
+        power_fx.push(
+            {
+                "x": monster.x - direction * 18,
+                "y": monster.y + 48,
+                "sprite": "power/speed",
+                "scale": 3,
+                "flip": monster.flip
+            }
+        )
     if power == "baby":
         for baby in companion:
             target_x = clamp(monster.x - direction * 22, 0, 368)
@@ -141,7 +197,7 @@ action updatePowers:
                 call powerStrike baby.x + 8, 32, 1, false
     if power == "aftershock":
         for offset in [-96, -48, 0, 48, 96]:
-            power_fx.push({"x":center + offset - 24,"y":174,"sprite":"power/shockwave","scale":3})
+            power_fx.push({"x": center + offset - 24, "y": 174, "sprite": "power/shockwave", "scale": 3})
     call describePower
 
 # Called after combat so a 180-tick shield protects all 180 simulation ticks.

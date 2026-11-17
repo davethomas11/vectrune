@@ -55,11 +55,11 @@ run:
 @Logic/crypt
 action audio_vault_entrance:
     level = 4
-    player = {"x":11.5,"y":11.5,"angle":0}
+    player = {"x": 11.5, "y": 11.5, "angle": 0}
     remaining = 0
 
 action audio_clear_vault:
-    player = {"x":11.5,"y":11.5,"angle":0}
+    player = {"x": 11.5, "y": 11.5, "angle": 0}
     remaining = 0
 
 action audio_fall:

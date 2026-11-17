@@ -1,7 +1,280 @@
 # Defense, rechargeable energy and skin-exclusive moves. All timers use 30 Hz.
 @Logic/monster
 state:
-    special_defs = [{"skin":"kaiju","name":"VINE SNARE","cost":40,"radius":80,"damage":2,"offset":0,"air":false,"heal":0,"guard":0,"stun":60,"dash":0,"dot":0,"pattern":"vines","ticks":60},{"skin":"ember","name":"FIRE FAN","cost":50,"radius":75,"damage":2,"offset":90,"air":false,"heal":0,"guard":0,"stun":0,"dash":0,"dot":1,"pattern":"flame","ticks":90},{"skin":"frost","name":"ICE NOVA","cost":55,"radius":110,"damage":1,"offset":0,"air":true,"heal":0,"guard":0,"stun":120,"dash":0,"dot":0,"pattern":"ice","ticks":45},{"skin":"volt","name":"CHAIN LIGHTNING","cost":50,"radius":160,"damage":3,"offset":0,"air":true,"heal":0,"guard":0,"stun":0,"dash":0,"dot":0,"pattern":"lightning","ticks":24},{"skin":"coral","name":"REEF REPAIR","cost":60,"radius":0,"damage":0,"offset":0,"air":false,"heal":25,"guard":30,"stun":0,"dash":0,"dot":0,"pattern":"heal","ticks":30},{"skin":"golem","name":"STONEWALL","cost":55,"radius":55,"damage":1,"offset":0,"air":false,"heal":0,"guard":150,"stun":0,"dash":0,"dot":0,"pattern":"stone","ticks":60},{"skin":"cyclops","name":"FOCUS RAY","cost":60,"radius":110,"damage":5,"offset":110,"air":true,"heal":0,"guard":0,"stun":0,"dash":0,"dot":0,"pattern":"beam","ticks":24},{"skin":"mantis","name":"RAZOR DASH","cost":45,"radius":40,"damage":4,"offset":0,"air":false,"heal":0,"guard":12,"stun":0,"dash":80,"dot":0,"pattern":"dash","ticks":12},{"skin":"drake","name":"DRAGON ROAR","cost":55,"radius":130,"damage":3,"offset":60,"air":true,"heal":0,"guard":0,"stun":45,"dash":0,"dot":0,"pattern":"flame","ticks":30},{"skin":"yeti","name":"AVALANCHE","cost":50,"radius":120,"damage":4,"offset":0,"air":false,"heal":0,"guard":0,"stun":30,"dash":0,"dot":0,"pattern":"ice","ticks":30},{"skin":"slime","name":"ACID SPLASH","cost":45,"radius":80,"damage":1,"offset":45,"air":false,"heal":0,"guard":0,"stun":0,"dash":0,"dot":1,"pattern":"acid","ticks":120},{"skin":"mecha","name":"MISSILE SALVO","cost":55,"radius":40,"damage":2,"offset":110,"air":true,"heal":0,"guard":0,"stun":0,"dash":0,"dot":0,"pattern":"missile","ticks":90},{"skin":"cosmo","name":"METEOR CALL","cost":65,"radius":125,"damage":4,"offset":100,"air":true,"heal":0,"guard":0,"stun":0,"dash":0,"dot":0,"pattern":"meteor","ticks":30},{"skin":"thorn","name":"THORN RING","cost":40,"radius":65,"damage":1,"offset":0,"air":false,"heal":0,"guard":90,"stun":0,"dash":0,"dot":1,"pattern":"vines","ticks":90},{"skin":"obsidian","name":"FAULT LINE","cost":65,"radius":145,"damage":5,"offset":0,"air":false,"heal":0,"guard":0,"stun":0,"dash":0,"dot":0,"pattern":"stone","ticks":30},{"skin":"tide","name":"TIDAL SURGE","cost":50,"radius":130,"damage":3,"offset":90,"air":true,"heal":0,"guard":0,"stun":60,"dash":0,"dot":0,"pattern":"tide","ticks":30},{"skin":"nova","name":"SOLAR BURST","cost":70,"radius":160,"damage":4,"offset":0,"air":true,"heal":10,"guard":30,"stun":0,"dash":0,"dot":0,"pattern":"solar","ticks":45}]
+    special_defs = [
+        {
+            "skin": "kaiju",
+            "name": "VINE SNARE",
+            "cost": 40,
+            "radius": 80,
+            "damage": 2,
+            "offset": 0,
+            "air": false,
+            "heal": 0,
+            "guard": 0,
+            "stun": 60,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "vines",
+            "ticks": 60
+        },
+        {
+            "skin": "ember",
+            "name": "FIRE FAN",
+            "cost": 50,
+            "radius": 75,
+            "damage": 2,
+            "offset": 90,
+            "air": false,
+            "heal": 0,
+            "guard": 0,
+            "stun": 0,
+            "dash": 0,
+            "dot": 1,
+            "pattern": "flame",
+            "ticks": 90
+        },
+        {
+            "skin": "frost",
+            "name": "ICE NOVA",
+            "cost": 55,
+            "radius": 110,
+            "damage": 1,
+            "offset": 0,
+            "air": true,
+            "heal": 0,
+            "guard": 0,
+            "stun": 120,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "ice",
+            "ticks": 45
+        },
+        {
+            "skin": "volt",
+            "name": "CHAIN LIGHTNING",
+            "cost": 50,
+            "radius": 160,
+            "damage": 3,
+            "offset": 0,
+            "air": true,
+            "heal": 0,
+            "guard": 0,
+            "stun": 0,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "lightning",
+            "ticks": 24
+        },
+        {
+            "skin": "coral",
+            "name": "REEF REPAIR",
+            "cost": 60,
+            "radius": 0,
+            "damage": 0,
+            "offset": 0,
+            "air": false,
+            "heal": 25,
+            "guard": 30,
+            "stun": 0,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "heal",
+            "ticks": 30
+        },
+        {
+            "skin": "golem",
+            "name": "STONEWALL",
+            "cost": 55,
+            "radius": 55,
+            "damage": 1,
+            "offset": 0,
+            "air": false,
+            "heal": 0,
+            "guard": 150,
+            "stun": 0,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "stone",
+            "ticks": 60
+        },
+        {
+            "skin": "cyclops",
+            "name": "FOCUS RAY",
+            "cost": 60,
+            "radius": 110,
+            "damage": 5,
+            "offset": 110,
+            "air": true,
+            "heal": 0,
+            "guard": 0,
+            "stun": 0,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "beam",
+            "ticks": 24
+        },
+        {
+            "skin": "mantis",
+            "name": "RAZOR DASH",
+            "cost": 45,
+            "radius": 40,
+            "damage": 4,
+            "offset": 0,
+            "air": false,
+            "heal": 0,
+            "guard": 12,
+            "stun": 0,
+            "dash": 80,
+            "dot": 0,
+            "pattern": "dash",
+            "ticks": 12
+        },
+        {
+            "skin": "drake",
+            "name": "DRAGON ROAR",
+            "cost": 55,
+            "radius": 130,
+            "damage": 3,
+            "offset": 60,
+            "air": true,
+            "heal": 0,
+            "guard": 0,
+            "stun": 45,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "flame",
+            "ticks": 30
+        },
+        {
+            "skin": "yeti",
+            "name": "AVALANCHE",
+            "cost": 50,
+            "radius": 120,
+            "damage": 4,
+            "offset": 0,
+            "air": false,
+            "heal": 0,
+            "guard": 0,
+            "stun": 30,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "ice",
+            "ticks": 30
+        },
+        {
+            "skin": "slime",
+            "name": "ACID SPLASH",
+            "cost": 45,
+            "radius": 80,
+            "damage": 1,
+            "offset": 45,
+            "air": false,
+            "heal": 0,
+            "guard": 0,
+            "stun": 0,
+            "dash": 0,
+            "dot": 1,
+            "pattern": "acid",
+            "ticks": 120
+        },
+        {
+            "skin": "mecha",
+            "name": "MISSILE SALVO",
+            "cost": 55,
+            "radius": 40,
+            "damage": 2,
+            "offset": 110,
+            "air": true,
+            "heal": 0,
+            "guard": 0,
+            "stun": 0,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "missile",
+            "ticks": 90
+        },
+        {
+            "skin": "cosmo",
+            "name": "METEOR CALL",
+            "cost": 65,
+            "radius": 125,
+            "damage": 4,
+            "offset": 100,
+            "air": true,
+            "heal": 0,
+            "guard": 0,
+            "stun": 0,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "meteor",
+            "ticks": 30
+        },
+        {
+            "skin": "thorn",
+            "name": "THORN RING",
+            "cost": 40,
+            "radius": 65,
+            "damage": 1,
+            "offset": 0,
+            "air": false,
+            "heal": 0,
+            "guard": 90,
+            "stun": 0,
+            "dash": 0,
+            "dot": 1,
+            "pattern": "vines",
+            "ticks": 90
+        },
+        {
+            "skin": "obsidian",
+            "name": "FAULT LINE",
+            "cost": 65,
+            "radius": 145,
+            "damage": 5,
+            "offset": 0,
+            "air": false,
+            "heal": 0,
+            "guard": 0,
+            "stun": 0,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "stone",
+            "ticks": 30
+        },
+        {
+            "skin": "tide",
+            "name": "TIDAL SURGE",
+            "cost": 50,
+            "radius": 130,
+            "damage": 3,
+            "offset": 90,
+            "air": true,
+            "heal": 0,
+            "guard": 0,
+            "stun": 60,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "tide",
+            "ticks": 30
+        },
+        {
+            "skin": "nova",
+            "name": "SOLAR BURST",
+            "cost": 70,
+            "radius": 160,
+            "damage": 4,
+            "offset": 0,
+            "air": true,
+            "heal": 10,
+            "guard": 30,
+            "stun": 0,
+            "dash": 0,
+            "dot": 0,
+            "pattern": "solar",
+            "ticks": 45
+        }
+    ]
     defending = false
     stance_height = 24
     energy = 100
@@ -105,24 +378,46 @@ action updateCombat:
     combat_fx = []
     if defending == true:
         guard_x = monster.flip ? monster.x - 10 : monster.x + monster.scale * 12
-        combat_fx.push({"x":guard_x,"y":monster.y,"sprite":"combat/block","scale":monster.scale,"flip":monster.flip})
+        combat_fx.push(
+            {
+                "x": guard_x,
+                "y": monster.y,
+                "sprite": "combat/block",
+                "scale": monster.scale,
+                "flip": monster.flip
+            }
+        )
     if guard_ticks > 0 && defending != true:
-        combat_fx.push({"x":monster.x - 12,"y":monster.y - 12,"sprite":"power/shield","scale":3})
+        combat_fx.push({"x": monster.x - 12, "y": monster.y - 12, "sprite": "power/shield", "scale": 3})
     if special_ticks > 0:
         sprite = "combat/" + special_pattern
-        combat_fx.push({"x":special_x - 24,"y":142,"sprite":sprite,"scale":3})
+        combat_fx.push({"x": special_x - 24, "y": 142, "sprite": sprite, "scale": 3})
         if special_pattern == "beam" || special_pattern == "flame":
             for side in [-1, 1]:
-                combat_fx.push({"x":special_x + side * 45 - 24,"y":132,"sprite":sprite,"scale":3})
+                combat_fx.push({"x": special_x + side * 45 - 24, "y": 132, "sprite": sprite, "scale": 3})
         if special_pattern == "meteor":
-            combat_fx.push({"x":special_x - 12,"y":40 + (30 - special_ticks) * 3,"sprite":"combat/meteor","scale":3})
+            combat_fx.push(
+                {
+                    "x": special_x - 12,
+                    "y": 40 + (30 - special_ticks) * 3,
+                    "sprite": "combat/meteor",
+                    "scale": 3
+                }
+            )
             if special_ticks == 1:
                 call powerStrike special_x, special_radius, special_impact, special_air
                 stop when status != "playing"
         if special_pattern == "missile":
             travel = 30 - (special_ticks % 30)
             for offset in [-18, 0, 18]:
-                combat_fx.push({"x":special_x - 90 + travel * 3,"y":120 + offset,"sprite":"combat/missile","scale":2})
+                combat_fx.push(
+                    {
+                        "x": special_x - 90 + travel * 3,
+                        "y": 120 + offset,
+                        "sprite": "combat/missile",
+                        "scale": 2
+                    }
+                )
             if special_ticks % 30 == 1:
                 call powerStrike special_x, special_radius, special_impact, special_air
                 stop when status != "playing"

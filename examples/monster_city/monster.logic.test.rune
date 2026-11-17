@@ -97,10 +97,10 @@ action readyPunch:
     cooldown = 0
 
 action arrangeArmyShot:
-    shots = [{"x":20,"y":166,"sprite":"shell","scale":1,"vx":1,"life":10,"damage":5}]
+    shots = [{"x": 20, "y": 166, "sprite": "shell", "scale": 1, "vx": 1, "life": 10, "damage": 5}]
 
 action fatalShot:
-    shots = [{"x":20,"y":166,"sprite":"shell","scale":1,"vx":1,"life":10,"damage":100}]
+    shots = [{"x": 20, "y": 166, "sprite": "shell", "scale": 1, "vx": 1, "life": 10, "damage": 100}]
 
 action lineUpLastBuilding:
     destroyed = 4
@@ -111,7 +111,9 @@ action lineUpLastBuilding:
     buildings[3].hp = 0
     buildings[4].hp = 1
     monster.x = 300
-    shots = [{"x":320,"y":166,"sprite":"shell","scale":1,"vx":1,"life":10,"damage":100}]
+    shots = [
+        {"x": 320, "y": 166, "sprite": "shell", "scale": 1, "vx": 1, "life": 10, "damage": 100}
+    ]
 
 action moveToEdge:
     monster.x = 336

@@ -121,12 +121,17 @@ action invalidProfile:
     profile.owned = ["missing"]
 
 action inspectMenu:
-    checks = {"cards":menu.cards.length}
+    checks = {"cards": menu.cards.length}
 action inspectCity:
-    checks = {"aircraft":aircraft.length,"soldiers":soldiers.length,"tanks":tanks.length,"buildings":buildings.length}
+    checks = {
+        "aircraft": aircraft.length,
+        "soldiers": soldiers.length,
+        "tanks": tanks.length,
+        "buildings": buildings.length
+    }
 action inspectShots:
     bombs = shots.any(s => s.vy > 0)
-    checks = {"bombs":bombs}
+    checks = {"bombs": bombs}
 
 @Test/Progression/StorePagesAndNewMonster
 type = logic

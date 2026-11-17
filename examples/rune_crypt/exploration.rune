@@ -63,7 +63,10 @@ action setup_exploration:
         lore = "THE HEART REMEMBERS EVERY FALLEN PILGRIM."
     hazards = []
     if level > 1:
-        hazards = [{"x":6.5,"y":3.5,"model":"world/trap","visible":true,"offset":0},{"x":11.5,"y":7.5,"model":"world/trap","visible":true,"offset":60}]
+        hazards = [
+            {"x": 6.5, "y": 3.5, "model": "world/trap", "visible": true, "offset": 0},
+            {"x": 11.5, "y": 7.5, "model": "world/trap", "visible": true, "offset": 60}
+        ]
     notice = level_title + " / E: READ TABLETS"
     notice_ticks = 60
 

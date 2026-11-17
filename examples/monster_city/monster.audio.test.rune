@@ -81,7 +81,7 @@ action lastAudioBuilding:
     buildings[4].hp = 1
 
 action lethalAudioShot:
-    shots = [{"x":20,"y":166,"sprite":"shell","scale":1,"vx":1,"life":10,"damage":100}]
+    shots = [{"x": 20, "y": 166, "sprite": "shell", "scale": 1, "vx": 1, "life": 10, "damage": 100}]
 
 action rifleBeat:
     clock = 59
