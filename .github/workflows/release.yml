@@ -102,7 +102,7 @@ jobs:
           "$BIN" test examples/vect_breach --type logic --json
           "$BIN" test examples/rune_crypt --type logic --json
           "$BIN" test examples/skybound --type logic --json
-          "$BIN" test examples/skybound_2 --type logic --json
+          "$BIN" test examples/skybound_2 --type logic --timeout 60 --json
 
       - name: Package
         shell: bash

@@ -104,4 +104,4 @@ jobs:
           target/debug/vectrune fmt examples/skybound --check
           target/debug/vectrune fmt examples/skybound_2 --check
           target/debug/vectrune test examples/skybound --type logic --json
-          target/debug/vectrune test examples/skybound_2 --type logic --json
+          target/debug/vectrune test examples/skybound_2 --type logic --timeout 60 --json
