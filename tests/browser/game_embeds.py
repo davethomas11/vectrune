@@ -12,6 +12,21 @@ source.add_argument('--site-dir')
 source.add_argument('--url')
 args = parser.parse_args()
 
+
+def assert_stable_cabinet(frame):
+    samples = frame.evaluate('''() => new Promise(resolve => {
+        const samples = [];
+        function sample() {
+            const cabinet = document.querySelector('.arcade-cabinet').getBoundingClientRect();
+            samples.push([innerHeight, cabinet.width, cabinet.height]);
+            if (samples.length === 36) resolve(samples.slice(12));
+            else requestAnimationFrame(sample);
+        }
+        requestAnimationFrame(sample);
+    })''')
+    assert all(sample == samples[0] for sample in samples), samples
+
+
 with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rstrip('/'))) as base, sync_playwright() as pw:
     browser = pw.chromium.launch()
     page = browser.new_page(viewport={'width': 1440, 'height': 1000})
@@ -27,11 +42,22 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
         frame = iframe.element_handle().content_frame()
         frame.wait_for_load_state()
         frame.evaluate('window.__tabState = { saved: 42 }')
-        for width in [1440, 390, 768, 1440]:
-            page.set_viewport_size({'width': width, 'height': 1000})
+        sizes = [(1440, 1000), (390, 1000), (768, 1000), (1440, 1000)]
+        if route in {'games', 'vectworms'}:
+            sizes = [
+                (1440, 1000), (390, 844), (768, 1024), (1440, 720),
+                (844, 390), (320, 640), (1440, 1000),
+            ]
+        for width, height in sizes:
+            page.set_viewport_size({'width': width, 'height': height})
             frame.wait_for_function('document.documentElement.scrollHeight <= innerHeight + 1')
             assert frame.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (route, width)
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (route, width)
+            if route in {'games', 'vectworms'}:
+                assert_stable_cabinet(frame)
+        if route in {'games', 'vectworms'}:
+            frame.locator('.start-btn').click()
+            assert_stable_cabinet(frame)
         source_tab.click()
         expect(iframe).to_be_hidden()
         expect(page.locator('.source-filter')).to_be_visible()
@@ -42,6 +68,8 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
         expect(game_tab).to_be_focused()
         expect(iframe).to_be_visible()
         assert frame.evaluate('window.__tabState.saved') == 42
+        if route in {'games', 'vectworms'}:
+            assert_stable_cabinet(frame)
         game_tab.press('End')
         expect(source_tab).to_be_focused()
         expect(page.locator('.source-filter')).to_have_value('no-such-file')

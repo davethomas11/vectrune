@@ -48,6 +48,11 @@ rules:
         user-select = none
         touch-action = manipulation
 
+    # Embedded cabinets size from available width; the host fits their height.
+    # Using the iframe's viewport height here creates a resize feedback loop.
+    .rune-embedded-game .arcade-cabinet:
+        max-width = 540px
+
     .cabinet-header:
         text-align = center
         margin-bottom = 0.75rem

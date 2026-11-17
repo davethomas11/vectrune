@@ -20,7 +20,7 @@ view:
         script src="/assets/site-navigation.js?v=1"
         script src="/assets/command-copy.js?v=1"
         script src="/assets/source-explorer.js?v=1"
-        script src="/assets/game-embeds.js?v=1"
+        script src="/assets/game-embeds.js?v=2"
         script src="/assets/syntax-highlight.js?v=5"
         script src="/assets/sandbox.js?v=15"
         script src="/assets/builtin-reference.js?v=8"

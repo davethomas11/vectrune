@@ -51,6 +51,7 @@
         observer?.disconnect();
         const body = iframe.contentDocument?.body;
         if (!body) return;
+        body.classList.add('rune-embedded-game');
         resize = () => {
           if (!iframe.isConnected) {
             observer.disconnect();
