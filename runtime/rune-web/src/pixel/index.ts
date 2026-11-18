@@ -1,10 +1,12 @@
 import { mountControls } from '../input/browser';
+import { beginGameLoading, markGameReady } from '../game_ready';
 import { PixelEngine, type PixelConfig, type Input } from './engine';
 import { unlockAudio } from '../audio';
 import type { RuneWebConfig } from '../types';
 let settings: PixelConfig;
 export function configure(config: PixelConfig): void { settings = config; }
 export function boot(options: RuneWebConfig): PixelEngine {
+  beginGameLoading();
   const game = new PixelEngine(settings, options);
   Object.assign(globalThis, { __RunePixel: game });
   if (typeof document !== 'undefined') {
@@ -34,6 +36,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
   context.imageSmoothingEnabled = false;
   const image = new ImageData(new Uint8ClampedArray(game.buffer.buffer as ArrayBuffer), width, height);
   let input: Input = {}, previous = 0, accumulator = 0, stopped = false, frameId = 0;
+  let ready = false;
   const abort = new AbortController();
   const listen = (element: EventTarget, name: string, callback: EventListener) => element.addEventListener(name, callback, { signal: abort.signal });
   const pending = new Set<string>();
@@ -129,6 +132,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     }
     mapped?.update();
     game.frame(); context.putImageData(image, 0, 0);
+    if (!ready) { ready = true; markGameReady(); }
     const state = game.app.state;
     const menu = game.config.menu ? state[game.config.menu] as any : null;
     const menuJson = JSON.stringify(menu);
@@ -170,7 +174,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     if(saveNotice) saveNotice.textContent = game.saveStatus === 'saved' ? 'Progress saved on this device' : game.saveStatus === 'recovered' ? 'Save could not be read. A fresh profile was created.' : 'Progress lasts for this session only - storage unavailable';
     frameId = requestAnimationFrame(frame);
   };
-  frameId = requestAnimationFrame(frame);
+  frame(performance.now());
   const dispose = () => { stopped = true; game.paused = true; cancelAnimationFrame(frameId); mapped?.dispose(); abort.abort(); observer.disconnect(); clear(); };
   listen(window,'pagehide',dispose);
   return dispose;

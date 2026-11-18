@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { createLogicApp } from './logic';
+import { beginGameLoading, markGameReady } from './game_ready';
 import { initContext, ctx } from './context';
 import { getWindowProp, setWindowProp } from './globals';
 import { makeReactive } from './scope';
@@ -48,6 +49,7 @@ export {
  * (page tree, state, actions, derived definitions, etc).
  */
 export function boot(config: RuneWebConfig): RuneApp {
+  beginGameLoading();
   // Register programmable audio definitions from @Sound and @Music
   registerSounds(config.sounds);
   registerMusic(config.music);
@@ -297,6 +299,10 @@ export function boot(config: RuneWebConfig): RuneApp {
   }
 
   app.render();
+
+  // DOM games are usable after render; pixel shells signal after drawing their canvas.
+  if (typeof document !== 'undefined' &&
+      !document.querySelector('canvas[data-rune-pixel], canvas[data-rune-pixel-3d]')) markGameReady();
 
   return app;
 }

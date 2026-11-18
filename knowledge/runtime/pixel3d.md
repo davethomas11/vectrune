@@ -1286,6 +1286,16 @@ installed display mode or iOS `navigator.standalone` is detected. It avoids a
 gesture-only native request at startup; the visible EXIT control restores the
 cabinet and its link back to Vectrune.
 
+Hosted game examples show a loading panel before the iframe downloads and keep
+it covered until the runtime reports readiness. Pixel and Pixel 3D hosts signal
+after drawing the first canvas frame; DOM games signal after their initial
+render. The parent validates the same-origin frame and its document readiness
+marker before enabling interaction. Source tabs remain available while loading.
+After 30 seconds the localized panel offers Retry, while continuing to wait for
+successful initialization. Older cached exports use a compatibility fallback.
+`tests/browser/game_loading.py` covers delayed downloads and engine startup,
+retry, cached exports and every hosted game in Chromium and WebKit.
+
 ## Floating destination titles
 
 Pixel-3d things can opt into world-anchored pixel-font plaques:

@@ -1,4 +1,5 @@
 import { isPausableStatus } from '../input/game';
+import { beginGameLoading, markGameReady } from '../game_ready';
 import { mountControls } from '../input/browser';
 import { Pixel3DEngine, type Pixel3DConfig, type Input3D } from './engine';
 import { unlockAudio } from '../audio';
@@ -12,6 +13,7 @@ export function configure(config: Pixel3DConfig): void {
 }
 
 export function boot(options: RuneWebConfig): Pixel3DEngine {
+  beginGameLoading();
   const game = new Pixel3DEngine(settings, options);
   Object.assign(globalThis, { __RunePixel3D: game, __RunePixel: game });
 
@@ -88,6 +90,7 @@ export function mount(
   let accumulator = 0;
   let stopped = false;
   let frameId = 0;
+  let ready = false;
   let menuOpen = false;
 
   const abort = new AbortController();
@@ -346,7 +349,10 @@ export function mount(
 
     touch?.update();
     mapped?.update();
-    if (game.frameIfChanged()) context.putImageData(image, 0, 0);
+    if (game.frameIfChanged()) {
+      context.putImageData(image, 0, 0);
+      if (!ready) { ready = true; markGameReady(); }
+    }
 
     const state = game.app.state as Record<string, any>;
     for (const element of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-paused]'))) {
@@ -416,9 +422,10 @@ export function mount(
     frameId = requestAnimationFrame(frame);
   };
 
-  frameId = requestAnimationFrame(frame);
-
   if (canvas.dataset.pixelAppFullscreen === 'true' && isStandaloneApp()) fullscreen.startStandalone();
+  // Paint before yielding: WebKit may suspend animation callbacks for a
+  // covered iframe, while the host is waiting for this initial ready signal.
+  frame(performance.now());
 
   const dispose = () => {
     stopped = true;

@@ -24,7 +24,9 @@ def assert_stable_cabinet(frame):
         }
         requestAnimationFrame(sample);
     })''')
-    assert all(sample == samples[0] for sample in samples), samples
+    # Fractional text metrics can settle by a subpixel as web fonts arrive.
+    assert all(max(s[i] for s in samples) - min(s[i] for s in samples) <= 1
+               for i in range(3)), samples
 
 
 with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rstrip('/'))) as base, sync_playwright() as pw:

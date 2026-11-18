@@ -163,6 +163,16 @@ var __RunePixel3DRuntime = (() => {
     }
   };
 
+  // src/game_ready.ts
+  function beginGameLoading() {
+    if (typeof document !== "undefined") document.documentElement.dataset.runeGameState = "loading";
+  }
+  function markGameReady() {
+    if (typeof document === "undefined" || typeof window === "undefined" || document.documentElement.dataset.runeGameState === "ready") return;
+    document.documentElement.dataset.runeGameState = "ready";
+    if (window.parent !== window) window.parent.postMessage({ type: "rune-game-ready" }, "*");
+  }
+
   // src/input/touch.ts
   function mountControlTouch(canvas, controls, profile, options) {
     const surface = canvas.parentElement || canvas;
@@ -7781,6 +7791,7 @@ var __RunePixel3DRuntime = (() => {
     settings = config;
   }
   function boot(options) {
+    beginGameLoading();
     const game = new Pixel3DEngine(settings, options);
     Object.assign(globalThis, { __RunePixel3D: game, __RunePixel: game });
     if (typeof document !== "undefined") {
@@ -7849,6 +7860,7 @@ var __RunePixel3DRuntime = (() => {
     let accumulator = 0;
     let stopped = false;
     let frameId = 0;
+    let ready = false;
     let menuOpen = false;
     const abort = new AbortController();
     const listen = (element, name, callback) => element.addEventListener(name, callback, { signal: abort.signal });
@@ -8135,7 +8147,13 @@ var __RunePixel3DRuntime = (() => {
       }
       touch?.update();
       mapped?.update();
-      if (game.frameIfChanged()) context.putImageData(image, 0, 0);
+      if (game.frameIfChanged()) {
+        context.putImageData(image, 0, 0);
+        if (!ready) {
+          ready = true;
+          markGameReady();
+        }
+      }
       const state = game.app.state;
       for (const element of Array.from(document.querySelectorAll("[data-pixel-paused]"))) {
         element.hidden = !game.paused || !isPausableStatus(state.status);
@@ -8185,8 +8203,8 @@ var __RunePixel3DRuntime = (() => {
       }
       frameId = requestAnimationFrame(frame);
     };
-    frameId = requestAnimationFrame(frame);
     if (canvas.dataset.pixelAppFullscreen === "true" && isStandaloneApp()) fullscreen.startStandalone();
+    frame(performance.now());
     const dispose = () => {
       stopped = true;
       game.paused = true;

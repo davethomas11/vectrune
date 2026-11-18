@@ -5488,6 +5488,16 @@ var __RuneWeb = (() => {
     };
   }
 
+  // src/game_ready.ts
+  function beginGameLoading() {
+    if (typeof document !== "undefined") document.documentElement.dataset.runeGameState = "loading";
+  }
+  function markGameReady() {
+    if (typeof document === "undefined" || typeof window === "undefined" || document.documentElement.dataset.runeGameState === "ready") return;
+    document.documentElement.dataset.runeGameState = "ready";
+    if (window.parent !== window) window.parent.postMessage({ type: "rune-game-ready" }, "*");
+  }
+
   // src/rendering.ts
   function renderNode(node, locals) {
     if (node.Element) {
@@ -5760,6 +5770,7 @@ var __RuneWeb = (() => {
 
   // src/index.ts
   function boot(config) {
+    beginGameLoading();
     registerSounds(config.sounds);
     registerMusic(config.music);
     const app = createLogicApp(function() {
@@ -5964,6 +5975,7 @@ var __RuneWeb = (() => {
       }
     }
     app.render();
+    if (typeof document !== "undefined" && !document.querySelector("canvas[data-rune-pixel], canvas[data-rune-pixel-3d]")) markGameReady();
     return app;
   }
   function setupWebSocket(endpoint, app) {

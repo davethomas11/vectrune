@@ -77,7 +77,7 @@ view:
 @Component/WebExample
 props: [title, preview, files, show_heading?, game?]
 view:
-    section .card .web-example data-game="{game ?? false}" data-active-tab=game:
+    section .card .web-example data-game="{game ?? false}" data-active-tab=game data-load-state=loading:
         if show_heading ?? true:
             div .section-heading:
                 span .tag .tag-practical "%i18n.Examples.live_preview%"
@@ -87,8 +87,17 @@ view:
             div .example-tabs role=tablist aria-label="{title}":
                 button type=button role=tab data-example-tab=game aria-selected=true "%i18n.Examples.game_tab%"
                 button type=button role=tab data-example-tab=source aria-selected=false tabindex=-1 "%i18n.Examples.source_tab%"
-        div .example-game-panel:
-            iframe .example-preview src="{preview}" title="{title}" allow="fullscreen; autoplay" allowfullscreen=true sandbox="allow-scripts allow-same-origin allow-downloads allow-modals allow-pointer-lock allow-orientation-lock"
+        div .example-game-panel aria-busy="{game ?? false}":
+            if game ?? false:
+                div .game-loader:
+                    div .game-loader-card:
+                        strong "{title}"
+                        p .game-load-status role=status aria-live=polite data-loading="%i18n.Examples.loading_game%" data-slow="%i18n.Examples.loading_slow%" data-failed="%i18n.Examples.loading_failed%" "%i18n.Examples.loading_game%"
+                        progress .game-load-progress aria-hidden=true
+                        button .game-load-retry type=button hidden=true "%i18n.Examples.retry_game%"
+                iframe .example-preview inert=true aria-hidden=true tabindex=-1 src="{preview}" title="{title}" allow="fullscreen; autoplay" allowfullscreen=true sandbox="allow-scripts allow-same-origin allow-downloads allow-modals allow-pointer-lock allow-orientation-lock"
+            if !(game ?? false):
+                iframe .example-preview src="{preview}" title="{title}" allow="fullscreen; autoplay" allowfullscreen=true sandbox="allow-scripts allow-same-origin allow-downloads allow-modals allow-pointer-lock allow-orientation-lock"
         div .example-source-panel:
             details .example-source open=true:
                 summary "%i18n.Examples.source_label%"

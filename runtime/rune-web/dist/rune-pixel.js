@@ -440,6 +440,16 @@ var __RunePixelRuntime = (() => {
     };
   }
 
+  // src/game_ready.ts
+  function beginGameLoading() {
+    if (typeof document !== "undefined") document.documentElement.dataset.runeGameState = "loading";
+  }
+  function markGameReady() {
+    if (typeof document === "undefined" || typeof window === "undefined" || document.documentElement.dataset.runeGameState === "ready") return;
+    document.documentElement.dataset.runeGameState = "ready";
+    if (window.parent !== window) window.parent.postMessage({ type: "rune-game-ready" }, "*");
+  }
+
   // src/ownership.ts
   var ownedValues = /* @__PURE__ */ new WeakSet();
   var reactiveTargets = /* @__PURE__ */ new WeakMap();
@@ -6110,6 +6120,7 @@ var __RunePixelRuntime = (() => {
     settings = config;
   }
   function boot(options) {
+    beginGameLoading();
     const game = new PixelEngine(settings, options);
     Object.assign(globalThis, { __RunePixel: game });
     if (typeof document !== "undefined") {
@@ -6142,6 +6153,7 @@ var __RunePixelRuntime = (() => {
     context.imageSmoothingEnabled = false;
     const image = new ImageData(new Uint8ClampedArray(game.buffer.buffer), width, height);
     let input = {}, previous = 0, accumulator = 0, stopped = false, frameId = 0;
+    let ready = false;
     const abort = new AbortController();
     const listen = (element, name, callback) => element.addEventListener(name, callback, { signal: abort.signal });
     const pending = /* @__PURE__ */ new Set();
@@ -6316,6 +6328,10 @@ var __RunePixelRuntime = (() => {
       mapped?.update();
       game.frame();
       context.putImageData(image, 0, 0);
+      if (!ready) {
+        ready = true;
+        markGameReady();
+      }
       const state = game.app.state;
       const menu = game.config.menu ? state[game.config.menu] : null;
       const menuJson = JSON.stringify(menu);
@@ -6379,7 +6395,7 @@ var __RunePixelRuntime = (() => {
       if (saveNotice) saveNotice.textContent = game.saveStatus === "saved" ? "Progress saved on this device" : game.saveStatus === "recovered" ? "Save could not be read. A fresh profile was created." : "Progress lasts for this session only - storage unavailable";
       frameId = requestAnimationFrame(frame);
     };
-    frameId = requestAnimationFrame(frame);
+    frame(performance.now());
     const dispose = () => {
       stopped = true;
       game.paused = true;
