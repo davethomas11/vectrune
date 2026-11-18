@@ -5,7 +5,7 @@
   const check=(ok,message)=>{if(!ok)throw Error(message);};
   function t(n,input={}){for(let i=0;i<n;i++)g.step(input);}
   function move(x){let i=0;while(Math.abs(s.player.x-x)>.2&&i++<400&&s.recovery_phase==='none')t(1,{left:s.player.x>x,right:s.player.x<x,fire:true});t(5);check(i<400&&s.recovery_phase==='none','Vault route blocked at '+x);}
-  function land(z){let i=0;while((!s.grounded||Math.abs(s.player.z-z)>.01)&&i++<120&&s.recovery_phase==='none')t(1,{fire:true});check(i<120&&s.player.z===z,'Vault landing failed at '+z);}
+  function land(z){let i=0;while((!s.grounded||Math.abs(s.player.z-z)>.01)&&i++<300&&s.recovery_phase==='none')t(1,{fire:true});check(i<300&&s.player.z===z,'Vault landing failed at '+z);}
   const unlocked=()=>kind==='jets'?s.jets:s.dash_unlocked;
   check(s.sector_id===(kind==='jets'?'jet_vault':'dash_vault')&&!unlocked(),'Upgrade granted before tunnel descent');
   check(s.player.z===13&&s.world.width===56,'Vault did not extend below the entrance');

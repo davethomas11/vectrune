@@ -7,8 +7,9 @@
   __starfallLaunch();s.enemies=[];s.boss.hp=1;
   g.invoke('hit_warden',[1,114,4]);
   check(s.escape_active&&s.return_encounters.length===3,'Warden did not arm return encounters');
+  t(150); // Let the health-container discovery finish before continuing.
   s.player.x=109;t(1);check(s.enemies.length===0,'Enemies appeared before retrieving the core');
-  s.player.x=124;s.player.z=4;t(1);check(s.core,'Core pickup failed');
+  s.player.x=124;s.player.z=4;t(1);check(s.core,'Core pickup failed');t(150);
   s.player.x=115;s.player.z=3;s.invulnerable=10000;t(1);
   check(s.enemies.length===2&&s.return_encounters[0].fired,'Crypt return encounter missing');
   const hunter=s.enemies[0],crawler=s.enemies[1];

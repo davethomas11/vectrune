@@ -19,6 +19,7 @@ import "bonus_rooms.rune"
 import "upgrade_vaults.rune"
 import "portals.rune"
 import "rewards.rune"
+import "discovery.rune"
 import "curator.rune"
 import "controls.rune"
 import "sound.rune"
@@ -44,7 +45,7 @@ world = world
 camera = camera
 perspective = starfall
 title_scene = starfall_title
-things = ["scenery","portals","ship","ship_flames","pickups","beacons","enemies","boss_warning","boss","root_warning","rootheart","machinery","shuttle","magnet_fx","gravity_consoles","forge_warning","forge_guardian","curator_warning","curator","shots","seal_shell","portal_aura","arrival_ring","avatar","rifle","effects","muzzle","charge_fx","ghost"]
+things = ["scenery","portals","ship","ship_flames","pickups","beacons","enemies","boss_warning","boss","root_warning","rootheart","machinery","shuttle","magnet_fx","gravity_consoles","forge_warning","forge_guardian","curator_warning","curator","shots","seal_shell","portal_aura","arrival_ring","avatar","discovery_item","rifle","effects","muzzle","charge_fx","ghost"]
 persistence = {"key":"starfall-campaign-v1","state":"campaign"}
 controls = starfall
 render_radius = 96

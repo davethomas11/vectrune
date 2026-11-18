@@ -84,6 +84,8 @@
   }
   check(Math.max(...positions)-Math.min(...positions)>8,'Guardian did not move across sanctuary');
   check(!s.boss.visible && s.boss.hp === 0, 'Guardian fight failed');
+  check(s.discovery_active, 'Warden health reward should celebrate');
+  ticks(150);
   check(s.music_track === 'sf_orbit', 'Exploration music not restored'); capture('warden');
   move(121); ticks(14,{right:true,jump:true,fire:true}); ticks(20,{fire:true}); move(124); check(s.core && s.status === 'playing', 'Core must be carried home');
   move(97);

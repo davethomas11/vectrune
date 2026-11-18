@@ -79,6 +79,7 @@ run:
     assert state.campaign.hydroponics == true
     assert state.foundry_cleared == true
     assert state.portals[1].visible == true
+    invoke wait_ticks 180
     invoke last_garden_life
     invoke take_damage 6
     invoke wait_ticks 24

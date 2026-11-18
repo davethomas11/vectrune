@@ -73,6 +73,7 @@ run:
     invoke tick {}
     assert state.jets == true
     assert state.pickups[0].visible == false
+    invoke wait_ticks 180
     invoke at_beacon
     invoke tick {}
     assert state.checkpoint.x == 35
@@ -106,10 +107,12 @@ run:
     assert state.boss.visible == false
     assert state.pickups[2].visible == true
     assert state.status == "playing"
+    invoke wait_ticks 180
     invoke at_core
     invoke tick {}
     assert state.core == true
     assert state.status == "playing"
+    invoke wait_ticks 180
     invoke at_ship
     invoke tick {}
     assert state.status == "departing"

@@ -33,6 +33,9 @@ fn starfall_completes_and_renders_in_the_shared_desktop_runtime() {
             .eval::<bool, _>(include_str!("browser/starfall_rewards.js"))
             .unwrap());
         assert!(ctx
+            .eval::<bool, _>(include_str!("browser/starfall_discovery.js"))
+            .unwrap());
+        assert!(ctx
             .eval::<bool, _>(include_str!("browser/starfall_cinematics.js"))
             .unwrap());
         assert!(ctx

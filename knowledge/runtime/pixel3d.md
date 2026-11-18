@@ -1348,3 +1348,15 @@ pillar, low star waves to jump and higher bolts to duck. Only its open iris take
 damage. Fatal deaths refill an undefeated Curator and return it to its dormant
 phase; defeating it permanently opens the chamber's return portal. Its health
 container is awarded once even if the player revisits the room.
+
+## Starfall item discovery
+
+Major pickups and first-time boss health containers pause gameplay for a
+five-second discovery sequence. The pilot raises both hands and lifts the
+actual item overhead, with gold sparkles and an original fanfare. The HUD names
+the item and explains keyboard, controller and touch use. Jump, fire, use or
+Enter confirms after the initial 1.2-second lift; held pickup inputs cannot
+skip it. Instructions remain visible after play resumes. Enemies, projectiles,
+physics and machinery stay frozen during the reveal, and damage is blocked.
+Rewards are granted before the animation and saved under the existing campaign
+rules. Repairs remain quick, and rare extra lives get sparkles without a pause.

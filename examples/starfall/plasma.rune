@@ -63,6 +63,8 @@ action sync_music:
         desired_track = "sf_mission"
     if status == "ending" || status == "credits":
         desired_track = "sf_homecoming"
+    if discovery_active:
+        desired_track = ""
     stop when desired_track == music_track
     music.stop
     music_track = desired_track

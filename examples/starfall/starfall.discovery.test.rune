@@ -1,0 +1,58 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/Discovery/LiftPausesCombatAndExplainsTheAbility
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke discovery_test_pickup
+run:
+    invoke tick {}
+    assert state.jets == true
+    assert state.discovery_active == true
+    assert state.discovery_item.model == "sf/jets"
+    assert state.ui.objective == "JUMP JETS ACQUIRED!"
+    invoke tick {"right":true,"fire":true,"jump":true}
+    assert state.player.x == 9
+    assert state.player.z == 3
+    assert state.shots.length == 0
+    invoke take_damage 99
+    assert state.health == 4
+    invoke wait_ticks 20
+    assert state.avatar.model == "sf/pilot_celebrate"
+    assert state.discovery_item.z > 5.5
+    assert state.rifle.visible == false
+    assert state.effects.length > 0
+    invoke advance
+    assert state.discovery_active == true
+    invoke wait_ticks 15
+    invoke advance
+    assert state.discovery_active == false
+    assert state.discovery_item.visible == false
+    assert state.rifle.visible == true
+    assert state.notice_ticks == 210
+
+@Test/Starfall/Discovery/AutomaticResumeAndPersistentBossReward
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    invoke claim_boss_container ["rootheart"]
+    assert state.max_health == 5
+    assert state.discovery_active == true
+    assert state.discovery_item.model == "sf/health_container"
+    invoke wait_ticks 150
+    assert state.discovery_active == false
+    assert state.health == 5
+    invoke claim_boss_container ["rootheart"]
+    assert state.discovery_active == false
+    assert state.max_health == 5
+    invoke start
+    assert state.discovery_item.visible == false
+    assert state.max_health == 5
+
+@Logic/starfall
+action discovery_test_pickup:
+    pickups = [{"x":9,"y":7,"z":3.5,"base":3.5,"kind":"jets","model":"sf/jets","visible":true}]

@@ -8,27 +8,7 @@ action claim_boss_container(key):
     campaign.containers[key] = true
     call refresh_health_capacity
     health = max_health
-    effects.push(
-        {
-            "x": player.x,
-            "y": 8.5,
-            "z": player.z + 2,
-            "dx": 0,
-            "dz": 0.025,
-            "ttl": 42,
-            "life": 42,
-            "angle": 0,
-            "spin": 0,
-            "scale": 0.8,
-            "kind": "container",
-            "model": "sf/health_container",
-            "title": "HEALTH +1",
-            "titleColor": 11993074,
-            "visible": true
-        }
-    )
-    effects = effects.slice(max(0,effects.length-96))
-    sound.play "sf_upgrade"
+    call begin_discovery "health", "sf/health_container"
 
 action place_oneup(key, x, z):
     pickups.push(

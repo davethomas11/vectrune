@@ -48,6 +48,7 @@ with tempfile.TemporaryDirectory(prefix="starfall-") as folder, sync_playwright(
     assert page.evaluate((ROOT / "tests/browser/starfall_layout.js").read_text())
     assert page.evaluate((ROOT / "tests/browser/starfall_portals.js").read_text())
     assert page.evaluate((ROOT / "tests/browser/starfall_rewards.js").read_text())
+    assert page.evaluate((ROOT / "tests/browser/starfall_discovery.js").read_text())
     assert page.evaluate((ROOT / "tests/browser/starfall_cinematics.js").read_text())
     # A boss cell must survive storage reload even before its sector relay is collected.
     page.evaluate("__starfallLaunch();__RunePixel3D.invoke('claim_boss_container',['rootheart'])")
@@ -279,6 +280,11 @@ with tempfile.TemporaryDirectory(prefix="starfall-") as folder, sync_playwright(
     use.dispatch_event("pointerdown", {"pointerId":16,"pointerType":"touch","bubbles":True})
     mobile.wait_for_function("__RunePixel3D.app.state.gravity_low")
     use.dispatch_event("pointerup", {"pointerId":16,"pointerType":"touch","bubbles":True})
+    mobile.evaluate("__starfallLaunch();__RunePixel3D.invoke('begin_discovery',['jets','sf/jets']);for(let i=0;i<40;i++)__RunePixel3D.step({})")
+    assert mobile.evaluate("__RunePixel3D.app.state.discovery_active")
+    mobile.locator('[data-control-touch="jump"]').tap()
+    mobile.wait_for_function("!__RunePixel3D.app.state.discovery_active")
+    assert mobile.evaluate("!__RunePixel3D.app.state.discovery_item.visible && __RunePixel3D.app.state.notice_ticks>0")
     mobile.screenshot(path="/private/tmp/starfall-mobile.png", full_page=True)
     assert not errors, errors
     browser.close()

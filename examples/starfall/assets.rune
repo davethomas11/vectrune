@@ -3654,3 +3654,83 @@ palette = sf
 unit = 1
 blocks:
     {"from": [-1, -1, -1], "size": [3, 3, 3], "color": "w"}
+
+@Model/sf/pilot_present
+palette = sf
+unit = 0.125
+blocks:
+    {"from": [-2, -2, 4], "size": [5, 4, 5], "color": "w"}
+    {"from": [-2, -2, 4], "size": [5, 4, 1], "color": "k"}
+    {"from": [-2, -1, 9], "size": [4, 2, 1], "color": "s"}
+    {"from": [-3, -2, 10], "size": [6, 4, 3], "color": "w"}
+    {"from": [-2, -2, 13], "size": [4, 4, 1], "color": "a"}
+    {"from": [-4, -2, 5], "size": [2, 4, 4], "color": "o"}
+    {"from": [-5, -1, 5], "size": [1, 2, 3], "color": "s"}
+    {"from": [-4, -1, 4], "size": [2, 2, 1], "color": "k"}
+    {"from": [-2, -1, 14], "size": [1, 1, 1], "color": "s"}
+    {"from": [-2, -3, 10], "size": [5, 1, 3], "color": "d"}
+    {"from": [-1, -4, 11], "size": [4, 1, 1], "color": "c"}
+    {"from": [-1, -3, 7], "size": [2, 1, 2], "color": "h"}
+    {"from": [-1, -4, 8], "size": [1, 1, 1], "color": "c"}
+    {"from": [1, -3, 6], "size": [1, 1, 1], "color": "o"}
+    {"from": [-2, 2, 10], "size": [5, 1, 3], "color": "d"}
+    {"from": [-1, 3, 11], "size": [4, 1, 1], "color": "c"}
+    {"from": [-1, 2, 7], "size": [2, 1, 2], "color": "h"}
+    {"from": [-1, 3, 8], "size": [1, 1, 1], "color": "c"}
+    {"from": [1, 2, 6], "size": [1, 1, 1], "color": "o"}
+    {"from": [-2, -1, 1], "size": [2, 3, 3], "color": "h"}
+    {"from": [-2, -2, 2], "size": [2, 1, 1], "color": "a"}
+    {"from": [-2, -2, 0], "size": [3, 4, 1], "color": "s"}
+    {"from": [-1, 1, 0], "size": [2, 1, 1], "color": "o"}
+    {"from": [1, -1, 1], "size": [2, 3, 3], "color": "h"}
+    {"from": [1, -2, 2], "size": [2, 1, 1], "color": "a"}
+    {"from": [1, -2, 0], "size": [3, 4, 1], "color": "s"}
+    {"from": [-5, -2, 7], "size": [2, 4, 4], "color": "w"}
+    {"from": [4, -2, 7], "size": [2, 4, 4], "color": "w"}
+    {"from": [-5, -2, 11], "size": [2, 4, 2], "color": "o"}
+    {"from": [4, -2, 11], "size": [2, 4, 2], "color": "o"}
+
+@Model/sf/pilot_celebrate
+palette = sf
+unit = 0.125
+blocks:
+    {"from": [-2, -2, 4], "size": [5, 4, 5], "color": "w"}
+    {"from": [-2, -2, 4], "size": [5, 4, 1], "color": "k"}
+    {"from": [-2, -1, 9], "size": [4, 2, 1], "color": "s"}
+    {"from": [-3, -2, 10], "size": [6, 4, 3], "color": "w"}
+    {"from": [-2, -2, 13], "size": [4, 4, 1], "color": "a"}
+    {"from": [-4, -2, 5], "size": [2, 4, 4], "color": "o"}
+    {"from": [-5, -1, 5], "size": [1, 2, 3], "color": "s"}
+    {"from": [-4, -1, 4], "size": [2, 2, 1], "color": "k"}
+    {"from": [-2, -1, 14], "size": [1, 1, 1], "color": "s"}
+    {"from": [-2, -3, 10], "size": [5, 1, 3], "color": "d"}
+    {"from": [-1, -4, 11], "size": [4, 1, 1], "color": "c"}
+    {"from": [-1, -3, 7], "size": [2, 1, 2], "color": "h"}
+    {"from": [-1, -4, 8], "size": [1, 1, 1], "color": "c"}
+    {"from": [1, -3, 6], "size": [1, 1, 1], "color": "o"}
+    {"from": [-2, 2, 10], "size": [5, 1, 3], "color": "d"}
+    {"from": [-1, 3, 11], "size": [4, 1, 1], "color": "c"}
+    {"from": [-1, 2, 7], "size": [2, 1, 2], "color": "h"}
+    {"from": [-1, 3, 8], "size": [1, 1, 1], "color": "c"}
+    {"from": [1, 2, 6], "size": [1, 1, 1], "color": "o"}
+    {"from": [-2, -1, 1], "size": [2, 3, 3], "color": "h"}
+    {"from": [-2, -2, 2], "size": [2, 1, 1], "color": "a"}
+    {"from": [-2, -2, 0], "size": [3, 4, 1], "color": "s"}
+    {"from": [-1, 1, 0], "size": [2, 1, 1], "color": "o"}
+    {"from": [1, -1, 1], "size": [2, 3, 3], "color": "h"}
+    {"from": [1, -2, 2], "size": [2, 1, 1], "color": "a"}
+    {"from": [1, -2, 0], "size": [3, 4, 1], "color": "s"}
+    {"from": [-5, -2, 9], "size": [2, 4, 6], "color": "w"}
+    {"from": [4, -2, 9], "size": [2, 4, 6], "color": "w"}
+    {"from": [-5, -2, 15], "size": [3, 4, 2], "color": "o"}
+    {"from": [3, -2, 15], "size": [3, 4, 2], "color": "o"}
+    {"from": [-4, -2, 17], "size": [2, 4, 1], "color": "c"}
+    {"from": [3, -2, 17], "size": [2, 4, 1], "color": "c"}
+
+@Model/sf/discovery_star
+palette = sf
+unit = 0.125
+blocks:
+    {"from": [-3, -1, 0], "size": [7, 2, 1], "color": "y"}
+    {"from": [0, -1, -3], "size": [1, 2, 7], "color": "y"}
+    {"from": [-1, -1, -1], "size": [3, 2, 3], "color": "w"}

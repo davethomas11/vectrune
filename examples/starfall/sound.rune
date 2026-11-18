@@ -456,3 +456,9 @@ harmony:
     [C2,E2,G2]:1 | [F2,A2,C3]:1 | [A1,C2,E2]:1 | [G1,B1,D2]:1
 bass:
     C2:1 | F1:1 | A1:1 | G1:1
+
+# Original discovery fanfare: a rising signal and a bright held resolution.
+@Sound/sf_discovery
+wave = triangle
+sequence = E5:100ms, B5:100ms, F#5:100ms, G5:180ms, B5:100ms, E6:480ms
+volume = 0.11

@@ -32,6 +32,12 @@ state:
     curator_phase = "dormant"
     charge_duration = 24
     upgrade_snapshot = null
+    discovery_active = false
+    discovery_ticks = 0
+    discovery_title = ""
+    discovery_help = ""
+    discovery_input_held = false
+    discovery_item = {"visible": false}
     portal_aura = []
     arrival_ring = {"visible": false, "model": "sf/rift_arrival", "x": 9, "y": 8, "z": 4}
     current_room = "dock"
@@ -213,6 +219,9 @@ action new_run:
     curator_phase = "dormant"
     charge_duration = campaign.capacitor ? 18 : 24
     navigation_stamp = ""
+    discovery_active = false
+    discovery_ticks = 0
+    discovery_item = {"visible": false}
     upgrade_snapshot = null
     damage_side = 0
     damage_indicator_ticks = 0
@@ -304,6 +313,10 @@ action start:
     call begin_intro
 
 action advance:
+    if discovery_active:
+        if discovery_ticks >= 36:
+            call finish_discovery
+        stop when true
     if status == "intro":
         call begin_landing
         stop when true
@@ -330,6 +343,9 @@ action tick(input):
     stop when status != "playing"
     if recovery_phase != "none":
         call tick_recovery
+        stop when true
+    if discovery_active:
+        call tick_discovery input
         stop when true
     room_changed = false
     use_pressed = !!input.use && !use_held
@@ -430,7 +446,7 @@ action tick(input):
         shots = []
         call refresh_ui
         stop when true
-    if status == "playing":
+    if status == "playing" && !discovery_active:
         call update_exploration
     if status == "playing":
         call update_view
@@ -488,6 +504,11 @@ action update_exploration:
             if item.kind == "core":
                 core = true
                 notice = "CORE SECURED. Security reinforcements inbound. Fight west to the ship!"
+            if item.kind != "repair" && item.kind != "oneup":
+                call begin_discovery item.kind, item.model
+            if item.kind == "oneup":
+                call discovery_sparkles
+    stop when discovery_active
     for beacon in beacons:
         if abs(player.x-beacon.x) < 0.9 && abs(player.z-beacon.z) < 0.4 && checkpoint.x != beacon.x:
             checkpoint = {"x": beacon.x, "z": beacon.z}
@@ -500,7 +521,7 @@ action update_exploration:
         call begin_departure
 
 action take_damage(amount, source_x):
-    stop when status != "playing" || recovery_phase != "none" || invulnerable > 0 || dash_ticks > 0
+    stop when status != "playing" || discovery_active || recovery_phase != "none" || invulnerable > 0 || dash_ticks > 0
     health = max(0, health-amount)
     flash = 2
     hurt_ticks = 9
@@ -589,6 +610,8 @@ action update_view:
     magnet_fx.x = player.x
     magnet_fx.z = player.z+2.3
     magnet_fx.angle = ticks*12
+    if discovery_active:
+        call pose_discovery
     if seal_shake > 0:
         camera.x += sin(ticks*133)*0.025*seal_shake/12
         camera.z += cos(ticks*119)*0.018*seal_shake/12
@@ -782,6 +805,14 @@ action refresh_ui:
         }
     }
     call show_navigation
+    if discovery_active:
+        ui.objective = discovery_title
+        ui.detail = "EQUIPMENT RECOVERED"
+        ui.notice = discovery_help
+        ui.prompt = discovery_ticks < 36 ? "NEW SIGNAL ACQUIRED" : "ENTER / JUMP / FIRE / USE TO CONTINUE"
+        ui.panel = null
+        touch_dash_ready = false
+        touch_use_ready = false
     if status == "intro" || status == "ending" || status == "credits":
         ui = {
             "meters": [],

@@ -1,0 +1,103 @@
+@Logic/starfall
+# Transient presentation: rewards are granted before this starts, never on dismissal.
+action begin_discovery(kind, model):
+    discovery_active = true
+    discovery_ticks = 0
+    discovery_input_held = true
+    discovery_title = "RELIC RECOVERED"
+    discovery_help = notice
+    if kind == "jets":
+        discovery_title = "JUMP JETS ACQUIRED!"
+        discovery_help = "Press JUMP again in midair to double jump.|SPACE / controller A / touch JUMP. Reach higher ledges!"
+    if kind == "dash":
+        discovery_title = "AIR DASH ACQUIRED!"
+        discovery_help = "Jump, then DASH to burst across gaps. Landing recharges it.|SHIFT or K / controller B / touch DASH."
+    if kind == "plasma":
+        discovery_title = "PLASMA CHARGE ACQUIRED!"
+        discovery_help = "Hold FIRE until charged, then release to blast violet seals.|Mouse or X / controller X / touch FIRE. Aim up with UP."
+    if kind == "glove":
+        discovery_title = "MAGNETIC GLOVE ACQUIRED!"
+        discovery_help = "Jump underneath the overhead carrier to grab and ride it.|Press JUMP to let go: SPACE / controller A / touch JUMP."
+    if kind == "capacitor":
+        discovery_title = "PLASMA CAPACITOR ACQUIRED!"
+        discovery_help = "Plasma charges 25% faster. Hold FIRE, then release.|This upgrade stays saved between expeditions."
+    if kind == "armor":
+        discovery_title = "SUIT ARMOR ACQUIRED!"
+        discovery_help = "Two extra health cells! Suit fully repaired.|Permanent protection, saved between expeditions."
+    if kind == "health":
+        discovery_title = "HEALTH CONTAINER ACQUIRED!"
+        discovery_help = "Maximum health increased by one. Suit fully repaired!|This health container stays saved between expeditions."
+    if kind == "relay" || kind == "foundry_relay":
+        discovery_title = kind == "relay" ? "GARDEN RELAY RESTORED!" : "FOUNDRY RELAY RESTORED!"
+        discovery_help = kind == "relay" ? "Sector and air dash saved! Return through the cargo portal.|Use jets and dash on the western ledges to reach plasma." : "Sector, glove and plasma saved! The crypt is accessible.|Return to containment and descend into the Reactor Crypt."
+    if kind == "core":
+        discovery_title = "STARCORE RECOVERED!"
+        discovery_help = "The Ark has a future! Bring this light back to your ship.|Reinforcements are inbound. Fight west to the docking ring!"
+    discovery_item = {"x": player.x, "y": 7, "z": player.z+1, "model": model, "angle": 0, "scale": 0.85, "visible": true}
+    velocity = 0
+    dash_ticks = 0
+    charge_ticks = 0
+    charge_ready = false
+    fire_held = false
+    aiming_up = false
+    ducking = false
+    hurt_ticks = 0
+    flash = 0
+    call sync_music
+    sound.play "sf_discovery"
+    call discovery_sparkles
+    call update_view
+    call refresh_ui
+
+action tick_discovery(input):
+    discovery_ticks += 1
+    # Edge-triggered dismissal: holding fire when collecting cannot skip the reveal.
+    held = !!input.jump || !!input.fire || !!input.use
+    pressed = held && !discovery_input_held
+    discovery_input_held = held
+    call update_effects
+    if discovery_ticks == 18 || discovery_ticks == 42:
+        call discovery_sparkles
+    call update_view
+    # Auto-resume keeps the expedition flowing; explicit confirmation is available
+    # after the lift. The instructions remain in the normal HUD afterward.
+    if discovery_ticks >= 150 || (discovery_ticks >= 36 && pressed):
+        call finish_discovery
+    call refresh_ui
+
+action finish_discovery:
+    discovery_active = false
+    discovery_item.visible = false
+    # Consume confirmation so a jump or charged shot cannot leak into gameplay.
+    jump_held = true
+    use_held = true
+    fire_held = false
+    invulnerable = max(invulnerable, 30)
+    notice = discovery_help
+    notice_ticks = 210
+    call sync_music
+    call update_view
+    call refresh_ui
+
+action pose_discovery:
+    lift = clamp(discovery_ticks/18, 0, 1)
+    avatar.model = discovery_ticks < 9 ? "sf/pilot_present" : "sf/pilot_celebrate"
+    avatar.angle = 0
+    avatar.visible = true
+    avatar.dissolve = 0
+    rifle.visible = false
+    muzzle.visible = false
+    charge_fx.visible = false
+    magnet_fx.visible = false
+    discovery_item.x = player.x
+    discovery_item.z = player.z+1.2+lift*1.35+sin(discovery_ticks*6)*0.045
+    discovery_item.angle = discovery_ticks*3
+    discovery_item.scale = 0.65+lift*0.2
+    camera.x += (clamp(player.x, 13, world.width-8)-camera.x)*0.12
+    camera.z += (clamp(player.z+1.8, 5, world.depth-5)-camera.z)*0.12
+
+action discovery_sparkles:
+    for i in range(0,12):
+        bearing = i*30+discovery_ticks*5
+        effects.push({"x":player.x+cos(bearing)*0.65,"y":7.4,"z":player.z+2+sin(bearing)*0.65,"dx":cos(bearing)*0.035,"dz":sin(bearing)*0.035+0.012,"ttl":30,"life":30,"angle":bearing,"spin":6,"scale":i%2 == 0 ? 0.8 : 0.5,"model":"sf/discovery_star","kind":"container","visible":true})
+    effects = effects.slice(max(0,effects.length-96))
