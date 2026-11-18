@@ -11,6 +11,10 @@ Starfall {
     touch_controls = "On touch, push the stick up to aim or down to duck. USE appears near doors and consoles; DASH appears after you unlock it. Start and Exit remain accessible in fullscreen. In portrait, a reminder recommends rotating your phone."
     objective = "Explore Hydroponics and the Gravity Foundry, link jump jets, air dash and the magnetic glove to reach the reactor, and defeat three guardians. Optional rooms hide upgrades, a fourth boss and rare extra lives."
     device = "Keyboard, controller and touch are supported. P pauses and opens the map. Start with four health cells and three lives; bosses add permanent health containers. Sector progress saves in this browser."
+    fullscreen_title = "Hide browser bars"
+    fullscreen_android = "Android: tap Fullscreen to hide the browser controls."
+    fullscreen_ios = "A web game cannot hide iPhone Safari’s bars automatically. For this tab, use Page Menu, then Hide Toolbar. For a bar-free launch, open the full game above, choose Share, then Add to Home Screen, and enable Open as Web App if offered. Launch Starfall from its new icon."
+    fullscreen_save = "The Home Screen app has a separate save on iPhone."
     source_title = "Explore the Rune source"
     source_text = "Game by Dave Thomas. Worlds, models, animations, controls, music and cinematic sequences are authored in Rune. Build and test locally with Vectrune 0.3.6 or newer."
 }

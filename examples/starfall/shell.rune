@@ -18,7 +18,7 @@ view:
                     button data-pixel-mute=true "Sound / V"
                     button data-pixel-fullscreen=true "Fullscreen / F"
             div .game-surface:
-                canvas data-rune-pixel-3d=true data-pixel-fit=viewport data-pixel-touch-padding=14 tabindex=0 aria-label="Starfall Protocol, a side-scrolling space adventure. A and D or arrows move, Space jumps, left click or X fires, W or Up aims upward, S or Down ducks. On touch, move the stick up to aim and down to duck. Recover the core and return to your ship."
+                canvas data-rune-pixel-3d=true data-pixel-fit=viewport data-pixel-app-fullscreen=true data-pixel-touch-padding=14 tabindex=0 aria-label="Starfall Protocol, a side-scrolling space adventure. A and D or arrows move, Space jumps, left click or X fires, W or Up aims upward, S or Down ducks. On touch, move the stick up to aim and down to duck. Recover the core and return to your ship."
                 button .fullscreen-exit .fullscreen-exit-hud data-pixel-fullscreen=true aria-label="Exit fullscreen" "EXIT"
                 div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
                     h2 "SIGNAL ON HOLD"
@@ -42,6 +42,10 @@ view:
             div:
                 h2 "04 / FOLLOW SIDE SIGNALS"
                 p "Pause with P, controller Start, or the touch PAUSE button to view the exploration map. V toggles sound. Purple hatches mark optional routes. The Signal Archive on the western middle ledge combines jets and dash for a faster-charging plasma capacitor. The Observatory in eastern containment needs the magnetic glove and a gravity-assisted ascent; its armor adds two health cells. Both upgrades stay saved. Beyond the Observatory armor, descend into the optional Void Curator chamber for another permanent health container. Enemies brighten before firing, and red edge cues show incoming damage direction."
+            div:
+                h2 "05 / PLAY WITHOUT BROWSER BARS"
+                p "Android: tap Fullscreen. iPhone Safari: use Page Menu, then Hide Toolbar for this tab. To launch without Safari bars, add this full game to your Home Screen from Share and enable Open as Web App if offered. Launch Starfall from its new icon. The Home Screen app uses a separate save on iPhone."
+                a href="https://vectrune.com/starfall/" "Back to Vectrune"
         footer:
             p "MADE WITH RUNE / PIXEL-3D"
             p "Keyboard / controller / touch. Completed sectors and their gear are saved."

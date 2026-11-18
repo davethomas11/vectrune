@@ -1274,6 +1274,18 @@ Browser regression checks cover native and fallback fullscreen in the site
 iframe, touch-only launch, rotation, contextual actions, near misses, inert
 background taps, pinch suppression, a persistent exit, and resolution recovery.
 
+Starfall's hosted standalone game also exports a web app manifest with
+`fullscreen` display and a `standalone` fallback, landscape orientation, a
+same-origin start URL and an icon. Android browser fullscreen requests
+`navigationUI: "hide"`. iPhone Safari cannot grant native fullscreen to the
+canvas: use Safari's Hide Toolbar for the current tab, or add the standalone
+game to the Home Screen and launch its icon for a browser-bar-free window.
+The site explains that iPhone Home Screen apps use a separate save container.
+An opt-in `data-pixel-app-fullscreen=true` expands the game at launch when
+installed display mode or iOS `navigator.standalone` is detected. It avoids a
+gesture-only native request at startup; the visible EXIT control restores the
+cabinet and its link back to Vectrune.
+
 ## Floating destination titles
 
 Pixel-3d things can opt into world-anchored pixel-font plaques:

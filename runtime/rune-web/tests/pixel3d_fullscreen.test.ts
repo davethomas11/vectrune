@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createFullscreen } from '../src/pixel3d/fullscreen';
+import { createFullscreen, isStandaloneApp } from '../src/pixel3d/fullscreen';
 
 function setup(native = true, lockFails = false) {
   const listeners: Record<string, (event?: KeyboardEvent) => void> = {};
@@ -30,6 +30,30 @@ function pressEscape(s: ReturnType<typeof setup>, repeat = false) {
 }
 afterEach(() => vi.unstubAllGlobals());
 describe('pixel3d fullscreen presentation', () => {
+  it('recognizes installed iPhone and Android display modes without treating a browser tab as installed', () => {
+    setup();
+    expect(isStandaloneApp()).toBe(false);
+    Object.assign(window,{navigator:{standalone:true}});
+    expect(isStandaloneApp()).toBe(true);
+    Object.assign(window,{navigator:{standalone:false},matchMedia:(query:string)=>({matches:query==='(display-mode: standalone)'})});
+    expect(isStandaloneApp()).toBe(true);
+    Object.assign(window,{matchMedia:(query:string)=>({matches:query==='(display-mode: fullscreen)'})});
+    expect(isStandaloneApp()).toBe(true);
+  });
+  it('starts an installed app without a gesture-only fullscreen request and keeps Exit working', async () => {
+    const s = setup();
+    s.control.startStandalone();
+    s.control.startStandalone();
+    expect(s.control.expanded()).toBe(true);
+    expect(s.surface.requestFullscreen).not.toHaveBeenCalled();
+    expect(s.changed).toHaveBeenCalledTimes(1);
+    await s.control.toggle();
+    expect(s.control.expanded()).toBe(false);
+    expect(s.doc.exitFullscreen).not.toHaveBeenCalled();
+    s.control.dispose();
+    s.control.startStandalone();
+    expect(s.control.expanded()).toBe(false);
+  });
   it('exits fallback fullscreen on Escape independently of canvas focus', async () => {
     const s = setup(false);
     await s.control.toggle();

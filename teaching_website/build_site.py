@@ -42,6 +42,28 @@ def routes():
     return sorted(set(re.findall(r'^\s*"([\w/-]+)"\s*->', layout, re.MULTILINE)))
 
 
+def starfall_web_app(html, directory):
+    """Give the standalone game a Home Screen launch with no browser chrome."""
+    html = re.sub(r'''<link\b[^>]*\brel=["']apple-touch-icon["'][^>]*>\s*''', '', html, flags=re.IGNORECASE)
+    manifest = {
+        "id": "./", "name": "Starfall Protocol", "short_name": "Starfall",
+        "start_url": "./index.html?launch=homescreen", "scope": "./",
+        "display": "fullscreen", "display_override": ["fullscreen", "standalone"],
+        "orientation": "landscape", "theme_color": "#080d1b", "background_color": "#080d1b",
+        "icons": [{"src": "../../rune-logo.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any"}],
+    }
+    (directory / 'manifest.webmanifest').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+    metadata = '''<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="../../rune-logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Starfall">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#080d1b">
+'''
+    return html.replace('</head>', metadata + '</head>', 1)
+
+
 def build_site(destination, binary, base="/", selected_routes=None, site_url="https://vectrune.com"):
     destination = Path(destination).resolve()
     binary = str(Path(binary).resolve())
@@ -104,7 +126,8 @@ def build_site(destination, binary, base="/", selected_routes=None, site_url="ht
         if slug not in {"vectraiders", "vectworms", "tic-tac-toe"} and not re.search(r'"controls"\s*:\s*\{', result.stdout):
             raise RuntimeError(f"{binary} did not compile {slug}'s @Controls profile. "
                                "Build the compiler from this checkout (omit --binary).")
-        (game / "index.html").write_text(result.stdout, encoding="utf-8")
+        html = starfall_web_app(result.stdout, game) if slug == 'starfall' else result.stdout
+        (game / "index.html").write_text(html, encoding="utf-8")
     from build_developer_starter import archive
     developer = assets / 'content/developer'
     developer.mkdir(parents=True, exist_ok=True)

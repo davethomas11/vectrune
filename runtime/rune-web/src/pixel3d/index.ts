@@ -3,7 +3,7 @@ import { mountControls } from '../input/browser';
 import { Pixel3DEngine, type Pixel3DConfig, type Input3D } from './engine';
 import { unlockAudio } from '../audio';
 import { mountTouch, STYLE } from './touch';
-import { createFullscreen } from './fullscreen';
+import { createFullscreen, isStandaloneApp } from './fullscreen';
 import type { RuneWebConfig } from '../types';
 
 let settings: Pixel3DConfig;
@@ -417,6 +417,8 @@ export function mount(
   };
 
   frameId = requestAnimationFrame(frame);
+
+  if (canvas.dataset.pixelAppFullscreen === 'true' && isStandaloneApp()) fullscreen.startStandalone();
 
   const dispose = () => {
     stopped = true;

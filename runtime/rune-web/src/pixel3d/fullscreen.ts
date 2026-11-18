@@ -1,4 +1,10 @@
 // Fullscreen and orientation belong to the presentation host, not game rules.
+export function isStandaloneApp(): boolean {
+  return Boolean(window.matchMedia?.('(display-mode: standalone)').matches ||
+    window.matchMedia?.('(display-mode: fullscreen)').matches ||
+    (window.navigator as (Navigator & { standalone?: boolean }) | undefined)?.standalone);
+}
+
 export function createFullscreen(surface: HTMLElement, changed: () => void) {
   const doc = surface.ownerDocument as Document & {
     webkitFullscreenElement?: Element;
@@ -46,6 +52,13 @@ export function createFullscreen(surface: HTMLElement, changed: () => void) {
   doc.addEventListener('keydown', onEscape, true);
   return {
     expanded,
+    startStandalone(): void {
+      if (disposed || expanded()) return;
+      // The installed app already owns a browser-free window; no gesture-only
+      // fullscreen request is needed to fit its game surface to that window.
+      fallbackMode(true);
+      changed();
+    },
     async toggle(): Promise<void> {
       if (busy || disposed) return;
       busy = true;

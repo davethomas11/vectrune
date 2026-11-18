@@ -17,6 +17,10 @@ view:
             p "%i18n.Starfall.touch_controls%"
             p "%i18n.Starfall.objective%"
             p "%i18n.Starfall.device%"
+            h3 "%i18n.Starfall.fullscreen_title%"
+            p "%i18n.Starfall.fullscreen_android%"
+            p "%i18n.Starfall.fullscreen_ios%"
+            p "%i18n.Starfall.fullscreen_save%"
 
         details .card .showcase-notes:
             summary "%i18n.Starfall.source_title%"

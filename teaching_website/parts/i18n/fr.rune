@@ -11,6 +11,10 @@ Starfall {
     touch_controls = "Sur écran tactile, poussez le stick vers le haut pour viser ou vers le bas pour vous baisser. USE apparaît près des portes et consoles ; DASH apparaît après son déblocage. Les boutons de départ et de sortie restent accessibles en plein écran. En mode portrait, un message conseille de tourner le téléphone."
     objective = "Explorez Hydroponie et la Fonderie Gravitationnelle. Combinez double saut, ruée aérienne et gant magnétique pour atteindre le réacteur et vaincre trois gardiens. Les salles facultatives cachent des améliorations, un quatrième boss et de rares vies supplémentaires."
     device = "Clavier, manette et commandes tactiles sont pris en charge. P met en pause et ouvre la carte. Commencez avec quatre points de santé et trois vies ; les boss offrent des réserves de santé permanentes. Les secteurs terminés sont sauvegardés dans ce navigateur."
+    fullscreen_title = "Masquer les barres du navigateur"
+    fullscreen_android = "Android : touchez Fullscreen pour masquer les commandes du navigateur."
+    fullscreen_ios = "Safari sur iPhone ne permet pas au jeu de masquer ses barres. Dans cet onglet, ouvrez le menu de page puis Masquer la barre d’outils. Pour démarrer sans barres, ouvrez le jeu complet ci-dessus, choisissez Partager puis Sur l’écran d’accueil, et activez Ouvrir comme app web si proposé. Lancez Starfall depuis sa nouvelle icône."
+    fullscreen_save = "L’app de l’écran d’accueil possède une sauvegarde distincte sur iPhone."
     source_title = "Explorer le code Rune"
     source_text = "Un jeu de Dave Thomas. Mondes, modèles, animations, commandes, musique et cinématiques sont écrits en Rune. Compilez et testez avec Vectrune 0.3.6 ou une version ultérieure."
 }

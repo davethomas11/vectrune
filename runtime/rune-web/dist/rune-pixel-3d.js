@@ -7669,6 +7669,9 @@ var __RunePixel3DRuntime = (() => {
   }
 
   // src/pixel3d/fullscreen.ts
+  function isStandaloneApp() {
+    return Boolean(window.matchMedia?.("(display-mode: standalone)").matches || window.matchMedia?.("(display-mode: fullscreen)").matches || window.navigator?.standalone);
+  }
   function createFullscreen(surface, changed) {
     const doc = surface.ownerDocument;
     const element = surface;
@@ -7720,6 +7723,11 @@ var __RunePixel3DRuntime = (() => {
     doc.addEventListener("keydown", onEscape, true);
     return {
       expanded,
+      startStandalone() {
+        if (disposed || expanded()) return;
+        fallbackMode(true);
+        changed();
+      },
       async toggle() {
         if (busy || disposed) return;
         busy = true;
@@ -8178,6 +8186,7 @@ var __RunePixel3DRuntime = (() => {
       frameId = requestAnimationFrame(frame);
     };
     frameId = requestAnimationFrame(frame);
+    if (canvas.dataset.pixelAppFullscreen === "true" && isStandaloneApp()) fullscreen.startStandalone();
     const dispose = () => {
       stopped = true;
       game.paused = true;
