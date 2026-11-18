@@ -3,10 +3,291 @@
 `@App type = pixel-3d` uses shared Rune game logic with a browser raycaster or
 the optional native desktop rasterizer. Vect Breach remains a separate example.
 
-Unreleased opt-in `@Scene world` adds solid voxel terrain, elevation, mining,
+The opt-in `@Scene world` in v0.3.6 adds solid voxel terrain, elevation, mining,
 seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](voxel-worlds.md)
 for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.
 The grid-map semantics below remain unchanged.
+
+## Starfall Protocol: side-scrolling space adventure (v0.3.6)
+
+[Play Starfall Protocol](https://vectrune.com/starfall/) or explore its
+[Rune source](../../examples/starfall/starfall.rune). It is a space
+metroidvania built on pixel-3d, with movement confined to one plane and a fixed
+side-on camera. Explore Kepler Station, recover jump jets in the cargo bay,
+enter the overgrown Hydroponics sector, unlock air dash, and restore its relay.
+Return through the cargo shortcut, climb the western ledges with jump jets,
+then air dash across the thirteen-tile gap to the plasma perch above the ship.
+Jump jets alone cannot bridge this gap; a missed crossing lands on the lower
+docking deck for another attempt. Plasma collection also requires the dash module.
+With plasma, breach
+the powered violet seal, restore the Gravity Foundry, defeat the Crypt Warden,
+and carry its core to the ship. The station's 128 x 21 x 20 volume, the garden's
+80 x 21 x 20 volume, and the Foundry's 96 x 21 x 20 volume use sparse terrain
+chunks. The shared sparse factory supports up to 4,096 tiles on each horizontal
+axis, subject to the logical-volume and resident-chunk budgets described below.
+
+```sh
+cargo build --bin vectrune
+target/debug/vectrune examples/starfall/starfall.rune -o html > starfall.html
+target/debug/vectrune test examples/starfall --type logic
+cargo test --test starfall_app
+python3 tests/browser/starfall.py
+```
+
+Open `starfall.html` and choose **Board station**. A/D or left/right arrows move;
+Space jumps, left click or X fires (J remains an alternate), and W/Up aims vertically.
+Hold S/Down to duck on the ground, move slowly and fire from a lower muzzle.
+The crouched combat height is 0.85 tiles versus 1.6 standing: the Warden's leap
+and high projectiles can pass overhead, while low bolts, grounded contact and
+slam shockwaves still hit. Release or jump to stand; airborne ducking is disabled.
+Controller right shoulder or left stick down ducks; touch supplies a DUCK button.
+Hold left click or X to charge plasma and release to fire; mouse firing does not
+lock the cursor or change the side-on aiming direction. Jump jets unlock a second
+press of jump in midair. P pauses and shows the map, V mutes, F toggles fullscreen, and Enter
+starts an expedition. Controller left stick moves, A jumps, X fires, left shoulder
+aims up, View/Back starts, and Start pauses. Touch supplies movement, jump,
+fire, and aim buttons. E uses nearby hatches; after collecting the air-dash module,
+jump and press Shift/K for a brief horizontal burst. Dash is limited to once per
+airborne trip and recharges on landing, with brief damage protection during the
+burst. Controller B dashes and Y uses hatches; touch adds DASH and USE buttons.
+
+### Exploration, optional upgrades and combat cues
+
+The map appears only on the pause screen. P, controller Start/left trigger,
+or the touch PAUSE button opens it. Gameplay freezes while paused; resume with
+the same control. Cyan marks the pilot's room,
+green marks explored rooms, red marks locked routes, and grey marks unknown rooms.
+Restored shortcuts appear as dotted cyan links. Exploration is saved alongside
+sector progression and survives game over. Old saves receive empty exploration
+and upgrade fields through the existing shape-based save migration.
+
+The starting upgrades occupy crypts reached through visible energy portals.
+Use E/USE at the **PROPULSION CRYPT** gateway near cargo x=49 for jump jets.
+Hydroponics' **DASH CRYPT** gateway is on the upper canopy at x=23.5, z=17:
+climb past the repair pod, then double jump onto the four-tile-higher ledge.
+Both gates stand on solid platforms; walking past one cannot teleport the pilot.
+Each connects to a 56x21x24 crypt with descending steps, a guard, a solid item
+pedestal and two return portals. Leaving without the upgrade returns beside its
+gateway safely. Parent terrain, enemies, checkpoints and bosses stay preserved.
+Animated energy fragments and six orbiting motes mark each gateway. Arrival adds
+a short expanding, dissolving ring while the pilot and rifle materialize. Portal
+animation follows the game clock and freezes while paused. A dedicated portal
+sound accompanies the existing door chime.
+
+Purple hatches lead to the optional Signal Archive (72x21x20) and the expanded
+Gravity Observatory (96x28x20):
+
+- **Signal Archive:** enter from the station's western middle ledge at x=33,z=10
+  with jump jets and air dash. Climb, cross a thirteen-tile breach, then climb to
+  the capacitor. It reduces plasma charge time from 24 to 18 ticks (0.8 to 0.6s).
+- **Gravity Observatory:** enter from eastern containment at x=74 after acquiring
+  the magnetic glove. Its console enables low gravity; combine jets and dash across
+  the raised route to suit armor, adding two cells to the current maximum.
+  Descend beyond the armor for the optional **Void Curator** chamber.
+
+Both rooms have a return hatch at the entrance and another beside the reward.
+They return to the original station entrance and preserve its enemies, bosses,
+checkpoint and broken seals. Rewards are banked immediately and survive game over;
+starting a new campaign after the ending clears them. Repair pods, beacons,
+sector transitions and lethal recovery heal the upgraded maximum health.
+
+Standard drones, spore skimmers and forge sentries brighten during their firing
+windup and play a short lock-on cue. Approaching an enemy whose cooldown has
+already elapsed grants a full 24-tick warning before its first shot. Directional
+red edge markers point toward lateral damage sources for 20 ticks, supplementing
+the existing flash and suit reaction. Ground and overhead impacts retain their
+normal hit reaction without inventing a lateral direction.
+
+### Hydroponics and connected sectors
+
+The cargo hatch at x=52, beside the jump-jet bay, leads to a dark greenhouse of
+glowing flowers, alien trees, hanging vines, glass shelves, and a broken canopy.
+E/USE is press-edge triggered, so holding it cannot bounce between sectors.
+Door transitions preserve the station's enemies, pickups, checkpoints, seal,
+and Warden state; projectiles and transient effects are cleared between rooms.
+
+Explore the western canopy for a repair pod, then use jump jets to climb to the
+higher dash-crypt entrance. Use its portal for air dash, return to the upper ledge, and
+combine jumping, jump jets, and dash to cross the
+twelve-tile greenhouse breach. Four spore skimmers patrol the garden, with
+animated wings, pollen deaths, and slower green projectiles. The **Rootheart**
+miniboss telegraphs a vine eruption and fires spores; jump or dash to evade,
+then shoot its exposed bloom. Its health bar and battle camera track the fight.
+Fatal deaths restore an undefeated Rootheart's health, as with the Warden.
+
+Defeating Rootheart reveals the garden relay. Collecting it powers the reactor
+seal and opens a two-way shortcut between the eastern garden and cargo near the
+first beacon. Plasma alone cannot break an unpowered seal. The relay also banks
+Hydroponics completion, jump jets and air dash under `starfall-campaign-v1`.
+Game over, returning to title, and browser reload preserve that completed sector
+and its traversal gear. Plasma resets with a new attempt until the Foundry is
+also completed and banked. The final reactor fight always belongs to the attempt.
+Completed Hydroponics remains visitable
+through either hatch. Winning and choosing **New campaign** clears the banked
+sector for a fresh full adventure. Restricted storage falls back to session saves.
+
+The greenhouse has its own bell/string exploration track and Rootheart battle
+variation. The reactor crypt remains the finale; the existing ship opening,
+three-life system, ghost recovery, plasma charging, and ending remain in use.
+
+### Gravity Foundry
+
+Past the violet seal, E/USE at the containment hatch (x=69) enters a furnace
+hall of coils, pistons, iron columns and glowing pools. Entry requires the garden
+relay and plasma. First inspect the **overhead carrier** at the west dock. Its scan
+unlocks the service workshop above the entrance: backtrack with jump jets over
+two upper ledges and recover the **magnetic glove** from its pedestal. Jump beneath
+the carrier to grip its underside, then hang across the 27-tile furnace span.
+Space releases into a jump; a short grace period prevents an immediate re-grab.
+Without the glove, the carrier cannot catch or support the pilot. Pause and ghost
+recovery freeze its motion.
+
+At the far dock, E/USE at a gravity console switches between **normal and low
+gravity**. Low gravity reduces acceleration from 0.035 to 0.012 tiles per tick
+squared. Combine it with jump jets to reach the high gantry, eight tiles above
+the dock. A second console in the lower arena lets you restore normal gravity
+before the **Iron Cantor** fight. Watch its raised hammers, jump the pair of heat
+waves, and release charged plasma while its furnace vent is open. The Cantor has
+24 HP, a dedicated life bar, vent/hammer/hit animations, and a separate battle
+score; fatal deaths reset an undefeated Cantor.
+
+Collecting the Foundry relay opens a two-way cargo shortcut at x=58 and releases
+the crypt bulkhead. The save adds `foundry` under the existing
+`starfall-campaign-v1` key; older Hydroponics saves retain their completed garden
+and start with Foundry incomplete. A banked Foundry restores the magnetic glove,
+plasma, jump jets and air dash after game over or reload, and keeps both access
+barriers open. The title, game-over screen and pause map explain saved progress.
+**New campaign** after victory clears both saved sectors for a full replay.
+
+The overhead carrier uses a game-authored grip range beneath its slab above the
+static voxel terrain. Carry runs before player movement; hanging poses, a raised
+glove and a magnetic contact effect show the attachment. Jumping detaches cleanly.
+The background pistons animate visually; they do not collide with the pilot.
+Foundry music pairs a 96 BPM mechanical exploration score with a 120 BPM Cantor
+variation. Both use the existing portable synthesizer.
+
+The title screen flies around Kepler Station using a separate looping camera.
+Starting an expedition plays a 20-second introduction: the salvage ship leaves
+the Helios Ark, shrinks to a distant light, and disappears while the mission
+story scrolls. The Ark's failing starcore threatens its gardens and air supply;
+the pilot must recover a replacement from abandoned Kepler Station. This leads
+into the 3.6-second approach, thruster landing, and pilot disembarkation.
+Returning with the core starts boarding and a four-second takeoff, followed by
+a nine-second homecoming that restores the Ark's lights and a 23-second credit
+roll, including **Game by Dave Thomas**. Victory follows the credits.
+Enter, the controller's confirm button, or the touch **Skip** button advances
+the introduction, homecoming, and credits. Pause freezes every sequence and
+its music; movement and weapons remain locked until disembarkation. Original
+title, mission, and homecoming scores use the shared synthesizer.
+
+The reusable `ui.cinema` HUD supports up to 64 text `lines`, a pixel scroll
+`offset`, normalized `top`/`bottom` clipping bounds (defaults 0.55/0.94), font
+`scale` (1 or 2), line `spacing` (12–48 pixels), and a `fade` from 0 to 1.
+The fade darkens the world beneath the letterboxed text, keeping the story
+readable in both browser and shared desktop rendering. Starfall's cinematic
+worlds, ship animations, and text timing are authored in
+[`cinematics.rune`](../../examples/starfall/cinematics.rune).
+
+After finding plasma, hold fire for 24 ticks (0.8 seconds; 18 ticks with the optional capacitor), then release to fire
+a six-damage charged blast. The muzzle orb grows as it charges, the HUD displays
+charge progress, and a sound signals readiness. Short taps release weaker shots;
+only a fully charged projectile can break the violet seal. Charge cancels on
+death and resets for a new expedition. A broken seal clears collision immediately,
+then its visual shell shakes and dissolves over 36 ticks with fragments and a
+small, brief camera shake. Pause freezes charge and seal animation.
+
+The HUD starts with four suit-health segments and grows with permanent boss
+containers and optional armor, turning red at two HP or less, plus
+**three total lives**. Blue beacons repair the suit and set a respawn point;
+they do not replenish lives. Ordinary hits reduce HP in place and grant brief
+protection. A depleted suit loses one life, collapses through two death poses,
+and dissolves. While lives remain, a cyan ghost floats back to the saved beacon
+with a trailing signal and a smoothly following camera. The suit rebuilds there
+automatically with full HP and protection. Falls use the same recovery sequence,
+costing two HP and preserving the remainder; a fall consumes a life only if fatal.
+Combat freezes during recovery; pause also freezes the ghost. Upgrades, broken
+seals, defeated enemies, and the recovered core survive the first two deaths.
+The third death finishes its collapse and opens **Game Over**. Enter or **New
+expedition** resets attempt progress, checkpoints and bosses, restores three
+lives, and replays the landing. Completed sectors and their gear remain banked;
+the button reads **Continue campaign** when that save is available. Returning to
+title also preserves completed sectors. Beyond containment, jump up two temple steps to an
+overlook beacon, then descend five tiles into a broad sanctuary lined with
+stone columns, cyan braziers, a wall sigil, and a raised core altar. The exit
+steps are climbable with jump jets, including on the return trip.
+
+The larger **Crypt Warden** has 48 life, an illustrated portrait and a dedicated
+life bar. Descending to the sanctuary floor wakes it. Four walking poses animate
+patrol and recovery; raised arms telegraph a marked leap, a crouching landing
+releases shockwaves in both directions, and moving ribs animate its exposed-core
+breathing. Avoid the marked landing spot, jump the slam wave, then fire during
+the cyan-core phase. Armor blocks shots outside that phase. The camera widens
+and frames both combatants. A fatal player death restores an undefeated Warden
+to all 48 HP, its home position, and its dormant phase for a fresh fight.
+Nonfatal hits and falls preserve boss damage. A defeated Warden stays defeated
+through the remaining lives. Defeating it reveals the core on the eastern altar. Recovery
+alone does not win; climb back out and return the core to the docking bay.
+
+The Warden's death arms three one-shot security encounters for the return trip.
+After collecting the core, crossing x=116, 74 and 46 spawns one **hunter** and
+one **deck crawler** in the crypt, containment and cargo areas respectively.
+Hunters flash an orange windup before a directed flying lunge; crawlers animate
+their legs, stop to charge, then fire a low bolt that can be jumped. Both have
+distinct damage flashes and particle deaths, and charged plasma kills either
+in one hit. Distant enemies remain idle until the pilot approaches. Encounter
+flags and defeated enemies survive ghost recovery and sector trips for the
+current expedition; a fresh expedition clears them. There is no escape timer.
+
+Models, textures, synthesized effects, music, HUD, and game logic are authored
+in Rune. The pilot has layered armor, a reflective visor, an oxygen pack, a
+four-frame walk cycle, airborne and upward-aiming poses, and an independently
+recoiling rifle. Drones animate their thrusters; the guardian's shutters open
+around its exposed core. Damage flashes brighten the pilot and enemies, while
+enemy deaths throw sparks and spinning armor fragments through expanding blast
+rings. Particles expire automatically and are capped at 96. Jump jets leave a
+short cyan exhaust trail. The original eight-bar, 72 BPM E Phrygian score layers
+low bass pedals, sustained string chords, sparse bell echoes, and tom percussion.
+A separate eight-bar, 132 BPM battle variation brings brass, driving bass and
+heavier percussion when the Warden awakens. It continues through the fight without
+restarting each tick. Defeat, leaving the arena, or ghost recovery restores the
+exploration score; re-entering an unfinished fight starts battle music again.
+
+The browser and QuickJS regression share an input-only route through
+the complete expedition, render its major milestones, and verify a round trip
+without losing a life. Browser checks also cover keyboard, controller, touch, pause, and
+replay; presentation fixtures render aiming, recoil, walking, airborne poses,
+hit flashes, drone debris, and the guardian explosion. The route renders every
+boss phase, checks its life bar against damage, and completes both the temple
+descent and return ascent with real movement inputs. Recovery fixtures check
+the life bar, collapse, ghost travel, pause, camera continuity, automatic rebuilding,
+and equipment retention. Logic scenarios also cover nonfatal hits and falls,
+equipment gates, effect expiry, and restart cleanup.
+Weapon fixtures cover hold/release behavior, charged-projectile seal gating,
+the dissolving wall, pause, and cancellation on death. Browser checks also sample
+the actual boss synthesizer output for nonzero audio energy.
+Lifecycle fixtures render the title flyover, introduction, landing,
+disembarkation, boarding, takeoff, homecoming, credits and Game Over. They verify
+natural cinematic completion, skipping, pause, three deaths, boss healing, and
+a complete expedition reset.
+Garden scenarios cover door debounce, preserved station state, dash gating and
+recharge, relay progression, miniboss armor and death reset, and saved gear after
+game over. The browser regression also reloads the real saved campaign and checks
+the actual keyboard and touch hatch/dash adapters.
+Foundry scenarios cover entry gating, magnetic carry and jumping off, console
+press-edge behavior, save migration, banked glove/plasma and released bulkheads,
+and Cantor armor and death reset. The shared browser/QuickJS route rides the
+shuttle, verifies pause freezes it, performs the low-gravity ascent, defeats the
+Cantor and returns through the shortcut before continuing to the crypt.
+Return-enemy fixtures exercise the Warden death hook, core gating, all three
+waves, hunter lunge and crawler charge/shot phases, pause, damage flashes,
+particle deaths, recovery without duplicate spawns, and restart cleanup. The
+input-only campaign route completes the return journey with all six spawned.
+Enemy patrols and lunges sweep their animated bounds against terrain, including
+wings/thrusters; crawlers also require ground beneath both feet. The greenhouse
+skimmer over the raised terrace starts at its correct deck height. Movement
+fixtures scan complete patrol cycles in all three sectors, test wall tunneling
+and platform edges, and compare standing versus crouched Warden contact and
+projectile damage. Keyboard, controller and touch ducking use the real adapters.
 
 ## Skybound: third-person platforming (v0.3.5)
 
@@ -233,9 +514,10 @@ chunk boundaries conservatively use fine traversal. Prefix clock increments
 retain the original floating-point additions so sampled depth buffers remain
 bit-exact, including edge and corner hits.
 
-Occupancy buffers are reused but **rebuilt each rendered frame**, so mining,
-`voxel_fill`, direct cell edits, cell-array replacement and resized volumes are
-immediately reflected. Dense volumes retain regular DDA. Terrain color/depth
+Occupancy originally rebuilt each rendered frame; the incremental snapshot
+validation described below now updates affected chunks while still detecting
+mining, `voxel_fill`, direct cell edits, cell-array replacement and resized volumes.
+Dense volumes retain regular DDA. Terrain color/depth
 buffers are written in row order, and below-horizon sky pixels use the exact
 opaque horizon color without cloud noise or longitude calculations.
 
@@ -255,6 +537,91 @@ wall-clock assertions. These remain CPU renderers in browser and QuickJS.
 A future GPU backend should explicitly retain CPU fallback for unavailable
 adapters, initialization failures and device/context loss; GPU fallback is not
 implemented by this CPU optimization pass.
+
+### Shared camera rays and exact voxel crossings
+
+Starfall's starting-platform descent exposed CPU terrain costs while the camera
+tracks downward. Unpitched voxel cameras now share horizontal ray components
+and reciprocals by screen column, and vertical components by row. Each renderer
+owns bounded typed-array caches keyed by its depth buffer; rotation, FOV and
+resolution changes rebuild the appropriate data. Pitched cameras keep the
+general ray calculation path.
+
+Empty-space traversal can also reuse per-axis voxel-boundary crossing tables.
+The tables use the same repeated additions as ordinary DDA, preserving floating
+point depth values. An estimated crossing index is corrected against those exact
+values before resuming fine traversal. Only axes whose camera position or ray
+configuration changed need their tables rebuilt. Coarse and fine traversal check
+volume exit on the stepped axis. Terrain snapshots detect edits on validation,
+so direct cell edits, mining and fills remain visible; these ray caches
+contain ray geometry rather than terrain. At Starfall's 432x270 resolution the
+ray and crossing tables use about 572 KiB for its station world.
+
+Local headless Chromium measurements at 432x270, comparing the same Starfall
+content before/after this pass (CPU rendering only, excluding browser presentation):
+
+| Scene | Median before / after | p95 before / after |
+| --- | --- | --- |
+| Starting-platform descent | 20.5 / 18.0 ms | 22.8 / 20.5 ms |
+| Cargo | 21.8 / 19.0 ms | 22.3 / 19.2 ms |
+| Hydroponics | 26.4 / 19.0 ms | 26.6 / 19.3 ms |
+| Gravity Foundry | 24.9 / 20.0 ms | 25.2 / 20.2 ms |
+| Crypt Warden | 26.1 / 19.8 ms | 26.4 / 20.0 ms |
+| Heavy explosion | 26.1 / 19.6 ms | 26.2 / 19.8 ms |
+| Rotating station camera | 16.9 / 15.4 ms | 21.0 / 19.8 ms |
+
+All 63 sampled Starfall color/depth hash pairs matched. A separate Skybound 2
+pitched-camera orbit comparison retained all 24 sampled pairs, with timings
+within a few percent of baseline. These measurements describe local rendering
+cost, not guaranteed end-to-end frame rates or CI timing thresholds. The heavier
+descent samples remain above the 16.7 ms budget for 60 FPS.
+
+```sh
+python3 tests/browser/starfall_performance.py --html before.html --output before.json
+python3 tests/browser/starfall_performance.py --html after.html --output after.json --compare before.json
+```
+
+The benchmark includes a simulated dock descent, static sector/combat views,
+and a rotating camera. Regression tests compare cached depths directly against
+scalar rays across camera movement and world-dimension changes, check cache
+refresh after pitch/FOV/viewport changes, and retain the existing boundary-ray,
+mining and terrain-edit coverage. Full Starfall browser and shared QuickJS
+campaign checks exercise the optimized renderer.
+
+### Incremental terrain metadata, expression scopes and presentation reuse
+
+Legacy flat-array voxel validation retains a per-world typed snapshot and per-chunk population
+counts. It scans cell values to detect arbitrary writes, including writes through
+an alias captured before validation, but validates changed IDs and updates only
+affected chunks. Material-count changes revalidate IDs; dimension changes rebuild
+the snapshot. Invalid data discards its partial snapshot. This retains direct
+array-write compatibility without a Proxy on every ray/voxel access. A rendered
+engine frame consumes the metadata from its immediately preceding validation,
+avoiding a second full terrain scan. Standalone renderer calls still inspect
+their world, and mining/fill/read APIs retain validation.
+
+Synchronous pixel-3d actions copy only potentially referenced names when building
+an expression scope. The bounded lexical-name cache preserves snapshot values
+and local > derived > state precedence. Games with helpers keep complete scopes,
+because a helper may implicitly read caller locals. Regular web apps retain the
+existing full-scope behavior. Tests cover scope shadowing, snapshot values and
+helper fallback.
+
+Browser and shared-renderer desktop hosts use `frameIfChanged()` to reuse the
+framebuffer between simulation updates. Ticks, actions, start/restart and pause
+changes invalidate presentation. Audio pumping, controls and host UI keep running.
+Public `frame()` still always renders; tooling that directly edits state outside
+an action/tick can call `invalidateFrame()` to request host presentation. This
+keeps the original simulation cadence and animation steps while avoiding duplicate
+CPU rasterization and browser framebuffer uploads.
+
+In a local paired Chromium sample with identical Starfall content, median descent
+simulation time fell from 4.3 to 1.1 ms, with p95 from 5.8 to 1.5 ms. Median render
+time was approximately unchanged at 18.7 versus 18.6 ms; these changes primarily
+reduce simulation and redundant-frame work. All 63 sampled color/depth pairs
+matched. Game additions are measured separately from this engine-only comparison.
+The full browser campaign, shared QuickJS campaign and desktop-feature compile
+also cover the expanded game.
 
 ## Textured floors and ceilings
 
@@ -399,6 +766,15 @@ Without this object, Vect Breach's presentation is preserved.
 
 ## Structured HUD and accessible shell controls
 
+An optional `ui.map` draws a portable exploration diagram. It contains `current`
+(a node ID), `expanded` (boolean), up to 24 nodes and up to 48 links. Nodes have
+unique `id`, `label`, normalized `x`/`y` in 0..100, `visited` and `locked` booleans.
+Links name `from`/`to` node IDs and may set `shortcut = true` for a dotted cyan
+connection. Expanded maps label rooms; compact maps show their state and current
+position. `ui.damageDirection` accepts -1, 0 or 1 for left, no cue or right impact.
+Both work with the floating HUD. Native scenes using a map select the shared
+renderer so the diagram matches browser output, including pause maps.
+
 `@Scene ui = ui` binds a **declared top-level logic state field** to a portable
 HUD in both browser and native rendering. It takes precedence over
 `presentation`'s legacy HUD; games without `ui` keep their existing rendering.
@@ -430,7 +806,7 @@ above the panel outside `playing` or while paused. It is ignored during active p
 `heading = "RUNE CRYPT"` fits; longer headings are clipped to the banner width.
 Invalid bound state reports an error rather than falling back to another HUD.
 
-**Unreleased customization:** optional `textScale` accepts `1` (default) or `2`.
+**Customization (v0.3.6):** optional `textScale` accepts `1` (default) or `2`.
 For example, `ui.textScale = 2` enlarges the bitmap text without changing world
 resolution. The larger layout wraps objectives/prompts to two lines, abbreviates
 meter labels when necessary (H health, G guardian, I impact in Rune Miners), and
@@ -451,7 +827,7 @@ There are no built-in icon names or renderer-owned icon artwork. Unknown sprite
 references report an error.
 
 Meters default to `display = "counter"`. Use `display = "pips"` with `icon` and
-`emptyIcon` to show up to eight full/empty resource icons, or `display = "bar"`
+`emptyIcon` to show up to sixteen full/empty resource icons (wrapping within the meter slot), or `display = "bar"`
 for an icon counter with a compact bar. Pips require an integer maximum of 1–8.
 The layout uses the actual sprite dimensions and draws at integer scale; small
 icons around 8–12 pixels work well. Meter `color` controls bar fill; icon colors
@@ -490,7 +866,7 @@ the element's `hidden` property. Invalid bindings report errors. These bind to
 the **game** state, not the shell's separate logic state. Action buttons clear
 held inputs and return focus to the canvas without unpausing; only starting a
 new run or the explicit pause/resume controls resume play.
-An **unreleased** opt-in `data-pixel-menu=true` on a shell menu clears held
+The opt-in `data-pixel-menu=true` on a shell menu clears held
 inputs on opening/closing and releases pointer lock while visible, so the
 mouse can select items. Bind its visibility with `data-pixel-hidden` or
 `data-pixel-paused`; the game remains responsible for freezing simulation.
@@ -502,7 +878,7 @@ focus-trapped dialogs.
 browser confirmation before restarting an active run; it does not affect
 starting from camp or programmatic `start()`.
 
-### Context-sensitive touch controls (unreleased)
+### Context-sensitive touch controls (v0.3.6)
 
 In an `@Controls` touch object, the whole overlay, joystick and individual
 buttons can each declare `"visible":"state.path"`. It resolves a **boolean
@@ -727,7 +1103,7 @@ Sources: [compiler](../../src/apps/pixel3d/mod.rs),
 [browser regressions](../../tests/browser/rune_crypt.py),
 [compiler/raster tests](../../tests/pixel3d_app.rs).
 
-## Declarative cameras and cinematic title scenes (unreleased)
+## Declarative cameras and cinematic title scenes (v0.3.6)
 
 Vect Breach's [title scene](../../examples/vect_breach/title.rune) demonstrates
 an elevated, pitched camera tour of its actual first level, with glowing bitmap
@@ -794,3 +1170,130 @@ for these cameras and title scenes (as voxel worlds do). Ordinary grid games
 retain their existing browser/native rendering paths. Desktop titles with a
 custom perspective or camera track also use the shared renderer. The standalone
 Rust `Rasterizer3D` API retains its fixed-eye camera interface.
+
+
+## Sparse worlds and nearby actors
+
+Large authored terrain can use `voxel_world(...)`; see
+[voxel worlds](voxel-worlds.md) for dimensions, chunk budgets and save format.
+`@Scene render_radius = 96` optionally bounds entity rendering around the camera.
+Without it, sparse worlds use their `renderDistance`; legacy scenes keep their
+existing visibility. Culling includes model bounds and entity scale, so a large
+model crossing the radius remains visible.
+
+Real-time game logic can use the shared `entity_group` and `nearby` expressions
+in either pixel engine:
+
+```rune
+action start:
+    enemies = entity_group()
+    enemies.push({"x":10,"y":8,"z":3,"visible":true,"model":"game/guard"})
+action tick(input):
+    for enemy in nearby(enemies, player, 28):
+        call update_enemy enemy
+```
+
+`entity_group([entities])` returns an array-compatible, owned collection with
+persistent 16-unit spatial buckets. It shallow-copies incoming ordinary records;
+use the returned records for subsequent mutations. Duplicate records within an
+import remain duplicates referencing the same owned entity. Push/pop, splices,
+indexed replacements, position/visibility changes and scale changes update or
+invalidate the index. Rewrap a JSON-restored array with `entity_group`.
+
+`nearby(collection, origin, radius)` returns visible entities within an inclusive
+Euclidean radius, preserving collection order and duplicates. An origin with
+`z` uses 3D distance; an origin without `z` uses 2D distance. Coordinates and
+radius must be finite, radius nonnegative. Ordinary arrays also work: they are
+indexed once per synchronous tick and reused for queries in that tick. Managed
+groups retain their index across ticks and are preferred for large populations.
+Their movement journal is bounded and safely rebuilds an index if it falls behind.
+Rendering queries declared collections directly, so managed scenery/enemies do
+not require a full coordinate scan every frame.
+
+Sleeping is explicit game logic: use a radius with margin beyond the visible
+screen, update local actors, and keep campaign state, quest timers and transient
+cleanup running. Projectiles should query actors around the projectile rather
+than reuse the player activation list. Starfall uses 28 tiles for enemy AI,
+24 for pickups, and 2 around each projectile. Waking enemies restart their attack
+telegraph to avoid an immediate surprise hit. Skybound, Skybound 2 and Vect Breach
+also use local enemy updates. Turn-based games retain their existing turn rules.
+
+
+`python3 tests/browser/chunks.py` reports browser scaling with identical nearby
+terrain at widths 256, 1,024 and 4,096, and nearby actor updates with populations
+10,000 and 100,000. It asserts equal color/depth hashes, equal resident chunk
+counts and equal active actor counts; timings are diagnostic, not CI thresholds.
+On a local Chromium run, these worlds each allocated 48 chunks and rendered the
+128 x 80 fixture in about 2 ms. Both actor populations updated 15 local actors.
+Starfall's 432 x 270 dock descent simulation median fell from about 1.1 ms to
+0.7 ms. Rendering retained exact sampled color/depth output, with modest remaining
+lookup overhead (roughly 0.6–1 ms in static views, more during camera rotation).
+These measurements describe this fixture and machine, not a frame-rate guarantee.
+
+
+Gap chevrons have distinct left/right block models so the face stays readable
+from the side camera. The western plasma jump points left; greenhouse and
+optional-room crossings point right. The jet and root tunnels are 56 tiles long
+and 24 tiles high, with seven tiles of clear space over each descending step.
+Their guards patrol an open approach bay, have 2 HP, and remain 15 tiles from the
+upgrade pedestal. The final chamber has extra landing space and a return portal.
+
+
+Hydroponics extends to depth 26 to frame its upper canopy and ghost return.
+The old dash hole on the low shelf is solid floor. Its new gateway stands on the
+z=17 ledge beyond the repair pod; a four-tile rise requires the second jump.
+The portal bay has a roof and east bulkhead, with a spacious underpass to the
+lower dash approach, keeping jump jets from bypassing the main breach.
+
+## Floating destination titles
+
+Pixel-3d things can opt into world-anchored pixel-font plaques:
+
+```rune
+portals.push({"x":52,"y":6.3,"z":3,"model":"sf/garden_hatch",
+              "title":"HYDROPONICS","titleColor":10283741,"visible":true})
+```
+
+`title` accepts 1-48 printable ASCII characters. The renderer places it above the
+model's highest block, accounting for scale; `titleHeight` overrides that offset
+in world units (0-64). `titleColor` is an RGB integer, default mint. Text tracks
+camera motion and pitch, clips at the viewport and tests terrain/model depth.
+Hidden or fully dissolved things have no plaque. Titles use the shared browser
+and QuickJS renderer; they are drawn before the regular HUD and do not alter
+geometry depth or collision. Starfall labels every sector door, shortcut, crypt
+gateway and return portal with its destination.
+
+
+## Health containers, extra lives and the Void Curator
+
+A fresh expedition starts at **4 health** and **3 lives**. Rootheart, the Iron
+Cantor, the Crypt Warden and the optional Void Curator each award one permanent
+health container immediately on defeat, refill the new maximum, and display a
+rising container. Each boss reward is unique across deaths, room rebuilds,
+game over and reload. The Observatory armor adds two more cells, giving a maximum
+of **10** with all four boss containers. Existing saves infer the main-boss
+containers from completed sectors; the versioned reward fields are part of the
+saved campaign shape, including cells earned before collecting a sector relay.
+
+Four green **1-UP** capsules reward optional exploration, away from the main
+route and upgrade pedestals. Claims are tracked per expedition and survive
+deaths and area revisits; a new expedition starts with three lives and restores
+the capsules. They do not refill health. The dock, crypts and Observatory no
+longer supply routine extra lives.
+
+| Area | Extra-life location |
+|---|---|
+| Containment | x=73, z=11.6, service loft beyond the seal |
+| Hydroponics | x=5, z=17.6, upper western canopy shelf |
+| Gravity Foundry | x=6, z=17.6, maintenance shelf above the workshop |
+| Signal Archive | x=65, z=7.6, far wall shelf beyond the upgrade balcony |
+
+The **Void Curator** is optional: the existing return door beside the armor
+remains available, and a retreat portal is available on the chamber floor.
+Continuing east drops into a larger chamber with a beacon and a gravity console
+before the encounter. The guardian has 16 HP,
+a dedicated bar and battle score, a moving iris/shield cycle, a marked starfall
+pillar, low star waves to jump and higher bolts to duck. Only its open iris takes
+damage. Fatal deaths refill an undefeated Curator and return it to its dormant
+phase; defeating it permanently opens the chamber's return portal. Its health
+container is awarded once even if the player revisits the room.

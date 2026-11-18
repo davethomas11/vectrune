@@ -1,0 +1,70 @@
+@Logic/starfall
+action update_weapon(input):
+    if !plasma && !!input.fire && cooldown == 0:
+        call fire_weapon !!input.aim_up
+    if plasma && !!input.fire && cooldown == 0:
+        if charge_ticks == 0:
+            sound.play "sf_plasma_charge"
+        charge_ticks = min(charge_duration, charge_ticks+1)
+        if charge_ticks == charge_duration && !charge_ready:
+            sound.play "sf_plasma_ready"
+        charge_ready = charge_ticks == charge_duration
+    if plasma && !input.fire && fire_held && charge_ticks > 0:
+        call fire_weapon !!input.aim_up
+        charge_ticks = 0
+        charge_ready = false
+    fire_held = !!input.fire
+
+action breach_seal(z):
+    stop when gate_open
+    if !garden_cleared:
+        notice = "RELAY OFFLINE. Restore Hydroponics through the cargo hatch first."
+        notice_ticks = 150
+        stop when true
+    gate_open = true
+    world = voxel_fill(world, [62,5,3], [1,4,16], 0)
+    seal_shell.x = 62.5
+    seal_shell.z = 3
+    seal_shell.visible = true
+    seal_shell.dissolve = 0
+    seal_age = 0
+    seal_shake = 12
+    call burst 62.5, z, 24
+    sound.play "sf_seal_break"
+    notice = "Seal destabilized. Reactor wing accessible."
+    notice_ticks = 120
+
+action update_seal:
+    seal_shake = max(0, seal_shake-1)
+    stop when sector_id != "station" || !seal_shell.visible
+    seal_age += 1
+    shake = max(0, 1-seal_age/36)
+    seal_shell.x = 62.5+sin(seal_age*131)*0.07*shake
+    seal_shell.z = 3+cos(seal_age*149)*0.035*shake
+    seal_shell.dissolve = clamp((seal_age-6)/30, 0, 1)
+    if seal_age >= 36:
+        seal_shell.visible = false
+        seal_shell.x = 62.5
+        seal_shell.z = 3
+
+action sync_music:
+    desired_track = status == "playing" || status == "landing" || status == "departing" ? "sf_orbit" : ""
+    if status == "playing" && recovery_phase == "none" && boss.visible && boss_phase != "dormant" && player.x >= 96:
+        desired_track = "sf_warden"
+    if status == "playing" && sector_id == "hydroponics":
+        desired_track = rootheart.visible && root_phase != "dormant" && recovery_phase == "none" ? "sf_rootheart" : "sf_garden"
+    if status == "playing" && sector_id == "foundry":
+        desired_track = forge_guardian.visible && forge_phase != "dormant" && recovery_phase == "none" ? "sf_iron_cantor" : "sf_foundry"
+    if status == "playing" && sector_id == "observatory" && curator.visible && curator_phase != "dormant" && recovery_phase == "none":
+        desired_track = "sf_curator"
+    if status == "title":
+        desired_track = "sf_title"
+    if status == "intro":
+        desired_track = "sf_mission"
+    if status == "ending" || status == "credits":
+        desired_track = "sf_homecoming"
+    stop when desired_track == music_track
+    music.stop
+    music_track = desired_track
+    if music_track != "":
+        music.play music_track

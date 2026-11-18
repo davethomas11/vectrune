@@ -1,0 +1,243 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/HatchRoundTripPreservesStation
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke garden_hatch_fixture
+run:
+    invoke tick {"use":true}
+    assert state.sector_id == "hydroponics"
+    assert state.world.storage == "chunked"
+    assert state.world.width == 80
+    assert state.ship.visible == false
+    invoke tick {"use":true}
+    assert state.sector_id == "hydroponics"
+    invoke tick {}
+    invoke tick {"use":true}
+    assert state.sector_id == "station"
+    assert state.world.storage == "chunked"
+    assert state.world.width == 128
+    assert state.pickups[0].visible == false
+    assert state.enemies[0].visible == false
+    assert state.boss.hp == 48
+    assert state.player.x == 51
+
+@Test/Starfall/AirDashRequiresModuleAndRechargesOnLanding
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke empty_dash_fixture
+run:
+    invoke tick {"jump":true}
+    invoke tick {"dash":true}
+    assert state.dash_ticks == 0
+    invoke enable_dash
+    invoke tick {}
+    invoke tick {"dash":true}
+    assert state.dash_ticks > 0
+    assert state.dash_ready == false
+    assert state.avatar.model == "sf/pilot_dash"
+    invoke take_damage 1
+    assert state.health == 4
+    invoke wait_ticks 13
+    invoke tick {"dash":true}
+    assert state.dash_ticks == 0
+    invoke wait_ticks 40
+    assert state.dash_ready == true
+
+@Test/Starfall/GardenRelayBanksGearAcrossGameOver
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke garden_hatch_fixture
+    invoke tick {"use":true}
+    invoke root_relay_fixture
+run:
+    invoke tick {}
+    assert state.campaign.hydroponics == true
+    assert state.garden_cleared == true
+    assert state.portals[1].visible == true
+    invoke last_garden_life
+    invoke take_damage 6
+    invoke wait_ticks 24
+    assert state.status == "gameover"
+    invoke advance
+    assert state.status == "intro"
+    invoke advance
+    assert state.status == "landing"
+    assert state.lives == 3
+    assert state.garden_cleared == true
+    assert state.jets == true
+    assert state.dash_unlocked == true
+    assert state.plasma == false
+    assert state.sector_id == "station"
+    assert state.portals[1].visible == true
+
+@Test/Starfall/UnpoweredSealRejectsChargedPlasma
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke unpowered_seal_fixture
+run:
+    invoke hold_plasma 24
+    invoke tick {}
+    invoke tick {}
+    assert state.gate_open == false
+    assert state.seal_shell.visible == false
+
+@Test/Starfall/RootheartArmorExposureAndDeathReset
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke garden_hatch_fixture
+    invoke tick {"use":true}
+    invoke root_combat_fixture
+run:
+    invoke tick {"fire":true}
+    invoke wait_ticks 4
+    assert state.rootheart.hp == 18
+    invoke root_open_fixture
+    invoke tick {"fire":true}
+    invoke wait_ticks 4
+    assert state.rootheart.hp == 17
+    invoke root_death_fixture
+    invoke take_damage 6
+    assert state.rootheart.hp == 18
+    assert state.root_phase == "dormant"
+    assert state.lives == 2
+
+@Logic/starfall
+action garden_hatch_fixture:
+    player.x = 52
+    jets = true
+    pickups[0].visible = false
+    enemies[0].visible = false
+
+action empty_dash_fixture:
+    player.x = 8
+    enemies = []
+
+action enable_dash:
+    dash_unlocked = true
+
+action root_relay_fixture:
+    rootheart.visible = false
+    rootheart.hp = 0
+    root_phase = "defeated"
+    pickups[2].visible = true
+    player.x = 72
+    dash_unlocked = true
+    enemies = []
+
+action last_garden_life:
+    lives = 1
+    invulnerable = 0
+
+action unpowered_seal_fixture:
+    player.x = 61
+    plasma = true
+    garden_cleared = false
+    enemies = []
+
+action root_combat_fixture:
+    player.x = 62
+    enemies = []
+    root_clock = 5
+    invulnerable = 1000
+
+action root_open_fixture:
+    root_clock = 70
+    cooldown = 0
+
+action root_death_fixture:
+    invulnerable = 0
+
+
+@Test/Starfall/DashCryptUsesUpperCanopyPortal
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke garden_hatch_fixture
+    invoke tick {"use":true}
+    invoke tick {}
+run:
+    invoke lower_dash_entrance_fixture
+    invoke tick {}
+    invoke read_dash_entrance
+    assert state.sector_id == "hydroponics"
+    assert state.lower_dash_floor == 7
+    assert state.upper_dash_floor == 9
+    assert state.upper_dash_shaft == 9
+    assert state.world.depth == 26
+    invoke upper_dash_entrance_fixture
+    invoke tick {}
+    assert state.sector_id == "hydroponics"
+    invoke tick {"use":true}
+    assert state.sector_id == "dash_vault"
+    assert state.dash_unlocked == false
+    invoke tick {}
+    invoke tick {"use":true}
+    assert state.sector_id == "hydroponics"
+    assert state.player.x == 22
+    assert state.player.z == 17
+    assert state.dash_unlocked == false
+
+@Logic/starfall
+action lower_dash_entrance_fixture:
+    player.x = 26
+    player.z = 5
+    player.vz = 0
+    enemies = []
+
+action upper_dash_entrance_fixture:
+    player.x = 23.5
+    player.z = 17
+    player.vz = 0
+    grounded = true
+
+action read_dash_entrance:
+    lower_dash_floor = voxel_get(world,26,7,4)
+    upper_dash_floor = voxel_get(world,22,7,16)
+    upper_dash_shaft = voxel_get(world,24,7,16)
+
+@Test/Starfall/DashCryptHeightCannotBypassBreach
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke garden_hatch_fixture
+    invoke tick {"use":true}
+    invoke tick {}
+run:
+    invoke canopy_breach_probe
+    assert state.sector_id == "hydroponics"
+    assert state.dash_unlocked == false
+    assert state.player.x < 30
+    assert state.player.z == 5
+
+@Logic/starfall
+# Even granting a takeoff at the outer edge, two jumps must fall short of the far dock.
+action canopy_breach_probe:
+    enemies = []
+    player.x = 24.8
+    player.z = 17
+    player.vz = 0
+    grounded = true
+    velocity = 0
+    jump_held = false
+    jumps = 0
+    call tick {"right":true,"jump":true}
+    for frame in range(0,11):
+        call tick {"right":true}
+    call tick {"right":true,"jump":true}
+    for frame in range(0,100):
+        if !grounded && player.z >= 5:
+            call tick {"right":true}

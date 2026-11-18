@@ -8,7 +8,8 @@ run:
     invoke initialize
     assert state.status == "title"
     assert state.coins.length == 12
-    assert state.world.cells.length == 12544
+    assert state.world.storage == "chunked"
+    assert state.world.width == 28
     invoke tick {}
     assert state.checkpoint_active == false
     invoke start

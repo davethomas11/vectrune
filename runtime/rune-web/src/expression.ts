@@ -14,11 +14,15 @@ import {
 } from './utils';
 import { getStorageItem, hasStorageItem } from './storage';
 import { slide as spatialSlide, sees as spatialSees, mapSpawn } from './pixel3d/spatial';
-import { voxelGenerate, voxelMove, voxelTarget, voxelMine, voxelRead, voxelFill } from './pixel3d/voxel';
+import { voxelGenerate, voxelMove, voxelTarget, voxelMine, voxelRead, voxelFill, voxelWorld } from './pixel3d/voxel';
 import type { Scope } from './types';
+import { nearby, entityGroup } from './pixel3d/entities';
 
 const MAX_DEPTH = 64;
 const voxelFunctions: Record<string, (...args: unknown[]) => unknown> = {
+  voxel_world: (width,height,depth,materials,options)=>voxelWorld(width,height,depth,materials,options),
+  nearby: (entities,position,radius)=>nearby(entities,position,radius),
+  entity_group: (entities)=>entityGroup(entities),
   voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
   voxel_move: (world, player, dx, dy, jump, movement) => voxelMove(world, player, dx, dy, jump, movement),
   voxel_target: (world, player) => voxelTarget(world, player),
@@ -27,6 +31,9 @@ const voxelFunctions: Record<string, (...args: unknown[]) => unknown> = {
   voxel_fill: (world, from, size, block) => voxelFill(world, from, size, block),
 };
 const voxelArity: Record<string, [number, number]> = {
+  voxel_world:[4,5],
+  nearby:[3,3],
+  entity_group:[0,1],
   voxel_generate: [1, 2], voxel_move: [4, 6], voxel_target: [2, 2], voxel_mine: [2, 2],
   voxel_get: [4, 4], voxel_fill: [4, 4],
 };

@@ -14,7 +14,7 @@ import tempfile
 
 SITE = Path(__file__).resolve().parent
 LOCALES = [("en_us", ""), ("es", "es"), ("fr", "fr")]
-MIN_COMPILER = (0, 3, 5)
+MIN_COMPILER = (0, 3, 6)
 
 
 def check_compiler(binary):
@@ -23,7 +23,7 @@ def check_compiler(binary):
     if not version or tuple(map(int, version.groups())) < MIN_COMPILER:
         raise RuntimeError(
             f"{binary} embeds an older browser runtime ({result.stdout.strip()}). "
-            "This site requires Vectrune 0.3.5 or newer for Skybound 2 Rune-authored HUD sprites and arranged music. "
+            "This site requires Vectrune 0.3.6 or newer for Starfall Protocol's chunked worlds and cinematic HUD. "
             "Omit --binary to build the compiler from this checkout; "
             "do not use an older Homebrew binary to render the updated teaching templates."
         )
@@ -96,7 +96,8 @@ def build_site(destination, binary, base="/", selected_routes=None, site_url="ht
                         ("monster-city", "monster_city/site_shell.rune"),
                         ("vect-breach", "vect_breach/site_shell.rune"),
                         ("rune-crypt", "rune_crypt/rune_crypt.rune"),
-                        ("skybound-2", "skybound_2/skybound_2.rune")]:
+                        ("skybound-2", "skybound_2/skybound_2.rune"),
+                        ("starfall", "starfall/starfall.rune")]:
         game = assets / "games" / slug
         game.mkdir(parents=True, exist_ok=True)
         result = subprocess.run([binary, str(SITE.parent / "examples" / entry), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)
@@ -156,7 +157,7 @@ def serve_site(destination, port, base="/"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", help="Use an existing compiler (0.3.5+); otherwise build this checkout")
+    parser.add_argument("--binary", help="Use an existing compiler (0.3.6+); otherwise build this checkout")
     parser.add_argument("--output", required=True)
     parser.add_argument("--base", default="/")
     parser.add_argument("--site-url", default="https://vectrune.com", help="Public site origin for docs canonical URLs and sitemap")

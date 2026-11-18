@@ -1,0 +1,100 @@
+#!RUNE
+import "assets.rune"
+import "station.rune"
+import "logic.rune"
+import "combat.rune"
+import "warden.rune"
+import "plasma.rune"
+import "effects.rune"
+import "recovery.rune"
+import "ship.rune"
+import "cinematics.rune"
+import "hydroponics.rune"
+import "rootheart.rune"
+import "foundry.rune"
+import "iron_cantor.rune"
+import "escape.rune"
+import "navigation.rune"
+import "bonus_rooms.rune"
+import "upgrade_vaults.rune"
+import "portals.rune"
+import "rewards.rune"
+import "curator.rune"
+import "controls.rune"
+import "sound.rune"
+import "shell.rune"
+
+@App
+name = Starfall Protocol
+type = pixel-3d
+runtime = hybrid
+scene = starfall
+resolution = [432,270]
+tick_rate = 30
+port = 3025
+shell = starfall_cabinet
+
+@Perspective/starfall
+fov = 72
+
+@Scene/starfall
+logic = starfall
+map = orbit
+world = world
+camera = camera
+perspective = starfall
+title_scene = starfall_title
+things = ["scenery","portals","ship","ship_flames","pickups","beacons","enemies","boss_warning","boss","root_warning","rootheart","machinery","shuttle","magnet_fx","gravity_consoles","forge_warning","forge_guardian","curator_warning","curator","shots","seal_shell","portal_aura","arrival_ring","avatar","rifle","effects","muzzle","charge_fx","ghost"]
+persistence = {"key":"starfall-campaign-v1","state":"campaign"}
+controls = starfall
+render_radius = 96
+ui = ui
+pause_ui = pause_ui
+restart_action = return_to_title
+click_to_start = false
+mouse_look = false
+presentation = {
+    "defeat": "SUIT OFFLINE",
+    "instructions": [
+        "A D / ARROWS MOVE - SPACE JUMP",
+        "CLICK / X FIRE - W / UP AIM HIGH",
+        "FIND JUMP JETS AND PLASMA TO OPEN NEW PATHS",
+        "P PAUSE / MAP - F FULLSCREEN - V SOUND"
+    ],
+    "objective": "RECOVER THE CORE. RETURN TO YOUR SHIP.",
+    "subtitle": "A SIGNAL FROM A DEAD STATION",
+    "title": "STARFALL PROTOCOL",
+    "victory": "SIGNAL RESTORED"
+}
+
+@Map/orbit
+floor = "#060b1b"
+sky = {"seed":701,"zenith":"#060b1b","horizon":"#060b1b","cloud":"#060b1b","speed":0}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Page/starfall
+logic = starfall
+view:
+    canvas data-rune-pixel-3d=true
+
+@Map/hydroponics
+floor = "#081a1c"
+sky = {"seed":704,"zenith":"#051719","horizon":"#0a2528","cloud":"#0a2528","speed":0.03}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Map/foundry
+floor = "#16101c"
+sky = {"seed":709,"zenith":"#100e1b","horizon":"#281b29","cloud":"#281b29","speed":0.025}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."

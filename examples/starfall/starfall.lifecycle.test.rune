@@ -1,0 +1,159 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/LandingLocksControlsAndDisembarks
+type = logic
+page = starfall
+run:
+    invoke start
+    assert state.status == "intro"
+    invoke advance
+    assert state.status == "landing"
+    assert state.lives == 3
+    assert state.ship.z == 15
+    assert state.avatar.visible == false
+    invoke tick {"right":true,"fire":true,"jump":true}
+    assert state.player.x == 9
+    assert state.shots.length == 0
+    assert state.ship.z < 15
+    invoke advance
+    assert state.status == "landing"
+    invoke wait_ticks 71
+    assert state.ship.z == 3
+    assert state.avatar.visible == true
+    invoke wait_ticks 36
+    assert state.status == "playing"
+    assert state.ship_flames.length == 0
+    assert state.touch_ready == true
+
+@Test/Starfall/ThreeDeathsThenFreshExpedition
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke equipped_life_fixture
+run:
+    invoke fatal_life
+    assert state.lives == 2
+    invoke finish_life_recovery
+    assert state.health == 4
+    assert state.jets == true
+    assert state.core == true
+    assert state.boss.visible == false
+    invoke fatal_life
+    assert state.lives == 1
+    invoke finish_life_recovery
+    assert state.status == "playing"
+    invoke fatal_life
+    assert state.lives == 0
+    assert state.recovery_phase == "collapse"
+    invoke wait_ticks 24
+    assert state.status == "gameover"
+    assert state.ghost.visible == false
+    assert state.ui.heading == "GAME OVER"
+    assert state.title_hidden == false
+    invoke tick {"right":true,"fire":true}
+    assert state.status == "gameover"
+    invoke advance
+    assert state.status == "intro"
+    invoke advance
+    assert state.status == "landing"
+    assert state.lives == 3
+    assert state.health == 4
+    assert state.jets == false
+    assert state.plasma == false
+    assert state.core == false
+    assert state.gate_open == false
+    assert state.boss.hp == 48
+    assert state.boss.visible == true
+    assert state.checkpoint.x == 9
+
+@Test/Starfall/DeathRefillsUnfinishedBoss
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke damaged_warden_fixture
+run:
+    invoke take_damage 1
+    assert state.boss.hp == 12
+    assert state.lives == 3
+    invoke fatal_life
+    assert state.lives == 2
+    assert state.boss.hp == 48
+    assert state.boss.x == 114
+    assert state.boss.z == 3
+    assert state.boss_clock == 0
+    assert state.boss_phase == "dormant"
+    assert state.boss_warning.visible == false
+    invoke finish_life_recovery
+    assert state.player.x == 90
+    assert state.player.z == 8
+    assert state.boss.hp == 48
+
+@Test/Starfall/BoardingAndTakeoffBeforeVictory
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke ready_for_departure
+run:
+    invoke tick {}
+    assert state.status == "departing"
+    invoke tick {"right":true,"fire":true,"jump":true}
+    assert state.player.x == 9
+    assert state.shots.length == 0
+    invoke advance
+    assert state.status == "departing"
+    invoke wait_ticks 29
+    assert state.avatar.visible == false
+    assert state.ship_flames.length == 2
+    invoke wait_ticks 45
+    assert state.ship.z > 7
+    assert state.ship.x < 7
+    assert state.status == "departing"
+    invoke wait_ticks 45
+    assert state.status == "ending"
+    invoke advance
+    assert state.status == "credits"
+    invoke advance
+    assert state.status == "won"
+    assert state.ship.visible == false
+    assert state.music_track == ""
+
+@Logic/starfall
+action equipped_life_fixture:
+    enemies = []
+    player.x = 58
+    checkpoint = {"x": 35, "z": 3}
+    jets = true
+    plasma = true
+    gate_open = true
+    core = true
+    boss.visible = false
+    boss.hp = 0
+    boss_phase = "defeated"
+
+action fatal_life:
+    invulnerable = 0
+    call take_damage 6
+
+action finish_life_recovery:
+    for i in range(0, 180):
+        stop when recovery_phase == "none"
+        call tick {}
+
+action damaged_warden_fixture:
+    enemies = []
+    player.x = 110
+    player.z = 3
+    checkpoint = {"x": 90, "z": 8}
+    boss.hp = 12
+    boss_clock = 161
+    boss_phase = "exposed"
+
+action ready_for_departure:
+    enemies = []
+    player.x = 9
+    core = true
+    boss.visible = false

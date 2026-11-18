@@ -12,6 +12,7 @@ on:
       - 'examples/monster_city/**'
       - 'examples/vect_breach/**'
       - 'examples/rune_crypt/**'
+      - 'examples/starfall/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -26,6 +27,7 @@ on:
       - 'examples/monster_city/**'
       - 'examples/vect_breach/**'
       - 'examples/rune_crypt/**'
+      - 'examples/starfall/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
@@ -61,7 +63,7 @@ jobs:
       - name: Check compiler
         run: cargo check
       - name: Test CLI and runtime integration
-        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test game_controls --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package --test pixel3d_app --test integration_vect_cli --test integration_vectrune_cli --test music_arrangement --test skybound_app --test skybound_2_app
+        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test game_controls --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package --test pixel3d_app --test integration_vect_cli --test integration_vectrune_cli --test music_arrangement --test skybound_app --test skybound_2_app --test starfall_app
       - name: Test CLI support and deployment packaging
         run: 'cargo test --lib cli::'
       - name: Test pixel audio and persistence without an output device
@@ -105,3 +107,6 @@ jobs:
           target/debug/vectrune fmt examples/skybound_2 --check
           target/debug/vectrune test examples/skybound --type logic --json
           target/debug/vectrune test examples/skybound_2 --type logic --timeout 60 --json
+
+      - name: Test Starfall Protocol
+        run: target/debug/vectrune test examples/starfall --type logic --timeout 60 --json

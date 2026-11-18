@@ -1,0 +1,357 @@
+@Logic/starfall
+# Sector doors swap bounded volumes while keeping the station's live state.
+action use_hatch:
+    if sector_id == "jet_vault" || sector_id == "dash_vault":
+        for portal in portals:
+            if abs(player.x-portal.x) < 1.25 && abs(player.z-portal.z) < 1.5:
+                call leave_upgrade_vault
+                stop when true
+    if sector_id == "foundry" || sector_id == "observatory":
+        for console in gravity_consoles:
+            if abs(player.x-console.x) < 1.3 && abs(player.z-console.z) < 1.5:
+                call toggle_foundry_gravity
+                stop when true
+    for portal in portals:
+        if portal.visible && abs(player.x-portal.x) < 1.25 && abs(player.z-portal.z) < 1.5:
+            if portal.kind == "jets_entry" || portal.kind == "dash_entry":
+                if portal.kind == "dash_entry" && !jets:
+                    notice = "Jump jets are required to reach the upper crypt."
+                    notice_ticks = 120
+                    stop when true
+                call enter_upgrade_vault portal.kind == "jets_entry" ? "jets" : "dash"
+                stop when true
+            if sector_id == "archive" || sector_id == "observatory":
+                call restore_station
+                player.x = bonus_return.x
+                player.z = bonus_return.z
+                call finish_sector_change
+                stop when true
+            if sector_id == "station" && (portal.kind == "archive_entry" || portal.kind == "observatory_entry"):
+                if !jets || !dash_unlocked || (portal.kind == "observatory_entry" && !glove_unlocked):
+                    notice = "Optional route locked. Archive needs jets + dash; Observatory also needs the magnetic glove."
+                    notice_ticks = 150
+                    stop when true
+                bonus_return = {"x": portal.x, "z": portal.z}
+                call capture_station
+                call build_bonus_room portal.kind == "archive_entry" ? "archive" : "observatory"
+                call finish_sector_change
+                stop when true
+            if sector_id == "station":
+                if !jets:
+                    notice = "Recover jump jets from the nearby cargo bay before entering."
+                    notice_ticks = 120
+                    stop when true
+                entering_foundry = portal.kind == "foundry_entry" || portal.kind == "foundry_shortcut"
+                shortcut_entry = portal.kind == "garden_shortcut" || portal.kind == "foundry_shortcut"
+                if entering_foundry && (!plasma || !garden_cleared):
+                    notice = "Restore Hydroponics and recover plasma before entering the Foundry."
+                    notice_ticks = 120
+                    stop when true
+                call capture_station
+                if entering_foundry:
+                    call build_foundry
+                    if shortcut_entry:
+                        player.x = 92
+                        checkpoint = {"x": 92, "z": 3}
+                if !entering_foundry:
+                    call build_hydroponics
+                    if shortcut_entry:
+                        player.x = 71
+                        checkpoint = {"x": 71, "z": 3}
+                call finish_sector_change
+                stop when true
+            if sector_id == "hydroponics" || sector_id == "foundry":
+                from_foundry = sector_id == "foundry"
+                shortcut_exit = portal.kind == "cargo_shortcut" || portal.kind == "foundry_exit"
+                call restore_station
+                player.x = from_foundry ? (shortcut_exit ? 58 : 68) : (shortcut_exit ? 37 : 51)
+                player.z = 3
+                call finish_sector_change
+                stop when true
+
+action capture_station:
+    station_snapshot = {
+        "world": world,
+        "pickups": pickups,
+        "enemies": enemies,
+        "beacons": beacons,
+        "scenery": scenery,
+        "portals": portals,
+        "boss": boss,
+        "boss_warning": boss_warning,
+        "boss_clock": boss_clock,
+        "boss_phase": boss_phase,
+        "checkpoint": {"x": checkpoint.x, "z": checkpoint.z},
+        "seal_shell": seal_shell
+    }
+
+action finish_sector_change:
+    if sector_id != "observatory":
+        curator.visible = false
+        curator_warning.visible = false
+    room_changed = true
+    player.y = 7
+    player.vz = 0
+    player.angle = 0
+    player.pitch = 0
+    velocity = 0
+    grounded = true
+    ducking = false
+    body_height = 1.6
+    on_shuttle = false
+    jumps = 0
+    jump_held = false
+    dash_ticks = 0
+    dash_ready = true
+    dash_held = false
+    charge_ticks = 0
+    charge_ready = false
+    fire_held = false
+    cooldown = 0
+    shots = []
+    effects = []
+    health = max_health
+    invulnerable = 45
+    transition_ticks = 12
+    camera.x = clamp(player.x, 13, world.width-13)
+    camera.y = 19
+    camera.z = clamp(player.z+1.5, 5, world.depth-5)
+    notice = sector_id == "hydroponics" ? (garden_cleared ? "Garden relay restored. USE the lit hatch to return to cargo." : "HYDROPONICS / Climb past the repair pod. Double jump to the upper dash crypt.") : "Cargo link restored. Saved sectors and equipment stay with you."
+    if sector_id == "foundry":
+        notice = foundry_cleared ? "Foundry restored. USE the lit hatch for the cargo shortcut." : "GRAVITY FOUNDRY / Inspect the overhead furnace carrier."
+    if sector_id == "archive" || sector_id == "observatory":
+        notice = sector_id == "archive" ? "OPTIONAL / Jets up, air dash across the breach. Recover the plasma capacitor." : "OPTIONAL / Engage low gravity, combine jets + dash, recover suit armor."
+    notice_ticks = 150
+    sound.play "sf_hatch"
+    call update_view
+    call sync_music
+    call refresh_ui
+
+action restore_station:
+    sector_id = "station"
+    level_map = "orbit"
+    world = station_snapshot.world
+    pickups = station_snapshot.pickups
+    enemies = station_snapshot.enemies
+    beacons = station_snapshot.beacons
+    scenery = station_snapshot.scenery
+    portals = station_snapshot.portals
+    portals[1].visible = garden_cleared
+    portals[3].visible = foundry_cleared
+    if foundry_cleared:
+        world = voxel_fill(world, [78,5,3], [1,4,16], 0)
+    boss = station_snapshot.boss
+    boss_warning = station_snapshot.boss_warning
+    boss_clock = station_snapshot.boss_clock
+    boss_phase = station_snapshot.boss_phase
+    checkpoint = {"x": station_snapshot.checkpoint.x, "z": station_snapshot.checkpoint.z}
+    seal_shell = station_snapshot.seal_shell
+    ship.visible = true
+    rootheart.visible = false
+    root_warning.visible = false
+    forge_guardian.visible = false
+    forge_warning.visible = false
+    shuttle.visible = false
+    magnet_fx.visible = false
+    machinery = []
+    gravity_consoles = []
+    gravity_low = false
+    on_shuttle = false
+
+action build_hydroponics:
+    sector_id = "hydroponics"
+    level_map = "hydroponics"
+    world = {
+        "width": 80,
+        "height": 21,
+        "depth": 26,
+        "seed": 704,
+        "biome": "meadow",
+        "materials": [
+            "sf/hull",
+            "sf/edge",
+            "sf/plasma",
+            "sf/reactor",
+            "sf/temple_stone",
+            "sf/temple_trim",
+            "sf/garden_moss",
+            "sf/garden_wall",
+            "sf/garden_glass"
+        ],
+        "cells": [],
+        "spawn": player
+    }
+    world = voxel_world(
+        world.width,
+        world.height,
+        world.depth,
+        world.materials,
+        {"seed": world.seed, "biome": world.biome, "spawn": world.spawn, "renderDistance": 128}
+    )
+    call deck 4, 18, 3, 7
+    call deck 21, 9, 5, 7
+    # Twelve empty tiles: double jump alone is insufficient; use the air dash.
+    call deck 42, 10, 5, 7
+    call deck 52, 5, 4, 7
+    call deck 57, 20, 3, 7
+    # A western maintenance shaft rewards exploration without bridging the breach.
+    call deck 10, 5, 7, 9
+    call deck 18, 5, 10, 9
+    call deck 10, 6, 13, 9
+    call deck 4, 4, 13, 9
+    # A canopy shelf above the repair route rewards a second look westward.
+    call deck 4, 3, 17, 9
+    # Four tiles above the repair pod: reaching this crypt requires the air jump.
+    # The east bulkhead funnels the return to the lower dash approach.
+    call deck 21, 4, 17, 9
+    # Enclose the portal bay, with a clear drop to the lower dash approach.
+    world = voxel_fill(world,[27,5,9],[1,4,17],8)
+    world = voxel_fill(world,[20,5,23],[8,4,1],9)
+    world = voxel_fill(world, [4,1,1], [73,1,17], 8)
+    world = voxel_fill(world, [3,5,1], [1,4,17], 8)
+    world = voxel_fill(world, [77,5,1], [1,4,17], 8)
+    scenery = []
+    scenery = entity_group(scenery)
+    scenery.push({"x": 29, "y": 6.2, "z": 5, "model": "sf/dash_gap_right"})
+    for x in [6,15,24,45,54,63,73]:
+        scenery.push({"x": x, "y": 3.3, "z": 3, "model": "sf/garden_tree"})
+        scenery.push({"x": x + 1, "y": 4, "z": 12, "model": "sf/hanging_vine"})
+    for x in [9,19,27,44,50,60,69,74]:
+        scenery.push({"x": x, "y": 8.2, "z": x < 30 || (x >= 42 && x < 52) ? 5: 3, "model": "sf/glow_flower"})
+    scenery.push({"x": 34, "y": 3.5, "z": 8, "model": "sf/broken_greenhouse"})
+    pickups = [
+        {
+            "x": 24,
+            "y": 7,
+            "z": 17.5,
+            "base": 17.5,
+            "kind": "dash",
+            "model": "sf/dash_cell",
+            "visible": false
+        },
+        {
+            "x": 12,
+            "y": 7,
+            "z": 13.5,
+            "base": 13.5,
+            "kind": "repair",
+            "model": "sf/repair_pod",
+            "visible": true
+        },
+        {
+            "x": 72,
+            "y": 7,
+            "z": 3.5,
+            "base": 3.5,
+            "kind": "relay",
+            "model": "sf/garden_relay",
+            "visible": !garden_cleared && !rootheart.visible
+        }
+    ]
+    pickups = entity_group(pickups)
+    call place_oneup "hydroponics",5,17.6
+    portals = [
+        {
+            "x": 6,
+            "y": 6.3,
+            "z": 3,
+            "kind": "cargo_entry",
+            "label": "RETURN TO CARGO",
+            "title": "CARGO",
+            "model": "sf/garden_hatch",
+            "visible": true
+        },
+        {
+            "x": 72,
+            "y": 6.3,
+            "z": 3,
+            "kind": "cargo_shortcut",
+            "label": "CARGO SHORTCUT / RELAY SAVED",
+            "title": "CARGO SHORTCUT",
+            "model": "sf/shortcut_hatch",
+            "visible": garden_cleared
+        }
+    ]
+    portals = entity_group(portals)
+    portals.push(
+        {
+            "x": 23.5,
+            "y": 6.5,
+            "z": 17,
+            "model": "sf/rift_gate0",
+            "kind": "dash_entry",
+            "label": "ENTER DASH CRYPT",
+            "title": "DASH CRYPT",
+            "visible": true
+        }
+    )
+    beacons = [
+        {"x": 18, "y": 7, "z": 3, "model": "sf/beacon", "active": false},
+        {"x": 58, "y": 7, "z": 3, "model": "sf/beacon", "active": false}
+    ]
+    beacons = entity_group(beacons)
+    enemies = entity_group()
+    call skimmer 17, 4, 1.2
+    call skimmer 46, 6, 1.5
+    call skimmer 55, 5, 1
+    call skimmer 11, 8, 1
+    boss = {"visible": false}
+    boss_warning = {"visible": false}
+    boss_phase = "dormant"
+    root_clock = 0
+    root_phase = "dormant"
+    rootheart = {
+        "x": 66,
+        "y": 7,
+        "z": 3,
+        "hp": 18,
+        "max_hp": 18,
+        "hit_ticks": 0,
+        "model": "sf/rootheart_closed",
+        "visible": !garden_cleared
+    }
+    root_warning = {"x": 58, "y": 9.1, "z": 3.05, "model": "sf/root_warning", "visible": false}
+    pickups[2].visible = false
+    seal_shell = {"visible": false}
+    ship.visible = false
+    ship_flames = []
+    player = {"x": 6, "y": 7, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint = {"x": 6, "z": 3}
+
+action skimmer(x, z, span):
+    enemies.push(
+        {
+            "x": x,
+            "y": 7,
+            "z": z,
+            "home": x,
+            "base": z,
+            "span": span,
+            "hp": 4,
+            "hit_ticks": 0,
+            "visible": true,
+            "model": "sf/skimmer",
+            "kind": "spore",
+            "cooldown": 70
+        }
+    )
+
+action dash_trail:
+    stop when effects.length >= 96
+    effects.push(
+        {
+            "x": player.x,
+            "y": 6.9,
+            "z": player.z + 0.7,
+            "dx": -dash_direction * 0.04,
+            "dz": 0,
+            "ttl": 9,
+            "life": 9,
+            "angle": 0,
+            "spin": 0,
+            "scale": 0.9,
+            "model": "sf/dash_echo",
+            "kind": "exhaust",
+            "visible": true
+        }
+    )

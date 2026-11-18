@@ -1,0 +1,47 @@
+@Logic/starfall
+# Boss rewards are campaign progress; four optional caches grant lives once per expedition.
+action refresh_health_capacity:
+    max_health = 4+(campaign.containers.rootheart ? 1 : 0)+(campaign.containers.cantor ? 1 : 0)+(campaign.containers.warden ? 1 : 0)+(campaign.containers.curator ? 1 : 0)+(campaign.armor ? 2 : 0)
+
+action claim_boss_container(key):
+    stop when campaign.containers[key]
+    campaign.containers[key] = true
+    call refresh_health_capacity
+    health = max_health
+    effects.push(
+        {
+            "x": player.x,
+            "y": 8.5,
+            "z": player.z + 2,
+            "dx": 0,
+            "dz": 0.025,
+            "ttl": 42,
+            "life": 42,
+            "angle": 0,
+            "spin": 0,
+            "scale": 0.8,
+            "kind": "container",
+            "model": "sf/health_container",
+            "title": "HEALTH +1",
+            "titleColor": 11993074,
+            "visible": true
+        }
+    )
+    effects = effects.slice(max(0,effects.length-96))
+    sound.play "sf_upgrade"
+
+action place_oneup(key, x, z):
+    pickups.push(
+        {
+            "x": x,
+            "y": 7,
+            "z": z,
+            "base": z,
+            "kind": "oneup",
+            "key": key,
+            "model": "sf/oneup",
+            "title": "1-UP",
+            "titleColor": 11993074,
+            "visible": !life_pickups[key]
+        }
+    )

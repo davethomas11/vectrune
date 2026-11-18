@@ -1,0 +1,117 @@
+@Logic/starfall
+action begin_departure:
+    stop when status != "playing"
+    status = "departing"
+    cinematic_ticks = 0
+    boarding_origin = player.x
+    velocity = 0
+    player.vz = 0
+    shots = []
+    charge_ticks = 0
+    charge_ready = false
+    fire_held = false
+    charge_fx.visible = false
+    muzzle.visible = false
+    rifle.visible = false
+    ship.x = 7
+    ship.z = 3
+    ship.visible = true
+    ship.model = "sf/ship"
+    sound.play "sf_ship_door"
+    call refresh_ui
+
+action tick_ship:
+    ticks += 1
+    cinematic_ticks += 1
+    call update_effects
+    if status == "landing":
+        progress = clamp(cinematic_ticks/72, 0, 1)
+        ease = 1-(1-progress)*(1-progress)*(1-progress)
+        ship.x = 2+5*ease
+        ship.z = 15-12*ease
+        ship.model = ticks%10 < 5 ? "sf/ship_flight" : "sf/ship_flight_lit"
+        camera.x += ((cinematic_ticks < 72 ? 10 : 13)-camera.x)*0.08
+        camera.z += (clamp(ship.z+0.5, 5, 11)-camera.z)*0.1
+        avatar.visible = false
+        rifle.visible = false
+        if cinematic_ticks == 72:
+            call ship_dust
+            sound.play "sf_ship_door"
+        if cinematic_ticks >= 72:
+            ship.x = 7
+            ship.z = 3
+            ship.model = "sf/ship"
+            walk = clamp((cinematic_ticks-72)/36, 0, 1)
+            avatar.visible = true
+            avatar.x = 7.2+1.8*walk
+            avatar.z = 3
+            avatar.angle = 0
+            avatar.dissolve = 0
+            avatar.model = "sf/pilot_run"+floor(ticks%16/4)
+        if cinematic_ticks >= 108:
+            status = "playing"
+            ticks = 0
+            notice = foundry_cleared ? "Saved sectors restored. Magnetic glove and plasma online." : (garden_cleared ? "Saved sector restored. Jump jets and air dash are ready." : "Touchdown. Find jump jets, then enter the Hydroponics hatch in cargo.")
+            notice_ticks = 180
+            call update_view
+    if status == "departing":
+        camera.x += (10-camera.x)*0.08
+        camera.z += (clamp(ship.z-0.3, 5, 12)-camera.z)*0.08
+        if cinematic_ticks < 30:
+            walk = cinematic_ticks/30
+            avatar.x = boarding_origin+(7.2-boarding_origin)*walk
+            avatar.z = 3
+            avatar.angle = 180
+            avatar.model = "sf/pilot_run"+floor(ticks%16/4)
+            avatar.dissolve = clamp((cinematic_ticks-20)/10, 0, 1)
+        if cinematic_ticks == 30:
+            call ship_dust
+            sound.play "sf_ship_launch"
+        if cinematic_ticks >= 30:
+            avatar.visible = false
+            flight = clamp((cinematic_ticks-30)/90, 0, 1)
+            ship.x = 7-5*flight
+            ship.z = 3+18*flight*flight
+            ship.model = ticks%10 < 5 ? "sf/ship_flight" : "sf/ship_flight_lit"
+        if cinematic_ticks >= 120:
+            call begin_homecoming
+            stop when true
+    call ship_engine_view
+    call sync_music
+    call refresh_ui
+
+action ship_engine_view:
+    ship_flames = []
+    engines = (status == "landing" && cinematic_ticks < 72) || (status == "departing" && cinematic_ticks >= 30)
+    if engines:
+        for offset in [-1.3,1.1]:
+            ship_flames.push(
+                {
+                    "x": ship.x + offset,
+                    "y": 5.6,
+                    "z": ship.z + 0.25,
+                    "model": ticks % 8 < 4 ? "sf/ship_exhaust": "sf/ship_exhaust_long",
+                    "scale": 0.85 + sin(ticks * 43) * 0.12,
+                    "visible": true
+                }
+            )
+
+action ship_dust:
+    for i in range(0, 12):
+        effects.push(
+            {
+                "x": ship.x + (i % 4 - 1.5) * 0.7,
+                "y": 6.2,
+                "z": 3.1,
+                "dx": i % 2 == 0 ? -0.1: 0.1,
+                "dz": 0.018,
+                "ttl": 24,
+                "life": 24,
+                "angle": i * 31,
+                "spin": 2,
+                "scale": 0.8,
+                "model": "sf/landing_dust",
+                "kind": "exhaust",
+                "visible": true
+            }
+        )

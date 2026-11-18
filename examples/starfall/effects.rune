@@ -1,0 +1,83 @@
+@Logic/starfall
+# Small deterministic fragments work in browser and QuickJS without physics bodies.
+action burst(x, z, count):
+    for i in range(0, count):
+        bearing = i*137+ticks*17
+        speed = 0.07+(i%5)*0.035
+        effects.push(
+            {
+                "x": x,
+                "y": 7.3 + (i % 3) * 0.06,
+                "z": z,
+                "dx": cos(bearing) * speed,
+                "dz": sin(bearing) * speed + 0.08,
+                "ttl": 14 + i % 5 * 3,
+                "life": 14 + i % 5 * 3,
+                "angle": bearing,
+                "spin": i % 2 == 0 ? 17: -13,
+                "scale": i % 3 == 0 ? 1: 0.6,
+                "model": i % 3 == 0 ? "sf/scrap": "sf/spark",
+                "kind": "debris",
+                "visible": true
+            }
+        )
+    if count > 8:
+        effects.push(
+            {
+                "x": x,
+                "y": 7.5,
+                "z": z,
+                "dx": 0,
+                "dz": 0,
+                "ttl": 9,
+                "life": 9,
+                "angle": 0,
+                "spin": 9,
+                "scale": 0.4,
+                "model": "sf/blast",
+                "kind": "blast",
+                "visible": true
+            }
+        )
+    # Cap work even when several drones explode during the same volley.
+    effects = effects.slice(max(0, effects.length-96))
+
+action jet_exhaust:
+    stop when effects.length >= 96
+    effects.push(
+        {
+            "x": player.x - facing * 0.35,
+            "y": 7.2,
+            "z": player.z + 0.35,
+            "dx": -facing * 0.015,
+            "dz": -0.09,
+            "ttl": 8,
+            "life": 8,
+            "angle": 0,
+            "spin": 0,
+            "scale": 1,
+            "model": "sf/exhaust",
+            "kind": "exhaust",
+            "visible": true
+        }
+    )
+
+action update_effects:
+    for effect in effects:
+        effect.ttl -= 1
+        effect.x += effect.dx
+        effect.z += effect.dz
+        effect.angle += effect.spin
+        if effect.kind == "debris":
+            effect.dz -= 0.014
+            effect.dx *= 0.97
+            effect.dissolve = clamp(1-effect.ttl/8, 0, 1)
+        if effect.kind == "blast":
+            effect.scale += 0.22
+            effect.dissolve = clamp(1-effect.ttl/effect.life, 0, 1)
+        if effect.kind == "container":
+            effect.dissolve = clamp(1-effect.ttl/10,0,1)
+        if effect.kind == "exhaust":
+            effect.scale *= 0.85
+        effect.visible = effect.ttl > 0 && effect.z > 1
+    effects = effects.filter(effect => effect.visible)

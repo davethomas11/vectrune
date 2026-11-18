@@ -29,8 +29,9 @@ import {
 import { setActiveMap, type SpatialMap } from './spatial';
 import type { BlockModel } from './model';
 import { validateHud, type GameHud } from './hud';
-import { validateWorld } from './voxel';
+import { validateWorld, validatedVoxelChunks } from './voxel';
 import { sampleCamera, type CameraTrack } from './camera';
+import { nearbyForRender, withEntityQueries } from './entities';
 
 export interface TitleScene {
   things?: string[];
@@ -44,6 +45,7 @@ export interface TitleScene {
 
 export interface Pixel3DConfig {
   fov?: number;
+  renderRadius?: number;
   cameraTrack?: CameraTrack;
   titleScene?: TitleScene;
   ui?: string;
@@ -95,6 +97,17 @@ export class Pixel3DEngine {
   private readonly context: RuneContext;
   private _paused = false;
   private _muted = false;
+  private frameRevision = 0;
+  private presentedRevision = -1;
+
+  /** Hosts can reuse the last pixels between simulation ticks. */
+  invalidateFrame(): void { this.frameRevision++; }
+  frameIfChanged(): Uint32Array | null {
+    if (this.presentedRevision === this.frameRevision) return null;
+    const pixels = this.frame();
+    this.presentedRevision = this.frameRevision;
+    return pixels;
+  }
 
   get paused(): boolean {
     return this._paused;
@@ -102,6 +115,7 @@ export class Pixel3DEngine {
   set paused(value: boolean) {
     if (value === this._paused) return;
     this._paused = value;
+    this.invalidateFrame();
     if (value) pauseMusic();
     setAudioMuted(this._muted || value);
     if (!value) resumeMusic();
@@ -121,6 +135,8 @@ export class Pixel3DEngine {
 
   /** The desktop host shares this renderer for features beyond its fixed-eye rasterizer. */
   get usesSharedRenderer(): boolean {
+    if (this.config.ui && (this.app.state[this.config.ui] as any)?.map) return true;
+    if (this.config.pauseUi && (this.app.state[this.config.pauseUi] as any)?.map) return true;
     if (this.config.world || this.config.cameraTrack ||
         (this.config.titleScene && this.app.state.status === 'title') ||
         (this.config.fov !== undefined && this.config.fov !== 66)) return true;
@@ -136,8 +152,14 @@ export class Pixel3DEngine {
   presentationTicks = 0;
   private wasTitle = false;
   private currentMapName = '';
+  private modelRadius = 0;
 
   constructor(readonly config: Pixel3DConfig, options: RuneWebConfig) {
+    if(config.renderRadius!==undefined&&(!Number.isFinite(config.renderRadius)||config.renderRadius<=0||config.renderRadius>4096))throw new Error('renderRadius must be in (0, 4096]');
+    for(const model of Object.values(config.models??{}))for(const block of model.blocks){
+      this.modelRadius=Math.max(this.modelRadius,Math.hypot(...block.from.map((v,i)=>Math.max(Math.abs(v),Math.abs(v+block.size[i])))));
+    }
+    for(const sprite of Object.values(config.sprites))this.modelRadius=Math.max(this.modelRadius,Math.hypot(sprite.width/sprite.height/2,.5));
     if (typeof window === 'undefined') {
       Object.assign(globalThis, { window: globalThis });
     }
@@ -169,6 +191,7 @@ export class Pixel3DEngine {
       ...options,
       app: this.app,
       isRendering: false,
+      compactScopes: true,
       memorySubscriptions: {},
       initialState: JSON.parse(JSON.stringify(options.stateJson)),
       loadedChunks: {},
@@ -203,6 +226,7 @@ export class Pixel3DEngine {
   }
 
   start(): void {
+    this.invalidateFrame();
     stopMusic();
     this._paused = false;
     setAudioMuted(this._muted);
@@ -222,11 +246,12 @@ export class Pixel3DEngine {
       return;
     }
     if (this.paused) return;
+    this.invalidateFrame();
 
-    withContext(this.context, () => {
+    withContext(this.context, () => withEntityQueries(() => {
       this.app.invokeAction('tick', [input]);
       this.app.computeDerived();
-    });
+    }));
     this.ticks++;
     this.syncScene();
     if (this.wasTitle) this.presentationTicks++;
@@ -255,6 +280,7 @@ export class Pixel3DEngine {
   }
 
   invoke(action: string, args: unknown[] = []): void {
+    this.invalidateFrame();
     if (action === this.config.restartAction) {
       if (this.app.state.status === 'playing' && !this.paused) return;
       this.paused = false;
@@ -323,17 +349,20 @@ export class Pixel3DEngine {
       : camVal || { x: 2.5, y: 2.5, angle: 0 };
 
     // 2. Resolve things
-    const things: Thing3D[] = [];
+    let things: Thing3D[] = [];
+    const radius=this.config.renderRadius??this.raycaster.config.world?.renderDistance;
+    const origin={x:camera.x,y:camera.y,z:camera.z??camera.height??0};
     const thingPaths = titleScene?.things ?? this.config.things;
     if (thingPaths) {
       for (const path of thingPaths) {
         const val = path.split('.').reduce((v, k) => v?.[k], state);
         if (Array.isArray(val)) {
-          things.push(...val);
+          const local=radius===undefined?val:nearbyForRender(val,origin,radius+2,this.modelRadius);
+          for(const thing of local)things.push(thing);
         } else if (val && typeof val === 'object' &&
           typeof val.x === 'number' && typeof val.y === 'number' &&
           (typeof val.sprite === 'string' || typeof val.model === 'string')) {
-          things.push(val as Thing3D);
+          if(radius===undefined||Math.hypot(val.x-origin.x,val.y-origin.y,(val.z??0)-origin.z)<=radius+2+this.modelRadius*(val.scale??1))things.push(val as Thing3D);
         }
       }
     }
@@ -413,6 +442,7 @@ export class Pixel3DEngine {
   }
 
   frame(): Uint32Array {
+    this.invalidateFrame();
     const stats = this.renderState();
     this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, {
       titleScene: stats.title_scene,
@@ -433,7 +463,8 @@ export class Pixel3DEngine {
       paused: stats.paused,
       presentation: stats.presentation,
       hudText: stats.hud_text,
-    }, stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time);
+    }, stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time,
+      this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : undefined);
     return this.raycaster.buffer;
   }
 }

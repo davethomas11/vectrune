@@ -1,0 +1,233 @@
+@Logic/starfall
+# Inspect the overhead carrier, then backtrack up to the glove workshop.
+action build_foundry:
+    sector_id = "foundry"
+    level_map = "foundry"
+    world = {
+        "width": 96,
+        "height": 21,
+        "depth": 20,
+        "seed": 709,
+        "biome": "ember",
+        "materials": [
+            "sf/hull",
+            "sf/edge",
+            "sf/plasma",
+            "sf/reactor",
+            "sf/temple_stone",
+            "sf/temple_trim",
+            "sf/forge_floor",
+            "sf/forge_wall",
+            "sf/forge_rail"
+        ],
+        "cells": [],
+        "spawn": player
+    }
+    world = voxel_world(
+        world.width,
+        world.height,
+        world.depth,
+        world.materials,
+        {"seed": world.seed, "biome": world.biome, "spawn": world.spawn, "renderDistance": 128}
+    )
+    call deck 4, 16, 3, 7
+    call deck 20, 6, 5, 9
+    call deck 14, 4, 9, 9
+    call deck 5, 9, 13, 9
+    # Small overhead maintenance shelf, separate from the glove pedestal.
+    call deck 5, 3, 17, 9
+    world = voxel_fill(world,[8,5,13],[3,4,1],6)
+    magnet_seen = glove_unlocked
+    if !magnet_seen:
+        world = voxel_fill(world,[13,5,10],[1,4,9],3)
+    # A 27-tile furnace span: the moving shuttle is the safe crossing.
+    call deck 53, 9, 5, 9
+    # An eight-tile rise requires the low-gravity console and jump jets.
+    call deck 62, 10, 13, 9
+    call deck 72, 5, 9, 7
+    call deck 77, 4, 5, 7
+    call deck 81, 14, 3, 7
+    world = voxel_fill(world,[4,1,1],[91,1,17],8)
+    world = voxel_fill(world,[3,5,1],[1,4,17],8)
+    world = voxel_fill(world,[95,5,1],[1,4,17],8)
+    scenery = []
+    scenery = entity_group(scenery)
+    for x in [8,18,28,38,48,58,68,78,88]:
+        scenery.push({"x": x, "y": 3, "z": 2, "model": "sf/foundry_girder"})
+        scenery.push({"x": x, "y": 3.8, "z": 8, "model": "sf/foundry_coil"})
+    for x in [29,37,45]:
+        scenery.push({"x": x, "y": 7, "z": 1.2, "model": "sf/furnace_pool"})
+    scenery.push({"x": 64, "y": 3.7, "z": 12, "model": "sf/gravity_sigil"})
+    scenery.push({"x": 9.5, "y": 7, "z": 13, "model": "sf/upgrade_pedestal"})
+    scenery.push({"x": 16, "y": 6.2, "z": 9, "model": "sf/dash_gap_left"})
+    scenery.push({"x": 24.5, "y": 6.2, "z": 5, "model": "sf/carrier_sign"})
+    scenery.push({"x": 39.5, "y": 7, "z": 14, "model": "sf/carrier_rail"})
+    machinery = [
+        {"x": 18, "y": 3.5, "z": 12, "home": 12, "model": "sf/foundry_piston", "angle": 0},
+        {"x": 74, "y": 3.5, "z": 16, "home": 16, "model": "sf/foundry_piston", "angle": 0}
+    ]
+    gravity_consoles = [
+        {"x": 57, "y": 6.3, "z": 5, "model": "sf/gravity_console"},
+        {"x": 82, "y": 6.3, "z": 3, "model": "sf/gravity_console"}
+    ]
+    portals = [
+        {
+            "x": 6,
+            "y": 6.3,
+            "z": 3,
+            "model": "sf/foundry_hatch",
+            "kind": "foundry_return",
+            "label": "RETURN TO CONTAINMENT",
+            "title": "CONTAINMENT",
+            "visible": true
+        },
+        {
+            "x": 92,
+            "y": 6.3,
+            "z": 3,
+            "model": "sf/foundry_hatch",
+            "kind": "foundry_exit",
+            "label": "CARGO SHORTCUT / FOUNDRY SAVED",
+            "title": "CARGO SHORTCUT",
+            "visible": foundry_cleared
+        }
+    ]
+    portals = entity_group(portals)
+    pickups = [
+        {
+            "x": 9.5,
+            "y": 7,
+            "z": 14.9,
+            "base": 14.9,
+            "kind": "glove",
+            "model": "sf/magnetic_glove",
+            "visible": !glove_unlocked
+        },
+        {
+            "x": 69,
+            "y": 7,
+            "z": 13.5,
+            "base": 13.5,
+            "kind": "repair",
+            "model": "sf/repair_pod",
+            "visible": true
+        },
+        {
+            "x": 92,
+            "y": 7,
+            "z": 3.5,
+            "base": 3.5,
+            "kind": "foundry_relay",
+            "model": "sf/foundry_relay",
+            "visible": false
+        }
+    ]
+    pickups = entity_group(pickups)
+    call place_oneup "foundry",6,17.6
+    beacons = [
+        {"x": 18, "y": 7, "z": 3, "model": "sf/beacon", "active": false},
+        {"x": 55, "y": 7, "z": 5, "model": "sf/beacon", "active": false},
+        {"x": 81.5, "y": 7, "z": 3, "model": "sf/beacon", "active": false}
+    ]
+    beacons = entity_group(beacons)
+    enemies = entity_group()
+    call forge_sentry 17, 4, 1
+    call forge_sentry 59, 6, 1
+    call forge_sentry 68, 14, 1
+    boss = {"visible": false}
+    boss_warning = {"visible": false}
+    rootheart.visible = false
+    root_warning.visible = false
+    forge_guardian = {
+        "x": 88,
+        "y": 7,
+        "z": 3,
+        "hp": 24,
+        "max_hp": 24,
+        "hit_ticks": 0,
+        "model": "sf/cantor_guard",
+        "visible": !foundry_cleared
+    }
+    forge_warning = {"x": 88, "y": 9.1, "z": 3.05, "model": "sf/cantor_warning", "visible": false}
+    forge_clock = 0
+    forge_phase = "dormant"
+    foundry_clock = 0
+    gravity_low = false
+    on_shuttle = false
+    shuttle = {
+        "x": 28.5,
+        "y": 7,
+        "z": 9,
+        "model": "sf/magnetic_shuttle",
+        "visible": true,
+        "width": 5
+    }
+    magnet_fx.visible = false
+    seal_shell = {"visible": false}
+    ship.visible = false
+    ship_flames = []
+    player = {"x": 6, "y": 7, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint = {"x": 6, "z": 3}
+
+action toggle_foundry_gravity:
+    stop when sector_id != "foundry" && sector_id != "observatory"
+    if !glove_unlocked:
+        notice = "The magnetic glove is required to synchronize with the gravity console."
+        notice_ticks = 120
+        stop when true
+    gravity_low = !gravity_low
+    sound.play "sf_gravity_switch"
+    notice = gravity_low ? "LOW GRAVITY ENGAGED. Jump jets can now reach the upper gantry." : "NORMAL GRAVITY RESTORED. Shorter jumps; the glove still grips the carrier."
+    notice_ticks = 150
+    for console in gravity_consoles:
+        console.model = gravity_low ? "sf/gravity_console_low" : "sf/gravity_console"
+
+action update_foundry_machinery:
+    if !magnet_seen && player.x >= 23 && player.z >= 4:
+        magnet_seen = true
+        world = voxel_fill(world,[13,5,10],[1,4,9],0)
+        notice = "CARRIER NEEDS A MAGNETIC GRIP. Service workshop unlocked above the entrance. <"
+        notice_ticks = 210
+        sound.play "sf_hatch"
+    previous_shuttle = shuttle.x
+    foundry_clock += 1
+    shuttle.x = 28.5+(1-cos(foundry_clock*1.2))*11
+    if on_shuttle && glove_unlocked:
+        player.x += shuttle.x-previous_shuttle
+    for machine in machinery:
+        machine.z = machine.home+sin(foundry_clock*3+machine.x)*0.8
+        machine.angle = 0
+
+# Hands catch within reach of the underside. Release briefly prevents re-grabbing.
+action grab_carrier(previous_z, releasing):
+    over_shuttle = abs(player.x-shuttle.x) < shuttle.width/2+0.45
+    grip_z = shuttle.z-2.4
+    caught_carrier = abs(player.z-grip_z) < 0.75 && player.vz != 0 && previous_z < shuttle.z-1.6
+    keep_grip = on_shuttle && over_shuttle
+    on_shuttle = false
+    if glove_unlocked && over_shuttle && !releasing && grip_release_ticks == 0 && (caught_carrier || keep_grip):
+        player.z = grip_z
+        player.vz = 0
+        grounded = false
+        jumps = 1
+        dash_ready = true
+        dash_ticks = 0
+        on_shuttle = true
+
+action forge_sentry(x, z, span):
+    enemies.push(
+        {
+            "x": x,
+            "y": 7,
+            "z": z,
+            "home": x,
+            "base": z,
+            "span": span,
+            "hp": 5,
+            "hit_ticks": 0,
+            "visible": true,
+            "model": "sf/forge_sentry",
+            "kind": "forge",
+            "cooldown": 70
+        }
+    )

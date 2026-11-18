@@ -4,7 +4,7 @@ import type { Sprite } from '../pixel/engine';
 import { skyPixel, type Sky } from './sky';
 import { renderModel, type BlockModel } from './model';
 import { renderHud, type GameHud } from './hud';
-import { renderVoxels, type VoxelWorld } from './voxel';
+import { renderVoxels, type VoxelWorld, type VoxelChunks } from './voxel';
 
 export interface Texture {
   width: number;
@@ -39,6 +39,9 @@ export interface Thing3D {
   sprite?: string;
   model?: string;
   dissolve?: number;
+  title?: string;
+  titleHeight?: number;
+  titleColor?: number;
   z?: number;
   angle?: number;
   scale?: number;
@@ -156,7 +159,8 @@ export class Raycaster3D {
     flash: number = 0,
     stats?: Stats3D,
     wallOverrides: WallOverride[] = [],
-    time: number = 0
+    time: number = 0,
+    preparedChunks?: VoxelChunks
   ): Uint32Array {
     const W = this.width;
     const H = this.height;
@@ -188,7 +192,7 @@ export class Raycaster3D {
     // 1. Floor & Ceiling casting
     if (this.config.world) {
       renderVoxels(this.config.world, camera, this.config.textures, map.sky, this.fov,
-        W, H, this.buffer, this.pixelDepth, time);
+        W, H, this.buffer, this.pixelDepth, time, preparedChunks);
       this.zBuffer.fill(Infinity);
     } else if (pitched) {
       renderGrid(map, camera, Object.values(this.config.textures), wallOverrides, things, this.config.sprites,
@@ -211,6 +215,8 @@ export class Raycaster3D {
       this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
     }
 
+    this.renderWorldTitles(camera, things, dirX, dirY, fovScale);
+
     // 4. Viewmodel Weapon (screen space, bottom-center)
     if (weapon && weapon.sprite) {
       this.renderWeapon(weapon);
@@ -221,12 +227,54 @@ export class Raycaster3D {
       this.applyFlash(flash);
     }
 
+    const fade=stats?.ui?.cinema?.fade??0;
+    if(fade>0){
+      const light=1-Math.min(1,fade);
+      for(let i=0;i<this.buffer.length;i++){
+        const c=this.buffer[i];this.buffer[i]=(0xff000000|Math.floor((c&255)*light)|Math.floor(((c>>>8)&255)*light)<<8|Math.floor(((c>>>16)&255)*light)<<16)>>>0;
+      }
+    }
+
     // 6. Retro HUD and status banners
     if (stats) {
       this.renderHUD(stats);
     }
 
     return this.buffer;
+  }
+
+  /** Pixel-font plaques anchored above actors, using the same projection/depth as models. */
+  private renderWorldTitles(camera:Camera3D,things:Thing3D[],dirX:number,dirY:number,fov:number):void {
+    const eye=this.config.world?(camera.z??0)+1.25:(camera.height??.5);
+    const pitch=(camera.pitch??0)*Math.PI/180,cp=Math.cos(pitch),sp=Math.sin(pitch);
+    const labels:Array<{text:string;x:number;y:number;distance:number;color:number}>=[];
+    for(const thing of things){
+      if(thing.visible===false||thing.title===undefined||(thing.dissolve??0)>=1)continue;
+      if(typeof thing.title!=='string'||!/^([\x20-\x7e]){1,48}$/.test(thing.title))throw new Error('Thing title must contain 1-48 printable characters');
+      if(thing.titleHeight!==undefined&&(!Number.isFinite(thing.titleHeight)||thing.titleHeight<0||thing.titleHeight>64))throw new Error('Thing titleHeight must be in [0, 64]');
+      if(thing.titleColor!==undefined&&(!Number.isInteger(thing.titleColor)||thing.titleColor<0||thing.titleColor>0xffffff))throw new Error('Thing titleColor must be an RGB integer');
+      if(![thing.x,thing.y,thing.z??0,thing.scale??1].every(Number.isFinite)||(thing.scale??1)<=0)throw new Error('Titled thing position and scale must be finite and scale positive');
+      let height=1;
+      for(const block of this.config.models?.[thing.model??'']?.blocks??[])height=Math.max(height,block.from[2]+block.size[2]);
+      const z=(thing.z??0)+(thing.titleHeight??(height*(thing.scale??1)+.4));
+      const dx=thing.x-camera.x,dy=thing.y-camera.y,forward=dx*dirX+dy*dirY;
+      const distance=forward*cp+(z-eye)*sp,side=-dx*dirY+dy*dirX,up=(z-eye)*cp-forward*sp;
+      if(distance<=.1||distance>48)continue;
+      const width=thing.title.length*4-1,x=Math.round(this.width/2*(1+side/(distance*fov))-width/2);
+      const y=Math.round((this.height>>1)-up*this.height/distance)-5;
+      if(x+width+3<0||x-3>=this.width||y+7<0||y-2>=this.height)continue;
+      labels.push({text:thing.title.toUpperCase(),x,y,distance,color:thing.titleColor??0x9ceadd});
+    }
+    labels.sort((a,b)=>b.distance-a.distance);
+    for(const label of labels){
+      const width=label.text.length*4-1;
+      const pixel=(x:number,y:number,color:number)=>{if(x>=0&&y>=0&&x<this.width&&y<this.height){const i=y*this.width+x;if(label.distance<this.pixelDepth[i])this.buffer[i]=packed(color);}};
+      for(let y=-2;y<7;y++)for(let x=-3;x<width+3;x++)pixel(label.x+x,label.y+y,y===6?0x28616c:0x0b1b24);
+      for(let c=0;c<label.text.length;c++){
+        const glyph=FONT[label.text[c]];if(!glyph)continue;
+        for(let i=0;i<glyph.length;i++)if(glyph[i]==='1')pixel(label.x+c*4+i%3,label.y+Math.floor(i/3),label.color);
+      }
+    }
   }
 
   rect(x: number, y: number, width: number, height: number, color: number): void {
@@ -240,7 +288,7 @@ export class Raycaster3D {
     }
   }
 
-  text(str: string, x: number, y: number, color = 0xf5e9cc, scale = 1): void {
+  text(str: string, x: number, y: number, color = 0xf5e9cc, scale = 1, clip?:{top:number;bottom:number}): void {
     let curX = Math.floor(x);
     const curY = Math.floor(y);
     for (const char of str.toUpperCase()) {
@@ -248,7 +296,8 @@ export class Raycaster3D {
       if (glyph) {
         for (let p = 0; p < glyph.length; p++) {
           if (glyph[p] === '1') {
-            this.rect(curX + (p % 3) * scale, curY + Math.floor(p / 3) * scale, scale, scale, color);
+            const y=curY+Math.floor(p/3)*scale,top=Math.max(y,clip?.top??y),bottom=Math.min(y+scale,clip?.bottom??y+scale);
+            if(bottom>top)this.rect(curX+(p%3)*scale,top,scale,bottom-top,color);
           }
         }
       }

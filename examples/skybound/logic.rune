@@ -63,7 +63,13 @@ action setup_course:
         "cells": [],
         "spawn": player
     }
-    world.cells = repeat(0, 12544)
+    world = voxel_world(
+        world.width,
+        world.height,
+        world.depth,
+        world.materials,
+        {"seed": world.seed, "biome": world.biome, "spawn": world.spawn, "renderDistance": 128}
+    )
     # Six solid islands, separated by real gaps. x/y are horizontal; z is up.
     call island 5, 7, 6, 6, 3, 1
     call island 13, 8, 4, 4, 4, 1
@@ -71,7 +77,7 @@ action setup_course:
     call island 18, 17, 5, 5, 6, 3
     call island 11, 18, 5, 4, 7, 1
     call island 5, 18, 4, 5, 8, 4
-    coins = []
+    coins = entity_group()
     call coin 8.5, 9, 3
     call coin 10, 9, 3
     call coin 13.5, 9, 4
@@ -116,6 +122,7 @@ action setup_course:
             "visible": true
         }
     ]
+    enemies = entity_group(enemies)
     scenery = [
         {"x": 19, "y": 18, "z": 6, "model": "sky/flag"},
         {"x": 5.8, "y": 7.8, "z": 3, "model": "sky/flower"},
@@ -124,6 +131,7 @@ action setup_course:
         {"x": 22, "y": 14, "z": 5, "model": "sky/flower"},
         {"x": 11.5, "y": 18.5, "z": 7, "model": "sky/flower"}
     ]
+    scenery = entity_group(scenery)
     camera = {"x": 0.422, "y": 6.606, "z": 6.3, "angle": 20, "pitch": -21}
     call update_view
 
@@ -193,7 +201,7 @@ action tick(input):
     jump_held = !!input.jump
     if player.z < 1.3:
         call lose_heart
-    for item in coins:
+    for item in nearby(coins, player, 32):
         item.angle = ticks * 6
         item.z = item.base + sin(ticks * 6) * 0.12
         coin_distance = distance(player, item)
@@ -201,7 +209,7 @@ action tick(input):
             item.visible = false
             collected += 1
             sound.play "sky_coin"
-    for enemy in enemies:
+    for enemy in nearby(enemies, player, 32):
         if enemy.visible:
             patrol = sin(ticks * 2) * 0.65
             if enemy.axis == "x":

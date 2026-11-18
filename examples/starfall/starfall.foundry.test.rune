@@ -1,0 +1,219 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/FoundryDoorRequiresPlasma
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke unarmed_foundry_fixture
+run:
+    invoke tick {"use":true}
+    assert state.sector_id == "station"
+    invoke tick {}
+    invoke arm_foundry_fixture
+    invoke tick {"use":true}
+    assert state.sector_id == "foundry"
+    assert state.world.storage == "chunked"
+    assert state.world.width == 96
+    invoke tick {"use":true}
+    assert state.sector_id == "foundry"
+    invoke tick {}
+    invoke tick {"use":true}
+    assert state.sector_id == "station"
+    assert state.player.x == 68
+
+@Test/Starfall/MagneticGloveCarryAndRelease
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke foundry_test_entry
+    invoke shuttle_fixture
+run:
+    invoke tick {}
+    assert state.player.x == 28.5
+    assert state.on_shuttle == false
+    invoke unlock_test_glove
+    invoke tick {}
+    invoke tick {}
+    assert state.player.x > 28.5
+    assert state.on_shuttle == true
+    assert state.magnet_fx.visible == true
+    invoke tick {"jump":true}
+    assert state.on_shuttle == false
+    assert state.player.z > 6.9
+    assert state.jumps == 1
+    assert state.dash_ready == true
+
+@Test/Starfall/GravityConsoleNeedsGloveAndUsesPressEdge
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke foundry_test_entry
+    invoke gravity_console_fixture
+run:
+    invoke tick {"use":true}
+    assert state.gravity_low == false
+    invoke tick {}
+    invoke unlock_test_glove
+    invoke tick {"use":true}
+    assert state.gravity_low == true
+    invoke tick {"use":true}
+    assert state.gravity_low == true
+    invoke tick {}
+    invoke tick {"use":true}
+    assert state.gravity_low == false
+
+@Test/Starfall/FoundryRelayPersistsGlovePlasmaAndCryptAccess
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke foundry_test_entry
+    invoke foundry_relay_fixture
+run:
+    invoke tick {}
+    assert state.campaign.foundry == true
+    assert state.campaign.hydroponics == true
+    assert state.foundry_cleared == true
+    assert state.portals[1].visible == true
+    invoke last_garden_life
+    invoke take_damage 6
+    invoke wait_ticks 24
+    assert state.status == "gameover"
+    invoke advance
+    assert state.status == "intro"
+    invoke advance
+    assert state.status == "landing"
+    assert state.glove_unlocked == true
+    assert state.plasma == true
+    assert state.gate_open == true
+    assert state.dash_unlocked == true
+    assert state.portals[3].visible == true
+    invoke read_foundry_locks
+    assert state.old_seal_tile == 0
+    assert state.crypt_lock_tile == 0
+
+@Test/Starfall/CantorArmorVentingAndFatalReset
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke foundry_test_entry
+    invoke cantor_fixture
+run:
+    invoke tick {"fire":true}
+    invoke wait_ticks 5
+    assert state.forge_guardian.hp == 24
+    invoke open_test_cantor
+    invoke tick {"fire":true}
+    invoke wait_ticks 5
+    assert state.forge_guardian.hp == 22
+    assert state.ui.meters[1].value == 22
+    invoke root_death_fixture
+    invoke take_damage 6
+    assert state.forge_guardian.hp == 24
+    assert state.forge_phase == "dormant"
+    assert state.lives == 2
+
+@Test/Starfall/ExistingHydroponicsSaveMigrates
+type = logic
+page = starfall
+run:
+    invoke old_campaign_fixture
+    invoke initialize
+    assert state.campaign.hydroponics == true
+    assert state.campaign.foundry == false
+    assert state.jets == true
+    assert state.dash_unlocked == true
+    assert state.glove_unlocked == false
+    assert state.max_health == 5
+
+@Logic/starfall
+action unarmed_foundry_fixture:
+    player.x = 69
+    jets = true
+    garden_cleared = true
+    enemies = []
+
+action arm_foundry_fixture:
+    plasma = true
+    gate_open = true
+
+action foundry_test_entry:
+    call unarmed_foundry_fixture
+    call arm_foundry_fixture
+    call tick {"use":true}
+    call tick {}
+    enemies = []
+
+action shuttle_fixture:
+    player.x = 28.5
+    player.z = 6.6
+    grounded = false
+    on_shuttle = true
+    foundry_clock = 0
+    shuttle.x = 28.5
+
+action unlock_test_glove:
+    glove_unlocked = true
+
+action gravity_console_fixture:
+    player.x = 57
+    player.z = 5
+
+action foundry_relay_fixture:
+    player.x = 92
+    player.z = 3
+    forge_guardian.visible = false
+    forge_guardian.hp = 0
+    pickups[2].visible = true
+    glove_unlocked = true
+
+action read_foundry_locks:
+    old_seal_tile = voxel_get(world,62,7,4)
+    crypt_lock_tile = voxel_get(world,78,7,4)
+
+action cantor_fixture:
+    player.x = 84
+    player.z = 3
+    forge_clock = 5
+    invulnerable = 1000
+
+action open_test_cantor:
+    forge_clock = 90
+    cooldown = 0
+
+action old_campaign_fixture:
+    campaign = {"hydroponics": true, "finished": false}
+
+
+@Test/Starfall/CarrierDiscoveryUnlocksGloveWorkshop
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke foundry_test_entry
+run:
+    invoke read_workshop_gate
+    assert state.glove_unlocked == false
+    assert state.magnet_seen == false
+    assert state.workshop_gate == 3
+    assert state.pickups[0].kind == "glove"
+    assert state.pickups[0].base == 14.9
+    invoke inspect_carrier_fixture
+    invoke tick {}
+    invoke read_workshop_gate
+    assert state.magnet_seen == true
+    assert state.glove_unlocked == false
+    assert state.workshop_gate == 0
+
+@Logic/starfall
+action read_workshop_gate:
+    workshop_gate = voxel_get(world,13,7,12)
+
+action inspect_carrier_fixture:
+    player.x = 24
+    player.z = 5

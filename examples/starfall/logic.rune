@@ -1,0 +1,813 @@
+@Logic/starfall
+state:
+    status = "title"
+    campaign = {
+        "hydroponics": false,
+        "foundry": false,
+        "finished": false,
+        "capacitor": false,
+        "armor": false,
+        "curator": false,
+        "reward_version": 0,
+        "containers": {"rootheart": false, "cantor": false, "warden": false, "curator": false},
+        "rooms": {
+            "dock": true,
+            "cargo": false,
+            "containment": false,
+            "crypt": false,
+            "hydroponics": false,
+            "foundry": false,
+            "archive": false,
+            "observatory": false,
+            "jet_vault": false,
+            "dash_vault": false
+        }
+    }
+    max_health = 4
+    life_pickups = {}
+    life_rewards = 0
+    curator = {"visible": false, "hp": 0, "max_hp": 16}
+    curator_warning = {"visible": false}
+    curator_clock = 0
+    curator_phase = "dormant"
+    charge_duration = 24
+    upgrade_snapshot = null
+    portal_aura = []
+    arrival_ring = {"visible": false, "model": "sf/rift_arrival", "x": 9, "y": 8, "z": 4}
+    current_room = "dock"
+    navigation_stamp = ""
+    map_nodes = []
+    map_links = [
+        {"from": "dock", "to": "cargo"},
+        {"from": "cargo", "to": "containment"},
+        {"from": "containment", "to": "crypt"},
+        {"from": "cargo", "to": "hydroponics"},
+        {"from": "containment", "to": "foundry"},
+        {"from": "cargo", "to": "archive"},
+        {"from": "foundry", "to": "observatory"}
+    ]
+    bonus_return = {"x": 33, "z": 10}
+    damage_side = 0
+    damage_indicator_ticks = 0
+    sector_id = "station"
+    level_map = "orbit"
+    station_snapshot = null
+    portals = []
+    garden_cleared = false
+    foundry_cleared = false
+    glove_unlocked = false
+    magnet_seen = false
+    grip_release_ticks = 0
+    gravity_low = false
+    foundry_clock = 0
+    on_shuttle = false
+    shuttle = {
+        "x": 28.5,
+        "y": 7,
+        "z": 5,
+        "visible": false,
+        "model": "sf/magnetic_shuttle",
+        "width": 5
+    }
+    magnet_fx = {"x": 9, "y": 7.2, "z": 3, "model": "sf/magnet_lock", "visible": false}
+    machinery = []
+    gravity_consoles = []
+    forge_clock = 0
+    forge_phase = "dormant"
+    forge_guardian = {"visible": false, "hp": 0, "max_hp": 24}
+    forge_warning = {"visible": false}
+    dash_unlocked = false
+    dash_ready = true
+    dash_ticks = 0
+    dash_direction = 1
+    dash_held = false
+    use_held = false
+    room_changed = false
+    transition_ticks = 0
+    root_clock = 0
+    root_phase = "dormant"
+    rootheart = {"visible": false, "hp": 0, "max_hp": 18}
+    root_warning = {"visible": false}
+    world = null
+    player = {"x": 9, "y": 7, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    camera = {"x": 13, "y": 19, "z": 5, "angle": 270, "pitch": 0}
+    avatar = {"x": 9, "y": 7, "z": 3, "model": "sf/pilot_idle", "angle": 0}
+    muzzle = {"x": 10, "y": 7, "z": 4, "model": "sf/bolt", "visible": false}
+    rifle = {"x": 9, "y": 7, "z": 3, "model": "sf/rifle", "angle": 0}
+    effects = []
+    aiming_up = false
+    ducking = false
+    body_height = 1.6
+    flash = 0
+    hurt_ticks = 0
+    jet_ticks = 0
+    charge_ticks = 0
+    charge_ready = false
+    fire_held = false
+    music_track = ""
+    seal_age = 0
+    seal_shake = 0
+    seal_shell = {
+        "x": 62.5,
+        "y": 7,
+        "z": 3,
+        "model": "sf/seal_shell",
+        "visible": false,
+        "dissolve": 0
+    }
+    charge_fx = {"x": 10, "y": 7.2, "z": 4, "model": "sf/charge_orb", "visible": false}
+    recovery_phase = "none"
+    recovery_ticks = 0
+    recovery_duration = 45
+    death_lethal = false
+    death_origin = {"x": 9, "z": 3}
+    return_target = {"x": 9, "z": 3}
+    ghost = {"x": 9, "y": 9.7, "z": 4, "model": "sf/ghost", "visible": false, "angle": 0}
+    scenery = []
+    pickups = []
+    beacons = []
+    enemies = []
+    shots = []
+    boss = {"visible": false}
+    boss_warning = {"visible": false}
+    checkpoint = {"x": 9, "z": 3}
+    health = 4
+    lives = 3
+    cinematic_ticks = 0
+    boarding_origin = 9
+    launch_label = "Board station / Enter"
+    ship = {"x": 7, "y": 5.5, "z": 3, "model": "sf/ship", "scale": 1.2, "visible": true}
+    ship_flames = []
+    jets = false
+    plasma = false
+    gate_open = false
+    core = false
+    escape_active = false
+    return_encounters = []
+    facing = 1
+    velocity = 0
+    grounded = true
+    jumps = 0
+    jump_held = false
+    cooldown = 0
+    invulnerable = 0
+    ticks = 0
+    boss_clock = 0
+    boss_phase = "dormant"
+    notice = ""
+    notice_ticks = 0
+    touch_ready = false
+    title_hidden = false
+    ui = {"meters": [], "panel": null}
+    pause_ui = {"meters": [], "panel": null}
+
+action initialize:
+    campaign.hydroponics = !!campaign.hydroponics
+    campaign.finished = !!campaign.finished
+    campaign.foundry = !!campaign.foundry
+    if campaign.foundry:
+        campaign.hydroponics = true
+    call new_run
+    status = "title"
+    call sync_music
+    call refresh_ui
+
+action new_run:
+    if !campaign.rooms:
+        campaign.rooms = {
+            "dock": true,
+            "cargo": false,
+            "containment": false,
+            "crypt": false,
+            "hydroponics": false,
+            "foundry": false,
+            "archive": false,
+            "observatory": false,
+            "jet_vault": false,
+            "dash_vault": false
+        }
+    campaign.capacitor = !!campaign.capacitor
+    campaign.armor = !!campaign.armor
+    campaign.curator = !!campaign.curator
+    if !campaign.containers:
+        campaign.containers = {
+            "rootheart": false,
+            "cantor": false,
+            "warden": false,
+            "curator": false
+        }
+    if campaign.reward_version != 1:
+        campaign.containers.rootheart = !!campaign.containers.rootheart || !!campaign.hydroponics
+        campaign.containers.cantor = !!campaign.containers.cantor || !!campaign.foundry
+        campaign.containers.warden = !!campaign.containers.warden || !!campaign.finished
+        campaign.containers.curator = !!campaign.containers.curator || campaign.curator
+        campaign.reward_version = 1
+    call refresh_health_capacity
+    life_pickups = {}
+    life_rewards = 0
+    curator.visible = false
+    curator_warning.visible = false
+    curator_clock = 0
+    curator_phase = "dormant"
+    charge_duration = campaign.capacitor ? 18 : 24
+    navigation_stamp = ""
+    upgrade_snapshot = null
+    damage_side = 0
+    damage_indicator_ticks = 0
+    player = {"x": 9, "y": 7, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint = {"x": 9, "z": 3}
+    camera = {"x": 13, "y": 19, "z": 5, "angle": 270, "pitch": 0}
+    health = max_health
+    lives = 3
+    sector_id = "station"
+    level_map = "orbit"
+    station_snapshot = null
+    garden_cleared = !!campaign.hydroponics || !!campaign.foundry
+    foundry_cleared = !!campaign.foundry
+    glove_unlocked = foundry_cleared
+    grip_release_ticks = 0
+    gravity_low = false
+    foundry_clock = 0
+    on_shuttle = false
+    shuttle.visible = false
+    magnet_fx.visible = false
+    machinery = []
+    gravity_consoles = []
+    forge_guardian.visible = false
+    forge_warning.visible = false
+    dash_unlocked = garden_cleared
+    dash_ready = true
+    dash_ticks = 0
+    dash_held = false
+    use_held = false
+    transition_ticks = 0
+    portal_aura = []
+    arrival_ring = {"visible": false, "model": "sf/rift_arrival", "x": 9, "y": 8, "z": 4}
+    rootheart.visible = false
+    root_warning.visible = false
+    cinematic_ticks = 0
+    boarding_origin = 9
+    launch_label = "Board station / Enter"
+    ship = {"x": 7, "y": 5.5, "z": 3, "model": "sf/ship", "scale": 1.2, "visible": true}
+    ship_flames = []
+    jets = garden_cleared
+    plasma = foundry_cleared
+    gate_open = foundry_cleared
+    charge_ticks = 0
+    charge_ready = false
+    fire_held = false
+    music_track = ""
+    seal_age = 0
+    seal_shake = 0
+    seal_shell.visible = false
+    seal_shell.dissolve = 0
+    charge_fx.visible = false
+    core = false
+    escape_active = false
+    return_encounters = []
+    facing = 1
+    velocity = 0
+    grounded = true
+    jumps = 0
+    jump_held = false
+    cooldown = 0
+    invulnerable = 0
+    ticks = 0
+    boss_clock = 0
+    boss_phase = "dormant"
+    shots = []
+    effects = []
+    aiming_up = false
+    ducking = false
+    body_height = 1.6
+    flash = 0
+    hurt_ticks = 0
+    jet_ticks = 0
+    recovery_phase = "none"
+    recovery_ticks = 0
+    death_lethal = false
+    ghost.visible = false
+    ghost.dissolve = 0
+    avatar.dissolve = 0
+    notice = "E / USE at the glowing PROPULSION CRYPT portal to find jump jets."
+    notice_ticks = 180
+    call build_title_fleet
+    call build_station
+    call update_view
+
+action start:
+    if campaign.finished:
+        campaign = {"hydroponics": false, "foundry": false, "finished": false}
+    call new_run
+    call begin_intro
+
+action advance:
+    if status == "intro":
+        call begin_landing
+        stop when true
+    if status == "ending":
+        call begin_credits
+        stop when true
+    if status == "credits":
+        call finish_credits
+        stop when true
+    stop when status == "playing" || status == "landing" || status == "departing"
+    call start
+
+action return_to_title:
+    music.stop
+    call initialize
+
+action tick(input):
+    if status == "intro" || status == "ending" || status == "credits":
+        call tick_cinema
+        stop when true
+    if status == "landing" || status == "departing":
+        call tick_ship
+        stop when true
+    stop when status != "playing"
+    if recovery_phase != "none":
+        call tick_recovery
+        stop when true
+    room_changed = false
+    use_pressed = !!input.use && !use_held
+    use_held = !!input.use
+    if use_pressed:
+        call use_hatch
+    stop when room_changed
+    ticks += 1
+    transition_ticks = max(0, transition_ticks-1)
+    notice_ticks = max(0, notice_ticks-1)
+    invulnerable = max(0, invulnerable-1)
+    cooldown = max(0, cooldown-1)
+    flash = max(0, flash-1)
+    hurt_ticks = max(0, hurt_ticks-1)
+    damage_indicator_ticks = max(0, damage_indicator_ticks-1)
+    jet_ticks = max(0, jet_ticks-1)
+    grip_release_ticks = max(0, grip_release_ticks-1)
+    aiming_up = !!input.aim_up
+    ducking = grounded && (!!input.duck || input.duck_axis > 0.5) && !input.jump
+    body_height = ducking ? 0.85 : 1.6
+    call update_effects
+    call update_seal
+    if sector_id == "foundry":
+        call update_foundry_machinery
+    axis = clamp((input.right ? 1 : 0)-(input.left ? 1 : 0)+(input.move_x ? input.move_x : 0), -1, 1)
+    velocity += (axis*(ducking ? 0.08 : 0.22)-velocity)*0.6
+    if abs(axis) > 0.1:
+        facing = axis > 0 ? 1 : -1
+    pressed = !!input.jump && !jump_held
+    if grounded:
+        jumps = 0
+        dash_ready = true
+    if !!input.dash && !dash_held && dash_unlocked && !grounded && dash_ready:
+        dash_ticks = 12
+        dash_direction = facing
+        dash_ready = false
+        sound.play "sf_air_dash"
+    dash_held = !!input.dash
+    move_delta = velocity
+    if dash_ticks > 0:
+        move_delta = dash_direction*0.72
+        player.vz = 0.035
+        dash_ticks -= 1
+        if ticks%2 == 0:
+            call dash_trail
+    if pressed && !grounded && jets && jumps < 2:
+        player.vz = 0.46
+        jumps = 2
+        jet_ticks = 10
+        sound.play "sf_jump"
+    if pressed && grounded:
+        jumps = 1
+        sound.play "sf_jump"
+    gravity_amount = (sector_id == "foundry" || sector_id == "observatory") && gravity_low ? 0.012 : 0.035
+    if sector_id == "foundry" && on_shuttle:
+        if pressed:
+            player.vz = 0.42
+            grip_release_ticks = 28
+            jumps = 1
+            jet_ticks = 0
+            on_shuttle = false
+        if !pressed:
+            player.vz = gravity_amount
+    previous_z = player.z
+    player = voxel_move(
+        world,
+        player,
+        move_delta,
+        0,
+        pressed && grounded,
+        {"jumpSpeed": 0.42, "gravity": gravity_amount, "autoStep": false}
+    )
+    player.y = 7
+    grounded = player.vz == 0 && player.z <= previous_z && world.cells[(floor(player.z-0.05)*world.height+7)*world.width+floor(player.x)] != 0
+    if sector_id == "foundry":
+        call grab_carrier previous_z, pressed
+    # Walking off a ledge consumes the ground jump; jets give one air jump.
+    if !grounded && jumps == 0:
+        jumps = 1
+    if !grounded:
+        ducking = false
+        body_height = 1.6
+    jump_held = !!input.jump
+    if player.z < 1.3:
+        invulnerable = 0
+        call take_damage 2
+        if recovery_phase == "none":
+            call begin_recovery
+    if recovery_phase != "none":
+        call refresh_ui
+        stop when true
+    call update_weapon input
+    if jet_ticks > 0 && ticks%2 == 0:
+        call jet_exhaust
+    call update_combat
+    call sync_music
+    if recovery_phase != "none":
+        shots = []
+        call refresh_ui
+        stop when true
+    if status == "playing":
+        call update_exploration
+    if status == "playing":
+        call update_view
+    call refresh_ui
+
+action update_exploration:
+    for item in nearby(pickups, player, 24):
+        item.z = item.base + sin(ticks*5)*0.15
+        if item.visible && (item.kind != "plasma" || dash_unlocked) && abs(player.x-item.x) < 1 && abs(player.z+0.5-item.z) < 1.3:
+            item.visible = false
+            sound.play "sf_upgrade"
+            notice_ticks = 210
+            if item.kind == "jets":
+                jets = true
+                notice = "JUMP JETS: press jump again in midair. Enter the cargo hatch for Hydroponics."
+            if item.kind == "plasma":
+                plasma = true
+                charge_ticks = 0
+                notice = "PLASMA: hold fire until charged, release to blast the violet seal."
+            if item.kind == "dash":
+                dash_unlocked = true
+                notice = "AIR DASH ONLINE: jump, then press SHIFT / K to burst across the breach."
+            if item.kind == "oneup" && !life_pickups[item.key]:
+                life_pickups[item.key] = true
+                life_rewards += 1
+                lives += 1
+                notice = "1-UP! EXTRA LIFE / "+lives+" LIVES"
+                sound.play "sf_oneup"
+            if item.kind == "repair":
+                health = max_health
+                notice = "Repair pod recovered. Suit fully restored."
+            if item.kind == "capacitor":
+                campaign.capacitor = true
+                charge_duration = 18
+                notice = "CAPACITOR SAVED / Plasma charge time reduced by 25%."
+            if item.kind == "armor":
+                campaign.armor = true
+                call refresh_health_capacity
+                health = max_health
+                notice = "ARMOR SAVED / Two additional health cells added to the suit."
+            if item.kind == "relay":
+                garden_cleared = true
+                campaign.hydroponics = true
+                portals[1].visible = true
+                notice = "HYDROPONICS SAVED. Return to cargo; air dash across the western gap for plasma."
+            if item.kind == "glove":
+                glove_unlocked = true
+                notice = "MAGNETIC GLOVE ONLINE. Jump to grab the carrier underneath; Space releases."
+            if item.kind == "foundry_relay":
+                foundry_cleared = true
+                campaign.foundry = true
+                campaign.hydroponics = true
+                portals[1].visible = true
+                notice = "FOUNDRY SAVED. Crypt bulkhead released. Glove and plasma are banked."
+            if item.kind == "core":
+                core = true
+                notice = "CORE SECURED. Security reinforcements inbound. Fight west to the ship!"
+    for beacon in beacons:
+        if abs(player.x-beacon.x) < 0.9 && abs(player.z-beacon.z) < 0.4 && checkpoint.x != beacon.x:
+            checkpoint = {"x": beacon.x, "z": beacon.z}
+            health = max_health
+            beacon.active = true
+            sound.play "sf_beacon"
+            notice = "Beacon linked. Suit repaired. Upgrades survive a suit reboot."
+            notice_ticks = 120
+    if sector_id == "station" && core && player.x < 10 && player.z < 4:
+        call begin_departure
+
+action take_damage(amount, source_x):
+    stop when status != "playing" || recovery_phase != "none" || invulnerable > 0 || dash_ticks > 0
+    health = max(0, health-amount)
+    flash = 2
+    hurt_ticks = 9
+    invulnerable = 45
+    damage_side = source_x >= 0 && abs(source_x-player.x) > 0.2 ? (source_x < player.x ? -1 : 1) : 0
+    damage_indicator_ticks = 20
+    call burst player.x, player.z+0.8, 6
+    sound.play "sf_hurt"
+    if health == 0:
+        call begin_recovery
+    call refresh_ui
+
+action respawn:
+    player = {"x": return_target.x, "y": 7, "z": return_target.z, "angle": 0, "pitch": 0, "vz": 0}
+    velocity = 0
+    jumps = 0
+    grounded = true
+    jump_held = false
+    aiming_up = false
+    ducking = false
+    body_height = 1.6
+    jet_ticks = 0
+    shots = []
+    invulnerable = 75
+    if death_lethal:
+        health = max_health
+    status = "playing"
+    recovery_phase = "reform"
+    recovery_ticks = 0
+    ghost.visible = false
+    avatar.dissolve = 1
+    notice = "Signal restored. Recovered equipment stays with you."
+    notice_ticks = 100
+
+action update_view:
+    call update_portal_presentation
+    in_temple = sector_id == "station" && player.x >= 96 && player.z < 8
+    camera_target = in_temple && boss.visible && boss_phase != "dormant" ? (player.x+boss.x)/2 : player.x+facing*1.4
+    in_garden_fight = sector_id == "hydroponics" && rootheart.visible && root_phase != "dormant"
+    if in_garden_fight:
+        camera_target = (player.x+rootheart.x)/2
+    # Keep the arena and its far hatch framed after the Cantor falls, too.
+    in_forge_arena = sector_id == "foundry" && player.x >= 79 && player.z < 10
+    if in_forge_arena:
+        camera_target = 87.5
+    if sector_id == "observatory" && player.x >= 65 && player.z < 8:
+        camera_target = 78.5
+    in_upgrade_vault = sector_id == "jet_vault" || sector_id == "dash_vault"
+    camera.x += (clamp(camera_target, 13, world.width-(in_forge_arena ? 6 : (in_upgrade_vault ? 8 : 13)))-camera.x)*0.12
+    camera.y += ((sector_id == "observatory" && player.x >= 65 && player.z < 8 ? 24.5 : (in_forge_arena || in_temple ? 20.6 : (in_garden_fight ? 20 : 19)))-camera.y)*0.08
+    camera.z += ((in_forge_arena ? 5.5 : (in_temple ? 6 : (in_garden_fight ? 5.5 : clamp(player.z+1.5, 5, world.depth-5))))-camera.z)*0.12
+    avatar.x = player.x
+    avatar.z = player.z
+    avatar.angle = facing == 1 ? 0 : 180
+    pose = !grounded ? "air" : (abs(velocity) > 0.03 ? "run"+floor(ticks%16/4) : "idle")
+    avatar.model = "sf/pilot_"+pose+(aiming_up ? "_up" : "")+(hurt_ticks > 0 ? "_hit" : "")
+    if ducking:
+        avatar.model = "sf/pilot_duck"+(hurt_ticks > 0 ? "_hit" : "")
+    if dash_ticks > 0:
+        avatar.model = "sf/pilot_dash"
+    if on_shuttle:
+        avatar.model = "sf/pilot_hang"+floor(ticks%24/12)+(hurt_ticks > 0 ? "_hit" : "")
+    avatar.dissolve = clamp(transition_ticks/12, 0, 1)
+    avatar.visible = hurt_ticks > 0 || invulnerable == 0 || ticks%6 < 3
+    # The rifle recoils independently, so the helmet and boots stay planted.
+    recoil = cooldown >= 6 ? 0.08 : 0
+    rifle.x = player.x-(aiming_up ? 0 : facing*recoil)
+    rifle.z = player.z-(aiming_up ? recoil : 0)-(ducking ? 0.55 : 0)
+    rifle.angle = avatar.angle
+    rifle.dissolve = avatar.dissolve
+    rifle.model = "sf/rifle"+(aiming_up ? "_up" : "")+(plasma ? "_plasma" : "")
+    rifle.visible = avatar.visible
+    muzzle.x = player.x+(aiming_up ? 0 : facing*1.1)
+    muzzle.z = player.z+(aiming_up ? 1.95 : 1)-(ducking ? 0.55 : 0)
+    muzzle.angle = ticks*37
+    muzzle.scale = cooldown == 7 ? 1 : 0.6
+    muzzle.model = plasma ? "sf/muzzle_plasma" : "sf/muzzle"
+    muzzle.visible = cooldown >= 6 && avatar.visible
+    charge_fx.x = muzzle.x
+    charge_fx.z = muzzle.z
+    charge_fx.angle = ticks*19
+    charge_fx.scale = 0.2+charge_ticks/charge_duration*0.65
+    charge_fx.model = charge_ticks >= charge_duration ? "sf/charge_ready" : "sf/charge_orb"
+    charge_fx.visible = plasma && charge_ticks > 0 && avatar.visible
+    magnet_fx.visible = glove_unlocked && on_shuttle
+    magnet_fx.x = player.x
+    magnet_fx.z = player.z+2.3
+    magnet_fx.angle = ticks*12
+    if seal_shake > 0:
+        camera.x += sin(ticks*133)*0.025*seal_shake/12
+        camera.z += cos(ticks*119)*0.018*seal_shake/12
+
+action refresh_ui:
+    call update_navigation
+    touch_ready = status == "playing" && recovery_phase == "none"
+    title_hidden = status != "title" && status != "won" && status != "gameover"
+    cinema_skip_hidden = status != "intro" && status != "ending" && status != "credits"
+    cinema_skip_ready = !cinema_skip_hidden
+    touch_ui_visible = touch_ready || cinema_skip_ready || status == "landing" || status == "departing"
+    launch_label = status == "gameover" || status == "won" ? "New expedition / Enter" : "Board station / Enter"
+    if campaign.hydroponics && !campaign.finished:
+        launch_label = "Continue campaign / Enter"
+    if campaign.finished:
+        launch_label = "New campaign / Enter"
+    objective = !jets ? "CARGO BAY > FIND JUMP JETS" : (!plasma ? "< JETS UP WESTERN LEDGES / AIR DASH TO PLASMA" : (!gate_open ? "CHARGE PLASMA AT THE VIOLET SEAL >" : (!core ? "DESCEND INTO THE REACTOR TEMPLE >" : "< RETURN TO YOUR SHIP")))
+    if sector_id == "station" && !boss.visible && !core && gate_open:
+        objective = "RECOVER THE CORE FROM THE EASTERN ALTAR >"
+    sector = player.x < 26 ? "01 / DOCKING RING" : (player.x < 62 ? "02 / SILENT CARGO" : (player.x < 87 ? "03 / CONTAINMENT" : "04 / THE REACTOR CRYPT"))
+    if sector_id == "station" && jets && !garden_cleared:
+        objective = "CARGO HATCH > RESTORE HYDROPONICS / E USE"
+    if sector_id == "station" && gate_open && !foundry_cleared:
+        objective = "CONTAINMENT HATCH > RESTORE GRAVITY FOUNDRY / E"
+    if sector_id == "foundry":
+        sector = "06 / GRAVITY FOUNDRY / "+(gravity_low ? "LOW GRAVITY" : "NORMAL GRAVITY")
+        objective = !glove_unlocked ? (magnet_seen ? "< JETS UP TO THE SERVICE WORKSHOP / FIND MAGNETIC GLOVE" : "INSPECT THE FURNACE CROSSING >") : (player.x < 53 ? "JUMP TO GRAB THE OVERHEAD CARRIER >" : (player.x < 73 ? "E AT CONSOLE / LOW GRAVITY TO REACH UPPER GANTRY" : (forge_guardian.visible ? "SILENCE THE IRON CANTOR >" : "RECOVER FOUNDRY RELAY / CARGO SHORTCUT >")))
+    if sector_id == "hydroponics":
+        sector = "05 / HYDROPONICS / THE OVERGROWTH"
+        objective = !dash_unlocked ? "JETS UP PAST THE REPAIR POD / DASH CRYPT >" : (rootheart.visible ? "CROSS THE BREACH / PURGE ROOTHEART >" : (!garden_cleared ? "RECOVER THE GARDEN RELAY >" : "RELAY SAVED / E USE CARGO SHORTCUT >"))
+    if sector_id == "archive" || sector_id == "observatory":
+        sector = sector_id == "archive" ? "07 / SIGNAL ARCHIVE" : "08 / GRAVITY OBSERVATORY"
+        objective = sector_id == "archive" ? "JETS + DASH / RECOVER THE OPTIONAL CAPACITOR >" : "LOW GRAVITY + JETS + DASH / OPTIONAL SUIT ARMOR >"
+    if sector_id == "observatory" && player.x >= 60:
+        objective = curator.visible ? "OPTIONAL / DEFEAT THE VOID CURATOR >" : "CURATOR SILENCED / HEALTH CONTAINER SAVED"
+    if sector_id == "jet_vault" || sector_id == "dash_vault":
+        sector = sector_id == "jet_vault" ? "CARGO / PROPULSION CRYPT" : "HYDROPONICS / DASH CRYPT"
+        objective = (sector_id == "jet_vault" ? jets : dash_unlocked) ? "UPGRADE RECOVERED / E AT EXIT TO RETURN" : "EXPLORE THE CRYPT / UPGRADE ON THE PEDESTAL >"
+
+    ui = {
+        "style": "floating",
+        "meters": [
+            {
+                "label": "HP " + health + "/" + max_health + " / LIVES " + lives,
+                "value": health,
+                "max": max_health,
+                "color": health <= 2 ? 15755890: 5828303,
+                "display": "pips",
+                "icon": health <= 2 ? "sf/life_critical": "sf/life_full",
+                "emptyIcon": "sf/life_empty"
+            }
+        ],
+        "objective": objective,
+        "detail": sector + " / " + (jets ? "JETS ": "") + (plasma ? "PLASMA ": "") + (core ? "CORE": "") + (dash_unlocked ? " / DASH": "") + (glove_unlocked ? " / GLOVE": ""),
+        "prompt": plasma ? "HOLD CLICK X CHARGE / RELEASE FIRE / S DOWN DUCK": "A D MOVE / SPACE JUMP / CLICK X FIRE / S DOWN DUCK",
+        "notice": notice_ticks > 0 ? notice: "",
+        "damageDirection": damage_indicator_ticks > 0 ? damage_side: 0,
+        "panel": null
+    }
+    if boss_phase != "dormant" && boss.visible && player.x >= 96:
+        ui.meters.push(
+            {
+                "label": "CRYPT WARDEN",
+                "value": boss.hp,
+                "max": boss.max_hp,
+                "color": boss_phase == "exposed" ? 5828303: 15755890,
+                "display": "bar",
+                "icon": "sf/warden_portrait"
+            }
+        )
+        ui.notice = boss_phase == "exposed" ? "CORE EXPOSED - FIRE!" : (boss_phase == "windup" || boss_phase == "leap" ? "S / DOWN DUCK UNDER LEAP / LEAVE MARKED LANDING" : (boss_phase == "slam" ? "JUMP THE SHOCKWAVE" : "CRYPT WARDEN / ARMORED"))
+    if sector_id == "hydroponics" && rootheart.visible && root_phase != "dormant":
+        ui.meters.push(
+            {
+                "label": "ROOTHEART",
+                "value": rootheart.hp,
+                "max": rootheart.max_hp,
+                "color": root_phase == "open" ? 5828303: 15755890,
+                "display": "bar"
+            }
+        )
+        ui.notice = root_phase == "open" ? "BLOOM EXPOSED - FIRE!" : "SPORES INBOUND / JUMP OR AIR DASH"
+    if sector_id == "foundry" && forge_guardian.visible && forge_phase != "dormant":
+        ui.meters.push(
+            {
+                "label": "IRON CANTOR",
+                "value": forge_guardian.hp,
+                "max": forge_guardian.max_hp,
+                "color": forge_phase == "vent" ? 5828303: 15755890,
+                "display": "bar"
+            }
+        )
+        ui.notice = forge_phase == "vent" ? "FURNACE VENT OPEN - RELEASE CHARGED PLASMA" : "HAMMER RAISED / JUMP THE TWO HEAT WAVES"
+    if sector_id == "observatory" && curator.visible && curator_phase != "dormant":
+        ui.meters.push(
+            {
+                "label": "VOID CURATOR",
+                "value": curator.hp,
+                "max": curator.max_hp,
+                "color": curator_phase == "open" ? 11993074: 12813036,
+                "display": "bar"
+            }
+        )
+        ui.notice = curator_phase == "open" ? "IRIS OPEN - FIRE / DUCK STAR BOLTS" : "LEAVE THE VIOLET TARGET / JUMP THE LOW STAR WAVE"
+    if plasma:
+        ui.meters.push(
+            {
+                "label": charge_ticks >= charge_duration ? "PLASMA READY": "PLASMA CHARGE",
+                "value": charge_ticks,
+                "max": charge_duration,
+                "color": charge_ticks >= charge_duration ? 11993074: 5828303,
+                "display": "bar"
+            }
+        )
+        if charge_ticks >= charge_duration:
+            ui.prompt = "PLASMA READY - RELEASE FIRE / UP AIM"
+    if dash_unlocked && !plasma:
+        ui.prompt = "SPACE JUMP / SHIFT K DASH / CLICK X FIRE / S DUCK / E USE"
+    for portal in portals:
+        if portal.visible && abs(player.x-portal.x) < 1.25 && abs(player.z-portal.z) < 1.5:
+            ui.prompt = "E / USE: "+portal.label
+    for console in gravity_consoles:
+        if abs(player.x-console.x) < 1.3 && abs(player.z-console.z) < 1.5:
+            ui.prompt = "E / USE: "+(gravity_low ? "RESTORE NORMAL GRAVITY" : "ENGAGE LOW GRAVITY")
+    if on_shuttle:
+        ui.prompt = "MAGNETIC GRIP / SPACE TO RELEASE"
+    if ducking:
+        ui.prompt = "DUCKING / CLICK X FIRE / SPACE TO JUMP"
+    if recovery_phase != "none":
+        ui.objective = recovery_phase == "collapse" ? "SUIT SIGNAL LOST" : (recovery_phase == "return" ? "GHOST RETURNING TO BEACON" : "REBUILDING SUIT")
+        ui.notice = lives+" lives remaining. Equipment and recovered core are safe."
+        ui.prompt = "SIGNAL RECOVERY / P PAUSE"
+    if status == "title":
+        ui.heading = "STARFALL PROTOCOL"
+        ui.objective = "A SIGNAL FROM A DEAD STATION"
+        ui.prompt = "ENTER / BOARD STATION"
+        ui.panel = {
+            "title": "RECOVER. UPGRADE. RETURN.",
+            "body": "Explore the gardens and gravity furnaces.|Find jets, air dash, plasma and a magnetic glove.|Restore both relays, then brave the crypt.",
+            "choices": [],
+            "selected": 0,
+            "footer": campaign.hydroponics ? (campaign.foundry ? "HYDROPONICS + FOUNDRY COMPLETE / GEAR SAVED": "HYDROPONICS COMPLETE / SAVED GEAR AVAILABLE"): "A CONNECTED SPACE ADVENTURE"
+        }
+    if status == "landing":
+        ui.objective = cinematic_ticks < 72 ? "APPROACHING KEPLER STATION" : "TOUCHDOWN / DISEMBARKING"
+        ui.notice = "THREE LIVES. RECOVER THE CORE. MAKE IT HOME."
+        ui.prompt = "LANDING SEQUENCE / P PAUSE"
+    if status == "departing":
+        ui.objective = cinematic_ticks < 30 ? "CORE ABOARD / BOARDING SHIP" : "ENGINES ONLINE / LEAVING KEPLER"
+        ui.notice = "Signal restored. Time to go home."
+        ui.prompt = "DEPARTURE SEQUENCE / P PAUSE"
+    if status == "gameover":
+        ui.heading = "GAME OVER"
+        ui.objective = "NO LIVES REMAINING"
+        ui.prompt = "ENTER / NEW EXPEDITION"
+        ui.notice = ""
+        ui.panel = {
+            "title": "THREE SIGNALS LOST",
+            "body": "Your pilot's signal has faded.|Continue with three lives.|Completed sectors and their gear stay saved.",
+            "choices": [],
+            "selected": 0,
+            "footer": campaign.hydroponics ? (campaign.foundry ? "FOUNDRY, GLOVE AND PLASMA ARE BANKED": "HYDROPONICS AND AIR DASH ARE BANKED"): "ENTER / RETRY EXPEDITION"
+        }
+    if status == "won":
+        ui.heading = "SIGNAL RESTORED"
+        ui.prompt = "ENTER TO START A NEW EXPEDITION"
+        ui.panel = {
+            "title": "WELCOME HOME, PILOT",
+            "body": "The starcore burns aboard the Helios Ark.|The gardens breathe. The children see another dawn.",
+            "choices": [],
+            "selected": 0,
+            "footer": "GAME BY DAVE THOMAS / EXPEDITION COMPLETE"
+        }
+    pause_ui = {
+        "heading": "SIGNAL ON HOLD",
+        "meters": ui.meters,
+        "objective": objective,
+        "detail": sector,
+        "prompt": "P RESUME / V SOUND / F FULLSCREEN",
+        "notice": "",
+        "panel": {
+            "title": "STATION MAP",
+            "body": "CARGO <-> GARDENS <-> GRAVITY FOUNDRY|Restore both relays to reach the Reactor Crypt.|SHIFT K dash / E hatches and gravity consoles.|Jump to hang from the carrier; Space releases.",
+            "choices": [],
+            "selected": 0,
+            "footer": "ATTEMPT RESETS AT TITLE / COMPLETED SECTORS STAY SAVED"
+        }
+    }
+    call show_navigation
+    if status == "intro" || status == "ending" || status == "credits":
+        ui = {
+            "meters": [],
+            "heading": status == "intro" ? "HELIOS ARK / POWER RESERVE: THREE CYCLES": (status == "ending" ? "HELIOS ARK / SIGNAL RESTORED": "GAME BY DAVE THOMAS"),
+            "objective": "",
+            "detail": "",
+            "notice": "",
+            "prompt": status == "credits" ? "ENTER / FINISH CREDITS - P PAUSE": "ENTER / SKIP SCENE - P PAUSE",
+            "panel": null,
+            "cinema": {
+                "lines": status == "intro" ? intro_lines: (status == "ending" ? ending_lines: credits_lines),
+                "offset": status == "intro" ? max(
+                    0,
+                    cinema_ticks - 15
+                ) * 0.85: cinema_ticks * (status == "credits" ? 0.75: 0.95),
+                "scale": 2,
+                "spacing": 18,
+                "top": status == "credits" ? 0.18: 0.55,
+                "bottom": 0.94,
+                "fade": status == "intro" ? max(
+                    clamp(1 - cinema_ticks / 18, 0, 1),
+                    clamp((cinema_ticks - intro_duration + 18) / 18, 0, 1)
+                ): (status == "ending" ? clamp(1 - cinema_ticks / 18, 0, 1): max(0.25, clamp((cinema_ticks - credits_duration + 30) / 30, 0, 1)))
+            }
+        }
+    if status != "playing" && status != "title" && status != "won" && status != "gameover":
+        pause_ui = {
+            "meters": [],
+            "heading": "SIGNAL ON HOLD",
+            "objective": "TRANSMISSION PAUSED",
+            "detail": "",
+            "notice": "",
+            "prompt": "P / CONTROLLER START TO RESUME",
+            "panel": null
+        }

@@ -1,0 +1,166 @@
+@Logic/starfall
+action build_bonus_room(kind):
+    sector_id = kind
+    level_map = kind == "archive" ? "orbit" : "foundry"
+    world = {
+        "width": kind == "observatory" ? 96: 72,
+        "height": kind == "observatory" ? 28: 21,
+        "depth": 20,
+        "seed": 719,
+        "biome": "meadow",
+        "materials": [
+            "sf/hull",
+            "sf/edge",
+            "sf/plasma",
+            "sf/reactor",
+            "sf/temple_stone",
+            "sf/temple_trim"
+        ],
+        "cells": [],
+        "spawn": player
+    }
+    world = voxel_world(
+        world.width,
+        world.height,
+        world.depth,
+        world.materials,
+        {"seed": world.seed, "biome": world.biome, "spawn": world.spawn, "renderDistance": 128}
+    )
+    call deck 4, 14, 3, 2
+    high = kind == "archive" ? 7 : 11
+    call deck 18, 7, high, 2
+    call deck 38, 7, high, 2
+    call deck 45, 11, high+4, 6
+    call deck 56, kind == "observatory" ? 36 : 12, 3, 2
+    if kind == "archive":
+        # Drop beyond the upgrade balcony, then search the far wall's shelf.
+        call deck 64, 3, 7, 2
+    world = voxel_fill(world,[3,5,1],[1,4,18],5)
+    east_wall = kind == "observatory" ? 92 : 68
+    world = voxel_fill(world,[east_wall,5,1],[1,4,18],5)
+    world = voxel_fill(world,[4,1,1],[east_wall-4,1,18],5)
+    scenery = []
+    scenery = entity_group(scenery)
+    for x in [8,20,32,44,56,65]:
+        scenery.push({"x": x, "y": 3.5, "z": 3, "model": kind == "archive" ? "sf/truss": "sf/foundry_coil"})
+    scenery.push({"x": 24, "y": 6.2, "z": high, "model": "sf/dash_gap_right"})
+    scenery.push({"x": 50, "y": 4, "z": high + 4, "model": "sf/temple_altar"})
+    pickups = [
+        {
+            "x": 51,
+            "y": 7,
+            "z": high + 4.5,
+            "base": high + 4.5,
+            "kind": kind == "archive" ? "capacitor": "armor",
+            "model": kind == "archive" ? "sf/overcharge_cell": "sf/armor_cell",
+            "visible": kind == "archive" ? !campaign.capacitor: !campaign.armor
+        }
+    ]
+    pickups = entity_group(pickups)
+    if kind == "archive":
+        call place_oneup "archive",65,7.6
+    portals = [
+        {
+            "x": 6,
+            "y": 6.3,
+            "z": 3,
+            "kind": "bonus_return",
+            "label": "RETURN TO STATION",
+            "title": "KEPLER STATION",
+            "model": "sf/shortcut_hatch",
+            "visible": true
+        },
+        {
+            "x": 51,
+            "y": 6.3,
+            "z": high + 4,
+            "kind": "bonus_return",
+            "label": "UPGRADE RECOVERED / RETURN TO STATION",
+            "title": "KEPLER STATION",
+            "model": "sf/shortcut_hatch",
+            "visible": true
+        }
+    ]
+    portals = entity_group(portals)
+    enemies = entity_group()
+    beacons = []
+    beacons = entity_group(beacons)
+    gravity_consoles = []
+    if kind == "observatory":
+        portals.push(
+            {
+                "x": 90,
+                "y": 6.3,
+                "z": 3,
+                "kind": "bonus_return",
+                "label": "RETURN TO STATION",
+                "title": "KEPLER STATION",
+                "model": "sf/rift_gate0",
+                "visible": campaign.curator
+            }
+        )
+        portals.push(
+            {
+                "x": 59,
+                "y": 6.3,
+                "z": 3,
+                "kind": "bonus_return",
+                "label": "RETREAT TO STATION",
+                "title": "RETREAT TO STATION",
+                "model": "sf/rift_gate0",
+                "visible": true
+            }
+        )
+        scenery.push(
+            {
+                "x": 54.5,
+                "y": 6.2,
+                "z": 15,
+                "model": "sf/dash_gap_right",
+                "title": "OPTIONAL: VOID CURATOR",
+                "titleColor": 12813036
+            }
+        )
+        beacons.push({"x": 63, "y": 7, "z": 3, "model": "sf/beacon", "active": false})
+        for x in [65,74,83,91]:
+            scenery.push({"x": x, "y": 3.5, "z": 3, "model": "sf/observatory_pillar"})
+        scenery.push({"x": 81, "y": 3, "z": 10, "model": "sf/star_lens"})
+        curator = {
+            "x": 81,
+            "y": 7,
+            "z": 3.2,
+            "hp": 16,
+            "max_hp": 16,
+            "hit_ticks": 0,
+            "model": "sf/curator_closed",
+            "visible": !campaign.curator
+        }
+        curator_warning = {
+            "x": 68,
+            "y": 8,
+            "z": 3.02,
+            "model": "sf/curator_warning",
+            "visible": false
+        }
+        curator_clock = 0
+        curator_phase = "dormant"
+        gravity_consoles = [
+            {"x": 12, "y": 6.3, "z": 3, "model": "sf/gravity_console"},
+            {"x": 42, "y": 6.3, "z": high, "model": "sf/gravity_console"},
+            {"x": 63, "y": 6.3, "z": 3, "model": "sf/gravity_console"}
+        ]
+    boss = {"visible": false}
+    boss_warning = {"visible": false}
+    rootheart.visible = false
+    root_warning.visible = false
+    forge_guardian.visible = false
+    forge_warning.visible = false
+    shuttle.visible = false
+    magnet_fx.visible = false
+    machinery = []
+    gravity_low = false
+    seal_shell = {"visible": false}
+    ship.visible = false
+    ship_flames = []
+    player = {"x": 6, "y": 7, "z": 3, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint = {"x": 6, "z": 3}

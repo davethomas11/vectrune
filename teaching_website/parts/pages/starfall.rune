@@ -1,0 +1,25 @@
+@Component/StarfallPage
+view:
+    div .page .application-guide .space-invaders-page .starfall-page:
+        section .card .showcase-intro:
+            div .section-heading:
+                span .tag .tag-advanced "%i18n.Starfall.badge%"
+                h1 "%i18n.Starfall.title%"
+                p .lead "%i18n.Starfall.description%"
+            p .showcase-try "%i18n.Starfall.try_it%"
+            a .secondary-cta href="/assets/games/starfall/index.html" target=_blank rel=noopener "%i18n.Starfall.standalone%"
+
+        WebExample game=true title="{i18n.Starfall.title}" preview="/assets/games/starfall/index.html" files="{sources ../../../examples/starfall/starfall.rune}" show_heading=false
+
+        section .card:
+            h2 "%i18n.Starfall.controls_title%"
+            p "%i18n.Starfall.controls%"
+            p "%i18n.Starfall.objective%"
+            p "%i18n.Starfall.device%"
+
+        details .card .showcase-notes:
+            summary "%i18n.Starfall.source_title%"
+            p "%i18n.Starfall.source_text%"
+            CommandBlock code="git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
+            CommandBlock code="vectrune examples/starfall/starfall.rune -o html > starfall.html"
+            CommandBlock code="vectrune test examples/starfall --type logic"

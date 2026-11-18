@@ -224,6 +224,9 @@ fn pause_and_restart_bindings_reject_invalid_scene_configuration() {
     use rune_runtime::rune_ast::Value;
     let doc = load_rune_document_from_path(Path::new("examples/rune_crypt/rune_crypt.rune")).unwrap();
     for (field, value, error) in [
+        ("render_radius", Value::Number(0.0), "render_radius"),
+        ("render_radius", Value::Number(4097.0), "render_radius"),
+        ("render_radius", Value::Bool(true), "render_radius"),
         ("pause_ui", Value::String("missing".into()), "unknown state"),
         ("pause_ui", Value::Number(42.0), "must name a state field"),
         ("restart_action", Value::String("missing".into()), "unknown action"),

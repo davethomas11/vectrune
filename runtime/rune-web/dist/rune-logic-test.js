@@ -36,6 +36,227 @@ var __RuneWeb = (() => {
     return _ctx;
   }
 
+  // src/ownership.ts
+  var ownedValues = /* @__PURE__ */ new WeakSet();
+  var reactiveTargets = /* @__PURE__ */ new WeakMap();
+  function ownValue(value) {
+    ownedValues.add(value);
+    return value;
+  }
+  function isOwnedValue(value) {
+    return ownedValues.has(value);
+  }
+  function registerReactive(proxy, target) {
+    reactiveTargets.set(proxy, target);
+  }
+  function rawValue(value) {
+    if (value && typeof value === "object") return reactiveTargets.get(value) ?? value;
+    return value;
+  }
+
+  // src/pixel3d/entities.ts
+  var active;
+  var groups = /* @__PURE__ */ new WeakMap();
+  var ownedEntities = /* @__PURE__ */ new WeakSet();
+  var movementSequence = 0;
+  var movementLog = Array(4096);
+  function ownEntity(value, importedEntities) {
+    value = rawValue(value);
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("entity_group expects entity objects");
+    if (ownedEntities.has(value)) return value;
+    const known = importedEntities.get(value);
+    if (known) return known;
+    const raw = { ...value };
+    const proxy = new Proxy(raw, {
+      set: (target, key, next) => {
+        Reflect.set(target, key, next);
+        if (["x", "y", "z", "visible", "scale"].includes(String(key))) entityMoved(proxy);
+        return true;
+      },
+      deleteProperty: (target, key) => {
+        Reflect.deleteProperty(target, key);
+        entityMoved(proxy);
+        return true;
+      },
+      defineProperty: () => {
+        throw new Error("Entity descriptors cannot be redefined");
+      }
+    });
+    ownValue(proxy);
+    ownedEntities.add(proxy);
+    importedEntities.set(value, proxy);
+    return proxy;
+  }
+  function entityGroup(values = []) {
+    values = rawValue(values);
+    if (!Array.isArray(values) || values.length > 1e6) throw new Error("entity_group needs an array");
+    if (groups.has(values)) return values;
+    const importedEntities = /* @__PURE__ */ new WeakMap();
+    const target = values.map((value) => ownEntity(value, importedEntities));
+    const proxy = new Proxy(target, {
+      set: (array, key, value) => {
+        if (key === "length") {
+          if (!Number.isInteger(value) || value < 0 || value > array.length) throw new Error("Grow entity groups with push or indexed writes");
+          Reflect.set(array, key, value);
+        } else if (typeof key === "string" && /^\d+$/.test(key)) {
+          const i = Number(key);
+          if (i > array.length || i >= 1e6) throw new Error("Entity group indices must be contiguous");
+          Reflect.set(array, key, ownEntity(value, importedEntities));
+        } else throw new Error("Invalid entity group property");
+        entitiesChanged(proxy);
+        return true;
+      },
+      deleteProperty: (array, key) => {
+        Reflect.deleteProperty(array, key);
+        entitiesChanged(proxy);
+        return true;
+      },
+      defineProperty: () => {
+        throw new Error("Entity group descriptors cannot be redefined");
+      }
+    });
+    ownValue(proxy);
+    groups.set(proxy, { version: 0, indices: /* @__PURE__ */ new Map() });
+    return proxy;
+  }
+  var session = () => ({ indices: /* @__PURE__ */ new WeakMap(), members: /* @__PURE__ */ new WeakMap() });
+  var EntityIndex = class {
+    constructor(source, dimensions, owner) {
+      this.source = source;
+      this.dimensions = dimensions;
+      this.owner = owner;
+      this.buckets = /* @__PURE__ */ new Map();
+      this.rows = /* @__PURE__ */ new Map();
+      this.positions = /* @__PURE__ */ new Map();
+      this.scales = /* @__PURE__ */ new Map();
+      this.maxScale = 1;
+      this.dirty = false;
+      this.revision = 0;
+      this.rebuild();
+    }
+    key(x, y, z) {
+      return `${Math.floor(x / 16)},${Math.floor(y / 16)},${this.dimensions === 3 ? Math.floor(z / 16) : 0}`;
+    }
+    rebuild() {
+      this.buckets.clear();
+      this.rows.clear();
+      this.positions.clear();
+      this.scales.clear();
+      this.maxScale = 1;
+      this.dirty = false;
+      this.source.forEach((entity, i) => {
+        if (!entity || typeof entity !== "object") throw new Error("nearby expects entity objects");
+        const positions = this.positions.get(entity) ?? [];
+        positions.push(i);
+        this.positions.set(entity, positions);
+        if (this.owner) {
+          const memberships = this.owner.members.get(entity) ?? /* @__PURE__ */ new Set();
+          memberships.add(this);
+          this.owner.members.set(entity, memberships);
+        }
+        this.place(i, entity);
+      });
+      this.revision = movementSequence;
+    }
+    place(i, entity) {
+      if (entity.visible === false) return;
+      const x = entity.x, y = entity.y, z = this.dimensions === 3 ? entity.z ?? 0 : 0;
+      if (![x, y, z].every(Number.isFinite)) throw new Error("nearby entity coordinates must be finite");
+      const key = this.key(x, y, z), bucket = this.buckets.get(key) ?? /* @__PURE__ */ new Set();
+      bucket.add(i);
+      this.buckets.set(key, bucket);
+      const scale = Number.isFinite(entity.scale) && entity.scale > 0 ? entity.scale : 1;
+      this.scales.set(scale, (this.scales.get(scale) ?? 0) + 1);
+      this.maxScale = Math.max(this.maxScale, scale);
+      this.rows.set(i, { entity, key, x, y, z, scale });
+    }
+    move(entity) {
+      if (this.dirty) return;
+      for (const i of this.positions.get(entity) ?? []) {
+        const row = this.rows.get(i);
+        if (row) {
+          const bucket = this.buckets.get(row.key);
+          bucket.delete(i);
+          if (!bucket.size) this.buckets.delete(row.key);
+          this.rows.delete(i);
+          const count = this.scales.get(row.scale) - 1;
+          if (count) this.scales.set(row.scale, count);
+          else this.scales.delete(row.scale);
+          if (row.scale === this.maxScale && !count) {
+            this.maxScale = 1;
+            for (const scale of this.scales.keys()) this.maxScale = Math.max(this.maxScale, scale);
+          }
+        }
+        this.place(i, entity);
+      }
+    }
+    query(origin, radius, padding = 0) {
+      if (this.dirty) this.rebuild();
+      if (!this.owner && this.revision !== movementSequence) {
+        if (movementSequence - this.revision > movementLog.length) this.rebuild();
+        else {
+          const changed = /* @__PURE__ */ new Set();
+          for (let version = this.revision + 1; version <= movementSequence; version++) changed.add(movementLog[version % movementLog.length].entity);
+          for (const entity of changed) if (this.positions.has(entity)) this.move(entity);
+          this.revision = movementSequence;
+        }
+      }
+      radius += padding * this.maxScale;
+      const minX = Math.floor((origin.x - radius) / 16), maxX = Math.floor((origin.x + radius) / 16);
+      const minY = Math.floor((origin.y - radius) / 16), maxY = Math.floor((origin.y + radius) / 16);
+      const minZ = this.dimensions === 3 ? Math.floor((origin.z - radius) / 16) : 0, maxZ = this.dimensions === 3 ? Math.floor((origin.z + radius) / 16) : 0;
+      const matches = [];
+      const inside = (row) => Math.hypot(row.x - origin.x, row.y - origin.y, this.dimensions === 3 ? row.z - origin.z : 0) <= radius;
+      if ((maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1) > this.rows.size * 2) {
+        for (const [i, row] of this.rows) if (inside(row)) matches.push(i);
+      } else for (let z = minZ; z <= maxZ; z++) for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+        for (const i of this.buckets.get(`${x},${y},${z}`) ?? []) if (inside(this.rows.get(i))) matches.push(i);
+      }
+      matches.sort((a, b) => a - b);
+      return matches.map((i) => this.source[i]);
+    }
+  };
+  function nearby(source, origin, radius) {
+    return query(source, origin, radius);
+  }
+  function query(source, origin, radius, padding = 0) {
+    source = rawValue(source);
+    if (!Array.isArray(source) || source.length > 1e6 || !origin || typeof origin !== "object" || typeof radius !== "number" || !Number.isFinite(radius) || radius < 0) throw new Error("nearby needs a collection, position and finite nonnegative radius");
+    const point = origin, dimensions = point.z === void 0 ? 2 : 3;
+    if (![point.x, point.y, ...dimensions === 3 ? [point.z] : []].every(Number.isFinite)) throw new Error("nearby origin must have finite coordinates");
+    const group = groups.get(source);
+    if (group) {
+      let indexed = group.indices.get(dimensions);
+      if (!indexed || indexed.version !== group.version) {
+        indexed = { version: group.version, index: new EntityIndex(source, dimensions) };
+        group.indices.set(dimensions, indexed);
+      }
+      return indexed.index.query(point, radius, padding);
+    }
+    const owner = active ?? session(), indices = owner.indices.get(source) ?? /* @__PURE__ */ new Map();
+    let index2 = indices.get(dimensions);
+    if (!index2) {
+      index2 = new EntityIndex(source, dimensions, owner);
+      indices.set(dimensions, index2);
+      owner.indices.set(source, indices);
+    }
+    return index2.query(point, radius, padding);
+  }
+  function entityMoved(value) {
+    if (value && typeof value === "object" && ownedEntities.has(value)) {
+      movementSequence++;
+      movementLog[movementSequence % movementLog.length] = { version: movementSequence, entity: value };
+    }
+    if (value && typeof value === "object") for (const index2 of active?.members.get(value) ?? []) index2.move(value);
+  }
+  function entitiesChanged(value) {
+    if (value && typeof value === "object") {
+      const group = groups.get(value);
+      if (group) group.version++;
+    }
+    if (Array.isArray(value)) for (const index2 of active?.indices.get(value)?.values() ?? []) index2.dirty = true;
+  }
+
   // src/core_expression.ts
   var precedence = {
     "??": 1,
@@ -272,8 +493,11 @@ var __RuneWeb = (() => {
           const receiver = ev(a.items[0]), key = safeKey(ev(a.items[1]));
           const arrays = ["push", "pop", "join", "slice", "map", "filter", "find", "some", "every", "includes", "indexOf"];
           const strings = ["join", "slice", "includes", "indexOf", "split", "toLowerCase", "toUpperCase", "padStart"];
-          if (Array.isArray(receiver) && arrays.includes(key) || typeof receiver === "string" && strings.includes(key))
-            return receiver[key](...args);
+          if (Array.isArray(receiver) && arrays.includes(key) || typeof receiver === "string" && strings.includes(key)) {
+            const result = receiver[key](...args);
+            if (key === "push" || key === "pop") entitiesChanged(receiver);
+            return result;
+          }
         }
         throw new Error(`Unknown function: ${name || "expression"}`);
       }
@@ -709,8 +933,27 @@ var __RuneWeb = (() => {
     if (current.trim()) segments.push(current.trim());
     return segments;
   }
-  function buildScope(locals) {
+  var expressionNames = /* @__PURE__ */ new Map();
+  function buildScope(locals, expression) {
     const c = ctx();
+    if (c.compactScopes && expression !== void 0 && Object.keys(c.helperDefinitions).length === 0) {
+      let names = expressionNames.get(expression);
+      if (!names) {
+        names = [...new Set(expression.match(/[A-Za-z_$][\w$]*/g) || [])];
+        if (expressionNames.size >= 4096) expressionNames.clear();
+        expressionNames.set(expression, names);
+      }
+      const scope = {};
+      for (const name of names) {
+        for (const source of [locals, c.app.derived, c.app.state]) {
+          if (source && Object.prototype.propertyIsEnumerable.call(source, name)) {
+            scope[name] = source[name];
+            break;
+          }
+        }
+      }
+      return scope;
+    }
     return Object.assign({}, c.app.state, c.app.derived, locals || {});
   }
   var proxyCache = /* @__PURE__ */ new WeakMap();
@@ -728,7 +971,7 @@ var __RuneWeb = (() => {
     });
   }
   function makeReactive(obj) {
-    if (obj === null || typeof obj !== "object") return obj;
+    if (obj === null || typeof obj !== "object" || isOwnedValue(obj)) return obj;
     if (obj.__isProxy) return obj;
     const cached = proxyCache.get(obj);
     if (cached) return cached;
@@ -752,11 +995,11 @@ var __RuneWeb = (() => {
         return val;
       },
       set(target, prop, value) {
-        const rawValue = value !== null && typeof value === "object" && value.__raw ? value.__raw : value;
-        if (target[prop] === rawValue) return true;
-        target[prop] = rawValue;
+        const rawValue2 = value !== null && typeof value === "object" && value.__raw ? value.__raw : value;
+        if (target[prop] === rawValue2) return true;
+        target[prop] = rawValue2;
         if (typeof prop === "string" && context.navigator && prop === context.navigator.bind) {
-          handleNavigatorStateChange(prop, rawValue);
+          handleNavigatorStateChange(prop, rawValue2);
         }
         scheduleRender();
         return true;
@@ -767,6 +1010,7 @@ var __RuneWeb = (() => {
         return true;
       }
     });
+    registerReactive(proxy, obj);
     proxyCache.set(obj, proxy);
     return proxy;
   }
@@ -930,7 +1174,261 @@ var __RuneWeb = (() => {
     return { ...map.spawn };
   }
 
+  // src/pixel3d/chunks.ts
+  var MAX_WORLD_AXIS = 4096;
+  var MAX_WORLD_DEPTH = 256;
+  var MAX_RESIDENT_CHUNKS = 16384;
+  var ChunkStore = class {
+    constructor(world, imported = {}) {
+      this.world = world;
+      this.raw = /* @__PURE__ */ new Map();
+      this.populations = /* @__PURE__ */ new Map();
+      this.revision = 0;
+      this.proxies = /* @__PURE__ */ new Map();
+      this.dimensions = [world.width, world.height, world.depth];
+      this.cw = Math.ceil(world.width / 4);
+      this.ch = Math.ceil(world.height / 4);
+      this.cd = Math.ceil(world.depth / 4);
+      this.occupied = this.cw * this.ch * this.cd <= 65536 ? new Uint8Array(this.cw * this.ch * this.cd) : /* @__PURE__ */ Object.create(null);
+      this.materialCount = world.materials.length;
+      this.publicChunks = new Proxy(/* @__PURE__ */ Object.create(null), {
+        get: (_t, key) => typeof key === "string" && /^\d+$/.test(key) ? this.proxies.get(Number(key)) : void 0,
+        ownKeys: () => [...this.raw.keys()].map(String),
+        getOwnPropertyDescriptor: (_t, key) => this.raw.has(Number(key)) ? { enumerable: true, configurable: true } : void 0,
+        set: (_t, key, value) => {
+          this.replace(Number(key), value);
+          return true;
+        },
+        deleteProperty: (_t, key) => {
+          this.remove(Number(key));
+          return true;
+        },
+        defineProperty: () => {
+          throw new Error("Chunk descriptors cannot be redefined");
+        }
+      });
+      const volume = world.width * world.height * world.depth;
+      const target = [];
+      target.length = volume;
+      this.cells = new Proxy(target, {
+        get: (t, key, receiver) => key === "length" ? volume : typeof key === "string" && /^\d+$/.test(key) ? this.readFlat(Number(key)) : Reflect.get(t, key, receiver),
+        set: (_t, key, value) => {
+          if (typeof key !== "string" || !/^\d+$/.test(key)) throw new Error("Chunked cells have a fixed length; write a cell index");
+          this.writeFlat(Number(key), value);
+          return true;
+        },
+        has: (t, key) => typeof key === "string" && /^\d+$/.test(key) ? Number(key) < volume : Reflect.has(t, key),
+        deleteProperty: (_t, key) => {
+          this.writeFlat(Number(key), 0);
+          return true;
+        },
+        defineProperty: () => {
+          throw new Error("Chunked cells cannot be redefined");
+        }
+      });
+      const entries = Object.entries(imported);
+      if (entries.length > MAX_RESIDENT_CHUNKS) throw new Error("Chunked world exceeds resident chunk budget");
+      for (const [key, values] of entries) this.replace(Number(key), values);
+    }
+    /** Bounded render accelerator; large worlds retain sparse lookup. */
+    prepareRenderCells() {
+      const volume = this.world.width * this.world.height * this.world.depth;
+      if (this.renderCells || volume > 65536) return;
+      this.renderCells = new Uint16Array(volume);
+      for (const [id, values] of this.raw) this.mirror(id, values);
+    }
+    mirror(id, values) {
+      if (!this.renderCells) return;
+      const bx = id % this.cw * 4, by = Math.floor(id / this.cw) % this.ch * 4, bz = Math.floor(id / (this.cw * this.ch)) * 4;
+      for (let i = 0; i < 64; i++) {
+        const x = bx + (i & 3), y = by + (i >> 2 & 3), z = bz + (i >> 4);
+        if (x < this.world.width && y < this.world.height && z < this.world.depth) this.renderCells[(z * this.world.height + y) * this.world.width + x] = values?.[i] ?? 0;
+      }
+    }
+    id(value) {
+      if (!Number.isInteger(value) || value < 0 || value >= this.cw * this.ch * this.cd) throw new Error("Invalid voxel chunk index");
+    }
+    block(value) {
+      if (!Number.isInteger(value) || value < 0 || value > this.world.materials.length) throw new Error("Invalid voxel block ID");
+    }
+    cell(id, cell, value) {
+      this.block(value);
+      if (value && (id % this.cw * 4 + (cell & 3) >= this.world.width || Math.floor(id / this.cw) % this.ch * 4 + (cell >> 2 & 3) >= this.world.height || Math.floor(id / (this.cw * this.ch)) * 4 + (cell >> 4) >= this.world.depth)) throw new Error("Solid chunk cell outside world");
+    }
+    replace(id, values) {
+      this.id(id);
+      if (!Array.isArray(values) || values.length !== 64) throw new Error("Voxel chunks need exactly 64 block IDs");
+      for (let cell = 0; cell < 64; cell++) this.cell(id, cell, values[cell]);
+      const count = values.reduce((n, v) => n + (v !== 0 ? 1 : 0), 0);
+      if (!count) {
+        this.remove(id);
+        return;
+      }
+      if (!this.raw.has(id) && this.raw.size >= MAX_RESIDENT_CHUNKS) throw new Error("Chunked world exceeds resident chunk budget");
+      const raw = values.slice();
+      this.raw.set(id, raw);
+      this.populations.set(id, count);
+      this.occupied[id] = 1;
+      this.mirror(id, raw);
+      this.proxies.set(id, new Proxy(raw, {
+        get: (t, key, receiver) => typeof key === "string" && /^\d+$/.test(key) ? this.raw.get(id)?.[Number(key)] ?? 0 : Reflect.get(t, key, receiver),
+        set: (_t, key, value) => {
+          if (typeof key !== "string" || !/^\d+$/.test(key) || Number(key) >= 64) throw new Error("Voxel chunks have fixed length");
+          this.writeChunk(id, Number(key), value);
+          return true;
+        },
+        deleteProperty: (_t, key) => {
+          const cell = Number(key);
+          if (!Number.isInteger(cell) || cell < 0 || cell >= 64) throw new Error("Invalid chunk cell");
+          this.writeChunk(id, cell, 0);
+          return true;
+        },
+        defineProperty: () => {
+          throw new Error("Chunk cells cannot be redefined");
+        }
+      }));
+      this.revision++;
+    }
+    remove(id) {
+      this.id(id);
+      if (this.raw.delete(id)) {
+        this.mirror(id);
+        this.proxies.delete(id);
+        this.populations.delete(id);
+        if (this.occupied instanceof Uint8Array) this.occupied[id] = 0;
+        else delete this.occupied[id];
+        this.revision++;
+      }
+    }
+    writeChunk(id, cell, value) {
+      this.cell(id, cell, value);
+      let raw = this.raw.get(id);
+      if (!raw) {
+        if (!value) return;
+        this.replace(id, Array(64).fill(0).map((_, i) => i === cell ? value : 0));
+        return;
+      }
+      const previous = raw[cell];
+      if (previous === value) return;
+      raw[cell] = value;
+      if (this.renderCells) {
+        const x = id % this.cw * 4 + (cell & 3), y = Math.floor(id / this.cw) % this.ch * 4 + (cell >> 2 & 3), z = Math.floor(id / (this.cw * this.ch)) * 4 + (cell >> 4);
+        this.renderCells[(z * this.world.height + y) * this.world.width + x] = value;
+      }
+      const count = this.populations.get(id) + (value ? 1 : 0) - (previous ? 1 : 0);
+      if (!count) this.remove(id);
+      else {
+        this.populations.set(id, count);
+        this.revision++;
+      }
+    }
+    /** Fill only intersecting chunks; preflight capacity before changing terrain. */
+    fill(from, size, block) {
+      const end = from.map((v, i) => v + size[i]), lo = from.map((v) => v >> 2), hi = end.map((v) => v - 1 >> 2);
+      let ids;
+      if (block === 0) ids = [...this.raw.keys()];
+      else {
+        if ((hi[0] - lo[0] + 1) * (hi[1] - lo[1] + 1) * (hi[2] - lo[2] + 1) > MAX_RESIDENT_CHUNKS) throw new Error("Chunked world exceeds resident chunk budget");
+        ids = [];
+        let count = this.raw.size;
+        for (let z = lo[2]; z <= hi[2]; z++) for (let y = lo[1]; y <= hi[1]; y++) for (let x = lo[0]; x <= hi[0]; x++) {
+          const id = (z * this.ch + y) * this.cw + x;
+          ids.push(id);
+          if (!this.raw.has(id) && ++count > MAX_RESIDENT_CHUNKS) throw new Error("Chunked world exceeds resident chunk budget");
+        }
+      }
+      for (const id of ids) {
+        const bx = id % this.cw * 4, by = Math.floor(id / this.cw) % this.ch * 4, bz = Math.floor(id / (this.cw * this.ch)) * 4;
+        for (let z = Math.max(from[2], bz); z < Math.min(end[2], bz + 4); z++)
+          for (let y = Math.max(from[1], by); y < Math.min(end[1], by + 4); y++)
+            for (let x = Math.max(from[0], bx); x < Math.min(end[0], bx + 4); x++) this.writeChunk(id, ((z & 3) * 4 + (y & 3)) * 4 + (x & 3), block);
+      }
+    }
+    readFlat(i) {
+      const { width, height, depth } = this.world;
+      if (!Number.isInteger(i) || i < 0 || i >= width * height * depth) return void 0;
+      const x = i % width, yz = Math.floor(i / width), y = yz % height, z = Math.floor(yz / height);
+      return this.raw.get(((z >> 2) * this.ch + (y >> 2)) * this.cw + (x >> 2))?.[((z & 3) * 4 + (y & 3)) * 4 + (x & 3)] ?? 0;
+    }
+    writeFlat(i, value) {
+      const { width, height, depth } = this.world;
+      if (!Number.isInteger(i) || i < 0 || i >= width * height * depth) throw new Error("Voxel cell index outside world");
+      const x = i % width, yz = Math.floor(i / width), y = yz % height, z = Math.floor(yz / height);
+      this.writeChunk(((z >> 2) * this.ch + (y >> 2)) * this.cw + (x >> 2), ((z & 3) * 4 + (y & 3)) * 4 + (x & 3), value);
+    }
+    validate() {
+      if (this.world.width !== this.dimensions[0] || this.world.height !== this.dimensions[1] || this.world.depth !== this.dimensions[2]) throw new Error("Recreate chunked worlds to resize them");
+      if (this.materialCount !== this.world.materials.length) {
+        for (const raw of this.raw.values()) for (const block of raw) this.block(block);
+        this.materialCount = this.world.materials.length;
+      }
+      if (this.world.cells !== this.cells || this.world.chunks !== this.publicChunks) throw new Error("Use cell writes or recreate a chunked world to replace its storage");
+    }
+  };
+  var stores = /* @__PURE__ */ new WeakMap();
+  function chunkStore(world) {
+    return stores.get(world) ?? stores.get(rawValue(world));
+  }
+  function ownChunks(world) {
+    world = rawValue(world);
+    let store = stores.get(world);
+    if (store) return store;
+    store = new ChunkStore(world, world.chunks);
+    stores.set(world, store);
+    ownValue(world);
+    ownValue(store.publicChunks);
+    ownValue(store.cells);
+    world.chunks = store.publicChunks;
+    Object.defineProperty(world, "cells", { value: store.cells, writable: true, configurable: true, enumerable: false });
+    return store;
+  }
+
   // src/pixel3d/voxel.ts
+  var worldSnapshots = /* @__PURE__ */ new WeakMap();
+  function inspectWorld(world) {
+    let snapshot2 = worldSnapshots.get(world);
+    const width = Math.ceil(world.width / 4), height = Math.ceil(world.height / 4);
+    const length = width * height * Math.ceil(world.depth / 4);
+    if (!snapshot2 || snapshot2.width !== world.width || snapshot2.height !== world.height || snapshot2.depth !== world.depth) {
+      snapshot2 = {
+        width: world.width,
+        height: world.height,
+        depth: world.depth,
+        materialCount: -1,
+        cells: new Uint16Array(world.cells.length),
+        populations: new Uint8Array(length),
+        chunks: { width, height, depth: Math.ceil(world.depth / 4), occupied: new Uint8Array(length), count: 0 }
+      };
+      worldSnapshots.set(world, snapshot2);
+    }
+    const { cells, populations, chunks } = snapshot2, limit = world.materials.length;
+    const validateAll = snapshot2.materialCount !== limit;
+    for (let i = 0; i < world.cells.length; i++) {
+      const block = world.cells[i], previous = cells[i];
+      if (block === previous && !validateAll) continue;
+      if (!Number.isInteger(block) || block < 0 || block > limit) {
+        worldSnapshots.delete(world);
+        throw new Error("Voxel world needs material names and an exactly sized array of valid block IDs");
+      }
+      if (!!block !== !!previous) {
+        const x = i % world.width, yz = Math.floor(i / world.width);
+        const y = yz % world.height, z = Math.floor(yz / world.height);
+        const chunk = ((z >> 2) * height + (y >> 2)) * width + (x >> 2);
+        populations[chunk] += block ? 1 : -1;
+        if (populations[chunk] === 1 && block) {
+          chunks.occupied[chunk] = 1;
+          chunks.count++;
+        }
+        if (populations[chunk] === 0 && !block) {
+          chunks.occupied[chunk] = 0;
+          chunks.count--;
+        }
+      }
+      cells[i] = block;
+    }
+    snapshot2.materialCount = limit;
+    return chunks;
+  }
   function integer(value, min, max, label) {
     if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
       throw new Error(`${label} must be an integer from ${min} to ${max}`);
@@ -939,21 +1437,54 @@ var __RuneWeb = (() => {
   }
   function validateWorld(value) {
     if (!value || typeof value !== "object") throw new Error("Voxel world must be an object");
-    const world = value;
-    integer(world.width, 1, 48, "Voxel width");
-    integer(world.height, 1, 48, "Voxel height");
-    integer(world.depth, 1, 24, "Voxel depth");
-    if (!Array.isArray(world.materials) || world.materials.length < 1 || world.materials.length > 256 || !world.materials.every((name) => typeof name === "string" && name.length > 0) || !Array.isArray(world.cells) || world.cells.length !== world.width * world.height * world.depth || !world.cells.every((block) => Number.isInteger(block) && block >= 0 && block <= world.materials.length)) {
+    const world = rawValue(value);
+    if (chunkStore(world) && world.storage !== "chunked") throw new Error("Chunked world storage cannot be changed");
+    integer(world.width, 1, MAX_WORLD_AXIS, "Voxel width");
+    integer(world.height, 1, MAX_WORLD_AXIS, "Voxel height");
+    integer(world.depth, 1, world.storage === "chunked" ? MAX_WORLD_DEPTH : 24, "Voxel depth");
+    if (world.renderDistance !== void 0 && (!Number.isFinite(world.renderDistance) || world.renderDistance <= 0 || world.renderDistance > 4096)) throw new Error("Voxel renderDistance must be in (0, 4096]");
+    if (world.storage !== "chunked" && world.width * world.height * world.depth > 48 * 48 * 24) {
+      throw new Error("Voxel world must contain at most 55296 cells");
+    }
+    if (!Array.isArray(world.materials) || world.materials.length < 1 || world.materials.length > 256 || !world.materials.every((name) => typeof name === "string" && name.length > 0)) {
       throw new Error("Voxel world needs material names and an exactly sized array of valid block IDs");
     }
+    if (world.storage === "chunked") {
+      if (world.width * world.height * world.depth > 2147483647) throw new Error("Chunked world exceeds logical cell limit");
+      if (world.chunks !== void 0 && (!world.chunks || typeof world.chunks !== "object" || Array.isArray(world.chunks))) throw new Error("Chunked world chunks must be a record");
+      (chunkStore(world) ?? ownChunks(world)).validate();
+      return world;
+    }
+    if (world.storage !== void 0) throw new Error("Unknown voxel storage");
+    if (!Array.isArray(world.cells) || world.cells.length !== world.width * world.height * world.depth) throw new Error("Voxel world needs material names and an exactly sized array of valid block IDs");
+    inspectWorld(world);
     return world;
+  }
+  function voxelWorld(width, height, depth, materials, options = {}) {
+    if (!options || typeof options !== "object" || Array.isArray(options)) throw new Error("Voxel world options must be an object");
+    const opts = options;
+    if (Object.keys(opts).some((k) => !["seed", "biome", "spawn", "renderDistance"].includes(k))) throw new Error("Unknown voxel world option");
+    const world = {
+      width,
+      height,
+      depth,
+      materials: Array.isArray(materials) ? materials.slice() : materials,
+      seed: opts.seed ?? 0,
+      biome: opts.biome ?? "meadow",
+      spawn: opts.spawn ?? { x: 0.5, y: 0.5, z: 1, angle: 0, pitch: 0, vz: 0 },
+      storage: "chunked",
+      chunks: {},
+      renderDistance: opts.renderDistance ?? 128
+    };
+    return validateWorld(world);
   }
   function index(world, x, y, z) {
     return (z * world.height + y) * world.width + x;
   }
   function voxelGet(world, x, y, z) {
     if (x < 0 || y < 0 || z < 0 || x >= world.width || y >= world.height || z >= world.depth) return 0;
-    return world.cells[index(world, x, y, z)];
+    const store = chunkStore(world);
+    return store ? store.readFlat(index(world, x, y, z)) : world.cells[index(world, x, y, z)];
   }
   function voxelRead(worldValue, xValue, yValue, zValue) {
     const world = validateWorld(worldValue);
@@ -971,6 +1502,11 @@ var __RuneWeb = (() => {
     const from = fromValue.map((v, i) => integer(v, 0, limits[i] - 1, "Voxel fill origin"));
     const size = sizeValue.map((v, i) => integer(v, 1, limits[i] - from[i], "Voxel fill size"));
     const block = integer(blockValue, 0, world.materials.length, "Voxel fill block");
+    const store = chunkStore(world);
+    if (store) {
+      store.fill(from, size, block);
+      return world;
+    }
     for (let z = from[2]; z < from[2] + size[2]; z++) for (let y = from[1]; y < from[1] + size[1]; y++) {
       for (let x = from[0]; x < from[0] + size[0]; x++) world.cells[index(world, x, y, z)] = block;
     }
@@ -1043,62 +1579,117 @@ var __RuneWeb = (() => {
     x >>= 2;
     y >>= 2;
     z >>= 2;
-    const width = chunks.width, height = chunks.height, depth = chunks.occupied.length / (width * height);
+    const width = chunks.width, height = chunks.height, depth = chunks.depth;
     const stepX = dx * 4, stepY = dy * 4, stepZ = dz * 4;
+    const exitX = sx > 0 ? width : -1, exitY = sy > 0 ? height : -1, exitZ = sz > 0 ? depth : -1;
+    let cellIndex = (z * height + y) * width + x;
     let entry = 0;
-    while (x >= 0 && y >= 0 && z >= 0 && x < width && y < height && z < depth) {
-      if (chunks.occupied[(z * height + y) * width + x]) return entry;
-      const next = Math.min(ex, ey, ez);
+    while (true) {
+      if (chunks.occupied[cellIndex]) return entry;
+      const axis = ex < ey && ex < ez ? 0 : ey < ez ? 1 : 2;
+      const next = axis === 0 ? ex : axis === 1 ? ey : ez;
       if (!Number.isFinite(next) || next > maxDistance) return Infinity;
       const tolerance = 1e-9 * Math.max(1, next);
-      if ((Math.abs(ex - next) <= tolerance ? 1 : 0) + (Math.abs(ey - next) <= tolerance ? 1 : 0) + (Math.abs(ez - next) <= tolerance ? 1 : 0) > 1) return entry;
+      if (axis === 0 ? ey - next <= tolerance || ez - next <= tolerance : axis === 1 ? ex - next <= tolerance || ez - next <= tolerance : ex - next <= tolerance || ey - next <= tolerance) return entry;
       entry = next;
-      if (ex < ey && ex < ez) {
+      if (axis === 0) {
         x += sx;
         ex += stepX;
-      } else if (ey < ez) {
+        cellIndex += sx;
+        if (x === exitX) return Infinity;
+      } else if (axis === 1) {
         y += sy;
         ey += stepY;
+        cellIndex += sy * width;
+        if (y === exitY) return Infinity;
       } else {
         z += sz;
         ez += stepZ;
+        cellIndex += sz * width * height;
+        if (z === exitZ) return Infinity;
       }
     }
-    return Infinity;
   }
   function voxelRay(world, origin, ray, maxDistance, output, chunks) {
+    return traceVoxelRay(
+      world,
+      origin,
+      ray[0],
+      ray[1],
+      ray[2],
+      Math.abs(1 / ray[0]),
+      Math.abs(1 / ray[1]),
+      Math.abs(1 / ray[2]),
+      maxDistance,
+      output,
+      chunks
+    );
+  }
+  function traceVoxelRay(world, origin, rx, ry, rz, dx, dy, dz, maxDistance, output, chunks, crossings, column = 0, row = 0) {
     let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
-    const width = world.width, height = world.height, depth = world.depth, cells = world.cells;
-    const sx = ray[0] < 0 ? -1 : 1, sy = ray[1] < 0 ? -1 : 1, sz = ray[2] < 0 ? -1 : 1;
+    const width = world.width, height = world.height, depth = world.depth;
+    const sourceStore = chunkStore(world), cells = sourceStore?.renderCells ?? world.cells;
+    const store = sourceStore?.renderCells ? void 0 : sourceStore;
+    let lastChunk = -1, blocks;
+    if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
+    const sx = rx < 0 ? -1 : 1, sy = ry < 0 ? -1 : 1, sz = rz < 0 ? -1 : 1;
     const stepY = sy * width, stepZ = sz * width * height;
     let cellIndex = (z * height + y) * width + x;
-    const dx = Math.abs(1 / ray[0]), dy = Math.abs(1 / ray[1]), dz = Math.abs(1 / ray[2]);
-    let tx = ray[0] === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
-    let ty = ray[1] === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
-    let tz = ray[2] === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
-    if (chunks && (ray[0] !== 0 || ray[1] !== 0 || ray[2] !== 0)) {
-      if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
+    let tx = rx === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
+    let ty = ry === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
+    let tz = rz === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    if (chunks && (rx !== 0 || ry !== 0 || rz !== 0)) {
       const entry = chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance);
       if (!Number.isFinite(entry)) return null;
       const beforeEntry = entry - 1e-9 * Math.max(1, entry);
-      while (tx < beforeEntry) {
-        x += sx;
-        tx += dx;
-      }
-      while (ty < beforeEntry) {
-        y += sy;
-        ty += dy;
-      }
-      while (tz < beforeEntry) {
-        z += sz;
-        tz += dz;
+      if (crossings) {
+        if (tx < beforeEntry) {
+          const offset = column * crossings.strideX;
+          const count = crossingBefore(crossings.x, offset, crossings.strideX, beforeEntry, dx);
+          x += sx * count;
+          tx = crossings.x[offset + count];
+        }
+        if (ty < beforeEntry) {
+          const offset = column * crossings.strideY;
+          const count = crossingBefore(crossings.y, offset, crossings.strideY, beforeEntry, dy);
+          y += sy * count;
+          ty = crossings.y[offset + count];
+        }
+        if (tz < beforeEntry) {
+          const offset = row * crossings.strideZ;
+          const count = crossingBefore(crossings.z, offset, crossings.strideZ, beforeEntry, dz);
+          z += sz * count;
+          tz = crossings.z[offset + count];
+        }
+      } else {
+        while (tx < beforeEntry) {
+          x += sx;
+          tx += dx;
+        }
+        while (ty < beforeEntry) {
+          y += sy;
+          ty += dy;
+        }
+        while (tz < beforeEntry) {
+          z += sz;
+          tz += dz;
+        }
       }
       cellIndex = (z * height + y) * width + x;
     }
+    if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
+    const exitX = sx > 0 ? width : -1, exitY = sy > 0 ? height : -1, exitZ = sz > 0 ? depth : -1;
     let distance = 0, face = 2;
-    for (let iteration = 0; iteration < 256 && distance <= maxDistance; iteration++) {
-      if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) break;
-      const block = cells[cellIndex];
+    for (let iteration = 0; iteration < width + height + depth + 3 && distance <= maxDistance; iteration++) {
+      let block;
+      if (store) {
+        const chunk = ((z >> 2) * store.ch + (y >> 2)) * store.cw + (x >> 2);
+        if (chunk !== lastChunk) {
+          blocks = store.raw.get(chunk);
+          lastChunk = chunk;
+        }
+        block = blocks?.[((z & 3) * 4 + (y & 3)) * 4 + (x & 3)] ?? 0;
+      } else block = cells[cellIndex];
       if (block) {
         if (!output) return { x, y, z, block, distance, face };
         output.x = x;
@@ -1115,18 +1706,21 @@ var __RuneWeb = (() => {
         tx += dx;
         x += sx;
         cellIndex += sx;
+        if (x === exitX) break;
       } else if (ty < tz) {
         face = 1;
         distance = ty;
         ty += dy;
         y += sy;
         cellIndex += stepY;
+        if (y === exitY) break;
       } else {
         face = 2;
         distance = tz;
         tz += dz;
         z += sz;
         cellIndex += stepZ;
+        if (z === exitZ) break;
       }
     }
     return null;
@@ -1202,10 +1796,19 @@ var __RuneWeb = (() => {
     }
     return p;
   }
+  function crossingBefore(values, offset, stride, before, delta) {
+    let count = Math.max(0, Math.min(stride - 1, Math.ceil((before - values[offset]) / delta)));
+    while (count < stride - 1 && values[offset + count] < before) count++;
+    while (count > 0 && values[offset + count - 1] >= before) count--;
+    return count;
+  }
 
   // src/expression.ts
   var MAX_DEPTH = 64;
   var voxelFunctions = {
+    voxel_world: (width, height, depth, materials, options) => voxelWorld(width, height, depth, materials, options),
+    nearby: (entities, position, radius) => nearby(entities, position, radius),
+    entity_group: (entities) => entityGroup(entities),
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
     voxel_move: (world, player, dx, dy, jump, movement) => voxelMove(world, player, dx, dy, jump, movement),
     voxel_target: (world, player) => voxelTarget(world, player),
@@ -1214,6 +1817,9 @@ var __RuneWeb = (() => {
     voxel_fill: (world, from, size, block) => voxelFill(world, from, size, block)
   };
   var voxelArity = {
+    voxel_world: [4, 5],
+    nearby: [3, 3],
+    entity_group: [0, 1],
     voxel_generate: [1, 2],
     voxel_move: [4, 6],
     voxel_target: [2, 2],
@@ -2624,18 +3230,20 @@ var __RuneWeb = (() => {
       current = locals[baseKey];
       if (segments.length === 1) {
         locals[baseKey] = value;
+        entitiesChanged(value);
         return;
       }
     } else {
       current = ctx().app.state[baseKey];
       if (segments.length === 1) {
         ctx().app.state[baseKey] = value;
+        entitiesChanged(value);
         return;
       }
     }
     for (let i = 1; i < segments.length - 1; i += 1) {
       const segment = segments[i];
-      const scopeValue2 = buildScope(locals);
+      const scopeValue2 = buildScope(locals, pathExpr);
       if (Array.isArray(current) && segment.startsWith("[].(") && segment.endsWith(")")) {
         const condition = segment.slice(4, -1);
         const match = current.find((item) => {
@@ -2663,7 +3271,7 @@ var __RuneWeb = (() => {
       }
     }
     const finalRawKey = segments[segments.length - 1];
-    const scopeValue = buildScope(locals);
+    const scopeValue = buildScope(locals, pathExpr);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
       const index2 = current.findIndex((item) => {
@@ -2672,6 +3280,7 @@ var __RuneWeb = (() => {
       });
       if (index2 !== -1) {
         current[index2] = value;
+        entitiesChanged(current);
       }
       return;
     } else if (finalRawKey.startsWith("[") && finalRawKey.endsWith("]")) {
@@ -2679,8 +3288,11 @@ var __RuneWeb = (() => {
       const lookup = evaluateExpression(innerExpr, scopeValue, 0);
       const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
       current[finalKey] = value;
+      entitiesChanged(current);
+      entityMoved(current);
     } else {
       current[finalRawKey] = value;
+      if (["x", "y", "z", "visible", "scale"].includes(finalRawKey)) entityMoved(current);
     }
   }
   function deletePath(pathExpr, locals) {
@@ -2736,6 +3348,7 @@ var __RuneWeb = (() => {
       });
       if (index2 !== -1) {
         current.splice(index2, 1);
+        entitiesChanged(current);
       }
     } else if (finalRawKey.startsWith("[") && finalRawKey.endsWith("]")) {
       const innerExpr = finalRawKey.slice(1, -1);
@@ -2743,6 +3356,7 @@ var __RuneWeb = (() => {
       const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
       if (Array.isArray(current) && typeof finalKey === "number") {
         current.splice(finalKey, 1);
+        entitiesChanged(current);
       } else {
         delete current[finalKey];
       }
@@ -2753,6 +3367,8 @@ var __RuneWeb = (() => {
         delete current[finalRawKey];
       }
     }
+    entitiesChanged(current);
+    entityMoved(current);
   }
   function executeStatement(statement, locals) {
     const trimmed = String(statement || "").trim();
@@ -2763,7 +3379,7 @@ var __RuneWeb = (() => {
       if (!match || !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, match[1])) {
         throw new Error(`Unknown Rune-Web action: ${rest}`);
       }
-      const args = match[2] ? splitTopLevel(match[2], ",").map((arg) => evaluateExpression(arg, buildScope(locals))) : [];
+      const args = match[2] ? splitTopLevel(match[2], ",").map((arg) => evaluateExpression(arg, buildScope(locals, trimmed))) : [];
       ctx().app.invokeAction(match[1], args, locals);
       return true;
     }
@@ -2773,23 +3389,23 @@ var __RuneWeb = (() => {
       if (trimmed.startsWith("sound.play(") && trimmed.endsWith(")")) {
         const inner = trimmed.slice(11, -1);
         const parts = splitTopLevel(inner, ",");
-        soundName = String(evaluateExpression(parts[0], buildScope(locals)) || "");
+        soundName = String(evaluateExpression(parts[0], buildScope(locals, trimmed)) || "");
         if (parts.length > 1) {
-          argVal = evaluateExpression(parts[1], buildScope(locals));
+          argVal = evaluateExpression(parts[1], buildScope(locals, trimmed));
         }
       } else if (trimmed.startsWith("play_sound(") && trimmed.endsWith(")")) {
         const inner = trimmed.slice(11, -1);
         const parts = splitTopLevel(inner, ",");
-        soundName = String(evaluateExpression(parts[0], buildScope(locals)) || "");
+        soundName = String(evaluateExpression(parts[0], buildScope(locals, trimmed)) || "");
         if (parts.length > 1) {
-          argVal = evaluateExpression(parts[1], buildScope(locals));
+          argVal = evaluateExpression(parts[1], buildScope(locals, trimmed));
         }
       } else if (trimmed.startsWith("sound.play ")) {
-        soundName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || "");
+        soundName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || "");
       } else if (trimmed.startsWith("sound.")) {
         soundName = trimmed.slice(6).trim();
       } else {
-        soundName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || "");
+        soundName = String(evaluateExpression(trimmed.slice(6), buildScope(locals, trimmed)) || "");
       }
       soundName = normalizeLiteral(soundName);
       playSound(soundName, argVal);
@@ -2810,13 +3426,13 @@ var __RuneWeb = (() => {
       }
       if (trimmed.startsWith("music.tempo =") || trimmed.startsWith("music.tempo=")) {
         const expr = trimmed.slice(trimmed.indexOf("=") + 1).trim();
-        const val = Number(evaluateExpression(expr, buildScope(locals)));
+        const val = Number(evaluateExpression(expr, buildScope(locals, trimmed)));
         if (!isNaN(val)) setMusicTempo(val);
         return true;
       }
       if (trimmed.startsWith("music.volume =") || trimmed.startsWith("music.volume=")) {
         const expr = trimmed.slice(trimmed.indexOf("=") + 1).trim();
-        const val = Number(evaluateExpression(expr, buildScope(locals)));
+        const val = Number(evaluateExpression(expr, buildScope(locals, trimmed)));
         if (!isNaN(val)) setMusicVolume(val);
         return true;
       }
@@ -2824,12 +3440,12 @@ var __RuneWeb = (() => {
         const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
         const parts = splitTopLevel(inner, ",");
         if (parts.length >= 4) {
-          const name = String(evaluateExpression(parts[0], buildScope(locals)));
-          const tempo = Number(evaluateExpression(parts[1], buildScope(locals))) || 128;
-          const lead = String(evaluateExpression(parts[2], buildScope(locals)));
-          const bass = String(evaluateExpression(parts[3], buildScope(locals)));
-          const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals))) : "";
-          const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals))) : "4/4";
+          const name = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+          const tempo = Number(evaluateExpression(parts[1], buildScope(locals, trimmed))) || 128;
+          const lead = String(evaluateExpression(parts[2], buildScope(locals, trimmed)));
+          const bass = String(evaluateExpression(parts[3], buildScope(locals, trimmed)));
+          const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals, trimmed))) : "";
+          const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals, trimmed))) : "4/4";
           const songBars = Number(ctx().app?.state?.bars) || 4;
           registerMusic({
             [name]: {
@@ -2851,8 +3467,8 @@ var __RuneWeb = (() => {
         const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
         const parts = splitTopLevel(inner, ",");
         if (parts.length >= 2) {
-          const name = String(evaluateExpression(parts[0], buildScope(locals)));
-          const songConfig = evaluateExpression(parts[1], buildScope(locals));
+          const name = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+          const songConfig = evaluateExpression(parts[1], buildScope(locals, trimmed));
           if (songConfig && typeof songConfig === "object") {
             registerMusic({
               [name]: songConfig
@@ -2864,13 +3480,13 @@ var __RuneWeb = (() => {
       if (trimmed === "music.play" || trimmed === "music.play()" || trimmed.startsWith("music.play(") || trimmed.startsWith("music.play ") || trimmed.startsWith("play_music(") || trimmed.startsWith("music ") && !trimmed.startsWith("music.tempo") && !trimmed.startsWith("music.volume")) {
         let trackName = "";
         if (trimmed.startsWith("music.play(") && trimmed.endsWith(")")) {
-          trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
+          trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals, trimmed)) || "");
         } else if (trimmed.startsWith("play_music(") && trimmed.endsWith(")")) {
-          trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || "");
+          trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals, trimmed)) || "");
         } else if (trimmed.startsWith("music.play ")) {
-          trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || "");
+          trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || "");
         } else if (trimmed.startsWith("music ")) {
-          trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || "");
+          trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals, trimmed)) || "");
         }
         trackName = normalizeLiteral(trackName);
         if (trackName) playMusic(trackName);
@@ -2894,7 +3510,7 @@ var __RuneWeb = (() => {
     }
     if (trimmed.startsWith("music.select_step(") && trimmed.endsWith(")")) {
       const inner = trimmed.slice(18, -1);
-      const id = Number(evaluateExpression(inner, buildScope(locals)));
+      const id = Number(evaluateExpression(inner, buildScope(locals, trimmed)));
       const state = ctx().app?.state;
       if (state) {
         state.selected_step_id = id;
@@ -2957,7 +3573,7 @@ var __RuneWeb = (() => {
     }
     if (trimmed.startsWith("music.delete_step(") && trimmed.endsWith(")")) {
       const inner = trimmed.slice(18, -1);
-      const id = Number(evaluateExpression(inner, buildScope(locals)));
+      const id = Number(evaluateExpression(inner, buildScope(locals, trimmed)));
       const state = ctx().app?.state;
       if (state) {
         const voice = String(state.active_voice || "lead");
@@ -2981,8 +3597,8 @@ var __RuneWeb = (() => {
     if (trimmed.startsWith("music.stretch_step(") && trimmed.endsWith(")")) {
       const inner = trimmed.slice(19, -1);
       const parts = splitTopLevel(inner, ",");
-      const id = Number(evaluateExpression(parts[0], buildScope(locals)));
-      const delta = parts.length > 1 ? Number(evaluateExpression(parts[1], buildScope(locals))) : 1;
+      const id = Number(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+      const delta = parts.length > 1 ? Number(evaluateExpression(parts[1], buildScope(locals, trimmed))) : 1;
       const state = ctx().app?.state;
       if (state) {
         const voice = String(state.active_voice || "lead");
@@ -3023,8 +3639,8 @@ var __RuneWeb = (() => {
     if (trimmed.startsWith("music.stack_chord_note(") && trimmed.endsWith(")")) {
       const inner = trimmed.slice(23, -1);
       const parts = splitTopLevel(inner, ",");
-      const note = String(evaluateExpression(parts[0], buildScope(locals)));
-      const dur = parts[1] ? String(evaluateExpression(parts[1], buildScope(locals))) : ":8";
+      const note = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+      const dur = parts[1] ? String(evaluateExpression(parts[1], buildScope(locals, trimmed))) : ":8";
       const state = ctx().app?.state;
       if (state) {
         const voice = String(state.active_voice || "lead");
@@ -3076,7 +3692,7 @@ var __RuneWeb = (() => {
     }
     if (trimmed.startsWith("music.duplicate_bar(") && trimmed.endsWith(")")) {
       const inner = trimmed.slice(20, -1);
-      const barNum = Number(evaluateExpression(inner, buildScope(locals))) || 1;
+      const barNum = Number(evaluateExpression(inner, buildScope(locals, trimmed))) || 1;
       const state = ctx().app?.state;
       if (state) {
         const voice = String(state.active_voice || "lead");
@@ -3099,7 +3715,7 @@ var __RuneWeb = (() => {
     }
     if (trimmed.startsWith("music.delete_bar(") && trimmed.endsWith(")")) {
       const inner = trimmed.slice(17, -1);
-      const barNum = Number(evaluateExpression(inner, buildScope(locals))) || 1;
+      const barNum = Number(evaluateExpression(inner, buildScope(locals, trimmed))) || 1;
       const state = ctx().app?.state;
       if (state) {
         const voice = String(state.active_voice || "lead");
@@ -3124,8 +3740,8 @@ var __RuneWeb = (() => {
       const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
       const parts = splitTopLevel(inner, ",");
       if (parts.length >= 2) {
-        const key = String(evaluateExpression(parts[0], buildScope(locals)));
-        const val = evaluateExpression(parts[1], buildScope(locals));
+        const key = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+        const val = evaluateExpression(parts[1], buildScope(locals, trimmed));
         const serialized = typeof val === "string" ? val : JSON.stringify(val);
         setStorageItem(key, serialized);
       }
@@ -3135,8 +3751,8 @@ var __RuneWeb = (() => {
       const rest = trimmed.slice(12).trim();
       const parts = splitTopLevel(rest, ",");
       if (parts.length >= 2) {
-        const key = String(evaluateExpression(parts[0], buildScope(locals)));
-        const val = evaluateExpression(parts[1], buildScope(locals));
+        const key = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+        const val = evaluateExpression(parts[1], buildScope(locals, trimmed));
         const serialized = typeof val === "string" ? val : JSON.stringify(val);
         setStorageItem(key, serialized);
       }
@@ -3144,7 +3760,7 @@ var __RuneWeb = (() => {
     }
     if (trimmed.startsWith("storage.remove(") || trimmed.startsWith("storage.delete(") || trimmed.startsWith("local_storage.remove(")) {
       const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
-      const key = String(evaluateExpression(inner, buildScope(locals)));
+      const key = String(evaluateExpression(inner, buildScope(locals, trimmed)));
       removeStorageItem(key);
       return true;
     }
@@ -3156,8 +3772,8 @@ var __RuneWeb = (() => {
       const inner = trimmed.slice(9, -1);
       const parts = splitTopLevel(inner, ",");
       if (parts.length >= 2) {
-        const filename = String(evaluateExpression(parts[0], buildScope(locals)));
-        const content = String(evaluateExpression(parts[1], buildScope(locals)));
+        const filename = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+        const content = String(evaluateExpression(parts[1], buildScope(locals, trimmed)));
         downloadText(filename, content);
       }
       return true;
@@ -3166,15 +3782,15 @@ var __RuneWeb = (() => {
       const rest = trimmed.slice(9).trim();
       const parts = splitTopLevel(rest, ",");
       if (parts.length >= 2) {
-        const filename = String(evaluateExpression(parts[0], buildScope(locals)));
-        const content = String(evaluateExpression(parts[1], buildScope(locals)));
+        const filename = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+        const content = String(evaluateExpression(parts[1], buildScope(locals, trimmed)));
         downloadText(filename, content);
       }
       return true;
     }
     if ((trimmed.startsWith("clipboard.copy(") || trimmed.startsWith("copy(")) && trimmed.endsWith(")")) {
       const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
-      const text = String(evaluateExpression(inner, buildScope(locals)));
+      const text = String(evaluateExpression(inner, buildScope(locals, trimmed)));
       copyText(text);
       return true;
     }
@@ -3230,7 +3846,7 @@ var __RuneWeb = (() => {
       const name = emitterMatch[1];
       const method = emitterMatch[2];
       const cfg = ctx().emitters[name] || {};
-      const scope = buildScope(locals);
+      const scope = buildScope(locals, trimmed);
       const existing = evaluateExpression(name, scope);
       const current = Array.isArray(existing) ? existing : [];
       if (method === "step") {
@@ -3300,7 +3916,7 @@ var __RuneWeb = (() => {
         assignPath(targetPath, JSON.parse(JSON.stringify(initial[targetPath])), locals);
         return true;
       }
-      const targetVal = evaluateExpression(targetPath, buildScope(locals));
+      const targetVal = evaluateExpression(targetPath, buildScope(locals, trimmed));
       if (Array.isArray(targetVal)) {
         for (const item of targetVal) {
           if (item && typeof item === "object") {
@@ -3337,8 +3953,8 @@ var __RuneWeb = (() => {
       const left = compoundMatch[1].trim();
       const op = compoundMatch[2];
       const right = compoundMatch[3].trim();
-      const rightVal = evaluateExpression(right, buildScope(locals));
-      const leftVal = evaluateExpression(left, buildScope(locals));
+      const rightVal = evaluateExpression(right, buildScope(locals, trimmed));
+      const leftVal = evaluateExpression(left, buildScope(locals, trimmed));
       let newVal;
       if (op === "+") {
         if (typeof leftVal === "number" && typeof rightVal === "number") {
@@ -3368,7 +3984,7 @@ var __RuneWeb = (() => {
         if (builtinVal == NO_ACTION) {
           return true;
         }
-        const value = builtinVal !== void 0 ? builtinVal : evaluateExpression(right, buildScope(locals));
+        const value = builtinVal !== void 0 ? builtinVal : evaluateExpression(right, buildScope(locals, trimmed));
         assignPath(left, value, locals);
         return true;
       }
@@ -3384,9 +4000,9 @@ var __RuneWeb = (() => {
     if (pushMatch) {
       const path = pushMatch[1].trim();
       const arg = pushMatch[2].trim();
-      const collection = evaluateExpression(path, buildScope(locals));
+      const collection = evaluateExpression(path, buildScope(locals, trimmed));
       if (Array.isArray(collection)) {
-        const val = evaluateExpression(arg, buildScope(locals));
+        const val = evaluateExpression(arg, buildScope(locals, trimmed));
         collection.push(val);
         assignPath(path, collection, locals);
       }
@@ -3398,7 +4014,7 @@ var __RuneWeb = (() => {
       const argsStr = trimmed.slice(parenIndex + 1, -1);
       if (funcName === "window.__runeWebEmit") {
         const args = argsStr ? splitTopLevel(argsStr, ",").map(
-          (arg) => evaluateExpression(arg, buildScope(locals))
+          (arg) => evaluateExpression(arg, buildScope(locals, trimmed))
         ) : [];
         const emitFn = getWindowProp("__runeWebEmit");
         if (emitFn && typeof emitFn === "function") {
@@ -3420,7 +4036,7 @@ var __RuneWeb = (() => {
         if (Boolean(
           evaluateExpression(
             conditional.condition,
-            buildScope(locals)
+            buildScope(locals, conditional.condition)
           )
         )) {
           if (!executeSteps(conditional.steps || [], locals)) return false;
@@ -3430,7 +4046,7 @@ var __RuneWeb = (() => {
         const loop = step.ForLoop;
         const collection = evaluateExpression(
           loop.collection,
-          buildScope(locals)
+          buildScope(locals, loop.collection)
         );
         if (Array.isArray(collection)) {
           for (let i = 0; i < collection.length; i++) {

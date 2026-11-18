@@ -1,4 +1,5 @@
 // Canonical expression AST shared by Rune-Web and native Vect scripts.
+import { entitiesChanged } from './pixel3d/entities';
 // Host-specific commands stay in their adapters; math uses Rune's degree convention.
 export type Expr =
   | { kind: 'literal'; value: string | number | boolean | null }
@@ -152,8 +153,11 @@ export function evaluateCoreExpression(e: Expr, scope: Record<string, any>, func
         const receiver = ev(a.items![0]), key = safeKey(ev(a.items![1]));
         const arrays = ['push', 'pop', 'join', 'slice', 'map', 'filter', 'find', 'some', 'every', 'includes', 'indexOf'];
         const strings = ['join', 'slice', 'includes', 'indexOf', 'split', 'toLowerCase', 'toUpperCase', 'padStart'];
-        if ((Array.isArray(receiver) && arrays.includes(key)) || (typeof receiver === 'string' && strings.includes(key)))
-          return (receiver as any)[key](...args);
+        if ((Array.isArray(receiver) && arrays.includes(key)) || (typeof receiver === 'string' && strings.includes(key))){
+          const result=(receiver as any)[key](...args);
+          if(key==='push'||key==='pop')entitiesChanged(receiver);
+          return result;
+        }
       }
       throw new Error(`Unknown function: ${name || 'expression'}`);
     }

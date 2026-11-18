@@ -1,3 +1,4 @@
+import { isPausableStatus } from '../input/game';
 import { mountControls } from '../input/browser';
 import { Pixel3DEngine, type Pixel3DConfig, type Input3D } from './engine';
 import { unlockAudio } from '../audio';
@@ -95,7 +96,7 @@ export function mount(
     callback: EventListener
   ) => element.addEventListener(name, callback, { signal: abort.signal });
 
-  const clear = () => {
+  const clear = (keepCommands = false) => {
     input = {};
     mouseFire = false;
     pendingFire = false;
@@ -103,7 +104,7 @@ export function mount(
     lookAccumX = 0;
     lookAccumY = 0;
     touch?.reset();
-    mapped?.clear();
+    mapped?.clear(keepCommands);
   };
 
   const start = () => {
@@ -136,7 +137,7 @@ export function mount(
   for (const button of Array.from(document.querySelectorAll('[data-pixel-pause]'))) {
     listen(button, 'click', () => {
       canvas.focus();
-      clear();
+      clear(true);
       game.paused = !game.paused;
     });
   }
@@ -156,14 +157,14 @@ export function mount(
     });
   }
   const surface = canvas.parentElement || canvas;
-  const fullscreen = createFullscreen(surface, () => { clear(); touch?.update(); });
+  const fullscreen = createFullscreen(surface, () => { clear(true); touch?.update(); });
   for (const button of Array.from(document.querySelectorAll('[data-pixel-fullscreen]'))) {
     listen(button, 'click', () => { void fullscreen.toggle().catch(() => {}); });
   }
   mapped = game.controls ? mountControls(canvas, game.controls, {
     state: () => game.app.state,
     playing: () => game.app.state.status === 'playing', paused: () => game.paused,
-    resume: () => { clear(); game.paused = false; },
+    resume: () => { clear(true); game.paused = false; },
     advance: () => { clear(); if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance'); else start(); },
     fullscreen: () => { void fullscreen.toggle().catch(() => {}); },
     interact: unlockAudio, lockedMouse: true, advanceInputs: ['fire', 'use'], expanded: fullscreen.expanded,
@@ -181,14 +182,14 @@ export function mount(
       if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance');
       else start();
     },
-    resume: () => { clear(); game.paused = false; },
+    resume: () => { clear(true); game.paused = false; },
     move: (x, y) => { moveX = x; moveY = y; },
     look: delta => { lookAccumX += delta; },
     fire: (held, pulse, cancel) => { touchFire = held; if (pulse) pendingFire = true; if (cancel) pendingFire = false; },
     use: (held, pulse, cancel) => { touchUse = held; if (pulse) pendingUse = true; if (cancel) pendingUse = false; },
     fullscreen: () => { void fullscreen.toggle().catch(() => {}); },
     expanded: fullscreen.expanded,
-    pause: () => { clear(); game.paused = !game.paused; },
+    pause: () => { clear(true); game.paused = !game.paused; },
   });
 
   // Queue short clicks until a simulation tick; keep mouse and keyboard holds separate.
@@ -320,18 +321,17 @@ export function mount(
       lookAccumY = 0;
 
       game.step(mapped ? mapped.sample(1 / tickRate) : controls);
-      if (game.app.state.status !== 'playing') clear();
+      if (game.app.state.status !== 'playing') clear(true);
       accumulator -= 1000 / tickRate;
     }
 
     touch?.update();
     mapped?.update();
-    game.frame();
-    context.putImageData(image, 0, 0);
+    if (game.frameIfChanged()) context.putImageData(image, 0, 0);
 
     const state = game.app.state as Record<string, any>;
     for (const element of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-paused]'))) {
-      element.hidden = !game.paused || state.status !== 'playing';
+      element.hidden = !game.paused || !isPausableStatus(state.status);
     }
     for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-pause]'))) {
       button.textContent = game.paused ? 'Resume / P' : 'Pause / P';
@@ -362,7 +362,8 @@ export function mount(
     }
     const nextMenuOpen = document.querySelector('[data-pixel-menu]:not([hidden])') !== null;
     if (nextMenuOpen !== menuOpen) {
-      clear();
+      // Keep held command edges latched across pause/menu DOM changes.
+      clear(true);
       menuOpen = nextMenuOpen;
       if (!menuOpen) canvas.focus({ preventScroll: true });
     }

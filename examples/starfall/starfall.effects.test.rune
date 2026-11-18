@@ -1,0 +1,104 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/AimPoseAndMuzzleFollowWeapon
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    invoke tick {"aim_up":true,"fire":true}
+    assert state.aiming_up == true
+    assert state.avatar.model == "sf/pilot_idle_up"
+    assert state.rifle.model == "sf/rifle_up"
+    assert state.muzzle.x == state.player.x
+    assert state.muzzle.z > 4.8
+    assert state.shots[0].dx == 0
+    assert state.shots[0].dz > 0
+    invoke tick {"left":true}
+    assert state.aiming_up == false
+    assert state.avatar.angle == 180
+    assert state.rifle.angle == 180
+    assert state.muzzle.x < state.player.x
+
+@Test/Starfall/DroneHitAndParticleDeath
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke isolate_drone
+run:
+    invoke tick {"aim_up":true,"fire":true}
+    invoke tick {"aim_up":true}
+    invoke tick {"aim_up":true}
+    assert state.enemies[0].hp == 1
+    assert state.enemies[0].hit_ticks > 0
+    assert state.enemies[0].model == "sf/drone_hit"
+    assert state.effects.length > 0
+    invoke wait_effect_ticks 6
+    invoke tick {"aim_up":true,"fire":true}
+    invoke tick {"aim_up":true}
+    invoke tick {"aim_up":true}
+    assert state.enemies[0].visible == false
+    assert state.effects.length >= 18
+    invoke wait_effect_ticks 32
+    assert state.effects.length == 0
+
+@Test/Starfall/DamageFlashAndRestartCleanup
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    invoke take_damage 1
+    invoke update_view
+    assert state.flash > 0
+    assert state.hurt_ticks > 0
+    assert state.avatar.model == "sf/pilot_idle_hit"
+    assert state.avatar.visible == true
+    invoke wait_effect_ticks 12
+    assert state.flash == 0
+    assert state.hurt_ticks == 0
+    invoke burst [9,4,44]
+    invoke launch_test_run
+    assert state.effects.length == 0
+    assert state.flash == 0
+    assert state.aiming_up == false
+
+@Test/Starfall/EffectsStayBoundedAndExpire
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    invoke flood_effects
+    assert state.effects.length <= 96
+    invoke wait_effect_ticks 32
+    assert state.effects.length == 0
+
+@Logic/starfall
+action isolate_drone:
+    enemies = [
+        {
+            "x": 9,
+            "y": 7,
+            "z": 6,
+            "home": 9,
+            "base": 6,
+            "span": 0,
+            "hp": 3,
+            "hit_ticks": 0,
+            "visible": true,
+            "model": "sf/drone",
+            "cooldown": 200
+        }
+    ]
+    plasma = true
+
+action wait_effect_ticks(count):
+    for i in range(0, count):
+        call tick {}
+
+action flood_effects:
+    for i in range(0, 10):
+        call burst 9, 4, 44

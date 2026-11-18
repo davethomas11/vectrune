@@ -1,0 +1,114 @@
+@Logic/starfall
+action reset_warden:
+    stop when sector_id != "station" || !boss.visible
+    boss.hp = boss.max_hp
+    boss.x = boss.home
+    boss.z = 3
+    boss.angle = 180
+    boss.hit_ticks = 0
+    boss.model = "sf/warden"
+    boss.target = 103
+    boss.launch = boss.home
+    boss_clock = 0
+    boss_phase = "dormant"
+    boss_warning.visible = false
+    pickups[2].visible = false
+
+# The guardian wakes only after the player descends to the sanctuary floor.
+# A marked landing point gives the pilot time to evade before the leap/slam.
+action update_warden:
+    boss_warning.visible = false
+    stop when sector_id != "station" || !boss.visible || recovery_phase != "none"
+    stop when boss_phase == "dormant" && (player.x < 97 || player.z > 6)
+    stop when player.x < 96
+    boss_clock += 1
+    boss.hit_ticks = max(0, boss.hit_ticks-1)
+    boss.angle = player.x < boss.x ? 180 : 0
+    if boss_clock <= 36:
+        boss_phase = "awakening"
+        boss.model = boss_clock < 18 ? "sf/warden_crouch" : "sf/warden_awaken"
+    if boss_clock > 36:
+        cycle = (boss_clock-36)%240
+        if cycle < 48:
+            boss_phase = "patrol"
+            boss.z = 3
+            boss.x += (boss.home+sin(boss_clock*3)*1.4-boss.x)*0.06
+            boss.model = "sf/warden_walk"+floor(cycle%24/6)
+        if cycle >= 48 && cycle < 78:
+            boss_phase = "windup"
+            boss.model = cycle < 63 ? "sf/warden_awaken" : "sf/warden_charge"
+            if cycle == 48:
+                boss.target = clamp(player.x, 102, 121)
+                boss.launch = boss.x
+                sound.play "sf_warden_charge"
+            boss_warning.visible = true
+            boss_warning.x = boss.target
+            boss_warning.scale = 1+sin(cycle*24)*0.12
+        if cycle >= 78 && cycle < 102:
+            boss_phase = "leap"
+            flight = (cycle-77)/24
+            ease = flight*flight*(3-2*flight)
+            boss.x = boss.launch+(boss.target-boss.launch)*ease
+            boss.z = 3+sin(flight*180)*1.8
+            boss.model = "sf/warden_leap"
+            boss_warning.visible = true
+            boss_warning.x = boss.target
+        if cycle >= 102 && cycle < 120:
+            boss_phase = "slam"
+            boss.z = 3
+            boss.model = "sf/warden_crouch"
+            if cycle == 104:
+                call temple_wave boss.x-2, -1
+                call temple_wave boss.x+2, 1
+                call burst boss.x, 3.3, 12
+                sound.play "sf_warden_slam"
+        if cycle >= 120 && cycle < 200:
+            boss_phase = "exposed"
+            boss.z = 3
+            boss.model = cycle%20 < 10 ? "sf/warden_open" : "sf/warden_breathe"
+        if cycle >= 200:
+            boss_phase = "recover"
+            boss.z = 3
+            boss.x += clamp(boss.home-boss.x, -0.22, 0.22)
+            boss.model = "sf/warden_walk"+floor(cycle%24/6)
+    if boss.hit_ticks > 0:
+        boss.model = "sf/warden_hit"
+    if abs(player.x-boss.x) < 1.8 && player.z < boss.z+4.8 && player.z+body_height > boss.z:
+        call take_damage 1, boss.x
+
+action temple_wave(x, direction):
+    shots.push(
+        {
+            "x": x,
+            "y": 7,
+            "z": 3.5,
+            "dx": direction * 0.27,
+            "dz": 0,
+            "ttl": 95,
+            "hostile": true,
+            "damage": 1,
+            "model": "sf/temple_wave",
+            "visible": true
+        }
+    )
+
+action hit_warden(damage, x, z):
+    stop when !boss.visible
+    boss.hp = max(0, boss.hp-damage)
+    boss.hit_ticks = 6
+    boss.model = "sf/warden_hit"
+    call burst x, z, 5
+    sound.play "sf_hit"
+    if boss.hp == 0:
+        boss.visible = false
+        call claim_boss_container "warden"
+        boss_warning.visible = false
+        call burst boss.x, boss.z+2.5, 44
+        sound.play "sf_explode"
+        boss_phase = "defeated"
+        pickups[2].visible = true
+        shots = []
+        call arm_escape_encounters
+        notice = "CRYPT WARDEN SILENCED / HEALTH +1. The core awaits on the eastern altar."
+        notice_ticks = 180
+        sound.play "sf_upgrade"

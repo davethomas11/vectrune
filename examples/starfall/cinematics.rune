@@ -1,0 +1,257 @@
+@Perspective/starfall_title_view
+fov = 76
+
+@Camera/starfall_flyover
+duration = 36
+loop = true
+points = [
+    {"x":58,"y":45,"height":17,"angle":280,"pitch":-9},
+    {"x":66,"y":41,"height":14,"angle":267,"pitch":-7},
+    {"x":73,"y":46,"height":18,"angle":255,"pitch":-11},
+    {"x":64,"y":51,"height":20,"angle":270,"pitch":-13}
+]
+
+@Scene/starfall_title
+map = orbit
+things = ["title_props"]
+camera = starfall_flyover
+perspective = starfall_title_view
+sky = {"seed":701,"zenith":"#030713","horizon":"#030713","cloud":"#030713","speed":0.01}
+heading = STARFALL PROTOCOL
+subtitle = ONE LAST FLIGHT. ONE LAST LIGHT.
+prompt = ENTER / START: BEGIN EXPEDITION
+
+@Logic/starfall
+state:
+    title_props = []
+    cinema_ticks = 0
+    intro_duration = 600
+    ending_duration = 270
+    credits_duration = 690
+    cinema_skip_ready = false
+    touch_ui_visible = false
+    cinema_skip_hidden = true
+    intro_lines = [
+        "THE HELIOS ARK",
+        "",
+        "For generations, the Ark has carried",
+        "the last human colony between the stars.",
+        "",
+        "Now its starcore is fading.",
+        "In three cycles, the gardens go dark.",
+        "Then the air runs out.",
+        "",
+        "One signal still answers: KEPLER STATION.",
+        "An abandoned power foundry beyond",
+        "the edge of the navigation charts.",
+        "",
+        "Its custodians have sealed the reactor.",
+        "Its gardens have learned to hunt.",
+        "",
+        "You are the Ark's last salvage pilot.",
+        "Wake the relays. Recover the starcore.",
+        "Bring the light home."
+    ]
+    ending_lines = [
+        "THE STARCORE IS HOME.",
+        "",
+        "Across the Helios Ark,",
+        "dark windows wake with light.",
+        "The gardens breathe again.",
+        "",
+        "One pilot. One impossible flight.",
+        "One more dawn."
+    ]
+    credits_lines = [
+        "STARFALL PROTOCOL",
+        "",
+        "GAME BY DAVE THOMAS",
+        "",
+        "DESIGN / CODE / WORLDS",
+        "DAVE THOMAS",
+        "",
+        "BUILT WITH RUNE",
+        "PIXEL-3D ENGINE",
+        "",
+        "THANK YOU FOR PLAYING",
+        "",
+        "EVERY LIGHT IS SOMEONE'S HOME.",
+        "",
+        "THE HELIOS ARK SAILS ON."
+    ]
+
+action build_title_fleet:
+    title_props = [
+        {"x": 64, "y": 16, "z": 10, "model": "sf/kepler_exterior"},
+        {"x": 55, "y": 23, "z": 10, "model": "sf/ship_flight", "scale": 0.7}
+    ]
+    for i in range(0,72):
+        title_props.push(
+            {
+                "x": 4 + i * 29 % 120,
+                "y": 2 + i * 13 % 27,
+                "z": 2 + i * 17 % 33,
+                "model": "sf/star",
+                "scale": i % 5 == 0 ? 1.5: 0.7
+            }
+        )
+
+action prepare_space_scene:
+    world = voxel_world(128, 64, 48, ["sf/hull"], {"renderDistance": 96})
+    level_map = "orbit"
+    scenery = [{"x": 45, "y": 14, "z": 12, "model": "sf/ark_dark"}]
+    for i in range(0,72):
+        scenery.push(
+            {
+                "x": 4 + i * 29 % 120,
+                "y": 2 + i * 13 % 27,
+                "z": 2 + i * 17 % 36,
+                "model": "sf/star",
+                "scale": i % 5 == 0 ? 1.5: 0.7
+            }
+        )
+    portals = []
+    pickups = []
+    enemies = []
+    beacons = []
+    machinery = []
+    gravity_consoles = []
+    effects = []
+    shots = []
+    portal_aura = []
+    arrival_ring.visible = false
+    boss.visible = false
+    boss_warning.visible = false
+    rootheart.visible = false
+    root_warning.visible = false
+    forge_guardian.visible = false
+    forge_warning.visible = false
+    curator.visible = false
+    curator_warning.visible = false
+    shuttle.visible = false
+    magnet_fx.visible = false
+    seal_shell.visible = false
+    avatar.visible = false
+    rifle.visible = false
+    muzzle.visible = false
+    charge_fx.visible = false
+    ghost.visible = false
+    ship_flames = []
+    camera = {"x": 64, "y": 45, "z": 14, "angle": 270, "pitch": 0}
+    ship.angle = 0
+    ship.dissolve = 0
+    cinema_ticks = 0
+
+action begin_intro:
+    status = "intro"
+    call prepare_space_scene
+    ship.x = 54
+    ship.y = 23
+    ship.z = 12
+    ship.scale = 1.2
+    ship.visible = true
+    ship.model = "sf/ship_flight"
+    sound.play "sf_ship_launch"
+    call sync_music
+    call refresh_ui
+
+action begin_landing:
+    call build_station
+    status = "landing"
+    cinematic_ticks = 0
+    cinema_skip_hidden = true
+    ship.x = 2
+    ship.y = 5.5
+    ship.z = 15
+    ship.scale = 1.2
+    ship.angle = 0
+    ship.dissolve = 0
+    ship.visible = true
+    ship.model = "sf/ship_flight"
+    camera = {"x": 10, "y": 19, "z": 11, "angle": 270, "pitch": 0}
+    sound.play "sf_ship_land"
+    call ship_engine_view
+    call sync_music
+    call refresh_ui
+
+action begin_homecoming:
+    campaign.finished = true
+    status = "ending"
+    call prepare_space_scene
+    ship.x = 82
+    ship.y = 4
+    ship.z = 19
+    ship.visible = true
+    ship.scale = 0.08
+    ship.model = "sf/distant_ship"
+    call sync_music
+    call refresh_ui
+
+action begin_credits:
+    status = "credits"
+    cinema_ticks = 0
+    ship.visible = false
+    ship_flames = []
+    scenery[0].model = "sf/ark_lit"
+    call refresh_ui
+
+action finish_credits:
+    status = "won"
+    cinema_skip_hidden = true
+    ship.visible = false
+    ship_flames = []
+    sound.play "sf_win"
+    call sync_music
+    call refresh_ui
+
+action tick_cinema:
+    cinema_ticks += 1
+    ticks += 1
+    ship_flames = []
+    if status == "intro":
+        flight = clamp((cinema_ticks-45)/165,0,1)
+        ease = flight*flight
+        ship.x = 54+28*ease
+        ship.y = 23-19*ease
+        ship.z = 12+7*ease
+        ship.scale = max(0.03,1.2*(1-flight)*(1-flight))
+        ship.model = ticks%10 < 5 ? "sf/ship_flight" : "sf/ship_flight_lit"
+        if cinema_ticks >= 190:
+            ship.model = "sf/distant_ship"
+            ship.scale = 0.08
+            ship.dissolve = clamp((cinema_ticks-210)/30,0,1)
+        ship.visible = cinema_ticks < 240
+        if cinema_ticks >= intro_duration:
+            call begin_landing
+            stop when true
+    if status == "ending":
+        flight = clamp(cinema_ticks/210,0,1)
+        ease = 1-(1-flight)*(1-flight)
+        ship.x = 82-28*ease
+        ship.y = 4+19*ease
+        ship.z = 19-7*ease
+        ship.scale = 0.03+1.17*ease
+        ship.model = cinema_ticks < 25 ? "sf/distant_ship" : (ticks%10 < 5 ? "sf/ship_flight" : "sf/ship_flight_lit")
+        if cinema_ticks >= 180:
+            scenery[0].model = "sf/ark_lit"
+        if cinema_ticks >= 210:
+            ship.model = "sf/ship"
+        if cinema_ticks >= ending_duration:
+            call begin_credits
+            stop when true
+    if status == "credits" && cinema_ticks >= credits_duration:
+        call finish_credits
+        stop when true
+    if ship.visible && (status == "intro" ? cinema_ticks < 190 : cinema_ticks < 210):
+        for offset in [-1.3,1.1]:
+            ship_flames.push(
+                {
+                    "x": ship.x + offset * ship.scale,
+                    "y": ship.y + 0.1,
+                    "z": ship.z + 0.2 * ship.scale,
+                    "model": "sf/ship_exhaust_long",
+                    "scale": ship.scale * 0.8,
+                    "visible": true
+                }
+            )
+    call refresh_ui

@@ -575,6 +575,12 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         );
         config["world"] = json!(field);
     }
+    if let Some(value) = scene.kv.get("render_radius") {
+        let value = json_value(value);
+        let radius = value.as_f64().context("Scene render_radius must be a number")?;
+        ensure!(radius.is_finite() && radius > 0.0 && radius <= 4096.0, "Scene render_radius must be in (0, 4096]");
+        config["renderRadius"] = json!(radius);
+    }
     if let Some(value) = scene.kv.get("pause_ui") {
         let value = json_value(value);
         let field = value.as_str().context("Scene pause_ui must name a state field")?;

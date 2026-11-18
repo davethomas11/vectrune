@@ -1,0 +1,67 @@
+@Logic/starfall
+action reset_iron_cantor:
+    stop when sector_id != "foundry" || !forge_guardian.visible
+    forge_guardian.hp = forge_guardian.max_hp
+    forge_guardian.x = 88
+    forge_guardian.z = 3
+    forge_guardian.hit_ticks = 0
+    forge_guardian.model = "sf/cantor_guard"
+    forge_clock = 0
+    forge_phase = "dormant"
+    forge_warning.visible = false
+
+action update_iron_cantor:
+    forge_warning.visible = false
+    stop when sector_id != "foundry" || !forge_guardian.visible || recovery_phase != "none" || player.x < 80
+    forge_clock += 1
+    forge_guardian.hit_ticks = max(0,forge_guardian.hit_ticks-1)
+    cycle = forge_clock%180
+    forge_phase = cycle >= 75 && cycle < 155 ? "vent" : "guard"
+    forge_guardian.model = forge_phase == "vent" ? (cycle%16 < 8 ? "sf/cantor_open" : "sf/cantor_vent") : (cycle >= 35 && cycle < 60 ? "sf/cantor_raise" : "sf/cantor_guard")
+    forge_guardian.x = 88+sin(forge_clock*2)*0.35
+    if forge_guardian.hit_ticks > 0:
+        forge_guardian.model = "sf/cantor_hit"
+    if cycle >= 35 && cycle < 60:
+        forge_warning.visible = true
+        forge_warning.x = forge_guardian.x
+    if cycle == 60 || cycle == 74:
+        direction = player.x < forge_guardian.x ? -1 : 1
+        call forge_wave forge_guardian.x+direction*1.4, direction
+        sound.play "sf_cantor_slam"
+    if abs(player.x-forge_guardian.x) < 1.2 && player.z < 6.5:
+        call take_damage 1, forge_guardian.x
+
+action forge_wave(x, direction):
+    shots.push(
+        {
+            "x": x,
+            "y": 7,
+            "z": 3.55,
+            "dx": direction * 0.24,
+            "dz": 0,
+            "ttl": 100,
+            "hostile": true,
+            "damage": 1,
+            "model": "sf/forge_wave",
+            "visible": true
+        }
+    )
+
+action hit_iron_cantor(damage, x, z):
+    stop when forge_phase != "vent" || !forge_guardian.visible
+    forge_guardian.hp = max(0,forge_guardian.hp-damage)
+    forge_guardian.hit_ticks = 6
+    forge_guardian.model = "sf/cantor_hit"
+    call burst x,z,5
+    sound.play "sf_hit"
+    if forge_guardian.hp == 0:
+        forge_guardian.visible = false
+        call claim_boss_container "cantor"
+        forge_warning.visible = false
+        forge_phase = "defeated"
+        pickups[2].visible = true
+        shots = []
+        call burst forge_guardian.x,4.5,36
+        sound.play "sf_explode"
+        notice = "IRON CANTOR SILENCED / HEALTH +1. Collect the relay to save the Foundry and open the crypt."
+        notice_ticks = 180

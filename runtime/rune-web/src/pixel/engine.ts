@@ -1,3 +1,4 @@
+import { withEntityQueries } from '../pixel3d/entities';
 import { GameControls } from '../input/game';
 import type { ControlsProfile } from '../input/types';
 import { GameSave, type Persistence } from './persistence';
@@ -96,7 +97,7 @@ export class PixelEngine {
   step(input: Input = {}): void {
     if (input.start) { this.start(); return; }
     if (this.paused) return;
-    withContext(this.context, () => { this.app.invokeAction('tick', [input]); this.app.computeDerived(); });
+    withEntityQueries(() => withContext(this.context, () => { this.app.invokeAction('tick', [input]); this.app.computeDerived(); }));
     this.ticks++;
     this.persist();
   }

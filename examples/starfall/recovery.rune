@@ -1,0 +1,136 @@
+@Logic/starfall
+# Keep the station paused while the pilot's signal returns to the saved beacon.
+# The camera follows the ghost continuously, including across long return trips.
+action begin_recovery:
+    stop when recovery_phase != "none"
+    recovery_phase = "collapse"
+    recovery_ticks = 0
+    death_lethal = health == 0
+    if death_lethal:
+        lives = max(0, lives-1)
+        call reset_warden
+        call reset_rootheart
+        call reset_iron_cantor
+        call reset_curator
+    death_origin = {"x": player.x, "z": max(3, player.z)}
+    return_target = {"x": checkpoint.x, "z": checkpoint.z}
+    recovery_duration = clamp(36+abs(death_origin.x-return_target.x), 45, 105)
+    velocity = 0
+    player.vz = 0
+    aiming_up = false
+    ducking = false
+    body_height = 1.6
+    jet_ticks = 0
+    on_shuttle = false
+    magnet_fx.visible = false
+    dash_ticks = 0
+    dash_held = false
+    dash_ready = true
+    cooldown = 0
+    charge_ticks = 0
+    charge_ready = false
+    fire_held = false
+    charge_fx.visible = false
+    shots = []
+    ghost.visible = false
+    avatar.x = death_origin.x
+    avatar.z = death_origin.z
+    avatar.visible = true
+    avatar.dissolve = 0
+    avatar.model = "sf/pilot_idle_hit"
+    rifle.visible = false
+    muzzle.visible = false
+    curator_warning.visible = false
+    boss_warning.visible = false
+    sound.play "sf_signal_lost"
+    call sync_music
+    call refresh_ui
+
+action tick_recovery:
+    ticks += 1
+    recovery_ticks += 1
+    flash = max(0, flash-1)
+    hurt_ticks = max(0, hurt_ticks-1)
+    notice_ticks = max(0, notice_ticks-1)
+    call update_effects
+    call update_seal
+    if recovery_phase == "collapse":
+        avatar.model = recovery_ticks < 5 ? "sf/pilot_idle_hit" : (recovery_ticks < 13 ? "sf/pilot_down0" : "sf/pilot_down1")
+        avatar.dissolve = clamp((recovery_ticks-14)/10, 0, 1)
+        if recovery_ticks == 13:
+            call burst death_origin.x, death_origin.z+0.4, 8
+        if recovery_ticks >= 24:
+            if death_lethal && lives == 0:
+                call finish_game_over
+                stop when true
+            recovery_phase = "return"
+            recovery_ticks = 0
+            avatar.visible = false
+            ghost.visible = true
+            ghost.dissolve = 0
+            ghost.x = death_origin.x
+            ghost.z = death_origin.z+0.8
+            sound.play "sf_ghost"
+    if recovery_phase == "return":
+        progress = clamp(recovery_ticks/recovery_duration, 0, 1)
+        ease = progress*progress*(3-2*progress)
+        ghost.x = death_origin.x+(return_target.x-death_origin.x)*ease
+        ghost.z = death_origin.z+(return_target.z-death_origin.z)*ease+0.8+sin(progress*180)*2.5
+        ghost.angle = return_target.x < death_origin.x ? 180 : 0
+        ghost.model = ticks%12 < 6 ? "sf/ghost" : "sf/ghost_drift"
+        ghost.scale = 1+sin(ticks*12)*0.04
+        if ticks%3 == 0 && effects.length < 96:
+            effects.push(
+                {
+                    "x": ghost.x,
+                    "y": 9.6,
+                    "z": ghost.z - 0.3,
+                    "dx": 0,
+                    "dz": 0.015,
+                    "ttl": 12,
+                    "life": 12,
+                    "angle": 0,
+                    "spin": 0,
+                    "scale": 0.5,
+                    "model": "sf/exhaust",
+                    "kind": "exhaust",
+                    "visible": true
+                }
+            )
+        camera.x += (clamp(ghost.x, 13, world.width-13)-camera.x)*0.15
+        camera.y += (19-camera.y)*0.08
+        camera.z += (clamp(ghost.z+1, 5, world.depth-5)-camera.z)*0.12
+        if recovery_ticks >= recovery_duration:
+            call respawn
+            sound.play "sf_beacon"
+    if recovery_phase == "reform":
+        avatar.visible = true
+        avatar.model = "sf/pilot_idle"
+        avatar.x = player.x
+        avatar.z = player.z
+        avatar.dissolve = clamp(1-recovery_ticks/18, 0, 1)
+        camera.x += (clamp(player.x, 13, world.width-13)-camera.x)*0.15
+        camera.z += (clamp(player.z+1.5, 5, world.depth-5)-camera.z)*0.12
+        if recovery_ticks >= 18:
+            recovery_phase = "none"
+            avatar.dissolve = 0
+            flash = 0
+            hurt_ticks = 0
+            call update_view
+    call refresh_ui
+
+action finish_game_over:
+    status = "gameover"
+    recovery_phase = "none"
+    ghost.visible = false
+    avatar.visible = false
+    rifle.visible = false
+    muzzle.visible = false
+    charge_fx.visible = false
+    shots = []
+    effects = []
+    flash = 0
+    hurt_ticks = 0
+    call sync_music
+    sound.play "sf_game_over"
+    call refresh_ui

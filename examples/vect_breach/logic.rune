@@ -106,7 +106,7 @@ action setup_level_1:
     weapon.sprite = "weapon/shotgun_idle"
     weapon.bob = 0
     projectiles = []
-    enemies = []
+    enemies = entity_group()
     enemies.push({"id":1,"x":2.5,"y":4.5,"sprite":"guard3d/walk0/0","hp":3,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":30})
     enemies.push({"id":2,"x":6.5,"y":3.5,"sprite":"guard3d/walk0/0","hp":3,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":45})
     enemies.push({"id":3,"x":14.5,"y":5.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
@@ -135,7 +135,7 @@ action setup_level_2:
     weapon.sprite = "weapon/shotgun_idle"
     weapon.bob = 0
     projectiles = []
-    enemies = []
+    enemies = entity_group()
     enemies.push({"id":1,"x":5.5,"y":1.5,"sprite":"guard3d/walk0/0","hp":3,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":25})
     enemies.push({"id":2,"x":9.5,"y":4.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
     enemies.push({"id":3,"x":12.5,"y":3.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
@@ -167,7 +167,7 @@ action setup_level_3:
     weapon.sprite = "weapon/shotgun_idle"
     weapon.bob = 0
     projectiles = []
-    enemies = []
+    enemies = entity_group()
     enemies.push({"id":1,"x":4.5,"y":1.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
     enemies.push({"id":2,"x":12.5,"y":1.5,"sprite":"guard3d/walk0/0","hp":4,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":20})
     enemies.push({"id":3,"x":7.5,"y":4.5,"sprite":"guard3d/walk0/0","hp":8,"visible":true,"angle":0,"anim":0,"pain":0,"attack":0,"cooldown":15})
@@ -323,7 +323,7 @@ action tick(input):
     stop when status != "playing"
 
     # Guards face their target, stride, flinch and telegraph each ranged attack.
-    for enemy in enemies:
+    for enemy in nearby(enemies, player, 28):
         if enemy.visible == true && enemy.hp > 0:
             enemy.cooldown = max(0, enemy.cooldown - 1)
             enemy.pain = max(0, enemy.pain - 1)

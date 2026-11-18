@@ -1,0 +1,174 @@
+@Logic/starfall
+# Descending service tunnels open into spacious upgrade chambers.
+action enter_upgrade_vault(kind):
+    upgrade_snapshot = {
+        "sector": sector_id,
+        "level_map": level_map,
+        "world": world,
+        "pickups": pickups,
+        "enemies": enemies,
+        "scenery": scenery,
+        "portals": portals,
+        "beacons": beacons,
+        "boss": boss,
+        "boss_warning": boss_warning,
+        "boss_clock": boss_clock,
+        "boss_phase": boss_phase,
+        "rootheart": rootheart,
+        "root_warning": root_warning,
+        "root_clock": root_clock,
+        "root_phase": root_phase,
+        "checkpoint": checkpoint,
+        "seal_shell": seal_shell,
+        "kind": kind
+    }
+    sector_id = kind == "jets" ? "jet_vault" : "dash_vault"
+    level_map = kind == "jets" ? "orbit" : "hydroponics"
+    world = {
+        "width": 56,
+        "height": 21,
+        "depth": 24,
+        "seed": 727,
+        "biome": "meadow",
+        "materials": [
+            "sf/hull",
+            "sf/edge",
+            "sf/plasma",
+            "sf/reactor",
+            "sf/temple_stone",
+            "sf/temple_trim",
+            "sf/garden_moss",
+            "sf/garden_wall",
+            "sf/garden_glass"
+        ],
+        "cells": [],
+        "spawn": player
+    }
+    world = voxel_world(
+        world.width,
+        world.height,
+        world.depth,
+        world.materials,
+        {"seed": world.seed, "biome": world.biome, "spawn": world.spawn, "renderDistance": 128}
+    )
+    for step in range(0,6):
+        x = 4+step*6
+        top = 13-step*2
+        call deck x, 6, top, kind == "jets" ? 2 : 7
+        world = voxel_fill(world,[x,5,top+7],[6,4,1],kind == "jets" ? 5 : 8)
+    call deck 40, 13, 3, kind == "jets" ? 2 : 7
+    world = voxel_fill(world,[34,5,10],[19,4,1],kind == "jets" ? 5 : 8)
+    world = voxel_fill(world,[4,1,1],[49,1,21],kind == "jets" ? 5 : 8)
+    world = voxel_fill(world,[53,5,1],[1,4,21],kind == "jets" ? 5 : 8)
+    # A real solid pedestal; its upper surface supports the pilot and upgrade.
+    world = voxel_fill(world,[44,5,3],[3,4,1],6)
+    scenery = [
+        {
+            "x": 45.5,
+            "y": 7,
+            "z": 3,
+            "model": kind == "jets" ? "sf/upgrade_pedestal": "sf/garden_pedestal"
+        }
+    ]
+    scenery = entity_group(scenery)
+    for step in range(0,6):
+        scenery.push(
+            {
+                "x": 7 + step * 6,
+                "y": 3.5,
+                "z": 14 - step * 2,
+                "model": kind == "jets" ? "sf/temple_brazier": "sf/glow_flower"
+            }
+        )
+    pickups = [
+        {
+            "x": 45.5,
+            "y": 7,
+            "z": 4.9,
+            "base": 4.9,
+            "kind": kind,
+            "model": kind == "jets" ? "sf/jets": "sf/dash_cell",
+            "visible": kind == "jets" ? !jets: !dash_unlocked
+        }
+    ]
+    pickups = entity_group(pickups)
+    portals = [
+        {
+            "x": 6,
+            "y": 6.3,
+            "z": 13,
+            "kind": "vault_exit",
+            "label": "RETURN TO UPPER DECK",
+            "title": kind == "jets" ? "RETURN TO CARGO": "RETURN TO CANOPY",
+            "model": "sf/rift_gate0",
+            "visible": true
+        },
+        {
+            "x": 51,
+            "y": 6.3,
+            "z": 3,
+            "kind": "vault_exit",
+            "label": "RETURN TO UPPER DECK",
+            "title": kind == "jets" ? "RETURN TO CARGO": "RETURN TO CANOPY",
+            "model": "sf/rift_gate0",
+            "visible": true
+        }
+    ]
+    portals = entity_group(portals)
+    enemies = entity_group()
+    if kind == "jets":
+        call drone 30.5, 6.8, 1.2
+    if kind == "dash":
+        call skimmer 30.5, 6.8, 1.2
+    enemies[0].hp = 2
+    enemies[0].cooldown = 110
+    beacons = []
+    beacons = entity_group(beacons)
+    boss = {"visible": false}
+    boss_warning = {"visible": false}
+    rootheart = {"visible": false}
+    root_warning = {"visible": false}
+    ship.visible = false
+    ship_flames = []
+    seal_shell = {"visible": false}
+    player = {"x": 6, "y": 7, "z": 13, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint = {"x": 6, "z": 13}
+    call finish_sector_change
+    notice = kind == "jets" ? "PROPULSION CRYPT / Follow the passage to the jet pack pedestal." : "DASH CRYPT / Follow the passage to the air-dash pedestal."
+    sound.play "sf_portal"
+    call refresh_ui
+
+action leave_upgrade_vault:
+    kind = upgrade_snapshot.kind
+    sector_id = upgrade_snapshot.sector
+    level_map = upgrade_snapshot.level_map
+    world = upgrade_snapshot.world
+    pickups = upgrade_snapshot.pickups
+    enemies = upgrade_snapshot.enemies
+    scenery = upgrade_snapshot.scenery
+    portals = upgrade_snapshot.portals
+    beacons = upgrade_snapshot.beacons
+    boss = upgrade_snapshot.boss
+    boss_warning = upgrade_snapshot.boss_warning
+    boss_clock = upgrade_snapshot.boss_clock
+    boss_phase = upgrade_snapshot.boss_phase
+    rootheart = upgrade_snapshot.rootheart
+    root_warning = upgrade_snapshot.root_warning
+    root_clock = upgrade_snapshot.root_clock
+    root_phase = upgrade_snapshot.root_phase
+    checkpoint = upgrade_snapshot.checkpoint
+    seal_shell = upgrade_snapshot.seal_shell
+    player = {
+        "x": kind == "jets" ? 46: 22,
+        "y": 7,
+        "z": kind == "jets" ? 3: 17,
+        "angle": 0,
+        "pitch": 0,
+        "vz": 0
+    }
+    ship.visible = sector_id == "station"
+    upgrade_snapshot = null
+    call finish_sector_change
+    sound.play "sf_portal"
+    notice = "Upper deck reached through the return portal."
+    call refresh_ui

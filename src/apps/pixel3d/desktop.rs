@@ -153,9 +153,12 @@ impl Host {
         })?;
         if shared_frame {
             self.context.with(|ctx| -> Result<()> {
-                let frame: TypedArray<u32> = ctx
-                    .eval("__RunePixel3D.frame()")
+                let frame: Option<TypedArray<u32>> = ctx
+                    .eval("__RunePixel3D.frameIfChanged()")
                     .map_err(|error| anyhow!(CaughtError::from_error(&ctx, error).to_string()))?;
+                let Some(frame) = frame else {
+                    return Ok(());
+                };
                 // Do not call JS while this borrowed framebuffer is live.
                 let bytes = unsafe { frame.as_bytes() }.context("Detached shared framebuffer")?;
                 ensure!(

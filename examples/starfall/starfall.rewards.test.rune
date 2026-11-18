@@ -1,0 +1,136 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/Rewards/FourHealthAndPermanentUniqueBossContainers
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    assert state.health == 4
+    assert state.max_health == 4
+    invoke claim_boss_container ["rootheart"]
+    assert state.max_health == 5
+    invoke claim_boss_container ["rootheart"]
+    assert state.max_health == 5
+    invoke claim_boss_container ["cantor"]
+    invoke claim_boss_container ["warden"]
+    invoke claim_boss_container ["curator"]
+    assert state.max_health == 8
+    assert state.health == 8
+    invoke install_test_armor
+    assert state.max_health == 10
+    invoke start
+    assert state.max_health == 10
+    assert state.health == 10
+    assert state.lives == 3
+
+@Test/Starfall/Rewards/OneUpCannotBeFarmedByRevisitingAnArea
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    invoke collect_test_secret_life
+    assert state.lives == 4
+    assert state.life_rewards == 1
+    assert state.life_pickups.containment == true
+    invoke build_station
+    assert state.pickups[3].visible == false
+    invoke collect_test_secret_life
+    assert state.lives == 4
+    invoke take_damage 99
+    assert state.lives == 3
+    assert state.life_pickups.containment == true
+    invoke start
+    invoke advance
+    assert state.lives == 3
+    assert state.life_rewards == 0
+    assert state.pickups[3].visible == true
+
+@Test/Starfall/Rewards/CuratorShieldAndDeathReset
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke curator_test_fixture
+run:
+    invoke hit_curator [4,81,4]
+    assert state.curator.hp == 16
+    invoke open_test_curator
+    invoke hit_curator [1,81,4]
+    assert state.curator.hp == 1
+    invoke take_damage 99
+    assert state.curator.hp == 16
+    assert state.curator_phase == "dormant"
+    assert state.curator_clock == 0
+    assert state.curator.visible == true
+    assert state.max_health == 4
+
+@Test/Starfall/Rewards/OptionalCuratorRewardsAndStaysDefeated
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke curator_test_fixture
+    invoke open_test_curator
+run:
+    invoke hit_curator [2,81,4]
+    assert state.curator.visible == false
+    assert state.campaign.curator == true
+    assert state.campaign.containers.curator == true
+    assert state.portals[2].visible == true
+    assert state.max_health == 5
+    assert state.health == 5
+    invoke hit_curator [2,81,4]
+    assert state.max_health == 5
+    invoke build_bonus_room ["observatory"]
+    assert state.curator.visible == false
+    assert state.portals[2].visible == true
+    invoke start
+    assert state.max_health == 5
+    assert state.health == 5
+
+@Logic/starfall
+action install_test_armor:
+    campaign.armor = true
+    call refresh_health_capacity
+    health = max_health
+
+action collect_test_secret_life:
+    player.x = 73
+    player.z = 11
+    call update_exploration
+
+action curator_test_fixture:
+    call capture_station
+    call build_bonus_room "observatory"
+    player.x = 68
+    player.z = 3
+    invulnerable = 0
+    curator_phase = "shield"
+
+action open_test_curator:
+    curator_phase = "open"
+    curator.hp = 2
+
+
+@Test/Starfall/Rewards/OptionalBossAllowsRetreat
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke curator_test_fixture
+    invoke curator_retreat_fixture
+run:
+    invoke tick {"use":true}
+    assert state.sector_id == "station"
+    assert state.curator.visible == false
+    assert state.campaign.curator == false
+    assert state.max_health == 4
+
+@Logic/starfall
+action curator_retreat_fixture:
+    player.x = 59
+    player.z = 3
+    bonus_return = {"x": 74, "z": 3}

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import {entityGroup} from '../src/pixel3d/entities';
+import { describe, expect, it, vi } from 'vitest';
 import { Raycaster3D, type RaycasterConfig, type Texture } from '../src/pixel3d/raycaster';
 import { fastSin, fastCos, degToIndex, ANGLE_UNITS } from '../src/pixel3d/math';
 import { slide, sees, castRay, setActiveMap, type SpatialMap } from '../src/pixel3d/spatial';
@@ -8,12 +9,41 @@ import { skyPixel, type Sky } from '../src/pixel3d/sky';
 import { renderModel, type BlockModel } from '../src/pixel3d/model';
 import { renderHud, validateHud, wrapText, type GameHud } from '../src/pixel3d/hud';
 
+it('reuses presented pixels until a tick, action, pause or explicit invalidation changes them', () => {
+  const engine=new Pixel3DEngine({width:40,height:30,tickRate:30,camera:'camera',textures:{},sprites:{},
+    map:{width:3,height:3,grid:Array(9).fill(0),floor:0,ceiling:0}},
+    {stateJson:{camera:{x:1.5,y:1.5,angle:0},status:'playing'},derivedDefinitions:{},helperDefinitions:{},actionDefinitions:{}} as RuneWebConfig);
+  const render=vi.spyOn(engine.raycaster,'render');
+  expect(engine.frameIfChanged()).not.toBeNull();
+  expect(engine.frameIfChanged()).toBeNull();
+  engine.step();expect(engine.frameIfChanged()).not.toBeNull();
+  engine.paused=true;expect(engine.frameIfChanged()).not.toBeNull();
+  engine.step();expect(engine.frameIfChanged()).toBeNull();
+  engine.invoke('anything');expect(engine.frameIfChanged()).not.toBeNull();
+  engine.invalidateFrame();expect(engine.frameIfChanged()).not.toBeNull();
+  expect(render).toHaveBeenCalledTimes(5);
+});
+
 describe('structured pixel3d HUD', () => {
   const ui: GameHud = {
     meters: [{ label: 'HEALTH', value: 25, max: 100, color: 0x7ed6ac }],
     objective: 'CLEAR THE DEPTH', detail: 'KNIGHT', prompt: 'E: CLAIM', notice: 'REWARD',
     panel: null,
   };
+  it('validates exploration links and draws current/locked rooms plus directional impact cues', () => {
+    const map={current:'dock',expanded:true,nodes:[
+      {id:'dock',label:'DOCK',x:10,y:60,visited:true,locked:false},
+      {id:'vault',label:'VAULT',x:80,y:20,visited:false,locked:true}],links:[{from:'dock',to:'vault'}]};
+    const hud:GameHud={...ui,style:'floating',map,damageDirection:-1};
+    expect(validateHud(hud)).toBe(hud);
+    expect(()=>validateHud({...hud,map:{...map,links:[{from:'dock',to:'missing'}]}})).toThrow('map');
+    expect(()=>validateHud({...hud,map:{...map,nodes:[map.nodes[0],map.nodes[0]]}})).toThrow('map');
+    expect(()=>validateHud({...hud,damageDirection:2})).toThrow('damageDirection');
+    const labels:string[]=[],rects:number[][]=[];
+    renderHud({width:432,height:270,text(t){labels.push(t);},rect(...r){rects.push(r);}},hud,'playing',false);
+    expect(labels).toContain('DOCK');expect(labels).toContain('VAULT');
+    expect(rects.some(r=>r[0]===4&&r[4]===0xf06b82)).toBe(true);
+  });
   it('validates bounded choices, finite resources, and required text', () => {
     expect(validateHud(ui)).toBe(ui);
     for (const invalid of [
@@ -474,4 +504,36 @@ describe('pixel3d raycaster rendering', () => {
     expect(Array.from(rc.render(camera))).toEqual(Array.from(new Raycaster3D(config).render(camera)));
   });
 
+});
+
+
+it('culls managed collections with scale-aware bounds and observes movement between renders',()=>{
+ const config:Pixel3DConfig={width:40,height:30,tickRate:30,camera:'camera',things:['actors'],renderRadius:10,textures:{},sprites:{},
+  models:{box:{blocks:[{from:[-1,-1,0],size:[2,2,2],color:0xffabcdef}]}},
+  map:{width:3,height:3,grid:Array(9).fill(0),floor:0,ceiling:0}};
+ const engine=new Pixel3DEngine(config,{stateJson:{camera:{x:0,y:0,z:0,angle:0},status:'playing',actors:[]},derivedDefinitions:{},helperDefinitions:{},actionDefinitions:{}} as RuneWebConfig);
+ const actors=entityGroup([{x:1,y:0,z:0,model:'box'},{x:100,y:0,z:0,model:'box'}]);
+ engine.app.state.actors=actors;
+ expect(engine.renderState().things).toEqual([actors[0]]);
+ actors[1].scale=50;expect(engine.renderState().things).toHaveLength(2);
+ actors[1].scale=1;expect(engine.renderState().things).toHaveLength(1);
+ actors[1].x=2;expect(engine.renderState().things).toHaveLength(2);
+ actors[0].visible=false;expect(engine.renderState().things).toEqual([actors[1]]);
+});
+
+
+it('wraps expanded health pips inside their slot without covering the next meter',()=>{
+ const full={width:12,height:6,origin:[0,0],colors:[0xabcdef],pixels:Array(72).fill(0)};
+ const hud:GameHud={style:'floating',objective:'',detail:'',prompt:'',notice:'',panel:null,meters:[
+  {label:'HP',value:16,max:16,color:0xabcdef,display:'pips',icon:'full',emptyIcon:'full'},
+  {label:'BOSS',value:10,max:10,color:0x123456},{label:'CHARGE',value:1,max:24,color:0x234567}]};
+ expect(validateHud(hud,{full})).toBe(hud);
+ const rectangles:number[][]=[];
+ const canvas={width:432,height:270,rect:(...args:number[])=>rectangles.push(args),text:()=>{}};
+ renderHud(canvas,hud,'playing',false,{full});
+ const pixels=rectangles.filter(row=>row[4]===0xabcdef);
+ expect(pixels).toHaveLength(16*72);
+ expect(pixels.every(([x,y,w,h])=>x>=8&&x+w<=146&&y>=14&&y+h<39)).toBe(true);
+ expect(new Set(pixels.map(([,y])=>y)).size).toBe(12);
+ expect(()=>validateHud({...hud,meters:[{...hud.meters[0],max:17}]},{full})).toThrow('valid meters');
 });

@@ -1,0 +1,75 @@
+@Logic/starfall
+# Optional Observatory guardian: leave the marked starfall, jump low waves, duck bolts.
+action reset_curator:
+    stop when sector_id != "observatory" || !curator.visible
+    curator.hp = curator.max_hp
+    curator.x = 81
+    curator.z = 3.2
+    curator.hit_ticks = 0
+    curator.model = "sf/curator_closed"
+    curator_clock = 0
+    curator_phase = "dormant"
+    curator_warning.visible = false
+
+action update_curator:
+    curator_warning.visible = false
+    stop when sector_id != "observatory" || !curator.visible || recovery_phase != "none" || player.x < 65 || player.z > 7
+    curator_clock += 1
+    curator.hit_ticks = max(0,curator.hit_ticks-1)
+    cycle = curator_clock%200
+    curator.x = 81+sin(curator_clock*1.8)*2.3
+    curator.z = 3.2+sin(curator_clock*3)*0.18
+    curator_phase = cycle >= 75 && cycle < 155 ? "open" : (cycle >= 35 && cycle < 75 ? "focus" : "shield")
+    curator.model = curator_phase == "open" ? (cycle%16 < 8 ? "sf/curator_open" : "sf/curator_pulse") : "sf/curator_closed"
+    if cycle == 35:
+        curator_warning.x = clamp(player.x,65,90)
+        sound.play "sf_curator_focus"
+    if cycle >= 35 && cycle < 75:
+        curator_warning.visible = true
+        curator_warning.model = cycle < 65 ? "sf/curator_warning" : "sf/curator_pillar"
+        if cycle >= 65 && abs(player.x-curator_warning.x) < 0.85 && player.z < 6.8:
+            call take_damage 1, curator_warning.x
+    if cycle == 65:
+        call curator_shot curator.x,3.55,-0.2
+    if cycle == 85 || cycle == 115:
+        direction = player.x < curator.x ? -1 : 1
+        call curator_shot curator.x,4.3,direction*0.2
+    if curator.hit_ticks > 0:
+        curator.model = "sf/curator_hit"
+    if abs(player.x-curator.x) < 1.3 && player.z < curator.z+3:
+        call take_damage 1,curator.x
+
+action curator_shot(x,z,dx):
+    shots.push(
+        {
+            "x": x,
+            "y": 7,
+            "z": z,
+            "dx": dx,
+            "dz": 0,
+            "ttl": 130,
+            "hostile": true,
+            "damage": 1,
+            "model": "sf/curator_star",
+            "visible": true
+        }
+    )
+
+action hit_curator(damage,x,z):
+    stop when !curator.visible || curator_phase != "open"
+    curator.hp = max(0,curator.hp-damage)
+    curator.hit_ticks = 6
+    call burst x,z,5
+    sound.play "sf_hit"
+    if curator.hp == 0:
+        curator.visible = false
+        curator_warning.visible = false
+        curator_phase = "defeated"
+        campaign.curator = true
+        shots = []
+        call burst curator.x,curator.z+1.5,32
+        call claim_boss_container "curator"
+        portals[2].visible = true
+        notice = "VOID CURATOR SILENCED / HEALTH +1. Observatory return portal online."
+        notice_ticks = 210
+        sound.play "sf_explode"

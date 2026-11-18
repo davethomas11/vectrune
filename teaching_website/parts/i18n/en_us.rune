@@ -1,4 +1,19 @@
 @I18N/en_us
+Starfall {
+    title = "Starfall Protocol"
+    badge = "Pixel 3D space metroidvania"
+    description = "The Helios Ark is going dark. Land on abandoned Kepler Station, explore connected sectors, recover lost abilities, and bring its starcore home."
+    play = "Play Starfall Protocol"
+    try_it = "Press Enter or Start to begin. Watch the opening flight, or skip the story scenes to land on Kepler Station. Open the full game for more room."
+    standalone = "Open the full game in a new tab"
+    controls_title = "One last flight. One last light."
+    controls = "A / D or arrows move; Space jumps; click or X fires; W / Up aims high; S / Down ducks; Shift dashes; E uses doors and consoles. Hold fire to charge plasma, then release."
+    objective = "Explore Hydroponics and the Gravity Foundry, link jump jets, air dash and the magnetic glove to reach the reactor, and defeat three guardians. Optional rooms hide upgrades, a fourth boss and rare extra lives."
+    device = "Keyboard, controller and touch are supported. P pauses and opens the map. Start with four health cells and three lives; bosses add permanent health containers. Sector progress saves in this browser."
+    source_title = "Explore the Rune source"
+    source_text = "Game by Dave Thomas. Worlds, models, animations, controls, music and cinematic sequences are authored in Rune. Build and test locally with Vectrune 0.3.6 or newer."
+}
+
 SkyboundTwo {
     title = "Skybound 2"
     badge = "Pixel 3D platform adventure"
@@ -620,10 +635,10 @@ Developer {
     opaque_text = "The formatter keeps view/CSS blocks and embedded text intact. It formats the entry file and its imports, validates all changes before writing, and refuses changes that alter the parsed document. Review the diff as with any formatter."
     ci_intro = "Copy this workflow into .github/workflows/rune.yml in your project. It is also included in the starter. The example uses an Ubuntu x86-64 runner and pins the CLI to 0.3.4."
     ci_text = "The pipeline checks installation, formatting, static diagnostics, and tests. JSON reports are suitable for tools; nonzero exits fail the job. Cache tooling is not required."
-    release_intro = "Play Rune Crypt: a five-depth dungeon roguelite built while expanding Pixel 3D."
-    release_text = "0.3.4 adds Rune Crypt with three classes, tactical combat, chosen upgrades, persistent training and an original soundtrack. Pixel 3D gains generated skies, textured floors and ceilings, taller rooms, solid block models, dissolving enemies and portable status/pause panels. fmt --line-width wraps long JSON objects safely. Vect Breach, Monster City, API tests and embedded logic tests remain supported."
+    release_intro = "Play Starfall Protocol: a space metroidvania built with the Pixel 3D engine."
+    release_text = "0.3.6 adds Starfall Protocol: connected sectors, three main bosses and an optional guardian, linked movement abilities, saved progress, original music, a cinematic opening and homecoming credits. The engine gains sparse chunked worlds, nearby entity processing, faster voxel rendering, destination labels, scrolling cinematic HUDs and stable controller pause."
     upgrade_title = "Upgrade and verify"
-    upgrade_text = "Homebrew users can update and upgrade. Other platforms should replace the old binary with 0.3.4 from Releases. doctor shows the executable actually running so you can spot an older binary on PATH."
+    upgrade_text = "Homebrew users can update and upgrade. Other platforms should replace the old binary with 0.3.6 from Releases. doctor shows the executable actually running so you can spot an older binary on PATH."
     cmd_1 = "brew install davethomas11/vectrune/vectrune\nvectrune --version"
     cmd_2 = "vectrune doctor .\nvectrune fmt . --check\nvectrune check . --deny-warnings\nvectrune test ."
     cmd_3 = "vectrune doctor .\nvectrune doctor app.rune --json"

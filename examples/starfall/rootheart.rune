@@ -1,0 +1,93 @@
+@Logic/starfall
+action reset_rootheart:
+    stop when sector_id != "hydroponics" || !rootheart.visible
+    rootheart.hp = rootheart.max_hp
+    rootheart.x = 66
+    rootheart.z = 3
+    rootheart.hit_ticks = 0
+    rootheart.model = "sf/rootheart_closed"
+    root_clock = 0
+    root_phase = "dormant"
+    root_warning.visible = false
+
+action update_rootheart:
+    root_warning.visible = false
+    stop when sector_id != "hydroponics" || !rootheart.visible || recovery_phase != "none" || player.x < 57
+    root_clock += 1
+    rootheart.hit_ticks = max(0, rootheart.hit_ticks-1)
+    cycle = root_clock%180
+    rootheart.x = 66+sin(root_clock*2)*0.6
+    rootheart.z = 3+sin(root_clock*4)*0.1
+    root_phase = cycle >= 60 && cycle < 140 ? "open" : "closed"
+    rootheart.model = root_phase == "open" ? (cycle%16 < 8 ? "sf/rootheart_open" : "sf/rootheart_breathe") : "sf/rootheart_closed"
+    if rootheart.hit_ticks > 0:
+        rootheart.model = "sf/rootheart_hit"
+    if cycle == 30:
+        root_warning.x = clamp(player.x, 58, 73)
+        sound.play "sf_root_charge"
+    if cycle >= 30 && cycle < 66:
+        root_warning.visible = true
+        root_warning.model = cycle < 54 ? "sf/root_warning" : "sf/root_spike"
+        if cycle >= 54 && abs(player.x-root_warning.x) < 0.7 && player.z < 4.6:
+            call take_damage 1, root_warning.x
+    if cycle == 45:
+        direction = player.x < rootheart.x ? -1 : 1
+        call spore_shot rootheart.x, 3.8, direction*0.18, 0
+    if abs(player.x-rootheart.x) < 1.1 && player.z < rootheart.z+2.4:
+        call take_damage 1, rootheart.x
+
+action spore_shot(x, z, dx, dz):
+    shots.push(
+        {
+            "x": x,
+            "y": 7,
+            "z": z,
+            "dx": dx,
+            "dz": dz,
+            "ttl": 105,
+            "hostile": true,
+            "damage": 1,
+            "model": "sf/spore_bolt",
+            "visible": true
+        }
+    )
+
+action hit_rootheart(damage, x, z):
+    stop when root_phase != "open" || !rootheart.visible
+    rootheart.hp = max(0, rootheart.hp-damage)
+    rootheart.hit_ticks = 5
+    rootheart.model = "sf/rootheart_hit"
+    call pollen_burst x, z, 5
+    sound.play "sf_hit"
+    if rootheart.hp == 0:
+        rootheart.visible = false
+        call claim_boss_container "rootheart"
+        root_warning.visible = false
+        root_phase = "defeated"
+        shots = []
+        pickups[2].visible = true
+        call pollen_burst rootheart.x, rootheart.z+1, 28
+        notice = "ROOTHEART PURGED / HEALTH +1. Collect the relay to bank this sector and open the shortcut."
+        notice_ticks = 180
+        sound.play "sf_upgrade"
+
+action pollen_burst(x, z, count):
+    for i in range(0, count):
+        effects.push(
+            {
+                "x": x,
+                "y": 7.3,
+                "z": z,
+                "dx": cos(i * 137) * 0.12,
+                "dz": sin(i * 137) * 0.1,
+                "ttl": 18 + i % 4 * 3,
+                "life": 27,
+                "angle": i * 23,
+                "spin": 13,
+                "scale": 0.7,
+                "model": i % 2 == 0 ? "sf/pollen": "sf/spore_bolt",
+                "kind": "exhaust",
+                "visible": true
+            }
+        )
+    effects = effects.slice(max(0,effects.length-96))

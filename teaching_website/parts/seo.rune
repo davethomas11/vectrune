@@ -143,7 +143,7 @@ description = %i18n.Developer.ci_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_release
-title = %i18n.Developer.release% — Vectrune 0.3.4
+title = %i18n.Developer.release% — Vectrune 0.3.6
 description = %i18n.Developer.release_intro%
 image = /assets/rune-logo.png
 
@@ -160,4 +160,9 @@ image = /assets/rune-logo.png
 @SEO/skybound-2
 title = %i18n.SkyboundTwo.title% — Vectrune
 description = %i18n.SkyboundTwo.description%
+image = /assets/rune-logo.png
+
+@SEO/starfall
+title = %i18n.Starfall.title% — Vectrune
+description = %i18n.Starfall.description%
 image = /assets/rune-logo.png

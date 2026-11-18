@@ -1,3 +1,4 @@
+import {isOwnedValue, registerReactive} from './ownership';
 // ============================================================================
 // Scope management — path splitting, scope building, reactivity
 // ============================================================================
@@ -69,8 +70,30 @@ export function splitPathSegments(expr: string): string[] {
 }
 
 /** Build a combined scope from app state, derived values, and local bindings. */
-export function buildScope(locals: Record<string, unknown>): Scope {
+const expressionNames = new Map<string, string[]>();
+export function buildScope(locals: Record<string, unknown>, expression?: string): Scope {
   const c = ctx();
+  // Game actions are synchronous. Copy only potentially referenced bindings,
+  // retaining snapshot values and the usual local > derived > state precedence.
+  // Helpers can implicitly consume caller locals, so keep their complete scope.
+  if (c.compactScopes && expression !== undefined && Object.keys(c.helperDefinitions).length === 0) {
+    let names = expressionNames.get(expression);
+    if (!names) {
+      names = [...new Set(expression.match(/[A-Za-z_$][\w$]*/g) || [])];
+      if (expressionNames.size >= 4096) expressionNames.clear();
+      expressionNames.set(expression, names);
+    }
+    const scope: Scope = {};
+    for (const name of names) {
+      for (const source of [locals, c.app.derived, c.app.state]) {
+        if (source && Object.prototype.propertyIsEnumerable.call(source, name)) {
+          scope[name] = source[name];
+          break;
+        }
+      }
+    }
+    return scope;
+  }
   return Object.assign({}, c.app.state, c.app.derived, locals || {});
 }
 
@@ -95,7 +118,7 @@ function scheduleRender(): void {
  * and tracks memory subscriptions for granular updates.
  */
 export function makeReactive(obj: Record<string, unknown>): Record<string, unknown> {
-  if (obj === null || typeof obj !== 'object') return obj;
+  if (obj === null || typeof obj !== 'object' || isOwnedValue(obj)) return obj;
   if ((obj as Record<string, unknown>).__isProxy) return obj;
 
   const cached = proxyCache.get(obj);
@@ -145,6 +168,7 @@ export function makeReactive(obj: Record<string, unknown>): Record<string, unkno
     },
   });
 
+  registerReactive(proxy,obj);
   proxyCache.set(obj, proxy);
   return proxy;
 }

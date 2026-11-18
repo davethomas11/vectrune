@@ -1,0 +1,184 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/TitleAndSidePlane
+type = logic
+page = starfall
+run:
+    invoke initialize
+    assert state.status == "title"
+    assert state.world.storage == "chunked"
+    assert state.world.width == 128
+    invoke tick {"right":true}
+    assert state.player.x == 9
+    invoke launch_test_run
+    invoke tick {"right":true,"forward":true,"back":true}
+    assert state.player.x > 9
+    assert state.player.y == 7
+    assert state.camera.angle == 270
+    assert state.camera.y == 19
+
+@Test/Starfall/JumpJetsRequireASecondPress
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    invoke tick {"jump":true}
+    assert state.jumps == 1
+    invoke tick {}
+    invoke tick {"jump":true}
+    assert state.jumps == 1
+    invoke give_jets
+    invoke tick {}
+    invoke tick {"jump":true}
+    assert state.jumps == 2
+    assert state.player.vz > 0.4
+    invoke tick {}
+    invoke tick {"jump":true}
+    assert state.player.vz < 0.4
+    assert state.jumps == 2
+
+@Test/Starfall/SealRequiresPlasma
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke at_seal
+run:
+    invoke tick {"fire":true}
+    invoke tick {}
+    assert state.gate_open == false
+    invoke give_plasma
+    invoke wait_ticks 7
+    invoke tick {"fire":true}
+    invoke tick {}
+    assert state.gate_open == false
+    invoke wait_ticks 7
+    invoke hold_plasma 24
+    assert state.charge_ready == true
+    assert state.gate_open == false
+    invoke tick {}
+    invoke tick {}
+    assert state.gate_open == true
+    assert state.plasma == true
+
+@Test/Starfall/BeaconAndDeathPreserveEquipment
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke at_jets
+run:
+    invoke tick {}
+    assert state.jets == true
+    assert state.pickups[0].visible == false
+    invoke at_beacon
+    invoke tick {}
+    assert state.checkpoint.x == 35
+    invoke take_damage 6
+    assert state.health == 0
+    assert state.recovery_phase == "collapse"
+    invoke advance
+    assert state.recovery_phase == "collapse"
+    invoke wait_ticks 100
+    assert state.status == "playing"
+    assert state.recovery_phase == "none"
+    assert state.health == 4
+    assert state.jets == true
+    assert state.player.x == 35
+    invoke take_damage 1
+    assert state.health == 4
+
+@Test/Starfall/BossArmorAndCoreReturn
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke at_boss
+run:
+    invoke tick {"fire":true}
+    invoke wait_ticks 4
+    assert state.boss.hp == 48
+    invoke expose_boss
+    invoke tick {"fire":true}
+    invoke wait_ticks 4
+    assert state.boss.visible == false
+    assert state.pickups[2].visible == true
+    assert state.status == "playing"
+    invoke at_core
+    invoke tick {}
+    assert state.core == true
+    assert state.status == "playing"
+    invoke at_ship
+    invoke tick {}
+    assert state.status == "departing"
+    invoke wait_ticks 120
+    assert state.status == "ending"
+    invoke advance
+    invoke advance
+    assert state.status == "won"
+    invoke tick {"right":true}
+    assert state.player.x == 9
+    invoke advance
+    assert state.status == "intro"
+    invoke advance
+    assert state.status == "landing"
+    invoke wait_ticks 108
+    assert state.status == "playing"
+    assert state.core == false
+    assert state.jets == false
+    assert state.boss.hp == 48
+
+@Logic/starfall
+action give_jets:
+    jets = true
+
+action give_plasma:
+    plasma = true
+    garden_cleared = true
+
+action at_jets:
+    call enter_upgrade_vault "jets"
+    player.x = 45.5
+    player.z = 4
+
+action at_seal:
+    player.x = 61
+
+action at_beacon:
+    if upgrade_snapshot:
+        call leave_upgrade_vault
+    player.x = 35
+    invulnerable = 0
+
+action at_boss:
+    player.x = 110
+
+action expose_boss:
+    boss_clock = 161
+    boss.hp = 1
+    cooldown = 0
+
+action at_core:
+    player.x = 124
+    player.z = 4
+
+action at_ship:
+    player.x = 9
+
+action wait_ticks(count):
+    for i in range(0, count):
+        call tick {}
+
+action hold_plasma(count):
+    for i in range(0, count):
+        call tick {"fire":true}
+
+action launch_test_run:
+    campaign = {"hydroponics": false, "finished": false}
+    call start
+    call advance
+    for i in range(0, 108):
+        stop when status != "landing"
+        call tick {}

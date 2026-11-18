@@ -76,3 +76,34 @@ it('keeps Enter menu confirmation available when mapped to host.start', () => {
   controls.command('host.start');
   expect(confirmed).toBe(true); expect(started).toBe(false);
 });
+
+it('keeps pause pressed through menu cleanup and rearms only on release', () => {
+  const game = { paused: false, muted: false, app: { state: { status: 'playing' } }, start() {}, invoke() {} };
+  const controls = new GameControls({ ...profile, gamepad: { Button9: { command: 'host.pause' }, Button0:'fire' } }, game);
+  const pad = { index:0, axes:[], buttons:Array.from({length:10},()=>({value:0})) };
+  pad.buttons[9].value=1;controls.gamepads([pad]);expect(game.paused).toBe(true);
+  controls.clear(true); // The host opens its pause menu and clears gameplay inputs.
+  for(let poll=0;poll<30;poll++)controls.gamepads([pad]);
+  expect(game.paused).toBe(true);
+  pad.buttons[9].value=0;controls.gamepads([pad]);
+  pad.buttons[9].value=1;controls.gamepads([pad]);expect(game.paused).toBe(false);
+  controls.clear(true); // Closing that menu must preserve the release latch too.
+  for(let poll=0;poll<30;poll++)controls.gamepads([pad]);
+  expect(game.paused).toBe(false);
+  controls.clear(); // Focus loss/disconnect cleanup still releases every source.
+  controls.gamepads([pad]);expect(game.paused).toBe(true);
+});
+
+it('uses controller Start to begin a title and pauses each cinematic state once per press',()=>{
+ let started=0;
+ const game={paused:false,muted:false,app:{state:{status:'title'}},start(){started++;this.app.state.status='intro';},invoke(){}};
+ const controls=new GameControls({...profile,gamepad:{Button9:{command:'host.pause'}}},game);
+ const pad={index:0,axes:[],buttons:Array.from({length:10},()=>({value:0}))};
+ pad.buttons[9].value=1;controls.gamepads([pad]);controls.clear(true);controls.gamepads([pad]);
+ expect(started).toBe(1);expect(game.paused).toBe(false);
+ for(const status of ['intro','landing','departing','ending','credits']){
+  game.app.state.status=status;game.paused=false;
+  pad.buttons[9].value=0;controls.gamepads([pad]);pad.buttons[9].value=1;controls.gamepads([pad]);
+  expect(game.paused).toBe(true);controls.clear(true);controls.gamepads([pad]);expect(game.paused).toBe(true);
+ }
+});

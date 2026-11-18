@@ -1,0 +1,52 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/Cinema/OpeningFlightLocksControlsAndRecedesToADot
+type = logic
+page = starfall
+run:
+    invoke start
+    assert state.status == "intro"
+    assert state.touch_ready == false
+    assert state.cinema_skip_ready == true
+    assert state.music_track == "sf_mission"
+    invoke tick {"right":true,"fire":true,"jump":true}
+    assert state.player.x == 9
+    assert state.shots.length == 0
+    invoke wait_ticks 199
+    assert state.ship.model == "sf/distant_ship"
+    assert state.ship.scale < 0.1
+    assert state.ship.visible == true
+    invoke wait_ticks 45
+    assert state.ship.visible == false
+    assert state.ui.cinema.offset > 100
+    invoke advance
+    assert state.status == "landing"
+    assert state.ship.scale == 1.2
+    assert state.world.depth == 20
+    invoke wait_ticks 108
+    assert state.status == "playing"
+    assert state.touch_ready == true
+
+@Test/Starfall/Cinema/HomecomingAndCreditsAttribution
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    invoke begin_homecoming
+    assert state.status == "ending"
+    assert state.campaign.finished == true
+    assert state.music_track == "sf_homecoming"
+    invoke wait_ticks 190
+    assert state.scenery[0].model == "sf/ark_lit"
+    assert state.ship.scale > 1
+    invoke wait_ticks 80
+    assert state.status == "credits"
+    assert state.ui.heading == "GAME BY DAVE THOMAS"
+    assert state.ui.cinema.lines[2] == "GAME BY DAVE THOMAS"
+    invoke wait_ticks 180
+    assert state.ui.cinema.offset > 100
+    invoke advance
+    assert state.status == "won"
+    assert state.music_track == ""

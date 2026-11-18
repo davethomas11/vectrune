@@ -24,6 +24,18 @@ var __RuneVect = (() => {
     run: () => run
   });
 
+  // src/pixel3d/entities.ts
+  var active;
+  var groups = /* @__PURE__ */ new WeakMap();
+  var movementLog = Array(4096);
+  function entitiesChanged(value) {
+    if (value && typeof value === "object") {
+      const group = groups.get(value);
+      if (group) group.version++;
+    }
+    if (Array.isArray(value)) for (const index of active?.indices.get(value)?.values() ?? []) index.dirty = true;
+  }
+
   // src/core_expression.ts
   var precedence = {
     "??": 1,
@@ -260,8 +272,11 @@ var __RuneVect = (() => {
           const receiver = ev(a.items[0]), key = safeKey(ev(a.items[1]));
           const arrays = ["push", "pop", "join", "slice", "map", "filter", "find", "some", "every", "includes", "indexOf"];
           const strings = ["join", "slice", "includes", "indexOf", "split", "toLowerCase", "toUpperCase", "padStart"];
-          if (Array.isArray(receiver) && arrays.includes(key) || typeof receiver === "string" && strings.includes(key))
-            return receiver[key](...args);
+          if (Array.isArray(receiver) && arrays.includes(key) || typeof receiver === "string" && strings.includes(key)) {
+            const result = receiver[key](...args);
+            if (key === "push" || key === "pop") entitiesChanged(receiver);
+            return result;
+          }
         }
         throw new Error(`Unknown function: ${name || "expression"}`);
       }

@@ -139,13 +139,14 @@ Explore the running apps, then read the Rune source behind them.
 
 | App | What it demonstrates | Try it | Source |
 | --- | --- | --- | --- |
+| **Starfall Protocol** | A space metroidvania with connected sectors, linked abilities, four bosses and cinematic flight sequences | [Play](https://vectrune.com/starfall/) | [Rune source](examples/starfall/) |
 | **Rune Crypt** | A dungeon roguelite with block models, combat, equipment, and exploration | [Play](https://vectrune.com/rune-crypt/) | [Rune source](examples/rune_crypt/) |
 | **Monster City** | A 2D kaiju game with destructible buildings, a shop, saved progress, and synthesized audio | [Play](https://vectrune.com/monster-city/) | [Rune source](examples/monster_city/) |
 | **VectRaiders** | An arcade game with reactive game state, collisions, input, and sound | [Play](https://vectrune.com/games/) | [Rune source](examples/space_invaders/) |
 | **Skybound 2** | A lantern-moth adventure across seven sky worlds, with squashable creatures, two bosses, and an original score | [Play](https://vectrune.com/skybound-2/) | [Rune source](examples/skybound_2/) |
 | **Learning site** | The site's own components, navigation, localization, and example explorer | [Visit](https://vectrune.com/) | [Site source](teaching_website/) |
 
-The [Rune Miners experiment](examples/rune_miners/) explores seeded voxel worlds, mining, inventory, and shared browser/native game logic on `main`.
+The [Rune Miners experiment](examples/rune_miners/) explores seeded voxel worlds, mining, inventory, and shared browser/native game logic on `main`. Authored worlds can use [sparse terrain chunks](knowledge/runtime/voxel-worlds.md) up to 4,096 tiles wide, while shared nearby-entity queries let real-time games sleep distant actors.
 
 ## Example library
 
@@ -160,6 +161,7 @@ From a repository checkout, run an example with `vectrune <path>`:
 | Reactive UI | [`examples/counter.rune`](examples/counter.rune) | State, events, and styles in one file |
 | 3D platformer | [`examples/skybound/skybound.rune`](examples/skybound/skybound.rune) | Third-person camera, jumping, coins, enemies, and checkpoints; [play/build instructions](knowledge/runtime/pixel3d.md#skybound-third-person-platforming-v035) |
 | Platform adventure | [`examples/skybound_2/skybound_2.rune`](examples/skybound_2/skybound_2.rune) | Nix the lantern moth, a seven-level atlas, two bosses, saved progression, and arranged music; [play/build instructions](knowledge/runtime/pixel3d.md#skybound-2-beyond-the-concept-v035) |
+| Space metroidvania | [`examples/starfall/starfall.rune`](examples/starfall/starfall.rune) | Connected sectors, four bosses, exploration map, optional movement-puzzle rooms and saved upgrades; [play/build instructions](knowledge/runtime/pixel3d.md#starfall-protocol-side-scrolling-space-adventure) |
 | Forms and components | [`examples/rune_web_guide/`](examples/rune_web_guide/) | Run an individual lesson such as `forms.rune` or `packing.rune` |
 | Reports | [`examples/sales_report.rune`](examples/sales_report.rune) | Grouped counts, sums, averages, medians, and distinct values |
 | Structured data | [`examples/skateboarders.rune`](examples/skateboarders.rune) | Named sections and records |

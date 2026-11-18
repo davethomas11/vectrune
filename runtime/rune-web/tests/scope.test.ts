@@ -52,6 +52,18 @@ describe('splitPathSegments', () => {
 });
 
 describe('buildScope', () => {
+  it('copies referenced game bindings as snapshots and retains helper caller scopes', () => {
+    const app=setupTestContext({a:1,unused:5},{a:2,b:3});
+    ctx().compactScopes=true;
+    const locals={a:undefined,index:0,items:[7]};
+    const scope=buildScope(locals,'a + b + items[index]');
+    expect(scope).toEqual({a:undefined,b:3,items:[7],index:0});
+    app.derived.b=9;
+    expect(scope.b).toBe(3);
+    expect(buildScope(locals,'b').b).toBe(9);
+    ctx().helperDefinitions={helper:{params:[],body:['return unused']}};
+    expect(buildScope(locals,'helper()').unused).toBe(5);
+  });
   it('merges state, derived, and locals', () => {
     setupTestContext({ a: 1 }, { b: 2 });
     const scope = buildScope({ c: 3, a: 10 }); // locals override state

@@ -27,7 +27,13 @@ action blank_world:
         "cells": [],
         "spawn": player
     }
-    world.cells = repeat(0, 38400)
+    world = voxel_world(
+        world.width,
+        world.height,
+        world.depth,
+        world.materials,
+        {"seed": world.seed, "biome": world.biome, "spawn": world.spawn, "renderDistance": 128}
+    )
 
 action island(x, y, width, height, top, material):
     # Match the island's exposed lower course to its surface biome.
@@ -53,8 +59,10 @@ action seed(x, y, z):
 action build_level:
     call blank_world
     seeds = []
+    seeds = entity_group(seeds)
     scenery = []
-    enemies = []
+    scenery = entity_group(scenery)
+    enemies = entity_group()
     boss.visible = false
     boss_hp = 0
     goal.visible = !stages[selected].boss

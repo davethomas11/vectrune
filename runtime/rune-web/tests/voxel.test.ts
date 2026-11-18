@@ -1,10 +1,94 @@
 import { describe, expect, it } from 'vitest';
 import { compileExpression } from '../src/expression';
-import { voxelGenerate, voxelGet, voxelMove, voxelRay, voxelMine, validateWorld, voxelRead, voxelFill, prepareVoxelChunks } from '../src/pixel3d/voxel';
+import { voxelGenerate, voxelGet, voxelMove, voxelRay, voxelMine, validateWorld, voxelRead, voxelFill, prepareVoxelChunks, renderVoxels } from '../src/pixel3d/voxel';
 import { Raycaster3D, type Texture } from '../src/pixel3d/raycaster';
 import { renderModel } from '../src/pixel3d/model';
 
 describe('voxel worlds', () => {
+  it('detects aliased raw writes and material-range changes after snapshot validation', () => {
+    const world=voxelGenerate(1), alias=world.cells;
+    validateWorld(world);
+    const chunks=prepareVoxelChunks(world);
+    alias[(7*20+7)*20+7]=2;
+    expect(validateWorld(world)).toBe(world);
+    expect(prepareVoxelChunks(world)).toBe(chunks);
+    expect(voxelRay(world,{x:7.5,y:7.5,z:8.5},[0,0,-1],20,undefined,chunks)).toMatchObject({z:7,block:2});
+    alias[0]=99;
+    expect(()=>validateWorld(world)).toThrow('valid block IDs');
+    alias[0]=1;
+    expect(validateWorld(world)).toBe(world);
+    world.materials=['only-one'];
+    expect(()=>validateWorld(world)).toThrow('valid block IDs');
+  });
+  it('keeps cached crossing depths identical to scalar rays while moving and changing worlds', () => {
+    const buffer = new Uint32Array(40*31), depths = new Float64Array(40*31);
+    const fov = 72, scale = Math.tan(fov*Math.PI/360);
+    for (const [width,height,depth] of [[13,17,9],[17,13,7]]) {
+      const world = {...voxelGenerate(1),width,height,depth,cells:Array(width*height*depth).fill(0)};
+      voxelFill(world,[2,3,1],[8,5,1],2);
+      voxelFill(world,[5,8,2],[1,2,3],3);
+      voxelFill(world,[9,6,3],[1,3,2],4);
+      const textures: Record<string, Texture> = Object.fromEntries(world.materials.map(name =>
+        [name,{width:1,height:1,pixels:new Uint32Array([0xff4080c0])}]));
+      for (const [x,y,z,angle] of [[4,11,4,270],[4.25,11.25,4.2,270],[4.25,11.25,3.1,270],
+        [4.25,11.25,3.1,0],[4,8,2,90],[8,4,3,35],[7,4,3,180],[3,3,4,225]]) {
+        const camera = {x,y,z,angle,pitch:0};
+        renderVoxels(world,camera,textures,null,fov,40,31,buffer,depths,0);
+        const a=angle*Math.PI/180, ca=Math.cos(a), sa=Math.sin(a);
+        const origin={x,y,z:z+1.25};
+        for (let row=0;row<31;row++) for (let column=0;column<40;column++) {
+          const u=(2*column/40-1)*scale, v=(31/2-row-.5)/31;
+          const hit=voxelRay(world,origin,[ca-sa*u,sa+ca*u,v],Math.hypot(width,height,depth));
+          expect(depths[row*40+column]).toBe(hit?.distance ?? Infinity);
+        }
+      }
+    }
+  });
+  it('refreshes camera rays for rotation, pitch, FOV and same-length framebuffer resizing', () => {
+    const world = voxelGenerate(319);
+    const textures: Record<string, Texture> = Object.fromEntries(world.materials.map((name, i) =>
+      [name, { width:1, height:1, pixels:new Uint32Array([0xff102030 + i * 0x101010]) }]));
+    const buffer = new Uint32Array(4000), depth = new Float64Array(4000);
+    const camera = { ...world.spawn, x:5.5 };
+    const sky = {seed:1,zenith:0x102030,horizon:0x203040,cloud:0x405060,speed:.1};
+    // Each result must agree with a renderer that has no cached orientation.
+    for (const [x,y,z,angle,pitch,fov,width,height] of [
+      [5.5,4.5,3,0,0,66,80,50], [6,5,4,0,0,66,80,50],
+      [6,5,4,270,0,66,80,50], [6,5,4,270,-35,66,80,50],
+      [6,5,4,270,-35,85,80,50], [6,5,4,270,-35,85,100,40],
+      [6,5,4,0,28,72,80,50], [5.5,4.5,3,0,0,66,80,50],
+    ]) {
+      Object.assign(camera, {x,y,z,angle,pitch});
+      // Warm-up also covers reuse with a previous renderer's camera object.
+      renderVoxels(world,camera,textures,sky,fov,width,height,buffer,depth,1);
+      renderVoxels(world,camera,textures,sky,fov,width,height,buffer,depth,1);
+      const expected = new Uint32Array(4000), expectedDepth = new Float64Array(4000);
+      renderVoxels(world,camera,textures,sky,fov,width,height,expected,expectedDepth,1);
+      expect(buffer).toEqual(expected);
+      expect(depth).toEqual(expectedDepth);
+    }
+    // Cached rays must not cache geometry or hide arbitrary cell edits.
+    const before = buffer.slice();
+    voxelFill(world,[6,4,3],[1,1,3],2);
+    renderVoxels(world,camera,textures,sky,66,80,50,buffer,depth,1);
+    expect(buffer).not.toEqual(before);
+  });
+  it('supports long station corridors within the existing cell budget', () => {
+    const world = { ...voxelGenerate(1), width:112, height:20, depth:22,
+      cells:Array(112*20*22).fill(0) };
+    expect(validateWorld(world)).toBe(world);
+    voxelFill(world, [100,5,2], [8,4,1], 2);
+    const player = {x:104,y:7,z:3,angle:0,pitch:0,vz:0};
+    expect(voxelMove(world, player, .2, 0).x).toBeCloseTo(104.2);
+    const hit = voxelRay(world, {x:104,y:7,z:6}, [0,0,-1], 10,
+      undefined, prepareVoxelChunks(world));
+    expect(hit).toMatchObject({x:104,y:7,z:2,block:2});
+    expect(() => validateWorld({...world,width:128,height:128})).toThrow('55296');
+    expect(() => validateWorld({...world,width:4097})).toThrow('Voxel width');
+    expect(() => validateWorld({...world,height:4097})).toThrow('Voxel height');
+    const boundary = {...world,width:128,height:18,depth:24,cells:Array(55296).fill(0)};
+    expect(validateWorld(boundary)).toBe(boundary);
+  });
   it('skips empty regions without reading their individual cells', () => {
     const world = { ...voxelGenerate(1), width:48, height:40, depth:20, cells:Array(48*40*20).fill(0) };
     world.cells[(10*40+30)*48+40] = 2;

@@ -23,6 +23,7 @@ export interface RuneContext {
   i18nData: Record<string, string>;
   app: RuneApp;
   isRendering: boolean;
+  compactScopes?: boolean;
   memorySubscriptions: Record<string, Set<string>>;
   navigator?: NavigatorConfig | null;
   initialState?: Record<string, unknown>;

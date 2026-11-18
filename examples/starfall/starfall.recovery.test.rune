@@ -1,0 +1,110 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/LifeBarAndOrdinaryDamage
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke safe_recovery_fixture
+run:
+    assert state.ui.meters[0].display == "pips"
+    assert state.ui.meters[0].icon == "sf/life_full"
+    invoke take_damage 2
+    assert state.health == 2
+    assert state.ui.meters[0].value == 2
+    assert state.ui.meters[0].icon == "sf/life_critical"
+    assert state.player.x == 58
+    assert state.recovery_phase == "none"
+    invoke take_damage 1
+    assert state.health == 2
+
+@Test/Starfall/DeathGhostAndAutomaticRebuild
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke safe_recovery_fixture
+run:
+    invoke take_damage 6
+    assert state.health == 0
+    assert state.recovery_phase == "collapse"
+    assert state.player.x == 58
+    assert state.ghost.visible == false
+    invoke tick {"right":true,"fire":true,"jump":true}
+    assert state.player.x == 58
+    assert state.shots.length == 0
+    invoke recovery_ticks 23
+    assert state.recovery_phase == "return"
+    assert state.avatar.visible == false
+    assert state.ghost.visible == true
+    invoke recovery_ticks 28
+    assert state.ghost.x < 58
+    assert state.ghost.x > 35
+    assert state.camera.x > 35
+    assert state.health == 0
+    assert state.jets == true
+    invoke recovery_ticks 31
+    assert state.recovery_phase == "reform"
+    assert state.player.x == 35
+    assert state.health == 4
+    assert state.ghost.visible == false
+    invoke recovery_ticks 18
+    assert state.recovery_phase == "none"
+    assert state.avatar.dissolve == 0
+    assert state.jets == true
+    assert state.plasma == true
+    assert state.invulnerable > 0
+
+@Test/Starfall/FallPreservesRemainingLife
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke safe_recovery_fixture
+    invoke into_gap
+run:
+    invoke tick {}
+    assert state.health == 2
+    assert state.recovery_phase == "collapse"
+    invoke recovery_ticks 130
+    assert state.recovery_phase == "none"
+    assert state.player.x == 35
+    assert state.player.z == 3
+    assert state.health == 2
+
+@Test/Starfall/RestartClearsGhostAndDissolve
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke safe_recovery_fixture
+run:
+    invoke take_damage 6
+    invoke recovery_ticks 30
+    assert state.ghost.visible == true
+    invoke launch_test_run
+    assert state.ghost.visible == false
+    assert state.recovery_phase == "none"
+    assert state.avatar.dissolve == 0
+    assert state.health == 4
+
+@Logic/starfall
+action safe_recovery_fixture:
+    player.x = 58
+    camera.x = 58
+    checkpoint = {"x": 35, "z": 3}
+    enemies = []
+    jets = true
+    plasma = true
+    call refresh_ui
+
+action recovery_ticks(count):
+    for i in range(0, count):
+        stop when recovery_phase == "none"
+        call tick {"right":true,"fire":true,"jump":true}
+
+action into_gap:
+    player.x = 24
+    player.z = 1.1
+    player.vz = -0.2

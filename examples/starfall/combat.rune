@@ -1,0 +1,171 @@
+@Logic/starfall
+action fire_weapon(up):
+    charged = plasma && charge_ticks >= charge_duration
+    cooldown = charged ? 10 : 7
+    if !charged:
+        sound.play "sf_fire"
+    if charged:
+        sound.play "sf_plasma_fire"
+    shots.push(
+        {
+            "x": player.x + (up ? 0: facing * 0.8),
+            "y": 7,
+            "z": player.z + (up ? 1.8: 1) - (ducking ? 0.55: 0),
+            "dx": up ? 0: facing * 0.8,
+            "dz": up ? 0.7: 0,
+            "ttl": 35,
+            "hostile": false,
+            "damage": charged ? 6: (plasma ? 2: 1),
+            "charged": charged,
+            "scale": charged ? 1.7: 1,
+            "model": charged ? "sf/charged_bolt": (plasma ? "sf/plasma_bolt": "sf/bolt"),
+            "visible": true
+        }
+    )
+
+action enemy_shot(x, z, dx, dz):
+    shots.push(
+        {
+            "x": x,
+            "y": 7,
+            "z": z,
+            "dx": dx,
+            "dz": dz,
+            "ttl": 100,
+            "hostile": true,
+            "damage": 1,
+            "model": "sf/enemy_bolt",
+            "visible": true
+        }
+    )
+
+# Swept, axis-separated bounds include wings and animated thrusters.
+# Test every overlapped voxel, rather than just the enemy's center point.
+action enemy_space(enemy, x, z):
+    radius = enemy.kind == "hunter" ? 1.4 : (enemy.kind == "crawler" ? 1.15 : (enemy.kind == "spore" ? 1.05 : 0.9))
+    bottom = enemy.kind == "hunter" ? 0.65 : (enemy.kind == "crawler" ? 0.625 : 0.65)
+    top = enemy.kind == "hunter" ? 0.9 : 0.65
+    enemy.space_clear = x-radius >= 0 && x+radius < world.width && z-bottom >= 1 && z+top < world.depth
+    stop when !enemy.space_clear
+    for bx in range(floor(x-radius), floor(x+radius)+1):
+        for bz in range(floor(z-bottom+0.001), floor(z+top-0.001)+1):
+            for by in [6,7]:
+                if world.cells[(bz*world.height+by)*world.width+bx] != 0:
+                    enemy.space_clear = false
+    if enemy.kind == "crawler":
+        for foot in [-0.65,0.65]:
+            if world.cells[(floor(z-0.75)*world.height+7)*world.width+floor(x+foot)] == 0:
+                enemy.space_clear = false
+
+action move_enemy(enemy, target_x, target_z):
+    dx = target_x-enemy.x
+    dz = target_z-enemy.z
+    steps = max(1, ceil(max(abs(dx), abs(dz))/0.15))
+    for step in range(0, steps):
+        call enemy_space enemy, enemy.x+dx/steps, enemy.z
+        if enemy.space_clear:
+            enemy.x += dx/steps
+        call enemy_space enemy, enemy.x, enemy.z+dz/steps
+        if enemy.space_clear:
+            enemy.z += dz/steps
+
+action update_combat:
+    call update_escape_encounters
+    for enemy in nearby(enemies, player, 28):
+        if enemy.visible:
+            if enemy.active_tick > 0 && ticks-enemy.active_tick > 1:
+                if enemy.kind == "hunter" || enemy.kind == "crawler":
+                    enemy.clock = 0
+                if enemy.kind != "hunter" && enemy.kind != "crawler":
+                    enemy.targeting = false
+                    enemy.cooldown = max(24, enemy.cooldown)
+            enemy.active_tick = ticks
+            enemy.hit_ticks = max(0, enemy.hit_ticks-1)
+            if enemy.kind == "hunter" || enemy.kind == "crawler":
+                call update_escape_enemy enemy
+            if enemy.kind != "hunter" && enemy.kind != "crawler":
+                enemy.model = enemy.hit_ticks > 0 ? "sf/drone_hit" : (ticks%8 < 4 ? "sf/drone" : "sf/drone_thrust")
+                if enemy.kind == "spore":
+                    enemy.model = enemy.hit_ticks > 0 ? "sf/skimmer_hit" : (ticks%12 < 6 ? "sf/skimmer" : "sf/skimmer_wing")
+                if enemy.kind == "forge":
+                    enemy.model = enemy.hit_ticks > 0 ? "sf/forge_sentry_hit" : (ticks%12 < 6 ? "sf/forge_sentry" : "sf/forge_sentry_vent")
+                call move_enemy enemy, enemy.home+sin(ticks*2+enemy.home)*enemy.span, enemy.base+sin(ticks*4+enemy.home)*0.2
+                can_attack = abs(player.x-enemy.x) < 12 && abs(player.z+0.8-enemy.z) < 2.5
+                if can_attack && !enemy.targeting:
+                    enemy.cooldown = max(24,enemy.cooldown)
+                enemy.targeting = can_attack
+                enemy.cooldown -= 1
+                if can_attack && enemy.cooldown > 0 && enemy.cooldown < 24:
+                    if enemy.hit_ticks == 0:
+                        enemy.model = enemy.kind == "spore" ? "sf/skimmer_charge" : (enemy.kind == "forge" ? "sf/forge_sentry_charge" : "sf/drone_charge")
+                    if enemy.cooldown == 23:
+                        sound.play "sf_enemy_lock"
+                if enemy.cooldown <= 0 && can_attack:
+                    enemy.cooldown = 80
+                    direction = player.x < enemy.x ? -1 : 1
+                    if enemy.kind != "spore":
+                        call enemy_shot enemy.x, enemy.z+0.2, direction*0.22, 0
+                    if enemy.kind == "spore":
+                        call spore_shot enemy.x, enemy.z+0.2, direction*0.17, -0.005
+            if abs(player.x-enemy.x) < 0.8 && enemy.z+0.55 > player.z && enemy.z-0.55 < player.z+body_height:
+                call take_damage 1, enemy.x
+    call update_warden
+    call update_rootheart
+    call update_iron_cantor
+    call update_curator
+    for shot in shots:
+        if shot.visible:
+            old_x = shot.x
+            shot.x += shot.dx
+            shot.z += shot.dz
+            shot.ttl -= 1
+            if shot.ttl <= 0 || shot.x < 1 || shot.x > world.width-1 || shot.z < 1 || shot.z > world.depth-1:
+                shot.visible = false
+            if shot.visible && shot.hostile && abs(shot.x-player.x) < 0.55 && shot.z > player.z && shot.z < player.z+body_height:
+                shot.visible = false
+                call take_damage 1, shot.x-shot.dx*4
+            # Swept seal hit: both directions work, and bolts cannot skip it.
+            crossed_gate = min(old_x, shot.x) <= 63 && max(old_x, shot.x) >= 62
+            if sector_id == "station" && shot.visible && !gate_open && crossed_gate && shot.z >= 3 && shot.z < 19:
+                shot.visible = false
+                if !shot.hostile && !!shot.charged:
+                    call breach_seal shot.z
+                if !shot.hostile && !shot.charged:
+                    notice = plasma ? "Seal resists weak shots. Hold fire until PLASMA READY, then release." : "Violet seal resists standard fire. Find plasma above the western dock."
+                    notice_ticks = 100
+            if shot.visible && world.cells[(floor(shot.z)*world.height+7)*world.width+floor(shot.x)] != 0:
+                shot.visible = false
+            if shot.visible && !shot.hostile:
+                for enemy in nearby(enemies, shot, 2):
+                    if shot.visible && enemy.visible && abs(shot.x-enemy.x) < 0.95 && abs(shot.z-enemy.z-0.2) < 0.65:
+                        shot.visible = false
+                        enemy.hp -= shot.damage
+                        enemy.hit_ticks = 5
+                        enemy.model = enemy.kind == "spore" ? "sf/skimmer_hit" : "sf/drone_hit"
+                        if enemy.kind == "forge":
+                            enemy.model = "sf/forge_sentry_hit"
+                        if enemy.kind == "hunter" || enemy.kind == "crawler":
+                            enemy.model = "sf/"+enemy.kind+"_hit"
+                        call burst shot.x, shot.z, 4
+                        sound.play "sf_hit"
+                        if enemy.hp <= 0:
+                            enemy.visible = false
+                            if enemy.kind != "spore":
+                                call burst enemy.x, enemy.z, 18
+                            if enemy.kind == "spore":
+                                call pollen_burst enemy.x, enemy.z, 18
+                            sound.play "sf_explode"
+                if shot.visible && curator.visible && abs(shot.x-curator.x) < 1.4 && shot.z > curator.z && shot.z < curator.z+3:
+                    shot.visible = false
+                    call hit_curator shot.damage, shot.x, shot.z
+                if shot.visible && forge_guardian.visible && abs(shot.x-forge_guardian.x) < 1.5 && shot.z > forge_guardian.z && shot.z < forge_guardian.z+4.4:
+                    shot.visible = false
+                    call hit_iron_cantor shot.damage, shot.x, shot.z
+                if shot.visible && rootheart.visible && abs(shot.x-rootheart.x) < 1.3 && shot.z > rootheart.z && shot.z < rootheart.z+3:
+                    shot.visible = false
+                    call hit_rootheart shot.damage, shot.x, shot.z
+                if shot.visible && boss.visible && abs(shot.x-boss.x) < 1.9 && shot.z > boss.z && shot.z < boss.z+5.6:
+                    shot.visible = false
+                    if boss_phase == "exposed":
+                        call hit_warden shot.damage, shot.x, shot.z
+    shots = shots.filter(shot => shot.visible)

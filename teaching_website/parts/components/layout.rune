@@ -64,6 +64,7 @@ view:
                     a .nav-link {.active when 'vect-breach'} href="{i18n.Common.base_path}vect-breach" data-route-link=true aria-current="{activePage == 'vect-breach' ? 'page' : 'false'}" click="navigate('vect-breach')" "%i18n.Nav.vect_breach%"
                     a .nav-link {.active when 'rune-crypt'} href="{i18n.Common.base_path}rune-crypt" data-route-link=true aria-current="{activePage == 'rune-crypt' ? 'page' : 'false'}" click="navigate('rune-crypt')" "%i18n.RuneCrypt.title%"
                     a .nav-link {.active when 'skybound-2'} href="{i18n.Common.base_path}skybound-2" data-route-link=true aria-current="{activePage == 'skybound-2' ? 'page' : 'false'}" click="navigate('skybound-2')" "%i18n.SkyboundTwo.title%"
+                    a .nav-link {.active when 'starfall'} href="{i18n.Common.base_path}starfall" data-route-link=true aria-current="{activePage == 'starfall' ? 'page' : 'false'}" click="navigate('starfall')" "%i18n.Starfall.title%"
                 div .nav-group:
                     h3 "%i18n.Nav.music%"
                     a .nav-link {.active when 'studio'} href="{i18n.Common.base_path}studio" data-route-link=true aria-current="{activePage == 'studio' or activePage == 'music' ? 'page' : 'false'}" click="navigate('studio')" "%i18n.Nav.studio%"
@@ -86,6 +87,7 @@ view:
                     "vect-breach"     -> VectBreachPage
                     "rune-crypt"      -> RuneCryptPage
                     "skybound-2"      -> SkyboundTwoPage
+                    "starfall"        -> StarfallPage
                     "studio"          -> RuneStudioPage
                     "music"           -> RuneStudioPage
                     "examples"        -> ExampleLab

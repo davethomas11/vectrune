@@ -1,4 +1,4 @@
-# Voxel worlds and Rune Miners (unreleased)
+# Voxel worlds and Rune Miners (v0.3.6)
 
 Pixel 3D scenes can opt into **solid, mineable 3D terrain**, independently of
 the existing grid-map renderer. Rune Crypt and Vect Breach keep their 2D wall
@@ -47,9 +47,49 @@ The world object contains `width`, `height`, `depth`, `seed`, `biome`,
 `materials`, `cells`, and `spawn`. Cells are flattened as
 `(z * height + y) * width + x`. Zero is air; positive IDs are **one-based**
 indices into `materials`, an array of compiled `@Texture` names.
-For custom volumes, width/height accept integers 1-48 and depth 1-24.
-There must be exactly width x height x depth cells and 1-256 materials;
-every cell ID must reference air or an existing material.
+For legacy flat-array volumes, width/height accept integers 1-4096 and depth
+1-24, with at most 55,296 cells in total. There must be exactly width x height x
+depth cells and 1-256 materials; every cell ID must reference air or an existing
+material. Existing generated worlds and raw array aliases retain their validation.
+
+For larger authored worlds, use sparse chunk storage:
+
+```rune
+world = voxel_world(2048, 32, 48, ["miners/stone", "miners/grass"], {
+    "renderDistance": 96,
+    "spawn": {"x":4.5,"y":4.5,"z":3,"angle":0,"pitch":0,"vz":0}
+})
+world = voxel_fill(world, [0,0,0], [32,32,2], 1)
+```
+
+`voxel_world(width, height, depth, materials[, options])` creates an empty world
+in both browser and desktop runtimes. Width/height allow 1-4096, depth 1-256,
+and the logical volume must not exceed 2,147,483,647 cells. Options are `seed`,
+`biome`, `spawn`, and `renderDistance` (default 128, range greater than 0 through
+4096). Changing world dimensions requires creating a new world.
+
+Only nonempty 4 x 4 x 4 terrain chunks allocate block arrays; clearing the final
+solid block releases its chunk. The resident budget is 16,384 chunks (1,048,576
+block slots), independent of the logical world dimensions. Empty space consumes
+no persistent block arrays. A world of at most 65,536 cells may also allocate a
+bounded 16-bit render accelerator (at most 128 KiB) on its first rendered frame;
+edits keep it synchronized. Larger worlds stay on sparse lookups.
+Validation reuses tracked chunk data rather than scanning the
+logical world. Ray traversal skips empty chunks, and terrain rays stop at
+`renderDistance`. This is sparse in-memory storage; occupied chunks remain in
+memory until cleared or the world is released. Disk paging is not implemented.
+
+`voxel_get`, `voxel_fill`, collision, mining, and indexed `world.cells[i]` writes
+work with both formats. Chunked `cells` is a fixed-length virtual array: avoid
+whole-array mapping/copying over its potentially huge logical length. For saves,
+serialize the world object with `JSON.stringify(world)`, which includes only its
+`storage: "chunked"` metadata and `chunks` dictionary. Validation restores the
+virtual cell view after JSON parsing. Each chunk contains 64 local block IDs in
+x-fastest order; its numeric key is the flattened chunk coordinate. Do not replace
+`cells` or `chunks` on an already live world.
+
+Starfall, Skybound, and Skybound 2 use the sparse factory. `voxel_generate`
+continues to return the original compact flat-array starter world.
 
 Starter IDs: 1 bedrock, 2 stone, 3 grass/ash, 4 timber, 5 copper,
 6 leaves/embers. Required textures are `miners/bedrock`, `miners/stone`,
@@ -117,6 +157,13 @@ JavaScript renderer inside QuickJS and copy its typed framebuffer into the
 native window. Legacy grid scenes still use the Rust rasterizer. This keeps
 voxel pixels and gameplay portable without claiming a native Rust voxel
 backend. Volumes are bounded/in-memory, not streamed chunks or infinite worlds.
+
+World validation retains a typed cell snapshot and updates occupancy metadata
+for changed chunks. A scan still detects raw/aliased array edits, and invalid
+cell IDs still fail validation. The shared engine reuses validated metadata
+within a synchronous rendered frame. Hosts also reuse their last framebuffer
+between ticks; external tools can call `invalidateFrame()` after direct state
+edits, or `frame()` to force rendering immediately.
 
 ## Play Rune Miners
 

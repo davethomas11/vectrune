@@ -1,0 +1,78 @@
+@Logic/starfall
+# Armed by the Warden's death, triggered only while carrying the core home.
+# These flags live for the whole expedition, including ghost returns and hatch trips.
+action arm_escape_encounters:
+    stop when escape_active
+    escape_active = true
+    return_encounters = [
+        {"trigger": 116, "hunter": 109, "crawler": 103, "fired": false},
+        {"trigger": 74, "hunter": 68, "crawler": 57, "fired": false},
+        {"trigger": 46, "hunter": 31, "crawler": 39, "fired": false}
+    ]
+
+action update_escape_encounters:
+    stop when !escape_active || !core || sector_id != "station"
+    for encounter in return_encounters:
+        if !encounter.fired && player.x <= encounter.trigger:
+            encounter.fired = true
+            call escape_enemy "hunter", encounter.hunter, 4, 2.5
+            call escape_enemy "crawler", encounter.crawler, 3.7, 2
+            sound.play "sf_reinforcements"
+            notice = "SECURITY SURGE / Hunters lunge; jump the crawlers' low bolts."
+            notice_ticks = 150
+
+action escape_enemy(kind, x, z, span):
+    enemies.push(
+        {
+            "kind": kind,
+            "x": x,
+            "y": 7,
+            "z": z,
+            "home": x,
+            "base": z,
+            "span": span,
+            "hp": kind == "hunter" ? 4: 3,
+            "hit_ticks": 0,
+            "clock": 0,
+            "direction": 1,
+            "angle": 0,
+            "phase": "patrol",
+            "visible": true,
+            "model": "sf/" + kind
+        }
+    )
+    call burst x, z, 8
+
+action update_escape_enemy(enemy):
+    # Idle off-screen; no projectiles or attacks arrive before their encounter.
+    stop when abs(player.x-enemy.x) > 13
+    enemy.clock += 1
+    cycle = enemy.clock%150
+    enemy.angle = player.x < enemy.x ? 180 : 0
+    if enemy.kind == "hunter":
+        enemy.phase = cycle < 28 ? "windup" : (cycle < 46 ? "lunge" : "patrol")
+        enemy.model = "sf/hunter"+(ticks%12 < 6 ? "" : "_wing")
+        if enemy.phase == "windup":
+            enemy.model = "sf/hunter_windup"
+            call move_enemy enemy, enemy.x, enemy.base+sin(enemy.clock*16)*0.12
+            enemy.direction = player.x < enemy.x ? -1 : 1
+        if enemy.phase == "lunge":
+            enemy.model = "sf/hunter_lunge"
+            enemy.angle = enemy.direction < 0 ? 180 : 0
+            call move_enemy enemy, clamp(enemy.x+enemy.direction*0.26, enemy.home-5, enemy.home+5), enemy.z
+        if enemy.phase == "patrol":
+            call move_enemy enemy, enemy.x+clamp(enemy.home-enemy.x, -0.025, 0.025), enemy.base+sin(enemy.clock*7)*0.25
+    if enemy.kind == "crawler":
+        enemy.phase = cycle >= 65 && cycle < 95 ? "charge" : "patrol"
+        enemy.model = "sf/crawler"+(ticks%12 < 6 ? "" : "_walk")
+        if enemy.phase == "patrol":
+            call move_enemy enemy, enemy.home+sin(enemy.clock*2)*enemy.span, enemy.z
+        if enemy.phase == "charge":
+            enemy.model = "sf/crawler_charge"
+            if cycle == 65:
+                sound.play "sf_crawler_charge"
+        if cycle == 95 && abs(player.z-3) < 2:
+            direction = player.x < enemy.x ? -1 : 1
+            call enemy_shot enemy.x+direction*0.8, 3.55, direction*0.18, 0
+    if enemy.hit_ticks > 0:
+        enemy.model = "sf/"+enemy.kind+"_hit"

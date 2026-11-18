@@ -1,4 +1,19 @@
 @I18N/es
+Starfall {
+    title = "Starfall Protocol"
+    badge = "Metroidvania espacial Pixel 3D"
+    description = "El Arca Helios se está apagando. Aterriza en la abandonada estación Kepler, explora sectores conectados, recupera habilidades y lleva su núcleo estelar a casa."
+    play = "Jugar a Starfall Protocol"
+    try_it = "Pulsa Intro o Start para comenzar. Disfruta del vuelo inicial o salta las escenas para aterrizar en Kepler. Abre el juego completo para tener más espacio."
+    standalone = "Abrir el juego completo en otra pestaña"
+    controls_title = "Un último vuelo. Una última luz."
+    controls = "A / D o flechas para moverte; Espacio para saltar; clic o X para disparar; W / Arriba para apuntar alto; S / Abajo para agacharte; Mayús para impulsarte; E para puertas y consolas. Mantén el disparo para cargar plasma y suelta para disparar."
+    objective = "Explora Hidroponía y la Fundición Gravitatoria. Combina el doble salto, el impulso aéreo y el guante magnético para alcanzar el reactor y vencer a tres guardianes. Las salas opcionales esconden mejoras, un cuarto jefe y vidas extra poco comunes."
+    device = "Compatible con teclado, mando y controles táctiles. P pausa y abre el mapa. Comienzas con cuatro puntos de salud y tres vidas; los jefes otorgan contenedores permanentes de salud. El progreso de los sectores se guarda en este navegador."
+    source_title = "Explora el código Rune"
+    source_text = "Un juego de Dave Thomas. Mundos, modelos, animaciones, controles, música y escenas están escritos en Rune. Compila y prueba con Vectrune 0.3.6 o posterior."
+}
+
 SkyboundTwo {
     title = "Skybound 2"
     badge = "Aventura de plataformas Pixel 3D"
@@ -620,10 +635,10 @@ Developer {
     opaque_text = "El formateador conserva vistas, CSS y texto incrustado. Formatea el archivo de entrada y sus imports, valida todos los cambios antes de escribir y rechaza cambios que alteren el documento analizado. Revisa el diff."
     ci_intro = "Copia este flujo en .github/workflows/rune.yml de tu proyecto. También viene en el proyecto descargable. Usa Ubuntu x86-64 y fija la CLI en 0.3.4."
     ci_text = "El pipeline comprueba instalación, formato, diagnósticos y pruebas. Los informes JSON sirven para otras herramientas; una salida distinta de cero hace fallar el trabajo. No requiere herramientas de caché."
-    release_intro = "Juega a Rune Crypt: un roguelite de cinco niveles creado ampliando Pixel 3D."
-    release_text = "0.3.4 añade Rune Crypt con tres clases, combate táctico, mejoras elegidas, entrenamiento permanente y música original. Pixel 3D incorpora cielos generados, suelos y techos texturizados, salas altas, modelos sólidos, enemigos que se disuelven y paneles de pausa. fmt --line-width divide objetos JSON largos sin cambiar su significado. Se conservan Vect Breach, Monster City y las pruebas de API y lógica."
+    release_intro = "Juega a Starfall Protocol: un metroidvania espacial creado con el motor Pixel 3D."
+    release_text = "0.3.6 añade Starfall Protocol: sectores conectados, tres jefes principales y un guardián opcional, habilidades enlazadas, progreso guardado, música original, introducción cinematográfica y créditos de regreso. El motor incorpora mundos por bloques dispersos, procesamiento de entidades cercanas, renderizado de vóxeles más rápido, nombres de destinos, texto cinematográfico y pausa estable con mando."
     upgrade_title = "Actualiza y verifica"
-    upgrade_text = "Con Homebrew, actualiza e instala la nueva versión. En otras plataformas, sustituye el binario por 0.3.4 desde Releases. doctor muestra el ejecutable real para detectar versiones antiguas en PATH."
+    upgrade_text = "Con Homebrew, actualiza e instala la nueva versión. En otras plataformas, sustituye el ejecutable por 0.3.6 desde Releases. doctor muestra el ejecutable en uso para detectar versiones antiguas en PATH."
     cmd_1 = "brew install davethomas11/vectrune/vectrune\nvectrune --version"
     cmd_2 = "vectrune doctor .\nvectrune fmt . --check\nvectrune check . --deny-warnings\nvectrune test ."
     cmd_3 = "vectrune doctor .\nvectrune doctor app.rune --json"

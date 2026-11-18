@@ -1,0 +1,29 @@
+@Logic/starfall
+# Portal shimmer is presentation only: it never changes collision or interactions.
+action update_portal_presentation:
+    portal_aura = []
+    for portal in nearby(portals, player, 26):
+        is_rift = portal.model == "sf/rift_gate0" || portal.model == "sf/rift_gate1"
+        if is_rift:
+            portal.model = ticks%20 < 10 ? "sf/rift_gate0" : "sf/rift_gate1"
+            for mote in range(0,6):
+                phase = ticks*4+mote*60
+                portal_aura.push(
+                    {
+                        "x": portal.x + cos(phase) * 0.95,
+                        "y": portal.y + 0.65,
+                        "z": portal.z + 1.5 + sin(phase) * 1.15,
+                        "model": "sf/portal_mote",
+                        "scale": 0.45 + sin(phase * 2) * 0.12,
+                        "visible": true
+                    }
+                )
+    arrival_ring = {
+        "x": player.x,
+        "y": 8.5,
+        "z": player.z + 1,
+        "model": "sf/rift_arrival",
+        "scale": 0.35 + (1 - transition_ticks / 12) * 1.5,
+        "dissolve": 1 - transition_ticks / 12,
+        "visible": transition_ticks > 0 && status == "playing" && recovery_phase == "none"
+    }

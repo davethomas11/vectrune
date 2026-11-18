@@ -72,3 +72,9 @@ view:
                 h3 "%i18n.SkyboundTwo.title%"
                 p "%i18n.SkyboundTwo.description%"
                 a .secondary-cta href="{i18n.Common.base_path}skybound-2" data-route-link=true click="navigate('skybound-2')" "%i18n.SkyboundTwo.play%"
+
+            article .example-card:
+                span .tag .tag-advanced "%i18n.Starfall.badge%"
+                h3 "%i18n.Starfall.title%"
+                p "%i18n.Starfall.description%"
+                a .secondary-cta href="{i18n.Common.base_path}starfall" data-route-link=true click="navigate('starfall')" "%i18n.Starfall.play%"

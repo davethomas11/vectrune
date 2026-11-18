@@ -1,4 +1,19 @@
 @I18N/fr
+Starfall {
+    title = "Starfall Protocol"
+    badge = "Metroidvania spatial Pixel 3D"
+    description = "L’Arche Helios s’éteint. Atterrissez sur la station Kepler abandonnée, explorez ses secteurs reliés, retrouvez des capacités et rapportez son cœur stellaire."
+    play = "Jouer à Starfall Protocol"
+    try_it = "Appuyez sur Entrée ou Start pour commencer. Regardez le vol initial ou passez les scènes pour atterrir sur Kepler. Ouvrez le jeu complet pour plus de place."
+    standalone = "Ouvrir le jeu complet dans un nouvel onglet"
+    controls_title = "Un dernier vol. Une dernière lumière."
+    controls = "A / D ou flèches pour bouger ; Espace pour sauter ; clic ou X pour tirer ; W / Haut pour viser en hauteur ; S / Bas pour se baisser ; Maj pour foncer ; E pour les portes et consoles. Maintenez le tir pour charger le plasma, puis relâchez."
+    objective = "Explorez Hydroponie et la Fonderie Gravitationnelle. Combinez double saut, ruée aérienne et gant magnétique pour atteindre le réacteur et vaincre trois gardiens. Les salles facultatives cachent des améliorations, un quatrième boss et de rares vies supplémentaires."
+    device = "Clavier, manette et commandes tactiles sont pris en charge. P met en pause et ouvre la carte. Commencez avec quatre points de santé et trois vies ; les boss offrent des réserves de santé permanentes. Les secteurs terminés sont sauvegardés dans ce navigateur."
+    source_title = "Explorer le code Rune"
+    source_text = "Un jeu de Dave Thomas. Mondes, modèles, animations, commandes, musique et cinématiques sont écrits en Rune. Compilez et testez avec Vectrune 0.3.6 ou une version ultérieure."
+}
+
 SkyboundTwo {
     title = "Skybound 2"
     badge = "Aventure de plateformes Pixel 3D"
@@ -620,10 +635,10 @@ Developer {
     opaque_text = "Le formateur conserve les blocs view/CSS et le texte intégré. Il formate le fichier d’entrée et ses imports, valide tout avant écriture et refuse les changements qui modifient le document analysé. Vérifiez le diff."
     ci_intro = "Copiez ce workflow dans .github/workflows/rune.yml de votre projet. Il figure aussi dans le téléchargement. Cet exemple utilise Ubuntu x86-64 et fixe la CLI à 0.3.4."
     ci_text = "Le pipeline vérifie installation, formatage, diagnostics et tests. Les rapports JSON sont exploitables par les outils ; tout code non nul fait échouer le job. Aucun outil de cache n’est requis."
-    release_intro = "Jouez à Rune Crypt : un roguelite de cinq niveaux créé en développant Pixel 3D."
-    release_text = "0.3.4 ajoute Rune Crypt avec trois classes, combat tactique, améliorations choisies, entraînement permanent et musique originale. Pixel 3D gagne ciels générés, sols et plafonds texturés, salles hautes, modèles solides, ennemis qui se dissolvent et panneaux de pause. fmt --line-width répartit les longs objets JSON sans changer leur sens. Vect Breach, Monster City et les tests d’API et de logique restent disponibles."
+    release_intro = "Jouez à Starfall Protocol : un metroidvania spatial créé avec le moteur Pixel 3D."
+    release_text = "0.3.6 ajoute Starfall Protocol : secteurs reliés, trois boss principaux et un gardien facultatif, capacités combinées, progression sauvegardée, musique originale, introduction et générique de retour. Le moteur gagne des mondes en blocs dispersés, le traitement des entités proches, un rendu voxel plus rapide, des noms de destinations, du texte cinématique défilant et une pause stable à la manette."
     upgrade_title = "Mettre à jour et vérifier"
-    upgrade_text = "Avec Homebrew, mettez à jour puis installez la nouvelle version. Sur les autres plateformes, remplacez le binaire par 0.3.4 depuis Releases. doctor affiche l’exécutable réellement utilisé pour repérer un ancien binaire dans le PATH."
+    upgrade_text = "Avec Homebrew, mettez à jour puis installez la nouvelle version. Sur les autres plateformes, remplacez le binaire par la version 0.3.6 depuis Releases. doctor affiche le binaire utilisé pour repérer une ancienne version dans PATH."
     cmd_1 = "brew install davethomas11/vectrune/vectrune\nvectrune --version"
     cmd_2 = "vectrune doctor .\nvectrune fmt . --check\nvectrune check . --deny-warnings\nvectrune test ."
     cmd_3 = "vectrune doctor .\nvectrune doctor app.rune --json"

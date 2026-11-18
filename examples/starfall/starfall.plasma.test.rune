@@ -1,0 +1,148 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/PlasmaPickupRequiresHydroponicsDash
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke plasma_perch_fixture
+run:
+    invoke tick {}
+    assert state.plasma == false
+    assert state.pickups[1].visible == true
+    invoke enable_dash
+    invoke tick {}
+    assert state.plasma == true
+    assert state.pickups[1].visible == false
+
+@Test/Starfall/JumpJetsAloneCannotCrossPlasmaGap
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke plasma_gap_fixture
+run:
+    invoke tick {"left":true,"jump":true}
+    invoke westward_ticks 11
+    invoke tick {"left":true,"jump":true}
+    invoke westward_ticks 52
+    invoke wait_ticks 25
+    assert state.plasma == false
+    assert state.player.z == 3
+    assert state.health == 4
+    assert state.lives == 3
+    assert state.recovery_phase == "none"
+
+@Test/Starfall/PlasmaChargesAndFiresOnRelease
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke plasma_fixture
+run:
+    invoke hold_plasma 23
+    assert state.shots.length == 0
+    assert state.charge_ticks == 23
+    assert state.charge_ready == false
+    invoke tick {"fire":true}
+    assert state.charge_ready == true
+    assert state.charge_fx.visible == true
+    assert state.charge_fx.model == "sf/charge_ready"
+    invoke tick {}
+    assert state.charge_ticks == 0
+    assert state.shots[0].charged == true
+    assert state.shots[0].damage == 6
+    assert state.charge_fx.visible == false
+
+@Test/Starfall/ChargedSealShakesDissolvesAndResets
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke plasma_fixture
+    invoke at_seal
+run:
+    invoke hold_plasma 24
+    assert state.gate_open == false
+    invoke tick {}
+    assert state.gate_open == true
+    assert state.seal_shell.visible == true
+    assert state.seal_shell.dissolve == 0
+    invoke read_seal
+    assert state.seal_tile == 0
+    invoke tick {}
+    assert state.seal_shell.x != 62.5
+    invoke wait_effect_ticks 12
+    assert state.seal_shell.dissolve > 0
+    assert state.seal_shell.dissolve < 1
+    invoke wait_effect_ticks 30
+    assert state.seal_shell.visible == false
+    assert state.seal_shake == 0
+    invoke launch_test_run
+    invoke read_seal
+    assert state.seal_tile == 3
+    assert state.seal_shell.visible == false
+
+@Test/Starfall/BossMusicFollowsFightAndRecovery
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    assert state.music_track == "sf_orbit"
+    invoke music_arena
+    invoke tick {}
+    assert state.music_track == "sf_warden"
+    invoke tick {}
+    assert state.music_track == "sf_warden"
+    invoke leave_music_arena
+    invoke tick {}
+    assert state.music_track == "sf_orbit"
+    invoke music_arena
+    invoke tick {}
+    assert state.music_track == "sf_warden"
+    invoke take_damage 6
+    assert state.music_track == "sf_orbit"
+    assert state.charge_ticks == 0
+    invoke return_to_title
+    assert state.music_track == "sf_title"
+
+@Logic/starfall
+action plasma_perch_fixture:
+    player.x = 6
+    player.z = 13
+    player.vz = 0
+    grounded = true
+    jets = true
+    enemies = []
+
+action plasma_gap_fixture:
+    player.x = 22
+    player.z = 13
+    player.vz = 0
+    grounded = true
+    jets = true
+    enemies = []
+
+action westward_ticks(count):
+    for i in range(0, count):
+        call tick {"left":true}
+
+action plasma_fixture:
+    player.x = 58
+    enemies = []
+    plasma = true
+    garden_cleared = true
+
+action read_seal:
+    seal_tile = voxel_get(world, 62, 7, 4)
+
+action music_arena:
+    enemies = []
+    player.x = 98
+    player.z = 3
+
+action leave_music_arena:
+    player.x = 95
+    player.z = 5

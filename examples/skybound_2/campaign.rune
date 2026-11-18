@@ -178,7 +178,7 @@ action show_map:
     boss_active = false
     boss.visible = false
     hazards = []
-    enemies = []
+    enemies = entity_group()
     seeds = []
     goal.visible = false
     ticks = 0

@@ -23,7 +23,7 @@ action creature(x, y, z, kind, axis, reach):
     )
 
 action tick_enemies(previous_z):
-    for enemy in enemies:
+    for enemy in nearby(enemies, player, 32):
         if enemy.visible && enemy.flat > 0:
             enemy.flat -= 1
             if enemy.flat == 0:

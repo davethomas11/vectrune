@@ -1,0 +1,58 @@
+@Controls/starfall
+keys:
+    KeyA -> left
+    ArrowLeft -> left
+    KeyD -> right
+    ArrowRight -> right
+    Space -> jump
+    KeyJ -> fire
+    KeyX -> fire
+    KeyW -> aim_up
+    ArrowUp -> aim_up
+    KeyS -> duck
+    ArrowDown -> duck
+    ShiftLeft -> dash
+    ShiftRight -> dash
+    KeyK -> dash
+    KeyE -> use
+commands:
+    Enter -> host.advance
+    KeyP -> host.pause
+    KeyF -> host.fullscreen
+    KeyV -> host.mute
+mouse:
+    Left -> fire
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.18}
+    Axis1 -> {"input":"duck_axis","deadzone":0.35}
+    Button0 -> jump
+    Button2 -> fire
+    Button4 -> aim_up
+    Button5 -> duck
+    Button6 -> {"command":"host.pause"}
+    Button1 -> dash
+    Button3 -> use
+    Button8 -> {"command":"host.advance"}
+    Button9 -> {"command":"host.pause"}
+touch = {
+    "buttons": [
+        {
+            "anchor": "top-right",
+            "command": "host.advance",
+            "id": "skip",
+            "label": "SKIP",
+            "offset": [12,12],
+            "size": 48,
+            "visible": "cinema_skip_ready"
+        },
+        {"id":"jump","input":"jump","label":"JUMP","offset":[12,16],"size":64},
+        {"id":"fire","input":"fire","label":"FIRE","offset":[88,16],"size":64},
+        {"id":"aim","input":"aim_up","label":"AIM UP","offset":[12,92],"size":48},
+        {"id":"duck","input":"duck","label":"DUCK","offset":[12,152],"size":48},
+        {"command":"host.pause","id":"pause","label":"PAUSE","offset":[76,152],"size":48},
+        {"id":"dash","input":"dash","label":"DASH","offset":[76,92],"size":48},
+        {"id":"use","input":"use","label":"USE","offset":[140,92],"size":48}
+    ],
+    "joystick": {"size":84,"x":"move_x","y":"move_y"},
+    "visible": "touch_ui_visible"
+}

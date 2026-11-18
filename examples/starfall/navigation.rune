@@ -1,0 +1,118 @@
+@Logic/starfall
+action update_navigation:
+    current_room = sector_id == "station" ? (player.x < 26 ? "dock" : (player.x < 62 ? "cargo" : (player.x < 87 ? "containment" : "crypt"))) : sector_id
+    if status == "playing":
+        campaign.rooms[current_room] = true
+    stamp = current_room+jets+dash_unlocked+plasma+gate_open+garden_cleared+foundry_cleared+glove_unlocked
+    if navigation_stamp != stamp:
+        navigation_stamp = stamp
+        map_nodes = [
+            {
+                "id": "dock",
+                "label": "DOCK",
+                "x": 3,
+                "y": 75,
+                "visited": !!campaign.rooms.dock,
+                "locked": false
+            },
+            {
+                "id": "cargo",
+                "label": "CARGO",
+                "x": 32,
+                "y": 75,
+                "visited": !!campaign.rooms.cargo,
+                "locked": false
+            },
+            {
+                "id": "containment",
+                "label": "SEAL",
+                "x": 62,
+                "y": 75,
+                "visited": !!campaign.rooms.containment,
+                "locked": !gate_open
+            },
+            {
+                "id": "crypt",
+                "label": "CRYPT",
+                "x": 95,
+                "y": 75,
+                "visited": !!campaign.rooms.crypt,
+                "locked": !foundry_cleared
+            },
+            {
+                "id": "hydroponics",
+                "label": "GARDEN",
+                "x": 32,
+                "y": 28,
+                "visited": !!campaign.rooms.hydroponics,
+                "locked": !jets
+            },
+            {
+                "id": "foundry",
+                "label": "FOUNDRY",
+                "x": 62,
+                "y": 28,
+                "visited": !!campaign.rooms.foundry,
+                "locked": !plasma || !garden_cleared
+            },
+            {
+                "id": "archive",
+                "label": "ARCHIVE",
+                "x": 3,
+                "y": 5,
+                "visited": !!campaign.rooms.archive,
+                "locked": !jets || !dash_unlocked
+            },
+            {
+                "id": "observatory",
+                "label": "OBSERVATORY",
+                "x": 95,
+                "y": 5,
+                "visited": !!campaign.rooms.observatory,
+                "locked": !glove_unlocked
+            }
+        ]
+        map_nodes.push(
+            {
+                "id": "jet_vault",
+                "label": "JET TUNNEL",
+                "x": 12,
+                "y": 40,
+                "visited": !!campaign.rooms.jet_vault,
+                "locked": false
+            }
+        )
+        map_nodes.push(
+            {
+                "id": "dash_vault",
+                "label": "DASH CRYPT",
+                "x": 46,
+                "y": 5,
+                "visited": !!campaign.rooms.dash_vault,
+                "locked": !jets
+            }
+        )
+        map_links = [
+            {"from": "dock", "to": "cargo"},
+            {"from": "cargo", "to": "containment"},
+            {"from": "containment", "to": "crypt"},
+            {"from": "cargo", "to": "hydroponics", "shortcut": garden_cleared},
+            {"from": "containment", "to": "foundry"},
+            {"from": "cargo", "to": "archive"},
+            {"from": "foundry", "to": "observatory"}
+        ]
+        map_links.push({"from": "cargo", "to": "jet_vault"})
+        map_links.push({"from": "hydroponics", "to": "dash_vault"})
+        if foundry_cleared:
+            map_links.push({"from": "cargo", "to": "foundry", "shortcut": true})
+
+action show_navigation:
+    pause_ui.map = {
+        "nodes": map_nodes,
+        "links": map_links,
+        "current": current_room,
+        "expanded": true
+    }
+    pause_ui.panel = null
+    pause_ui.notice = ""
+    pause_ui.prompt = "P RESUME / CYAN YOU / GREEN EXPLORED / RED LOCK / DOTTED SHORTCUTS"

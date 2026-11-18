@@ -1,0 +1,108 @@
+#!RUNE
+import "starfall.rune"
+
+@Test/Starfall/WardenWakesAfterDescent
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+run:
+    invoke at_overlook
+    invoke tick {}
+    invoke tick {}
+    assert state.boss_phase == "dormant"
+    assert state.boss_clock == 0
+    invoke sanctuary_fixture
+    invoke tick {}
+    invoke tick {}
+    assert state.boss_phase == "awakening"
+    assert state.ui.meters[1].label == "CRYPT WARDEN"
+    assert state.ui.meters[1].display == "bar"
+    assert state.ui.meters[1].value == 48
+
+@Test/Starfall/WardenPatrolAndMarkedLeap
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke sanctuary_fixture
+run:
+    invoke warden_time 72
+    invoke update_warden
+    assert state.boss_phase == "patrol"
+    assert state.boss.x != 114
+    invoke warden_time 83
+    invoke update_warden
+    assert state.boss_phase == "windup"
+    assert state.boss_warning.visible == true
+    assert state.boss.target == 102
+    invoke move_to_warden
+    invoke update_warden
+    assert state.boss.target == 102
+    invoke warden_time 113
+    invoke update_warden
+    assert state.boss_phase == "leap"
+    assert state.boss.z > 3
+    invoke warden_time 139
+    invoke update_warden
+    assert state.boss_phase == "slam"
+    assert state.boss.z == 3
+    assert state.shots.length == 2
+
+@Test/Starfall/WardenArmorExposureAndLifeBar
+type = logic
+page = starfall
+setup:
+    invoke launch_test_run
+    invoke sanctuary_fixture
+    invoke move_to_warden
+run:
+    invoke warden_time 40
+    invoke tick {"fire":true}
+    invoke tick {}
+    invoke tick {}
+    assert state.boss.hp == 48
+    invoke open_warden
+    invoke tick {"fire":true}
+    invoke tick {}
+    invoke tick {}
+    assert state.boss.hp == 46
+    assert state.ui.meters[1].value == 46
+    assert state.boss.model == "sf/warden_hit"
+    invoke finish_warden
+    invoke tick {"fire":true}
+    invoke tick {}
+    invoke tick {}
+    assert state.boss.visible == false
+    assert state.boss_warning.visible == false
+    assert state.pickups[2].visible == true
+    assert state.ui.meters.length == 2
+
+@Logic/starfall
+action at_overlook:
+    player.x = 90
+    player.z = 8
+
+action sanctuary_fixture:
+    player.x = 98
+    player.z = 3
+    enemies = []
+    jets = true
+    plasma = true
+    gate_open = true
+    invulnerable = 1000
+
+action move_to_warden:
+    player.x = 110
+
+action warden_time(value):
+    boss_clock = value
+
+action open_warden:
+    boss_clock = 161
+    cooldown = 0
+
+action finish_warden:
+    boss.hp = 2
+    boss_clock = 161
+    cooldown = 0

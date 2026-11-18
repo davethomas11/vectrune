@@ -14,6 +14,7 @@ import { playSound, playMusic, stopMusic, pauseMusic, resumeMusic, setMusicTempo
 import { setStorageItem, removeStorageItem, clearStorage } from './storage';
 import type { ActionStep, Scope } from './types';
 import { NO_ACTION, STOP } from './builtins/command';
+import { entityMoved, entitiesChanged } from './pixel3d/entities';
 
 // ---------------------------------------------------------------------------
 // assignPath — set a value at a dotted/bracketed path
@@ -36,19 +37,21 @@ export function assignPath(
     current = locals[baseKey];
     if (segments.length === 1) {
       locals[baseKey] = value;
+      entitiesChanged(value);
       return;
     }
   } else {
     current = ctx().app.state[baseKey];
     if (segments.length === 1) {
       ctx().app.state[baseKey] = value;
+      entitiesChanged(value);
       return;
     }
   }
 
   for (let i = 1; i < segments.length - 1; i += 1) {
     const segment = segments[i];
-    const scopeValue = buildScope(locals);
+    const scopeValue = buildScope(locals, pathExpr);
 
     if (
       Array.isArray(current) &&
@@ -84,7 +87,7 @@ export function assignPath(
   }
 
   const finalRawKey = segments[segments.length - 1];
-  const scopeValue = buildScope(locals);
+  const scopeValue = buildScope(locals, pathExpr);
 
   if (
     Array.isArray(current) &&
@@ -98,6 +101,7 @@ export function assignPath(
     });
     if (index !== -1) {
       (current as unknown[])[index] = value;
+      entitiesChanged(current);
     }
     return;
   } else if (finalRawKey.startsWith('[') && finalRawKey.endsWith(']')) {
@@ -107,8 +111,11 @@ export function assignPath(
       ? Number(lookup)
       : valueToString(lookup);
     (current as Record<string, unknown>)[finalKey as string] = value;
+    entitiesChanged(current);
+    entityMoved(current);
   } else {
     (current as Record<string, unknown>)[finalRawKey] = value;
+    if(['x','y','z','visible','scale'].includes(finalRawKey))entityMoved(current);
   }
 }
 
@@ -190,6 +197,7 @@ export function deletePath(
     });
     if (index !== -1) {
       (current as unknown[]).splice(index, 1);
+      entitiesChanged(current);
     }
   } else if (finalRawKey.startsWith('[') && finalRawKey.endsWith(']')) {
     const innerExpr = finalRawKey.slice(1, -1);
@@ -199,6 +207,7 @@ export function deletePath(
       : valueToString(lookup);
     if (Array.isArray(current) && typeof finalKey === 'number') {
       (current as unknown[]).splice(finalKey, 1);
+      entitiesChanged(current);
     } else {
       delete (current as Record<string, unknown>)[finalKey as string];
     }
@@ -209,6 +218,8 @@ export function deletePath(
       delete (current as Record<string, unknown>)[finalRawKey];
     }
   }
+  entitiesChanged(current);
+  entityMoved(current);
 }
 
 // ---------------------------------------------------------------------------
@@ -229,7 +240,7 @@ export function executeStatement(
     if (!match || !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, match[1])) {
       throw new Error(`Unknown Rune-Web action: ${rest}`);
     }
-    const args = match[2] ? splitTopLevel(match[2], ',').map(arg => evaluateExpression(arg, buildScope(locals))) : [];
+    const args = match[2] ? splitTopLevel(match[2], ',').map(arg => evaluateExpression(arg, buildScope(locals, trimmed))) : [];
     ctx().app.invokeAction(match[1], args, locals);
     return true;
   }
@@ -241,23 +252,23 @@ export function executeStatement(
     if (trimmed.startsWith('sound.play(') && trimmed.endsWith(')')) {
       const inner = trimmed.slice(11, -1);
       const parts = splitTopLevel(inner, ',');
-      soundName = String(evaluateExpression(parts[0], buildScope(locals)) || '');
+      soundName = String(evaluateExpression(parts[0], buildScope(locals, trimmed)) || '');
       if (parts.length > 1) {
-        argVal = evaluateExpression(parts[1], buildScope(locals));
+        argVal = evaluateExpression(parts[1], buildScope(locals, trimmed));
       }
     } else if (trimmed.startsWith('play_sound(') && trimmed.endsWith(')')) {
       const inner = trimmed.slice(11, -1);
       const parts = splitTopLevel(inner, ',');
-      soundName = String(evaluateExpression(parts[0], buildScope(locals)) || '');
+      soundName = String(evaluateExpression(parts[0], buildScope(locals, trimmed)) || '');
       if (parts.length > 1) {
-        argVal = evaluateExpression(parts[1], buildScope(locals));
+        argVal = evaluateExpression(parts[1], buildScope(locals, trimmed));
       }
     } else if (trimmed.startsWith('sound.play ')) {
-      soundName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || '');
+      soundName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || '');
     } else if (trimmed.startsWith('sound.')) {
       soundName = trimmed.slice(6).trim();
     } else {
-      soundName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || '');
+      soundName = String(evaluateExpression(trimmed.slice(6), buildScope(locals, trimmed)) || '');
     }
     soundName = normalizeLiteral(soundName);
     playSound(soundName, argVal);
@@ -281,13 +292,13 @@ export function executeStatement(
     }
     if (trimmed.startsWith('music.tempo =') || trimmed.startsWith('music.tempo=')) {
       const expr = trimmed.slice(trimmed.indexOf('=') + 1).trim();
-      const val = Number(evaluateExpression(expr, buildScope(locals)));
+      const val = Number(evaluateExpression(expr, buildScope(locals, trimmed)));
       if (!isNaN(val)) setMusicTempo(val);
       return true;
     }
     if (trimmed.startsWith('music.volume =') || trimmed.startsWith('music.volume=')) {
       const expr = trimmed.slice(trimmed.indexOf('=') + 1).trim();
-      const val = Number(evaluateExpression(expr, buildScope(locals)));
+      const val = Number(evaluateExpression(expr, buildScope(locals, trimmed)));
       if (!isNaN(val)) setMusicVolume(val);
       return true;
     }
@@ -295,12 +306,12 @@ export function executeStatement(
       const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
       const parts = splitTopLevel(inner, ',');
       if (parts.length >= 4) {
-        const name = String(evaluateExpression(parts[0], buildScope(locals)));
-        const tempo = Number(evaluateExpression(parts[1], buildScope(locals))) || 128;
-        const lead = String(evaluateExpression(parts[2], buildScope(locals)));
-        const bass = String(evaluateExpression(parts[3], buildScope(locals)));
-        const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals))) : '';
-        const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals))) : '4/4';
+        const name = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+        const tempo = Number(evaluateExpression(parts[1], buildScope(locals, trimmed))) || 128;
+        const lead = String(evaluateExpression(parts[2], buildScope(locals, trimmed)));
+        const bass = String(evaluateExpression(parts[3], buildScope(locals, trimmed)));
+        const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals, trimmed))) : '';
+        const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals, trimmed))) : '4/4';
         const songBars = Number((ctx().app as any)?.state?.bars) || 4;
         registerMusic({
           [name]: {
@@ -323,8 +334,8 @@ export function executeStatement(
       const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
       const parts = splitTopLevel(inner, ',');
       if (parts.length >= 2) {
-        const name = String(evaluateExpression(parts[0], buildScope(locals)));
-        const songConfig = evaluateExpression(parts[1], buildScope(locals)) as any;
+        const name = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+        const songConfig = evaluateExpression(parts[1], buildScope(locals, trimmed)) as any;
         if (songConfig && typeof songConfig === 'object') {
           registerMusic({
             [name]: songConfig,
@@ -343,13 +354,13 @@ export function executeStatement(
     ) {
       let trackName = '';
       if (trimmed.startsWith('music.play(') && trimmed.endsWith(')')) {
-        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
+        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals, trimmed)) || '');
       } else if (trimmed.startsWith('play_music(') && trimmed.endsWith(')')) {
-        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals)) || '');
+        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals, trimmed)) || '');
       } else if (trimmed.startsWith('music.play ')) {
-        trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals)) || '');
+        trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || '');
       } else if (trimmed.startsWith('music ')) {
-        trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals)) || '');
+        trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals, trimmed)) || '');
       }
       trackName = normalizeLiteral(trackName);
       if (trackName) playMusic(trackName);
@@ -376,7 +387,7 @@ export function executeStatement(
 
   if (trimmed.startsWith('music.select_step(') && trimmed.endsWith(')')) {
     const inner = trimmed.slice(18, -1);
-    const id = Number(evaluateExpression(inner, buildScope(locals)));
+    const id = Number(evaluateExpression(inner, buildScope(locals, trimmed)));
     const state = (ctx().app as any)?.state;
     if (state) {
       state.selected_step_id = id;
@@ -441,7 +452,7 @@ function syncMusicState(state: any): void {
 
   if (trimmed.startsWith('music.delete_step(') && trimmed.endsWith(')')) {
     const inner = trimmed.slice(18, -1);
-    const id = Number(evaluateExpression(inner, buildScope(locals)));
+    const id = Number(evaluateExpression(inner, buildScope(locals, trimmed)));
     const state = (ctx().app as any)?.state;
     if (state) {
       const voice = String(state.active_voice || 'lead');
@@ -466,8 +477,8 @@ function syncMusicState(state: any): void {
   if (trimmed.startsWith('music.stretch_step(') && trimmed.endsWith(')')) {
     const inner = trimmed.slice(19, -1);
     const parts = splitTopLevel(inner, ',');
-    const id = Number(evaluateExpression(parts[0], buildScope(locals)));
-    const delta = parts.length > 1 ? Number(evaluateExpression(parts[1], buildScope(locals))) : 1;
+    const id = Number(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+    const delta = parts.length > 1 ? Number(evaluateExpression(parts[1], buildScope(locals, trimmed))) : 1;
     const state = (ctx().app as any)?.state;
     if (state) {
       const voice = String(state.active_voice || 'lead');
@@ -509,8 +520,8 @@ function syncMusicState(state: any): void {
   if (trimmed.startsWith('music.stack_chord_note(') && trimmed.endsWith(')')) {
     const inner = trimmed.slice(23, -1);
     const parts = splitTopLevel(inner, ',');
-    const note = String(evaluateExpression(parts[0], buildScope(locals)));
-    const dur = parts[1] ? String(evaluateExpression(parts[1], buildScope(locals))) : ':8';
+    const note = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+    const dur = parts[1] ? String(evaluateExpression(parts[1], buildScope(locals, trimmed))) : ':8';
     const state = (ctx().app as any)?.state;
     if (state) {
       const voice = String(state.active_voice || 'lead');
@@ -564,7 +575,7 @@ function syncMusicState(state: any): void {
 
   if (trimmed.startsWith('music.duplicate_bar(') && trimmed.endsWith(')')) {
     const inner = trimmed.slice(20, -1);
-    const barNum = Number(evaluateExpression(inner, buildScope(locals))) || 1;
+    const barNum = Number(evaluateExpression(inner, buildScope(locals, trimmed))) || 1;
     const state = (ctx().app as any)?.state;
     if (state) {
       const voice = String(state.active_voice || 'lead');
@@ -588,7 +599,7 @@ function syncMusicState(state: any): void {
 
   if (trimmed.startsWith('music.delete_bar(') && trimmed.endsWith(')')) {
     const inner = trimmed.slice(17, -1);
-    const barNum = Number(evaluateExpression(inner, buildScope(locals))) || 1;
+    const barNum = Number(evaluateExpression(inner, buildScope(locals, trimmed))) || 1;
     const state = (ctx().app as any)?.state;
     if (state) {
       const voice = String(state.active_voice || 'lead');
@@ -620,8 +631,8 @@ function syncMusicState(state: any): void {
     const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
     const parts = splitTopLevel(inner, ',');
     if (parts.length >= 2) {
-      const key = String(evaluateExpression(parts[0], buildScope(locals)));
-      const val = evaluateExpression(parts[1], buildScope(locals));
+      const key = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+      const val = evaluateExpression(parts[1], buildScope(locals, trimmed));
       const serialized = typeof val === 'string' ? val : JSON.stringify(val);
       setStorageItem(key, serialized);
     }
@@ -632,8 +643,8 @@ function syncMusicState(state: any): void {
     const rest = trimmed.slice(12).trim();
     const parts = splitTopLevel(rest, ',');
     if (parts.length >= 2) {
-      const key = String(evaluateExpression(parts[0], buildScope(locals)));
-      const val = evaluateExpression(parts[1], buildScope(locals));
+      const key = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+      const val = evaluateExpression(parts[1], buildScope(locals, trimmed));
       const serialized = typeof val === 'string' ? val : JSON.stringify(val);
       setStorageItem(key, serialized);
     }
@@ -646,7 +657,7 @@ function syncMusicState(state: any): void {
     trimmed.startsWith('local_storage.remove(')
   ) {
     const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
-    const key = String(evaluateExpression(inner, buildScope(locals)));
+    const key = String(evaluateExpression(inner, buildScope(locals, trimmed)));
     removeStorageItem(key);
     return true;
   }
@@ -665,8 +676,8 @@ function syncMusicState(state: any): void {
     const inner = trimmed.slice(9, -1);
     const parts = splitTopLevel(inner, ',');
     if (parts.length >= 2) {
-      const filename = String(evaluateExpression(parts[0], buildScope(locals)));
-      const content = String(evaluateExpression(parts[1], buildScope(locals)));
+      const filename = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+      const content = String(evaluateExpression(parts[1], buildScope(locals, trimmed)));
       downloadText(filename, content);
     }
     return true;
@@ -676,8 +687,8 @@ function syncMusicState(state: any): void {
     const rest = trimmed.slice(9).trim();
     const parts = splitTopLevel(rest, ',');
     if (parts.length >= 2) {
-      const filename = String(evaluateExpression(parts[0], buildScope(locals)));
-      const content = String(evaluateExpression(parts[1], buildScope(locals)));
+      const filename = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+      const content = String(evaluateExpression(parts[1], buildScope(locals, trimmed)));
       downloadText(filename, content);
     }
     return true;
@@ -689,7 +700,7 @@ function syncMusicState(state: any): void {
     trimmed.endsWith(')')
   ) {
     const inner = trimmed.slice(trimmed.indexOf('(') + 1, -1);
-    const text = String(evaluateExpression(inner, buildScope(locals)));
+    const text = String(evaluateExpression(inner, buildScope(locals, trimmed)));
     copyText(text);
     return true;
   }
@@ -761,7 +772,7 @@ function syncMusicState(state: any): void {
     const name = emitterMatch[1];
     const method = emitterMatch[2];
     const cfg = ctx().emitters![name] || {};
-    const scope = buildScope(locals);
+    const scope = buildScope(locals, trimmed);
     const existing = evaluateExpression(name, scope);
     const current = Array.isArray(existing) ? (existing as Array<Record<string, unknown>>) : [];
 
@@ -839,7 +850,7 @@ function syncMusicState(state: any): void {
       assignPath(targetPath, JSON.parse(JSON.stringify(initial[targetPath])), locals);
       return true;
     }
-    const targetVal = evaluateExpression(targetPath, buildScope(locals));
+    const targetVal = evaluateExpression(targetPath, buildScope(locals, trimmed));
     if (Array.isArray(targetVal)) {
       for (const item of targetVal) {
         if (item && typeof item === 'object') {
@@ -878,8 +889,8 @@ function syncMusicState(state: any): void {
     const left = compoundMatch[1].trim();
     const op = compoundMatch[2];
     const right = compoundMatch[3].trim();
-    const rightVal = evaluateExpression(right, buildScope(locals));
-    const leftVal = evaluateExpression(left, buildScope(locals));
+    const rightVal = evaluateExpression(right, buildScope(locals, trimmed));
+    const leftVal = evaluateExpression(left, buildScope(locals, trimmed));
     let newVal: unknown;
     if (op === '+') {
       if (typeof leftVal === 'number' && typeof rightVal === 'number') {
@@ -914,7 +925,7 @@ function syncMusicState(state: any): void {
       if (builtinVal == NO_ACTION) {
         return true;
       }
-      const value = builtinVal !== undefined ? builtinVal : evaluateExpression(right, buildScope(locals));
+      const value = builtinVal !== undefined ? builtinVal : evaluateExpression(right, buildScope(locals, trimmed));
       assignPath(left, value, locals);
       return true;
     }
@@ -934,9 +945,9 @@ function syncMusicState(state: any): void {
   if (pushMatch) {
     const path = pushMatch[1].trim();
     const arg = pushMatch[2].trim();
-    const collection = evaluateExpression(path, buildScope(locals));
+    const collection = evaluateExpression(path, buildScope(locals, trimmed));
     if (Array.isArray(collection)) {
-      const val = evaluateExpression(arg, buildScope(locals));
+      const val = evaluateExpression(arg, buildScope(locals, trimmed));
       collection.push(val);
       assignPath(path, collection, locals);
     }
@@ -952,7 +963,7 @@ function syncMusicState(state: any): void {
     if (funcName === 'window.__runeWebEmit') {
       const args = argsStr
         ? splitTopLevel(argsStr, ',').map((arg) =>
-          evaluateExpression(arg, buildScope(locals)),
+          evaluateExpression(arg, buildScope(locals, trimmed)),
         )
         : [];
       const emitFn = getWindowProp('__runeWebEmit');
@@ -986,7 +997,7 @@ export function executeSteps(
         Boolean(
           evaluateExpression(
             conditional.condition,
-            buildScope(locals),
+            buildScope(locals, conditional.condition),
           ),
         )
       ) {
@@ -998,7 +1009,7 @@ export function executeSteps(
       const loop = step.ForLoop!;
       const collection = evaluateExpression(
         loop.collection,
-        buildScope(locals),
+        buildScope(locals, loop.collection),
       );
       if (Array.isArray(collection)) {
         for (let i = 0; i < collection.length; i++) {
