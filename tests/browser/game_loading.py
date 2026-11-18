@@ -117,7 +117,9 @@ async def check(base):
         page = await context.new_page()
         page.on('pageerror',lambda error:errors.append(str(error)))
         for route in ['games','vectworms','monster-city','vect-breach','rune-crypt','skybound-2']:
-            await page.goto(base+'/'+route+'/')
+            # Finish route prefetches before navigating away: WebKit reports
+            # interrupted live-network fetches as access-control errors.
+            await page.goto(base+'/'+route+'/',wait_until='networkidle')
             await expect(page.locator('.web-example[data-game="true"]')).to_have_attribute('data-load-state','ready',timeout=15000)
             await expect(page.locator('.game-loader')).not_to_be_visible()
         print('All existing game engines clear their loading screens',flush=True)
