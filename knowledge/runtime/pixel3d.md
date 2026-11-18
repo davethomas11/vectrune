@@ -1261,9 +1261,18 @@ current website runtime; it does not change desktop game rules or save data.
 Starfall keeps Start inside the fullscreen surface. Its touch stick moves,
 aims upward, and ducks; Jump and Fire stay in a compact lower corner. Dash
 appears after unlocking it, and Use appears only near an interaction. Pause
-opens the map and offers Exit fullscreen, keeping that extra button out of play.
+opens the map. Fullscreen keeps a small EXIT button visible, including during
+the title and story scenes. Portrait fullscreen shows a two-line rotation hint.
+
+Opt-in `data-pixel-touch-padding=14` expands touch targeting by 14 CSS pixels
+without enlarging the artwork. The closest visible button wins where buffers
+overlap; presses farther away do nothing. This also guards the game surface
+against selection, context menus, double-tap and pinch gestures. Page content
+outside the game remains scrollable and selectable.
+
 Browser regression checks cover native and fallback fullscreen in the site
-iframe, touch-only launch, rotation, contextual actions, and resolution recovery.
+iframe, touch-only launch, rotation, contextual actions, near misses, inert
+background taps, pinch suppression, a persistent exit, and resolution recovery.
 
 ## Floating destination titles
 

@@ -884,6 +884,31 @@ fullscreen:
         assert!(css.contains("max-width: 100vw;"));
         assert!(css.contains("height: 100vh;"));
     }
+
+    #[test]
+    fn preserves_vendor_and_custom_property_hyphens_in_authored_styles() {
+        let doc = crate::rune_parser::parse_rune(r#"
+@Page/touch
+view:
+    div .surface "Touch controls"
+
+@Style/touch
+rules:
+    .surface:
+        -webkit-user-select = none
+        -webkit-touch-callout = none
+        -webkit-tap-highlight-color = transparent
+        --touch-padding = 14px
+        - touch-action = none
+"#).expect("parsed styles");
+        let frontend = super::super::parser::parse_rune_web_frontend(&doc, "touch").unwrap();
+        let style = &frontend.style_definitions["touch"];
+        let css = CssCompiler::new(style).compile(&style.rules);
+        for declaration in ["-webkit-user-select: none;", "-webkit-touch-callout: none;",
+            "-webkit-tap-highlight-color: transparent;", "--touch-padding: 14px;", "touch-action: none;"] {
+            assert!(css.contains(declaration), "Missing {declaration}: {css}");
+        }
+    }
 }
 
 

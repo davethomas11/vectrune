@@ -602,6 +602,7 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                 if let Some((_, path)) = series_stack.last().cloned() {
                     // Compute the target list safely
                     let logic_expression = sec.path.first().is_some_and(|part| part == "Logic");
+                    let style_expression = sec.path.first().is_some_and(|part| part == "Style");
                     let maybe_list = resolve_series_path_mut(&mut sec.series, &path, false);
 
                     if let Some(list) = maybe_list {
@@ -633,7 +634,10 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                             list.push(Value::String(assignment));
                             continue;
                         }
-                        let item_text = if line.trim_start().starts_with('-') {
+                        // CSS vendor/custom properties start with a hyphen, not a list marker.
+                        let trimmed = line.trim_start();
+                        let item_text = if trimmed.starts_with('-') &&
+                            (!style_expression || trimmed.chars().nth(1).is_some_and(char::is_whitespace)) {
                             line.trim_start()[1..].trim().to_string()
                         } else {
                             line.trim().to_string()

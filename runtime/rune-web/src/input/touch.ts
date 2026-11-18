@@ -7,6 +7,7 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
   playing(): boolean; paused(): boolean; resume(): void; advance(): void; interact(): void; fullscreen(): void; expanded?(): boolean; tapToAdvance?: boolean;
 }) {
   const surface = canvas.parentElement || canvas;
+  const padding = Math.max(0, Math.min(24, Number(canvas.dataset.pixelTouchPadding) || 0));
   const style = document.createElement('style');
   style.textContent = `.rune-control-touch{position:absolute;z-index:6;pointer-events:none;display:none;user-select:none;-webkit-user-select:none;touch-action:none}@media(pointer:coarse),(hover:none){.rune-control-touch{display:block}}.rune-control-touch.is-touch{display:block}.rune-control-touch[hidden]{display:none}.rune-control-touch button{position:absolute;pointer-events:auto;touch-action:none;color:#fff;background:#172c42bb;border:2px solid #efca6a99;border-radius:50%;font:bold 11px ui-monospace,monospace;padding:4px;box-sizing:border-box;min-width:44px;min-height:44px}.rune-control-touch button:focus-visible{outline:3px solid white}.rune-control-touch .control-thumb{position:absolute;left:30%;top:30%;width:40%;height:40%;border-radius:50%;background:#efca6aaa;pointer-events:none}`;
   document.head.append(style);
@@ -16,13 +17,22 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
   if (position === 'static') surface.style.position = 'relative';
   const oldTouchAction = canvas.style.touchAction;
   canvas.style.touchAction = 'none';
-  const hint = document.createElement('span'); hint.className = 'rotate-hint'; hint.textContent = 'Rotate your device for landscape play'; overlay.append(hint);
+  const hint = document.createElement('div'); hint.className = 'rune-control-rotate';
+  hint.setAttribute('role', 'status'); hint.setAttribute('aria-live', 'polite');
+  const cramped = document.createElement('strong'); cramped.textContent = "It's cramped in here";
+  const rotate = document.createElement('span'); rotate.textContent = 'Please rotate your phone to landscape.';
+  hint.append(cramped, rotate); surface.append(hint);
+  style.textContent += '.rune-control-rotate{position:absolute;z-index:7;top:calc(max(12px,env(safe-area-inset-top)) + 68px);left:50%;transform:translateX(-50%);width:min(300px,calc(100% - 32px));padding:12px;box-sizing:border-box;border:1px solid #627b98;border-radius:8px;background:#142432ed;color:white;text-align:center;font:14px system-ui,sans-serif;pointer-events:none;user-select:none;-webkit-user-select:none}.rune-control-rotate strong,.rune-control-rotate span{display:block}.rune-control-rotate span{margin-top:6px;font-size:12px}.rune-control-rotate[hidden]{display:none!important}';
   const abort = new AbortController();
   function listen(target: EventTarget, name: string, fn: (e: PointerEvent) => void) { target.addEventListener(name, fn as EventListener, { signal: abort.signal, passive: false }); }
-  type Pointer = { target: HTMLElement; move?(e: PointerEvent): void; end(cancel: boolean): void };
+  type Pointer = { target: HTMLElement; needsOverlay?: boolean; move?(e: PointerEvent): void; end(cancel: boolean): void };
   const pointers = new Map<number, Pointer>();
   const occupied = new Set<HTMLElement>();
   const visibility = new Map<HTMLElement, string>();
+  const starters = new Map<HTMLElement, (e: PointerEvent) => void>();
+  function bind(target: HTMLElement, start: (e: PointerEvent) => void) {
+    starters.set(target, start); listen(target, 'pointerdown', start);
+  }
   function visible(path: string | undefined): boolean {
     if (path === undefined) return true;
     let value: unknown = options.state?.();
@@ -73,7 +83,7 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
         if (def[direction]) emit(`stick:${direction}`, def[direction]!, amount > .35, 'button', cancel);
       }
     }
-    listen(stick, 'pointerdown', e => {
+    bind(stick, e => {
       if (occupied.has(stick) || !activate(e)) return;
       capture(stick, e, { target: stick, move, end: cancel => move(undefined, cancel) }); move(e);
     });
@@ -84,7 +94,7 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
     target.classList.add('touch-' + def.id);
     if (def.aria_label) target.setAttribute('aria-label', def.aria_label);
     if (def.input) target.dataset.gameplay = 'true';
-    listen(target, 'pointerdown', e => {
+    bind(target, e => {
       if (def.command) {
         e.preventDefault(); e.stopPropagation(); options.interact(); canvas.focus({ preventScroll: true });
         if (controls.command(def.command) === 'host.fullscreen') options.fullscreen();
@@ -99,6 +109,70 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
       }, end: cancel => emit(def.id, def.input!, false, 'button', cancel) });
     });
     target.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); }, { signal: abort.signal });
+  }
+  if (padding > 0) {
+    let assistedClickUntil = 0;
+    const guardedTouches = new Set<number>();
+    // Exiting fullscreen moves the page under the finger. Consume that touch's
+    // compatibility click so it cannot hit the toolbar and immediately reenter.
+    document.addEventListener('pointerdown', e => { assistedClickUntil = 0; guardedTouches.delete(e.pointerId); }, { signal: abort.signal, capture: true });
+    document.addEventListener('pointerup', e => {
+      assistedClickUntil = guardedTouches.delete(e.pointerId) ? Date.now() + 700 : 0;
+    }, { signal: abort.signal, capture: true });
+    document.addEventListener('pointercancel', e => { guardedTouches.delete(e.pointerId); }, { signal: abort.signal, capture: true });
+    document.addEventListener('click', e => {
+      if (e.isTrusted && e.detail !== 0 && Date.now() < assistedClickUntil) {
+        assistedClickUntil = 0; e.preventDefault(); e.stopImmediatePropagation();
+      }
+    }, { signal: abort.signal, capture: true });
+    function available(button: HTMLButtonElement): boolean {
+      const css = getComputedStyle(button);
+      return !button.disabled && button.getClientRects().length > 0 && css.visibility !== 'hidden' && css.pointerEvents !== 'none';
+    }
+    function distance(button: HTMLElement, x: number, y: number): number {
+      const r = button.getBoundingClientRect();
+      return Math.hypot(Math.max(r.left-x, 0, x-r.right), Math.max(r.top-y, 0, y-r.bottom));
+    }
+    surface.addEventListener('pointerdown', e => {
+      if (!['touch', 'pen'].includes(e.pointerType)) return;
+      overlay.classList.add('is-touch');
+      const direct = e.target instanceof Element ? e.target.closest('button') : null;
+      if (direct) {
+        if (starters.has(direct)) { guardedTouches.add(e.pointerId); e.preventDefault(); }
+        return;
+      }
+      // Empty space is inert. Only a near miss on a visible control is assisted.
+      guardedTouches.add(e.pointerId);
+      e.preventDefault(); e.stopImmediatePropagation();
+      let nearest: HTMLButtonElement | undefined, best = Infinity, center = Infinity;
+      for (const button of Array.from(surface.querySelectorAll<HTMLButtonElement>('button'))) {
+        if (!available(button)) continue;
+        const d = distance(button, e.clientX, e.clientY), r = button.getBoundingClientRect();
+        const c = Math.hypot(e.clientX-r.left-r.width/2, e.clientY-r.top-r.height/2);
+        if (d <= padding && (d < best || (d === best && c < center))) { nearest = button; best = d; center = c; }
+      }
+      if (!nearest) return;
+      const start = starters.get(nearest);
+      if (start) { start(e); return; }
+      if (occupied.has(surface)) return;
+      const button = nearest;
+      let inside = true;
+      // Menu/exit buttons commit on release, preserving the browser's user gesture.
+      capture(surface, e, { target: surface, needsOverlay: false, move: p => { inside = distance(button, p.clientX, p.clientY) <= padding; },
+        end: cancel => {
+          if (!cancel && inside && button.isConnected && available(button)) {
+            button.click();
+          }
+        } });
+    }, { signal: abort.signal, capture: true, passive: false });
+    const suppress = (e: Event) => { e.preventDefault(); };
+    for (const name of ['contextmenu', 'selectstart', 'dragstart', 'dblclick', 'gesturestart', 'gesturechange', 'gestureend']) {
+      surface.addEventListener(name, suppress, { signal: abort.signal, passive: false });
+    }
+    surface.addEventListener('touchmove', suppress, { signal: abort.signal, passive: false });
+    surface.addEventListener('click', e => {
+      if (!(e.target instanceof Element && e.target.closest('button'))) { e.preventDefault(); e.stopImmediatePropagation(); }
+    }, { signal: abort.signal, capture: true });
   }
   listen(canvas, 'pointerdown', e => {
     if (!['touch', 'pen'].includes(e.pointerType) || occupied.has(canvas)) return;
@@ -121,9 +195,11 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
     pointers.delete(e.pointerId); occupied.delete(pointer.target); pointer.end(e.type !== 'pointerup');
   }
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) listen(document, name, end);
-  function reset() {
-    const active = [...pointers]; pointers.clear(); occupied.clear();
+  function reset(keepMenu = false) {
+    const active = [...pointers];
     for (const [id, pointer] of active) {
+      if (keepMenu && pointer.needsOverlay === false) continue;
+      pointers.delete(id); occupied.delete(pointer.target);
       pointer.end(true); try { pointer.target.releasePointerCapture(id); } catch { /* Already released. */ }
     }
   }
@@ -135,13 +211,12 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
       element.hidden = (element.dataset.gameplay === 'true' && !options.playing()) || !visible(visibility.get(element));
     }
     for (const [id, pointer] of [...pointers]) {
-      if (overlay.hidden || pointer.target.hidden) {
+      if ((overlay.hidden && pointer.needsOverlay !== false) || pointer.target.hidden) {
         pointers.delete(id); occupied.delete(pointer.target); pointer.end(true);
         try { pointer.target.releasePointerCapture(id); } catch { /* Already released. */ }
       }
     }
     const expanded = options.expanded?.() || false;
-    hint.style.cssText = 'position:absolute;left:25%;bottom:calc(100% + 12px);width:50%;text-align:center;color:white;background:#142432dd;font:12px monospace;padding:8px';
     hint.hidden = !expanded || innerWidth >= innerHeight;
     for (const def of profile.buttons || []) {
       const target = Array.from(overlay.querySelectorAll<HTMLButtonElement>('button')).find(b => b.dataset.controlTouch === def.id)!;
@@ -150,5 +225,5 @@ export function mountControlTouch(canvas: HTMLCanvasElement, controls: GameContr
     }
   }
   const resize = new ResizeObserver(update); resize.observe(canvas); resize.observe(surface); update();
-  return { reset, update, dispose() { reset(); abort.abort(); resize.disconnect(); overlay.remove(); style.remove(); canvas.style.touchAction = oldTouchAction; if (position === 'static') surface.style.position = ''; } };
+  return { reset, update, dispose() { reset(); abort.abort(); resize.disconnect(); overlay.remove(); hint.remove(); style.remove(); canvas.style.touchAction = oldTouchAction; if (position === 'static') surface.style.position = ''; } };
 }

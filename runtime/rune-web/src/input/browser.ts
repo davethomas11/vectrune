@@ -53,7 +53,7 @@ export function mountControls(canvas: HTMLCanvasElement, controls: GameControls,
   const touch = controls.profile.touch && controls.profile.touch.enabled !== false ? mountControlTouch(canvas, controls, controls.profile.touch, {
     ...options, interact() { lastTouch = Date.now(); options.interact(); },
   }) : undefined;
-  function clear(keepCommands = false) { touch?.reset(); controls.clear(keepCommands); }
+  function clear(keepCommands = false) { touch?.reset(keepCommands); controls.clear(keepCommands); }
   listen(canvas, 'blur', () => clear()); listen(window, 'blur', () => clear());
   listen(document, 'visibilitychange', () => { if (document.hidden) clear(); });
   return {

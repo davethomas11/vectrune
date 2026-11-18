@@ -8,7 +8,7 @@ Starfall {
     standalone = "Ouvrir le jeu complet dans un nouvel onglet"
     controls_title = "Un dernier vol. Une dernière lumière."
     controls = "A / D ou flèches pour bouger ; Espace pour sauter ; clic ou X pour tirer ; W / Haut pour viser en hauteur ; S / Bas pour se baisser ; Maj pour foncer ; E pour les portes et consoles. Maintenez le tir pour charger le plasma, puis relâchez."
-    touch_controls = "Sur écran tactile, poussez le stick vers le haut pour viser ou vers le bas pour vous baisser. USE apparaît près des portes et consoles ; DASH apparaît après son déblocage. Le plein écran contient le bouton de départ et le menu Pause permet d’en sortir."
+    touch_controls = "Sur écran tactile, poussez le stick vers le haut pour viser ou vers le bas pour vous baisser. USE apparaît près des portes et consoles ; DASH apparaît après son déblocage. Les boutons de départ et de sortie restent accessibles en plein écran. En mode portrait, un message conseille de tourner le téléphone."
     objective = "Explorez Hydroponie et la Fonderie Gravitationnelle. Combinez double saut, ruée aérienne et gant magnétique pour atteindre le réacteur et vaincre trois gardiens. Les salles facultatives cachent des améliorations, un quatrième boss et de rares vies supplémentaires."
     device = "Clavier, manette et commandes tactiles sont pris en charge. P met en pause et ouvre la carte. Commencez avec quatre points de santé et trois vies ; les boss offrent des réserves de santé permanentes. Les secteurs terminés sont sauvegardés dans ce navigateur."
     source_title = "Explorer le code Rune"

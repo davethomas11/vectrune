@@ -18,7 +18,8 @@ view:
                     button data-pixel-mute=true "Sound / V"
                     button data-pixel-fullscreen=true "Fullscreen / F"
             div .game-surface:
-                canvas data-rune-pixel-3d=true data-pixel-fit=viewport tabindex=0 aria-label="Starfall Protocol, a side-scrolling space adventure. A and D or arrows move, Space jumps, left click or X fires, W or Up aims upward, S or Down ducks. On touch, move the stick up to aim and down to duck. Recover the core and return to your ship."
+                canvas data-rune-pixel-3d=true data-pixel-fit=viewport data-pixel-touch-padding=14 tabindex=0 aria-label="Starfall Protocol, a side-scrolling space adventure. A and D or arrows move, Space jumps, left click or X fires, W or Up aims upward, S or Down ducks. On touch, move the stick up to aim and down to duck. Recover the core and return to your ship."
+                button .fullscreen-exit .fullscreen-exit-hud data-pixel-fullscreen=true aria-label="Exit fullscreen" "EXIT"
                 div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
                     h2 "SIGNAL ON HOLD"
                     p "Resume whenever you are ready."
@@ -27,7 +28,6 @@ view:
                     button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
                 div .launch data-pixel-hidden=title_hidden:
                     button .primary data-pixel-start=true data-pixel-text=launch_label "Board station / Enter"
-                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
             p .status data-pixel-status=true role=status aria-live=polite "Awaiting pilot."
         section .guide aria-label="Pilot briefing":
             div:
@@ -130,6 +130,15 @@ rules:
     .game-surface:
         position = relative
         background = #060b1b
+        touch-action = none
+        overscroll-behavior = none
+        user-select = none
+        -webkit-user-select = none
+        -webkit-touch-callout = none
+    .game-surface *:
+        user-select = none
+        -webkit-user-select = none
+        -webkit-touch-callout = none
     canvas:
         display = block
         width = 100%
@@ -214,12 +223,22 @@ rules:
         display = none
     .game-surface:fullscreen .fullscreen-exit, .game-surface.rune-pixel3d-expanded .fullscreen-exit:
         display = inline-block
+    .fullscreen-exit-hud:
+        position = absolute
+        z-index = 9
+        top = max(12px, env(safe-area-inset-top))
+        right = calc(max(12px, env(safe-area-inset-right)) + 52px)
+        width = 52px
+        height = 44px
+        padding = 4px
+        font-size = 11px
+        background = #142432dd
     .game-surface:fullscreen canvas[data-pixel-fit=viewport], .game-surface.rune-pixel3d-expanded canvas[data-pixel-fit=viewport]:
         width = 100% !important
         height = 100% !important
         max-width = none !important
         max-height = none !important
         aspect-ratio = auto
-    .game-surface:has(.pause-menu:not([hidden])) .rune-control-touch [data-gameplay=true]:
+    .game-surface:has(.pause-menu:not([hidden])) .rune-control-touch button:
         visibility = hidden
         pointer-events = none

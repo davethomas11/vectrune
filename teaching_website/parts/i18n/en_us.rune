@@ -8,7 +8,7 @@ Starfall {
     standalone = "Open the full game in a new tab"
     controls_title = "One last flight. One last light."
     controls = "A / D or arrows move; Space jumps; click or X fires; W / Up aims high; S / Down ducks; Shift dashes; E uses doors and consoles. Hold fire to charge plasma, then release."
-    touch_controls = "On touch, push the stick up to aim or down to duck. USE appears near doors and consoles; DASH appears after you unlock it. Fullscreen includes its own Start button, and Pause includes Exit fullscreen."
+    touch_controls = "On touch, push the stick up to aim or down to duck. USE appears near doors and consoles; DASH appears after you unlock it. Start and Exit remain accessible in fullscreen. In portrait, a reminder recommends rotating your phone."
     objective = "Explore Hydroponics and the Gravity Foundry, link jump jets, air dash and the magnetic glove to reach the reactor, and defeat three guardians. Optional rooms hide upgrades, a fourth boss and rare extra lives."
     device = "Keyboard, controller and touch are supported. P pauses and opens the map. Start with four health cells and three lives; bosses add permanent health containers. Sector progress saves in this browser."
     source_title = "Explore the Rune source"

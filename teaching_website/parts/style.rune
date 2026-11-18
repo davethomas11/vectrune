@@ -1208,6 +1208,10 @@ rules:
         box-sizing = border-box
 
     .iframe-fullscreen:
+        touch-action = none
+        overscroll-behavior = none
+        user-select = none
+        -webkit-user-select = none
         position = fixed !important
         top = 0 !important
         left = 0 !important
