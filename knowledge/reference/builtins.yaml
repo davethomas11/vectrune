@@ -36,6 +36,39 @@ builtins:
       - ___last_exec_result___
     sources:
       - src/builtins/builtin/parse_json.rs
+      - runtime/rune-web/src/builtins/parse_json.ts
+    notes:
+      - "The source may be a dotted path such as `response.body`."
+      - "Rune-Web: `x = parse-json <string expr>` returns the parsed value; invalid JSON throws. Added in runtime/rune-web/src/builtins/parse_json.ts."
+  - name: fetch
+    category: http
+    summary: "HTTP GET: `x = fetch url [catch handler]` assigns { status, ok, url, content_type, body } (non-2xx is returned, not raised); `fetch url then handler [catch handler]` calls a handler. In Rune-Web the assignment form must be a top-level action step and suspends the action."
+    arguments:
+      - name: url
+        description: "Literal http(s) URL, or a variable / @Values name holding one (server). Rune-Web accepts an expression."
+    writes_context:
+      - assigned variable
+      - ___last_exec_result___ (server only)
+    notes:
+      - "Limits: 10s timeout, 1 MiB body. Server follows 5 redirects; browsers follow their own limit."
+      - "Rune-Web is subject to browser CORS and mixed-content rules. See runtime/fetch.md."
+    sources:
+      - src/builtins/builtin/http_fetch.rs
+      - runtime/rune-web/src/builtins/fetch.ts
+      - tests/fetch_builtin.rs
+      - runtime/rune-web/tests/builtins/fetch.test.ts
+  - name: fetch-json
+    category: http
+    summary: "HTTP GET returning parsed JSON: `x = fetch-json url [catch handler]`, or `fetch-json url then handler [catch handler]`. Without catch, the server responds 502 for non-2xx/non-JSON and 504 on timeout. Handlers get { status, message } (catch) or the value (then). In Rune-Web the assignment form must be a top-level action step."
+    arguments:
+      - name: url
+        description: Same as fetch.
+    writes_context:
+      - assigned variable
+      - ___last_exec_result___ (server only)
+    sources:
+      - src/builtins/builtin/http_fetch.rs
+      - runtime/rune-web/src/builtins/fetch.ts
   - name: validate
     category: schema
     summary: Validate data against conditions or schema-driven expectations.

@@ -325,6 +325,16 @@
                     <li>Example: <code>parsed_body = parse-json body</code></li>
                 </ul>
             </li>
+            <li><strong><code>fetch &lt;url|name&gt; [catch &lt;handler&gt;]</code></strong>: Outbound HTTP GET returning <code>{status, body}</code>. Only http/https, 10s timeout, 1 MiB cap. The URL may be a literal or a name such as a read-only <code>@Values</code> entry (native runtime only).
+                <ul>
+                    <li>Example: <code>response = fetch weather_url</code></li>
+                </ul>
+            </li>
+            <li><strong><code>fetch-json &lt;url|name&gt; [catch &lt;handler&gt;]</code></strong>: Like <code>fetch</code>, but parses the body as JSON. Non-2xx responses return 502 (504 on timeout) unless a <code>catch</code> handler is given. In Rune-Web, browser CORS rules apply. See <code>knowledge/runtime/fetch.md</code>.
+                <ul>
+                    <li>Example: <code>weather = fetch-json weather_url</code></li>
+                </ul>
+            </li>
             <li><strong><code>append &lt;variable&gt; &lt;value&gt;</code></strong>: Appends a <code>value</code> (or variable) to a JSON array in context.
                 <ul>
                     <li>Example: <code>my_list = []; append my_list "item1"</code> (then <code>my_list</code> would be <code>["item1"]</code>)</li>

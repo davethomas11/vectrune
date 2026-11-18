@@ -279,6 +279,22 @@ Examples in the current codebase include:
 
 Comparison operators like `>`, `<`, `==`, `!=` work in conditional expressions and do not conflict with multiline key markers.
 
+## @Values
+
+A top-level `@Values` section declares read-only constants for server-side `run:` blocks.
+Names resolve like any context variable; request data cannot shadow them, and reassigning one fails with a 500.
+`@Values` is not implemented in Rune-Web. See `runtime/fetch.md`.
+
+```rune
+@Values
+weather_url = "https://api.open-meteo.com/v1/forecast?latitude=49.28&longitude=-123.12&current=temperature_2m"
+
+@Route/GET /weather
+run:
+    weather = fetch-json weather_url
+    respond 200 weather
+```
+
 ## Environment variables
 
 String values may reference environment variables using `$NAME$` syntax.

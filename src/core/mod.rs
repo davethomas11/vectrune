@@ -64,6 +64,27 @@ pub fn extract_data_sources(doc: &RuneDocument) -> HashMap<String, Section> {
     data_sources
 }
 
+fn values_sections(doc: &RuneDocument) -> impl Iterator<Item = &Section> {
+    doc.sections
+        .iter()
+        .filter(|section| section.path.len() == 1 && section.path[0] == "Values")
+}
+
+/// Copies `@Values` into the context. Called on every step run so request data
+/// (body, path params) can never shadow a declared value.
+pub fn seed_values(doc: &RuneDocument, ctx: &mut Context) {
+    for section in values_sections(doc) {
+        for (name, value) in &section.kv {
+            ctx.insert(name.clone(), value.to_json());
+        }
+    }
+}
+
+pub(crate) fn is_value_name(doc: &RuneDocument, ident: &str) -> bool {
+    let root = ident.split(|c| c == '.' || c == '[').next().unwrap_or("").trim();
+    values_sections(doc).any(|section| section.kv.contains_key(root))
+}
+
 pub fn extract_auth_configs(doc: &RuneDocument) -> HashMap<String, Section> {
     let mut auths = HashMap::new();
     for section in &doc.sections {
@@ -326,6 +347,7 @@ pub async fn execute_steps_inner(
     steps: &[Value],
     ctx: &mut Context,
 ) -> Option<(u16, String)> {
+    seed_values(&state.doc, ctx);
     for step in steps {
         match step {
             Value::String(s) => {
@@ -572,6 +594,13 @@ async fn handle_assignment(
     var: &str,
     cmd: &str,
 ) -> Option<(u16, String)> {
+    if is_value_name(&state.doc, var) {
+        return Some((
+            500,
+            format!("cannot assign to '{}': names declared in @Values are read-only", var),
+        ));
+    }
+
     // 1. Object Construction: var = { ... }
     if cmd.starts_with('{') {
         let map = parse_object_literal(ctx, cmd);
@@ -683,6 +712,7 @@ pub(crate) async fn execute_steps_inner_no_fallthrough(
     steps: &[Value],
     ctx: &mut Context,
 ) -> Option<(u16, String)> {
+    seed_values(&state.doc, ctx);
     for step in steps {
         match step {
             Value::String(s) => {
@@ -951,6 +981,8 @@ fn is_known_command_name(ctx: &Context, name: &str) -> bool {
             | "uuid"
             | "now"
             | "summarize"
+            | "fetch"
+            | "fetch-json"
     ) {
         return true;
     }

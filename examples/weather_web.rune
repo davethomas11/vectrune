@@ -1,0 +1,33 @@
+#!RUNE
+
+@App
+name = Weather Web
+type = REST
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = weather
+
+# Browser fetch is subject to CORS; Open-Meteo sends Access-Control-Allow-Origin: *.
+@Page/weather
+logic = weather
+title = Vancouver Weather
+state:
+    url = "https://api.open-meteo.com/v1/forecast?latitude=49.28&longitude=-123.12&current=temperature_2m"
+    temperature = "?"
+    error = ""
+view:
+    main:
+        h1 "Vancouver: {temperature}°C"
+        p "{error}"
+        button click="loadWeather()" "Refresh"
+
+@Logic/weather
+action loadWeather():
+    weather = fetch-json url catch weatherFailed
+    temperature = weather.current.temperature_2m
+    error = ""
+
+action weatherFailed(failure):
+    error = failure.message

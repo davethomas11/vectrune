@@ -1,0 +1,22 @@
+#!RUNE
+
+@Values
+weather_url = "https://api.open-meteo.com/v1/forecast?latitude=49.28&longitude=-123.12&current=temperature_2m"
+
+@App
+name = Vancouver Weather
+type = REST
+version = 1.0
+
+# One step: fetch and parse JSON.
+@Route/GET /weather
+run:
+    weather = fetch-json weather_url
+    respond 200 weather
+
+# Explicit: inspect the raw response (status, ok, content_type, body) yourself.
+@Route/GET /weather-explicit
+run:
+    response = fetch weather_url
+    weather = parse-json response.body
+    respond 200 weather

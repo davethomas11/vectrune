@@ -9,6 +9,7 @@ import { getWindowProp } from './globals';
 import { interpolate } from './interpolation';
 import { splitPathSegments, buildScope } from './scope';
 import { handleBuiltin } from "./builtins";
+import { parseFetchAssignment, runFetchAssignment, reportFetchFailure } from "./builtins/fetch";
 import { splitTopLevel, valueToString, normalizeLiteral } from './utils';
 import { playSound, playMusic, stopMusic, pauseMusic, resumeMusic, setMusicTempo, setMusicVolume, registerMusic, registerSounds } from './audio';
 import { setStorageItem, removeStorageItem, clearStorage } from './storage';
@@ -232,6 +233,10 @@ export function executeStatement(
 ): boolean {
   const trimmed = String(statement || '').trim();
   if (!trimmed) return true;
+
+  if (parseFetchAssignment(trimmed)) {
+    throw new Error(`'${trimmed}' is only supported as a top-level action step`);
+  }
 
   // Shared Rune action calls, including from fixed game ticks.
   if (trimmed.startsWith('call ')) {
@@ -981,12 +986,42 @@ function syncMusicState(state: any): void {
 // executeSteps — run an array of action steps (Statement / Conditional / ForLoop)
 // ---------------------------------------------------------------------------
 
+/** Starts a `x = fetch...` step and runs the remaining steps once it settles. */
+function suspendForFetch(
+  pending: NonNullable<ReturnType<typeof parseFetchAssignment>>,
+  locals: Record<string, unknown>,
+  rest: ActionStep[],
+): void {
+  runFetchAssignment(pending, locals).then(
+    (value) => {
+      try {
+        assignPath(pending.target, value, locals);
+        executeSteps(rest, locals);
+      } catch (error) {
+        console.error(error);
+      }
+      ctx().app.render();
+    },
+    (error) => reportFetchFailure(error, pending.onError),
+  );
+}
+
 export function executeSteps(
   steps: ActionStep[],
   locals: Record<string, unknown>,
+  nested = false,
 ): boolean {
-  for (const step of steps) {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
     if (Object.prototype.hasOwnProperty.call(step, 'Statement')) {
+      const pending = parseFetchAssignment(step.Statement!);
+      if (pending) {
+        if (nested) {
+          throw new Error(`'${step.Statement}' must be a top-level action step, not inside if/for. Use 'fetch-json <url> then <action>' there.`);
+        }
+        suspendForFetch(pending, locals, steps.slice(i + 1));
+        return false;
+      }
       if (!executeStatement(step.Statement!, locals)) return false;
       continue;
     }
@@ -1001,7 +1036,7 @@ export function executeSteps(
           ),
         )
       ) {
-        if (!executeSteps(conditional.steps || [], locals)) return false;
+        if (!executeSteps(conditional.steps || [], locals, true)) return false;
       }
     }
 
@@ -1022,7 +1057,7 @@ export function executeSteps(
           if (loop.index_name) {
             childLocals[loop.index_name] = i;
           }
-          if (!executeSteps(loop.steps || [], childLocals)) {
+          if (!executeSteps(loop.steps || [], childLocals, true)) {
             break;
           }
         }

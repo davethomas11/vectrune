@@ -106,6 +106,20 @@ Omit `enthusiastic` and the POST returns HTTP 400. Open **http://127.0.0.1:3000/
 
 If port 3000 is occupied, use `vectrune app.rune --port 8080` and update the request URLs. In Windows PowerShell, use `curl.exe` to call curl directly.
 
+### Calling other APIs
+
+`fetch-json` makes an outbound GET (http/https, 10s timeout, 1 MiB cap); `@Values` holds read-only constants. See `examples/weather.rune` (server) and `examples/weather_web.rune` (browser, subject to CORS).
+
+```rune
+@Values
+weather_url = "https://api.open-meteo.com/v1/forecast?latitude=49.28&longitude=-123.12&current=temperature_2m"
+
+@Route/GET /weather
+run:
+    weather = fetch-json weather_url
+    respond 200 weather
+```
+
 Continue with the [REST tutorial](https://vectrune.com/docs/getting-started/), [routing reference](https://vectrune.com/docs/rest/), or [validation reference](https://vectrune.com/docs/validation/).
 
 ## What you can build

@@ -215,6 +215,21 @@ pages:
       - src/core/mod.rs
       - examples/vect/
       - tests/integration_vect_cli.rs
+  - id: runtime.fetch
+    path: runtime/fetch.md
+    kind: page
+    title: Fetch, fetch-json and @Values
+    audience:
+      - ai
+      - human
+    sources:
+      - src/builtins/builtin/http_fetch.rs
+      - src/core/mod.rs
+      - runtime/rune-web/src/builtins/fetch.ts
+      - examples/weather.rune
+      - examples/weather_web.rune
+      - tests/fetch_builtin.rs
+      - runtime/rune-web/tests/builtins/fetch.test.ts
   - id: runtime.cli
     path: runtime/cli.md
     kind: page

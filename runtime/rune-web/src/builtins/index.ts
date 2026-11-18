@@ -26,6 +26,8 @@ import { countCommand } from "./count";
 import { flattenCommand } from "./flatten";
 import { avgCommand } from "./avg";
 import { cloneCommand } from "./clone";
+import { parseJsonCommand } from "./parse_json";
+import { fetchCommand, fetchJsonCommand } from "./fetch";
 import { startTimerCommand, stopTimerCommand } from "./timer";
 
 /** Register a builtin command */
@@ -62,6 +64,9 @@ registerCommand(avgCommand);
 registerCommand(cloneCommand);
 registerCommand(startTimerCommand);
 registerCommand(stopTimerCommand);
+registerCommand(parseJsonCommand);
+registerCommand(fetchCommand);
+registerCommand(fetchJsonCommand);
 
 /**
  * Process conditional 'when' suffix.

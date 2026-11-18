@@ -16,8 +16,9 @@ pub fn builtin_parse_json(
         "body"
     };
 
-    if let Some(JsonValue::String(s)) = ctx.get(value) {
-        match serde_json::from_str::<JsonValue>(s) {
+    // Resolve dotted paths too, so `parse-json response.body` works.
+    if let Some(JsonValue::String(s)) = crate::core::resolve_path(ctx, value, None) {
+        match serde_json::from_str::<JsonValue>(&s) {
             Ok(v) => {
                 ctx.insert(target.into(), v.clone());
                 ctx.insert(LAST_EXEC_RESULT.to_string(), v.clone());

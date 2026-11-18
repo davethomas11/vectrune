@@ -131,6 +131,64 @@
       "fields": []
     },
     {
+      "id": "fetch",
+      "category": "native",
+      "name": "fetch",
+      "signature": "result = fetch <url|name> [catch <handler>]",
+      "summary": "Perform an outbound HTTP GET and return {status, body}.",
+      "sources": [
+        "src/builtins/builtin/http_fetch.rs",
+        "runtime/rune-web/src/builtins/fetch.ts"
+      ],
+      "returns": "Writes the response (fetch: {status, body}; fetch-json: parsed JSON) to the assignment target and ___last_exec_result___.",
+      "errors": "GET only; http/https only; 10s timeout, 1 MiB cap. Native REST: 502 for upstream non-2xx/bad JSON/network errors, 504 on timeout, unless a catch handler is given. Rune-Web: failures call the catch action; browser CORS rules apply.",
+      "example": "response = fetch weather_url",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "http(s) URL literal, or a name (e.g. an @Values entry) holding one."
+        },
+        {
+          "name": "catch",
+          "description": "Optional: func/action called with the error ($1 / payload {status, message})."
+        }
+      ],
+      "aliases": [],
+      "notes": [
+        "@Values entries are read-only and native-only. See knowledge/runtime/fetch.md."
+      ],
+      "fields": []
+    },
+    {
+      "id": "fetch-json",
+      "category": "native",
+      "name": "fetch-json",
+      "signature": "result = fetch-json <url|name> [catch <handler>]",
+      "summary": "Perform an outbound HTTP GET and parse the body as JSON.",
+      "sources": [
+        "src/builtins/builtin/http_fetch.rs",
+        "runtime/rune-web/src/builtins/fetch.ts"
+      ],
+      "returns": "Writes the response (fetch: {status, body}; fetch-json: parsed JSON) to the assignment target and ___last_exec_result___.",
+      "errors": "GET only; http/https only; 10s timeout, 1 MiB cap. Native REST: 502 for upstream non-2xx/bad JSON/network errors, 504 on timeout, unless a catch handler is given. Rune-Web: failures call the catch action; browser CORS rules apply.",
+      "example": "weather = fetch-json weather_url",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "http(s) URL literal, or a name (e.g. an @Values entry) holding one."
+        },
+        {
+          "name": "catch",
+          "description": "Optional: func/action called with the error ($1 / payload {status, message})."
+        }
+      ],
+      "aliases": [],
+      "notes": [
+        "@Values entries are read-only and native-only. See knowledge/runtime/fetch.md."
+      ],
+      "fields": []
+    },
+    {
       "id": "validate",
       "category": "native",
       "name": "validate",

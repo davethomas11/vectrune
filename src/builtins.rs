@@ -11,6 +11,8 @@ pub mod builtin {
     pub mod csv;
     #[cfg(not(target_arch = "wasm32"))]
     pub mod data_source;
+    #[cfg(not(target_arch = "wasm32"))]
+    pub mod http_fetch;
     pub mod json;
     pub mod logger;
     pub mod memory;
@@ -71,7 +73,7 @@ pub fn is_builtin(name: &str) -> bool {
         "memory.set", "get-memory", "memory.get", "clear-memory", "memory.clear",
         "del-memory", "memory.del", "append", "memory.append", "delete", "is-set",
         "return", "#",
-        "to-number", "to-string", "to-bool", "uuid.v4", "uuid", "now", "summarize"
+        "to-number", "to-string", "to-bool", "uuid.v4", "uuid", "now", "summarize", "fetch", "fetch-json"
     ];
 
     core_builtins.contains(&name) || ws_builtins.contains(&name) || db_builtins.contains(&name)
@@ -468,7 +470,14 @@ pub async fn call_builtin(
         "clear-memory" | "memory.clear" => builtin_clear_memory(args, ctx).await,
         "del-memory" | "memory.del" => builtin_del_memory(args, ctx).await,
         "append" | "memory.append" => builtin_append(args, assign_to, ctx).await,
+        "delete" if args.first().is_some_and(|n| crate::core::is_value_name(&app_state.doc, n)) => {
+            BuiltinResult::Error(format!("cannot delete '{}': names declared in @Values are read-only", args[0]))
+        }
         "delete" => builtin_delete(args, ctx),
+        #[cfg(not(target_arch = "wasm32"))]
+        "fetch" | "fetch-json" => builtin::http_fetch::builtin_fetch_like(name, args, ctx, app_state, assign_to).await,
+        #[cfg(target_arch = "wasm32")]
+        "fetch" | "fetch-json" => BuiltinResult::Error(format!("{name}: not supported in WebAssembly builds")),
         "is-set" => builtin_is_set(args, ctx, assign_to),
         "to-number" => builtin_to_number(args, assign_to, ctx),
         "to-string" => builtin_to_string(args, assign_to, ctx),

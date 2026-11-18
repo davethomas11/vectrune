@@ -3657,6 +3657,166 @@ var __RunePixel3DRuntime = (() => {
     handler: handleClone
   };
 
+  // src/builtins/parse_json.ts
+  function handleParseJson(statement, locals) {
+    const match = statement.trim().match(/^parse-json\s+(.+)$/);
+    if (!match) return void 0;
+    const source = evaluateExpression(match[1], buildScope(locals, statement));
+    if (typeof source !== "string") throw new Error("parse-json: expected a string");
+    try {
+      return JSON.parse(source);
+    } catch {
+      throw new Error("parse-json: invalid JSON");
+    }
+  }
+  var parseJsonCommand = {
+    prefix: ["parse-json"],
+    signature: "x = parse-json <expr>",
+    description: "Parses a JSON string and returns the value",
+    handler: handleParseJson
+  };
+
+  // src/builtins/fetch.ts
+  var DEFAULT_FETCH_LIMITS = { timeoutMs: 1e4, maxBodyBytes: 1024 * 1024 };
+  var FetchError = class extends Error {
+    constructor(message, status = 0) {
+      super(message);
+      this.status = status;
+    }
+  };
+  function redactUrl(url) {
+    const safe = new URL(url.href);
+    safe.username = "";
+    safe.password = "";
+    safe.search = "";
+    safe.hash = "";
+    return safe.href;
+  }
+  function parseUrl(value) {
+    if (typeof value !== "string" || !value) throw new FetchError("fetch: URL must be a non-empty string");
+    const base = typeof location !== "undefined" ? location.href : void 0;
+    let url;
+    try {
+      url = new URL(value, base);
+    } catch {
+      throw new FetchError("fetch: not a valid URL");
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new FetchError(`fetch: unsupported URL scheme '${url.protocol.slice(0, -1)}' (only http and https)`);
+    }
+    return url;
+  }
+  async function runFetch(target, limits = DEFAULT_FETCH_LIMITS) {
+    const url = parseUrl(target);
+    const shown = redactUrl(url);
+    const tooLarge = () => new FetchError(`fetch: ${shown} response exceeded ${limits.maxBodyBytes} bytes`);
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, limits.timeoutMs);
+    try {
+      const response = await fetch(url.href, {
+        method: "GET",
+        redirect: "follow",
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+        signal: controller.signal
+      });
+      const declared = Number(response.headers.get("content-length"));
+      if (declared > limits.maxBodyBytes) throw tooLarge();
+      const chunks = [];
+      let total = 0;
+      const reader = response.body?.getReader();
+      if (reader) {
+        for (; ; ) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          total += value.byteLength;
+          if (total > limits.maxBodyBytes) {
+            await reader.cancel();
+            throw tooLarge();
+          }
+          chunks.push(value);
+        }
+      }
+      const bytes = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      return {
+        status: response.status,
+        ok: response.ok,
+        url: response.url ? redactUrl(new URL(response.url)) : shown,
+        content_type: response.headers.get("content-type") ?? "",
+        body: new TextDecoder().decode(bytes)
+      };
+    } catch (error) {
+      if (error instanceof FetchError) throw error;
+      if (timedOut) throw new FetchError(`fetch: ${shown} timed out after ${limits.timeoutMs / 1e3}s`);
+      throw new FetchError(`fetch: request to ${shown} failed (network error or blocked by CORS)`);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  async function runFetchJson(target, limits) {
+    const result = await runFetch(target, limits);
+    const shown = redactUrl(new URL(result.url));
+    if (!result.ok) throw new FetchError(`fetch-json: ${shown} returned HTTP ${result.status}`, result.status);
+    try {
+      return JSON.parse(result.body);
+    } catch {
+      throw new FetchError(`fetch-json: ${shown} did not return valid JSON`, result.status);
+    }
+  }
+  function parseFetchAssignment(statement) {
+    const match = statement.trim().match(/^([A-Za-z_][\w.[\]'"]*)\s*=\s*(fetch|fetch-json)\s+(.+?)(?:\s+catch\s+(\S+))?$/);
+    if (!match) return null;
+    return { target: match[1], kind: match[2], urlExpr: match[3], onError: match[4] };
+  }
+  function runFetchAssignment(pending, locals) {
+    const run = pending.kind === "fetch" ? runFetch : runFetchJson;
+    return Promise.resolve().then(() => run(evaluateExpression(pending.urlExpr, buildScope(locals, pending.urlExpr))));
+  }
+  function reportFetchFailure(error, onError) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (onError) deliver(onError, { status: error instanceof FetchError ? error.status : 0, message });
+    else console.warn(message);
+  }
+  function deliver(action, payload) {
+    const app = ctx().app;
+    app.invokeAction(action, [payload]);
+    app.render();
+  }
+  function makeHandler(name) {
+    return (statement, locals) => {
+      const match = statement.trim().match(new RegExp(`^${name}\\s+(.+?)\\s+then\\s+(\\S+)(?:\\s+catch\\s+(\\S+))?$`));
+      if (!match) return void 0;
+      const [, urlExpr, onSuccess, onError] = match;
+      const run = name === "fetch" ? runFetch : runFetchJson;
+      Promise.resolve().then(() => run(evaluateExpression(urlExpr, buildScope(locals, statement)))).then(
+        (value) => deliver(onSuccess, value),
+        (error) => reportFetchFailure(error, onError)
+      );
+      return true;
+    };
+  }
+  var fetchCommand = {
+    prefix: ["fetch"],
+    signature: "fetch <url> then <action> [catch <action>]",
+    description: "HTTP GET; calls the action with { status, ok, url, content_type, body }",
+    handler: makeHandler("fetch")
+  };
+  var fetchJsonCommand = {
+    prefix: ["fetch-json"],
+    signature: "fetch-json <url> then <action> [catch <action>]",
+    description: "HTTP GET; calls the action with the parsed JSON, or the catch action on failure",
+    handler: makeHandler("fetch-json")
+  };
+
   // src/builtins/timer.ts
   function handleStartTimer(statement, _locals) {
     if (!statement.startsWith("start-timer ") && !statement.startsWith("interval ")) return void 0;
@@ -3729,6 +3889,9 @@ var __RunePixel3DRuntime = (() => {
   registerCommand(cloneCommand);
   registerCommand(startTimerCommand);
   registerCommand(stopTimerCommand);
+  registerCommand(parseJsonCommand);
+  registerCommand(fetchCommand);
+  registerCommand(fetchJsonCommand);
   function handleWhen(statement, locals) {
     const whenIndex = statement.lastIndexOf(" when ");
     if (whenIndex === -1) return statement;
@@ -5036,6 +5199,9 @@ var __RunePixel3DRuntime = (() => {
   function executeStatement(statement, locals) {
     const trimmed = String(statement || "").trim();
     if (!trimmed) return true;
+    if (parseFetchAssignment(trimmed)) {
+      throw new Error(`'${trimmed}' is only supported as a top-level action step`);
+    }
     if (trimmed.startsWith("call ")) {
       const rest = trimmed.slice(5).trim();
       const match = rest.match(/^([a-zA-Z_][\w]*)(?:\s+(.*))?$/);
@@ -5688,9 +5854,32 @@ var __RunePixel3DRuntime = (() => {
     }
     return true;
   }
-  function executeSteps(steps, locals) {
-    for (const step of steps) {
+  function suspendForFetch(pending, locals, rest) {
+    runFetchAssignment(pending, locals).then(
+      (value) => {
+        try {
+          assignPath(pending.target, value, locals);
+          executeSteps(rest, locals);
+        } catch (error) {
+          console.error(error);
+        }
+        ctx().app.render();
+      },
+      (error) => reportFetchFailure(error, pending.onError)
+    );
+  }
+  function executeSteps(steps, locals, nested = false) {
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
       if (Object.prototype.hasOwnProperty.call(step, "Statement")) {
+        const pending = parseFetchAssignment(step.Statement);
+        if (pending) {
+          if (nested) {
+            throw new Error(`'${step.Statement}' must be a top-level action step, not inside if/for. Use 'fetch-json <url> then <action>' there.`);
+          }
+          suspendForFetch(pending, locals, steps.slice(i + 1));
+          return false;
+        }
         if (!executeStatement(step.Statement, locals)) return false;
         continue;
       }
@@ -5702,7 +5891,7 @@ var __RunePixel3DRuntime = (() => {
             buildScope(locals, conditional.condition)
           )
         )) {
-          if (!executeSteps(conditional.steps || [], locals)) return false;
+          if (!executeSteps(conditional.steps || [], locals, true)) return false;
         }
       }
       if (Object.prototype.hasOwnProperty.call(step, "ForLoop")) {
@@ -5712,17 +5901,17 @@ var __RunePixel3DRuntime = (() => {
           buildScope(locals, loop.collection)
         );
         if (Array.isArray(collection)) {
-          for (let i = 0; i < collection.length; i++) {
-            const item = collection[i];
+          for (let i2 = 0; i2 < collection.length; i2++) {
+            const item = collection[i2];
             const childLocals = Object.assign(
               {},
               locals || {}
             );
             childLocals[loop.item_name] = item;
             if (loop.index_name) {
-              childLocals[loop.index_name] = i;
+              childLocals[loop.index_name] = i2;
             }
-            if (!executeSteps(loop.steps || [], childLocals)) {
+            if (!executeSteps(loop.steps || [], childLocals, true)) {
               break;
             }
           }

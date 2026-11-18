@@ -56,6 +56,44 @@
       ]
     },
     {
+      "name": "fetch",
+      "aliases": null,
+      "category": "http",
+      "summary": "HTTP GET: `x = fetch url [catch handler]` assigns { status, ok, url, content_type, body } (non-2xx is returned, not raised); `fetch url then handler [catch handler]` calls a handler. In Rune-Web the assignment form must be a top-level action step and suspends the action.",
+      "behavior": null,
+      "arguments": [
+        {
+          "name": "url",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        }
+      ],
+      "writes_context": [
+        "assigned variable",
+        "___last_exec_result___ (server only)"
+      ]
+    },
+    {
+      "name": "fetch-json",
+      "aliases": null,
+      "category": "http",
+      "summary": "HTTP GET returning parsed JSON: `x = fetch-json url [catch handler]`, or `fetch-json url then handler [catch handler]`. Without catch, the server responds 502 for non-2xx/non-JSON and 504 on timeout. Handlers get { status, message } (catch) or the value (then). In Rune-Web the assignment form must be a top-level action step.",
+      "behavior": null,
+      "arguments": [
+        {
+          "name": "url",
+          "variadic": null,
+          "optional": null,
+          "default": null
+        }
+      ],
+      "writes_context": [
+        "assigned variable",
+        "___last_exec_result___ (server only)"
+      ]
+    },
+    {
       "name": "validate",
       "aliases": null,
       "category": "schema",

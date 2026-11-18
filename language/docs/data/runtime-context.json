@@ -11,6 +11,14 @@
       ]
     },
     {
+      "name": "@Values names",
+      "summary": "Constants declared in a top-level `@Values` section (server runtime only; not available in Rune-Web).",
+      "notes": [
+        "Seeded into context on every step run, after request data, so a body or path param can never shadow them.",
+        "Assigning to or deleting a @Values name (including `name.key = ...`) fails with HTTP 500: values are read-only."
+      ]
+    },
+    {
       "name": "path.params",
       "summary": "Map of request path parameters.",
       "notes": [
