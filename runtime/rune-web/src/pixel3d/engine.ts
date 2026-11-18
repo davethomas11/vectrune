@@ -102,6 +102,10 @@ export class Pixel3DEngine {
 
   /** Hosts can reuse the last pixels between simulation ticks. */
   invalidateFrame(): void { this.frameRevision++; }
+  /** Browser presentation may fit a wider screen without changing game rules. */
+  resizeViewport(width: number, height: number): void {
+    if (this.raycaster.resize(width, height)) this.invalidateFrame();
+  }
   frameIfChanged(): Uint32Array | null {
     if (this.presentedRevision === this.frameRevision) return null;
     const pixels = this.frame();
@@ -337,7 +341,10 @@ export class Pixel3DEngine {
     const titleScene = state.status === 'title' ? this.config.titleScene : undefined;
     this.raycaster.config.world = !titleScene && this.config.world ? validateWorld(state[this.config.world]) : undefined;
     this.raycaster.setMap(titleScene?.map ?? (this.config.maps?.[this.currentMapName] || this.config.map));
-    this.raycaster.fov = titleScene?.fov ?? this.config.fov ?? 66;
+    const authoredFov = titleScene?.fov ?? this.config.fov ?? 66;
+    const aspectScale = (this.raycaster.width * this.config.height) / (this.raycaster.height * this.config.width);
+    this.raycaster.fov = aspectScale === 1 ? authoredFov :
+      Math.atan(Math.tan(authoredFov * Math.PI / 360) * aspectScale) * 360 / Math.PI;
     const presentationTime = this.presentationTicks / this.config.tickRate;
 
     // 1. Resolve camera

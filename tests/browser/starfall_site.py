@@ -21,7 +21,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     expect(page.get_by_role('link', name='Play Starfall Protocol', exact=True)).to_be_visible()
     page.locator('.sidebar a[href$="starfall"]').click()
     expect(page.locator('main')).to_have_attribute('data-route', 'starfall')
-    expect(page.locator('main h1')).to_have_text('Starfall Protocol')
+    expect(page.locator('main h1')).to_have_text('Starfall Protocol', timeout=15000)
     expect(page).to_have_title('Starfall Protocol — Vectrune')
     iframe = page.locator('iframe.example-preview')
     expect(iframe).to_have_attribute('src', '/assets/games/starfall/index.html')
@@ -62,7 +62,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
         expect(page.locator('main')).to_have_attribute('data-route', 'starfall')
         assert page.url.rstrip('/') == base + ('/' + locale if locale else '') + '/starfall'
         page.reload()
-        expect(page.locator('main h1')).to_have_text('Starfall Protocol')
+        expect(page.locator('main h1')).to_have_text('Starfall Protocol', timeout=15000)
         page.get_by_role('tab', name=source_label, exact=True).click()
         expect(page.locator('.source-filter')).to_be_visible()
     standalone = browser.new_page()

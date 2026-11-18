@@ -61,13 +61,14 @@ export function mount(
     KeyE: 'use',
   };
 
+  game.resizeViewport(width, height);
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d', { alpha: false });
   if (!context) throw new Error('This game needs Canvas 2D support');
   context.imageSmoothingEnabled = false;
 
-  const image = new ImageData(
+  let image = new ImageData(
     new Uint8ClampedArray(game.raycaster.buffer.buffer as ArrayBuffer),
     width,
     height
@@ -157,7 +158,25 @@ export function mount(
     });
   }
   const surface = canvas.parentElement || canvas;
-  const fullscreen = createFullscreen(surface, () => { clear(true); touch?.update(); });
+  const fullscreen = createFullscreen(surface, () => { fitViewport(); clear(true); touch?.update(); mapped?.update(); });
+  function fitViewport() {
+    let renderWidth = width, renderHeight = height;
+    if (canvas.dataset.pixelFit === 'viewport' && fullscreen.expanded()) {
+      const rect = surface.getBoundingClientRect();
+      const aspect = Math.max(.25, Math.min(4, rect.width / Math.max(1, rect.height)));
+      // Keep the authored pixel budget as the field of view grows to fit a phone.
+      renderWidth = Math.round(Math.sqrt(width * height * aspect) / 2) * 2;
+      renderHeight = Math.round(renderWidth / aspect);
+    }
+    if (canvas.width === renderWidth && canvas.height === renderHeight) return;
+    game.resizeViewport(renderWidth, renderHeight);
+    canvas.width = renderWidth;
+    canvas.height = renderHeight;
+    context!.imageSmoothingEnabled = false;
+    image = new ImageData(new Uint8ClampedArray(game.raycaster.buffer.buffer as ArrayBuffer), renderWidth, renderHeight);
+  }
+  const viewportResize = new ResizeObserver(fitViewport);
+  viewportResize.observe(surface);
   for (const button of Array.from(document.querySelectorAll('[data-pixel-fullscreen]'))) {
     listen(button, 'click', () => { void fullscreen.toggle().catch(() => {}); });
   }
@@ -404,6 +423,7 @@ export function mount(
     game.paused = true;
     cancelAnimationFrame(frameId);
     fullscreen.dispose();
+    viewportResize.disconnect();
     touch?.dispose();
     mapped?.dispose();
     mappedStyle?.remove();

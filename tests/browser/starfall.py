@@ -234,11 +234,21 @@ with tempfile.TemporaryDirectory(prefix="starfall-") as folder, sync_playwright(
     assert mobile.evaluate((ROOT / "tests/browser/starfall_launch.js").read_text())
     expect(mobile.locator(".rune-control-touch")).to_be_visible()
     assert mobile.evaluate("document.documentElement.scrollWidth <= innerWidth")
-    for name, condition in [("jump", "player.z > 3.3"), ("fire", "cooldown > 0"), ("aim", "aiming_up"), ("duck", "ducking")]:
+    for name, condition in [("jump", "player.z > 3.3"), ("fire", "cooldown > 0")]:
         button = mobile.locator(f'[data-control-touch="{name}"]')
         button.dispatch_event("pointerdown", {"pointerId":11,"pointerType":"touch","bubbles":True})
         mobile.wait_for_function("__RunePixel3D.app.state." + condition)
         button.dispatch_event("pointerup", {"pointerId":11,"pointerType":"touch","bubbles":True})
+    stick = mobile.locator('[data-control-touch="joystick"]')
+    for direction, condition in [(-1, 'aiming_up'), (1, 'ducking')]:
+        mobile.wait_for_function('__RunePixel3D.app.state.grounded')
+        box = stick.bounding_box()
+        pointer = {"pointerId": 19, "pointerType": "touch", "bubbles": True,
+                   "clientX": box['x'] + box['width']/2,
+                   "clientY": box['y'] + box['height']*(.5 + direction*.35)}
+        stick.dispatch_event('pointerdown', pointer)
+        mobile.wait_for_function('__RunePixel3D.app.state.' + condition)
+        stick.dispatch_event('pointerup', pointer)
     pause_button = mobile.locator('[data-control-touch="pause"]')
     for paused in [True, False]:
         pause_button.dispatch_event("pointerdown", {"pointerId":20,"pointerType":"touch","bubbles":True})

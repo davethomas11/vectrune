@@ -1212,7 +1212,7 @@ rules:
         top = 0 !important
         left = 0 !important
         width = 100vw !important
-        height = 100vh !important
+        height = 100dvh !important
         z-index = 999999 !important
         border = none !important
         border-radius = 0 !important

@@ -18,20 +18,21 @@ view:
                     button data-pixel-mute=true "Sound / V"
                     button data-pixel-fullscreen=true "Fullscreen / F"
             div .game-surface:
-                canvas data-rune-pixel-3d=true tabindex=0 aria-label="Starfall Protocol, a side-scrolling space adventure. A and D or arrows move, Space jumps, left click or X fires, W or Up aims upward, S or Down ducks. Recover the core and return to your ship."
+                canvas data-rune-pixel-3d=true data-pixel-fit=viewport tabindex=0 aria-label="Starfall Protocol, a side-scrolling space adventure. A and D or arrows move, Space jumps, left click or X fires, W or Up aims upward, S or Down ducks. On touch, move the stick up to aim and down to duck. Recover the core and return to your ship."
                 div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
                     h2 "SIGNAL ON HOLD"
                     p "Resume whenever you are ready."
                     button data-pixel-pause=true "Resume expedition / P"
                     button data-pixel-restart=true "Reset to title"
-            div .launch data-pixel-hidden=title_hidden:
-                button .primary data-pixel-start=true data-pixel-text=launch_label "Board station / Enter"
-                p "Explore. Upgrade. Find your way home."
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
+                div .launch data-pixel-hidden=title_hidden:
+                    button .primary data-pixel-start=true data-pixel-text=launch_label "Board station / Enter"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
             p .status data-pixel-status=true role=status aria-live=polite "Awaiting pilot."
         section .guide aria-label="Pilot briefing":
             div:
                 h2 "01 / SUIT UP"
-                p "The opening flight and mission briefing precede your landing. Enter or Skip scene advances the story; P pauses cinematics. Your ship lands before controls unlock. A / D or arrows move; Space jumps. Left click or X fires; hold to charge plasma and release to shoot. W / Up aims high. Hold S / Down to duck and fire low; jump to stand. Controller right shoulder or left stick down ducks, and touch has DUCK. J still fires as an alternate. Start with four health cells and three lives per attempt. Bosses add permanent health containers. Four rare green 1-UP capsules reward exploring optional ledges; each can be claimed once per expedition. Completed sectors stay saved after game over. P pauses, including landing and takeoff."
+                p "The opening flight and mission briefing precede your landing. Enter or Skip scene advances the story; P pauses cinematics. Your ship lands before controls unlock. A / D or arrows move; Space jumps. Left click or X fires; hold to charge plasma and release to shoot. W / Up aims high. Hold S / Down to duck and fire low; jump to stand. Controller right shoulder or left stick down ducks. On touch, push the movement stick up to aim or down to duck; USE appears near doors and consoles, and DASH appears once unlocked. J still fires as an alternate. Start with four health cells and three lives per attempt. Bosses add permanent health containers. Four rare green 1-UP capsules reward exploring optional ledges; each can be claimed once per expedition. Completed sectors stay saved after game over. P pauses, including landing and takeoff."
             div:
                 h2 "02 / OPEN NEW PATHS"
                 p "Use E at the glowing Propulsion Crypt portal to find jump jets on their pedestal, then use E at the nearby hatch to enter Hydroponics. Climb Hydroponics past the repair pod, then double jump to the marked upper ledge. Use E at the glowing Dash Crypt portal to recover air dash from its pedestal. Jump, then press Shift / K to cross the greenhouse breach. Defeat Rootheart and collect its relay to save the sector and open a shortcut back to cargo. Controller B dashes and Y uses hatches; touch has DASH and USE buttons."
@@ -110,6 +111,7 @@ rules:
         gap = 6px
         flex-wrap = wrap
     button:
+        -webkit-tap-highlight-color = transparent
         cursor = pointer
         border = 1px solid #34435d
         border-radius = 4px
@@ -137,12 +139,17 @@ rules:
         touch-action = none
         outline-offset = -3px
     .launch:
+        position = absolute
+        z-index = 7
+        bottom = max(32px, calc(env(safe-area-inset-bottom) + 12px))
+        left = 0
+        right = 0
         display = flex
         align-items = center
         justify-content = center
         flex-wrap = wrap
         gap = 12px 24px
-        padding = 18px
+        padding = 8px
         font-size = 12px
         color = #8c9db8
     .primary:
@@ -182,6 +189,7 @@ rules:
         font-size = 10px
     .pause-menu:
         position = absolute
+        z-index = 8
         inset = 0 0 auto 0
         display = flex
         flex-direction = row
@@ -202,3 +210,16 @@ rules:
         display = none
     .rune-embedded-game .cabinet:
         padding = 8px
+    .fullscreen-exit:
+        display = none
+    .game-surface:fullscreen .fullscreen-exit, .game-surface.rune-pixel3d-expanded .fullscreen-exit:
+        display = inline-block
+    .game-surface:fullscreen canvas[data-pixel-fit=viewport], .game-surface.rune-pixel3d-expanded canvas[data-pixel-fit=viewport]:
+        width = 100% !important
+        height = 100% !important
+        max-width = none !important
+        max-height = none !important
+        aspect-ratio = auto
+    .game-surface:has(.pause-menu:not([hidden])) .rune-control-touch [data-gameplay=true]:
+        visibility = hidden
+        pointer-events = none

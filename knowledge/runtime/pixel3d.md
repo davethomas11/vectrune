@@ -40,16 +40,18 @@ Hold S/Down to duck on the ground, move slowly and fire from a lower muzzle.
 The crouched combat height is 0.85 tiles versus 1.6 standing: the Warden's leap
 and high projectiles can pass overhead, while low bolts, grounded contact and
 slam shockwaves still hit. Release or jump to stand; airborne ducking is disabled.
-Controller right shoulder or left stick down ducks; touch supplies a DUCK button.
+Controller right shoulder or left stick down ducks; on touch, push the movement
+stick down to duck or up to aim.
 Hold left click or X to charge plasma and release to fire; mouse firing does not
 lock the cursor or change the side-on aiming direction. Jump jets unlock a second
 press of jump in midair. P pauses and shows the map, V mutes, F toggles fullscreen, and Enter
 starts an expedition. Controller left stick moves, A jumps, X fires, left shoulder
-aims up, View/Back starts, and Start pauses. Touch supplies movement, jump,
-fire, and aim buttons. E uses nearby hatches; after collecting the air-dash module,
+aims up, View/Back starts, and Start pauses. Touch supplies a movement stick,
+Jump, Fire, and Pause. E uses nearby hatches; after collecting the air-dash module,
 jump and press Shift/K for a brief horizontal burst. Dash is limited to once per
 airborne trip and recharges on landing, with brief damage protection during the
-burst. Controller B dashes and Y uses hatches; touch adds DASH and USE buttons.
+burst. Controller B dashes and Y uses hatches; touch shows DASH after unlocking
+it and USE only near an interaction.
 
 ### Exploration, optional upgrades and combat cues
 
@@ -1244,6 +1246,24 @@ The old dash hole on the low shelf is solid floor. Its new gateway stands on the
 z=17 ledge beyond the repair pod; a four-tile rise requires the second jump.
 The portal bay has a roof and east bulkhead, with a spacious underpass to the
 lower dash approach, keeping jump jets from bypassing the main breach.
+
+## Browser viewport fitting and Starfall touch layout
+
+A Pixel 3D shell can opt a canvas into `data-pixel-fit=viewport`. In fullscreen,
+the browser host resizes the render target to the available aspect ratio while
+keeping approximately the authored pixel count and preserving the vertical
+field of view. Wider phones show more world horizontally, with no cropped HUD
+or stretched models. Leaving fullscreen restores the authored resolution.
+Shell CSS must let the fullscreen canvas fill its surface; canvases without the
+attribute keep their existing aspect ratio. This presentation option is in the
+current website runtime; it does not change desktop game rules or save data.
+
+Starfall keeps Start inside the fullscreen surface. Its touch stick moves,
+aims upward, and ducks; Jump and Fire stay in a compact lower corner. Dash
+appears after unlocking it, and Use appears only near an interaction. Pause
+opens the map and offers Exit fullscreen, keeping that extra button out of play.
+Browser regression checks cover native and fallback fullscreen in the site
+iframe, touch-only launch, rotation, contextual actions, and resolution recovery.
 
 ## Floating destination titles
 

@@ -37,7 +37,7 @@ gamepad:
 touch = {
     "buttons": [
         {
-            "anchor": "top-right",
+            "anchor": "bottom-right",
             "command": "host.advance",
             "id": "skip",
             "label": "SKIP",
@@ -45,14 +45,48 @@ touch = {
             "size": 48,
             "visible": "cinema_skip_ready"
         },
-        {"id":"jump","input":"jump","label":"JUMP","offset":[12,16],"size":64},
-        {"id":"fire","input":"fire","label":"FIRE","offset":[88,16],"size":64},
-        {"id":"aim","input":"aim_up","label":"AIM UP","offset":[12,92],"size":48},
-        {"id":"duck","input":"duck","label":"DUCK","offset":[12,152],"size":48},
-        {"command":"host.pause","id":"pause","label":"PAUSE","offset":[76,152],"size":48},
-        {"id":"dash","input":"dash","label":"DASH","offset":[76,92],"size":48},
-        {"id":"use","input":"use","label":"USE","offset":[140,92],"size":48}
+        {
+            "id": "jump",
+            "input": "jump",
+            "label": "JUMP",
+            "offset": [80,14],
+            "size": 56,
+            "visible": "touch_ready"
+        },
+        {
+            "id": "fire",
+            "input": "fire",
+            "label": "FIRE",
+            "offset": [12,14],
+            "size": 56,
+            "visible": "touch_ready"
+        },
+        {
+            "anchor": "top-right",
+            "aria_label": "Pause game",
+            "command": "host.pause",
+            "id": "pause",
+            "label": "II",
+            "offset": [12,12],
+            "size": 44
+        },
+        {
+            "id": "dash",
+            "input": "dash",
+            "label": "DASH",
+            "offset": [12,82],
+            "size": 48,
+            "visible": "touch_dash_ready"
+        },
+        {
+            "id": "use",
+            "input": "use",
+            "label": "USE",
+            "offset": [80,82],
+            "size": 48,
+            "visible": "touch_use_ready"
+        }
     ],
-    "joystick": {"size":84,"x":"move_x","y":"move_y"},
+    "joystick": {"down":"duck","size":76,"up":"aim_up","visible":"touch_ready","x":"move_x"},
     "visible": "touch_ui_visible"
 }

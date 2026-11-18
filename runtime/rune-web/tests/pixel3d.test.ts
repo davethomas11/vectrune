@@ -9,6 +9,30 @@ import { skyPixel, type Sky } from '../src/pixel3d/sky';
 import { renderModel, type BlockModel } from '../src/pixel3d/model';
 import { renderHud, validateHud, wrapText, type GameHud } from '../src/pixel3d/hud';
 
+it('fits a wide viewport without stretching the world or increasing the authored pixel budget', () => {
+  const engine = new Pixel3DEngine({width:432,height:270,tickRate:30,fov:72,camera:'camera',textures:{},sprites:{},
+    map:{width:3,height:3,grid:Array(9).fill(0),floor:0,ceiling:0}},
+    {stateJson:{camera:{x:1.5,y:1.5,angle:0},status:'playing'},derivedDefinitions:{},helperDefinitions:{},actionDefinitions:{}} as RuneWebConfig);
+  const original = engine.frameIfChanged();
+  engine.resizeViewport(502,232);
+  const wide = engine.frameIfChanged();
+  expect(wide).toHaveLength(502*232);
+  expect(wide).not.toBe(original);
+  expect(engine.raycaster.zBuffer).toHaveLength(502);
+  expect(engine.raycaster.pixelDepth).toHaveLength(502*232);
+  const verticalScale = Math.tan(engine.raycaster.fov*Math.PI/360)*232/502;
+  expect(verticalScale).toBeCloseTo(Math.tan(72*Math.PI/360)*270/432,10);
+  expect(engine.frameIfChanged()).toBeNull();
+  engine.resizeViewport(502,232);
+  expect(engine.frameIfChanged()).toBeNull();
+  engine.resizeViewport(432,270);
+  expect(engine.frameIfChanged()).toHaveLength(432*270);
+  expect(engine.raycaster.fov).toBe(72);
+  for (const [width,height] of [[NaN,270],[432,0],[432.5,270],[2048,2048]]) {
+    expect(()=>engine.resizeViewport(width,height)).toThrow('viewport size');
+  }
+});
+
 it('reuses presented pixels until a tick, action, pause or explicit invalidation changes them', () => {
   const engine=new Pixel3DEngine({width:40,height:30,tickRate:30,camera:'camera',textures:{},sprites:{},
     map:{width:3,height:3,grid:Array(9).fill(0),floor:0,ceiling:0}},

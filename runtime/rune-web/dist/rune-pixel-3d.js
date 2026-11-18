@@ -6451,6 +6451,16 @@ var __RunePixel3DRuntime = (() => {
       }
       this.config.map = map;
     }
+    resize(width, height) {
+      if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 2048 || height > 2048 || width * height > 1048576) throw new Error("Invalid pixel3d viewport size");
+      if (width === this.width && height === this.height) return false;
+      this.width = this.config.width = width;
+      this.height = this.config.height = height;
+      this.buffer = new Uint32Array(width * height);
+      this.zBuffer = new Float64Array(width);
+      this.pixelDepth = new Float64Array(width * height);
+      return true;
+    }
     render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks) {
       const W = this.width;
       const H = this.height;
@@ -7101,6 +7111,10 @@ var __RunePixel3DRuntime = (() => {
     invalidateFrame() {
       this.frameRevision++;
     }
+    /** Browser presentation may fit a wider screen without changing game rules. */
+    resizeViewport(width, height) {
+      if (this.raycaster.resize(width, height)) this.invalidateFrame();
+    }
     frameIfChanged() {
       if (this.presentedRevision === this.frameRevision) return null;
       const pixels = this.frame();
@@ -7219,7 +7233,9 @@ var __RunePixel3DRuntime = (() => {
       const titleScene = state.status === "title" ? this.config.titleScene : void 0;
       this.raycaster.config.world = !titleScene && this.config.world ? validateWorld(state[this.config.world]) : void 0;
       this.raycaster.setMap(titleScene?.map ?? (this.config.maps?.[this.currentMapName] || this.config.map));
-      this.raycaster.fov = titleScene?.fov ?? this.config.fov ?? 66;
+      const authoredFov = titleScene?.fov ?? this.config.fov ?? 66;
+      const aspectScale = this.raycaster.width * this.config.height / (this.raycaster.height * this.config.width);
+      this.raycaster.fov = aspectScale === 1 ? authoredFov : Math.atan(Math.tan(authoredFov * Math.PI / 360) * aspectScale) * 360 / Math.PI;
       const presentationTime = this.presentationTicks / this.config.tickRate;
       const camVal = this.config.camera.split(".").reduce((v, k) => v?.[k], state);
       const track = titleScene?.camera ?? this.config.cameraTrack;
@@ -7697,12 +7713,13 @@ var __RunePixel3DRuntime = (() => {
       Space: "fire",
       KeyE: "use"
     };
+    game.resizeViewport(width, height);
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) throw new Error("This game needs Canvas 2D support");
     context.imageSmoothingEnabled = false;
-    const image = new ImageData(
+    let image = new ImageData(
       new Uint8ClampedArray(game.raycaster.buffer.buffer),
       width,
       height
@@ -7783,9 +7800,28 @@ var __RunePixel3DRuntime = (() => {
     }
     const surface = canvas.parentElement || canvas;
     const fullscreen = createFullscreen(surface, () => {
+      fitViewport();
       clear(true);
       touch?.update();
+      mapped?.update();
     });
+    function fitViewport() {
+      let renderWidth = width, renderHeight = height;
+      if (canvas.dataset.pixelFit === "viewport" && fullscreen.expanded()) {
+        const rect = surface.getBoundingClientRect();
+        const aspect = Math.max(0.25, Math.min(4, rect.width / Math.max(1, rect.height)));
+        renderWidth = Math.round(Math.sqrt(width * height * aspect) / 2) * 2;
+        renderHeight = Math.round(renderWidth / aspect);
+      }
+      if (canvas.width === renderWidth && canvas.height === renderHeight) return;
+      game.resizeViewport(renderWidth, renderHeight);
+      canvas.width = renderWidth;
+      canvas.height = renderHeight;
+      context.imageSmoothingEnabled = false;
+      image = new ImageData(new Uint8ClampedArray(game.raycaster.buffer.buffer), renderWidth, renderHeight);
+    }
+    const viewportResize = new ResizeObserver(fitViewport);
+    viewportResize.observe(surface);
     for (const button of Array.from(document.querySelectorAll("[data-pixel-fullscreen]"))) {
       listen(button, "click", () => {
         void fullscreen.toggle().catch(() => {
@@ -8044,6 +8080,7 @@ var __RunePixel3DRuntime = (() => {
       game.paused = true;
       cancelAnimationFrame(frameId);
       fullscreen.dispose();
+      viewportResize.disconnect();
       touch?.dispose();
       mapped?.dispose();
       mappedStyle?.remove();

@@ -127,11 +127,11 @@ const FONT: Record<string, string> = {
 };
 
 export class Raycaster3D {
-  readonly width: number;
-  readonly height: number;
-  readonly buffer: Uint32Array;
-  readonly zBuffer: Float64Array;
-  readonly pixelDepth: Float64Array;
+  width: number;
+  height: number;
+  buffer: Uint32Array;
+  zBuffer: Float64Array;
+  pixelDepth: Float64Array;
   fov: number;
 
   constructor(readonly config: RaycasterConfig) {
@@ -150,6 +150,18 @@ export class Raycaster3D {
       throw new Error('Map ceilingHeight must be greater than 0.5 and at most 16 tiles');
     }
     this.config.map = map;
+  }
+
+  resize(width: number, height: number): boolean {
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 ||
+        width > 2048 || height > 2048 || width * height > 1048576) throw new Error('Invalid pixel3d viewport size');
+    if (width === this.width && height === this.height) return false;
+    this.width = this.config.width = width;
+    this.height = this.config.height = height;
+    this.buffer = new Uint32Array(width * height);
+    this.zBuffer = new Float64Array(width);
+    this.pixelDepth = new Float64Array(width * height);
+    return true;
   }
 
   render(

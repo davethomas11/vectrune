@@ -157,6 +157,8 @@ state:
     notice = ""
     notice_ticks = 0
     touch_ready = false
+    touch_dash_ready = false
+    touch_use_ready = false
     title_hidden = false
     ui = {"meters": [], "panel": null}
     pause_ui = {"meters": [], "panel": null}
@@ -594,10 +596,12 @@ action update_view:
 action refresh_ui:
     call update_navigation
     touch_ready = status == "playing" && recovery_phase == "none"
+    touch_dash_ready = touch_ready && dash_unlocked
+    touch_use_ready = false
     title_hidden = status != "title" && status != "won" && status != "gameover"
     cinema_skip_hidden = status != "intro" && status != "ending" && status != "credits"
     cinema_skip_ready = !cinema_skip_hidden
-    touch_ui_visible = touch_ready || cinema_skip_ready || status == "landing" || status == "departing"
+    touch_ui_visible = title_hidden
     launch_label = status == "gameover" || status == "won" ? "New expedition / Enter" : "Board station / Enter"
     if campaign.hydroponics && !campaign.finished:
         launch_label = "Continue campaign / Enter"
@@ -708,9 +712,11 @@ action refresh_ui:
     for portal in portals:
         if portal.visible && abs(player.x-portal.x) < 1.25 && abs(player.z-portal.z) < 1.5:
             ui.prompt = "E / USE: "+portal.label
+            touch_use_ready = touch_ready
     for console in gravity_consoles:
         if abs(player.x-console.x) < 1.3 && abs(player.z-console.z) < 1.5:
             ui.prompt = "E / USE: "+(gravity_low ? "RESTORE NORMAL GRAVITY" : "ENGAGE LOW GRAVITY")
+            touch_use_ready = touch_ready
     if on_shuttle:
         ui.prompt = "MAGNETIC GRIP / SPACE TO RELEASE"
     if ducking:
