@@ -112,6 +112,18 @@ jobs:
           tar czf ../../../${{ matrix.platform.bin }}-${{ matrix.platform.name }}.tar.gz ${{ matrix.platform.bin }}
           cd -
 
+      - name: Generate offline manuals
+        if: matrix.platform.name == 'linux-x86_64'
+        run: python3 teaching_website/build_man_pages.py --binary target/x86_64-unknown-linux-gnu/release/vectrune --output dist/manuals/man
+
+      - name: Upload offline manuals
+        if: matrix.platform.name == 'linux-x86_64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-manuals
+          path: dist/manuals/
+          if-no-files-found: error
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -133,6 +145,18 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+
+      - name: Bundle offline manuals with every platform
+        run: |
+          test -s artifacts/man/man1/vectrune.1
+          test -s artifacts/man/man7/vectrune-language.7
+          for archive in artifacts/*.tar.gz; do
+            gzip -d "$archive"
+            tar --append --file="${archive%.gz}" -C artifacts man
+            gzip -n "${archive%.gz}"
+            tar -tzf "$archive" | grep -Fx 'man/man1/vectrune.1'
+            tar -tzf "$archive" | grep -Fx 'man/man7/vectrune-language.7'
+          done
 
       - name: Release
         uses: softprops/action-gh-release@v2

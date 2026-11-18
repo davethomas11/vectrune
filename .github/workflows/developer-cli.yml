@@ -14,6 +14,11 @@ on:
       - 'examples/rune_crypt/**'
       - 'examples/starfall/**'
       - 'teaching_website/build_developer_starter.py'
+      - 'teaching_website/build_man_pages.py'
+      - 'teaching_website/generate_man_pages.vect'
+      - 'teaching_website/reference_inventory.py'
+      - 'knowledge/reference/library.json'
+      - '.github/workflows/release.yml'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
       - '.github/workflows/developer-cli.yml'
@@ -29,6 +34,11 @@ on:
       - 'examples/rune_crypt/**'
       - 'examples/starfall/**'
       - 'teaching_website/build_developer_starter.py'
+      - 'teaching_website/build_man_pages.py'
+      - 'teaching_website/generate_man_pages.vect'
+      - 'teaching_website/reference_inventory.py'
+      - 'knowledge/reference/library.json'
+      - '.github/workflows/release.yml'
       - 'teaching_website/content/developer/**'
       - 'Cargo.toml'
       - '.github/workflows/developer-cli.yml'
@@ -84,6 +94,8 @@ jobs:
         run: target/debug/vectrune test examples/rune_studio --json
       - name: Verify downloaded starter workflow
         run: python tests/browser/test_developer_starter.py
+      - name: Verify offline manual generation
+        run: python tests/browser/test_man_pages.py
       - name: Lint Monster City and run pixel game tests
         run: |
           target/debug/vectrune check examples/monster_city --deny-warnings

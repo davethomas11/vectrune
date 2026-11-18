@@ -201,6 +201,13 @@ absolute paths remain absolute. `script_dir` exposes that directory. Writes
 replace the target file and report filesystem errors. Parent directories must
 already exist.
 
+The release manual renderer is another extended-script example:
+`teaching_website/generate_man_pages.vect` reads one JSON inventory line from
+stdin and writes two roff manuals using reusable actions and collections.
+Run it through `python3 teaching_website/build_man_pages.py --output dist/man`;
+Python collects the existing docs inventory and CLI help, while `.vect` handles
+all manual rendering. See [offline manuals](../runtime/cli.md#offline-manuals).
+
 Expressions parse once into a typed Pratt AST from
 `runtime/rune-web/src/core_expression.ts`. Rune-Web uses the same implementation
 for supported expressions, retaining its existing evaluator for specialized

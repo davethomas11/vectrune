@@ -1,5 +1,5 @@
-use serde_json::json;
 use super::single_route::add_expect_request_body;
+use serde_json::json;
 
 pub fn add_crud_routes(
     paths: &mut serde_json::Map<String, serde_json::Value>,
@@ -28,11 +28,17 @@ pub fn add_crud_routes(
                 json!(format!("{} {}", m.to_uppercase(), path)),
             );
             operation.insert("description".to_string(), json!(description));
+            let statuses = match (*m, with_id) {
+                ("get", false) => vec![200, 500],
+                ("get", true) => vec![200, 404, 500],
+                ("post", _) => vec![201, 400, 500],
+                ("put", _) => vec![200, 404, 500],
+                ("delete", _) => vec![204, 404, 500],
+                _ => vec![500],
+            };
             operation.insert(
                 "responses".to_string(),
-                json!({
-                    "200": { "description": "OK" }
-                }),
+                super::single_route::response_definitions(statuses),
             );
 
             if with_id {
@@ -58,4 +64,3 @@ pub fn add_crud_routes(
         }
     }
 }
-

@@ -1,0 +1,85 @@
+#!VECT
+# One JSON input line supplies the shared inventory, release version and output.
+# Invoke through build_man_pages.py; the host creates output directories first.
+input <- stdio
+request = json.parse(input)
+catalog = request.catalog
+
+action text(value):
+    lines = []
+    for line in value.split("\n"):
+        escaped = line.split("\\").join("\\e").split("-").join("\\-")
+        lines.push("\\&" + escaped)
+    return lines.join("\n") + "\n"
+
+action heading(title):
+    return ".SH\n" + text(title)
+
+action subsection(title):
+    return ".SS\n" + text(title)
+
+action paragraph(value):
+    return ".PP\n" + text(value)
+
+action literal(value):
+    return ".PP\n.nf\n.ft CW\n" + text(value) + ".ft R\n.fi\n"
+
+action header(name, section):
+    return ".TH \"" + name + "\" \"" + section + "\" \"" + request.date + "\" \"" + request.version + "\" \"Vectrune manual\"\n"
+
+action finish(content):
+    lines = content.split("\n")
+    output = []
+    for line, index in lines:
+        if line == ".PP" and index >= 2 and (lines[index - 2] == ".SH" or lines[index - 2] == ".SS"):
+            continue
+        output.push(line)
+    return output.join("\n")
+
+action render_entry(entry):
+    result = subsection(entry.name)
+    result += literal(entry.signature) + paragraph(entry.summary)
+    result += paragraph("Runtime: " + entry.runtime)
+    if entry.aliases and entry.aliases.length > 0:
+        result += paragraph("Aliases: " + entry.aliases.join(", "))
+    for parameter in entry.parameters ?? []:
+        result += paragraph(parameter.name + ": " + parameter.description)
+    if entry.returns:
+        result += paragraph("Returns / effects: " + entry.returns)
+    if entry.errors:
+        result += paragraph("Errors / edge cases: " + entry.errors)
+    for field in entry.fields ?? []:
+        result += paragraph(field.name + " (" + field.type + "; default: " + field.default + "): " + field.description)
+    for note in entry.notes ?? []:
+        result += paragraph("Note: " + note)
+    if entry.example:
+        result += literal(entry.example)
+    result += paragraph("Implementation: " + entry.sources.join(", "))
+    return result
+
+cli = header("VECTRUNE", "1")
+cli += heading("NAME") + text("vectrune - run scripts, serve apps, and convert documents")
+cli += heading("SYNOPSIS")
+for entry in catalog.entries:
+    if entry.category == "cli" and entry.name == "vectrune":
+        cli += literal(entry.signature)
+cli += heading("DESCRIPTION") + paragraph("Command-line reference generated from this release of Vectrune. See vectrune-language(7) for language syntax, library functions, examples and runtime limitations.")
+cli += heading("COMMANDS AND OPTIONS")
+for entry in catalog.entries:
+    if entry.category == "cli" and entry.help:
+        cli += subsection(entry.name) + literal(entry.help)
+cli += heading("SEE ALSO") + paragraph("vectrune-language(7), https://vectrune.com/docs/")
+
+language = header("VECTRUNE-LANGUAGE", "7")
+language += heading("NAME") + text("vectrune-language - language and library reference")
+language += heading("DESCRIPTION") + paragraph("Offline snapshot of the shared Vectrune reference for this release. Native/server functions and Rune-Web commands have distinct runtimes; check each runtime label and limitation. Coverage is by public feature family, not every host-specific field.")
+for category in catalog.categories:
+    if category.id == "cli":
+        continue
+    language += heading(category.title.toUpperCase()) + paragraph(category.description)
+    for entry in catalog.entries:
+        if entry.category == category.id:
+            language += render_entry(entry)
+language += heading("SEE ALSO") + paragraph("vectrune(1), https://vectrune.com/docs/")
+file.write(request.output + "/man1/vectrune.1", finish(cli))
+file.write(request.output + "/man7/vectrune-language.7", finish(language))

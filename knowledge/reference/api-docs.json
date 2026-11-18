@@ -22,7 +22,8 @@
         {
           "title": "1. Install and verify",
           "paragraphs": [
-            "On macOS or Linux with Homebrew, install the CLI and confirm it is available. Windows binaries and source installation are covered in the developer quickstart."
+            "On macOS or Linux with Homebrew, install the CLI and confirm it is available. Windows binaries and source installation are covered in the developer quickstart.",
+            "Releases that bundle offline manuals also install man vectrune for CLI commands and man vectrune-language for language/library details through Homebrew. These manuals match the packaged release; the website may describe newer features."
           ],
           "command": "brew tap davethomas11/homebrew-vectrune\nbrew install vectrune\nvectrune --version",
           "links": [
@@ -201,8 +202,8 @@
         {
           "title": "Contract limits",
           "paragraphs": [
-            "Single-route response documentation currently contains a generic HTTP 200 entry. The generator does not infer the actual 201, 400, or other responses from run statements, nor their response-body schemas.",
-            "OpenAPI describes JSON request bodies; it does not change the text response content type of the REST handler. Compare the generated contract with real responses before using it for client generation.",
+            "The generator includes statically visible respond statuses, HTTP 400 for validate, HTTP 500 for runtime errors, and HTTP 200 when execution can fall through. It does not infer response body shapes from Rune values, so response schemas are strings matching the native REST handler's text/plain wire format.",
+            "Generated CRUD routes document their implemented success statuses, validation/not-found statuses where applicable, and runtime errors. Authentication middleware responses are not yet added to the generated contract.",
             "The bundled Swagger UI page loads its JavaScript and stylesheet from unpkg.com. A browser needs access to that CDN to display the UI. The /openapi.json document itself is served locally."
           ],
           "links": [

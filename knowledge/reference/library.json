@@ -89,7 +89,7 @@
       "sources": [
         "src/builtins/builtin/respond.rs"
       ],
-      "returns": "HTTP response. Context objects are serialized as JSON text. The native REST handler uses a text/plain response body.",
+      "returns": "HTTP response. Context objects are serialized as JSON text. The native REST handler uses a text/plain response body; generated OpenAPI documents detected status codes with a string response schema.",
       "errors": "",
       "example": "respond 201 body",
       "parameters": [
@@ -104,7 +104,7 @@
       ],
       "aliases": [],
       "notes": [
-        "The OpenAPI generator does not infer every response status from these statements."
+        "OpenAPI status inference is static: dynamically produced statuses are not discovered, and response values are documented as text strings rather than inferred Rune/JSON schemas."
       ],
       "fields": []
     },

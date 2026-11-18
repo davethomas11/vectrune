@@ -14,6 +14,38 @@ Common entrypoints include:
 - `vectrune <script.rune> --merge-with <spec>`
 - `vectrune --ai <prompt>`
 
+## Offline manuals
+
+Release archives include `man/man1/vectrune.1` and
+`man/man7/vectrune-language.7`. The Homebrew formula installs them for
+`man vectrune` and `man vectrune-language` on macOS and Linux. Older releases
+without bundled pages remain installable, but do not provide these manuals.
+Windows archives contain the same pages; Windows does not include a man viewer.
+CLI/runtime behavior is unchanged.
+
+The renderer is `teaching_website/generate_man_pages.vect`. Its Python launcher
+only collects the shared inventory through `reference_inventory.py`, queries
+the release binary for version/help, and creates output directories. Formatting,
+content selection and roff escaping execute in `.vect`. The language manual
+uses `knowledge/reference/library.json` plus extracted frontend command metadata;
+the CLI manual uses the binary's recursively collected help. Runtime labels,
+examples, parameters, defaults and limitations are retained.
+
+From a checkout with a built CLI:
+
+```sh
+python3 teaching_website/build_man_pages.py --binary target/debug/vectrune --output dist/man
+man ./dist/man/man1/vectrune.1
+man ./dist/man/man7/vectrune-language.7
+```
+
+Release CI generates once on a native Linux host from the checked-out release
+tag, then bundles identical pages with every platform binary. It does not execute
+cross-compiled binaries for documentation generation. No generation tools are
+required during Homebrew installation. The public website may describe a newer
+version; the bundled manuals describe the installed release. Tests:
+`python3 tests/browser/test_man_pages.py`.
+
 ## Local development install helpers
 
 The repository includes checked-in install helpers for repeat local development installs:

@@ -254,6 +254,11 @@ The logic harness runs without a browser and records supported storage, download
 | Export a frontend | `vectrune examples/counter.rune -o html > counter.html` |
 | Get command help | `vectrune --help` or `vectrune test --help` |
 
+Homebrew installs offline manuals from releases that bundle them:
+`man vectrune` for commands and options, and `man vectrune-language` for the
+language/library reference. These match the packaged release; the website
+may describe newer features.
+
 For AWS Lambda, use the [packaging guide](documents/feature/lambda_runner/lambda_usage.md) and [binary build guide](documents/feature/lambda_runner/binary_build_guide.md). Packaging requires a Linux binary matching the target Lambda environment.
 
 ## Installation options

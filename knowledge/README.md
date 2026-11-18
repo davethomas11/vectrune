@@ -24,6 +24,10 @@ It is intended to support two downstream consumers:
 - `reference/` — structured reference files for builtins, app types, runtime context, and related concepts
 - `reference/library.json` — technical dictionary of functions, syntax, declarations, configuration, and runtime behavior; native builtin coverage is checked and frontend commands/CLI help are extracted during the docs build
 - `reference/api-docs.json` — supporting API guides rendered alongside the technical reference by `teaching_website/build_api_docs.py`; examples are included from runnable source files
+- `../teaching_website/generate_man_pages.vect` renders
+  offline manuals from the same combined reference inventory; its Python launcher
+  collects metadata, then runs the renderer with the release binary. See
+  [offline CLI manuals](runtime/cli.md#offline-manuals).
 
 ## Strategy and backlog ownership
 

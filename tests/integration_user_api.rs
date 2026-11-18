@@ -93,6 +93,7 @@ email = string
 @Route/POST /users
 expect = User
 run:
+    validate body #User
     respond 201 \"User added\"
 "#;
 
@@ -125,8 +126,23 @@ run:
         "string"
     );
     assert_eq!(
-        val["paths"]["/users"]["post"]["requestBody"]["content"]["application/json"]["schema"]["$ref"],
+        val["paths"]["/users"]["post"]["requestBody"]["content"]["application/json"]["schema"]
+            ["$ref"],
         "#/components/schemas/User"
+    );
+    assert!(val["paths"]["/users"]["post"]["responses"]
+        .get("201")
+        .is_some());
+    assert!(val["paths"]["/users"]["post"]["responses"]
+        .get("400")
+        .is_some());
+    assert!(val["paths"]["/users"]["post"]["responses"]
+        .get("500")
+        .is_some());
+    assert_eq!(
+        val["paths"]["/users"]["post"]["responses"]["201"]["content"]["text/plain"]["schema"]
+            ["type"],
+        "string"
     );
 }
 
@@ -153,6 +169,10 @@ run:
 @Route/DELETE /users/{id}
 run:
     respond 200 "User deleted"
+
+@Route/CRUD /crud-users
+schema = User
+data_source = UserDB
 "#;
 
     let app = build_router_from_str(script).await;
@@ -195,8 +215,69 @@ run:
         .any(|p| p["name"] == "id" && p["in"] == "path"));
 
     assert_eq!(
-        val["paths"]["/users/{id}"]["put"]["requestBody"]["content"]["application/json"]["schema"]["$ref"],
+        val["paths"]["/users/{id}"]["put"]["requestBody"]["content"]["application/json"]["schema"]
+            ["$ref"],
         "#/components/schemas/User"
+    );
+    assert!(val["paths"]["/users/{id}"]["put"]["responses"]
+        .get("200")
+        .is_some());
+    assert!(val["paths"]["/users/{id}"]["put"]["responses"]
+        .get("500")
+        .is_some());
+    assert!(val["paths"]["/crud-users/{id}"]["delete"]["responses"]
+        .get("204")
+        .is_some());
+    assert!(
+        val["paths"]["/crud-users/{id}"]["delete"]["responses"]["204"]
+            .get("content")
+            .is_none()
+    );
+    assert!(val["paths"]["/crud-users/{id}"]["delete"]["responses"]
+        .get("404")
+        .is_some());
+}
+
+#[tokio::test]
+async fn swagger_infers_conditional_responses_and_text_body_contract() {
+    let script = r#"#!RUNE
+
+@App
+name = Greeting API
+type = REST
+swagger = true
+
+@Route/GET /greetings/{name}
+run:
+    validate name != "invalid" "Invalid name"
+    if name == "missing":
+        respond 404 "Not found"
+    respond 200 { name: name }
+"#;
+
+    let app = build_router_from_str(script).await;
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/openapi.json")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let openapi: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    let responses = &openapi["paths"]["/greetings/{name}"]["get"]["responses"];
+
+    assert!(responses.get("200").is_some());
+    assert!(responses.get("404").is_some());
+    assert!(responses.get("400").is_some());
+    assert!(responses.get("500").is_some());
+    assert_eq!(
+        responses["200"]["content"]["text/plain"]["schema"]["type"],
+        "string"
     );
 }
 
