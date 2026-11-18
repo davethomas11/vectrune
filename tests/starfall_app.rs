@@ -8,7 +8,9 @@ fn starfall_completes_and_renders_in_the_shared_desktop_runtime() {
     assert_eq!(game.config["camera"], "camera");
     assert_eq!(game.config["mouseLook"], false);
     let runtime = rquickjs::Runtime::new().unwrap();
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(180);
+    // This runs all cinematic, combat and traversal fixtures plus the full return
+    // route in one QuickJS context. Shared CI runners need more than three minutes.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(600);
     runtime.set_interrupt_handler(Some(Box::new(move || {
         std::time::Instant::now() >= deadline
     })));
