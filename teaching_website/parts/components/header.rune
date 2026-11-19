@@ -19,7 +19,7 @@ view:
                             a .nav-link href="{i18n.Common.base_path}#walkthrough" data-route-link=true click="navigate('home')" "%i18n.Header.nav_walkthrough%"
                             a .nav-link href="{i18n.Common.base_path}#examples" data-route-link=true click="navigate('home')" "%i18n.Header.nav_examples%"
                             a .nav-link href="{i18n.Common.base_path}#next" data-route-link=true click="navigate('home')" "%i18n.Header.nav_next%"
-                            a .nav-link href="{i18n.Common.base_path}" data-route-link=true aria-current="{activePage == 'home' ? 'page' : 'false'}" click="navigate('home')" "%i18n.Nav.overview%"
+                            a .nav-link href="{i18n.Common.base_path}" data-home-overview=true data-route-link=true aria-current="{activePage == 'home' ? 'page' : 'false'}" click="navigate('home')" "%i18n.Nav.overview%"
                             a .nav-link href="{i18n.Common.base_path}documents" data-route-link=true aria-current="{activePage == 'documents' ? 'page' : 'false'}" click="navigate('documents')" "%i18n.DocumentSyntax.nav%"
                             a .nav-link href="{i18n.Common.base_path}localization" data-route-link=true aria-current="{activePage == 'localization' ? 'page' : 'false'}" click="navigate('localization')" "%i18n.Nav.localization%"
                         div .nav-group:

@@ -172,9 +172,29 @@ def check(base, directory, screenshots):
             page.go_back()
             expect(page.locator('main h1')).to_have_text(headline)
             page.wait_for_function('Math.abs(scrollY - 450) < 3')
-            # Explicit anchors still land on the requested section.
-            menu_link(page, 'a[href$="#quickstart"]').click()
-            page.wait_for_function('document.activeElement.id === "quickstart"')
+            # Homepage section links dismiss the menu, move focus and mark only
+            # the selected section, including when selecting the same link twice.
+            overview = page.locator('#site-navigation [data-home-overview]')
+            for width, section in [(1440, 'quickstart'), (390, 'tour'), (390, 'tour')]:
+                page.set_viewport_size({'width': width, 'height': 844})
+                link = menu_link(page, f'a[href$="#{section}"]')
+                link.click()
+                expect(page.locator(f'#{section}')).to_be_focused()
+                expect(page.locator('.menu-panel-learn')).to_be_hidden()
+                expect(page.locator('.navigation-toggle')).to_have_attribute('aria-expanded', 'false')
+                expect(link).to_have_attribute('aria-current', 'location')
+                expect(overview).to_have_attribute('aria-current', 'false')
+                expect(page.locator('#site-navigation [aria-current="location"]')).to_have_count(1)
+                assert page.url == f'{base}/{locale}#{section}'
+            page.go_back()
+            expect(page.locator('a.nav-link[href$="#quickstart"]')).to_have_attribute('aria-current', 'location')
+            page.go_forward()
+            expect(page.locator('a.nav-link[href$="#tour"]')).to_have_attribute('aria-current', 'location')
+            menu_link(page, '[data-home-overview]').click()
+            expect(overview).to_have_attribute('aria-current', 'page')
+            expect(page.locator('main h1')).to_be_focused()
+            assert page.url == f'{base}/{locale}'
+            page.set_viewport_size({'width': 1440, 'height': 1000})
             menu_link(page, '[data-on-click="navigate(\'web_forms\')"]').click()
             expect(page.locator('main h1')).to_be_focused()
             expect(page.locator('.example-preview')).to_be_visible()
@@ -185,7 +205,7 @@ def check(base, directory, screenshots):
             assert page.url.rstrip('/') == url.rstrip('/')
             if screenshots and not locale:
                 page.screenshot(path=str(screenshots / 'lesson-desktop.png'))
-            menu_link(page, '[aria-current][data-on-click="navigate(\'home\')"]').click()
+            menu_link(page, '[data-home-overview]').click()
             expect(page.locator('main h1')).to_have_text(headline)
             command = page.locator('.command-block').first
             command.locator('.command-copy').click()
