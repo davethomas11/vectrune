@@ -89,13 +89,17 @@ function increment(record: any, path: any[], by: any): any {
   return { value: box.value, changed: parent[property] };
 }
 function validate(packet: Packet): void {
-  const fields: Record<string, string[]> = { get: ['collection', 'key'], scan: ['collection', 'prefix', 'after', 'limit'],
+  const fields: Record<string, string[]> = { get: ['collection', 'key'], get_many: ['collection', 'keys'], scan: ['collection', 'prefix', 'after', 'limit'],
     put: ['collection', 'key', 'value', 'expected'], delete: ['collection', 'key', 'expected'], increment: ['collection', 'key', 'path', 'by', 'expected'],
     append: ['stream', 'kind', 'value'], read: ['stream', 'after', 'limit', 'wait_ms'], batch: ['operations'] };
   check(packet && typeof packet === 'object' && own(fields, packet.op), 'unknown storage operation');
   for (const field of Object.keys(packet)) check(field === 'op' || fields[packet.op].includes(field), `unknown packet field: ${field}`);
-  if (['get', 'scan', 'put', 'delete', 'increment'].includes(packet.op)) name(packet.collection);
+  if (['get', 'get_many', 'scan', 'put', 'delete', 'increment'].includes(packet.op)) name(packet.collection);
   if (['get', 'put', 'delete', 'increment'].includes(packet.op)) key(packet.key);
+  if (packet.op === 'get_many') {
+    check(Array.isArray(packet.keys) && packet.keys.length >= 1 && packet.keys.length <= 256, 'get_many requires 1..256 keys');
+    packet.keys.forEach(key);
+  }
   if (['put', 'append'].includes(packet.op)) { check(own(packet, 'value'), 'value required'); packedValue(packet.value); }
   if (packet.op === 'increment') check(typeof packet.by === 'number' && Number.isFinite(packet.by), 'increment must be numeric');
   if (packet.expected != null) cursor(packet.expected);
@@ -121,7 +125,7 @@ async function page(store: IDBObjectStore, range: IDBKeyRange, match: (key: IDBV
 }
 async function local(database: string, packet: Packet): Promise<any> {
   const db = await open(database);
-  const read = ['get', 'scan', 'read'].includes(packet.op);
+  const read = ['get', 'get_many', 'scan', 'read'].includes(packet.op);
   const tx = db.transaction(read ? [packet.op === 'read' ? 'events' : 'records'] : ['records', 'events', 'meta'], read ? 'readonly' : 'readwrite', read ? undefined : { durability: 'strict' });
   const done = finished(tx);
   // Observe rejection immediately; semantic validation can fail before IDB aborts.
@@ -133,6 +137,16 @@ async function local(database: string, packet: Packet): Promise<any> {
   try {
     let result: any;
     if (packet.op === 'get') { const value = await request(records().get(recordKey(packet))); result = value == null ? null : unpack(value); }
+    else if (packet.op === 'get_many') {
+      result = [];
+      let size = 3;
+      for (const key of packet.keys as string[]) {
+        const value = await request(records().get([packet.collection, utf8(key)]));
+        size += value?.length ?? 1;
+        check(size <= MAX_PAGE, 'get_many response exceeds 4 MiB');
+        result.push(value == null ? null : unpack(value));
+      }
+    }
     else if (packet.op === 'scan') {
       const prefix = packet.prefix ?? '', start = packet.after ?? prefix;
       const resultPage = await page(records(), IDBKeyRange.lowerBound([packet.collection, utf8(start)], packet.after != null), k => {

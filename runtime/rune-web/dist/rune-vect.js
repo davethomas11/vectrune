@@ -340,8 +340,11 @@ var __RuneVect = (() => {
         if (scope[e.value] === void 0) return void 0;
         return Array.isArray(source) ? source.find((item) => String(item?.[e.value]) === String(scope[e.value])) : void 0;
       }
-      case "overlay":
-        return overlay(ev(e.items[0]), ev(e.items[1]));
+      case "overlay": {
+        const [source, overrides] = e.items;
+        const value = source.kind === "id" && !Object.prototype.hasOwnProperty.call(scope, source.value) ? scope[`${source.value}_batch`] : ev(source);
+        return overlay(value, ev(overrides));
+      }
       case "generate": {
         const count = collectionCount(ev(e.items[1]));
         const step = finiteNumber(ev(e.items[2]));

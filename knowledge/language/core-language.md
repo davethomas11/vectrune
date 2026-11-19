@@ -236,6 +236,9 @@ result = { actors, selected }
   `all { ... }` uses the same operation. Generated and overlaid batches expand
   inside arrays; ordinary nested arrays stay nested. Copies have independent
   nested data, so updates leave the template and other copies intact.
+- A named overlay such as `alien with { y: 40 }` uses `alien` when that binding
+  exists. Otherwise it looks for `alien_batch`. This shorthand applies to
+  overlays in every host, including Rune-Web initial state.
 - `objects[]id` selects the first object matching the current `id` binding;
   numeric and string IDs compare by their string value. It supports reads,
   replacements, nested writes and compound writes, including

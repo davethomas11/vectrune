@@ -8,6 +8,7 @@
 /// - execute a small interpreted subset of action steps
 
 use super::ast::{LogicDefinition, ViewNode};
+use std::cell::Cell;
 use std::collections::HashMap;
 
 /// JavaScript code generator from a page + logic definition.
@@ -155,17 +156,23 @@ __RuneWeb.boot({{
             let mut remaining = Vec::new();
             let before = values.len();
             for (name, source) in pending {
-                let result = crate::object_syntax::evaluate(source, &|name| base.get(name).or_else(|| values.get(name)).cloned());
+                let waiting = Cell::new(false);
+                let result = crate::object_syntax::evaluate(source, &|key| {
+                    let value = base.get(key).or_else(|| values.get(key));
+                    if value.is_none() && definitions.contains_key(key) {
+                        waiting.set(true);
+                    }
+                    value.cloned()
+                });
+                if waiting.get() {
+                    remaining.push((name, source));
+                    continue;
+                }
                 match result {
                     Ok(value) => { values.insert(name.clone(), value); }
-                    Err(error) => {
-                        let waits = error.strip_prefix("Unknown variable: ").is_some_and(|missing|
-                            definitions.keys().any(|key| !values.contains_key(key) && (key == missing || key.starts_with(missing) || missing.starts_with(key.as_str()))));
-                        if waits { remaining.push((name, source)); }
-                        else {
-                            let mut scope = values.clone(); scope.extend(base.clone());
-                            values.insert(name.clone(), self.parse_value_with_locals(source, &scope));
-                        }
+                    Err(_) => {
+                        let mut scope = values.clone(); scope.extend(base.clone());
+                        values.insert(name.clone(), self.parse_value_with_locals(source, &scope));
                     }
                 }
             }
@@ -364,15 +371,7 @@ fn parse_var_with_object(s: &str, locals: &HashMap<String, serde_json::Value>) -
         return None;
     }
 
-    let local_val = locals.get(var_part).or_else(|| {
-        locals.iter().find_map(|(k, v)| {
-            if k.starts_with(var_part) || var_part.starts_with(k) {
-                Some(v)
-            } else {
-                None
-            }
-        })
-    })?;
+    let local_val = locals.get(var_part).or_else(|| locals.get(&format!("{var_part}_batch")))?;
 
     let empty_vars = HashMap::new();
     let with_map = parse_relaxed_object(with_part, &empty_vars)?;

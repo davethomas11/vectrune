@@ -17,7 +17,70 @@ export interface FetchLimits {
   maxBodyBytes: number;
 }
 
+interface FetchOptions extends FetchLimits {
+  headers?: Headers;
+  redirect?: "follow" | "error";
+}
+
 export const DEFAULT_FETCH_LIMITS: FetchLimits = { timeoutMs: 10_000, maxBodyBytes: 1024 * 1024 };
+
+const forbiddenHeaders = new Set([
+  "accept-charset", "accept-encoding", "access-control-request-headers", "access-control-request-method",
+  "connection", "content-length", "cookie", "cookie2", "date", "dnt", "expect", "host",
+  "keep-alive", "origin", "permissions-policy", "referer", "set-cookie", "te", "trailer",
+  "transfer-encoding", "upgrade", "user-agent", "via", "x-http-method", "x-http-method-override", "x-method-override",
+]);
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseRequestOptions(value: unknown): FetchOptions {
+  if (!isObject(value)) throw new FetchError("fetch: options must be an object");
+  const options: FetchOptions = { ...DEFAULT_FETCH_LIMITS };
+  const boundedInteger = (item: unknown, field: string, max: number): number => {
+    if (typeof item === "number" && Number.isInteger(item) && item >= 1 && item <= max) return item;
+    throw new FetchError(`fetch: ${field} must be an integer from 1 to ${max}`);
+  };
+  for (const [field, item] of Object.entries(value)) {
+    switch (field) {
+      case "timeout_ms":
+        options.timeoutMs = boundedInteger(item, field, 60_000);
+        break;
+      case "max_body_bytes":
+        options.maxBodyBytes = boundedInteger(item, field, 8 * 1024 * 1024);
+        break;
+      case "redirect":
+        if (item !== "follow" && item !== "error") throw new FetchError("fetch: redirect must be follow or error");
+        options.redirect = item;
+        break;
+      case "headers": {
+        if (!isObject(item)) throw new FetchError("fetch: headers must be an object");
+        const headers = new Headers();
+        for (const [header, value] of Object.entries(item)) {
+          const name = header.toLowerCase();
+          if (!/^[!#$%&'*+.^_`|~0-9a-z-]+$/.test(name)) throw new FetchError("fetch: invalid header name");
+          if (forbiddenHeaders.has(name) || name.startsWith("proxy-") || name.startsWith("sec-")) {
+            throw new FetchError(`fetch: request header ${name} is not supported`);
+          }
+          if (typeof value !== "string") throw new FetchError("fetch: header values must be strings");
+          if (/[^\t\x20-\x7e]/.test(value)) throw new FetchError("fetch: invalid header value");
+          if (headers.has(name)) throw new FetchError("fetch: duplicate header name");
+          headers.set(name, value);
+        }
+        if (Object.keys(item).length > 0) options.headers = headers;
+        break;
+      }
+      default:
+        throw new FetchError(`fetch: unknown option ${field}`);
+    }
+  }
+  if (options.headers) {
+    if (options.redirect === "follow") throw new FetchError("fetch: requests with custom headers cannot follow redirects");
+    options.redirect = "error";
+  }
+  return options;
+}
 
 export interface FetchResult {
   status: number;
@@ -61,7 +124,7 @@ function parseUrl(value: unknown): URL {
 
 export async function runFetch(
   target: unknown,
-  limits: FetchLimits = DEFAULT_FETCH_LIMITS,
+  limits: FetchOptions = DEFAULT_FETCH_LIMITS,
 ): Promise<FetchResult> {
   const url = parseUrl(target);
   const shown = redactUrl(url);
@@ -77,7 +140,8 @@ export async function runFetch(
   try {
     const response = await fetch(url.href, {
       method: "GET",
-      redirect: "follow",
+      redirect: limits.redirect ?? "follow",
+      headers: limits.headers,
       credentials: "omit",
       referrerPolicy: "no-referrer",
       signal: controller.signal,
@@ -118,13 +182,14 @@ export async function runFetch(
   } catch (error) {
     if (error instanceof FetchError) throw error;
     if (timedOut) throw new FetchError(`fetch: ${shown} timed out after ${limits.timeoutMs / 1000}s`);
-    throw new FetchError(`fetch: request to ${shown} failed (network error or blocked by CORS)`);
+    const reason = limits.redirect === "error" ? "network error, redirect, or blocked by CORS" : "network error or blocked by CORS";
+    throw new FetchError(`fetch: request to ${shown} failed (${reason})`);
   } finally {
     clearTimeout(timer);
   }
 }
 
-export async function runFetchJson(target: unknown, limits?: FetchLimits): Promise<unknown> {
+export async function runFetchJson(target: unknown, limits?: FetchOptions): Promise<unknown> {
   const result = await runFetch(target, limits);
   const shown = redactUrl(new URL(result.url));
   if (!result.ok) throw new FetchError(`fetch-json: ${shown} returned HTTP ${result.status}`, result.status);
@@ -153,8 +218,15 @@ export function parseFetchAssignment(statement: string): FetchAssignment | null 
 
 /** Runs the request for an assignment form. Rejects with a FetchError. */
 export function runFetchAssignment(pending: FetchAssignment, locals: any): Promise<unknown> {
-  const run = pending.kind === "fetch" ? runFetch : runFetchJson;
-  return Promise.resolve().then(() => run(evaluateExpression(pending.urlExpr, buildScope(locals, pending.urlExpr))));
+  return Promise.resolve().then(() => runRequest(pending.kind, pending.urlExpr, locals));
+}
+
+function runRequest(kind: FetchAssignment["kind"], request: string, locals: Record<string, unknown>): Promise<unknown> {
+  const options = request.match(/\s+options\s+([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)$/);
+  const url = options ? request.slice(0, options.index) : request;
+  const scope = buildScope(locals, request);
+  const config = options ? parseRequestOptions(evaluateExpression(options[1], scope)) : undefined;
+  return (kind === "fetch" ? runFetch : runFetchJson)(evaluateExpression(url, scope), config);
 }
 
 /** Calls the catch action with { status, message }, or logs a warning when there is none. */
@@ -178,9 +250,8 @@ function makeHandler(name: "fetch" | "fetch-json") {
     if (!match) return undefined;
     const [, urlExpr, onSuccess, onError] = match;
 
-    const run = name === "fetch" ? runFetch : runFetchJson;
     Promise.resolve()
-      .then(() => run(evaluateExpression(urlExpr, buildScope(locals, statement))))
+      .then(() => runRequest(name, urlExpr, locals))
       .then(
         (value) => deliver(onSuccess, value),
         (error) => reportFetchFailure(error, onError),
@@ -191,14 +262,14 @@ function makeHandler(name: "fetch" | "fetch-json") {
 
 export const fetchCommand: BuiltinCommand = {
   prefix: ["fetch"],
-  signature: "fetch <url> then <action> [catch <action>]",
+  signature: "fetch <url> [options <binding>] then <action> [catch <action>]",
   description: "HTTP GET; calls the action with { status, ok, url, content_type, body }",
   handler: makeHandler("fetch"),
 };
 
 export const fetchJsonCommand: BuiltinCommand = {
   prefix: ["fetch-json"],
-  signature: "fetch-json <url> then <action> [catch <action>]",
+  signature: "fetch-json <url> [options <binding>] then <action> [catch <action>]",
   description: "HTTP GET; calls the action with the parsed JSON, or the catch action on failure",
   handler: makeHandler("fetch-json"),
 };

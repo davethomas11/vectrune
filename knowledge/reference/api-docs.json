@@ -482,7 +482,7 @@
         {
           "title": "Compose with an existing app",
           "paragraphs": [
-            "Import the provider declarations into a REST app and call db/events with an operation packet. Writes and their change entries commit atomically. The packet API includes get, put, delete, increment, bounded prefix scans, append, replay and fixed atomic batches."
+            "Import the provider declarations into a REST app and call db/events with an operation packet. Writes and their change entries commit atomically. The packet API includes get, get_many, put, delete, increment, bounded prefix scans, append, replay and fixed atomic batches."
           ],
           "source": "examples/data/storage/api.rune"
         },

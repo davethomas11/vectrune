@@ -110,6 +110,20 @@ async fn standalone_server_cli_remote_adapter_and_replay_work_together() {
         .await
         .unwrap();
     assert_eq!(value["value"]["count"], 1);
+    let cli_endpoint = endpoint.clone();
+    let output = tokio::task::spawn_blocking(move || {
+        std::process::Command::new(assert_cmd::cargo::cargo_bin!("vectrune"))
+            .args([
+                "db", "get-many", "notes", "missing", "one", "one", "--endpoint", &cli_endpoint,
+            ])
+            .output()
+            .unwrap()
+    })
+    .await
+    .unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let many: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(many, json!([null, value, value]));
     let doc = parse_rune(&format!(
         "@Datasource/remote\ntype = rune-db\nmode = remote\nendpoint = {endpoint}"
     ))

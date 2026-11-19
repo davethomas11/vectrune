@@ -79,7 +79,11 @@ export function buildScope(locals: Record<string, unknown>, expression?: string)
   if (c.compactScopes && expression !== undefined && Object.keys(c.helperDefinitions).length === 0) {
     let names = expressionNames.get(expression);
     if (!names) {
-      names = [...new Set(expression.match(/[A-Za-z_$][\w$]*/g) || [])];
+      const bindings = new Set(expression.match(/[A-Za-z_$][\w$]*/g) || []);
+      names = [...bindings];
+      if (bindings.has('with') || bindings.has('all')) {
+        names = [...new Set([...names, ...names.map(name => `${name}_batch`)])];
+      }
       if (expressionNames.size >= 4096) expressionNames.clear();
       expressionNames.set(expression, names);
     }

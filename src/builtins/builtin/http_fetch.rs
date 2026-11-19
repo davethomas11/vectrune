@@ -5,7 +5,7 @@
 use crate::builtins::{BuiltinResult, Context, LAST_EXEC_RESULT};
 use crate::builtins::builtin::function::invoke_func;
 use crate::core::{resolve_path, AppState};
-use reqwest::{redirect::Policy, Client, Url};
+use reqwest::{header::{HeaderMap, HeaderName, HeaderValue}, redirect::Policy, Client, Url};
 use serde_json::{json, Value as JsonValue};
 use std::time::Duration;
 
@@ -21,6 +21,73 @@ pub const DEFAULT_LIMITS: Limits = Limits {
     max_redirects: 5,
     max_body_bytes: 1024 * 1024,
 };
+
+struct Options {
+    limits: Limits,
+    headers: HeaderMap,
+    follow_redirects: bool,
+}
+
+fn request_options(value: Option<JsonValue>) -> Result<Options, String> {
+    let mut options = Options {
+        limits: DEFAULT_LIMITS,
+        headers: HeaderMap::new(),
+        follow_redirects: true,
+    };
+    let Some(value) = value else { return Ok(options) };
+    let fields = value.as_object().ok_or("fetch: options must be an object")?;
+    let number = |value: &JsonValue, field, max| {
+        value.as_u64().filter(|n| (1..=max).contains(n))
+            .ok_or_else(|| format!("fetch: {field} must be an integer from 1 to {max}"))
+    };
+    for (field, value) in fields {
+        match field.as_str() {
+            "timeout_ms" => options.limits.timeout = Duration::from_millis(number(value, field, 60_000)?),
+            "max_body_bytes" => options.limits.max_body_bytes = number(value, field, 8 * 1024 * 1024)? as usize,
+            "redirect" => options.follow_redirects = match value.as_str() {
+                Some("follow") => true,
+                Some("error") => false,
+                _ => return Err("fetch: redirect must be follow or error".into()),
+            },
+            "headers" => {
+                let headers = value.as_object().ok_or("fetch: headers must be an object")?;
+                for (name, value) in headers {
+                    let name = HeaderName::from_bytes(name.as_bytes()).map_err(|_| "fetch: invalid header name")?;
+                    if !is_portable_header(name.as_str()) {
+                        return Err(format!("fetch: request header {name} is not supported"));
+                    }
+                    let value = value.as_str().ok_or("fetch: header values must be strings")?;
+                    if !value.bytes().all(|b| b == b'\t' || (32..=126).contains(&b)) {
+                        return Err("fetch: invalid header value".into());
+                    }
+                    let value = HeaderValue::from_str(value.trim_matches([' ', '\t']))
+                        .map_err(|_| "fetch: invalid header value")?;
+                    if options.headers.insert(name, value).is_some() {
+                        return Err("fetch: duplicate header name".into());
+                    }
+                }
+            }
+            _ => return Err(format!("fetch: unknown option {field}")),
+        }
+    }
+    if !options.headers.is_empty() {
+        if fields.get("redirect").and_then(JsonValue::as_str) == Some("follow") {
+            return Err("fetch: requests with custom headers cannot follow redirects".into());
+        }
+        options.follow_redirects = false;
+    }
+    Ok(options)
+}
+
+fn is_portable_header(name: &str) -> bool {
+    !name.starts_with("proxy-") && !name.starts_with("sec-") && !matches!(name,
+        "accept-charset" | "accept-encoding" | "access-control-request-headers" |
+        "access-control-request-method" | "connection" | "content-length" | "cookie" |
+        "cookie2" | "date" | "dnt" | "expect" | "host" | "keep-alive" | "origin" |
+        "permissions-policy" | "referer" | "set-cookie" | "te" | "trailer" |
+        "transfer-encoding" | "upgrade" | "user-agent" | "via" |
+        "x-http-method" | "x-http-method-override" | "x-method-override")
+}
 
 pub struct Fetched {
     pub status: u16,
@@ -89,10 +156,20 @@ fn resolve_url(name: &str, args: &[String], ctx: &Context) -> Result<Url, String
 }
 
 pub async fn get(url: Url, limits: Limits) -> Result<Fetched, FetchError> {
+    get_with_options(url, Options { limits, headers: HeaderMap::new(), follow_redirects: true }).await
+}
+
+async fn get_with_options(url: Url, options: Options) -> Result<Fetched, FetchError> {
     let shown = redact(&url);
+    let limits = options.limits;
+    let policy = if options.follow_redirects {
+        Policy::limited(limits.max_redirects)
+    } else {
+        Policy::custom(|attempt| attempt.error("redirect blocked"))
+    };
     let client = Client::builder()
         .timeout(limits.timeout)
-        .redirect(Policy::limited(limits.max_redirects))
+        .redirect(policy)
         .user_agent(concat!("vectrune/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|e| fail(500, format!("fetch: could not build HTTP client: {e}")))?;
@@ -101,13 +178,17 @@ pub async fn get(url: Url, limits: Limits) -> Result<Fetched, FetchError> {
         if e.is_timeout() {
             fail(504, format!("fetch: {shown} timed out after {}s", limits.timeout.as_secs_f32()))
         } else if e.is_redirect() {
-            fail(502, format!("fetch: {shown} exceeded {} redirects", limits.max_redirects))
+            if options.follow_redirects {
+                fail(502, format!("fetch: {shown} exceeded {} redirects", limits.max_redirects))
+            } else {
+                fail(502, format!("fetch: {shown} redirect blocked"))
+            }
         } else {
             fail(502, format!("fetch: request to {shown} failed"))
         }
     };
 
-    let mut response = client.get(url).send().await.map_err(map_err)?;
+    let mut response = client.get(url).headers(options.headers).send().await.map_err(map_err)?;
     let too_large = || {
         fail(502, format!("fetch: {shown} response exceeded {} bytes", limits.max_body_bytes))
     };
@@ -150,9 +231,13 @@ fn store(ctx: &mut Context, assign_to: Option<&str>, value: JsonValue) {
 
 /// `fetch` returns `{ status, ok, url, content_type, body }` and never fails on non-2xx.
 /// `fetch-json` returns parsed JSON; non-2xx or non-JSON answers are failures.
-async fn fetch_value(name: &str, url: Url) -> Result<JsonValue, FetchError> {
+async fn fetch_value(name: &str, url: Url, options: Options) -> Result<JsonValue, FetchError> {
     let shown = redact(&url);
-    let fetched = get(url, DEFAULT_LIMITS).await?;
+    let fetched = if options.headers.is_empty() && options.follow_redirects {
+        get(url, options.limits).await?
+    } else {
+        get_with_options(url, options).await?
+    };
     if name == "fetch" {
         return Ok(fetched.to_json());
     }
@@ -170,7 +255,7 @@ async fn fetch_value(name: &str, url: Url) -> Result<JsonValue, FetchError> {
     })
 }
 
-/// Splits `<url> [then <func>] [catch <func>]`.
+/// Splits `<url> [options <binding>] [then <func>] [catch <func>]`.
 fn split_clauses(name: &str, args: &[String]) -> Result<(Vec<String>, Option<String>, Option<String>), String> {
     let first_clause = args
         .iter()
@@ -225,11 +310,22 @@ pub async fn builtin_fetch_like(
         Ok(parts) => parts,
         Err(msg) => return BuiltinResult::Error(msg),
     };
-    let url = match resolve_url(name, &url_args, ctx) {
+    let (url_args, config) = match url_args.as_slice() {
+        [url, keyword, binding] if keyword == "options" => match resolve_path(ctx, binding, None) {
+            Some(value) => (std::slice::from_ref(url), Some(value)),
+            None => return BuiltinResult::Error(format!("{name}: options binding '{binding}' is not defined")),
+        },
+        args => (args, None),
+    };
+    let url = match resolve_url(name, url_args, ctx) {
         Ok(url) => url,
         Err(msg) => return BuiltinResult::Error(msg),
     };
-    match fetch_value(name, url).await {
+    let options = match request_options(config) {
+        Ok(options) => options,
+        Err(message) => return BuiltinResult::Error(message),
+    };
+    match fetch_value(name, url, options).await {
         Ok(value) => {
             store(ctx, assign_to, value.clone());
             match then {

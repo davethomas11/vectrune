@@ -598,7 +598,15 @@ impl Expr {
                     }
                 }
             }
-            Expr::Overlay(source, extra) => overlay(ev(source)?, ev(extra)?)?,
+            Expr::Overlay(source, extra) => {
+                let value = match source.as_ref() {
+                    Expr::Name(name) => ev(source).or_else(|missing| {
+                        resolve(&format!("{name}_batch")).ok_or(missing)
+                    })?,
+                    _ => ev(source)?,
+                };
+                overlay(value, ev(extra)?)?
+            }
             Expr::Generate(template, n, props, step, extra) => {
                 let n = count(&ev(n)?)?;
                 let step = finite(&ev(step)?)?;

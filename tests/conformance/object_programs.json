@@ -167,5 +167,25 @@
         ]
       }
     ]
+  },
+  {
+    "category": "portable generator batch shorthand",
+    "statements": [
+      "local alien_batch = { x: 50 } * 2 inc x by 65",
+      "alien_count = 18",
+      "result = [alien with { y: 40 }] all { alive: true }"
+    ],
+    "expected": [
+      {
+        "x": 50,
+        "y": 40,
+        "alive": true
+      },
+      {
+        "x": 115,
+        "y": 40,
+        "alive": true
+      }
+    ]
   }
 ]

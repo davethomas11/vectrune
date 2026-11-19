@@ -13,6 +13,16 @@ async fn upstream() -> String {
     let app = Router::new()
         .route("/weather", get(|| async { r#"{"current":{"temperature_2m":12.5}}"# }))
         .route("/text", get(|| async { "not json" }))
+        .route("/echo-header", get(|headers: axum::http::HeaderMap| async move {
+            axum::Json(serde_json::json!({
+                "mode": headers.get("x-request-mode").and_then(|value| value.to_str().ok()),
+            }))
+        }))
+        .route("/redirect-header", get(|| async { (StatusCode::FOUND, [("location", "/echo-header")]) }))
+        .route("/slow", get(|| async {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            "late"
+        }))
         .route("/missing", get(|| async { (StatusCode::NOT_FOUND, "nope") }));
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -55,6 +65,24 @@ run:
 run:
     weather = fetch-json "{base}/weather"
     respond 200 weather
+
+@Route/GET /header
+run:
+    request_options = {{ headers: {{ "X-Request-Mode": "demo with spaces" }}, timeout_ms: 5000, max_body_bytes: 4096 }}
+    response = fetch-json "{base}/echo-header" options request_options
+    respond 200 response
+
+@Route/GET /blocked-redirect
+run:
+    request_options = {{ headers: {{ "X-Request-Mode": "private" }} }}
+    response = fetch "{base}/redirect-header" options request_options
+    respond 200 response
+
+@Route/GET /short-timeout
+run:
+    request_options = {{ timeout_ms: 20 }}
+    response = fetch "{base}/slow" options request_options
+    respond 200 response
 
 @Route/GET /missing-json
 run:
@@ -139,6 +167,18 @@ async fn fetch_json_returns_parsed_json() {
     assert_eq!(json["current"]["temperature_2m"], 12.5);
 }
 
+#[tokio::test]
+async fn fetch_options_work_through_rest_routes() {
+    let base = upstream().await;
+    let (status, body) = call(&base, "/header").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(serde_json::from_str::<serde_json::Value>(&body).unwrap()["mode"], "demo with spaces");
+    let (status, body) = call(&base, "/blocked-redirect").await;
+    assert_eq!(status, StatusCode::BAD_GATEWAY, "{body}");
+    assert!(body.contains("redirect blocked"), "{body}");
+    assert!(!body.contains("private"));
+    assert_eq!(call(&base, "/short-timeout").await.0, StatusCode::GATEWAY_TIMEOUT);
+}
 #[tokio::test]
 async fn explicit_fetch_then_parse_json_matches_fetch_json() {
     let base = upstream().await;

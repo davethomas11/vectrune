@@ -47,7 +47,8 @@ def check(base, browser_name="chromium"):
                     expect(frame.locator(".overlay")).to_have_count(0)
                     # Pause the real timer for deterministic geometry; actions remain real.
                     frame.locator("body").evaluate("() => runeWebApp.stopTimer()")
-                    expect(frame.locator(".alien")).to_have_count(18)
+                    for kind in (1, 2, 3):
+                        expect(frame.locator(f".alien.type-{kind}:visible")).to_have_count(6)
                     geometry = frame.locator("body").evaluate("""() => {
                         const viewport = document.querySelector('.arena-viewport').getBoundingClientRect();
                         const fits = r => r.left >= viewport.left - 1 && r.right <= viewport.right + 1

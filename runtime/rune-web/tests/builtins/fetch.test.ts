@@ -136,6 +136,30 @@ describe('fetch builtins', () => {
 
 describe('fetch assignment form', () => {
   const steps = (...lines: string[]) => lines.map((Statement) => ({ Statement }));
+  it('sends request options in assignment and callback forms and blocks redirects with custom headers', async () => {
+    const mock = stubFetch(async () => json({ ok: true }));
+    const app = ctx().app as any;
+    app.invokeAction = vi.fn();
+    const locals = createLocals();
+    locals.opts = { headers: { 'X-Mode': 'demo with spaces' }, timeout_ms: 120, max_body_bytes: 256 };
+
+    executeSteps(steps('result = fetch-json "https://example.com" options opts'), locals);
+    await vi.waitFor(() => expect(app.state.result).toEqual({ ok: true }));
+    runBuiltin('fetch-json "https://example.com" options opts then loaded', locals);
+    await vi.waitFor(() => expect(app.invokeAction).toHaveBeenCalledWith('loaded', [{ ok: true }]));
+    expect(mock.mock.calls).toHaveLength(2);
+    for (const [, init] of mock.mock.calls) {
+      expect(init.headers.get('x-mode')).toBe('demo with spaces');
+      expect(init.redirect).toBe('error');
+    }
+
+    locals.opts.redirect = 'follow';
+    runBuiltin('fetch-json "https://example.com" options opts then loaded catch failed', locals);
+    await vi.waitFor(() => expect(app.invokeAction).toHaveBeenCalledWith('failed', [
+      expect.objectContaining({ status: 0, message: expect.stringContaining('cannot follow redirects') }),
+    ]));
+    expect(mock.mock.calls).toHaveLength(2);
+  });
   const mockApp = () => {
     const app = ctx().app as any;
     app.invokeAction = vi.fn();

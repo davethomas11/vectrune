@@ -1,20 +1,27 @@
 {
-  "version": "0.3.10",
+  "version": "0.3.11",
   "locales": {
     "en_us": {
-      "intro": "Play Marble Run and Dog Walker, two arcade games built with Pixel 3D.",
-      "summary": "This release adds sphere, cylinder, and ramp models. The Marble Run demo lets you compare resolutions, palettes, and frame rates and try the experimental WebGL renderer on supported devices. Dog Walker showcases 3D tethers, and the teaching site adds expandable navigation and a release history."
+      "intro": "Configure HTTP requests, read multiple Rune DB records in one call, and play VectRaiders with its full alien formation.",
+      "summary": "Fetch and fetch-json support custom headers, timeouts, response limits, and redirect handling. Rune DB adds snapshot batch reads, and generator shorthand works across runtimes."
     },
     "es": {
-      "intro": "Juega a Marble Run y Dog Walker, dos juegos arcade creados con Pixel 3D.",
-      "summary": "Esta versión incorpora modelos de esferas, cilindros y rampas. La demo de Marble Run permite comparar resoluciones, paletas y frecuencias de imagen y probar el renderizado experimental WebGL en dispositivos compatibles. Dog Walker muestra las cuerdas 3D y el sitio incorpora navegación desplegable y un historial de versiones."
+      "intro": "Configura peticiones HTTP, lee varios registros de Rune DB en una sola llamada y juega a VectRaiders con la formación alienígena completa.",
+      "summary": "Fetch y fetch-json admiten encabezados personalizados, tiempos de espera, límites de respuesta y control de redirecciones. Rune DB añade lecturas múltiples en una sola captura y se recupera la sintaxis abreviada de los generadores."
     },
     "fr": {
-      "intro": "Jouez à Marble Run et Dog Walker, deux jeux d’arcade créés avec Pixel 3D.",
-      "summary": "Cette version ajoute des modèles de sphères, de cylindres et de rampes. La démo Marble Run permet de comparer les résolutions, les palettes et les cadences et d’essayer le rendu WebGL expérimental sur les appareils compatibles. Dog Walker présente les attaches 3D, et le site propose une navigation déroulante et un historique des versions."
+      "intro": "Configurez les requêtes HTTP, lisez plusieurs enregistrements Rune DB en un appel et retrouvez la formation complète dans VectRaiders.",
+      "summary": "Fetch et fetch-json acceptent des en-têtes personnalisés, des délais, des limites de réponse et le contrôle des redirections. Rune DB ajoute la lecture groupée à un instant donné, et le raccourci des générateurs fonctionne de nouveau dans les différents environnements."
     }
   },
   "releases": [
+    {
+      "tag": "v0.3.11",
+      "tagged_on": null,
+      "github_tag": false,
+      "published_on": null,
+      "summary": "Added HTTP request options and Rune DB snapshot batch reads. Restored named generator overlays across runtimes and the full VectRaiders alien formation."
+    },
     {
       "tag": "v0.3.10",
       "tagged_on": "2026-11-19",

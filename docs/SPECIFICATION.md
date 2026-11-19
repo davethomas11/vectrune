@@ -180,6 +180,8 @@ result = { actors, selected }
 - `template with { ... }` copies an object or overlays every object in an array.
   `all { ... }` is the same overlay operation. Generated batches and overlay
   arrays expand inside array literals; ordinary nested arrays stay nested.
+  A bare overlay name resolves exactly first, then tries the `_batch` suffix.
+  For example, `alien with { y: 40 }` uses `alien_batch` when `alien` is absent.
 - Generated objects and overlays copy nested data, so later updates do not
   change the template or other copies. Bare variable assignment retains the
   host's existing value/reference behavior.

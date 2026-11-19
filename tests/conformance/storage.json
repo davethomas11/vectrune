@@ -45,6 +45,56 @@
   },
   {
     "request": {
+      "op": "get_many",
+      "collection": "notes",
+      "keys": [
+        "missing",
+        "a",
+        "a"
+      ]
+    },
+    "expected": [
+      null,
+      {
+        "key": "a",
+        "value": {
+          "title": "One",
+          "count": 1,
+          "items": [
+            {
+              "sku": "B",
+              "qty": 3
+            }
+          ]
+        },
+        "revision": "1"
+      },
+      {
+        "key": "a",
+        "value": {
+          "title": "One",
+          "count": 1,
+          "items": [
+            {
+              "sku": "B",
+              "qty": 3
+            }
+          ]
+        },
+        "revision": "1"
+      }
+    ]
+  },
+  {
+    "request": {
+      "op": "get_many",
+      "collection": "notes",
+      "keys": []
+    },
+    "error": true
+  },
+  {
+    "request": {
       "op": "increment",
       "collection": "notes",
       "key": "a",
