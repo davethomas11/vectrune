@@ -336,7 +336,7 @@ rules:
     .menu-category[open] .menu-category-label::after:
         transform = translateY(0.12rem) rotate(225deg)
 
-    .menu-category-label:hover, .menu-category[open] .menu-category-label, .menu-category:has([aria-current="page"]) .menu-category-label, .navigation-toggle:hover:
+    .menu-category-label:hover, .menu-category[open] .menu-category-label, .menu-category:has([aria-current="page"], [aria-current="location"]) .menu-category-label, .navigation-toggle:hover:
         background = #eaf3ee
 
     .menu-category-label:focus-visible:
@@ -1199,7 +1199,7 @@ rules:
     .nav-link:hover:
         background = rgba(232, 243, 236, 0.9)
 
-    .nav-link[aria-current="page"]:
+    .nav-link[aria-current="page"], .nav-link[aria-current="location"]:
         background = #e2eee7
         color = {brand-dark}
         font-weight = 700

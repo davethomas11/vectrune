@@ -5,14 +5,13 @@
     if (!root) return;
     let pending = null;
     let queued = false;
-    const header = root.querySelector('.site-header');
-    const menu = header?.querySelector('#site-navigation');
-    const toggle = header?.querySelector('.navigation-toggle');
     const narrow = matchMedia('(max-width: 900px)');
     const base = (document.querySelector('meta[name="rune-base-path"]')?.content || '').replace(/\/$/, '');
     history.scrollRestoration = 'manual';
 
     function setMobileMenu(open) {
+      const header = root.querySelector('.site-header');
+      const toggle = header?.querySelector('.navigation-toggle');
       if (!header || !toggle) return;
       header.dataset.mobileMenu = String(open);
       toggle.setAttribute('aria-expanded', String(open));
@@ -20,7 +19,7 @@
     }
 
     function closeCategory() {
-      const category = menu?.querySelector('.menu-category[open]');
+      const category = root.querySelector('#site-navigation .menu-category[open]');
       if (category) category.open = false;
       return category;
     }
@@ -29,20 +28,36 @@
       setMobileMenu(false);
     }
 
-    toggle?.addEventListener('click', () => setMobileMenu(header.dataset.mobileMenu !== 'true'));
-    menu?.addEventListener('click', event => {
-      if (event.target.closest('a')) closeMenu();
+    // Rune-Web can replace the header when it renders a route. Delegate events
+    // and look up the current elements when handling navigation.
+    root.addEventListener('click', event => {
+      const toggle = event.target.closest('.navigation-toggle');
+      if (toggle) setMobileMenu(toggle.getAttribute('aria-expanded') !== 'true');
     });
-    document.addEventListener('pointerdown', event => {
-      if (!menu?.contains(event.target) && !toggle?.contains(event.target)) closeMenu();
-    });
-    document.addEventListener('focusin', event => {
-      if (!menu?.contains(event.target) && !toggle?.contains(event.target)) closeMenu();
-    });
+    function dismissOutsideMenu(event) {
+      if (!event.target.closest('#site-navigation, .navigation-toggle')) closeMenu();
+    }
+    document.addEventListener('pointerdown', dismissOutsideMenu);
+    document.addEventListener('focusin', dismissOutsideMenu);
     narrow.addEventListener('change', closeMenu);
 
     function savePosition() {
       if (!pending) history.replaceState({ ...history.state, sitePosition: [scrollX, scrollY] }, '', location.href);
+    }
+    function updateHomeSelection(main) {
+      const home = main?.dataset.route === 'home';
+      const menu = root.querySelector('#site-navigation');
+      if (!menu) return;
+      let sectionSelected = false;
+      for (const link of menu.querySelectorAll('.nav-link[href*="#"]')) {
+        if (home && link.hash === location.hash) {
+          sectionSelected = true;
+          link.setAttribute('aria-current', 'location');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      }
+      menu.querySelector('[data-home-overview]')?.setAttribute('aria-current', home && !sectionSelected ? 'page' : 'false');
     }
     function finish() {
       queued = false;
@@ -52,7 +67,10 @@
         const locale = location.pathname.slice(base.length).split('/')[1];
         recovery.href = base + (locale === 'fr' || locale === 'es' ? `/${locale}/` : '/');
       }
-      if (!pending || !main || main.dataset.route !== pending.route || main.querySelector('.rune-lazy-placeholder')) return;
+      if (!pending || !main || main.dataset.route !== pending.route || main.querySelector('.rune-lazy-placeholder')) {
+        updateHomeSelection(main);
+        return;
+      }
       const navigation = pending;
       pending = null;
       let target = main.querySelector('h1') || main;
@@ -60,6 +78,7 @@
         try { target = document.getElementById(decodeURIComponent(navigation.anchor.slice(1))) || target; } catch (_) { /* Use page title. */ }
         history.replaceState(history.state, '', location.pathname + location.search + navigation.anchor);
       }
+      updateHomeSelection(main);
       target.setAttribute('tabindex', '-1');
       target.focus({ preventScroll: true });
       if (navigation.position) {
@@ -74,17 +93,26 @@
     }
     document.addEventListener('click', event => {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
-      const link = event.target.closest('a[data-on-click]');
+      const link = event.target.closest('a');
       if (!link || link.target === '_blank') return;
+      if (link.closest('#site-navigation')) closeMenu();
       const action = link.getAttribute('data-on-click');
+      if (!action) return;
       const route = action.match(/^navigate\('([^']+)'\)/)?.[1] || (action.startsWith('openExample(') ? 'examples' : null);
       if (!route) return;
       savePosition();
       const anchor = new URL(link.href).hash;
-      // Perform action anchors after the destination has actually rendered.
-      if (anchor) event.preventDefault();
-      if (anchor && window.runeWebApp?.state.activePage === route && location.hash !== anchor) {
-        history.pushState(history.state, '', location.pathname + location.search + anchor);
+      if (route === 'home' && root.querySelector('main[data-route="home"]')) {
+        // The homepage is already rendered. Keep the fragment navigation
+        // independent of the Rune-Web route action.
+        event.preventDefault();
+        event.stopPropagation();
+        if (location.hash !== anchor) {
+          history.pushState({ ...history.state, sitePosition: null }, '', location.pathname + location.search + anchor);
+        }
+      } else if (anchor) {
+        // Wait for the destination route to render before jumping to its section.
+        event.preventDefault();
       }
       pending = { route, anchor: anchor === '#app' ? '' : anchor };
       schedule();
@@ -100,9 +128,12 @@
       const category = closeCategory();
       if (category) {
         category.querySelector('summary').focus({ preventScroll: true });
-      } else if (header?.dataset.mobileMenu === 'true') {
-        closeMenu();
-        toggle.focus({ preventScroll: true });
+      } else {
+        const toggle = root.querySelector('.navigation-toggle[aria-expanded="true"]');
+        if (toggle) {
+          closeMenu();
+          toggle.focus({ preventScroll: true });
+        }
       }
     });
     window.addEventListener('popstate', event => {
@@ -112,6 +143,7 @@
       pending = { route: window.runeWebApp?.state.activePage || 'home', position: event.state?.sitePosition || (location.hash ? null : [0, 0]), anchor: location.hash };
       schedule();
     });
+    window.addEventListener('hashchange', schedule);
     let saving = false;
     window.addEventListener('scroll', () => {
       if (!saving) requestAnimationFrame(() => { saving = false; savePosition(); });
