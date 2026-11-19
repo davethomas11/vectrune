@@ -6737,8 +6737,10 @@ var __RuneWeb = (() => {
       helperDefinitions: config.helperDefinitions,
       actionDefinitions: config.actionDefinitions,
       i18nData: config.i18nData,
+      // Match the game hosts: snapshot only bindings referenced by each expression.
       app,
       isRendering: false,
+      compactScopes: true,
       memorySubscriptions: {},
       initialState: JSON.parse(JSON.stringify(config.stateJson)),
       emitters: config.emitters || {},

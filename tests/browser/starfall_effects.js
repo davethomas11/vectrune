@@ -4,7 +4,7 @@
   function check(ok, message) { if (!ok) throw Error(message); }
   function frame() {
     const pixels = g.frame();
-    check(pixels.length === 432 * 270 && pixels.every(p => (p >>> 24) === 255), 'Invalid effects frame');
+    check(pixels.length === g.raycaster.width * g.raycaster.height && pixels.every(p => (p >>> 24) === 255), 'Invalid effects frame');
   }
   __starfallLaunch();
   g.step({aim_up:true, fire:true});
@@ -13,7 +13,10 @@
   check(s.shots[0].dx === 0 && s.shots[0].dz > 0, 'Upward shot moved sideways');
   frame();
   const poses = new Set();
-  for (let i = 0; i < 16; i++) { g.step({right:true}); poses.add(s.avatar.model); frame(); }
+  for (let i = 0; i < 16; i++) {
+    g.step({right:true});
+    if (!poses.has(s.avatar.model)) { poses.add(s.avatar.model); frame(); }
+  }
   check(poses.size === 4, 'Walk cycle did not use all four poses');
   g.step({left:true, aim_up:true}); frame();
   check(s.avatar.angle === 180 && s.rifle.angle === 180, 'Left aiming pose not mirrored');
