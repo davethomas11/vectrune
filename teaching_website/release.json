@@ -13,5 +13,266 @@
       "intro": "Jouez à Marble Run, un jeu d’arcade de descente créé avec Pixel 3D.",
       "summary": "Cette version ajoute des modèles de sphères, de cylindres et de rampes. La démo Marble Run permet de comparer les résolutions, les palettes et les cadences et d’essayer le rendu WebGL expérimental sur les appareils compatibles."
     }
-  }
+  },
+  "releases": [
+    {
+      "tag": "v0.3.10",
+      "tagged_on": "2026-11-19",
+      "github_tag": false,
+      "published_on": null,
+      "summary": "Marble Run showcases Pixel 3D spheres, cylinders, and ramps, with selectable resolutions, palettes, frame rates, and experimental WebGL rendering."
+    },
+    {
+      "tag": "v0.3.9",
+      "tagged_on": "2026-11-18",
+      "github_tag": true,
+      "published_on": "2026-11-19",
+      "summary": "Added portable Rune syntax, persistent game and app storage, and a simpler path to hosting Rune-Web applications."
+    },
+    {
+      "tag": "v0.3.8",
+      "tagged_on": "2026-11-18",
+      "github_tag": true,
+      "published_on": "2026-11-18",
+      "summary": "Added fetch and fetch-json, reusable @Values, and improved parity between Rune-Web and the native runtime."
+    },
+    {
+      "tag": "v0.3.7",
+      "tagged_on": "2026-11-18",
+      "github_tag": true,
+      "published_on": "2026-11-18",
+      "summary": "Added offline CLI and language manuals to release archives and improved API contract handling. Starfall gained mobile fullscreen and Home Screen launch support."
+    },
+    {
+      "tag": "v0.3.6",
+      "tagged_on": "2026-11-17",
+      "github_tag": true,
+      "published_on": "2026-11-18",
+      "summary": "Introduced Starfall Protocol and chunked Pixel 3D worlds. Game showcases gained separate play and source tabs."
+    },
+    {
+      "tag": "v0.3.5",
+      "tagged_on": "2026-11-16",
+      "github_tag": true,
+      "published_on": "2026-11-17",
+      "summary": "Introduced Skybound 2 and the Pixel 3D platform runtime, including voxel worlds and cinematic cameras. The teaching site gained searchable language and library references."
+    },
+    {
+      "tag": "v0.3.4",
+      "tagged_on": "2026-11-15",
+      "github_tag": true,
+      "published_on": "2026-11-15",
+      "summary": "Introduced Rune Crypt and declarative keyboard, controller, and touch profiles for Pixel 3D games."
+    },
+    {
+      "tag": "v0.3.3",
+      "tagged_on": "2026-11-14",
+      "github_tag": true,
+      "published_on": "2026-11-14",
+      "summary": "Introduced the Pixel 3D hybrid engine and Vect Breach, with three sectors, mobile aiming, and landscape fullscreen. The same cycle added Monster City and native pixel audio."
+    },
+    {
+      "tag": "v0.3.2",
+      "tagged_on": "2026-11-12",
+      "github_tag": true,
+      "published_on": "2026-11-12",
+      "summary": "Shipped embedded JavaScript logic tests for Rune applications."
+    },
+    {
+      "tag": "v0.3.1",
+      "tagged_on": "2026-11-12",
+      "github_tag": true,
+      "published_on": "2026-11-12",
+      "summary": "Added developer checks, fixtures, watch mode, formatting, isolated tests, and localized developer guides."
+    },
+    {
+      "tag": "v0.2.21",
+      "tagged_on": "2026-11-12",
+      "github_tag": true,
+      "published_on": null,
+      "summary": "Added the doctor and check commands and native Rune test support."
+    },
+    {
+      "tag": "v0.2.20",
+      "tagged_on": "2026-11-12",
+      "github_tag": true,
+      "published_on": "2026-11-12",
+      "summary": "Repaired teaching-site locale navigation, preserved source formatting, and made recursively imported files browsable in examples."
+    },
+    {
+      "tag": "v0.2.19",
+      "tagged_on": "2026-11-11",
+      "github_tag": true,
+      "published_on": "2026-11-12",
+      "summary": "Added Rune Studio’s MIDI piano roll, polyphonic chords, song time signatures, and instrument racks. Audio timing was decoupled from the editor updates."
+    },
+    {
+      "tag": "v0.2.18",
+      "tagged_on": "2026-11-08",
+      "github_tag": true,
+      "published_on": "2026-11-09",
+      "summary": "Added an interactive step sequencer, active note and track highlighting, and fullscreen support for embedded Rune Studio."
+    },
+    {
+      "tag": "v0.2.17",
+      "tagged_on": "2026-11-08",
+      "github_tag": true,
+      "published_on": "2026-11-09",
+      "summary": "Added Rune Studio note editor panels and improved mobile and fullscreen layouts."
+    },
+    {
+      "tag": "v0.2.16",
+      "tagged_on": "2026-11-08",
+      "github_tag": true,
+      "published_on": "2026-11-09",
+      "summary": "Introduced Rune Studio, an 8-bit music workstation with a visual editor, preloaded songs, and browser storage."
+    },
+    {
+      "tag": "v0.2.15",
+      "tagged_on": "2026-11-08",
+      "github_tag": true,
+      "published_on": "2026-11-08",
+      "summary": "Music tracks gained multiline series for one bar per line and inline annotations."
+    },
+    {
+      "tag": "v0.2.14",
+      "tagged_on": "2026-11-08",
+      "github_tag": true,
+      "published_on": "2026-11-08",
+      "summary": "Added programmable sound synthesis and an 8-bit music sequencer. VectRaiders and VectWorms gained original tunes."
+    },
+    {
+      "tag": "v0.2.13",
+      "tagged_on": "2026-11-08",
+      "github_tag": true,
+      "published_on": "2026-11-08",
+      "summary": "Added the Rune-Web optimizer, with lazy route chunks, background preloading, and path-based navigation."
+    },
+    {
+      "tag": "v0.2.12",
+      "tagged_on": "2026-11-06",
+      "github_tag": true,
+      "published_on": "2026-11-07",
+      "summary": "Added route-specific SEO metadata, favicon support, and pre-rendered social card previews."
+    },
+    {
+      "tag": "v0.2.11",
+      "tagged_on": "2026-11-06",
+      "github_tag": true,
+      "published_on": "2026-11-07",
+      "summary": "Added VectWorms, Web Audio synthesis, declarative particle effects, and local templates."
+    },
+    {
+      "tag": "v0.2.10",
+      "tagged_on": "2026-11-06",
+      "github_tag": true,
+      "published_on": "2026-11-06",
+      "summary": "Added state generators and a compact syntax for declaring actions in Rune-Web."
+    },
+    {
+      "tag": "v0.2.9",
+      "tagged_on": "2026-11-06",
+      "github_tag": true,
+      "published_on": "2026-11-06",
+      "summary": "Expanded Rune-Web styling with multiple presets, CSS shorthands, token opacity, and nesting. VectRaiders gained improved mobile controls and sizing."
+    },
+    {
+      "tag": "v0.2.8",
+      "tagged_on": "2026-11-04",
+      "github_tag": true,
+      "published_on": "2026-11-05",
+      "summary": "Introduced Rune-Web game abilities and the arcade game later named VectRaiders. Also expanded dynamic AI teaching examples."
+    },
+    {
+      "tag": "v0.2.7",
+      "tagged_on": "2026-11-04",
+      "github_tag": true,
+      "published_on": "2026-11-04",
+      "summary": "Introduced one-line grouped reports with summarize, including median, distinct, first, and last aggregations. Updated the teaching site and browser examples."
+    },
+    {
+      "tag": "v0.2.6",
+      "tagged_on": "2026-11-02",
+      "github_tag": true,
+      "published_on": "2026-11-03",
+      "summary": "Added type conversions, UUID generation, and timestamps. Improved the standalone browser sandbox and release builds."
+    },
+    {
+      "tag": "v0.2.5",
+      "tagged_on": "2026-05-09",
+      "github_tag": true,
+      "published_on": "2026-05-10",
+      "summary": "Fixed the shell and PowerShell release-bump scripts so version updates target the package version without changing dependency versions."
+    },
+    {
+      "tag": "v0.2.4",
+      "tagged_on": "2026-05-09",
+      "github_tag": true,
+      "published_on": null,
+      "summary": "An intermediate version bump in the 0.2.x release-script history."
+    },
+    {
+      "tag": "v0.2.3",
+      "tagged_on": "2026-05-09",
+      "github_tag": true,
+      "published_on": "2026-05-10",
+      "summary": "Added Rune-Web memory bindings and reactive updates over WebSockets, alongside improvements to the release tooling."
+    },
+    {
+      "tag": "v0.2.2",
+      "tagged_on": "2026-05-08",
+      "github_tag": true,
+      "published_on": "2026-05-09",
+      "summary": "Added the .vect scripting language, the .vectrune natural-language engine, and file-watch hot reload. Updated the browser sandbox."
+    },
+    {
+      "tag": "v0.2.1",
+      "tagged_on": "2026-05-05",
+      "github_tag": true,
+      "published_on": "2026-05-06",
+      "summary": "Added Rune-Web localization, translated the teaching site, and introduced editor syntax highlighting for Rune."
+    },
+    {
+      "tag": "v0.2.0",
+      "tagged_on": "2026-05-04",
+      "github_tag": true,
+      "published_on": "2026-05-05",
+      "summary": "Introduced Rune-Web with reactive state, components, and styles. The same development cycle added WebSocket support and expanded multi-file and Swagger support."
+    },
+    {
+      "tag": "v0.1.5",
+      "tagged_on": "2026-03-04",
+      "github_tag": true,
+      "published_on": "2026-03-05",
+      "summary": "Improved host and port configuration and removed incidental parser output."
+    },
+    {
+      "tag": "v0.1.4",
+      "tagged_on": "2026-03-04",
+      "github_tag": true,
+      "published_on": "2026-03-04",
+      "summary": "Began AWS Lambda runtime work and added Zig-based Linux cross-compilation tooling."
+    },
+    {
+      "tag": "v0.1.3",
+      "tagged_on": "2026-02-18",
+      "github_tag": true,
+      "published_on": null,
+      "summary": "Added support for Gemini to Vectrune."
+    },
+    {
+      "tag": "v0.1.2",
+      "tagged_on": "2026-02-09",
+      "github_tag": true,
+      "published_on": null,
+      "summary": "Added GraphQL support."
+    },
+    {
+      "tag": "v0.1.1",
+      "tagged_on": "2026-02-06",
+      "github_tag": true,
+      "published_on": "2026-02-07",
+      "summary": "Added command-line document merging. Early examples covered authentication and a generated frontend."
+    }
+  ]
 }

@@ -11,6 +11,7 @@ import tempfile
 from threading import Thread
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 
 ROOT = Path(__file__).resolve().parents[2]
 LESSONS = [
@@ -48,7 +49,7 @@ def check(base):
                 # Exercise the actual mobile menu, not just hidden navigation buttons.
                 page.set_viewport_size({"width": 320, "height": 1000})
                 page.locator(".navigation-toggle").click()
-                page.locator(f'.sidebar [data-on-click="navigate(\'web_{lesson}\')"]').click()
+                menu_link(page, f'[data-on-click="navigate(\'web_{lesson}\')"]').click()
                 expect(page.locator(".navigation-toggle")).to_have_attribute("aria-expanded", "false")
                 title = page.evaluate(
                     "(key) => runeWebApp.state.i18n.RuneWebGuide[key]", lesson + "_title",
@@ -97,12 +98,12 @@ def check(base):
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), (locale, lesson, width)
                     assert frame.locator("html").evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1"), (locale, lesson, width)
                 assert "%i18n." not in page.locator("main.content-area").inner_text()
-            page.locator('.sidebar [data-on-click="navigate(\'rune_web\')"]').click()
+            menu_link(page, '[data-on-click="navigate(\'rune_web\')"]').click()
             frame = page.frame_locator(".example-preview")
             expect(frame.locator("h1")).to_have_text("Count: 0")
             frame.get_by_role("button", name="+ Increase", exact=True).click()
             expect(frame.locator("h1")).to_have_text("Count: 1")
-            page.locator('.sidebar [data-on-click="navigate(\'rest_get\')"]').click()
+            menu_link(page, '[data-on-click="navigate(\'rest_get\')"]').click()
             expect(page.locator("#sandbox-editor")).to_be_visible()
             assert not errors, errors
             print(locale or "en/", "five lessons, source, interactions, mobile menu, four widths and existing pages passed", flush=True)

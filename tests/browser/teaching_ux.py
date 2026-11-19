@@ -14,10 +14,12 @@ import time
 from urllib.request import Request, urlopen
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from rune_web_guide import ROOT
 
 sys.path.insert(0, str(ROOT / 'teaching_website'))
 from build_site import build_site
+from release_metadata import GITHUB, SOURCE, release_archive
 
 
 def check_starter(directory):
@@ -117,8 +119,13 @@ def check(base, directory, screenshots):
             expect(page.locator('.skip-link')).to_be_focused()
             page.keyboard.press('Enter')
             expect(page.locator('#content')).to_be_focused()
-            expect(page.locator('.sidebar a.nav-link')).to_have_count(34)
-            expect(page.locator('.sidebar [aria-current="page"]')).to_have_count(1)
+            expect(page.locator('#site-navigation a.nav-link')).to_have_count(42)
+            expect(page.locator('#site-navigation [aria-current="page"]')).to_have_count(1)
+            categories = page.locator('#site-navigation .menu-category')
+            expect(categories).to_have_count(4)
+            learn = page.locator('[data-menu-category="learn"] > summary')
+            games = page.locator('[data-menu-category="games"] > summary')
+            expect(page.locator('.menu-panel')).to_have_count(4)
             for width in [320, 390, 768, 1440]:
                 page.set_viewport_size({'width': width, 'height': 844})
                 page.evaluate('scrollTo(0, 0)')
@@ -132,13 +139,30 @@ def check(base, directory, screenshots):
                     page.locator('.navigation-toggle').click()
                     expect(page.locator('.navigation-toggle')).to_have_attribute('aria-expanded', 'true')
                     expect(page.locator('.navigation-toggle')).to_be_focused()
+                    expect(learn).to_be_visible()
+                    expect(page.locator('.menu-panel-learn')).to_be_hidden()
+                    learn.click()
+                    expect(page.locator('.menu-panel-learn')).to_be_visible()
+                    page.keyboard.press('Escape')
+                    expect(page.locator('.menu-panel-learn')).to_be_hidden()
+                    expect(learn).to_be_focused()
                     page.keyboard.press('Escape')
                     expect(page.locator('.navigation-toggle')).to_have_attribute('aria-expanded', 'false')
                     expect(page.locator('.navigation-toggle')).to_be_focused()
             page.set_viewport_size({'width': 1440, 'height': 1000})
+            expect(page.locator('.navigation-toggle')).to_be_hidden()
+            learn.focus()
+            page.keyboard.press('Enter')
+            expect(page.locator('.menu-panel-learn')).to_be_visible()
+            games.click()
+            expect(page.locator('.menu-panel-games')).to_be_visible()
+            expect(page.locator('.menu-panel-learn')).to_be_hidden()
+            page.keyboard.press('Escape')
+            expect(page.locator('.menu-panel-games')).to_be_hidden()
+            expect(games).to_be_focused()
             page.evaluate('scrollTo(0, 450)')
             page.wait_for_timeout(100)
-            page.locator('.sidebar [data-on-click="navigate(\'rest_get\')"]').click()
+            menu_link(page, '[data-on-click="navigate(\'rest_get\')"]').click()
             expect(page.locator('main h1')).to_be_focused()
             top = page.locator('main h1').bounding_box()['y']
             assert 70 <= top <= 180, (locale, top)
@@ -149,9 +173,9 @@ def check(base, directory, screenshots):
             expect(page.locator('main h1')).to_have_text(headline)
             page.wait_for_function('Math.abs(scrollY - 450) < 3')
             # Explicit anchors still land on the requested section.
-            page.locator('.site-nav a[href$="#quickstart"]').click()
+            menu_link(page, 'a[href$="#quickstart"]').click()
             page.wait_for_function('document.activeElement.id === "quickstart"')
-            page.locator('.sidebar [data-on-click="navigate(\'web_forms\')"]').click()
+            menu_link(page, '[data-on-click="navigate(\'web_forms\')"]').click()
             expect(page.locator('main h1')).to_be_focused()
             expect(page.locator('.example-preview')).to_be_visible()
             # The same lesson must work on refresh, with server content.
@@ -161,7 +185,7 @@ def check(base, directory, screenshots):
             assert page.url.rstrip('/') == url.rstrip('/')
             if screenshots and not locale:
                 page.screenshot(path=str(screenshots / 'lesson-desktop.png'))
-            page.locator('.sidebar [data-on-click="navigate(\'home\')"]').click()
+            menu_link(page, '[aria-current][data-on-click="navigate(\'home\')"]').click()
             expect(page.locator('main h1')).to_have_text(headline)
             command = page.locator('.command-block').first
             command.locator('.command-copy').click()
@@ -230,7 +254,7 @@ def check(base, directory, screenshots):
         print('Studio Save/Load works in the embedded preview and EXPORT .RUNE downloads the song', flush=True)
         # Destination links keep a useful URL for native new-tab navigation.
         with context.expect_page() as event:
-            page.locator('.sidebar [data-on-click="navigate(\'web_components\')"]').click(button='middle')
+            menu_link(page, '[data-on-click="navigate(\'web_components\')"]').click(button='middle')
         new_tab = event.value
         new_tab.wait_for_load_state()
         expect(new_tab.locator('main')).to_have_attribute('data-route', 'web_components')
@@ -266,6 +290,76 @@ def run(directory, screenshots):
     check_starter(directory)
     with preview(directory) as base:
         check(base, directory, screenshots)
+        check_game_previews(base)
+        check_release_archive(base)
+
+
+def check_release_archive(base):
+    data = json.loads(SOURCE.read_text(encoding='utf-8'))
+    archive = release_archive(data)
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={'width': 390, 'height': 844})
+        for prefix, title in (('', 'Release history'), ('/es', 'Historial de versiones'),
+                              ('/fr', 'Historique des versions')):
+            page.goto(f'{base}{prefix}/')
+            page.locator('.dev-banner-link').click()
+            expect(page.locator('main h1')).to_have_text(title)
+            expect(page.locator('main h1')).to_be_focused()
+            expect(page.locator('.release-entry h2')).to_have_text([item['tag'] for item in archive])
+            expect(page.locator('.release-archive-header a')).to_have_attribute('href', f'{GITHUB}/releases')
+            for item in archive:
+                row = page.locator(f'.release-entry[id="{item["tag"]}"]')
+                if item['url']:
+                    expect(row.locator('a')).to_have_attribute('href', item['url'])
+                else:
+                    expect(row.locator('a')).to_have_count(0)
+                if item['date']:
+                    expect(row.locator('time')).to_have_attribute('datetime', item['date'])
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+            page.reload()
+            expect(page.locator('main h1')).to_have_text(title)
+        browser.close()
+    print('Release history renders all JSON entries and their GitHub destinations in all three locales', flush=True)
+
+
+def check_game_previews(base):
+    games = ['dog-walker', 'games', 'vectworms', 'monster-city', 'vect-breach',
+             'rune-crypt', 'skybound-2', 'starfall', 'marble-run']
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        desktop = browser.new_page(viewport={'width': 1440, 'height': 900})
+        desktop.goto(base + '/')
+        desktop.locator('[data-menu-category="games"] summary').click()
+        preview = desktop.locator('.menu-panel-games .game-preview')
+        count = preview.locator('.game-preview-count')
+        expect(count).to_have_text('2 / 9', timeout=9000)
+        preview.get_by_role('button', name='Pause slideshow').click()
+        expect(preview.get_by_role('button', name='Play slideshow')).to_be_visible()
+        preview.get_by_role('button', name='Previous game').click()
+        expect(count).to_have_text('1 / 9')
+        preview.get_by_role('button', name='Previous game').click()
+        expect(count).to_have_text('9 / 9')
+
+        phone = browser.new_page(
+            viewport={'width': 390, 'height': 844}, has_touch=True, reduced_motion='reduce',
+        )
+        phone.goto(base + '/es/games/')
+        preview = phone.locator('main .game-preview')
+        preview.scroll_into_view_if_needed()
+        expect(preview.get_by_role('button', name='Iniciar la presentación')).to_be_visible()
+        visible = preview.locator('.game-preview-slide:visible')
+        for index, game in enumerate(games):
+            expect(visible).to_have_attribute('href', f'/es/{game}')
+            image = visible.locator('img')
+            expect(image).to_be_visible()
+            image.evaluate('(img) => img.decode()')
+            if index < len(games) - 1:
+                preview.get_by_role('button', name='Juego siguiente').tap()
+        visible.tap()
+        expect(phone.locator('main')).to_have_attribute('data-route', 'marble-run')
+        browser.close()
+    print('Game previews rotate automatically and support pause, wrapping, reduced motion and localized game links', flush=True)
 
 
 def check_hosting_prefix():
@@ -278,7 +372,7 @@ def check_hosting_prefix():
                 page = browser.new_page()
                 page.goto(base + '/fr/')
                 expect(page.locator('main')).to_have_attribute('data-route', 'home')
-                link = page.locator('.sidebar [data-on-click="navigate(\'web_forms\')"]')
+                link = menu_link(page, '[data-on-click="navigate(\'web_forms\')"]')
                 expect(link).to_have_attribute('href', '/guide/fr/web_forms')
                 link.click()
                 expect(page.locator('main h1')).to_be_focused()

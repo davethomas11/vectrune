@@ -11,6 +11,10 @@ view:
 
         WebExample game=true title="{i18n.SpaceInvaders.title}" preview="/assets/games/vectraiders/index.html" files="{sources ../../../examples/games/space_invaders/space_invaders.rune}" show_heading=false
 
+        section .card .game-gallery:
+            h2 "%i18n.GamePreview.more_games%"
+            GamePreview
+
         details .card .showcase-notes:
             summary "%i18n.Guide.how_it_works%"
             div .features-grid:

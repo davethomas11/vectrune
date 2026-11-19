@@ -1,0 +1,25 @@
+@Component/ReleasesPage
+view:
+    div .page .releases-page:
+        section .card .release-archive-header:
+            h1 "%i18n.Releases.title%"
+            p .lead "%i18n.Releases.description%"
+            a .secondary-cta href="{release_info.github_url}" "%i18n.Releases.github_all%"
+
+        ol .release-list:
+            li .card .release-entry id="{release.tag}" <- release in release_info.releases:
+                div .release-entry-meta:
+                    h2 "{release.tag}"
+                    if release.date:
+                        time datetime="{release.date}" "{release.date}"
+                    if release.status == "unpublished":
+                        span "%i18n.Releases.unpublished%"
+                div .release-entry-body:
+                    if release.current:
+                        p "{i18n.Common.locale == 'es' ? release_info.locales.es.summary : i18n.Common.locale == 'fr' ? release_info.locales.fr.summary : release.summary}"
+                    if release.current == false:
+                        p lang=en "{release.summary}"
+                    if release.status == "published":
+                        a .content-link href="{release.url}" aria-label="{i18n.Releases.github_release} {release.tag}" "%i18n.Releases.github_release%"
+                    if release.status == "tag":
+                        a .content-link href="{release.url}" aria-label="{i18n.Releases.github_tag} {release.tag}" "%i18n.Releases.github_tag%"

@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from pathlib import Path
 import re
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from teaching_ux import preview
 
 parser = argparse.ArgumentParser()
@@ -20,7 +21,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     page.bring_to_front()
     page.goto(base + '/')
     expect(page.get_by_role('link', name='Play Vect Breach', exact=True)).to_be_visible()
-    page.locator('.sidebar a[href$="vect-breach"]').click()
+    menu_link(page, 'a[href$="vect-breach"]').click()
     expect(page.locator('main')).to_have_attribute('data-route', 'vect-breach')
     expect(page.locator('main h1')).to_have_text('Vect Breach')
     expect(page).to_have_title('Vect Breach — Vectrune')

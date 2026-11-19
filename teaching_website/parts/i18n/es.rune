@@ -75,6 +75,33 @@ Common {
     translation_source = "Ayuda a traducir en GitHub ↗"
     localization_guide = "Guía de localización"
 }
+Releases {
+    title = "Historial de versiones"
+    description = "Consulta los cambios de cada versión de Vectrune, desde las primeras versiones de la CLI hasta los juegos y las herramientas de desarrollo más recientes."
+    github_all = "Todas las versiones en GitHub"
+    github_release = "Versión en GitHub"
+    github_tag = "Ver etiqueta de Git"
+    unpublished = "Publicación pendiente en GitHub"
+}
+
+GamePreview {
+    label = "Vistas previas de los juegos"
+    more_games = "Explora los juegos"
+    previous = "Juego anterior"
+    next = "Juego siguiente"
+    play = "Iniciar la presentación"
+    pause = "Pausar la presentación"
+}
+
+SiteMenu {
+    menu = "Menú"
+    learn = "Aprender"
+    tools = "Herramientas"
+    api_reference = "Referencia del lenguaje y la API"
+    showcase_title = "Creado con Vectrune"
+    showcase_description = "Descubre cómo se hicieron estos juegos y juégalos en tu navegador."
+}
+
 Header {
     kicker = "El lenguaje Vectrune"
     home_label = "Inicio de Vectrune"

@@ -6,6 +6,7 @@ import tempfile
 from threading import Thread
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from rune_web_guide import ROOT, QuietHandler, build_site
 
 EXAMPLES = [('games', 'games/space_invaders', 'space_invaders'), ('vectworms', 'games/vectworms', 'vectworms'), ('studio', 'rune-web/studio', 'rune_studio')]
@@ -22,7 +23,7 @@ def check(base):
             page.goto(base + '/' + locale)
             for route, folder, entry in EXAMPLES:
                 page.set_viewport_size({'width': 1440, 'height': 1000})
-                page.locator(f'.sidebar [data-on-click="navigate(\'{route}\')"]').click()
+                menu_link(page, f'[data-on-click="navigate(\'{route}\')"]').click()
                 if route != 'studio':
                     page.locator('[data-example-tab=source]').click()
                 files = page.locator('.source-file')
@@ -60,7 +61,7 @@ def check(base):
                 assert '%i18n.' not in page.locator('.example-source').inner_text()
             # Exercise the same component through the nested Example Lab route.
             page.set_viewport_size({'width': 1440, 'height': 1000})
-            page.locator('.sidebar [data-on-click="openExample(\'app\')"]').click()
+            menu_link(page, '[data-on-click="openExample(\'app\')"]').click()
             for example, folder, entry in [('counter', 'beginner', 'counter'), ('tic', 'games/tic_tac_toe', 'tic_tac_toe'), ('invaders', 'games/space_invaders', 'space_invaders'), ('worms', 'games/vectworms', 'vectworms')]:
                 page.locator(f'.example-picker [data-on-click="openExample(\'{example}\')"]').click()
                 expect(page.locator('.source-file summary').first).to_have_text(f'{entry}.rune')

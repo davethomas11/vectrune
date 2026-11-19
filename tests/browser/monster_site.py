@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from pathlib import Path
 import re
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from teaching_ux import preview
 
 parser=argparse.ArgumentParser();source=parser.add_mutually_exclusive_group(required=True);source.add_argument('--site-dir');source.add_argument('--url');args=parser.parse_args()
@@ -12,7 +13,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(base+'/')
     expect(page.get_by_role('link',name='Play Monster City',exact=True)).to_be_visible()
-    page.locator('.sidebar a[href$="monster-city"]').click()
+    menu_link(page, 'a[href$="monster-city"]').click()
     expect(page.locator('main')).to_have_attribute('data-route','monster-city')
     expect(page.locator('main h1')).to_contain_text('Monster City')
     page.wait_for_load_state('networkidle')
