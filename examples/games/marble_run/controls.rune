@@ -1,0 +1,37 @@
+@Controls/marble_run
+keys:
+    KeyW -> forward
+    ArrowUp -> forward
+    KeyS -> back
+    ArrowDown -> back
+    KeyA -> left
+    ArrowLeft -> left
+    KeyD -> right
+    ArrowRight -> right
+    Space -> jump
+    KeyX -> charge
+    ShiftLeft -> charge
+    ShiftRight -> charge
+commands:
+    Enter -> host.advance
+    KeyP -> host.pause
+    KeyM -> host.mute
+    KeyF -> host.fullscreen
+    KeyT -> return_to_title
+    KeyL -> open_selector
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.15}
+    Axis1 -> {"input":"move_y","invert":true,"deadzone":0.15}
+    Button0 -> jump
+    Button2 -> charge
+    Button7 -> {"input":"charge","threshold":0.3}
+    Button8 -> {"command":"host.advance"}
+    Button9 -> {"command":"host.pause"}
+touch = {
+    "buttons": [
+        {"id":"jump","input":"jump","label":"JUMP","offset":[12,16],"size":64},
+        {"id":"charge","input":"charge","label":"CHARGE","offset":[88,16],"size":64}
+    ],
+    "joystick": {"size":84,"x":"move_x","y":"move_y"},
+    "visible": "touch_ready"
+}

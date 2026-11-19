@@ -273,8 +273,11 @@ pub fn compile_assets(doc: &RuneDocument) -> Result<Json> {
         let unit = section.kv.get("unit").map(json_value).unwrap_or(json!(0.125));
         let unit = unit.as_f64().context(format!("{label}: unit must be numeric"))?;
         ensure!(unit.is_finite() && unit > 0.0 && unit <= 1.0, "{label}: unit must be greater than 0 and at most 1 world tile");
-        let blocks = section.series.get("blocks").context(format!("{label}: missing blocks:"))?;
-        ensure!(!blocks.is_empty() && blocks.len() <= 256, "{label}: needs 1-256 blocks");
+        let empty = Vec::new();
+        let blocks = section.series.get("blocks").unwrap_or(&empty);
+        let shapes = section.series.get("shapes").unwrap_or(&empty);
+        ensure!(!(blocks.is_empty() && shapes.is_empty()) && blocks.len() + shapes.len() <= 256,
+            "{label}: needs 1-256 blocks or shapes");
         let mut compiled = Vec::new();
         for block in blocks {
             let block = json_value(block);
@@ -296,6 +299,42 @@ pub fn compile_assets(doc: &RuneDocument) -> Result<Json> {
             let rgb = palette.get(&symbol.as_bytes()[0]).context(format!("{label}: unknown palette symbol {symbol}"))?
                 .context(format!("{label}: blocks cannot be transparent"))?;
             compiled.push(json!({"from":from,"size":size,"color":pack_color(rgb)}));
+        }
+        for shape in shapes {
+            let shape = json_value(shape);
+            let object = shape.as_object().context(format!("{label}: each shape must be an object"))?;
+            let kind = shape["type"].as_str().context(format!("{label}: shape needs a type"))?;
+            let keys: &[&str] = match kind {
+                "sphere" => &["type", "center", "radius", "color"],
+                "cylinder" => &["type", "center", "radius", "height", "color"],
+                "ramp" => &["type", "from", "size", "color"],
+                _ => anyhow::bail!("{label}: unknown shape type {kind}"),
+            };
+            ensure!(object.keys().all(|k| keys.contains(&k.as_str())), "{label}: unknown {kind} property");
+            let number = |v: &Json, positive: bool| -> Result<f64> {
+                let n = v.as_f64().context(format!("{label}: shape dimensions must be numeric"))?;
+                ensure!(n.is_finite() && n.abs() <= 32.0 && (!positive || n > 0.0),
+                    "{label}: shape dimensions must be finite, within 32 units, and sizes positive");
+                Ok(n * unit)
+            };
+            let triple = |key: &str, positive: bool| -> Result<Vec<f64>> {
+                let list = shape[key].as_array().context(format!("{label}: {kind} {key} needs three numbers"))?;
+                ensure!(list.len() == 3, "{label}: {kind} {key} needs three numbers");
+                list.iter().map(|v| number(v, positive)).collect()
+            };
+            let (from, size) = if kind == "ramp" {
+                (triple("from", false)?, triple("size", true)?)
+            } else {
+                let center = triple("center", false)?;
+                let radius = number(&shape["radius"], true)?;
+                let height = if kind == "sphere" { radius * 2.0 } else { number(&shape["height"], true)? };
+                (vec![center[0]-radius, center[1]-radius, center[2]-height/2.0], vec![radius*2.0, radius*2.0, height])
+            };
+            let symbol = shape["color"].as_str().context(format!("{label}: shape color needs a palette symbol"))?;
+            ensure!(symbol.len() == 1 && symbol.is_ascii(), "{label}: shape color needs one ASCII palette symbol");
+            let rgb = palette.get(&symbol.as_bytes()[0]).context(format!("{label}: unknown palette symbol {symbol}"))?
+                .context(format!("{label}: shapes cannot be transparent"))?;
+            compiled.push(json!({"from":from, "size":size, "color":pack_color(rgb), "shape":kind}));
         }
         models.insert(section.path[1..].join("/"), json!({"blocks":compiled}));
     }
@@ -380,7 +419,7 @@ pub fn parse_map_full(
         ensure!(!map_section.kv.contains_key("ceiling"), "Map sky and ceiling are mutually exclusive");
         let value = json_value(value);
         let obj = value.as_object().context("Map sky must be an object")?;
-        ensure!(obj.keys().all(|k| ["seed", "zenith", "horizon", "cloud", "speed"].contains(&k.as_str())), "Unknown Map sky property");
+        ensure!(obj.keys().all(|k| ["seed", "zenith", "horizon", "cloud", "speed", "below"].contains(&k.as_str())), "Unknown Map sky property");
         let seed = obj.get("seed").and_then(Json::as_f64).context("Map sky needs an unsigned integer seed")?;
         ensure!(seed.is_finite() && seed.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(&seed), "Map sky seed must be an unsigned 32-bit integer");
         let seed = seed as u32;
@@ -390,7 +429,12 @@ pub fn parse_map_full(
         };
         let speed = obj.get("speed").map(|v| v.as_f64().context("Sky speed must be numeric")).transpose()?.unwrap_or(0.25);
         ensure!(speed.is_finite() && (0.0..=10.0).contains(&speed), "Sky speed must be between 0 and 10");
-        json!({"seed":seed,"zenith":sky_color("zenith")?,"horizon":sky_color("horizon")?,"cloud":sky_color("cloud")?,"speed":speed})
+        let mut sky = json!({"seed":seed,"zenith":sky_color("zenith")?,"horizon":sky_color("horizon")?,"cloud":sky_color("cloud")?,"speed":speed});
+        if obj.contains_key("below") {
+            ensure!(!map_section.kv.contains_key("floor"), "Map sky below replaces the floor");
+            sky["below"] = json!(sky_color("below")?);
+        }
+        sky
     } else { Json::Null };
 
     let spawn = parse_spawn(map_section, &grid_flat, map_width, map_height)?;

@@ -1,0 +1,538 @@
+#!RUNE
+import "marble_run.rune"
+
+@Test/Marble/FreshRun
+type = logic
+page = marble_run
+run:
+    invoke initialize
+    assert state.status == "title"
+    invoke start
+    assert state.lives == 3
+    assert state.player.z == 10
+    assert state.enemies.length == 3
+    assert state.charge_orbs.length == 12
+
+@Test/Marble/SlopeAndMomentum
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke on_slope
+run:
+    invoke tick {}
+    assert state.player.x > 10
+    assert state.player.z < 9.5
+    assert state.grounded == true
+    invoke tick {}
+    assert state.player.vx > 0.01
+
+@Test/Marble/FullChargeAutoFires
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke beside_sentry
+run:
+    invoke charge_for 23
+    assert state.player.x == 15.6
+    assert state.player.z == 8.1
+    assert state.charge == 23
+    assert state.charging == true
+    assert state.charges_left == 2
+    assert state.kills == 0
+    invoke tick {"charge":true}
+    assert state.player.x == 15.6
+    assert state.charging == false
+    assert state.charge == 0
+    assert state.charge_cooldown == 90
+    assert state.kills == 1
+    assert state.fragments.length == 10
+    assert state.blast_ticks == 18
+    invoke age 35
+    assert state.fragments.length == 0
+    assert state.enemies[0].visible == false
+
+@Test/Marble/EarlyReleaseCannotFireOrCancel
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke beside_sentry
+run:
+    invoke charge_for 5
+    invoke blast
+    assert state.kills == 0
+    assert state.fragments.length == 0
+    invoke age 18
+    assert state.charging == true
+    assert state.charge == 23
+    assert state.player.x == 15.6
+    assert state.kills == 0
+    invoke tick {}
+    assert state.kills == 1
+    assert state.charging == false
+
+@Test/Marble/HeldButtonDoesNotQueueAndCooldownBlocksSpam
+type = logic
+page = marble_run
+setup:
+    invoke start
+run:
+    invoke charge_for 24
+    invoke tick {}
+    invoke tick {"charge":true}
+    assert state.charges_left == 2
+    assert state.charging == false
+    invoke charge_for 100
+    assert state.charge_cooldown == 0
+    assert state.charges_left == 2
+    assert state.charging == false
+    invoke tick {}
+    invoke tick {"charge":true}
+    assert state.charges_left == 1
+    assert state.charging == true
+
+@Test/Marble/ThreeCellLimitAndNoDeathRefill
+type = logic
+page = marble_run
+setup:
+    invoke start
+run:
+    invoke burn_cell
+    invoke burn_cell
+    invoke burn_cell
+    assert state.charges_left == 0
+    invoke tick {"charge":true}
+    assert state.charging == false
+    invoke lose_life
+    assert state.charges_left == 0
+    invoke tick {}
+    invoke tick {"charge":true}
+    assert state.charging == false
+
+@Test/Marble/BlastNeedsClosePositioning
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke outside_blast
+run:
+    invoke charge_for 24
+    assert state.kills == 0
+    assert state.charges_left == 2
+    assert state.blast_ticks == 18
+
+@Test/Marble/JumpNeedsNewPressAndCannotAnchorMidair
+type = logic
+page = marble_run
+setup:
+    invoke start
+run:
+    invoke tick {"jump":true}
+    assert state.player.z > 10
+    invoke tick {"charge":true,"jump":true}
+    assert state.charging == false
+    assert state.charges_left == 3
+    invoke held_jump 35
+    assert state.grounded == true
+    invoke tick {"jump":true}
+    assert state.player.z == 10
+    invoke tick {}
+    invoke tick {"jump":true}
+    assert state.player.z > 10
+
+@Test/Marble/GapAndCheckpoint
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke at_gap
+run:
+    invoke tick {"jump":true}
+    invoke age 27
+    assert state.player.x > 35
+    assert state.lives == 3
+    assert state.checkpoint_active == true
+    invoke fall
+    invoke tick {}
+    assert state.lives == 2
+    assert state.death_phase == "shatter"
+    invoke age 36
+    assert state.player.x == 36.5
+    assert state.player.z == 6
+
+@Test/Marble/UnjumpedGapIsAFall
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke at_gap
+run:
+    invoke age 81
+    assert state.lives == 2
+    assert state.player.x == 3
+    assert state.checkpoint_active == false
+
+@Test/Marble/EnemyContactAndRespawnGrace
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke touching_sentry
+run:
+    invoke tick {}
+    assert state.lives == 2
+    assert state.death_phase == "shatter"
+    invoke age 36
+    assert state.player.x == 3
+    invoke touching_sentry
+    invoke tick {}
+    assert state.lives == 2
+
+@Test/Marble/CoursesUnlockInOrderAndGetHarder
+type = logic
+page = marble_run
+setup:
+    invoke start
+run:
+    invoke advance
+    assert state.level == 1
+    invoke clear_level
+    assert state.status == "level_complete"
+    assert state.completed_levels == 1
+    assert state.unlocked_level == 2
+    invoke advance
+    assert state.level == 2
+    assert state.unlocked_level == 2
+    assert state.gaps.length == 2
+    assert state.enemies.length == 4
+    assert state.surfaces[0].half < 3
+    assert state.charges_left == 3
+    assert state.checkpoint_active == false
+    assert state.player.z == 14
+    invoke clear_level
+    invoke advance
+    assert state.level == 3
+    assert state.unlocked_level == 3
+    assert state.gaps.length == 3
+    assert state.enemies.length == 5
+    assert state.corner_count == 3
+    assert state.pipe_count == 2
+    assert state.player.z == 18
+    invoke clear_level
+    assert state.status == "level_complete"
+    invoke advance
+    assert state.level == 4
+    assert state.corner_count == 4
+    invoke clear_level
+    invoke advance
+    assert state.level == 5
+    assert state.gaps.length == 4
+    invoke clear_level
+    invoke advance
+    assert state.level == 6
+    assert state.gaps.length == 5
+    assert state.enemies.length == 7
+    invoke clear_level
+    assert state.status == "won"
+    assert state.completed_levels == 6
+    assert state.progress.unlocked == 6
+    assert state.progress.cleared == 6
+    invoke advance
+    assert state.level == 1
+    assert state.completed_levels == 0
+
+@Test/Marble/GameOverRetriesCurrentCourse
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke clear_level
+    invoke advance
+run:
+    invoke lose_and_wait
+    invoke lose_and_wait
+    invoke lose_and_wait
+    assert state.status == "gameover"
+    assert state.level == 2
+    invoke advance
+    assert state.level == 2
+    assert state.status == "playing"
+    assert state.lives == 3
+    assert state.charges_left == 3
+    assert state.kills == 0
+    assert state.fragments.length == 0
+    assert state.enemies[0].visible == true
+
+@Test/Marble/RotatedRampPullsDownhill
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke on_rotated_descent
+run:
+    invoke tick {}
+    assert state.player.vy > 0
+    assert state.player.z < 5.25
+    assert state.grounded == true
+
+@Test/Marble/HalfPipeBanksReturnToCenter
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke on_left_bank
+run:
+    invoke tick {}
+    assert state.player.vx > 0
+    assert state.player.z < 6.75
+    assert state.grounded == true
+    invoke on_right_bank
+    invoke tick {}
+    assert state.player.vx < 0
+    assert state.player.z < 6.75
+
+@Test/Marble/BankLipPreservesUpwardMomentum
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke at_bank_lip
+run:
+    invoke tick {}
+    assert state.player.x < 44
+    assert state.player.vz > 0
+    assert state.grounded == false
+    assert state.lives == 3
+
+@Test/Marble/SpikesIgnoreBlastAndRespectRespawnGrace
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke beside_spikes
+run:
+    invoke charge_for 24
+    assert state.spikes.length == 3
+    invoke touching_spike
+    invoke tick {}
+    assert state.lives == 2
+    assert state.death_phase == "shatter"
+    invoke age 36
+    assert state.player.x == 3
+    invoke touching_spike
+    invoke tick {}
+    assert state.lives == 2
+
+@Test/Marble/JumpClearsSpikeTips
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke approaching_spike
+run:
+    invoke tick {"jump":true}
+    invoke age 17
+    assert state.player.x > 29
+    assert state.lives == 3
+
+@Test/Marble/HalfPipeEntranceHasSolidBanks
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke at_bank_entrance
+run:
+    invoke tick {}
+    assert state.player.y < 4
+    assert state.player.z == 6
+    assert state.grounded == true
+
+@Test/Marble/GoalNeedsActualPosition
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke wrong_goal_position
+run:
+    invoke tick {}
+    assert state.status == "playing"
+
+@Test/Marble/TitleAndLockedCoursePreview
+type = logic
+page = marble_run
+run:
+    invoke initialize
+    assert state.status == "title"
+    assert state.title_props.length == 11
+    assert state.title_actions_hidden == false
+    invoke open_selector
+    assert state.status == "level_select"
+    assert state.course_cards.length == 6
+    invoke select_course 6
+    assert state.selection_locked == true
+    invoke advance
+    assert state.status == "level_select"
+    assert state.level == 1
+    invoke select_course 1
+    invoke advance
+    assert state.status == "playing"
+
+@Test/Marble/SelectorReplaysSavedUnlocks
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke clear_level
+    invoke advance
+    invoke clear_level
+run:
+    invoke return_to_title
+    assert state.progress.unlocked == 3
+    invoke open_selector
+    invoke select_course 3
+    assert state.selection_locked == false
+    invoke advance
+    assert state.level == 3
+    assert state.lives == 3
+    assert state.charges_left == 3
+
+@Test/Marble/SelectorHasInputEdges
+type = logic
+page = marble_run
+setup:
+    invoke initialize
+    invoke open_selector
+run:
+    invoke tick {"right":true}
+    assert state.selected_level == 2
+    invoke tick {"right":true}
+    assert state.selected_level == 2
+    invoke tick {}
+    invoke tick {"left":true}
+    assert state.selected_level == 1
+    invoke tick {"jump":true}
+    assert state.status == "playing"
+
+@Test/Marble/DeathShattersThenReforms
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke charge_for 1
+run:
+    invoke lose_life
+    assert state.death_timer == 36
+    assert state.fragments.length == 24
+    invoke death_input 12
+    assert state.player.x == 3
+    assert state.avatar.dissolve > 0.5
+    assert state.fragments.length > 0
+    assert state.charges_left == 2
+    assert state.status == "playing"
+    invoke age 24
+    assert state.death_phase == "none"
+    assert state.avatar.dissolve == 0
+    assert state.avatar.scale == 1
+    assert state.player.x == 3
+    assert state.fragments.length == 0
+    assert state.charges_left == 2
+
+@Test/Marble/FinalDeathFinishesBeforeGameOver
+type = logic
+page = marble_run
+setup:
+    invoke start
+    invoke lose_and_wait
+    invoke lose_and_wait
+run:
+    invoke lose_life
+    assert state.lives == 0
+    assert state.status == "playing"
+    invoke age 35
+    assert state.status == "playing"
+    invoke tick {}
+    assert state.status == "gameover"
+    assert state.death_timer == 0
+    assert state.launch_hidden == false
+
+@Logic/marble_run
+action on_slope:
+    player = {"x": 10, "y": 0, "z": 9.5, "vx": 0, "vy": 0, "vz": 0}
+
+action beside_sentry:
+    player = {"x": 15.6, "y": 0, "z": 8.1, "vx": 0.2, "vy": 0, "vz": 0}
+
+action charge_for(count):
+    for i in range(0,count):
+        call tick {"charge":true}
+
+action age(count):
+    for i in range(0,count):
+        call tick {}
+
+action held_jump(count):
+    for i in range(0,count):
+        call tick {"jump":true}
+
+action at_gap:
+    player = {"x": 31, "y": 0, "z": 6, "vx": 0.34, "vy": 0, "vz": 0}
+    enemies[1].visible = false
+    enemies[1].dissolve = 1
+
+action fall:
+    player.z = 0
+
+action at_goal:
+    player = {"x": goal.x, "y": goal.y, "z": goal.z, "vx": 0, "vy": 0, "vz": 0}
+
+action touching_sentry:
+    player = {"x": 18, "y": 0, "z": 7.5, "vx": 0, "vy": 0, "vz": 0}
+
+action clear_level:
+    call at_goal
+    call tick {}
+
+action burn_cell:
+    call charge_for 24
+    call age 90
+
+action outside_blast:
+    player = {"x": 14.5, "y": 0, "z": 8.375, "vx": 0, "vy": 0, "vz": 0}
+
+action on_rotated_descent:
+    call route_point 70
+    player = {"x": route_x, "y": route_y, "z": route_z, "vx": 0, "vy": 0, "vz": 0}
+
+action on_left_bank:
+    player = {"x": 45, "y": 12, "z": 6.75, "vx": 0, "vy": 0, "vz": 0}
+
+action on_right_bank:
+    player = {"x": 49, "y": 12, "z": 6.75, "vx": 0, "vy": 0, "vz": 0}
+
+action beside_spikes:
+    player = {"x": 25.5, "y": 1.8, "z": 6, "vx": 0, "vy": 0, "vz": 0}
+
+action touching_spike:
+    player = {"x": spikes[0].x, "y": spikes[0].y, "z": spikes[0].z, "vx": 0, "vy": 0, "vz": 0}
+
+action approaching_spike:
+    player = {"x": 25.4, "y": 1.8, "z": 6, "vx": 0.34, "vy": 0, "vz": 0}
+
+action at_bank_entrance:
+    player = {"x": 45, "y": 3.95, "z": 6, "vx": 0, "vy": 0.3, "vz": 0}
+
+action wrong_goal_position:
+    player = {"x": goal.x, "y": 0, "z": 6, "vx": 0, "vy": 0, "vz": 0}
+
+action at_bank_lip:
+    player = {"x": 44.02, "y": 12, "z": 7.972, "vx": -0.32, "vy": 0, "vz": 0}
+
+action lose_and_wait:
+    call lose_life
+    call age 36
+
+action death_input(count):
+    for i in range(0,count):
+        call tick {"right":true,"jump":true,"charge":true}

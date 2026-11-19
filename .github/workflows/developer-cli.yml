@@ -13,8 +13,14 @@ on:
       - 'examples/games/vect_breach/**'
       - 'examples/games/rune_crypt/**'
       - 'examples/games/starfall/**'
+      - 'examples/games/marble_run/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/build_man_pages.py'
+      - 'teaching_website/release.json'
+      - 'teaching_website/release_metadata.py'
+      - 'teaching_website/parts/release.generated.rune'
+      - 'docs/releases/**'
+      - 'tests/browser/test_teaching_build.py'
       - 'teaching_website/generate_man_pages.vect'
       - 'teaching_website/reference_inventory.py'
       - 'knowledge/reference/library.json'
@@ -33,8 +39,14 @@ on:
       - 'examples/games/vect_breach/**'
       - 'examples/games/rune_crypt/**'
       - 'examples/games/starfall/**'
+      - 'examples/games/marble_run/**'
       - 'teaching_website/build_developer_starter.py'
       - 'teaching_website/build_man_pages.py'
+      - 'teaching_website/release.json'
+      - 'teaching_website/release_metadata.py'
+      - 'teaching_website/parts/release.generated.rune'
+      - 'docs/releases/**'
+      - 'tests/browser/test_teaching_build.py'
       - 'teaching_website/generate_man_pages.vect'
       - 'teaching_website/reference_inventory.py'
       - 'knowledge/reference/library.json'
@@ -82,7 +94,7 @@ jobs:
           npm test
           npm run build
       - name: Test CLI and runtime integration
-        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test game_controls --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package --test pixel3d_app --test integration_vect_cli --test integration_vectrune_cli --test music_arrangement --test skybound_app --test skybound_2_app --test starfall_app --test object_syntax_parity --test storage_core --test storage_network --test multi_app_cli
+        run: cargo test --test developer_cli --test logic_testing --test pixel_app --test game_controls --test integration_app --test arithmetic_assignment_test --test parser_object_assignment_regression --test imports_test --test conditional_in_series_test --test lambda_package --test pixel3d_app --test pixel3d_shapes --test marble_run_app --test integration_vect_cli --test integration_vectrune_cli --test music_arrangement --test skybound_app --test skybound_2_app --test starfall_app --test object_syntax_parity --test storage_core --test storage_network --test multi_app_cli
       - name: Test CLI support and deployment packaging
         run: 'cargo test --lib cli::'
       - name: Test pixel audio and persistence without an output device
@@ -105,6 +117,9 @@ jobs:
         run: python tests/browser/test_developer_starter.py
       - name: Verify offline manual generation
         run: python tests/browser/test_man_pages.py
+      - name: Verify website release metadata
+        if: runner.os == 'Linux'
+        run: python3 tests/browser/test_teaching_build.py
       - name: Lint Monster City and run pixel game tests
         run: |
           target/debug/vectrune check examples/games/monster_city --deny-warnings
@@ -131,3 +146,9 @@ jobs:
 
       - name: Test Starfall Protocol
         run: target/debug/vectrune test examples/games/starfall --type logic --timeout 60 --json
+
+      - name: Test Marble Run
+        run: |
+          target/debug/vectrune fmt examples/games/marble_run --check
+          target/debug/vectrune check examples/games/marble_run --deny-warnings
+          target/debug/vectrune test examples/games/marble_run --type logic --json

@@ -5,6 +5,7 @@ import { Pixel3DEngine, type Pixel3DConfig, type Input3D } from './engine';
 import { unlockAudio } from '../audio';
 import { mountTouch, STYLE } from './touch';
 import { createFullscreen, isStandaloneApp } from './fullscreen';
+import { createWebGlRenderer } from './webgl';
 import type { RuneWebConfig } from '../types';
 
 let settings: Pixel3DConfig;
@@ -66,7 +67,10 @@ export function mount(
   game.resizeViewport(width, height);
   canvas.width = width;
   canvas.height = height;
-  const context = canvas.getContext('2d', { alpha: false });
+  const gpuToggle = document.querySelector<HTMLInputElement>('input[data-pixel-gpu]');
+  const fps = document.querySelector<HTMLElement>('[data-pixel-fps]');
+  const frameRate = document.querySelector<HTMLSelectElement>('select[data-pixel-frame-rate]');
+  const context = canvas.getContext('2d', { alpha: gpuToggle !== null });
   if (!context) throw new Error('This game needs Canvas 2D support');
   context.imageSmoothingEnabled = false;
 
@@ -92,6 +96,13 @@ export function mount(
   let frameId = 0;
   let ready = false;
   let menuOpen = false;
+  let fpsStart = 0, drawnFrames = 0;
+  let gpu: ReturnType<typeof createWebGlRenderer>;
+  let gpuCanvas: HTMLCanvasElement | undefined;
+  let paletteColors: number[] | undefined;
+  const tickMs = 1000 / tickRate;
+  let nextRenderAt: number | undefined;
+  let overlayKey: string | undefined;
 
   const abort = new AbortController();
   const listen = (
@@ -161,22 +172,155 @@ export function mount(
     });
   }
   const surface = canvas.parentElement || canvas;
+  const resolution = document.querySelector<HTMLSelectElement>('select[data-pixel-resolution]');
+  const palette = document.querySelector<HTMLSelectElement>('select[data-pixel-palette]');
   const fullscreen = createFullscreen(surface, () => { fitViewport(); clear(true); touch?.update(); mapped?.update(); });
   function fitViewport() {
     let renderWidth = width, renderHeight = height;
+    if (resolution) {
+      const size = /^(\d+)x(\d+)$/.exec(resolution.value);
+      if (!size) throw new Error('Pixel-3d resolution options must use WIDTHxHEIGHT');
+      renderWidth = Number(size[1]);
+      renderHeight = Number(size[2]);
+      if (renderWidth * height !== renderHeight * width) {
+        throw new Error('Pixel-3d resolution options must match the app aspect ratio');
+      }
+    }
+    const hudScale = renderWidth / width;
     if (canvas.dataset.pixelFit === 'viewport' && fullscreen.expanded()) {
       const rect = surface.getBoundingClientRect();
       const aspect = Math.max(.25, Math.min(4, rect.width / Math.max(1, rect.height)));
-      // Keep the authored pixel budget as the field of view grows to fit a phone.
-      renderWidth = Math.round(Math.sqrt(width * height * aspect) / 2) * 2;
+      // Keep the selected pixel budget as the field of view grows to fit a phone.
+      renderWidth = Math.round(Math.sqrt(renderWidth * renderHeight * aspect) / 2) * 2;
       renderHeight = Math.round(renderWidth / aspect);
     }
-    if (canvas.width === renderWidth && canvas.height === renderHeight) return;
-    game.resizeViewport(renderWidth, renderHeight);
-    canvas.width = renderWidth;
-    canvas.height = renderHeight;
-    context!.imageSmoothingEnabled = false;
-    image = new ImageData(new Uint8ClampedArray(game.raycaster.buffer.buffer as ArrayBuffer), renderWidth, renderHeight);
+    game.resizeViewport(renderWidth, renderHeight, hudScale);
+    if (canvas.width !== renderWidth || canvas.height !== renderHeight) {
+      canvas.width = renderWidth;
+      canvas.height = renderHeight;
+      context!.imageSmoothingEnabled = false;
+      image = new ImageData(new Uint8ClampedArray(game.raycaster.buffer.buffer as ArrayBuffer), renderWidth, renderHeight);
+      overlayKey = undefined;
+    }
+    if (gpuCanvas) {
+      if (gpuCanvas.width !== renderWidth) gpuCanvas.width = renderWidth;
+      if (gpuCanvas.height !== renderHeight) gpuCanvas.height = renderHeight;
+      gpuCanvas.style.left = `${canvas.offsetLeft}px`;
+      gpuCanvas.style.top = `${canvas.offsetTop}px`;
+    }
+  }
+  function applyPalette() {
+    const value = palette?.value;
+    paletteColors = value && value !== 'original' ? value.split(',').map(hex => {
+      if (!/^[\da-f]{6}$/i.test(hex)) throw new Error('Pixel-3d palette options need six-digit hex colors');
+      return Number.parseInt(hex, 16);
+    }) : undefined;
+    const paletteOutline = palette?.selectedOptions[0]?.dataset.pixelOutline === 'true';
+    game.raycaster.setPalette(paletteColors, paletteOutline);
+    gpu?.setPalette(paletteColors);
+    overlayKey = undefined;
+    game.invalidateFrame();
+  }
+  if (resolution) {
+    listen(resolution, 'change', fitViewport);
+    fitViewport();
+  }
+  if (palette) {
+    listen(palette, 'change', applyPalette);
+    applyPalette();
+  }
+  function resetFps() {
+    drawnFrames = 0;
+    fpsStart = 0;
+    nextRenderAt = undefined;
+    if (fps) fps.textContent = `${gpuToggle?.checked ? 'GPU' : 'CPU'} · — FPS`;
+  }
+  if (frameRate) {
+    listen(frameRate, 'change', () => {
+      resetFps();
+      game.invalidateFrame();
+    });
+  }
+  function cpuFallback(reason: string) {
+    if (gpuToggle) {
+      gpuToggle.checked = false;
+      gpuToggle.disabled = true;
+      gpuToggle.title = reason;
+    }
+    gpu?.dispose();
+    gpu = undefined;
+    gpuCanvas?.remove();
+    gpuCanvas = undefined;
+    resetFps();
+    game.invalidateFrame();
+  }
+  function toggleGpu() {
+    if (gpuToggle?.checked && !gpu) {
+      const layer = document.createElement('canvas');
+      layer.dataset.pixelGpuSurface = 'true';
+      layer.setAttribute('aria-hidden', 'true');
+      layer.style.cssText = 'position:absolute;pointer-events:none';
+      layer.hidden = true;
+      try {
+        gpu = createWebGlRenderer(layer, game.config.models);
+      } catch (error) {
+        console.warn('Pixel 3D WebGL setup failed', error);
+      }
+      if (!gpu) {
+        cpuFallback('Accelerated WebGL 2 is unavailable. Using the CPU renderer.');
+        return;
+      }
+      gpuCanvas = layer;
+      gpu.setPalette(paletteColors);
+      surface.prepend(layer);
+      fitViewport();
+      listen(layer, 'webglcontextlost', () => cpuFallback('WebGL context lost. Using the CPU renderer.'));
+    }
+    if (gpuCanvas && !gpuToggle?.checked) gpuCanvas.hidden = true;
+    overlayKey = undefined;
+    gpu?.resetInterpolation();
+    resetFps();
+    game.invalidateFrame();
+  }
+  if (gpuToggle) {
+    listen(gpuToggle, 'change', toggleGpu);
+    toggleGpu();
+  }
+
+  function drawFrame(extraFrames: boolean): boolean {
+    if (gpu && gpuCanvas && gpuToggle?.checked) {
+      try {
+        const changed = game.presentIfChanged(() => {
+          const stats = game.renderState();
+          const { map, world } = game.raycaster.config;
+          if (!map.sky || map.sky.below === undefined || world || map.grid.some(Boolean) ||
+              stats.weapon || stats.things.some(thing => thing.sprite || thing.title)) {
+            throw new Error('This scene needs the CPU renderer');
+          }
+          gpu!.capture(stats, map.sky, game.raycaster.fov, extraFrames);
+          const hud = game.frameHud(stats);
+          const key = JSON.stringify(hud);
+          if (overlayKey !== key) {
+            game.raycaster.renderOverlay(hud);
+            context!.putImageData(image, 0, 0);
+            overlayKey = key;
+          }
+        });
+        if (!changed && !extraFrames) return false;
+        gpu.draw(extraFrames ? accumulator / tickMs : 1, game.raycaster.outlineRadius);
+        gpuCanvas.hidden = false;
+        return true;
+      } catch (error) {
+        console.warn('Pixel 3D WebGL frame failed', error);
+        cpuFallback('This scene could not use WebGL. Using the CPU renderer.');
+      }
+    }
+    if (!game.frameIfChanged()) {
+      if (!extraFrames) return false;
+      game.frame();
+    }
+    context!.putImageData(image, 0, 0);
+    return true;
   }
   const viewportResize = new ResizeObserver(fitViewport);
   viewportResize.observe(surface);
@@ -324,10 +468,10 @@ export function mount(
 
   const frame = (now: number) => {
     if (stopped) return;
-    if (previous) accumulator += Math.min(now - previous, (1000 / tickRate) * 5);
+    if (previous) accumulator += Math.min(now - previous, tickMs * 5);
     previous = now;
 
-    while (accumulator >= 1000 / tickRate) {
+    while (accumulator >= tickMs) {
       const controls: Input3D = {
         ...input,
         fire: Boolean(input.fire || mouseFire || touchFire || pendingFire),
@@ -344,14 +488,33 @@ export function mount(
 
       game.step(mapped ? mapped.sample(1 / tickRate) : controls);
       if (game.app.state.status !== 'playing') clear(true);
-      accumulator -= 1000 / tickRate;
+      accumulator -= tickMs;
     }
 
     touch?.update();
     mapped?.update();
-    if (game.frameIfChanged()) {
-      context.putImageData(image, 0, 0);
+    const capped = frameRate?.value === '60';
+    const extraFrames = !game.paused && (capped || frameRate?.value === 'display');
+    // Keep the render deadline independent of simulation and tolerate a rounded refresh timestamp.
+    const renderDue = !capped || nextRenderAt === undefined || now + .5 >= nextRenderAt;
+    if (capped && renderDue) {
+      const deadline = nextRenderAt ?? now;
+      const interval = 1000 / 60;
+      nextRenderAt = deadline + Math.max(1, Math.floor((now - deadline) / interval) + 1) * interval;
+    }
+    if (renderDue && drawFrame(extraFrames)) {
+      drawnFrames++;
       if (!ready) { ready = true; markGameReady(); }
+    }
+    if (fps) {
+      if (!fpsStart) fpsStart = now;
+      const seconds = (now - fpsStart) / 1000;
+      if (seconds >= .5) {
+        const renderer = gpuCanvas && !gpuCanvas.hidden ? 'GPU' : 'CPU';
+        fps.textContent = `${renderer} · ${game.paused ? 'Paused' : `${Math.round(drawnFrames / seconds)} FPS`}`;
+        fpsStart = now;
+        drawnFrames = 0;
+      }
     }
 
     const state = game.app.state as Record<string, any>;
@@ -432,6 +595,8 @@ export function mount(
     game.paused = true;
     cancelAnimationFrame(frameId);
     fullscreen.dispose();
+    gpu?.dispose();
+    gpuCanvas?.remove();
     viewportResize.disconnect();
     touch?.dispose();
     mapped?.dispose();

@@ -6,7 +6,7 @@ view:
         a href="{i18n.Common.base_path}developer_testing" data-route-link=true aria-current="{activePage == 'developer_testing' ? 'page' : 'false'}" click="navigate('developer_testing')" "%i18n.Developer.testing%"
         a href="{i18n.Common.base_path}developer_quality" data-route-link=true aria-current="{activePage == 'developer_quality' ? 'page' : 'false'}" click="navigate('developer_quality')" "%i18n.Developer.quality%"
         a href="{i18n.Common.base_path}developer_ci" data-route-link=true aria-current="{activePage == 'developer_ci' ? 'page' : 'false'}" click="navigate('developer_ci')" "%i18n.Developer.ci%"
-        a href="{i18n.Common.base_path}developer_release" data-route-link=true aria-current="{activePage == 'developer_release' ? 'page' : 'false'}" click="navigate('developer_release')" "%i18n.Developer.release%"
+        a href="{i18n.Common.base_path}developer_release" data-route-link=true aria-current="{activePage == 'developer_release' ? 'page' : 'false'}" click="navigate('developer_release')" "{i18n.Developer.release_heading} {release_info.version}"
 
 @Component/DeveloperYaml
 props: [code]
@@ -131,13 +131,13 @@ view:
     div .page .developer-page:
         section .card:
             p .eyebrow "%i18n.Developer.badge%"
-            h1 "%i18n.Developer.release%"
-            p .lead "%i18n.Developer.release_intro%"
+            h1 "{i18n.Developer.release_heading} {release_info.version}"
+            p .lead "{i18n.Common.locale == 'es' ? release_info.locales.es.intro : i18n.Common.locale == 'fr' ? release_info.locales.fr.intro : release_info.locales.en_us.intro}"
         DeveloperNav
         section .card:
-            p "%i18n.Developer.release_text%"
+            p "{i18n.Common.locale == 'es' ? release_info.locales.es.summary : i18n.Common.locale == 'fr' ? release_info.locales.fr.summary : release_info.locales.en_us.summary}"
         section .card:
             h2 "%i18n.Developer.upgrade_title%"
             p "%i18n.Developer.upgrade_text%"
             CommandBlock code="{i18n.Developer.cmd_11}"
-            a .content-link href=https://github.com/davethomas11/vectrune/releases/tag/v0.3.6 target=_blank rel="noopener noreferrer" "%i18n.Developer.releases%"
+            a .content-link href="https://github.com/davethomas11/vectrune/releases/tag/v{release_info.version}" target=_blank rel="noopener noreferrer" "%i18n.Developer.releases%"

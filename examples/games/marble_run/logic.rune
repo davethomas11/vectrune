@@ -1,0 +1,557 @@
+@Logic/marble_run
+state:
+    status = "title"
+    player = {"x": 3, "y": 0, "z": 10, "vx": 0, "vy": 0, "vz": 0}
+    camera = {"x": -7, "y": -6, "height": 19, "angle": 31, "pitch": -36}
+    avatar = {"x": 3, "y": 0, "z": 10.55, "angle": 0, "model": "marble/ball"}
+    shadow = {"x": 3, "y": 0, "z": 10.02, "model": "marble/shadow"}
+    stripe = {"x": 3, "y": 0, "z": 11.07, "model": "marble/stripe"}
+    goal = {"x": 64, "y": 0, "z": 2, "model": "marble/beacon"}
+    track = []
+    surfaces = []
+    scenery = []
+    enemies = []
+    charge_orbs = []
+    fragments = []
+    checkpoint = {"x": 3, "y": 0, "z": 10}
+    checkpoint_active = false
+    lives = 3
+    level = 1
+    level_count = 6
+    unlocked_level = 1
+    completed_levels = 0
+    level_name = "01 / COPPER CASCADE"
+    start_height = 10
+    checkpoint_x = 36.5
+    checkpoint_z = 6
+    max_speed = 0.34
+    gaps = []
+    spikes = []
+    route = []
+    waypoints = []
+    build_x = 0
+    build_y = 0
+    build_z = 10
+    build_s = 0
+    build_angle = 0
+    route_x = 0
+    route_y = 0
+    route_z = 0
+    route_angle = 0
+    route_pipe = false
+    course_s = 0
+    course_angle = 0
+    course_length = 0
+    corner_count = 0
+    pipe_count = 0
+    checkpoint_y = 0
+    checkpoint_world_x = 36.5
+    slope_y = 0
+    charges_left = 3
+    charge_duration = 24
+    charge_cooldown = 0
+    charge_held = false
+    blast_radius = 3
+    kills = 0
+    ticks = 0
+    roll = 0
+    grounded = true
+    jump_held = false
+    charging = false
+    charge = 0
+    blast_ticks = 0
+    blast_power = 0
+    invulnerable = 0
+    floor_z = -100
+    slope_x = 0
+    announcement = ""
+    launch_label = "Next course"
+    touch_ready = false
+    title_hidden = false
+    ui = {"meters": [], "objective": "", "detail": "", "prompt": "", "notice": "", "panel": null}
+    pause_ui = {
+        "meters": [],
+        "objective": "",
+        "detail": "",
+        "prompt": "",
+        "notice": "",
+        "panel": null
+    }
+
+action initialize:
+    progress.cleared = clamp(floor(progress.cleared),0,level_count)
+    progress.unlocked = clamp(max(floor(progress.unlocked),progress.cleared+1),1,level_count)
+    level = 1
+    unlocked_level = progress.unlocked
+    completed_levels = 0
+    selected_level = 1
+    call setup_course
+    call setup_title
+    status = "title"
+    announcement = "Marble Run"
+    music.play "marble_title"
+    call update_menu
+    call update_view
+
+action setup_course:
+    call define_course
+    player = {"x": 3, "y": 0, "z": start_height, "vx": 0, "vy": 0, "vz": 0}
+    checkpoint = {"x": 3, "y": 0, "z": start_height}
+    camera = {"x": -7, "y": -6, "height": start_height + 9, "angle": 31, "pitch": -36}
+    lives = 3
+    kills = 0
+    course_s = 3
+    course_segment = -1
+    course_angle = 0
+    ticks = 0
+    roll = 0
+    grounded = true
+    jump_held = false
+    charging = false
+    charge = 0
+    charge_cooldown = 0
+    charge_held = false
+    charges_left = 3
+    blast_ticks = 0
+    death_timer = 0
+    death_age = 0
+    death_phase = "none"
+    flash = 0
+    invulnerable = 0
+    checkpoint_active = false
+    fragments = []
+    charge_orbs = []
+    for i in range(0,12):
+        charge_orbs.push({"x": 3, "y": 0, "z": 10.55, "model": "marble/mote", "visible": false})
+
+action start:
+    level = 1
+    unlocked_level = progress.unlocked
+    completed_levels = 0
+    call begin_level
+
+action begin_level:
+    call setup_course
+    status = "playing"
+    announcement = level_name
+    sound.play "marble_start"
+    music.play "marble_theme"
+    selected_level = level
+    call update_menu
+    call update_view
+
+action advance:
+    stop when status == "playing"
+    if status == "level_select":
+        call play_selected
+        stop when true
+    if status == "level_complete":
+        level += 1
+        unlocked_level = max(unlocked_level,level)
+        call begin_level
+        stop when true
+    if status == "gameover":
+        call begin_level
+        stop when true
+    call start
+
+action return_to_title:
+    music.stop
+    call initialize
+
+# Collision uses the same continuous planes as the visual wedges, not stair steps.
+# The radius supports edge overhang; the ball falls once its center leaves a deck.
+action surface_at(x,y):
+    floor_z = -100
+    slope_x = 0
+    slope_y = 0
+    for deck in surfaces:
+        if x >= deck.min_x && x <= deck.max_x && y >= deck.min_y && y <= deck.max_y:
+            along = (x-deck.x)*deck.dx+(y-deck.y)*deck.dy
+            across = -(x-deck.x)*deck.dy+(y-deck.y)*deck.dx
+            if along >= -0.000001 && along <= deck.length+0.000001 && abs(across) <= deck.half+0.000001:
+                candidate = deck.z+along*deck.slope
+                bank_slope = 0
+                if deck.pipe && abs(across) > 0.5:
+                    bank = min(3,floor((abs(across)-0.5)/0.625))
+                    rise = (2*bank+1)*0.125/0.625
+                    candidate += bank*bank*0.125+(abs(across)-0.5-bank*0.625)*rise
+                    bank_slope = (across > 0 ? 1 : -1)*rise
+                if candidate > floor_z:
+                    floor_z = candidate
+                    slope_x = deck.dx*deck.slope-deck.dy*bank_slope
+                    slope_y = deck.dy*deck.slope+deck.dx*bank_slope
+
+# Progress follows the closest path leg, including while the marble jumps a gap.
+action locate_route:
+    nearest = 1000000
+    from_index = course_segment-1
+    to_index = course_segment+2
+    best_index = course_segment
+    for segment, index in route:
+        if course_segment < 0 || (index >= from_index && index <= to_index):
+            along = clamp((player.x-segment.x)*segment.dx+(player.y-segment.y)*segment.dy,0,segment.length)
+            px = segment.x+segment.dx*along
+            py = segment.y+segment.dy*along
+            distance = (player.x-px)*(player.x-px)+(player.y-py)*(player.y-py)
+            if distance < nearest:
+                nearest = distance
+                best_index = index
+                course_s = segment.s+along
+                course_angle = segment.angle
+    course_segment = best_index
+
+action tick(input):
+    if status == "title" || status == "level_select":
+        call tick_menu input
+        call update_view
+        stop when true
+    stop when status != "playing"
+    if death_timer > 0:
+        call tick_death input
+        stop when true
+    ticks += 1
+    invulnerable = max(0, invulnerable-1)
+    blast_ticks = max(0, blast_ticks-1)
+    charge_cooldown = max(0,charge_cooldown-1)
+    call surface_at player.x, player.y
+    grounded = floor_z > -50 && abs(player.z-floor_z) < 0.04 && player.vz <= 0
+    forward = clamp((input.forward ? 1 : 0)-(input.back ? 1 : 0)+(input.move_y ? input.move_y : 0),-1,1)
+    side = clamp((input.right ? 1 : 0)-(input.left ? 1 : 0)+(input.move_x ? input.move_x : 0),-1,1)
+    magnitude = max(1,sqrt(forward*forward+side*side))
+    # Camera-relative steering with diagonal normalization and downhill gravity.
+    ax = (cos(31)*forward-sin(31)*side)/magnitude
+    ay = (sin(31)*forward+cos(31)*side)/magnitude
+    # A press commits one cell to the entire wind-up. Early release cannot fire,
+    # and holding the button after discharge cannot queue another charge.
+    if !!input.charge && !charge_held && grounded && !charging && charges_left > 0 && charge_cooldown == 0:
+        charging = true
+        charge = 0
+        charges_left -= 1
+        sound.play "marble_charge"
+    charge_held = !!input.charge
+    anchored = charging
+    if anchored:
+        charge = min(charge_duration,charge+1)
+        player.vx = 0
+        player.vy = 0
+        player.vz = 0
+        if charge == charge_duration:
+            call blast
+            charging = false
+            charge = 0
+            charge_cooldown = 90
+    if !anchored:
+        player.vx = clamp(player.vx*0.975+ax*0.017-(grounded ? slope_x*0.035 : 0),-max_speed,max_speed)
+        player.vy = clamp(player.vy*0.975+ay*0.017-(grounded ? slope_y*0.035 : 0),-max_speed,max_speed)
+        velocity = sqrt(player.vx*player.vx+player.vy*player.vy)
+        if velocity > max_speed:
+            player.vx = player.vx/velocity*max_speed
+            player.vy = player.vy/velocity*max_speed
+        if !!input.jump && !jump_held && grounded:
+            player.vz = 0.34
+            grounded = false
+            sound.play "marble_jump"
+        old_z = player.z
+        # Substeps keep edge crossings and landings stable at maximum speed.
+        for substep in range(0,4):
+            launch_vz = slope_x*player.vx+slope_y*player.vy
+            previous_x = player.x
+            previous_y = player.y
+            player.x += player.vx/4
+            player.y += player.vy/4
+            call surface_at player.x, player.y
+            if grounded && floor_z > player.z+0.18:
+                player.x = previous_x
+                player.y = previous_y
+                player.vx = 0
+                player.vy = 0
+                call surface_at player.x, player.y
+            follows_surface = grounded && floor_z > -50 && abs(player.z-floor_z) < 0.15
+            if follows_surface:
+                player.z = floor_z
+            if !follows_surface:
+                if grounded && floor_z < -50:
+                    player.vz = clamp(launch_vz,-0.4,0.5)
+                grounded = false
+                player.z += player.vz/4
+                if player.vz <= 0 && floor_z > -50 && player.z <= floor_z && old_z >= floor_z-0.15:
+                    player.z = floor_z
+                    player.vz = 0
+                    grounded = true
+            old_z = player.z
+        if !grounded:
+            player.vz = max(-0.7,player.vz-0.028)
+        roll += sqrt(player.vx*player.vx+player.vy*player.vy)*100
+    jump_held = !!input.jump
+    for post in scenery:
+        dx = player.x-post.x
+        dy = player.y-post.y
+        distance = sqrt(dx*dx+dy*dy)
+        if distance < 0.95 && abs(player.z-post.z) < 1.2:
+            if distance < 0.01:
+                dx = -1
+                distance = 1
+            player.x = post.x+dx/distance*0.96
+            player.y = post.y+dy/distance*0.96
+            player.vx = dx/distance*0.16
+            player.vy = dy/distance*0.16
+    for enemy in enemies:
+        if enemy.dissolve > 0:
+            enemy.dissolve = min(1,enemy.dissolve+0.08)
+            enemy.visible = enemy.dissolve < 1
+        if enemy.dissolve == 0:
+            offset = sin(ticks*enemy.speed+enemy.phase)*enemy.span
+            enemy.x = enemy.home_x+enemy.axis_x*offset
+            enemy.y = enemy.home_y+enemy.axis_y*offset
+            enemy.z = enemy.home_z
+            if enemy.pipe && abs(offset) > 0.5:
+                bank = min(3,floor((abs(offset)-0.5)/0.625))
+                enemy.z += bank*bank*0.125+(abs(offset)-0.5-bank*0.625)*(2*bank+1)*0.2
+            if abs(player.x-enemy.x) < 0.9 && abs(player.y-enemy.y) < 0.9 && abs(player.z-enemy.z) < 1 && invulnerable == 0:
+                call lose_life
+    for spike in spikes:
+        dx = player.x-spike.x
+        dy = player.y-spike.y
+        if dx*dx+dy*dy < 0.85*0.85 && player.z < spike.z+0.7 && player.z+1.1 > spike.z && invulnerable == 0:
+            call lose_life
+    if death_timer > 0:
+        call update_view
+        stop when true
+    call locate_route
+    if course_s > checkpoint_x-0.5 && course_s < checkpoint_x+5 && grounded && !checkpoint_active:
+        checkpoint = {"x": checkpoint_world_x, "y": checkpoint_y, "z": checkpoint_z}
+        checkpoint_active = true
+        announcement = "Checkpoint saved"
+        sound.play "marble_checkpoint"
+    if player.z < 0.8:
+        call lose_life
+    if death_timer > 0:
+        call update_view
+        stop when true
+    goal_distance = (player.x-goal.x)*(player.x-goal.x)+(player.y-goal.y)*(player.y-goal.y)
+    if status == "playing" && goal_distance < 1.5*1.5 && abs(player.z-goal.z) < 0.1 && grounded:
+        completed_levels = level
+        progress.cleared = max(progress.cleared,level)
+        progress.unlocked = max(progress.unlocked,min(level_count,level+1))
+        unlocked_level = progress.unlocked
+        call update_menu
+        status = level < level_count ? "level_complete" : "won"
+        announcement = status == "won" ? "All courses cleared" : "Course clear"
+        music.stop
+        sound.play "marble_win"
+    call update_effects
+    call update_view
+
+action blast:
+    stop when !charging || charge < charge_duration
+    blast_power = 1
+    blast_ticks = 18
+    radius = blast_radius
+    sound.play "marble_blast"
+    for enemy in enemies:
+        distance = sqrt((enemy.x-player.x)*(enemy.x-player.x)+(enemy.y-player.y)*(enemy.y-player.y)+(enemy.z-player.z)*(enemy.z-player.z))
+        if enemy.visible && enemy.dissolve == 0 && distance < radius:
+            enemy.dissolve = 0.01
+            kills += 1
+            for i in range(0,10):
+                angle = i*36
+                fragments.push(
+                    {
+                        "x": enemy.x,
+                        "y": enemy.y,
+                        "z": enemy.z + 0.7,
+                        "vx": cos(angle) * 0.16,
+                        "vy": sin(angle) * 0.16,
+                        "vz": 0.12 + i * 0.012,
+                        "life": 28,
+                        "life_max": 28,
+                        "model": "marble/shard",
+                        "scale": 0.8 + i * 0.035,
+                        "visible": true
+                    }
+                )
+
+action lose_life:
+    stop when status != "playing" || death_timer > 0
+    lives = max(0,lives-1)
+    death_timer = 36
+    death_age = 0
+    death_phase = "shatter"
+    flash = 0.18
+    invulnerable = 75
+    player.vx = 0
+    player.vy = 0
+    player.vz = 0
+    charge = 0
+    charging = false
+    blast_ticks = 0
+    announcement = lives > 0 ? "Marble lost. Lives left: "+lives : "Game over"
+    sound.play "marble_shatter"
+    for i in range(0,24):
+        angle = i*137.5
+        fragments.push(
+            {
+                "x": player.x,
+                "y": player.y,
+                "z": max(0.8, player.z) + 0.55,
+                "vx": cos(angle) * (0.08 + i * 0.004),
+                "vy": sin(angle) * (0.08 + i * 0.004),
+                "vz": 0.12 + (i % 5) * 0.04,
+                "life": 36,
+                "life_max": 36,
+                "model": i % 2 == 0 ? "marble/death_shard": "marble/death_glint",
+                "scale": 0.6 + (i % 4) * 0.15,
+                "visible": true
+            }
+        )
+
+action tick_death(input):
+    ticks += 1
+    death_age += 1
+    death_timer -= 1
+    flash = max(0,0.18-death_age*0.012)
+    jump_held = !!input.jump
+    charge_held = !!input.charge
+    call update_effects
+    if death_timer == 0:
+        death_phase = "none"
+        fragments = []
+        if lives > 0:
+            player = {
+                "x": checkpoint.x,
+                "y": checkpoint.y,
+                "z": checkpoint.z,
+                "vx": 0,
+                "vy": 0,
+                "vz": 0
+            }
+            grounded = true
+            course_segment = -1
+            invulnerable = 75
+        if lives == 0:
+            status = "gameover"
+            music.stop
+    call update_view
+
+action update_effects:
+    for i in range(0,12):
+        orb = charge_orbs[i]
+        orb.visible = charging || blast_ticks > 0
+        angle = ticks*6+i*30
+        radius = charging ? 0.7+charge/charge_duration*0.6 : (18-blast_ticks)*blast_radius/18
+        orb.x = player.x+cos(angle)*radius
+        orb.y = player.y+sin(angle)*radius
+        orb.z = player.z+0.55+sin(angle*2)*0.15
+        orb.scale = charging ? 0.5+charge/charge_duration : max(0.1,blast_ticks/12)
+    # Bounded effect lifetime avoids accumulating invisible objects on long runs.
+    alive = []
+    for shard in fragments:
+        shard.x += shard.vx
+        shard.y += shard.vy
+        shard.z += shard.vz
+        shard.vz -= 0.025
+        shard.life -= 1
+        shard.dissolve = clamp(1-shard.life/shard.life_max,0,1)
+        if shard.life > 0:
+            alive.push(shard)
+    fragments = alive
+
+action update_view:
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z+0.55
+    avatar.angle = roll
+    avatar.visible = death_timer > 0 ? death_age < 24 : (lives > 0 && (invulnerable == 0 || ticks % 6 < 3))
+    avatar.dissolve = death_timer > 0 ? min(1,death_age/20) : 0
+    avatar.scale = death_timer > 0 ? 1+min(death_age,8)*0.025 : 1
+    stripe.x = player.x+sin(roll)*0.53
+    stripe.y = player.y
+    stripe.z = player.z+0.55+cos(roll)*0.53
+    call surface_at player.x, player.y
+    shadow.x = player.x
+    shadow.y = player.y
+    shadow.z = floor_z+0.02
+    shadow.visible = floor_z > 0
+    stripe.visible = avatar.visible
+    stripe.dissolve = avatar.dissolve
+    camera.x = player.x-10
+    camera.y = player.y-6
+    camera.height = max(8,player.z+9)
+    touch_ready = status == "playing" && death_timer == 0
+    title_hidden = status == "playing"
+    pause_hidden = status != "playing"
+    title_actions_hidden = status != "title"
+    selector_hidden = status != "level_select"
+    selector_unavailable = status == "playing"
+    launch_hidden = status == "title" || status == "level_select" || status == "playing"
+    launch_label = status == "level_complete" ? "Next course" : (status == "gameover" ? "Retry" : "Play again")
+    ui = {
+        "style": "floating",
+        "meters": [
+            {
+                "label": "",
+                "icon": "marble/hud/marble_full",
+                "emptyIcon": "marble/hud/marble_empty",
+                "display": "pips",
+                "value": lives,
+                "max": 3,
+                "color": 6873576
+            },
+            {
+                "label": "",
+                "showValue": false,
+                "icon": charging ? "marble/hud/bolt_charge": (charges_left == 0 ? "marble/hud/bolt_empty": (charge_cooldown > 0 ? "marble/hud/hourglass": "marble/hud/bolt_ready")),
+                "value": charging ? floor(charge * 100 / charge_duration): (charges_left == 0 ? 0: (charge_cooldown > 0 ? floor((90 - charge_cooldown) * 100 / 90): 100)),
+                "max": 100,
+                "color": charging ? 16242315: (charges_left == 0 ? 6783885: 6873576),
+                "display": "bar"
+            },
+            {
+                "label": "",
+                "icon": "marble/hud/cell_full",
+                "emptyIcon": "marble/hud/cell_empty",
+                "display": "pips",
+                "value": charges_left,
+                "max": 3,
+                "color": 16242315
+            }
+        ],
+        "objective": "",
+        "detail": "",
+        "prompt": "",
+        "notice": "",
+        "panel": null
+    }
+    if !launch_hidden:
+        ui.meters = []
+        ui.heading = announcement
+        ui.prompt = "ENTER / "+launch_label
+    pause_ui = {
+        "meters": [],
+        "objective": "ARROWS STEER / SPACE JUMP / X BLAST",
+        "detail": level_name,
+        "prompt": "P RESUME / T TITLE",
+        "notice": "",
+        "panel": null
+    }
+
+    if status == "level_select":
+        ui = {
+            "meters": [],
+            "objective": "",
+            "detail": "",
+            "prompt": "",
+            "notice": "",
+            "panel": {
+                "title": "COURSE " + selected_level + " / " + level_count,
+                "body": selection_description,
+                "choices": [
+                    "< PREVIOUS",
+                    selection_name + (selection_locked ? " / LOCKED": " / READY"),
+                    "NEXT >"
+                ],
+                "selected": 1,
+                "footer": "LEFT / RIGHT / ENTER"
+            }
+        }

@@ -1,0 +1,465 @@
+@Logic/marble_run
+action define_course:
+    track = []
+    surfaces = []
+    scenery = []
+    enemies = []
+    spikes = []
+    gaps = []
+    route = []
+    waypoints = []
+    corner_count = 0
+    pipe_count = 0
+    max_speed = min(0.38,0.34+(level-1)*0.02)
+    if level == 1:
+        level_name = "01 / COPPER CASCADE"
+        start_height = 10
+        checkpoint_x = 36.5
+        checkpoint_z = 6
+        call begin_path
+        call deck 3, "marble/deck"
+        call ramp 3, "marble/slope"
+        call deck 3, "marble/deck"
+        call gap 3, 3
+        call deck 4, "marble/landing"
+        call corner 90
+        call half_pipe
+        call ramp 4, "marble/wide_slope"
+        call deck 4, "marble/landing"
+        call finish_path
+        call sentry_at 18, 1.6, 2, 0
+        call sentry_at 41.5, 1.6, 2, 120
+        call sentry_at 74, 1.5, 2, 240
+        call spike_at 28, 1.8
+        call spike_at 86, -2.5
+        call spike_at 86, 2.5
+    if level == 2:
+        level_name = "02 / GLASS SPINE"
+        start_height = 14
+        checkpoint_x = 37
+        checkpoint_z = 10
+        call begin_path
+        call deck 2.25, "marble/deck_glass"
+        call ramp 2.25, "marble/slope_glass"
+        call deck 2.25, "marble/deck_glass"
+        call gap 3.5, 2.25
+        call deck 2.25, "marble/deck_glass"
+        call corner 90
+        call half_pipe
+        call deck 2.25, "marble/deck_glass"
+        call gap 4, 2.25
+        call deck 2.5, "marble/deck_finish"
+        call corner -90
+        call ramp 1.75, "marble/slope_spine"
+        call deck 2.5, "marble/deck_finish"
+        call finish_path
+        call sentry_at 18, 1.2, 3, 0
+        call sentry_at 60, 1.2, 3, 90
+        call sentry_at 108, 0.95, 3, 180
+        call sentry_at 113, 1.5, 3, 270
+        call spike_at 28, -1.5
+        call spike_at 61, -2.3
+        call spike_at 61, 2.3
+        call spike_at 102, -1
+        call spike_at 102, 0
+        call spike_at 102, 1
+    if level == 3:
+        level_name = "03 / TEMPEST RIDGE"
+        start_height = 18
+        checkpoint_x = 37.5
+        checkpoint_z = 14
+        call begin_path
+        call deck 2, "marble/deck_ridge"
+        call ramp 1.75, "marble/slope_spine"
+        call deck 1.75, "marble/deck_spine"
+        call gap 4, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner 90
+        call half_pipe
+        call deck 1.75, "marble/deck_spine"
+        call gap 4.25, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner 90
+        call ramp 1.75, "marble/slope_spine"
+        call deck 2, "marble/deck_ridge"
+        call corner -90
+        call half_pipe
+        call deck 1.5, "marble/deck_storm"
+        call gap 4.5, 1.5
+        call deck 2, "marble/deck_ridge"
+        call ramp 1.5, "marble/slope_storm"
+        call deck 2, "marble/deck_ridge"
+        call finish_path
+        call sentry_at 18, 1, 4, 0
+        call sentry_at 70, 1, 4, 72
+        call sentry_at 110, 0.8, 4, 144
+        call sentry_at 138, 1.2, 4, 216
+        call sentry_at 178.5, 1.1, 4, 288
+        call spike_at 28, 1.2
+        call spike_at 60, 0
+        call spike_at 104, -1
+        call spike_at 104, 0
+        call spike_at 104, 1
+        call spike_at 137, -2.3
+        call spike_at 137, 2.3
+        call spike_at 171, -0.9
+        call spike_at 171, 0
+        call spike_at 171, 0.9
+
+    if level == 4:
+        level_name = "04 / AURORA SWITCHBACK"
+        start_height = 18
+        checkpoint_x = 37
+        checkpoint_z = 14
+        call begin_path
+        call deck 2.25, "marble/deck_glass"
+        call ramp 2.25, "marble/slope_glass"
+        call deck 2.25, "marble/deck_glass"
+        call gap 3.5, 2.25
+        call deck 2.5, "marble/deck_finish"
+        call corner -90
+        call half_pipe
+        call deck 2.25, "marble/deck_glass"
+        call gap 3.5, 2.25
+        call deck 2.5, "marble/deck_finish"
+        call corner 90
+        call ramp 1.75, "marble/slope_spine"
+        call corner 90
+        call deck 2, "marble/deck_ridge"
+        call gap 4, 2
+        call deck 2.5, "marble/deck_finish"
+        call corner -90
+        call ramp 1.75, "marble/slope_spine"
+        call deck 2.5, "marble/deck_finish"
+        call finish_path
+        call sentry_at 18, 1.2, 3.5, 0
+        call sentry_at 60, 1.2, 3.5, 90
+        call sentry_at 106, 0.8, 3.5, 180
+        call sentry_at 154, 0.8, 3.5, 240
+        call sentry_at 166, 1.2, 3.5, 300
+        call spike_at 28, -1.5
+        call spike_at 61, -2.3
+        call spike_at 61, 2.3
+        call spike_at 103, -1
+        call spike_at 103, 0
+        call spike_at 103, 1
+        call spike_at 155, -1
+        call spike_at 155, 0
+        call spike_at 155, 1
+    if level == 5:
+        level_name = "05 / EMBER FOUNDRY"
+        start_height = 22
+        checkpoint_x = 37.5
+        checkpoint_z = 18
+        call begin_path
+        call deck 2, "marble/deck_ridge"
+        call ramp 1.75, "marble/slope_spine"
+        call deck 1.75, "marble/deck_spine"
+        call gap 4, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner 90
+        call half_pipe
+        call deck 1.75, "marble/deck_spine"
+        call gap 4, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner 90
+        call ramp 1.5, "marble/slope_storm"
+        call deck 2, "marble/deck_ridge"
+        call gap 4, 2
+        call deck 2, "marble/deck_ridge"
+        call corner -90
+        call half_pipe
+        call deck 1.75, "marble/deck_spine"
+        call gap 4, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner -90
+        call ramp 1.75, "marble/slope_spine"
+        call deck 2.5, "marble/deck_finish"
+        call finish_path
+        call sentry_at 18, 1, 4, 0
+        call sentry_at 60, 1.2, 4, 60
+        call sentry_at 90, 1.3, 4, 120
+        call sentry_at 108, 0.8, 4, 180
+        call sentry_at 150, 1.2, 4, 240
+        call sentry_at 196, 0.8, 4, 300
+        call spike_at 28, 1.2
+        call spike_at 104, -1
+        call spike_at 104, 0
+        call spike_at 104, 1
+        call spike_at 150, -2.3
+        call spike_at 150, 2.3
+        call spike_at 192, -1
+        call spike_at 192, 0
+        call spike_at 192, 1
+    if level == 6:
+        level_name = "06 / CELESTIAL CROWN"
+        start_height = 26
+        checkpoint_x = 37.5
+        checkpoint_z = 22
+        call begin_path
+        call deck 2, "marble/deck_ridge"
+        call ramp 1.75, "marble/slope_spine"
+        call deck 1.75, "marble/deck_spine"
+        call gap 4, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner 90
+        call half_pipe
+        call deck 1.75, "marble/deck_spine"
+        call gap 4, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner -90
+        call ramp 1.75, "marble/slope_spine"
+        call deck 2, "marble/deck_ridge"
+        call gap 4, 2
+        call deck 2, "marble/deck_ridge"
+        call corner -90
+        call half_pipe
+        call deck 1.75, "marble/deck_spine"
+        call gap 4, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner 90
+        call ramp 1.5, "marble/slope_storm"
+        call deck 1.75, "marble/deck_spine"
+        call gap 4, 1.75
+        call deck 2, "marble/deck_ridge"
+        call corner 90
+        call ramp 1.75, "marble/slope_spine"
+        call deck 2.5, "marble/deck_finish"
+        call finish_path
+        call sentry_at 18, 1, 4.5, 0
+        call sentry_at 60, 1.2, 4.5, 50
+        call sentry_at 90, 1.3, 4.5, 100
+        call sentry_at 108, 0.8, 4.5, 150
+        call sentry_at 150, 1.2, 4.5, 200
+        call sentry_at 194, 0.8, 4.5, 250
+        call sentry_at 240, 0.8, 4.5, 300
+        call spike_at 28, 1.2
+        call spike_at 60, 0
+        call spike_at 104, -1
+        call spike_at 104, 0
+        call spike_at 104, 1
+        call spike_at 150, -2.3
+        call spike_at 150, 2.3
+        call spike_at 192, -1
+        call spike_at 192, 0
+        call spike_at 192, 1
+        call spike_at 236, -1
+        call spike_at 236, 0
+        call spike_at 236, 1
+
+# The path cursor authors both rendered geometry and oriented collision planes.
+action begin_path:
+    build_x = 0
+    build_y = 0
+    build_z = start_height
+    build_angle = 0
+    build_s = 0
+
+action lane(length,slope,half,kind):
+    route.push(
+        {
+            "x": build_x,
+            "y": build_y,
+            "z": build_z,
+            "angle": build_angle,
+            "dx": cos(build_angle),
+            "dy": sin(build_angle),
+            "s": build_s,
+            "length": length,
+            "slope": slope,
+            "half": half,
+            "kind": kind
+        }
+    )
+    build_x += cos(build_angle)*length
+    build_y += sin(build_angle)*length
+    build_z += slope*length
+    build_s += length
+    waypoints.push({"x": build_x, "y": build_y, "s": build_s, "kind": kind})
+
+action plane(length,slope,half,pipe):
+    dx = cos(build_angle)
+    dy = sin(build_angle)
+    surfaces.push(
+        {
+            "x": build_x,
+            "y": build_y,
+            "z": build_z,
+            "angle": build_angle,
+            "dx": dx,
+            "dy": dy,
+            "length": length,
+            "slope": slope,
+            "half": half,
+            "pipe": pipe,
+            "min_x": min(build_x, build_x + dx * length) - abs(dy) * half - 0.000001,
+            "max_x": max(build_x, build_x + dx * length) + abs(dy) * half + 0.000001,
+            "min_y": min(build_y, build_y + dy * length) - abs(dx) * half - 0.000001,
+            "max_y": max(build_y, build_y + dy * length) + abs(dx) * half + 0.000001
+        }
+    )
+
+action deck(half,model):
+    call plane 8, 0, half, false
+    track.push({"x": build_x, "y": build_y, "z": build_z, "angle": build_angle, "model": model})
+    call lane 8, 0, half, "deck"
+
+action ramp(half,model):
+    call plane 16, -0.25, half, false
+    track.push(
+        {
+            "x": build_x + cos(build_angle) * 16,
+            "y": build_y + sin(build_angle) * 16,
+            "z": build_z - 4,
+            "angle": build_angle + 180,
+            "model": model
+        }
+    )
+    call lane 16, -0.25, half, "ramp"
+
+action gap(width,half):
+    gaps.push({"s": build_s, "landing": build_s + width})
+    scenery.push(
+        {
+            "x": build_x - cos(build_angle) + sin(build_angle) * (half - 0.1),
+            "y": build_y - sin(build_angle) - cos(build_angle) * (half - 0.1),
+            "z": build_z,
+            "model": "marble/pillar"
+        }
+    )
+    scenery.push(
+        {
+            "x": build_x - cos(build_angle) - sin(build_angle) * (half - 0.1),
+            "y": build_y - sin(build_angle) + cos(build_angle) * (half - 0.1),
+            "z": build_z,
+            "model": "marble/pillar"
+        }
+    )
+    call lane width, 0, half, "gap"
+
+action corner(turn):
+    # An eight-tile square gives room to slow down and cut the inside of the bend.
+    center_x = build_x+cos(build_angle)*4
+    center_y = build_y+sin(build_angle)*4
+    surfaces.push(
+        {
+            "x": center_x - 4,
+            "y": center_y,
+            "z": build_z,
+            "angle": 0,
+            "dx": 1,
+            "dy": 0,
+            "min_x": center_x - 4.000001,
+            "max_x": center_x + 4.000001,
+            "min_y": center_y - 4.000001,
+            "max_y": center_y + 4.000001,
+            "length": 8,
+            "slope": 0,
+            "half": 4,
+            "pipe": false
+        }
+    )
+    track.push({"x": center_x, "y": center_y, "z": build_z, "model": "marble/corner"})
+    call lane 4, 0, 4, "turn"
+    build_angle += turn
+    track.push(
+        {
+            "x": build_x,
+            "y": build_y,
+            "z": build_z + 0.03,
+            "angle": build_angle,
+            "model": "marble/arrow"
+        }
+    )
+    call lane 4, 0, 4, "turn"
+    corner_count += 1
+
+action half_pipe:
+    call plane 16, 0, 3, true
+    for slab in range(0,2):
+        track.push(
+            {
+                "x": build_x + cos(build_angle) * slab * 8,
+                "y": build_y + sin(build_angle) * slab * 8,
+                "z": build_z,
+                "angle": build_angle,
+                "model": "marble/deck"
+            }
+        )
+    # Four matching planes on each bank approximate a rounded U with a flat trough.
+    for strip in range(0,4):
+        for band in range(0,4):
+            for sign in [-1,1]:
+                across = sign*(0.5+band*0.625)
+                along = strip*4+2
+                track.push(
+                    {
+                        "x": build_x + cos(build_angle) * along - sin(build_angle) * across,
+                        "y": build_y + sin(build_angle) * along + cos(build_angle) * across,
+                        "z": build_z + band * band * 0.125,
+                        "angle": build_angle + sign * 90,
+                        "model": "marble/pipe_bank_" + band
+                    }
+                )
+    call lane 16, 0, 3, "pipe"
+    pipe_count += 1
+
+action route_point(distance):
+    for segment in route:
+        if distance >= segment.s && distance <= segment.s+segment.length:
+            along = distance-segment.s
+            route_x = segment.x+segment.dx*along
+            route_y = segment.y+segment.dy*along
+            route_z = segment.z+segment.slope*along
+            route_angle = segment.angle
+            route_pipe = segment.kind == "pipe"
+
+action finish_path:
+    course_length = build_s
+    call route_point build_s-3
+    goal.x = route_x
+    goal.y = route_y
+    goal.z = route_z
+    call route_point checkpoint_x
+    checkpoint_y = route_y
+    checkpoint_world_x = route_x
+
+action sentry_at(distance,span,speed,phase):
+    call route_point distance
+    enemies.push(
+        {
+            "x": route_x,
+            "y": route_y,
+            "z": route_z,
+            "home_x": route_x,
+            "home_y": route_y,
+            "home_z": route_z,
+            "axis_x": -sin(route_angle),
+            "axis_y": cos(route_angle),
+            "pipe": route_pipe,
+            "angle": route_angle,
+            "s": distance,
+            "span": span,
+            "speed": speed,
+            "phase": phase,
+            "model": "marble/sentry",
+            "visible": true,
+            "dissolve": 0
+        }
+    )
+
+action spike_at(distance,across):
+    call route_point distance
+    hazard_x = route_x-sin(route_angle)*across
+    hazard_y = route_y+cos(route_angle)*across
+    call surface_at hazard_x, hazard_y
+    spikes.push(
+        {
+            "x": hazard_x,
+            "y": hazard_y,
+            "z": floor_z,
+            "s": distance,
+            "across": across,
+            "model": "marble/spikes"
+        }
+    )

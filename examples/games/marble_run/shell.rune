@@ -1,0 +1,274 @@
+@Page/marble_cabinet
+title = Marble Run - Six Descents
+logic = marble_cabinet
+style = marble_cabinet
+view:
+    main .cabinet:
+        section .game-card:
+            div .toolbar:
+                div .display-options:
+                    label:
+                        span "Resolution"
+                        select data-pixel-resolution=true:
+                            option value="384x240" "384 × 240"
+                            option value="576x360" "576 × 360"
+                            option value="768x480" "768 × 480"
+                    label:
+                        span "Palette"
+                        select data-pixel-palette=true:
+                            option value=original "Original"
+                            option value="09120c,39533a,78944f,b9ce77,e7edaf" data-pixel-outline=true "Pocket"
+                            option value="26160d,4e2616,784421,a86931,d39745,f0c87a,fff1ba" "Amber"
+                            option value="151325,2f314f,535675,7b8aad,adcbd3,eff5cf" "Moonlight"
+                    label:
+                        span "Frame rate"
+                        select data-pixel-frame-rate=true:
+                            option value=simulation "30 FPS"
+                            option value=60 "60 FPS"
+                            option value=display "Uncapped (display)"
+                    label:
+                        input type=checkbox data-pixel-gpu=true title="Experimental WebGL 2 renderer"
+                        span "GPU"
+                    span .fps data-pixel-fps=true title="Frames drawn per second" "CPU · — FPS"
+                div .buttons:
+                    button data-pixel-pause=true data-pixel-hidden=pause_hidden "Pause / P"
+                    button data-pixel-mute=true "Sound"
+                    button data-pixel-fullscreen=true "Fullscreen"
+            div .game-surface:
+                canvas data-rune-pixel-3d=true tabindex=0 autofocus=true aria-label="Marble Run. Arrows steer, Space jumps, X charges a blast."
+                div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
+                    h2 "Paused"
+                    button data-pixel-pause=true "Resume / P"
+                    button data-pixel-restart=true "Return to title / T"
+                div .title-actions data-pixel-hidden=title_actions_hidden:
+                    button .primary data-pixel-start=true "Start"
+                    button data-pixel-action="open_selector" "Levels"
+                section .level-picker data-pixel-hidden=selector_hidden hidden=true aria-label="Level selector":
+                    div .picker-heading:
+                        h2 "Choose a course"
+                        button data-pixel-action="return_to_title" "Title / T"
+                    div .course-grid:
+                        button .course-card data-pixel-action="select_course" data-pixel-args="[1]" data-pixel-text=course_cards.0.label data-pixel-selected=course_cards.0.selected "Course 1"
+                        button .course-card data-pixel-action="select_course" data-pixel-args="[2]" data-pixel-text=course_cards.1.label data-pixel-selected=course_cards.1.selected "Course 2"
+                        button .course-card data-pixel-action="select_course" data-pixel-args="[3]" data-pixel-text=course_cards.2.label data-pixel-selected=course_cards.2.selected "Course 3"
+                        button .course-card data-pixel-action="select_course" data-pixel-args="[4]" data-pixel-text=course_cards.3.label data-pixel-selected=course_cards.3.selected "Course 4"
+                        button .course-card data-pixel-action="select_course" data-pixel-args="[5]" data-pixel-text=course_cards.4.label data-pixel-selected=course_cards.4.selected "Course 5"
+                        button .course-card data-pixel-action="select_course" data-pixel-args="[6]" data-pixel-text=course_cards.5.label data-pixel-selected=course_cards.5.selected "Course 6"
+                    p .course-description data-pixel-text=selection_description "Pick a course."
+                    div .picker-footer:
+                        button data-pixel-action="select_course" data-pixel-args="[1]" "First course"
+                        button .primary data-pixel-action="play_selected" data-pixel-disabled=selection_locked "Play selected / Enter"
+            div .launch data-pixel-hidden=launch_hidden:
+                button .primary data-pixel-action="advance" data-pixel-text=launch_label "Next course"
+            p .announcement data-pixel-text=announcement role=status aria-live=polite "Marble Run"
+        details .guide:
+            summary "How to play"
+            p "Steer with the arrows or WASD. Follow the gold arrows through corners and ride the blue banks. Gold posts mark gaps. Jump over gaps and spikes with Space."
+            p "Press X or Shift to spend a cell. The marble stops and blasts automatically when the bolt gauge fills. An hourglass shows the cooldown. You get three cells per course."
+            p "On a controller, use the left stick to steer, the bottom face button to jump, and the left face button or right trigger to blast. On touchscreens, use the on-screen stick and buttons."
+
+@Logic/marble_cabinet
+state:
+    label = "Marble Run"
+
+@Style/marble_cabinet
+rules:
+    :root:
+        color-scheme = light
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #eef0e4
+        color = #173b46
+        font-family = system-ui, sans-serif
+    .cabinet:
+        max-width = 1120px
+        margin = auto
+        padding = clamp(16px, 3vw, 40px)
+    .game-card:
+        overflow = hidden
+        background = #173b46
+        border = 4px solid #173b46
+        border-radius = 16px
+        box-shadow = 0 12px 0 #d8ddcb
+    .toolbar:
+        display = flex
+        align-items = center
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 8px
+        padding = 8px
+    .display-options:
+        display = flex
+        flex-wrap = wrap
+        gap = 8px 14px
+    .display-options label:
+        display = flex
+        align-items = center
+        gap = 6px
+        color = #fff4d6
+        font-size = 12px
+        font-weight = 700
+    .display-options select:
+        min-height = 44px
+        padding = 6px
+        border = 1px solid #718195
+        border-radius = 6px
+        background = #344e6b
+        color = #fff4d6
+        font = inherit
+    .display-options input:
+        margin = 0
+        width = 17px
+        height = 17px
+        accent-color = #ffe18a
+    .fps:
+        align-self = center
+        color = #fff4d6
+        font-size = 12px
+        font-weight = 700
+        font-variant-numeric = tabular-nums
+        min-width = 90px
+    .buttons:
+        display = flex
+        flex-wrap = wrap
+        gap = 6px
+    button:
+        cursor = pointer
+        border = 1px solid #718195
+        border-radius = 6px
+        background = #344e6b
+        color = #fff4d6
+        padding = 10px 12px
+        min-height = 44px
+        font = inherit
+        font-size = 12px
+        font-weight = 700
+    button:hover:
+        background = #45617f
+    button:focus-visible, select:focus-visible:
+        outline = 3px solid #ffe18a
+        outline-offset = 3px
+    .game-surface:
+        position = relative
+        background = #427cc4
+    canvas:
+        position = relative
+        display = block
+        width = 100%
+        height = auto
+        aspect-ratio = 8 / 5
+        image-rendering = pixelated
+        touch-action = none
+        outline-offset = -3px
+    .launch:
+        display = flex
+        align-items = center
+        justify-content = center
+        flex-wrap = wrap
+        gap = 8px 20px
+        padding = 16px
+        color = #d2dedf
+        font-size = 13px
+    .primary:
+        background = #ffe18a
+        border-color = #ffe18a
+        color = #173b46
+        padding = 14px 24px
+        font-size = 14px
+    .primary:hover:
+        background = #fff4d6
+    .announcement:
+        position = absolute
+        width = 1px
+        height = 1px
+        overflow = hidden
+        clip-path = inset(50%)
+    .guide:
+        max-width = 640px
+        margin-top = 24px
+    .guide summary:
+        cursor = pointer
+        font-size = 14px
+        font-weight = 700
+    .guide p:
+        font-size = 13px
+        line-height = 1.7
+        color = #546b6f
+    .pause-menu:
+        position = absolute
+        inset = 0
+        display = flex
+        flex-direction = column
+        justify-content = center
+        align-items = center
+        gap = 12px
+        padding = 20px
+        background = #173b46ed
+        color = #fff4d6
+    .pause-menu h2:
+        margin = 0
+    [hidden]:
+        display = none !important
+
+    .title-actions:
+        position = absolute
+        bottom = clamp(36px, 5.4vw, 64px)
+        left = 16px
+        right = 16px
+        display = flex
+        flex-wrap = wrap
+        gap = 10px
+        justify-content = center
+    .level-picker:
+        position = absolute
+        inset = 0
+        overflow = auto
+        background = #102a40
+        color = #fff4d6
+        padding = clamp(12px, 3vw, 28px)
+        display = flex
+        flex-direction = column
+        justify-content = flex-start
+        gap = 14px
+    .picker-heading:
+        display = flex
+        justify-content = space-between
+        align-items = center
+        gap = 12px
+    .picker-heading h2:
+        margin = 0
+        font-size = clamp(18px, 3vw, 32px)
+        letter-spacing = 1px
+    .course-grid:
+        display = grid
+        grid-template-columns = repeat(3, minmax(0, 1fr))
+        gap = 10px
+    .course-card:
+        min-height = clamp(52px, 8vw, 88px)
+        text-align = left
+        line-height = 1.7
+        background = #214554
+        border-color = #537973
+        font-size = clamp(9px, 1.2vw, 13px)
+    .course-card[aria-pressed="true"]:
+        background = #315b63
+        border-color = #ffe18a
+        box-shadow = inset 0 0 0 2px #ffe18a
+    .course-description:
+        margin = 0
+        color = #b5d5ce
+        min-height = 22px
+        font-size = 13px
+    .picker-footer:
+        display = flex
+        justify-content = space-between
+        align-items = center
+        gap = 12px
+    button:disabled:
+        cursor = not-allowed
+        opacity = 0.45
+
+    .game-surface:has(.level-picker:not([hidden])):
+        min-height = 340px

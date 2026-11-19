@@ -78,3 +78,9 @@ view:
                 h3 "%i18n.Starfall.title%"
                 p "%i18n.Starfall.description%"
                 a .secondary-cta href="{i18n.Common.base_path}starfall" data-route-link=true click="navigate('starfall')" "%i18n.Starfall.play%"
+
+            article .example-card:
+                span .tag .tag-advanced "Pixel 3D"
+                h3 "%i18n.MarbleRun.title%"
+                p "%i18n.MarbleRun.description%"
+                a .secondary-cta href="{i18n.Common.base_path}marble-run" data-route-link=true click="navigate('marble-run')" "%i18n.MarbleRun.play%"

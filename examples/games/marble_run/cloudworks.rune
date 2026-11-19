@@ -1,0 +1,57 @@
+# Scenic models only. They sit below the playable decks and have no collision.
+@Logic/marble_run
+state:
+    factory = [
+        {"x": 18, "y": -16, "z": -24, "angle": 15, "model": "cloudworks/tower"},
+        {"x": 37, "y": 21, "z": -23, "angle": 30, "model": "cloudworks/mill"},
+        {"x": 52, "y": -14, "z": -30, "angle": 0, "model": "cloudworks/trestle"},
+        {"x": 75, "y": -14, "z": -29, "angle": 45, "model": "cloudworks/tower"},
+        {"x": 70, "y": 35, "z": -29, "angle": 55, "model": "cloudworks/trestle"},
+        {"x": 86, "y": 59, "z": -28, "angle": 0, "model": "cloudworks/mill"},
+        {"x": 108, "y": 18, "z": -31, "angle": 80, "model": "cloudworks/tower"},
+        {"x": 128, "y": 38, "z": -29, "angle": 90, "model": "cloudworks/trestle"},
+        {"x": 124, "y": -23, "z": -30, "angle": 40, "model": "cloudworks/mill"},
+        {"x": -14, "y": 26, "z": -22, "angle": 90, "model": "cloudworks/tower"}
+    ]
+
+@Palette/cloudworks
+colors = {"h":"#9d7884","m":"#ac8285","r":"#bd938e","s":"#886d81","w":"#d1a394"}
+
+@Model/cloudworks/tower
+palette = cloudworks
+unit = 1
+blocks:
+    {"from":[-5,-5,0],"size":[10,10,5],"color":"s"}
+    {"from":[-4,-4,5],"size":[8,8,7],"color":"h"}
+    {"from":[-5,-5,12],"size":[10,10,1],"color":"r"}
+    {"from":[-3,-3,13],"size":[6,6,3],"color":"m"}
+    {"from":[-2,-5,8],"size":[4,1,1],"color":"w"}
+shapes:
+    {"type":"cylinder","center":[1,1,16],"radius":1.5,"height":6,"color":"s"}
+    {"type":"cylinder","center":[1,1,19],"radius":1.8,"height":1,"color":"r"}
+
+@Model/cloudworks/mill
+palette = cloudworks
+unit = 1
+blocks:
+    {"from":[-8,-5,0],"size":[16,10,4],"color":"s"}
+    {"from":[-7,-4,4],"size":[14,8,4],"color":"h"}
+    {"from":[-8,-5,8],"size":[16,10,1],"color":"r"}
+    {"from":[-6,-5,6],"size":[2,1,1],"color":"w"}
+    {"from":[-2,-5,6],"size":[2,1,1],"color":"w"}
+    {"from":[2,-5,6],"size":[2,1,1],"color":"w"}
+    {"from":[-6,-1,12],"size":[12,2,1],"color":"m"}
+    {"from":[-1,-6,12],"size":[2,12,1],"color":"m"}
+shapes:
+    {"type":"cylinder","center":[0,0,11],"radius":5,"height":2,"color":"h"}
+    {"type":"cylinder","center":[0,0,13],"radius":2,"height":2,"color":"w"}
+
+@Model/cloudworks/trestle
+palette = cloudworks
+unit = 1
+blocks:
+    {"from":[-11,-2,0],"size":[2,4,11],"color":"s"}
+    {"from":[9,-2,0],"size":[2,4,11],"color":"s"}
+    {"from":[-12,-3,11],"size":[24,6,1],"color":"m"}
+    {"from":[-12,-3,12],"size":[24,1,1],"color":"h"}
+    {"from":[-12,2,12],"size":[24,1,1],"color":"h"}

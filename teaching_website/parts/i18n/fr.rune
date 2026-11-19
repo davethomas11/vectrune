@@ -1,4 +1,11 @@
 @I18N/fr
+MarbleRun {
+    title = "Marble Run"
+    description = "Dévalez six parcours au-dessus d’une usine flottante. Prenez les virages relevés, sautez par-dessus les trous et les pics, et utilisez vos cellules de charge contre les sentinelles."
+    play = "Jouer à Marble Run"
+    standalone = "Ouvrir le jeu dans un nouvel onglet"
+    display_options = "Essayez la palette Pocket ou activez le rendu GPU expérimental. Le jeu affiche la cadence réelle lorsque vous changez la résolution ou le nombre d’images par seconde."
+}
 Starfall {
     title = "Starfall Protocol"
     badge = "Metroidvania spatial Pixel 3D"
@@ -611,7 +618,8 @@ Developer {
     testing = "Tester en Rune"
     quality = "Qualité du code"
     ci = "Intégration continue"
-    release = "Nouveautés de 0.3.4"
+    release = "Nouveautés"
+    release_heading = "Nouveautés de"
     badge = "Outils de développement · 0.3.4"
     start_intro = "Passez de l’installation de la CLI à cinq tests Rune réussis. Le projet téléchargeable comprend une vraie API, des fixtures réutilisables et un workflow GitHub Actions."
     install_title = "1. Installer ou mettre à jour"
@@ -644,8 +652,6 @@ Developer {
     opaque_text = "Le formateur conserve les blocs view/CSS et le texte intégré. Il formate le fichier d’entrée et ses imports, valide tout avant écriture et refuse les changements qui modifient le document analysé. Vérifiez le diff."
     ci_intro = "Copiez ce workflow dans .github/workflows/rune.yml de votre projet. Il figure aussi dans le téléchargement. Cet exemple utilise Ubuntu x86-64 et fixe la CLI à 0.3.4."
     ci_text = "Le pipeline vérifie installation, formatage, diagnostics et tests. Les rapports JSON sont exploitables par les outils ; tout code non nul fait échouer le job. Aucun outil de cache n’est requis."
-    release_intro = "Jouez à Starfall Protocol : un metroidvania spatial créé avec le moteur Pixel 3D."
-    release_text = "0.3.6 ajoute Starfall Protocol : secteurs reliés, trois boss principaux et un gardien facultatif, capacités combinées, progression sauvegardée, musique originale, introduction et générique de retour. Le moteur gagne des mondes en blocs dispersés, le traitement des entités proches, un rendu voxel plus rapide, des noms de destinations, du texte cinématique défilant et une pause stable à la manette."
     upgrade_title = "Mettre à jour et vérifier"
     upgrade_text = "Avec Homebrew, mettez à jour puis installez la nouvelle version. Sur les autres plateformes, remplacez le binaire par la version 0.3.6 depuis Releases. doctor affiche le binaire utilisé pour repérer une ancienne version dans PATH."
     cmd_1 = "brew install davethomas11/vectrune/vectrune\nvectrune --version"

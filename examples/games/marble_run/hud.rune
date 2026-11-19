@@ -1,0 +1,144 @@
+# Game-owned HUD icons. Dots stay transparent over the 3D scene.
+@Palette/marble_hud
+colors = {
+    ".": "transparent",
+    "c": "#68e1e8",
+    "g": "#f7d68b",
+    "k": "#142b38",
+    "o": "#d59968",
+    "s": "#67838d",
+    "t": "#277eab",
+    "w": "#e5fbdf"
+}
+
+@Sprite/marble/hud/marble_full
+palette = marble_hud
+size = [9,9]
+origin = [0,0]
+pixels:
+    "..kkkkk.."
+    ".kccwcck."
+    "kcwwccctk"
+    "kcwcccctk"
+    "kcccccctk"
+    "kcccctttk"
+    "kcttttttk"
+    ".ktttttk."
+    "..kkkkk.."
+
+@Sprite/marble/hud/marble_empty
+palette = marble_hud
+size = [9,9]
+origin = [0,0]
+pixels:
+    "..kkkkk.."
+    ".ksssssk."
+    "ks.....sk"
+    "ks.....sk"
+    "ks.....sk"
+    "ks.....sk"
+    "ks.....sk"
+    ".ksssssk."
+    "..kkkkk.."
+
+@Sprite/marble/hud/cell_full
+palette = marble_hud
+size = [7,11]
+origin = [0,0]
+pixels:
+    "..kkk.."
+    ".kgggk."
+    "kkkkkkk"
+    "kgwwwgk"
+    "kgggggk"
+    "kgggggk"
+    "kgwwwgk"
+    "kgggggk"
+    "kgooogk"
+    "koooook"
+    "kkkkkkk"
+
+@Sprite/marble/hud/cell_empty
+palette = marble_hud
+size = [7,11]
+origin = [0,0]
+pixels:
+    "..kkk.."
+    ".ksssk."
+    "kkkkkkk"
+    "ks...sk"
+    "ks...sk"
+    "ks...sk"
+    "ks...sk"
+    "ks...sk"
+    "ks...sk"
+    "ksssssk"
+    "kkkkkkk"
+
+@Sprite/marble/hud/bolt_charge
+palette = marble_hud
+size = [9,11]
+origin = [0,0]
+pixels:
+    ".....kk.."
+    "....kgk.."
+    "...kggk.."
+    "..kggk..."
+    ".kgggkkk."
+    "kgggggggk"
+    ".kkkgggk."
+    "...kggk.."
+    "..kggk..."
+    "..kgk...."
+    "..kk....."
+
+@Sprite/marble/hud/bolt_ready
+palette = marble_hud
+size = [9,11]
+origin = [0,0]
+pixels:
+    ".....kk.."
+    "....kck.."
+    "...kcck.."
+    "..kcck..."
+    ".kccckkk."
+    "kccccccck"
+    ".kkkccck."
+    "...kcck.."
+    "..kcck..."
+    "..kck...."
+    "..kk....."
+
+@Sprite/marble/hud/bolt_empty
+palette = marble_hud
+size = [9,11]
+origin = [0,0]
+pixels:
+    ".....kk.."
+    "....ksk.."
+    "...kssk.."
+    "..kssk..."
+    ".kssskkk."
+    "ksssssssk"
+    ".kkksssk."
+    "...kssk.."
+    "..kssk..."
+    "..ksk...."
+    "..kk....."
+
+@Sprite/marble/hud/hourglass
+palette = marble_hud
+size = [9,11]
+origin = [0,0]
+pixels:
+    "kkkkkkkkk"
+    "ktttttttk"
+    ".kswwwsk."
+    "..kswsk.."
+    "...ksk..."
+    "....k...."
+    "...kgk..."
+    "..kgggk.."
+    ".kgggggk."
+    "ktttttttk"
+    "kkkkkkkkk"

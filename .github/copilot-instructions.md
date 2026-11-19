@@ -62,6 +62,7 @@ If you find a mismatch, fix `knowledge/` first, then update downstream docs.
 
 ## Important files
 
+- `AGENTS.md` — release metadata, teaching site and offline manual maintenance
 - `knowledge/README.md`
 - `knowledge/manifest.yaml`
 - `knowledge/agents/maintenance.md`

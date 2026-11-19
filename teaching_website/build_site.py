@@ -11,19 +11,22 @@ import re
 import shutil
 import subprocess
 import tempfile
+from release_metadata import sync_release
 
 SITE = Path(__file__).resolve().parent
 LOCALES = [("en_us", ""), ("es", "es"), ("fr", "fr")]
-MIN_COMPILER = (0, 3, 6)
-
-
 def check_compiler(binary):
+    try:
+        release_version, _ = sync_release()
+    except (KeyError, OSError, ValueError) as error:
+        raise RuntimeError(str(error)) from error
+    minimum = tuple(map(int, release_version.split(".")))
     result = subprocess.run([str(binary), "--version"], capture_output=True, text=True, check=True)
     version = re.search(r'\b(\d+)\.(\d+)\.(\d+)\b', result.stdout)
-    if not version or tuple(map(int, version.groups())) < MIN_COMPILER:
+    if not version or tuple(map(int, version.groups())) < minimum:
         raise RuntimeError(
             f"{binary} embeds an older browser runtime ({result.stdout.strip()}). "
-            "This site requires Vectrune 0.3.6 or newer for Starfall Protocol's chunked worlds and cinematic HUD. "
+            f"This site requires Vectrune {release_version} or newer. "
             "Omit --binary to build the compiler from this checkout; "
             "do not use an older Homebrew binary to render the updated teaching templates."
         )
@@ -119,7 +122,8 @@ def build_site(destination, binary, base="/", selected_routes=None, site_url="ht
                         ("vect-breach", "vect_breach/site_shell.rune"),
                         ("rune-crypt", "rune_crypt/rune_crypt.rune"),
                         ("skybound-2", "skybound_2/skybound_2.rune"),
-                        ("starfall", "starfall/starfall.rune")]:
+                        ("starfall", "starfall/starfall.rune"),
+                        ("marble-run", "marble_run/marble_run.rune")]:
         game = assets / "games" / slug
         game.mkdir(parents=True, exist_ok=True)
         result = subprocess.run([binary, str(SITE.parent / "examples/games" / entry), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)
@@ -180,7 +184,7 @@ def serve_site(destination, port, base="/"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", help="Use an existing compiler (0.3.6+); otherwise build this checkout")
+    parser.add_argument("--binary", help="Use a compiler at least as new as release.json; otherwise build this checkout")
     parser.add_argument("--output", required=True)
     parser.add_argument("--base", default="/")
     parser.add_argument("--site-url", default="https://vectrune.com", help="Public site origin for docs canonical URLs and sitemap")

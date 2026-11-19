@@ -1,0 +1,58 @@
+#!RUNE
+import "models.rune"
+import "cloudworks.rune"
+import "hud.rune"
+import "logic.rune"
+import "menus.rune"
+import "title.rune"
+import "levels.rune"
+import "controls.rune"
+import "sound.rune"
+import "shell.rune"
+
+@App
+name = Marble Run
+type = pixel-3d
+runtime = hybrid
+scene = marble_run
+resolution = [384,240]
+tick_rate = 30
+port = 3027
+shell = marble_cabinet
+
+@Perspective/downhill
+fov = 72
+
+@Scene/marble_run
+logic = marble_run
+map = valley
+camera = camera
+perspective = downhill
+things = ["factory","track","scenery","enemies","spikes","shadow","avatar","stripe","charge_orbs","fragments","goal"]
+controls = marble_run
+ui = ui
+title_scene = marble_title_scene
+persistence = {"key":"marble-run-campaign-v1","state":"progress"}
+pause_ui = pause_ui
+restart_action = return_to_title
+click_to_start = false
+mouse_look = false
+@Map/valley
+sky = {
+    "below": "#4d405a",
+    "cloud": "#ddb5aa",
+    "horizon": "#edac83",
+    "seed": 87,
+    "speed": 0.16,
+    "zenith": "#423958"
+}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Page/marble_run
+logic = marble_run
+view:
+    canvas data-rune-pixel-3d=true

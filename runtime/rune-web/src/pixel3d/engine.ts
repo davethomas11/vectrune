@@ -25,6 +25,7 @@ import {
   type ViewmodelWeapon,
   type WallOverride,
   type Presentation,
+  type Stats3D,
 } from './raycaster';
 import { setActiveMap, type SpatialMap } from './spatial';
 import type { BlockModel } from './model';
@@ -103,14 +104,17 @@ export class Pixel3DEngine {
   /** Hosts can reuse the last pixels between simulation ticks. */
   invalidateFrame(): void { this.frameRevision++; }
   /** Browser presentation may fit a wider screen without changing game rules. */
-  resizeViewport(width: number, height: number): void {
-    if (this.raycaster.resize(width, height)) this.invalidateFrame();
+  resizeViewport(width: number, height: number, hudScale = 1): void {
+    if (this.raycaster.resize(width, height, hudScale)) this.invalidateFrame();
   }
   frameIfChanged(): Uint32Array | null {
-    if (this.presentedRevision === this.frameRevision) return null;
-    const pixels = this.frame();
+    return this.presentIfChanged(() => { this.frame(); }) ? this.raycaster.buffer : null;
+  }
+  presentIfChanged(draw: () => void): boolean {
+    if (this.presentedRevision === this.frameRevision) return false;
+    draw();
     this.presentedRevision = this.frameRevision;
-    return pixels;
+    return true;
   }
 
   get paused(): boolean {
@@ -141,6 +145,8 @@ export class Pixel3DEngine {
   get usesSharedRenderer(): boolean {
     if (this.config.ui && (this.app.state[this.config.ui] as any)?.map) return true;
     if (this.config.pauseUi && (this.app.state[this.config.pauseUi] as any)?.map) return true;
+    const map = this.config.maps?.[this.currentMapName] ?? this.config.map;
+    if (map.sky?.below !== undefined) return true;
     if (this.config.world || this.config.cameraTrack ||
         (this.config.titleScene && this.app.state.status === 'title') ||
         (this.config.fov !== undefined && this.config.fov !== 66)) return true;
@@ -448,10 +454,8 @@ export class Pixel3DEngine {
     };
   }
 
-  frame(): Uint32Array {
-    this.invalidateFrame();
-    const stats = this.renderState();
-    this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, {
+  frameHud(stats: ReturnType<Pixel3DEngine['renderState']>): Stats3D {
+    return {
       titleScene: stats.title_scene,
       presentationTime: stats.presentation_time,
       status: stats.status,
@@ -470,7 +474,14 @@ export class Pixel3DEngine {
       paused: stats.paused,
       presentation: stats.presentation,
       hudText: stats.hud_text,
-    }, stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time,
+    };
+  }
+
+  frame(): Uint32Array {
+    this.invalidateFrame();
+    const stats = this.renderState();
+    this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, this.frameHud(stats),
+      stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time,
       this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : undefined);
     return this.raycaster.buffer;
   }

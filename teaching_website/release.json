@@ -1,0 +1,17 @@
+{
+  "version": "0.3.10",
+  "locales": {
+    "en_us": {
+      "intro": "Play Marble Run, a downhill arcade game built with Pixel 3D.",
+      "summary": "This release adds sphere, cylinder, and ramp models. The Marble Run demo lets you compare resolutions, palettes, and frame rates and try the experimental WebGL renderer on supported devices."
+    },
+    "es": {
+      "intro": "Juega a Marble Run, un juego arcade de descenso creado con Pixel 3D.",
+      "summary": "Esta versión incorpora modelos de esferas, cilindros y rampas. La demo de Marble Run permite comparar resoluciones, paletas y frecuencias de imagen y probar el renderizado experimental WebGL en dispositivos compatibles."
+    },
+    "fr": {
+      "intro": "Jouez à Marble Run, un jeu d’arcade de descente créé avec Pixel 3D.",
+      "summary": "Cette version ajoute des modèles de sphères, de cylindres et de rampes. La démo Marble Run permet de comparer les résolutions, les palettes et les cadences et d’essayer le rendu WebGL expérimental sur les appareils compatibles."
+    }
+  }
+}

@@ -57,6 +57,18 @@ pages:
       - examples/games/rune_crypt/
       - tests/pixel3d_app.rs
       - tests/browser/rune_crypt.py
+  - id: runtime.model-shapes
+    path: runtime/model-shapes.md
+    kind: page
+    title: Pixel 3D Model Shapes
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/pixel3d/mod.rs
+      - runtime/rune-web/src/pixel3d/model.ts
+      - examples/games/marble_run/models.rune
+      - tests/pixel3d_shapes.rs
   - id: product.overview
     path: product/overview.md
     kind: page

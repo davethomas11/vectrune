@@ -8,6 +8,7 @@ export interface HudMeter {
   icon?: string;
   emptyIcon?: string;
   display?: 'counter' | 'pips' | 'bar';
+  showValue?: boolean;
 }
 export interface HudPanel {
   title: string;
@@ -77,6 +78,7 @@ export function validateHud(value: unknown, sprites: Record<string, Sprite> = {}
   if (!Array.isArray(hud.meters) || hud.meters.length > 3 ||
       !hud.meters.every(m => m && typeof m.label === 'string' && Number.isFinite(m.value) &&
         Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 0xffffff &&
+        (m.showValue === undefined || typeof m.showValue === 'boolean') &&
         (m.display === undefined || ['counter', 'pips', 'bar'].includes(m.display)) &&
         (m.display !== 'pips' || (Number.isInteger(m.max) && m.max <= 16 && m.icon !== undefined && m.emptyIcon !== undefined))) ||
       !['objective', 'detail', 'prompt', 'notice'].every(k => typeof Reflect.get(hud, k) === 'string')) {
@@ -147,31 +149,41 @@ function renderFloatingHud(canvas: CanvasHud, ui: GameHud, status: string, pause
   let metersBottom = 32;
   ui.meters.forEach((meter, i) => {
     const x = 8 + i * slot, columns = Math.max(1, Math.floor((slot - 4) / 4));
-    text(meter.label.slice(0, columns), x, 6, gold);
+    const iconTop = meter.label ? 14 : 8;
+    if (meter.label) text(meter.label.slice(0, columns), x, 6, gold);
     if (meter.display === 'pips') {
       const full = asset(meter.icon!), empty = asset(meter.emptyIcon!);
       const count = Math.ceil(meter.max), pipWidth = Math.max(full.width, empty.width);
       const scale = slot >= count * (pipWidth * 2 + 3) ? 2 : 1;
       const perRow = Math.max(1, Math.floor((slot - 1) / (scale * pipWidth + 3)));
       const rowHeight = scale * Math.max(full.height, empty.height) + 3;
-      for (let pip = 0; pip < count; pip++) icon(pip < Math.ceil(meter.value) ? meter.icon! : meter.emptyIcon!, x + pip % perRow * (scale * pipWidth + 3), 14 + Math.floor(pip / perRow) * rowHeight, scale);
-      metersBottom = Math.max(metersBottom, 14 + Math.ceil(count / perRow) * rowHeight);
+      for (let pip = 0; pip < count; pip++) icon(pip < Math.ceil(meter.value) ? meter.icon! : meter.emptyIcon!, x + pip % perRow * (scale * pipWidth + 3), iconTop + Math.floor(pip / perRow) * rowHeight, scale);
+      metersBottom = Math.max(metersBottom, iconTop + Math.ceil(count / perRow) * rowHeight);
     } else {
-      if (meter.icon) icon(meter.icon, x, 14);
-      const number = `${Math.max(0, Math.ceil(meter.value))}/${Math.ceil(meter.max)}`;
+      if (meter.icon) icon(meter.icon, x, iconTop);
       const left = x + (meter.icon ? asset(meter.icon).width * 2 + 7 : 0);
-      const scale = number.length * 8 <= slot - (left - x) - 4 ? 2 : 1;
-      text(number, left, 18, 0xfff2cf, scale);
+      if (meter.showValue !== false) {
+        const number = `${Math.max(0, Math.ceil(meter.value))}/${Math.ceil(meter.max)}`;
+        const scale = number.length * 8 <= slot - (left - x) - 4 ? 2 : 1;
+        text(number, left, iconTop + 4, 0xfff2cf, scale);
+      }
       if (meter.display === 'bar') {
         const barWidth = Math.max(0, slot - (left - x) - 4);
-        canvas.rect(left, 30, barWidth, 2, ink);
-        canvas.rect(left, 30, Math.floor(barWidth * Math.max(0, Math.min(1, meter.value / meter.max))), 2, meter.color);
+        const fill = Math.max(0, Math.min(1, meter.value / meter.max));
+        if (meter.showValue === false) {
+          const width = Math.min(48, barWidth);
+          canvas.rect(left, iconTop + 9, width, 4, ink);
+          canvas.rect(left + 1, iconTop + 10, Math.floor(Math.max(0, width - 2) * fill), 2, meter.color);
+        } else {
+          canvas.rect(left, iconTop + 16, barWidth, 2, ink);
+          canvas.rect(left, iconTop + 16, Math.floor(barWidth * fill), 2, meter.color);
+        }
       }
     }
   });
   const columns = Math.max(1, Math.floor((W - 16) / 4));
   const top = ui.meters.length ? Math.max(39, metersBottom + 5) : 8;
-  text(ui.detail.slice(0, columns), 8, top, 0xbcebdc);
+  if (ui.detail) text(ui.detail.slice(0, columns), 8, top, 0xbcebdc);
   if (ui.objective) text(ui.objective.slice(0, columns), 8, top + 10, gold);
   if (ui.heading && (status !== 'playing' || paused)) {
     const heading = ui.heading.slice(0, Math.max(1, Math.floor((W - 32) / 8)));

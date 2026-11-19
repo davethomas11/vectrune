@@ -3349,7 +3349,7 @@ var __RunePixel3DRuntime = (() => {
 
   // src/pixel3d/sky.ts
   function noise(x, y, seed) {
-    let n = (x & 63) * 374761393 + y * 668265263 + seed >>> 0;
+    let n = x * 374761393 + y * 668265263 + seed >>> 0;
     n = Math.imul(n ^ n >>> 13, 1274126177) >>> 0;
     return ((n ^ n >>> 16) >>> 0) / 4294967295;
   }
@@ -3360,16 +3360,27 @@ var __RunePixel3DRuntime = (() => {
     }
     return color >>> 0;
   }
-  function skyPixel(sky, longitude, altitude, time) {
-    if (altitude === 0) return (4278190080 | sky.horizon) >>> 0;
-    const u = ((longitude / (2 * Math.PI) * 64 + time * sky.speed) % 64 + 64) % 64;
-    const v = altitude * 12;
+  function cloudDensity(u, v, seed, wrap = 63) {
     const x = Math.floor(u), y = Math.floor(v);
     const fx = u - x, fy = v - y;
     const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-    const a = noise(x, y, sky.seed) * (1 - sx) + noise(x + 1, y, sky.seed) * sx;
-    const b = noise(x, y + 1, sky.seed) * (1 - sx) + noise(x + 1, y + 1, sky.seed) * sx;
-    const density = Math.max(0, Math.min(1, (a * (1 - sy) + b * sy - 0.5) * 4));
+    const left = x & wrap, right = x + 1 & wrap;
+    const a = noise(left, y, seed) * (1 - sx) + noise(right, y, seed) * sx;
+    const b = noise(left, y + 1, seed) * (1 - sx) + noise(right, y + 1, seed) * sx;
+    return Math.max(0, Math.min(1, (a * (1 - sy) + b * sy - 0.5) * 4));
+  }
+  function skyPixel(sky, longitude, altitude, time) {
+    const u = longitude / (2 * Math.PI) * 64;
+    const drift = time * sky.speed;
+    if (altitude < 0 && sky.below !== void 0) {
+      const depth = -altitude;
+      const gradient = mix(sky.horizon, sky.below, Math.floor(Math.sqrt(depth) * 32) / 32);
+      const far = cloudDensity(u + drift * 0.35, depth * 23, sky.seed);
+      const near = cloudDensity(u / 2 + drift, depth * 14 + 13, sky.seed + 719, 31);
+      return mix(gradient, sky.cloud, (far * 0.18 + near * 0.42) * Math.min(1, depth * 7));
+    }
+    if (altitude <= 0) return (4278190080 | sky.horizon) >>> 0;
+    const density = cloudDensity(((u + drift) % 64 + 64) % 64, altitude * 12, sky.seed);
     const band = Math.floor(altitude * 16) / 16;
     return mix(mix(sky.horizon, sky.zenith, band), sky.cloud, density * Math.min(1, altitude * 5));
   }
@@ -4145,7 +4156,7 @@ var __RunePixel3DRuntime = (() => {
         );
         if (!hit) {
           depth[i] = Infinity;
-          buffer[i] = sky && rz > 0 ? skyPixel(sky, Math.atan2(ry, rx), Math.min(1, rz), time) : horizon;
+          buffer[i] = sky && (rz > 0 || sky.below !== void 0) ? skyPixel(sky, Math.atan2(ry, rx), Math.max(-1, Math.min(1, rz)), time) : horizon;
         } else {
           depth[i] = hit.distance;
           const texture = materialTextures[hit.block - 1];
@@ -8396,12 +8407,14 @@ var __RunePixel3DRuntime = (() => {
     const billboards = things.filter((t) => t.sprite && !t.model && t.visible !== false);
     for (let y = 0; y < height; y++) {
       const v = ((height >> 1) - y - 0.5) / height;
+      const rz = sp + cp * v;
+      const plane = map.sky?.below === void 0 && rz < -1e-10 ? -eye / rz : !map.sky && rz > 1e-10 ? (top - eye) / rz : Infinity;
+      const altitude = rz < 0 ? Math.max(-1, rz) : Math.min(1, rz * 2);
       for (let x = 0; x < width; x++) {
         const u = (2 * x / width - 1) * scale;
-        const rx = dx * (cp - sp * v) - dy * u, ry = dy * (cp - sp * v) + dx * u, rz = sp + cp * v;
+        const rx = dx * (cp - sp * v) - dy * u, ry = dy * (cp - sp * v) + dx * u;
         let hit = Infinity;
         let color = sample(map.ceiling, 0, 0);
-        const plane = rz < -1e-10 ? -eye / rz : !map.sky && rz > 1e-10 ? (top - eye) / rz : Infinity;
         if (plane > 0 && Number.isFinite(plane)) {
           hit = plane;
           color = sample(rz < 0 ? map.floor : map.ceiling, camera.x + rx * hit, camera.y + ry * hit);
@@ -8442,7 +8455,7 @@ var __RunePixel3DRuntime = (() => {
           }
         }
         if (!Number.isFinite(hit) && map.sky) {
-          color = skyPixel(map.sky, Math.atan2(ry, rx), Math.max(0, Math.min(1, rz * 2)), time);
+          color = skyPixel(map.sky, Math.atan2(ry, rx), altitude, time);
         }
         for (const thing of billboards) {
           const sprite = sprites[thing.sprite];
@@ -8493,6 +8506,7 @@ var __RunePixel3DRuntime = (() => {
     const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - (instance.z ?? 0)) / scale];
     for (const block of model.blocks) {
       const max = block.from.map((v, i) => v + block.size[i]);
+      const center = block.from.map((v, i) => v + block.size[i] / 2);
       let left = width, right = 0, top = height, bottom = 0, clipped = false, frontCorners = 0;
       let outsideLeft = 0, outsideRight = 0, outsideTop = 0, outsideBottom = 0;
       for (let corner = 0; corner < 8; corner++) {
@@ -8556,12 +8570,50 @@ var __RunePixel3DRuntime = (() => {
               }
             }
           }
+          let curvedShade;
+          if (block.shape === "sphere" || block.shape === "cylinder") {
+            const px = origin[0] - center[0], py = origin[1] - center[1], pz = origin[2] - center[2];
+            const sphere = block.shape === "sphere", radius = block.size[0] / 2;
+            const a = rayX * rayX + rayY * rayY + (sphere ? rayZ * rayZ : 0);
+            const b = px * rayX + py * rayY + (sphere ? pz * rayZ : 0);
+            const k = px * px + py * py + (sphere ? pz * pz : 0) - radius * radius;
+            if (a < 1e-20) {
+              if (k > 0) valid = false;
+            } else {
+              const discriminant = b * b - a * k;
+              if (discriminant < 0) valid = false;
+              else {
+                const root = Math.sqrt(discriminant);
+                near = Math.max(near, (-b - root) / a);
+                far = Math.min(far, (-b + root) / a);
+              }
+            }
+            const distance = near > 1e-3 ? near : far;
+            const nx = px + rayX * distance, ny = py + rayY * distance, nz = pz + rayZ * distance;
+            const cap = !sphere && Math.abs(Math.abs(nz) - block.size[2] / 2) < 1e-7;
+            const normalLength = sphere ? radius : Math.hypot(nx, ny);
+            const light = cap ? nz > 0 ? 0.75 : -0.75 : (-0.4 * nx - 0.5 * ny + (sphere ? 0.75 * nz : 0)) / normalLength;
+            curvedShade = 0.55 + 0.45 * Math.max(0, light);
+          } else if (block.shape === "ramp") {
+            const slope = block.size[2] / block.size[0];
+            const offset = origin[2] - block.from[2] - slope * (origin[0] - block.from[0]);
+            const rate = rayZ - slope * rayX;
+            if (Math.abs(rate) < 1e-12) {
+              if (offset > 0) valid = false;
+            } else if (rate < 0 && -offset / rate > near) {
+              near = -offset / rate;
+              face = 3;
+            } else if (rate > 0 && -offset / rate < far) {
+              far = -offset / rate;
+              exitFace = 3;
+            }
+          }
           const index2 = y * width + x;
           const hit = near > 1e-3 ? near : far;
           if (near <= 1e-3) face = exitFace;
           if (valid && far >= near && hit > 1e-3 && hit < depth[index2]) {
             depth[index2] = hit;
-            buffer[index2] = face === 2 ? colorZ : face === 0 ? colorX : colorY;
+            buffer[index2] = curvedShade !== void 0 ? shade2(block.color, curvedShade) : face === 3 ? shade2(block.color, 0.9) : face === 2 ? colorZ : face === 0 ? colorX : colorY;
           }
         }
       }
@@ -8586,7 +8638,7 @@ var __RunePixel3DRuntime = (() => {
     if (hud.textScale !== void 0 && hud.textScale !== 1 && hud.textScale !== 2) {
       throw new Error("Pixel-3d ui textScale must be 1 or 2");
     }
-    if (!Array.isArray(hud.meters) || hud.meters.length > 3 || !hud.meters.every((m) => m && typeof m.label === "string" && Number.isFinite(m.value) && Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 16777215 && (m.display === void 0 || ["counter", "pips", "bar"].includes(m.display)) && (m.display !== "pips" || Number.isInteger(m.max) && m.max <= 16 && m.icon !== void 0 && m.emptyIcon !== void 0)) || !["objective", "detail", "prompt", "notice"].every((k) => typeof Reflect.get(hud, k) === "string")) {
+    if (!Array.isArray(hud.meters) || hud.meters.length > 3 || !hud.meters.every((m) => m && typeof m.label === "string" && Number.isFinite(m.value) && Number.isFinite(m.max) && m.max > 0 && Number.isInteger(m.color) && m.color >= 0 && m.color <= 16777215 && (m.showValue === void 0 || typeof m.showValue === "boolean") && (m.display === void 0 || ["counter", "pips", "bar"].includes(m.display)) && (m.display !== "pips" || Number.isInteger(m.max) && m.max <= 16 && m.icon !== void 0 && m.emptyIcon !== void 0)) || !["objective", "detail", "prompt", "notice"].every((k) => typeof Reflect.get(hud, k) === "string")) {
       throw new Error("Pixel-3d ui needs up to three valid meters and objective/detail/prompt/notice strings");
     }
     for (const name2 of [hud.noticeIcon, ...hud.meters.flatMap((m) => [m.icon, m.emptyIcon])]) {
@@ -8649,31 +8701,41 @@ var __RunePixel3DRuntime = (() => {
     let metersBottom = 32;
     ui.meters.forEach((meter, i) => {
       const x = 8 + i * slot, columns2 = Math.max(1, Math.floor((slot - 4) / 4));
-      text(meter.label.slice(0, columns2), x, 6, gold);
+      const iconTop = meter.label ? 14 : 8;
+      if (meter.label) text(meter.label.slice(0, columns2), x, 6, gold);
       if (meter.display === "pips") {
         const full = asset(meter.icon), empty = asset(meter.emptyIcon);
         const count = Math.ceil(meter.max), pipWidth = Math.max(full.width, empty.width);
         const scale = slot >= count * (pipWidth * 2 + 3) ? 2 : 1;
         const perRow = Math.max(1, Math.floor((slot - 1) / (scale * pipWidth + 3)));
         const rowHeight = scale * Math.max(full.height, empty.height) + 3;
-        for (let pip = 0; pip < count; pip++) icon(pip < Math.ceil(meter.value) ? meter.icon : meter.emptyIcon, x + pip % perRow * (scale * pipWidth + 3), 14 + Math.floor(pip / perRow) * rowHeight, scale);
-        metersBottom = Math.max(metersBottom, 14 + Math.ceil(count / perRow) * rowHeight);
+        for (let pip = 0; pip < count; pip++) icon(pip < Math.ceil(meter.value) ? meter.icon : meter.emptyIcon, x + pip % perRow * (scale * pipWidth + 3), iconTop + Math.floor(pip / perRow) * rowHeight, scale);
+        metersBottom = Math.max(metersBottom, iconTop + Math.ceil(count / perRow) * rowHeight);
       } else {
-        if (meter.icon) icon(meter.icon, x, 14);
-        const number = `${Math.max(0, Math.ceil(meter.value))}/${Math.ceil(meter.max)}`;
+        if (meter.icon) icon(meter.icon, x, iconTop);
         const left = x + (meter.icon ? asset(meter.icon).width * 2 + 7 : 0);
-        const scale = number.length * 8 <= slot - (left - x) - 4 ? 2 : 1;
-        text(number, left, 18, 16773839, scale);
+        if (meter.showValue !== false) {
+          const number = `${Math.max(0, Math.ceil(meter.value))}/${Math.ceil(meter.max)}`;
+          const scale = number.length * 8 <= slot - (left - x) - 4 ? 2 : 1;
+          text(number, left, iconTop + 4, 16773839, scale);
+        }
         if (meter.display === "bar") {
           const barWidth = Math.max(0, slot - (left - x) - 4);
-          canvas.rect(left, 30, barWidth, 2, ink);
-          canvas.rect(left, 30, Math.floor(barWidth * Math.max(0, Math.min(1, meter.value / meter.max))), 2, meter.color);
+          const fill = Math.max(0, Math.min(1, meter.value / meter.max));
+          if (meter.showValue === false) {
+            const width = Math.min(48, barWidth);
+            canvas.rect(left, iconTop + 9, width, 4, ink);
+            canvas.rect(left + 1, iconTop + 10, Math.floor(Math.max(0, width - 2) * fill), 2, meter.color);
+          } else {
+            canvas.rect(left, iconTop + 16, barWidth, 2, ink);
+            canvas.rect(left, iconTop + 16, Math.floor(barWidth * fill), 2, meter.color);
+          }
         }
       }
     });
     const columns = Math.max(1, Math.floor((W - 16) / 4));
     const top = ui.meters.length ? Math.max(39, metersBottom + 5) : 8;
-    text(ui.detail.slice(0, columns), 8, top, 12381148);
+    if (ui.detail) text(ui.detail.slice(0, columns), 8, top, 12381148);
     if (ui.objective) text(ui.objective.slice(0, columns), 8, top + 10, gold);
     if (ui.heading && (status !== "playing" || paused)) {
       const heading = ui.heading.slice(0, Math.max(1, Math.floor((W - 32) / 8)));
@@ -8868,7 +8930,7 @@ var __RunePixel3DRuntime = (() => {
   }
 
   // src/pixel3d/raycaster.ts
-  var packed = (rgb) => (4278190080 | (rgb & 255) << 16 | rgb & 65280 | rgb >>> 16 & 255) >>> 0;
+  var packed = (rgb2) => (4278190080 | (rgb2 & 255) << 16 | rgb2 & 65280 | rgb2 >>> 16 & 255) >>> 0;
   var FONT = {
     A: "010101111101101",
     B: "110101110101110",
@@ -8926,6 +8988,9 @@ var __RunePixel3DRuntime = (() => {
   var Raycaster3D = class {
     constructor(config) {
       this.config = config;
+      this.hudScale = 1;
+      this.drawScale = 1;
+      this.silhouettes = false;
       this.width = config.width;
       this.height = config.height;
       this.fov = config.fov || 66;
@@ -8934,6 +8999,9 @@ var __RunePixel3DRuntime = (() => {
       this.pixelDepth = new Float64Array(this.width * this.height);
       this.setMap(config.map);
     }
+    get outlineRadius() {
+      return this.silhouettes ? Math.max(1, Math.round(this.hudScale)) : 0;
+    }
     setMap(map) {
       const height = map.ceilingHeight ?? 1;
       if (!Number.isFinite(height) || height <= 0.5 || height > 16) {
@@ -8941,15 +9009,30 @@ var __RunePixel3DRuntime = (() => {
       }
       this.config.map = map;
     }
-    resize(width, height) {
+    resize(width, height, hudScale = 1) {
       if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 2048 || height > 2048 || width * height > 1048576) throw new Error("Invalid pixel3d viewport size");
-      if (width === this.width && height === this.height) return false;
+      if (!Number.isFinite(hudScale) || hudScale <= 0) throw new Error("Invalid pixel3d HUD scale");
+      const scaleChanged = this.hudScale !== hudScale;
+      this.hudScale = hudScale;
+      if (width === this.width && height === this.height) return scaleChanged;
       this.width = this.config.width = width;
       this.height = this.config.height = height;
       this.buffer = new Uint32Array(width * height);
       this.zBuffer = new Float64Array(width);
       this.pixelDepth = new Float64Array(width * height);
       return true;
+    }
+    setPalette(colors, silhouettes = false) {
+      if (colors === void 0) {
+        this.palette = void 0;
+        this.silhouettes = false;
+        return;
+      }
+      if (colors.length < 2 || colors.length > 16 || !colors.every((color) => Number.isInteger(color) && color >= 0 && color <= 16777215)) {
+        throw new Error("Pixel-3d palette needs 2 to 16 RGB colors, from darkest to lightest");
+      }
+      this.palette = Uint32Array.from({ length: 256 }, (_, light) => packed(colors[Math.floor(light * colors.length / 256)]));
+      this.silhouettes = silhouettes;
     }
     render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks) {
       const W = this.width;
@@ -8959,7 +9042,7 @@ var __RunePixel3DRuntime = (() => {
       const px = camera.x;
       const py = camera.y;
       const ang = camera.angle;
-      const pitched = !this.config.world && ((camera.height ?? 0.5) !== 0.5 || (camera.pitch ?? 0) !== 0);
+      const pitched = !this.config.world && ((camera.height ?? 0.5) !== 0.5 || (camera.pitch ?? 0) !== 0 || map.sky?.below !== void 0);
       const freeCamera = pitched || !!this.config.world;
       const dirX = freeCamera ? Math.cos(ang * Math.PI / 180) : fastCos(ang);
       const dirY = freeCamera ? Math.sin(ang * Math.PI / 180) : fastSin(ang);
@@ -9020,6 +9103,7 @@ var __RunePixel3DRuntime = (() => {
       if (!this.config.world && !pitched && things && things.length > 0) {
         this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
       }
+      if (this.silhouettes) this.drawSilhouettes();
       this.renderWorldTitles(camera, things, dirX, dirY, fovScale);
       if (weapon && weapon.sprite) {
         this.renderWeapon(weapon);
@@ -9035,10 +9119,58 @@ var __RunePixel3DRuntime = (() => {
           this.buffer[i] = (4278190080 | Math.floor((c & 255) * light) | Math.floor((c >>> 8 & 255) * light) << 8 | Math.floor((c >>> 16 & 255) * light) << 16) >>> 0;
         }
       }
-      if (stats) {
-        this.renderHUD(stats);
-      }
+      if (stats) this.drawHud(stats);
+      this.applyPalette();
       return this.buffer;
+    }
+    /** Transparent HUD for the browser's model renderer. Uses the same layout and palette. */
+    renderOverlay(stats) {
+      this.buffer.fill(0);
+      this.drawHud(stats);
+      this.applyPalette(true);
+    }
+    drawHud(stats) {
+      this.drawScale = this.hudScale;
+      try {
+        this.renderHUD(stats);
+      } finally {
+        this.drawScale = 1;
+      }
+    }
+    applyPalette(transparent = false) {
+      const palette = this.palette;
+      if (palette) {
+        const pixels = this.buffer;
+        for (let i = 0; i < pixels.length; i++) {
+          const pixel = pixels[i];
+          if (transparent && pixel === 0) continue;
+          const light = (pixel & 255) * 54 + (pixel >>> 8 & 255) * 183 + (pixel >>> 16 & 255) * 19 >>> 8;
+          pixels[i] = palette[light];
+        }
+      }
+    }
+    drawSilhouettes() {
+      const { width, height, pixelDepth: depth, buffer } = this;
+      const radius = this.outlineRadius;
+      const diagonal = radius > 1 ? Math.max(1, Math.floor(radius / Math.SQRT2)) : 0;
+      for (let y = 0; y < height; y++) {
+        const row = y * width, above = Math.max(0, y - radius) * width, below = Math.min(height - 1, y + radius) * width;
+        const upper = Math.max(0, y - diagonal) * width, lower = Math.min(height - 1, y + diagonal) * width;
+        for (let x = 0; x < width; x++) {
+          const i = row + x;
+          let edge = Math.min(
+            depth[row + Math.max(0, x - radius)],
+            depth[row + Math.min(width - 1, x + radius)],
+            depth[above + x],
+            depth[below + x]
+          );
+          if (diagonal) {
+            const left = Math.max(0, x - diagonal), right = Math.min(width - 1, x + diagonal);
+            edge = Math.min(edge, depth[upper + left], depth[upper + right], depth[lower + left], depth[lower + right]);
+          }
+          if (depth[i] - edge > Math.max(0.12, edge * 0.025)) buffer[i] = 4278190080;
+        }
+      }
     }
     /** Pixel-font plaques anchored above actors, using the same projection/depth as models. */
     renderWorldTitles(camera, things, dirX, dirY, fov) {
@@ -9081,10 +9213,11 @@ var __RunePixel3DRuntime = (() => {
     }
     rect(x, y, width, height, color) {
       const c = packed(color);
-      const left = Math.min(this.width, Math.max(0, Math.floor(x)));
-      const top = Math.max(0, Math.floor(y));
-      const right = Math.min(this.width, Math.floor(x + width));
-      const bottom = Math.min(this.height, Math.floor(y + height));
+      const scale = this.drawScale;
+      const left = Math.min(this.width, Math.max(0, Math.floor(x * scale)));
+      const top = Math.max(0, Math.floor(y * scale));
+      const right = Math.min(this.width, Math.floor((x + width) * scale));
+      const bottom = Math.min(this.height, Math.floor((y + height) * scale));
       for (let row = top; row < bottom; row++) {
         this.buffer.fill(c, row * this.width + left, row * this.width + Math.max(left, right));
       }
@@ -9106,8 +9239,8 @@ var __RunePixel3DRuntime = (() => {
       }
     }
     renderHUD(stats) {
-      const W = this.width;
-      const H = this.height;
+      const W = Math.floor(this.width / this.drawScale);
+      const H = Math.floor(this.height / this.drawScale);
       if (stats.titleScene) {
         const title = stats.titleScene;
         const scale = Math.max(1, Math.min(4, Math.floor((W - 32) / (title.heading.length * 4))));
@@ -9133,7 +9266,13 @@ var __RunePixel3DRuntime = (() => {
         return;
       }
       if (stats.ui) {
-        renderHud(this, stats.ui, stats.status || "playing", stats.paused || false, this.config.sprites);
+        const canvas = this.drawScale === 1 ? this : {
+          width: W,
+          height: H,
+          rect: this.rect.bind(this),
+          text: this.text.bind(this)
+        };
+        renderHud(canvas, stats.ui, stats.status || "playing", stats.paused || false, this.config.sprites);
         return;
       }
       if (stats.presentation) {
@@ -9602,14 +9741,19 @@ var __RunePixel3DRuntime = (() => {
       this.frameRevision++;
     }
     /** Browser presentation may fit a wider screen without changing game rules. */
-    resizeViewport(width, height) {
-      if (this.raycaster.resize(width, height)) this.invalidateFrame();
+    resizeViewport(width, height, hudScale = 1) {
+      if (this.raycaster.resize(width, height, hudScale)) this.invalidateFrame();
     }
     frameIfChanged() {
-      if (this.presentedRevision === this.frameRevision) return null;
-      const pixels = this.frame();
+      return this.presentIfChanged(() => {
+        this.frame();
+      }) ? this.raycaster.buffer : null;
+    }
+    presentIfChanged(draw) {
+      if (this.presentedRevision === this.frameRevision) return false;
+      draw();
       this.presentedRevision = this.frameRevision;
-      return pixels;
+      return true;
     }
     get paused() {
       return this._paused;
@@ -9636,6 +9780,8 @@ var __RunePixel3DRuntime = (() => {
     get usesSharedRenderer() {
       if (this.config.ui && this.app.state[this.config.ui]?.map) return true;
       if (this.config.pauseUi && this.app.state[this.config.pauseUi]?.map) return true;
+      const map = this.config.maps?.[this.currentMapName] ?? this.config.map;
+      if (map.sky?.below !== void 0) return true;
       if (this.config.world || this.config.cameraTrack || this.config.titleScene && this.app.state.status === "title" || this.config.fov !== void 0 && this.config.fov !== 66) return true;
       const camera = this.config.camera.split(".").reduce((v, key2) => v?.[key2], this.app.state);
       return !!camera && ((camera.height ?? 0.5) !== 0.5 || (camera.pitch ?? 0) !== 0);
@@ -9804,6 +9950,28 @@ var __RunePixel3DRuntime = (() => {
         }) : []
       };
     }
+    frameHud(stats) {
+      return {
+        titleScene: stats.title_scene,
+        presentationTime: stats.presentation_time,
+        status: stats.status,
+        heading: stats.camera.angle,
+        health: stats.health,
+        ammo: stats.ammo,
+        score: stats.score,
+        kills: stats.kills,
+        level: stats.level,
+        levelTitle: stats.level_title,
+        storyTitle: stats.story_title,
+        storyBody: stats.story_body,
+        message: stats.message,
+        switchActivated: stats.switch_activated,
+        ui: stats.ui,
+        paused: stats.paused,
+        presentation: stats.presentation,
+        hudText: stats.hud_text
+      };
+    }
     frame() {
       this.invalidateFrame();
       const stats = this.renderState();
@@ -9812,26 +9980,7 @@ var __RunePixel3DRuntime = (() => {
         stats.things,
         stats.weapon,
         stats.flash,
-        {
-          titleScene: stats.title_scene,
-          presentationTime: stats.presentation_time,
-          status: stats.status,
-          heading: stats.camera.angle,
-          health: stats.health,
-          ammo: stats.ammo,
-          score: stats.score,
-          kills: stats.kills,
-          level: stats.level,
-          levelTitle: stats.level_title,
-          storyTitle: stats.story_title,
-          storyBody: stats.story_body,
-          message: stats.message,
-          switchActivated: stats.switch_activated,
-          ui: stats.ui,
-          paused: stats.paused,
-          presentation: stats.presentation,
-          hudText: stats.hud_text
-        },
+        this.frameHud(stats),
         stats.wall_overrides,
         stats.title_scene ? stats.presentation_time : stats.time,
         this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : void 0
@@ -10162,6 +10311,452 @@ var __RunePixel3DRuntime = (() => {
     };
   }
 
+  // src/pixel3d/webgl.ts
+  var TAU = 2 * Math.PI;
+  var radians = (degrees) => degrees * Math.PI / 180;
+  var blend = (from, to, t) => from + (to - from) * t;
+  var blendAngle = (from, to, t) => from + (((to - from + 180) % 360 + 360) % 360 - 180) * t;
+  var rgb = (value) => [(value & 255) / 255, (value >>> 8 & 255) / 255, (value >>> 16 & 255) / 255];
+  function mesh(model) {
+    const data = [];
+    for (const { from, size, color, shape } of model.blocks) {
+      const [r, g, b] = rgb(color);
+      const vertex = (p, shade3, normal = [0, 0, 0]) => {
+        data.push(
+          from[0] + p[0] * size[0],
+          from[1] + p[1] * size[1],
+          from[2] + p[2] * size[2],
+          r,
+          g,
+          b,
+          ...normal,
+          shade3
+        );
+      };
+      const quad = (a, b2, c, d, shade3) => {
+        for (const p of [a, b2, c, a, c, d]) vertex(p, shade3);
+      };
+      if (shape === "sphere") {
+        const point = (row, col) => {
+          const phi = Math.PI * row / 16, theta = TAU * col / 24;
+          return [Math.sin(phi) * Math.cos(theta), Math.sin(phi) * Math.sin(theta), Math.cos(phi)];
+        };
+        for (let row = 0; row < 16; row++) for (let col = 0; col < 24; col++) {
+          const a = point(row, col), b2 = point(row + 1, col);
+          const c = point(row + 1, col + 1), d = point(row, col + 1);
+          for (const n of [a, b2, c, a, c, d]) vertex([0.5 + n[0] / 2, 0.5 + n[1] / 2, 0.5 + n[2] / 2], 0, n);
+        }
+      } else if (shape === "cylinder") {
+        for (let col = 0; col < 24; col++) {
+          const a = TAU * col / 24, b2 = TAU * (col + 1) / 24;
+          const n = [Math.cos(a), Math.sin(a), 0], m = [Math.cos(b2), Math.sin(b2), 0];
+          const p = (v, z) => [0.5 + v[0] / 2, 0.5 + v[1] / 2, z];
+          const a0 = p(n, 0), a1 = p(n, 1), b0 = p(m, 0), b1 = p(m, 1);
+          vertex(a0, 0, n);
+          vertex(b0, 0, m);
+          vertex(b1, 0, m);
+          vertex(a0, 0, n);
+          vertex(b1, 0, m);
+          vertex(a1, 0, n);
+          for (const v of [a0, b0, [0.5, 0.5, 0]]) vertex(v, 0.55);
+          for (const v of [a1, b1, [0.5, 0.5, 1]]) vertex(v, 0.8875);
+        }
+      } else {
+        const a = [0, 0, 0], b2 = [1, 0, 0], c = [1, 1, 0], d = [0, 1, 0];
+        const ramp = shape === "ramp", low = ramp ? 0 : 1;
+        const e = [0, 0, low], f = [1, 0, 1], g2 = [1, 1, 1], h = [0, 1, low];
+        quad(a, b2, c, d, 1);
+        quad(e, f, g2, h, ramp ? 0.9 : 1);
+        quad(b2, c, g2, f, 0.8);
+        if (!ramp) quad(a, d, h, e, 0.8);
+        quad(a, b2, f, e, 0.65);
+        quad(d, c, g2, h, 0.65);
+      }
+    }
+    return new Float32Array(data);
+  }
+  var header = "#version 300 es\nprecision highp float;\nprecision highp int;\n";
+  var colorPass = `
+uniform vec3 palette[16];
+uniform int bands;
+uniform float light;
+uniform vec3 tint;
+vec3 finishColor(vec3 color) {
+  color = clamp(color + tint, 0.0, 1.0) * light;
+  if (bands == 0) return color;
+  float luma = dot(color, vec3(54.0, 183.0, 19.0)) / 256.0;
+  return palette[min(bands - 1, int(luma * float(bands)))];
+}
+`;
+  var skyVertex = `
+void main() {
+  vec2 pos = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  gl_Position = vec4(pos * 2.0 - 1.0, 0, 1);
+}
+`;
+  var skyFragment = `
+uniform vec2 viewport, heading, tilt;
+uniform float fov, drift;
+uniform uint seed;
+uniform vec3 horizon, zenith, cloud, below;
+out vec4 painted;
+float noise(ivec2 xy, uint salt) {
+  uint n = uint(xy.x) * 374761393u + uint(xy.y) * 668265263u + salt;
+  n = (n ^ (n >> 13u)) * 1274126177u;
+  return float(n ^ (n >> 16u)) / 4294967295.0;
+}
+float density(vec2 p, uint salt, int mask) {
+  ivec2 cell = ivec2(floor(p));
+  vec2 f = smoothstep(0.0, 1.0, fract(p));
+  int x = cell.x & mask, xx = (cell.x + 1) & mask;
+  float a = mix(noise(ivec2(x, cell.y), salt), noise(ivec2(xx, cell.y), salt), f.x);
+  float b = mix(noise(ivec2(x, cell.y+1), salt), noise(ivec2(xx, cell.y+1), salt), f.x);
+  return clamp((mix(a, b, f.y) - 0.5) * 4.0, 0.0, 1.0);
+}
+void main() {
+  vec2 p = gl_FragCoord.xy / viewport - 0.5;
+  vec2 right = vec2(-heading.y, heading.x);
+  vec2 dir = heading * (tilt.x - tilt.y * p.y) + right * (2.0 * fov * p.x);
+  float u = atan(dir.y, dir.x) * (64.0 / 6.28318530718);
+  float rz = tilt.y + tilt.x * p.y;
+  vec3 color;
+  if (rz < 0.0) {
+    float depth = min(1.0, -rz);
+    color = mix(horizon, below, floor(sqrt(depth) * 32.0) / 32.0);
+    float farCloud = density(vec2(u + drift * 0.35, depth * 23.0), seed, 63);
+    float nearCloud = density(vec2(u / 2.0 + drift, depth * 14.0 + 13.0), seed + 719u, 31);
+    color = mix(color, cloud, (farCloud * 0.18 + nearCloud * 0.42) * min(1.0, depth * 7.0));
+  } else {
+    float h = min(1.0, rz * 2.0);
+    color = mix(horizon, zenith, floor(h * 16.0) / 16.0);
+    color = mix(color, cloud, density(vec2(u + drift, h * 12.0), seed, 63) * min(1.0, h * 5.0));
+  }
+  painted = vec4(finishColor(color), 1);
+}
+`;
+  var modelVertex = `
+layout(location=0) in vec3 point;
+layout(location=1) in vec3 color;
+layout(location=2) in vec4 shade;
+layout(location=3) in vec4 positionScale;
+layout(location=4) in vec3 rotationDissolve;
+uniform vec3 eye;
+uniform vec2 heading, tilt;
+uniform float fov;
+out vec3 pigment;
+out vec4 shading;
+flat out float dissolve;
+void main() {
+  vec3 local = point * positionScale.w;
+  vec2 rotation = rotationDissolve.xy;
+  vec3 p = positionScale.xyz - eye + vec3(rotation.x*local.x - rotation.y*local.y,
+    rotation.y*local.x + rotation.x*local.y, local.z);
+  float forward = dot(p.xy, heading);
+  float side = dot(p.xy, vec2(-heading.y, heading.x));
+  float distance = forward*tilt.x + p.z*tilt.y;
+  float up = p.z*tilt.x - forward*tilt.y;
+  // Near 0.05 and far 1000, with perspective division by distance.
+  gl_Position = vec4(side/fov, 2.0*up, 1.000100005*distance - 0.100005, distance);
+  pigment = color;
+  shading = shade;
+  dissolve = rotationDissolve.z;
+}
+`;
+  var modelFragment = `
+in vec3 pigment;
+in vec4 shading;
+flat in float dissolve;
+uniform float height;
+out vec4 painted;
+void main() {
+  if (dissolve > 0.0) {
+    uvec2 p = uvec2(gl_FragCoord.x, height - gl_FragCoord.y) / 2u;
+    uint hash = p.x * 73856093u ^ p.y * 19349663u;
+    if (float((hash ^ (hash >> 13u)) * 1274126177u) / 4294967296.0 < dissolve) discard;
+  }
+  float shade = shading.w;
+  if (shade == 0.0) shade = 0.55 + 0.45 * max(0.0, dot(normalize(shading.xyz), vec3(-0.4,-0.5,0.75)));
+  painted = vec4(finishColor(floor(pigment * shade * 255.0) / 255.0), 1);
+}
+`;
+  var silhouetteFragment = `
+uniform highp sampler2D sceneColor, sceneDepth;
+uniform int radius, diagonal;
+uniform vec3 ink;
+out vec4 painted;
+float distanceAt(ivec2 pixel) {
+  ivec2 limit = textureSize(sceneDepth, 0) - 1;
+  float depth = texelFetch(sceneDepth, clamp(pixel, ivec2(0), limit), 0).r;
+  return 50.0 / (1000.0 - 999.95 * depth);
+}
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy);
+  ivec2 x = ivec2(radius, 0), y = ivec2(0, radius);
+  float edge = min(min(distanceAt(p-x), distanceAt(p+x)), min(distanceAt(p-y), distanceAt(p+y)));
+  if (diagonal > 0) {
+    ivec2 a = ivec2(diagonal, diagonal), b = ivec2(diagonal, -diagonal);
+    edge = min(edge, min(min(distanceAt(p-a), distanceAt(p+a)), min(distanceAt(p-b), distanceAt(p+b))));
+  }
+  if (distanceAt(p) - edge > max(0.12, edge * 0.025)) painted = vec4(ink, 1);
+  else painted = texelFetch(sceneColor, p, 0);
+}
+`;
+  function createWebGlRenderer(canvas, models = {}) {
+    const context = canvas.getContext("webgl2", { alpha: false, antialias: false, depth: true, failIfMajorPerformanceCaveat: true });
+    if (!context) return void 0;
+    const gl = context;
+    gl.disable(gl.DITHER);
+    const programs = [];
+    const shaders = [];
+    const batches = /* @__PURE__ */ new Map();
+    const skyVao = gl.createVertexArray();
+    let target;
+    const clearTarget = () => {
+      if (!target) return;
+      gl.deleteFramebuffer(target.framebuffer);
+      gl.deleteTexture(target.color);
+      gl.deleteTexture(target.depth);
+      target = void 0;
+    };
+    const dispose = () => {
+      clearTarget();
+      gl.deleteVertexArray(skyVao);
+      for (const { vao, mesh: mesh2, instances } of batches.values()) {
+        gl.deleteVertexArray(vao);
+        gl.deleteBuffer(mesh2);
+        gl.deleteBuffer(instances);
+      }
+      for (const p of programs) gl.deleteProgram(p);
+      for (const s of shaders) gl.deleteShader(s);
+    };
+    const program = (vertex, fragment, names) => {
+      const handle = gl.createProgram();
+      if (!handle) throw new Error("Could not allocate a WebGL program");
+      programs.push(handle);
+      for (const [type, source] of [[gl.VERTEX_SHADER, header + vertex], [gl.FRAGMENT_SHADER, header + colorPass + fragment]]) {
+        const shader = gl.createShader(type);
+        if (!shader) throw new Error("Could not allocate a WebGL shader");
+        shaders.push(shader);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) ?? "Shader compile failed");
+        gl.attachShader(handle, shader);
+      }
+      gl.linkProgram(handle);
+      if (!gl.getProgramParameter(handle, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(handle) ?? "Program link failed");
+      const loc = Object.fromEntries([...names, "bands", "palette[0]", "light", "tint"].map((name2) => [name2, gl.getUniformLocation(handle, name2)]));
+      return { handle, loc };
+    };
+    try {
+      let bindSilhouetteTarget2 = function() {
+        const { width, height } = canvas;
+        if (target?.width === width && target.height === height) {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
+          return target;
+        }
+        clearTarget();
+        const framebuffer = gl.createFramebuffer(), color = gl.createTexture(), depth = gl.createTexture();
+        if (!framebuffer || !color || !depth) {
+          gl.deleteFramebuffer(framebuffer);
+          gl.deleteTexture(color);
+          gl.deleteTexture(depth);
+          throw new Error("Could not allocate a WebGL silhouette target");
+        }
+        target = { framebuffer, color, depth, width, height };
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        for (const [texture, format, attachment] of [
+          [color, gl.RGBA8, gl.COLOR_ATTACHMENT0],
+          [depth, gl.DEPTH_COMPONENT24, gl.DEPTH_ATTACHMENT]
+        ]) {
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.texStorage2D(gl.TEXTURE_2D, 1, format, width, height);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+          gl.framebufferTexture2D(gl.FRAMEBUFFER, attachment, gl.TEXTURE_2D, texture, 0);
+        }
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+          throw new Error("WebGL silhouette target is incomplete");
+        }
+        return target;
+      }, batchFor2 = function(name2) {
+        const cached = batches.get(name2);
+        if (cached) return cached;
+        const vertices = mesh(models[name2]);
+        const buffer = gl.createBuffer(), instances = gl.createBuffer(), vao = gl.createVertexArray();
+        if (!buffer || !instances || !vao) {
+          gl.deleteBuffer(buffer);
+          gl.deleteBuffer(instances);
+          gl.deleteVertexArray(vao);
+          throw new Error("Could not allocate a WebGL mesh");
+        }
+        const batch = {
+          vao,
+          mesh: buffer,
+          instances,
+          vertices: vertices.length / 10,
+          transforms: new Float32Array(floatsPerInstance * 8),
+          count: 0,
+          capacity: 0
+        };
+        batches.set(name2, batch);
+        gl.bindVertexArray(vao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        [3, 3, 4].forEach((count, index2) => {
+          gl.enableVertexAttribArray(index2);
+          gl.vertexAttribPointer(index2, count, gl.FLOAT, false, 40, index2 * 12);
+        });
+        gl.bindBuffer(gl.ARRAY_BUFFER, instances);
+        for (const [location2, count, offset] of [[3, 4, 0], [4, 3, 16]]) {
+          gl.enableVertexAttribArray(location2);
+          gl.vertexAttribPointer(location2, count, gl.FLOAT, false, floatsPerInstance * 4, offset);
+          gl.vertexAttribDivisor(location2, 1);
+        }
+        return batch;
+      };
+      var bindSilhouetteTarget = bindSilhouetteTarget2, batchFor = batchFor2;
+      const skyProgram = program(skyVertex, skyFragment, ["viewport", "heading", "tilt", "fov", "drift", "seed", "horizon", "zenith", "cloud", "below"]);
+      const modelProgram = program(modelVertex, modelFragment, ["eye", "heading", "tilt", "fov", "height"]);
+      let silhouetteProgram;
+      const floatsPerInstance = 7;
+      let palette = [];
+      const setPalette = (colors) => {
+        palette = colors?.flatMap((c) => [(c >>> 16) / 255, (c >>> 8 & 255) / 255, (c & 255) / 255]) ?? [];
+      };
+      let captured, previous;
+      const capture = (frame, sky, fov, interpolate2) => {
+        const time = frame.title_scene ? frame.presentation_time : frame.time;
+        const old = captured;
+        previous = interpolate2 && old?.poses && old.sky === sky && old.frame.status === frame.status && old.frame.level === frame.level && time > old.time && time - old.time < 0.1 ? old : void 0;
+        const poses = interpolate2 ? /* @__PURE__ */ new Map() : void 0;
+        if (poses) for (const thing of frame.things) {
+          if (thing.visible !== false && thing.model) {
+            const { x, y, z, angle, scale, model } = thing;
+            poses.set(thing, { x, y, z, angle, scale, model });
+          }
+        }
+        captured = { frame, camera: { ...frame.camera }, sky, fov, time, poses };
+      };
+      const resetInterpolation = () => {
+        captured = previous = void 0;
+      };
+      const draw = (alpha = 1, outlineRadius = 0) => {
+        if (gl.isContextLost()) throw new Error("WebGL context lost");
+        if (!captured) throw new Error("WebGL frame has not been prepared");
+        const { frame, sky, fov: fovDegrees } = captured;
+        const { things } = frame;
+        const target2 = captured.camera;
+        const oldCamera = previous?.camera;
+        const t = Math.max(0, Math.min(1, alpha));
+        const camera = oldCamera && t < 1 && Math.hypot(target2.x - oldCamera.x, target2.y - oldCamera.y, (target2.height ?? 0.5) - (oldCamera.height ?? 0.5)) < 4 ? {
+          x: blend(oldCamera.x, target2.x, t),
+          y: blend(oldCamera.y, target2.y, t),
+          height: blend(oldCamera.height ?? 0.5, target2.height ?? 0.5, t),
+          angle: blendAngle(oldCamera.angle, target2.angle, t),
+          pitch: blend(oldCamera.pitch ?? 0, target2.pitch ?? 0, t)
+        } : target2;
+        const yaw = radians(camera.angle), pitch = radians(camera.pitch ?? 0);
+        const heading = [Math.cos(yaw), Math.sin(yaw)];
+        const tilt = [Math.cos(pitch), Math.sin(pitch)];
+        const fov = Math.tan(radians(fovDegrees) / 2);
+        const light = Math.max(0, 1 - (frame.ui?.cinema?.fade ?? 0));
+        const flash = Math.min(1, frame.flash * 0.12);
+        const red = Math.floor(180 * flash) / 255, other = -Math.floor(50 * flash) / 255;
+        const time = previous ? blend(previous.time, captured.time, t) : captured.time;
+        const setup = ({ handle, loc }) => {
+          gl.useProgram(handle);
+          gl.uniform2f(loc.heading, ...heading);
+          gl.uniform2f(loc.tilt, ...tilt);
+          gl.uniform1f(loc.fov, fov);
+          gl.uniform1f(loc.light, light);
+          gl.uniform3f(loc.tint, red, other, other);
+          gl.uniform1i(loc.bands, palette.length / 3);
+          if (palette.length) gl.uniform3fv(loc["palette[0]"], palette);
+          return loc;
+        };
+        const outlineTarget = outlineRadius ? bindSilhouetteTarget2() : void 0;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.disable(gl.DEPTH_TEST);
+        const s = setup(skyProgram);
+        gl.uniform2f(s.viewport, canvas.width, canvas.height);
+        gl.uniform1f(s.drift, time * sky.speed);
+        gl.uniform1ui(s.seed, sky.seed);
+        gl.uniform3f(s.horizon, ...rgb(sky.horizon));
+        gl.uniform3f(s.zenith, ...rgb(sky.zenith));
+        gl.uniform3f(s.cloud, ...rgb(sky.cloud));
+        gl.uniform3f(s.below, ...rgb(sky.below ?? sky.horizon));
+        gl.bindVertexArray(skyVao);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.enable(gl.DEPTH_TEST);
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+        const m = setup(modelProgram);
+        gl.uniform3f(m.eye, camera.x, camera.y, camera.height ?? 0.5);
+        gl.uniform1f(m.height, canvas.height);
+        for (const batch of batches.values()) batch.count = 0;
+        for (const thing of things) {
+          if (!thing.model || thing.visible === false || thing.dissolve === 1) continue;
+          let { x, y, z = 0, angle = 0, scale = 1 } = thing;
+          const old = t < 1 ? previous?.poses?.get(thing) : void 0;
+          if (old && old.model === thing.model && Math.hypot(x - old.x, y - old.y, z - (old.z ?? 0)) < 4) {
+            x = blend(old.x, x, t);
+            y = blend(old.y, y, t);
+            z = blend(old.z ?? 0, z, t);
+            angle = blendAngle(old.angle ?? 0, angle, t);
+            scale = blend(old.scale ?? 1, scale, t);
+          }
+          const batch = batchFor2(thing.model);
+          const offset = batch.count++ * floatsPerInstance;
+          if (offset === batch.transforms.length) {
+            const resized = new Float32Array(batch.transforms.length * 2);
+            resized.set(batch.transforms);
+            batch.transforms = resized;
+          }
+          const data = batch.transforms, rotation = radians(angle);
+          data[offset] = x;
+          data[offset + 1] = y;
+          data[offset + 2] = z;
+          data[offset + 3] = scale;
+          data[offset + 4] = Math.cos(rotation);
+          data[offset + 5] = Math.sin(rotation);
+          data[offset + 6] = thing.dissolve ?? 0;
+        }
+        for (const batch of batches.values()) {
+          if (!batch.count) continue;
+          gl.bindVertexArray(batch.vao);
+          gl.bindBuffer(gl.ARRAY_BUFFER, batch.instances);
+          if (batch.capacity !== batch.transforms.byteLength) {
+            batch.capacity = batch.transforms.byteLength;
+            gl.bufferData(gl.ARRAY_BUFFER, batch.capacity, gl.DYNAMIC_DRAW);
+          }
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, batch.transforms, 0, batch.count * floatsPerInstance);
+          gl.drawArraysInstanced(gl.TRIANGLES, 0, batch.vertices, batch.count);
+        }
+        if (outlineTarget) {
+          silhouetteProgram ?? (silhouetteProgram = program(skyVertex, silhouetteFragment, ["sceneColor", "sceneDepth", "radius", "diagonal", "ink"]));
+          const { handle, loc } = silhouetteProgram;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.disable(gl.DEPTH_TEST);
+          gl.useProgram(handle);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, outlineTarget.color);
+          gl.uniform1i(loc.sceneColor, 0);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, outlineTarget.depth);
+          gl.uniform1i(loc.sceneDepth, 1);
+          gl.uniform1i(loc.radius, outlineRadius);
+          gl.uniform1i(loc.diagonal, Math.floor(outlineRadius / Math.SQRT2));
+          gl.uniform3f(loc.ink, palette[0], palette[1], palette[2]);
+          gl.bindVertexArray(skyVao);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+        }
+      };
+      return { capture, draw, resetInterpolation, setPalette, dispose };
+    } catch (error) {
+      dispose();
+      throw error;
+    }
+  }
+
   // src/pixel3d/index.ts
   var settings;
   function configure(config) {
@@ -10215,7 +10810,10 @@ var __RunePixel3DRuntime = (() => {
     game.resizeViewport(width, height);
     canvas.width = width;
     canvas.height = height;
-    const context = canvas.getContext("2d", { alpha: false });
+    const gpuToggle = document.querySelector("input[data-pixel-gpu]");
+    const fps = document.querySelector("[data-pixel-fps]");
+    const frameRate = document.querySelector("select[data-pixel-frame-rate]");
+    const context = canvas.getContext("2d", { alpha: gpuToggle !== null });
     if (!context) throw new Error("This game needs Canvas 2D support");
     context.imageSmoothingEnabled = false;
     let image = new ImageData(
@@ -10239,6 +10837,13 @@ var __RunePixel3DRuntime = (() => {
     let frameId = 0;
     let ready = false;
     let menuOpen = false;
+    let fpsStart = 0, drawnFrames = 0;
+    let gpu;
+    let gpuCanvas;
+    let paletteColors;
+    const tickMs = 1e3 / tickRate;
+    let nextRenderAt;
+    let overlayKey;
     const abort = new AbortController();
     const listen = (element, name2, callback) => element.addEventListener(name2, callback, { signal: abort.signal });
     const clear = (keepCommands = false) => {
@@ -10299,6 +10904,8 @@ var __RunePixel3DRuntime = (() => {
       });
     }
     const surface = canvas.parentElement || canvas;
+    const resolution = document.querySelector("select[data-pixel-resolution]");
+    const palette = document.querySelector("select[data-pixel-palette]");
     const fullscreen = createFullscreen(surface, () => {
       fitViewport();
       clear(true);
@@ -10307,18 +10914,147 @@ var __RunePixel3DRuntime = (() => {
     });
     function fitViewport() {
       let renderWidth = width, renderHeight = height;
+      if (resolution) {
+        const size = /^(\d+)x(\d+)$/.exec(resolution.value);
+        if (!size) throw new Error("Pixel-3d resolution options must use WIDTHxHEIGHT");
+        renderWidth = Number(size[1]);
+        renderHeight = Number(size[2]);
+        if (renderWidth * height !== renderHeight * width) {
+          throw new Error("Pixel-3d resolution options must match the app aspect ratio");
+        }
+      }
+      const hudScale = renderWidth / width;
       if (canvas.dataset.pixelFit === "viewport" && fullscreen.expanded()) {
         const rect = surface.getBoundingClientRect();
         const aspect = Math.max(0.25, Math.min(4, rect.width / Math.max(1, rect.height)));
-        renderWidth = Math.round(Math.sqrt(width * height * aspect) / 2) * 2;
+        renderWidth = Math.round(Math.sqrt(renderWidth * renderHeight * aspect) / 2) * 2;
         renderHeight = Math.round(renderWidth / aspect);
       }
-      if (canvas.width === renderWidth && canvas.height === renderHeight) return;
-      game.resizeViewport(renderWidth, renderHeight);
-      canvas.width = renderWidth;
-      canvas.height = renderHeight;
-      context.imageSmoothingEnabled = false;
-      image = new ImageData(new Uint8ClampedArray(game.raycaster.buffer.buffer), renderWidth, renderHeight);
+      game.resizeViewport(renderWidth, renderHeight, hudScale);
+      if (canvas.width !== renderWidth || canvas.height !== renderHeight) {
+        canvas.width = renderWidth;
+        canvas.height = renderHeight;
+        context.imageSmoothingEnabled = false;
+        image = new ImageData(new Uint8ClampedArray(game.raycaster.buffer.buffer), renderWidth, renderHeight);
+        overlayKey = void 0;
+      }
+      if (gpuCanvas) {
+        if (gpuCanvas.width !== renderWidth) gpuCanvas.width = renderWidth;
+        if (gpuCanvas.height !== renderHeight) gpuCanvas.height = renderHeight;
+        gpuCanvas.style.left = `${canvas.offsetLeft}px`;
+        gpuCanvas.style.top = `${canvas.offsetTop}px`;
+      }
+    }
+    function applyPalette() {
+      const value = palette?.value;
+      paletteColors = value && value !== "original" ? value.split(",").map((hex) => {
+        if (!/^[\da-f]{6}$/i.test(hex)) throw new Error("Pixel-3d palette options need six-digit hex colors");
+        return Number.parseInt(hex, 16);
+      }) : void 0;
+      const paletteOutline = palette?.selectedOptions[0]?.dataset.pixelOutline === "true";
+      game.raycaster.setPalette(paletteColors, paletteOutline);
+      gpu?.setPalette(paletteColors);
+      overlayKey = void 0;
+      game.invalidateFrame();
+    }
+    if (resolution) {
+      listen(resolution, "change", fitViewport);
+      fitViewport();
+    }
+    if (palette) {
+      listen(palette, "change", applyPalette);
+      applyPalette();
+    }
+    function resetFps() {
+      drawnFrames = 0;
+      fpsStart = 0;
+      nextRenderAt = void 0;
+      if (fps) fps.textContent = `${gpuToggle?.checked ? "GPU" : "CPU"} \xB7 \u2014 FPS`;
+    }
+    if (frameRate) {
+      listen(frameRate, "change", () => {
+        resetFps();
+        game.invalidateFrame();
+      });
+    }
+    function cpuFallback(reason) {
+      if (gpuToggle) {
+        gpuToggle.checked = false;
+        gpuToggle.disabled = true;
+        gpuToggle.title = reason;
+      }
+      gpu?.dispose();
+      gpu = void 0;
+      gpuCanvas?.remove();
+      gpuCanvas = void 0;
+      resetFps();
+      game.invalidateFrame();
+    }
+    function toggleGpu() {
+      if (gpuToggle?.checked && !gpu) {
+        const layer = document.createElement("canvas");
+        layer.dataset.pixelGpuSurface = "true";
+        layer.setAttribute("aria-hidden", "true");
+        layer.style.cssText = "position:absolute;pointer-events:none";
+        layer.hidden = true;
+        try {
+          gpu = createWebGlRenderer(layer, game.config.models);
+        } catch (error) {
+          console.warn("Pixel 3D WebGL setup failed", error);
+        }
+        if (!gpu) {
+          cpuFallback("Accelerated WebGL 2 is unavailable. Using the CPU renderer.");
+          return;
+        }
+        gpuCanvas = layer;
+        gpu.setPalette(paletteColors);
+        surface.prepend(layer);
+        fitViewport();
+        listen(layer, "webglcontextlost", () => cpuFallback("WebGL context lost. Using the CPU renderer."));
+      }
+      if (gpuCanvas && !gpuToggle?.checked) gpuCanvas.hidden = true;
+      overlayKey = void 0;
+      gpu?.resetInterpolation();
+      resetFps();
+      game.invalidateFrame();
+    }
+    if (gpuToggle) {
+      listen(gpuToggle, "change", toggleGpu);
+      toggleGpu();
+    }
+    function drawFrame(extraFrames) {
+      if (gpu && gpuCanvas && gpuToggle?.checked) {
+        try {
+          const changed = game.presentIfChanged(() => {
+            const stats = game.renderState();
+            const { map, world } = game.raycaster.config;
+            if (!map.sky || map.sky.below === void 0 || world || map.grid.some(Boolean) || stats.weapon || stats.things.some((thing) => thing.sprite || thing.title)) {
+              throw new Error("This scene needs the CPU renderer");
+            }
+            gpu.capture(stats, map.sky, game.raycaster.fov, extraFrames);
+            const hud = game.frameHud(stats);
+            const key2 = JSON.stringify(hud);
+            if (overlayKey !== key2) {
+              game.raycaster.renderOverlay(hud);
+              context.putImageData(image, 0, 0);
+              overlayKey = key2;
+            }
+          });
+          if (!changed && !extraFrames) return false;
+          gpu.draw(extraFrames ? accumulator / tickMs : 1, game.raycaster.outlineRadius);
+          gpuCanvas.hidden = false;
+          return true;
+        } catch (error) {
+          console.warn("Pixel 3D WebGL frame failed", error);
+          cpuFallback("This scene could not use WebGL. Using the CPU renderer.");
+        }
+      }
+      if (!game.frameIfChanged()) {
+        if (!extraFrames) return false;
+        game.frame();
+      }
+      context.putImageData(image, 0, 0);
+      return true;
     }
     const viewportResize = new ResizeObserver(fitViewport);
     viewportResize.observe(surface);
@@ -10502,9 +11238,9 @@ var __RunePixel3DRuntime = (() => {
     });
     const frame = (now) => {
       if (stopped) return;
-      if (previous) accumulator += Math.min(now - previous, 1e3 / tickRate * 5);
+      if (previous) accumulator += Math.min(now - previous, tickMs * 5);
       previous = now;
-      while (accumulator >= 1e3 / tickRate) {
+      while (accumulator >= tickMs) {
         const controls = {
           ...input,
           fire: Boolean(input.fire || mouseFire || touchFire || pendingFire),
@@ -10520,15 +11256,33 @@ var __RunePixel3DRuntime = (() => {
         lookAccumY = 0;
         game.step(mapped ? mapped.sample(1 / tickRate) : controls);
         if (game.app.state.status !== "playing") clear(true);
-        accumulator -= 1e3 / tickRate;
+        accumulator -= tickMs;
       }
       touch?.update();
       mapped?.update();
-      if (game.frameIfChanged()) {
-        context.putImageData(image, 0, 0);
+      const capped = frameRate?.value === "60";
+      const extraFrames = !game.paused && (capped || frameRate?.value === "display");
+      const renderDue = !capped || nextRenderAt === void 0 || now + 0.5 >= nextRenderAt;
+      if (capped && renderDue) {
+        const deadline = nextRenderAt ?? now;
+        const interval = 1e3 / 60;
+        nextRenderAt = deadline + Math.max(1, Math.floor((now - deadline) / interval) + 1) * interval;
+      }
+      if (renderDue && drawFrame(extraFrames)) {
+        drawnFrames++;
         if (!ready) {
           ready = true;
           markGameReady();
+        }
+      }
+      if (fps) {
+        if (!fpsStart) fpsStart = now;
+        const seconds = (now - fpsStart) / 1e3;
+        if (seconds >= 0.5) {
+          const renderer = gpuCanvas && !gpuCanvas.hidden ? "GPU" : "CPU";
+          fps.textContent = `${renderer} \xB7 ${game.paused ? "Paused" : `${Math.round(drawnFrames / seconds)} FPS`}`;
+          fpsStart = now;
+          drawnFrames = 0;
         }
       }
       const state = game.app.state;
@@ -10587,6 +11341,8 @@ var __RunePixel3DRuntime = (() => {
       game.paused = true;
       cancelAnimationFrame(frameId);
       fullscreen.dispose();
+      gpu?.dispose();
+      gpuCanvas?.remove();
       viewportResize.disconnect();
       touch?.dispose();
       mapped?.dispose();

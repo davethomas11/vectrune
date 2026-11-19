@@ -1,4 +1,11 @@
 @I18N/en_us
+MarbleRun {
+    title = "Marble Run"
+    description = "Roll through six courses above a floating factory. Bank around corners, jump gaps and spikes, and spend charge cells to blast sentries."
+    play = "Play Marble Run"
+    standalone = "Open game in a new tab"
+    display_options = "Try the Pocket palette or switch on the experimental GPU renderer. The game shows actual FPS as you change the resolution and frame rate."
+}
 Starfall {
     title = "Starfall Protocol"
     badge = "Pixel 3D space metroidvania"
@@ -611,7 +618,8 @@ Developer {
     testing = "Testing Rune"
     quality = "Code quality"
     ci = "Continuous integration"
-    release = "What’s new in 0.3.4"
+    release = "What’s new"
+    release_heading = "What’s new in"
     badge = "Developer tools · 0.3.4"
     start_intro = "Go from an installed CLI to five passing Rune tests. The downloadable starter includes a real API, reusable fixtures, and a GitHub Actions workflow."
     install_title = "1. Install or upgrade"
@@ -644,8 +652,6 @@ Developer {
     opaque_text = "The formatter keeps view/CSS blocks and embedded text intact. It formats the entry file and its imports, validates all changes before writing, and refuses changes that alter the parsed document. Review the diff as with any formatter."
     ci_intro = "Copy this workflow into .github/workflows/rune.yml in your project. It is also included in the starter. The example uses an Ubuntu x86-64 runner and pins the CLI to 0.3.4."
     ci_text = "The pipeline checks installation, formatting, static diagnostics, and tests. JSON reports are suitable for tools; nonzero exits fail the job. Cache tooling is not required."
-    release_intro = "Play Starfall Protocol: a space metroidvania built with the Pixel 3D engine."
-    release_text = "0.3.6 adds Starfall Protocol: connected sectors, three main bosses and an optional guardian, linked movement abilities, saved progress, original music, a cinematic opening and homecoming credits. The engine gains sparse chunked worlds, nearby entity processing, faster voxel rendering, destination labels, scrolling cinematic HUDs and stable controller pause."
     upgrade_title = "Upgrade and verify"
     upgrade_text = "Homebrew users can update and upgrade. Other platforms should replace the old binary with 0.3.6 from Releases. doctor shows the executable actually running so you can spot an older binary on PATH."
     cmd_1 = "brew install davethomas11/vectrune/vectrune\nvectrune --version"

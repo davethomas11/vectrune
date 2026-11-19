@@ -43,6 +43,36 @@ describe('elevated pitched grid rendering', () => {
     expect(rc.buffer[30 * 80 + 40]).toBe(0xff880000);
     expect(rc.pixelDepth[30 * 80 + 40]).toBeLessThan(1);
   });
+  it('drifts clouds behind models below the horizon when the sky replaces the floor', () => {
+    const rc = create({ ...map, sky: { ...sky, below: 0xff804020, cloud: 0xffc09080, speed: .2 } });
+    const camera = { x: 1.5, y: 1.5, angle: 0, height: 3, pitch: -36 };
+    const center = 30 * 80 + 40;
+    const before = rc.render(camera).slice();
+    expect(rc.pixelDepth[center]).toBe(Infinity);
+    expect(before[center]).not.toBe(map.floor);
+    expect(rc.render(camera, [], undefined, 0, undefined, [], 10)).not.toEqual(before);
+
+    rc.config.models = { platform: { blocks: [{ from: [-1, -1, 0], size: [2, 2, 1], color: 0xffffffff }] } };
+    rc.render(camera, [{ x: 7.5, y: 1.5, z: -2, model: 'platform' }]);
+    expect(rc.pixelDepth[center]).toBeLessThan(10);
+    expect(rc.buffer[center]).toBe(0xffffffff);
+  });
+  it('outlines model silhouettes without tinting distant sky or the model interior', () => {
+    const light = 0xffeeeeee;
+    const rc = create({ ...map, grid: map.grid.map(() => 0),
+      sky: { ...sky, horizon: light, zenith: light, cloud: light, below: light } });
+    rc.config.models = { platform: { blocks: [{ from: [-1, -1, 0], size: [2, 2, 1], color: light }] } };
+    const camera = { x: 1.5, y: 1.5, angle: 0, height: 3, pitch: -36 };
+    const things = [{ x: 7.5, y: 1.5, z: -2, model: 'platform' }];
+    rc.setPalette([0, 0xffffff]);
+    const plain = rc.render(camera, things).slice();
+    rc.setPalette([0, 0xffffff], true);
+    const outline = rc.render(camera, things);
+    expect(outline[0]).toBe(plain[0]);
+    expect(outline[30 * 80 + 40]).toBe(plain[30 * 80 + 40]);
+    expect(outline.some((color, i) => color === 0xff000000 && plain[i] !== color &&
+      rc.pixelDepth[i] === Infinity)).toBe(true);
+  });
   it('occludes grounded billboards behind walls and shows them from above', () => {
     const rc = create();
     rc.config.sprites.test = { width: 1, height: 1, origin: [0, 1], colors: [0xffffff], pixels: [0] };
