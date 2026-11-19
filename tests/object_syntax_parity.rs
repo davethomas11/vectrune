@@ -1,10 +1,33 @@
 use rune_runtime::{
+    apps::rune_web::render_html_for_path,
     builtins::Context,
     core::{execute_steps_inner, AppState},
     rune_parser::parse_rune,
 };
 use serde_json::Value;
 use std::{collections::HashMap, io::Cursor, sync::Arc};
+
+#[tokio::test]
+async fn vectraiders_html_bootstraps_all_three_alien_rows() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("examples/games/space_invaders/space_invaders.rune");
+    let document = rune_runtime::rune_parser::load_rune_document_from_path(&path).unwrap();
+    let html = render_html_for_path(&document, "/").await.unwrap();
+    let state = html.lines().find_map(|line| line.strip_prefix("  stateJson: "))
+        .unwrap().trim_end_matches(',');
+    let state: Value = serde_json::from_str(state).unwrap();
+    let aliens = state["aliens"].as_array().unwrap();
+    assert_eq!(aliens.len(), 18);
+    assert!(state.get("alien_batch").is_none());
+    for (index, alien) in aliens.iter().enumerate() {
+        let row = index / 6 + 1;
+        let x = 50 + (index % 6) * 65;
+        assert_eq!(*alien, serde_json::json!({
+            "x": x, "start_x": x, "y": row * 40, "start_y": row * 40,
+            "type": row, "alive": true,
+        }));
+    }
+}
 
 fn fixtures(name: &str) -> Vec<Value> {
     serde_json::from_str(match name {

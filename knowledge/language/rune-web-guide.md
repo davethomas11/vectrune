@@ -85,6 +85,7 @@ state:
 ```
 - `local <name> = <expr>`: Declares a local template or generator in `state:` without exposing it in the public reactive state.
 - `<batch_ref> with { ... }`: Maps over a local batch, cloning each element and merging the designated properties.
+- A named overlay checks the exact binding first, then its `_batch` form. Here `alien` resolves to `alien_batch` even when other names start with `alien`.
 - `[ ... ] all { ... }`: Post-modifier applying shared properties across all flattened elements in the resulting collection.
 - `{ template } * N`: Standalone replication of a template object N times.
 - `inc (props) by STEP`: Increments numeric properties across items (`value = base + i * STEP`).

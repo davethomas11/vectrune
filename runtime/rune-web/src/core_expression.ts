@@ -201,7 +201,13 @@ export function evaluateCoreExpression(e: Expr, scope: Record<string, any>, func
       if (scope[e.value] === undefined) return undefined;
       return Array.isArray(source) ? source.find(item => String(item?.[e.value]) === String(scope[e.value])) : undefined;
     }
-    case 'overlay': return overlay(ev(e.items[0]), ev(e.items[1]));
+    case 'overlay': {
+      const [source, overrides] = e.items;
+      const value = source.kind === 'id' && !Object.prototype.hasOwnProperty.call(scope, source.value)
+        ? scope[`${source.value}_batch`]
+        : ev(source);
+      return overlay(value, ev(overrides));
+    }
     case 'generate': {
       const count = collectionCount(ev(e.items[1]));
       const step = finiteNumber(ev(e.items[2]));

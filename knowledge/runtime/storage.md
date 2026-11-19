@@ -67,11 +67,22 @@ network adapter to connect to its owner.
 vectrune db put notes hello --value '{"count":0}' --endpoint http://localhost:7331
 vectrune db increment notes hello --path '["count"]' --by 1 --endpoint http://localhost:7331
 vectrune db get notes hello --endpoint http://localhost:7331
+vectrune db get-many notes hello second --endpoint http://localhost:7331
 vectrune db scan notes --prefix h --limit 20 --endpoint http://localhost:7331
 vectrune events tail '$changes' --endpoint http://localhost:7331
 ```
 
 `db query` is an alias for `db scan`, not SQL or a property-filter expression.
+`db get-many` reads 1–256 keys from one collection in a single read snapshot.
+It returns records in the requested order, repeats duplicate keys, and puts
+`null` in each missing slot. The MessagePack response is limited to 4 MiB.
+
+```rune
+packet = { op: "get_many", collection: "notes", keys: ["hello", "second"] }
+records = db main packet
+```
+
+The same packet works with native and remote Rune DB and Rune-Web IndexedDB.
 `events read <stream>` returns one bounded page; `events tail <stream>` prints
 events as newline-delimited JSON, updates its cursor, and waits for new commits.
 Use `--after <sequence>` to replay strictly after a saved position. Ctrl-C stops

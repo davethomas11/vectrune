@@ -69,6 +69,12 @@ pub fn commands() -> Vec<Command> {
                 .arg(required("key")),
         ))
         .subcommand(connection(
+            Command::new("get-many")
+                .about("Read multiple records in one snapshot, in input order")
+                .arg(required("collection"))
+                .arg(required("keys").num_args(1..=256)),
+        ))
+        .subcommand(connection(
             Command::new("put")
                 .arg(required("collection"))
                 .arg(required("key"))
@@ -151,6 +157,10 @@ pub async fn run(kind: &str, args: &ArgMatches) -> Result<()> {
         ("db", "get") => Request::Get {
             collection: string("collection"),
             key: string("key"),
+        },
+        ("db", "get-many") => Request::GetMany {
+            collection: string("collection"),
+            keys: args.get_many::<String>("keys").unwrap().cloned().collect(),
         },
         ("db", "put") => Request::Put {
             collection: string("collection"),

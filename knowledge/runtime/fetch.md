@@ -12,6 +12,24 @@ In Rune-Web the assignment form suspends the action while the request runs, beca
 | `x = fetch-json url catch handler` | on failure `handler` is called with `{ status, message }` |
 | `fetch-json url then handler [catch handler]` | success calls `handler` with the value |
 
+## Request options
+
+Pass a binding after `options` in either form, before any `then` or `catch` clause.
+
+```rune
+request_options = { headers: { "Accept": "application/json", "X-Client": "rune-demo" }, timeout_ms: 3000, max_body_bytes: 262144 }
+weather = fetch-json weather_url options request_options
+```
+
+| Field | Behavior |
+| --- | --- |
+| `headers` | A map of HTTP header names to ASCII strings. Transport and browser-controlled headers such as `Host`, `Cookie`, and `Content-Length` are rejected. |
+| `timeout_ms` | Total request and response-read timeout in milliseconds, 1–60000. Defaults to 10000. |
+| `max_body_bytes` | Response cap in bytes, 1–8388608. Defaults to 1048576. |
+| `redirect` | `"follow"` uses the host's redirect limit. `"error"` rejects redirects. A request with custom headers uses `"error"` to keep those headers on the original request. |
+
+Unknown fields and malformed options are rejected before the request.
+
 `status` in an error is the upstream HTTP status, or `0` when no response was received (network, CORS, timeout, size, bad JSON on a 2xx).
 
 ## Server (REST, GraphQL, WebSocket routes)
@@ -39,7 +57,7 @@ Run it: `vectrune examples/api/weather.rune`, then `curl localhost:3000/weather`
 - `url` is a literal `http://` / `https://` URL, or a name resolved from context (including `@Values`). Other schemes are rejected (500).
 - `catch <func>` / `then <func>` call a `func` defined earlier in the route. The handler reads its argument as `$1`. With `x = ... catch f`, a response produced by `f` is assigned to `x`, and the route continues. Server `func` support is basic: `respond 200 $1` works, but path reads like `$1.message` are not expanded by `respond`. An undefined handler is a 500.
 - Without `catch`, failures end the route.
-- Limits (not configurable yet): 10s total timeout, 5 redirects, 1 MiB response body. Exceeding them responds `502`/`504`.
+- Defaults are a 10-second total timeout, up to five redirects, and a 1 MiB response body. Size and redirect errors respond `502`, and timeouts respond `504`.
 - Error messages omit credentials, query string and fragment, so API keys in URLs are not echoed.
 - `@Values` names are seeded after request data and are read-only (assignment or `delete` fails with 500).
 
@@ -81,16 +99,16 @@ Full example: `examples/rune-web/weather_web.rune` (`vectrune examples/rune-web/
 ### CORS and browser limits
 
 - The browser enforces CORS. The target must send `Access-Control-Allow-Origin` for your page's origin, or the request fails with `status: 0` ("network error or blocked by CORS"). A CORS block cannot be told apart from a network failure.
-- Only simple GETs are sent: no custom headers, `credentials: "omit"` (no cookies), no referrer. This avoids preflight requests.
+- Requests use GET with `credentials: "omit"` and no referrer. Custom headers can trigger a CORS preflight and must be allowed by the target.
 - An `https://` page cannot fetch `http://` URLs (mixed content), except `localhost` in most browsers.
-- Redirects are followed using the browser's own limit, not 5. Cross-origin redirects must also satisfy CORS.
-- The 10s timeout and 1 MiB cap are enforced in the runtime while streaming.
+- When redirects are enabled, the browser applies its own limit and CORS rules.
+- The timeout and response cap are enforced while streaming.
 - If an API lacks CORS, call it from a server route with `fetch-json` and have the page call that route.
 - Anything in a Rune-Web page, including URLs and keys, is visible to the user. Put secrets in server `@Values`, not in the page.
 
 ## Not implemented yet
 
-Methods other than GET, fetch assignment inside nested Rune-Web blocks, serialized/cancellable requests, headers, request bodies, authentication, query-parameter helpers, configurable timeouts, outbound-host allow lists, environment-backed values, `@Every` scheduling, and `@Values` in Rune-Web.
+Methods other than GET, fetch assignment inside nested Rune-Web blocks, serialized/cancellable requests, request bodies, query-parameter helpers, outbound-host allow lists, environment-backed values, `@Every` scheduling, and `@Values` in Rune-Web.
 
 ## Sources
 

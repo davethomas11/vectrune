@@ -134,19 +134,23 @@
       "id": "fetch",
       "category": "native",
       "name": "fetch",
-      "signature": "result = fetch <url|name> [catch <handler>]",
+      "signature": "result = fetch <url|name> [options <binding>] [catch <handler>]",
       "summary": "Perform an outbound HTTP GET and return {status, body}.",
       "sources": [
         "src/builtins/builtin/http_fetch.rs",
         "runtime/rune-web/src/builtins/fetch.ts"
       ],
       "returns": "Writes the response (fetch: {status, body}; fetch-json: parsed JSON) to the assignment target and ___last_exec_result___.",
-      "errors": "GET only; http/https only; 10s timeout, 1 MiB cap. Native REST: 502 for upstream non-2xx/bad JSON/network errors, 504 on timeout, unless a catch handler is given. Rune-Web: failures call the catch action; browser CORS rules apply.",
+      "errors": "GET only; http/https only; Default 10s timeout and 1 MiB cap, configurable per request. Native REST: 502 for upstream non-2xx/bad JSON/network errors, 504 on timeout, unless a catch handler is given. Rune-Web: failures call the catch action; browser CORS rules apply.",
       "example": "response = fetch weather_url",
       "parameters": [
         {
           "name": "url",
           "description": "http(s) URL literal, or a name (e.g. an @Values entry) holding one."
+        },
+        {
+          "name": "options",
+          "description": "Optional binding holding headers, timeout_ms, max_body_bytes, or redirect. Custom header requests reject redirects."
         },
         {
           "name": "catch",
@@ -163,19 +167,23 @@
       "id": "fetch-json",
       "category": "native",
       "name": "fetch-json",
-      "signature": "result = fetch-json <url|name> [catch <handler>]",
+      "signature": "result = fetch-json <url|name> [options <binding>] [catch <handler>]",
       "summary": "Perform an outbound HTTP GET and parse the body as JSON.",
       "sources": [
         "src/builtins/builtin/http_fetch.rs",
         "runtime/rune-web/src/builtins/fetch.ts"
       ],
       "returns": "Writes the response (fetch: {status, body}; fetch-json: parsed JSON) to the assignment target and ___last_exec_result___.",
-      "errors": "GET only; http/https only; 10s timeout, 1 MiB cap. Native REST: 502 for upstream non-2xx/bad JSON/network errors, 504 on timeout, unless a catch handler is given. Rune-Web: failures call the catch action; browser CORS rules apply.",
+      "errors": "GET only; http/https only; Default 10s timeout and 1 MiB cap, configurable per request. Native REST: 502 for upstream non-2xx/bad JSON/network errors, 504 on timeout, unless a catch handler is given. Rune-Web: failures call the catch action; browser CORS rules apply.",
       "example": "weather = fetch-json weather_url",
       "parameters": [
         {
           "name": "url",
           "description": "http(s) URL literal, or a name (e.g. an @Values entry) holding one."
+        },
+        {
+          "name": "options",
+          "description": "Optional binding holding headers, timeout_ms, max_body_bytes, or redirect. Custom header requests reject redirects."
         },
         {
           "name": "catch",
@@ -1082,7 +1090,8 @@
         "Supported in extended .vect scripts, backend .rune run: blocks, Rune-Web actions and the browser emulator. Construction expressions also work in Rune-Web initial @Logic state.",
         "Backend field expressions support literals, paths, arithmetic, comparisons, booleans, nullish fallback and ternaries. Helper calls and other statements retain their host-specific support.",
         "with and all use the same overlay operation. Ordinary nested arrays remain nested.",
-        "Updating one generated or overlaid object does not change the template or its other copies. Bare variable assignment retains the host's existing value/reference behavior."
+        "Updating one generated or overlaid object does not change the template or its other copies. Bare variable assignment retains the host's existing value/reference behavior.",
+        "A named overlay checks the exact binding first, then looks for the same name with the _batch suffix. For example, alien with { y: 40 } resolves alien_batch when alien is absent."
       ],
       "fields": []
     },
@@ -4426,12 +4435,13 @@
       "aliases": [],
       "notes": [
         "Standalone hosts use @App type = rune-db or vect-event with source = <provider>.",
-        "CLI: vectrune db get/put/delete/increment/scan/batch; vectrune events append/read/tail. Connect with --endpoint, --file or --config plus --source.",
+        "CLI: vectrune db get/get-many/put/delete/increment/scan/batch; vectrune events append/read/tail. Connect with --endpoint, --file or --config plus --source.",
         "Rune-Web supports optional catch <action> on top-level I/O assignments; native Vect uses db.request(config, source, packet).",
         "Example applications and commands: examples/data/storage/README.md.",
         "Server-side database + Rune-Web frontend: examples/data/storage/fullstack/database.rune and fullstack/app.rune. Site walkthrough: /docs/storage/.",
         "Atomic checkout and saved-cursor replay: examples/data/storage/checkout.vect and replay.vect. The offline Rune DB and Vect Event guide includes runnable sources.",
-        "One server: examples/data/storage/fullstack/single-server.rune. Separate apps in one command: vectrune <frontend.rune> --secondary-app <database.rune>."
+        "One server: examples/data/storage/fullstack/single-server.rune. Separate apps in one command: vectrune <frontend.rune> --secondary-app <database.rune>.",
+        "get_many reads 1..256 keys from one collection snapshot, repeating duplicate keys and returning null for missing records. Results follow input order. CLI: vectrune db get-many."
       ],
       "fields": []
     },

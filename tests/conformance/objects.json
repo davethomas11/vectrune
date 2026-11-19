@@ -347,7 +347,7 @@
     "expr": "{text: \"\\u0041\\uD83D\\uDE00\\b\\f\\/\"}",
     "context": {},
     "expected": {
-      "text": "A\ud83d\ude00\b\f/"
+      "text": "A😀\b\f/"
     }
   },
   {
@@ -364,5 +364,51 @@
       ]
     },
     "expected": null
+  },
+  {
+    "category": "named overlay resolves the batch suffix before unrelated names",
+    "expr": "[alien with { y: 40 }] all { alive: true }",
+    "context": {
+      "alien_count": 18,
+      "alien_bullets": [],
+      "alien_batch": [
+        {
+          "x": 50
+        },
+        {
+          "x": 115
+        }
+      ]
+    },
+    "expected": [
+      {
+        "x": 50,
+        "y": 40,
+        "alive": true
+      },
+      {
+        "x": 115,
+        "y": 40,
+        "alive": true
+      }
+    ]
+  },
+  {
+    "category": "exact overlay names take precedence over batch aliases",
+    "expr": "alien with { y: 40 }",
+    "context": {
+      "alien": {
+        "x": 20
+      },
+      "alien_batch": [
+        {
+          "x": 50
+        }
+      ]
+    },
+    "expected": {
+      "x": 20,
+      "y": 40
+    }
   }
 ]

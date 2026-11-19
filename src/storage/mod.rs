@@ -22,6 +22,10 @@ pub enum Request {
         collection: String,
         key: String,
     },
+    GetMany {
+        collection: String,
+        keys: Vec<String>,
+    },
     Scan {
         collection: String,
         #[serde(default)]
@@ -221,6 +225,20 @@ impl Store {
                     Some(v) => serde_json::to_value(decode::<Record>(v.value())?)?,
                     None => Value::Null,
                 })
+            }
+            Request::GetMany { collection, keys } => {
+                ensure!((1..=MAX_OPS).contains(&keys.len()), "get_many requires 1..256 keys");
+                let tx = self.db.begin_read()?;
+                let table = tx.open_table()?;
+                let mut size = 3;
+                let mut records = Vec::with_capacity(keys.len());
+                for key in keys {
+                    let value = table.get(record_key(collection, key)?.as_slice())?;
+                    size += value.as_ref().map_or(1, |v| v.value().len());
+                    ensure!(size <= MAX_PAGE, "get_many response exceeds 4 MiB");
+                    records.push(value.map(|v| decode::<Record>(v.value())).transpose()?);
+                }
+                Ok(serde_json::to_value(records)?)
             }
             Request::Scan {
                 collection,

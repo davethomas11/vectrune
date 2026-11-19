@@ -17,7 +17,7 @@ describe('portable object syntax', () => {
   for (const fixture of programs) it(fixture.category, () => {
     const app: RuneApp = { state: {}, derived: {}, render() {}, computeDerived() {}, invokeAction() {} };
     initContext({ app, pageTree: { Text: '' }, derivedDefinitions: {}, helperDefinitions: {}, actionDefinitions: {},
-      i18nData: {}, isRendering: false, memorySubscriptions: {} });
+      i18nData: {}, isRendering: false, compactScopes: true, memorySubscriptions: {} });
     const locals = {};
     for (const statement of fixture.statements) executeStatement(statement, locals);
     expect(app.state.result).toEqual(fixture.expected);
