@@ -377,26 +377,87 @@ rules:
     .menu-panel-games h3:
         grid-column = 1 / -1
 
-    .menu-game:
-        display = grid
+    .game-preview:
+        min-width = 0
         overflow = hidden
-        border-radius = 10px
+        border = 1px solid {border}
+        border-radius = 12px
         background = #eaf3ee
+
+    .game-gallery:
+        max-width = 46rem
+        margin-inline = auto
+
+    .game-gallery h2:
+        margin = 0 0 1rem
+
+    .game-preview-slide:
+        display = grid
         color = {brand-dark}
         text-decoration = none
 
-    .menu-game img:
+    .game-preview-slide[hidden], .game-preview-controls[hidden], .game-preview:not([data-preview-ready]) .game-preview-slide:not(:first-child):
+        display = none
+
+    .game-preview-slide img:
+        display = block
         width = 100%
         height = auto
-        aspect-ratio = 2
+        aspect-ratio = 16 / 9
         object-fit = cover
         image-rendering = pixelated
+        background = #132b33
 
-    .menu-game strong:
-        padding = 0.8rem 1rem
+    .game-preview-slide strong:
+        padding = 0.7rem 0.9rem
 
-    .menu-game:hover strong:
+    .game-preview-slide:hover strong:
         text-decoration = underline
+
+    .game-preview-controls:
+        display = flex
+        align-items = center
+        flex-wrap = wrap
+        gap = 0.3rem
+        border-top = 1px solid {border}
+        padding = 0.3rem 0.55rem
+
+    .game-preview-controls button:
+        min-height = 44px
+        min-width = 44px
+        border = 0
+        border-radius = 6px
+        background = transparent
+        color = {brand-dark}
+        font = inherit
+        font-weight = 700
+        cursor = pointer
+
+    .game-preview-controls button:hover:
+        background = #dcece4
+
+    .game-preview-controls .game-preview-step:
+        font-size = 1.4rem
+
+    .game-preview-count:
+        color = {text-soft}
+        font-size = 0.8rem
+        font-variant-numeric = tabular-nums
+
+    .game-preview-controls .game-preview-toggle:
+        margin-left = auto
+        padding-inline = 0.45rem
+        font-size = 0.8rem
+
+    .game-preview-slide:focus-visible:
+        outline-offset = -4px
+
+    .game-preview-status:
+        position = absolute
+        width = 1px
+        height = 1px
+        overflow = hidden
+        clip-path = inset(50%)
 
     .header-actions:
         display = flex
@@ -1326,7 +1387,7 @@ rules:
         border-top = 2px dashed {border}
         padding-top = 2.5rem
 
-    .navigation-toggle:
+    .site-header .navigation-toggle:
         display = none
 
     .page, .hero > *, .install-grid > *, .steps-grid > *, .tour-grid > *, .walkthrough-grid > *, .examples-grid > *, .next-grid > *, .builtin-card:
@@ -1686,7 +1747,7 @@ responsive:
         .language-summary:
             padding-inline = 0.35rem
 
-        .navigation-toggle:
+        .site-header .navigation-toggle:
             display = flex
 
         .menu-icon:
@@ -1732,7 +1793,7 @@ responsive:
             gap = 0.9rem
             padding = 0.85rem 0.5rem 1rem
 
-        .menu-game:
+        .menu-panel-games .game-preview:
             display = none
 
         .hero:

@@ -75,6 +75,15 @@ Common {
     translation_source = "Ayuda a traducir en GitHub ↗"
     localization_guide = "Guía de localización"
 }
+GamePreview {
+    label = "Vistas previas de los juegos"
+    more_games = "Explora los juegos"
+    previous = "Juego anterior"
+    next = "Juego siguiente"
+    play = "Iniciar la presentación"
+    pause = "Pausar la presentación"
+}
+
 SiteMenu {
     menu = "Menú"
     learn = "Aprender"

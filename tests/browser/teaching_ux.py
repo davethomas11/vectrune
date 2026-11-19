@@ -149,6 +149,7 @@ def check(base, directory, screenshots):
                     expect(page.locator('.navigation-toggle')).to_have_attribute('aria-expanded', 'false')
                     expect(page.locator('.navigation-toggle')).to_be_focused()
             page.set_viewport_size({'width': 1440, 'height': 1000})
+            expect(page.locator('.navigation-toggle')).to_be_hidden()
             learn.focus()
             page.keyboard.press('Enter')
             expect(page.locator('.menu-panel-learn')).to_be_visible()
@@ -288,6 +289,46 @@ def run(directory, screenshots):
     check_starter(directory)
     with preview(directory) as base:
         check(base, directory, screenshots)
+        check_game_previews(base)
+
+
+def check_game_previews(base):
+    games = ['dog-walker', 'games', 'vectworms', 'monster-city', 'vect-breach',
+             'rune-crypt', 'skybound-2', 'starfall', 'marble-run']
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        desktop = browser.new_page(viewport={'width': 1440, 'height': 900})
+        desktop.goto(base + '/')
+        desktop.locator('[data-menu-category="games"] summary').click()
+        preview = desktop.locator('.menu-panel-games .game-preview')
+        count = preview.locator('.game-preview-count')
+        expect(count).to_have_text('2 / 9', timeout=9000)
+        preview.get_by_role('button', name='Pause slideshow').click()
+        expect(preview.get_by_role('button', name='Play slideshow')).to_be_visible()
+        preview.get_by_role('button', name='Previous game').click()
+        expect(count).to_have_text('1 / 9')
+        preview.get_by_role('button', name='Previous game').click()
+        expect(count).to_have_text('9 / 9')
+
+        phone = browser.new_page(
+            viewport={'width': 390, 'height': 844}, has_touch=True, reduced_motion='reduce',
+        )
+        phone.goto(base + '/es/games/')
+        preview = phone.locator('main .game-preview')
+        preview.scroll_into_view_if_needed()
+        expect(preview.get_by_role('button', name='Iniciar la presentación')).to_be_visible()
+        visible = preview.locator('.game-preview-slide:visible')
+        for index, game in enumerate(games):
+            expect(visible).to_have_attribute('href', f'/es/{game}')
+            image = visible.locator('img')
+            expect(image).to_be_visible()
+            image.evaluate('(img) => img.decode()')
+            if index < len(games) - 1:
+                preview.get_by_role('button', name='Juego siguiente').tap()
+        visible.tap()
+        expect(phone.locator('main')).to_have_attribute('data-route', 'marble-run')
+        browser.close()
+    print('Game previews rotate automatically and support pause, wrapping, reduced motion and localized game links', flush=True)
 
 
 def check_hosting_prefix():

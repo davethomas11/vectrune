@@ -1,0 +1,26 @@
+@Component/GamePreview
+view:
+    div .game-preview data-game-preview=true role=region aria-label="%i18n.GamePreview.label%":
+        div .game-preview-track:
+            GamePreviewSlide route=dog-walker title="{i18n.DogWalker.title}" image=/assets/dog-walker-cover.png
+            GamePreviewSlide route=games title="{i18n.Nav.vectraiders}" image=/assets/vectraiders-cover.png
+            GamePreviewSlide route=vectworms title="{i18n.Nav.vectworms}" image=/assets/vectworms-cover.png
+            GamePreviewSlide route=monster-city title="{i18n.Nav.monster_city}" image=/assets/monster-city-cover.png
+            GamePreviewSlide route=vect-breach title="{i18n.Nav.vect_breach}" image=/assets/vect-breach-cover.png
+            GamePreviewSlide route=rune-crypt title="{i18n.RuneCrypt.title}" image=/assets/rune-crypt-cover.png
+            GamePreviewSlide route=skybound-2 title="{i18n.SkyboundTwo.title}" image=/assets/skybound-2-cover.png
+            GamePreviewSlide route=starfall title="{i18n.Starfall.title}" image=/assets/starfall-cover.png
+            GamePreviewSlide route=marble-run title="{i18n.MarbleRun.title}" image=/assets/marble-run-cover.png
+        div .game-preview-controls hidden=true:
+            button .game-preview-step type=button data-preview-step=-1 aria-label="%i18n.GamePreview.previous%" "‹"
+            span .game-preview-count aria-hidden=true
+            button .game-preview-step type=button data-preview-step=1 aria-label="%i18n.GamePreview.next%" "›"
+            button .game-preview-toggle type=button data-preview-toggle=true data-play="%i18n.GamePreview.play%" data-pause="%i18n.GamePreview.pause%" "%i18n.GamePreview.pause%"
+        span .game-preview-status role=status
+
+@Component/GamePreviewSlide
+props: [route, title, image]
+view:
+    a .game-preview-slide href="{i18n.Common.base_path}{route}":
+        img src="{image}" width=512 height=288 alt="" loading=lazy decoding=async
+        strong "{title}"
