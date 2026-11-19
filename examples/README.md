@@ -45,6 +45,7 @@ port 3000; run one at a time or choose another port with `--port`.
 | Skybound | [skybound/skybound.rune](games/skybound/skybound.rune) |
 | Skybound 2 | [skybound_2/skybound_2.rune](games/skybound_2/skybound_2.rune) |
 | Starfall Protocol | [starfall/starfall.rune](games/starfall/starfall.rune) |
+| Dog Walker | [dog_walker/dog_walker.rune](games/dog_walker/dog_walker.rune) |
 | Worm Game | [worm_game/worm_game.rune](games/worm_game/worm_game.rune) |
 
 For example:

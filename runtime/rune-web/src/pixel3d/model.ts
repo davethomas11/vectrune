@@ -16,6 +16,9 @@ export interface ModelInstance {
   angle?: number;
   scale?: number;
   dissolve?: number;
+  // Internal pose for a tether cylinder. Stretch along local Z before tipping its axis.
+  axisTilt?: number;
+  axialScale?: number;
 }
 
 function shade(color: number, factor: number): number {
@@ -48,17 +51,31 @@ export function renderModel(
   const eye = camera.height ?? .5, pitch = (camera.pitch ?? 0) * Math.PI / 180;
   const cp = Math.cos(pitch), sp = Math.sin(pitch);
   const c = Math.cos(angle), s = Math.sin(angle);
+  const tilt = instance.axisTilt ?? 0, axialScale = instance.axialScale ?? 1;
+  const oriented = tilt !== 0 || axialScale !== 1;
+  const tc = oriented ? Math.cos(tilt) : 1, ts = oriented ? Math.sin(tilt) : 0;
   const ox = camera.x - instance.x, oy = camera.y - instance.y;
   const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - (instance.z ?? 0)) / scale];
+  if (oriented) {
+    const [x, , z] = origin;
+    origin[0] = x * tc - z * ts;
+    origin[2] = (x * ts + z * tc) / axialScale;
+  }
   for (const block of model.blocks) {
     const max = block.from.map((v, i) => v + block.size[i]);
     const center = block.from.map((v, i) => v + block.size[i] / 2);
     let left = width, right = 0, top = height, bottom = 0, clipped = false, frontCorners = 0;
     let outsideLeft = 0, outsideRight = 0, outsideTop = 0, outsideBottom = 0;
     for (let corner = 0; corner < 8; corner++) {
-      const lx = (corner & 1 ? max[0] : block.from[0]) * scale;
+      let lx = (corner & 1 ? max[0] : block.from[0]) * scale;
       const ly = (corner & 2 ? max[1] : block.from[1]) * scale;
-      const z = (corner & 4 ? max[2] : block.from[2]) * scale + (instance.z ?? 0);
+      let z = (corner & 4 ? max[2] : block.from[2]) * scale;
+      if (oriented) {
+        const x = lx, height = z * axialScale;
+        lx = x * tc + height * ts;
+        z = -x * ts + height * tc;
+      }
+      z += instance.z ?? 0;
       const x = instance.x + lx * c - ly * s - camera.x;
       const y = instance.y + lx * s + ly * c - camera.y;
       const forward = x * dirX + y * dirY;
@@ -95,9 +112,14 @@ export function renderModel(
         const v = ((height >> 1) - y - .5) / height;
         const rx = dirX * cp - dirY * fovScale * cx - dirX * sp * v;
         const ry = dirY * cp + dirX * fovScale * cx - dirY * sp * v;
-        const rayX = (rx * c + ry * s) / scale;
+        let rayX = (rx * c + ry * s) / scale;
         const rayY = (-rx * s + ry * c) / scale;
-        const rayZ = (sp + cp * v) / scale;
+        let rayZ = (sp + cp * v) / scale;
+        if (oriented) {
+          const x = rayX;
+          rayX = x * tc - rayZ * ts;
+          rayZ = (x * ts + rayZ * tc) / axialScale;
+        }
         let near = -Infinity, far = Infinity, face = 0, exitFace = 0, valid = true;
         for (let axis = 0; axis < 3; axis++) {
           const component = axis === 0 ? rayX : axis === 1 ? rayY : rayZ;

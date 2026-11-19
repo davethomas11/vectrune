@@ -1,8 +1,9 @@
 // Experimental model-only browser backend. Game rules and HUD stay shared.
 import type { Pixel3DEngine } from './engine';
-import type { BlockModel } from './model';
+import type { BlockModel, ModelInstance } from './model';
 import type { Thing3D } from './raycaster';
 import type { Sky } from './sky';
+import { tetherModel, tetherPieces, type Point3D, type Tether3D } from './tether';
 
 type Frame = ReturnType<Pixel3DEngine['renderState']>;
 type Vec = [number, number, number];
@@ -14,6 +15,7 @@ type CapturedFrame = {
   fov: number;
   time: number;
   poses?: Map<Thing3D, Pose>;
+  tethers?: Map<Tether3D, Tether3D>;
 };
 type Batch = {
   vao: WebGLVertexArrayObject;
@@ -30,6 +32,7 @@ const blend = (from: number, to: number, t: number) => from + (to - from) * t;
 const blendAngle = (from: number, to: number, t: number) =>
   from + (((to - from + 180) % 360 + 360) % 360 - 180) * t;
 const rgb = (value: number): Vec => [(value & 255) / 255, ((value >>> 8) & 255) / 255, ((value >>> 16) & 255) / 255];
+const tetherRod = Symbol('tether rod'), tetherJoint = Symbol('tether joint');
 
 function mesh(model: BlockModel): Float32Array {
   const data: number[] = [];
@@ -145,6 +148,8 @@ layout(location=1) in vec3 color;
 layout(location=2) in vec4 shade;
 layout(location=3) in vec4 positionScale;
 layout(location=4) in vec3 rotationDissolve;
+layout(location=5) in vec3 tiltStretch;
+layout(location=6) in vec4 instanceColor;
 uniform vec3 eye;
 uniform vec2 heading, tilt;
 uniform float fov;
@@ -153,6 +158,9 @@ out vec4 shading;
 flat out float dissolve;
 void main() {
   vec3 local = point * positionScale.w;
+  local.z *= tiltStretch.z;
+  local.xz = vec2(tiltStretch.x * local.x + tiltStretch.y * local.z,
+    -tiltStretch.y * local.x + tiltStretch.x * local.z);
   vec2 rotation = rotationDissolve.xy;
   vec3 p = positionScale.xyz - eye + vec3(rotation.x*local.x - rotation.y*local.y,
     rotation.y*local.x + rotation.x*local.y, local.z);
@@ -162,7 +170,7 @@ void main() {
   float up = p.z*tilt.x - forward*tilt.y;
   // Near 0.05 and far 1000, with perspective division by distance.
   gl_Position = vec4(side/fov, 2.0*up, 1.000100005*distance - 0.100005, distance);
-  pigment = color;
+  pigment = mix(color, instanceColor.rgb, instanceColor.a);
   shading = shade;
   dissolve = rotationDissolve.z;
 }
@@ -216,7 +224,7 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
 
   const programs: WebGLProgram[] = [];
   const shaders: WebGLShader[] = [];
-  const batches = new Map<string, Batch>();
+  const batches = new Map<string | symbol, Batch>();
   const skyVao = gl.createVertexArray();
   let target: {
     framebuffer: WebGLFramebuffer; color: WebGLTexture; depth: WebGLTexture;
@@ -295,11 +303,11 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
       }
       return target;
     }
-    const floatsPerInstance = 7;
-    function batchFor(name: string): Batch {
+    const floatsPerInstance = 14;
+    function batchFor(name: string | symbol): Batch {
       const cached = batches.get(name);
       if (cached) return cached;
-      const vertices = mesh(models[name]);
+      const vertices = mesh(typeof name === 'symbol' ? tetherModel(name === tetherJoint) : models[name]);
       const buffer = gl.createBuffer(), instances = gl.createBuffer(), vao = gl.createVertexArray();
       if (!buffer || !instances || !vao) {
         gl.deleteBuffer(buffer);
@@ -320,12 +328,36 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
         gl.vertexAttribPointer(index, count, gl.FLOAT, false, 40, index * 12);
       });
       gl.bindBuffer(gl.ARRAY_BUFFER, instances);
-      for (const [location, count, offset] of [[3, 4, 0], [4, 3, 16]]) {
+      for (const [location, count, offset] of [[3, 4, 0], [4, 3, 16], [5, 3, 28], [6, 4, 40]]) {
         gl.enableVertexAttribArray(location);
         gl.vertexAttribPointer(location, count, gl.FLOAT, false, floatsPerInstance * 4, offset);
         gl.vertexAttribDivisor(location, 1);
       }
       return batch;
+    }
+    function queue(batch: Batch, instance: ModelInstance, overrideColor?: Vec) {
+      const offset = batch.count++ * floatsPerInstance;
+      if (offset === batch.transforms.length) {
+        const resized = new Float32Array(batch.transforms.length * 2);
+        resized.set(batch.transforms);
+        batch.transforms = resized;
+      }
+      const data = batch.transforms, rotation = radians(instance.angle ?? 0);
+      const tilt = instance.axisTilt ?? 0;
+      data[offset] = instance.x;
+      data[offset + 1] = instance.y;
+      data[offset + 2] = instance.z ?? 0;
+      data[offset + 3] = instance.scale ?? 1;
+      data[offset + 4] = Math.cos(rotation);
+      data[offset + 5] = Math.sin(rotation);
+      data[offset + 6] = instance.dissolve ?? 0;
+      data[offset + 7] = Math.cos(tilt);
+      data[offset + 8] = Math.sin(tilt);
+      data[offset + 9] = instance.axialScale ?? 1;
+      data[offset + 10] = overrideColor?.[0] ?? 0;
+      data[offset + 11] = overrideColor?.[1] ?? 0;
+      data[offset + 12] = overrideColor?.[2] ?? 0;
+      data[offset + 13] = overrideColor ? 1 : 0;
     }
     let palette: number[] = [];
     const setPalette = (colors?: number[]) => {
@@ -344,7 +376,11 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
           poses.set(thing, { x, y, z, angle, scale, model });
         }
       }
-      captured = { frame, camera: { ...frame.camera }, sky, fov, time, poses };
+      const tethers = interpolate && frame.tethers.length ? new Map<Tether3D, Tether3D>() : undefined;
+      if (tethers) for (const tether of frame.tethers) {
+        if (tether.visible !== false) tethers.set(tether, { ...tether, points: tether.points.map(p => [...p]) });
+      }
+      captured = { frame, camera: { ...frame.camera }, sky, fov, time, poses, tethers };
     };
     const resetInterpolation = () => { captured = previous = undefined; };
     const draw = (alpha = 1, outlineRadius = 0) => {
@@ -414,21 +450,22 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
           angle = blendAngle(old.angle ?? 0, angle, t);
           scale = blend(old.scale ?? 1, scale, t);
         }
-        const batch = batchFor(thing.model);
-        const offset = batch.count++ * floatsPerInstance;
-        if (offset === batch.transforms.length) {
-          const resized = new Float32Array(batch.transforms.length * 2);
-          resized.set(batch.transforms);
-          batch.transforms = resized;
-        }
-        const data = batch.transforms, rotation = radians(angle);
-        data[offset] = x;
-        data[offset + 1] = y;
-        data[offset + 2] = z;
-        data[offset + 3] = scale;
-        data[offset + 4] = Math.cos(rotation);
-        data[offset + 5] = Math.sin(rotation);
-        data[offset + 6] = thing.dissolve ?? 0;
+        queue(batchFor(thing.model), { x, y, z, angle, scale, dissolve: thing.dissolve });
+      }
+      for (const tether of frame.tethers) {
+        if (tether.visible === false) continue;
+        const old = t < 1 ? previous?.tethers?.get(tether) : undefined;
+        const smooth = old && old.points.length === tether.points.length && tether.points.every((p, i) =>
+          Math.hypot(p[0] - old.points[i][0], p[1] - old.points[i][1], p[2] - old.points[i][2]) < 4);
+        const pose = smooth ? {
+          ...tether,
+          slack: blend(old.slack ?? 0, tether.slack ?? 0, t),
+          points: tether.points.map((p, i): Point3D => [
+            blend(old.points[i][0], p[0], t), blend(old.points[i][1], p[1], t), blend(old.points[i][2], p[2], t),
+          ]),
+        } : tether;
+        const color: Vec = [(tether.color >>> 16) / 255, ((tether.color >>> 8) & 255) / 255, (tether.color & 255) / 255];
+        for (const piece of tetherPieces(pose)) queue(batchFor(piece.joint ? tetherJoint : tetherRod), piece, color);
       }
       for (const batch of batches.values()) {
         if (!batch.count) continue;

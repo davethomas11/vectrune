@@ -123,7 +123,8 @@ def build_site(destination, binary, base="/", selected_routes=None, site_url="ht
                         ("rune-crypt", "rune_crypt/rune_crypt.rune"),
                         ("skybound-2", "skybound_2/skybound_2.rune"),
                         ("starfall", "starfall/starfall.rune"),
-                        ("marble-run", "marble_run/marble_run.rune")]:
+                        ("marble-run", "marble_run/marble_run.rune"),
+                        ("dog-walker", "dog_walker/dog_walker.rune")]:
         game = assets / "games" / slug
         game.mkdir(parents=True, exist_ok=True)
         result = subprocess.run([binary, str(SITE.parent / "examples/games" / entry), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)

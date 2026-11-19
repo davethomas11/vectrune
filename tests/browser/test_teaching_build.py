@@ -33,7 +33,7 @@ class TeachingBuildTests(unittest.TestCase):
         games = layout.split('h3 "%i18n.Nav.games%"', 1)[1].split('div .nav-group:', 1)[0]
         self.assertEqual(
             re.findall(r'click="navigate\(\'([\w-]+)\'\)"', games),
-            ['games', 'vectworms', 'monster-city', 'vect-breach', 'rune-crypt', 'skybound-2', 'starfall', 'marble-run'],
+            ['games', 'vectworms', 'monster-city', 'vect-breach', 'rune-crypt', 'skybound-2', 'starfall', 'marble-run', 'dog-walker'],
         )
 
     def test_stale_compiler_is_rejected_before_overwriting_a_working_site(self):

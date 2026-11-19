@@ -8502,17 +8502,31 @@ var __RunePixel3DRuntime = (() => {
     const eye = camera.height ?? 0.5, pitch = (camera.pitch ?? 0) * Math.PI / 180;
     const cp = Math.cos(pitch), sp = Math.sin(pitch);
     const c = Math.cos(angle), s = Math.sin(angle);
+    const tilt = instance.axisTilt ?? 0, axialScale = instance.axialScale ?? 1;
+    const oriented = tilt !== 0 || axialScale !== 1;
+    const tc = oriented ? Math.cos(tilt) : 1, ts = oriented ? Math.sin(tilt) : 0;
     const ox = camera.x - instance.x, oy = camera.y - instance.y;
     const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - (instance.z ?? 0)) / scale];
+    if (oriented) {
+      const [x, , z] = origin;
+      origin[0] = x * tc - z * ts;
+      origin[2] = (x * ts + z * tc) / axialScale;
+    }
     for (const block of model.blocks) {
       const max = block.from.map((v, i) => v + block.size[i]);
       const center = block.from.map((v, i) => v + block.size[i] / 2);
       let left = width, right = 0, top = height, bottom = 0, clipped = false, frontCorners = 0;
       let outsideLeft = 0, outsideRight = 0, outsideTop = 0, outsideBottom = 0;
       for (let corner = 0; corner < 8; corner++) {
-        const lx = (corner & 1 ? max[0] : block.from[0]) * scale;
+        let lx = (corner & 1 ? max[0] : block.from[0]) * scale;
         const ly = (corner & 2 ? max[1] : block.from[1]) * scale;
-        const z = (corner & 4 ? max[2] : block.from[2]) * scale + (instance.z ?? 0);
+        let z = (corner & 4 ? max[2] : block.from[2]) * scale;
+        if (oriented) {
+          const x2 = lx, height2 = z * axialScale;
+          lx = x2 * tc + height2 * ts;
+          z = -x2 * ts + height2 * tc;
+        }
+        z += instance.z ?? 0;
         const x = instance.x + lx * c - ly * s - camera.x;
         const y = instance.y + lx * s + ly * c - camera.y;
         const forward = x * dirX + y * dirY;
@@ -8548,9 +8562,14 @@ var __RunePixel3DRuntime = (() => {
           const v = ((height >> 1) - y - 0.5) / height;
           const rx = dirX * cp - dirY * fovScale * cx - dirX * sp * v;
           const ry = dirY * cp + dirX * fovScale * cx - dirY * sp * v;
-          const rayX = (rx * c + ry * s) / scale;
+          let rayX = (rx * c + ry * s) / scale;
           const rayY = (-rx * s + ry * c) / scale;
-          const rayZ = (sp + cp * v) / scale;
+          let rayZ = (sp + cp * v) / scale;
+          if (oriented) {
+            const x2 = rayX;
+            rayX = x2 * tc - rayZ * ts;
+            rayZ = (x2 * ts + rayZ * tc) / axialScale;
+          }
           let near = -Infinity, far = Infinity, face = 0, exitFace = 0, valid = true;
           for (let axis = 0; axis < 3; axis++) {
             const component = axis === 0 ? rayX : axis === 1 ? rayY : rayZ;
@@ -8929,6 +8948,63 @@ var __RunePixel3DRuntime = (() => {
     }
   }
 
+  // src/pixel3d/tether.ts
+  function validateTether(value) {
+    const validPoint = (p) => Array.isArray(p) && p.length === 3 && p.every((n) => Number.isFinite(n) && Math.abs(n) <= 1e6);
+    const tether = value;
+    if (!tether || !Array.isArray(tether.points) || tether.points.length < 2 || tether.points.length > 32 || !tether.points.every(validPoint)) {
+      throw new Error("Pixel-3d tether needs 2 to 32 finite [x,y,z] points within one million tiles");
+    }
+    if (!Number.isFinite(tether.radius) || tether.radius < 2e-3 || tether.radius > 2 || !Number.isInteger(tether.color) || tether.color < 0 || tether.color > 16777215 || tether.visible !== void 0 && typeof tether.visible !== "boolean") {
+      throw new Error("Pixel-3d tether needs a radius from .002 to 2, an RGB color, and an optional boolean visible");
+    }
+    const slack = tether.slack ?? 0;
+    if (!Number.isFinite(slack) || slack < 0 || slack > 32 || slack > 0 && tether.points.length !== 2) {
+      throw new Error("Pixel-3d tether slack must be 0 to 32 and needs exactly two points when nonzero");
+    }
+    return tether;
+  }
+  function tetherModel(joint, color = 4294967295) {
+    return { blocks: [{ from: [-0.5, -0.5, -0.5], size: [1, 1, 1], shape: joint ? "sphere" : "cylinder", color }] };
+  }
+  function* tetherPieces(tether) {
+    if (tether.visible === false) return;
+    let points = tether.points;
+    if (tether.slack) {
+      const [a, b] = points;
+      const slack = tether.slack;
+      points = Array.from({ length: 9 }, (_, i) => {
+        const t = i / 8;
+        return [
+          a[0] + (b[0] - a[0]) * t,
+          a[1] + (b[1] - a[1]) * t,
+          a[2] + (b[2] - a[2]) * t - 4 * slack * t * (1 - t)
+        ];
+      });
+    }
+    const scale = tether.radius * 2;
+    let lastJoint;
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i];
+      const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+      const length = Math.hypot(dx, dy, dz);
+      if (length < 1e-6) continue;
+      if (!lastJoint) yield { x: a[0], y: a[1], z: a[2], scale, joint: true };
+      yield {
+        x: (a[0] + b[0]) / 2,
+        y: (a[1] + b[1]) / 2,
+        z: (a[2] + b[2]) / 2,
+        angle: Math.atan2(dy, dx) * 180 / Math.PI,
+        scale,
+        joint: false,
+        axisTilt: Math.atan2(Math.hypot(dx, dy), dz),
+        axialScale: length / scale
+      };
+      yield { x: b[0], y: b[1], z: b[2], scale, joint: true };
+      lastJoint = b;
+    }
+  }
+
   // src/pixel3d/raycaster.ts
   var packed = (rgb2) => (4278190080 | (rgb2 & 255) << 16 | rgb2 & 65280 | rgb2 >>> 16 & 255) >>> 0;
   var FONT = {
@@ -9034,7 +9110,7 @@ var __RunePixel3DRuntime = (() => {
       this.palette = Uint32Array.from({ length: 256 }, (_, light) => packed(colors[Math.floor(light * colors.length / 256)]));
       this.silhouettes = silhouettes;
     }
-    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks) {
+    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks, tethers = []) {
       const W = this.width;
       const H = this.height;
       const halfH = H >> 1;
@@ -9050,7 +9126,7 @@ var __RunePixel3DRuntime = (() => {
       const planeX = -dirY * fovScale;
       const planeY = dirX * fovScale;
       this.pixelDepth.fill(Infinity);
-      if (!this.config.world && things.some((t) => t.model && t.visible !== false)) {
+      if (!this.config.world && (tethers.length || things.some((t) => t.model && t.visible !== false))) {
         for (let y = 0; y < H; y++) {
           if (y < halfH && map.sky) continue;
           const planeHeight = y < halfH ? (map.ceilingHeight ?? 1) - 0.5 : 0.5;
@@ -9093,12 +9169,19 @@ var __RunePixel3DRuntime = (() => {
         this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
         this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
       }
+      const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
       for (const thing of things) {
         if (thing.visible === false || !thing.model) continue;
         const model = this.config.models?.[thing.model];
         if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
-        const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
         renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+      }
+      for (const tether of tethers) {
+        if (tether.visible === false) continue;
+        const rod = tetherModel(false, packed(tether.color)), joint = tetherModel(true, packed(tether.color));
+        for (const piece of tetherPieces(tether)) {
+          renderModel(piece.joint ? joint : rod, piece, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+        }
       }
       if (!this.config.world && !pitched && things && things.length > 0) {
         this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
@@ -9778,6 +9861,7 @@ var __RunePixel3DRuntime = (() => {
     }
     /** The desktop host shares this renderer for features beyond its fixed-eye rasterizer. */
     get usesSharedRenderer() {
+      if (this.config.tethers?.length) return true;
       if (this.config.ui && this.app.state[this.config.ui]?.map) return true;
       if (this.config.pauseUi && this.app.state[this.config.pauseUi]?.map) return true;
       const map = this.config.maps?.[this.currentMapName] ?? this.config.map;
@@ -9903,6 +9987,16 @@ var __RunePixel3DRuntime = (() => {
         }
         if (![thing.x, thing.y, thing.z ?? 0, thing.angle ?? 0, thing.scale ?? 1].every(Number.isFinite) || (thing.scale ?? 1) <= 0) throw new Error("Pixel-3d model position/angle must be finite and scale must be positive");
       }
+      const tethers = [];
+      const tetherPaths = titleScene ? titleScene.tethers : this.config.tethers;
+      for (const path of tetherPaths ?? []) {
+        const value = path.split(".").reduce((v, k) => v?.[k], state);
+        for (const item of Array.isArray(value) ? value : [value]) {
+          if (item === null || item === void 0) continue;
+          if (tethers.length >= 64) throw new Error("Pixel-3d supports up to 64 tethers per frame");
+          tethers.push(validateTether(item));
+        }
+      }
       let weapon = void 0;
       if (this.config.weapon) {
         weapon = this.config.weapon.split(".").reduce((v, k) => v?.[k], state);
@@ -9925,6 +10019,7 @@ var __RunePixel3DRuntime = (() => {
         presentation_time: presentationTime,
         camera,
         things,
+        tethers,
         weapon: titleScene ? void 0 : weapon,
         flash: titleScene ? 0 : flash,
         status,
@@ -9983,7 +10078,8 @@ var __RunePixel3DRuntime = (() => {
         this.frameHud(stats),
         stats.wall_overrides,
         stats.title_scene ? stats.presentation_time : stats.time,
-        this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : void 0
+        this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : void 0,
+        stats.tethers
       );
       return this.raycaster.buffer;
     }
@@ -10317,6 +10413,8 @@ var __RunePixel3DRuntime = (() => {
   var blend = (from, to, t) => from + (to - from) * t;
   var blendAngle = (from, to, t) => from + (((to - from + 180) % 360 + 360) % 360 - 180) * t;
   var rgb = (value) => [(value & 255) / 255, (value >>> 8 & 255) / 255, (value >>> 16 & 255) / 255];
+  var tetherRod = Symbol("tether rod");
+  var tetherJoint = Symbol("tether joint");
   function mesh(model) {
     const data = [];
     for (const { from, size, color, shape } of model.blocks) {
@@ -10440,6 +10538,8 @@ layout(location=1) in vec3 color;
 layout(location=2) in vec4 shade;
 layout(location=3) in vec4 positionScale;
 layout(location=4) in vec3 rotationDissolve;
+layout(location=5) in vec3 tiltStretch;
+layout(location=6) in vec4 instanceColor;
 uniform vec3 eye;
 uniform vec2 heading, tilt;
 uniform float fov;
@@ -10448,6 +10548,9 @@ out vec4 shading;
 flat out float dissolve;
 void main() {
   vec3 local = point * positionScale.w;
+  local.z *= tiltStretch.z;
+  local.xz = vec2(tiltStretch.x * local.x + tiltStretch.y * local.z,
+    -tiltStretch.y * local.x + tiltStretch.x * local.z);
   vec2 rotation = rotationDissolve.xy;
   vec3 p = positionScale.xyz - eye + vec3(rotation.x*local.x - rotation.y*local.y,
     rotation.y*local.x + rotation.x*local.y, local.z);
@@ -10457,7 +10560,7 @@ void main() {
   float up = p.z*tilt.x - forward*tilt.y;
   // Near 0.05 and far 1000, with perspective division by distance.
   gl_Position = vec4(side/fov, 2.0*up, 1.000100005*distance - 0.100005, distance);
-  pigment = color;
+  pigment = mix(color, instanceColor.rgb, instanceColor.a);
   shading = shade;
   dissolve = rotationDissolve.z;
 }
@@ -10581,7 +10684,7 @@ void main() {
       }, batchFor2 = function(name2) {
         const cached = batches.get(name2);
         if (cached) return cached;
-        const vertices = mesh(models[name2]);
+        const vertices = mesh(typeof name2 === "symbol" ? tetherModel(name2 === tetherJoint) : models[name2]);
         const buffer = gl.createBuffer(), instances = gl.createBuffer(), vao = gl.createVertexArray();
         if (!buffer || !instances || !vao) {
           gl.deleteBuffer(buffer);
@@ -10607,18 +10710,41 @@ void main() {
           gl.vertexAttribPointer(index2, count, gl.FLOAT, false, 40, index2 * 12);
         });
         gl.bindBuffer(gl.ARRAY_BUFFER, instances);
-        for (const [location2, count, offset] of [[3, 4, 0], [4, 3, 16]]) {
+        for (const [location2, count, offset] of [[3, 4, 0], [4, 3, 16], [5, 3, 28], [6, 4, 40]]) {
           gl.enableVertexAttribArray(location2);
           gl.vertexAttribPointer(location2, count, gl.FLOAT, false, floatsPerInstance * 4, offset);
           gl.vertexAttribDivisor(location2, 1);
         }
         return batch;
+      }, queue2 = function(batch, instance, overrideColor) {
+        const offset = batch.count++ * floatsPerInstance;
+        if (offset === batch.transforms.length) {
+          const resized = new Float32Array(batch.transforms.length * 2);
+          resized.set(batch.transforms);
+          batch.transforms = resized;
+        }
+        const data = batch.transforms, rotation = radians(instance.angle ?? 0);
+        const tilt = instance.axisTilt ?? 0;
+        data[offset] = instance.x;
+        data[offset + 1] = instance.y;
+        data[offset + 2] = instance.z ?? 0;
+        data[offset + 3] = instance.scale ?? 1;
+        data[offset + 4] = Math.cos(rotation);
+        data[offset + 5] = Math.sin(rotation);
+        data[offset + 6] = instance.dissolve ?? 0;
+        data[offset + 7] = Math.cos(tilt);
+        data[offset + 8] = Math.sin(tilt);
+        data[offset + 9] = instance.axialScale ?? 1;
+        data[offset + 10] = overrideColor?.[0] ?? 0;
+        data[offset + 11] = overrideColor?.[1] ?? 0;
+        data[offset + 12] = overrideColor?.[2] ?? 0;
+        data[offset + 13] = overrideColor ? 1 : 0;
       };
-      var bindSilhouetteTarget = bindSilhouetteTarget2, batchFor = batchFor2;
+      var bindSilhouetteTarget = bindSilhouetteTarget2, batchFor = batchFor2, queue = queue2;
       const skyProgram = program(skyVertex, skyFragment, ["viewport", "heading", "tilt", "fov", "drift", "seed", "horizon", "zenith", "cloud", "below"]);
       const modelProgram = program(modelVertex, modelFragment, ["eye", "heading", "tilt", "fov", "height"]);
       let silhouetteProgram;
-      const floatsPerInstance = 7;
+      const floatsPerInstance = 14;
       let palette = [];
       const setPalette = (colors) => {
         palette = colors?.flatMap((c) => [(c >>> 16) / 255, (c >>> 8 & 255) / 255, (c & 255) / 255]) ?? [];
@@ -10635,7 +10761,11 @@ void main() {
             poses.set(thing, { x, y, z, angle, scale, model });
           }
         }
-        captured = { frame, camera: { ...frame.camera }, sky, fov, time, poses };
+        const tethers = interpolate2 && frame.tethers.length ? /* @__PURE__ */ new Map() : void 0;
+        if (tethers) for (const tether of frame.tethers) {
+          if (tether.visible !== false) tethers.set(tether, { ...tether, points: tether.points.map((p) => [...p]) });
+        }
+        captured = { frame, camera: { ...frame.camera }, sky, fov, time, poses, tethers };
       };
       const resetInterpolation = () => {
         captured = previous = void 0;
@@ -10704,21 +10834,23 @@ void main() {
             angle = blendAngle(old.angle ?? 0, angle, t);
             scale = blend(old.scale ?? 1, scale, t);
           }
-          const batch = batchFor2(thing.model);
-          const offset = batch.count++ * floatsPerInstance;
-          if (offset === batch.transforms.length) {
-            const resized = new Float32Array(batch.transforms.length * 2);
-            resized.set(batch.transforms);
-            batch.transforms = resized;
-          }
-          const data = batch.transforms, rotation = radians(angle);
-          data[offset] = x;
-          data[offset + 1] = y;
-          data[offset + 2] = z;
-          data[offset + 3] = scale;
-          data[offset + 4] = Math.cos(rotation);
-          data[offset + 5] = Math.sin(rotation);
-          data[offset + 6] = thing.dissolve ?? 0;
+          queue2(batchFor2(thing.model), { x, y, z, angle, scale, dissolve: thing.dissolve });
+        }
+        for (const tether of frame.tethers) {
+          if (tether.visible === false) continue;
+          const old = t < 1 ? previous?.tethers?.get(tether) : void 0;
+          const smooth = old && old.points.length === tether.points.length && tether.points.every((p, i) => Math.hypot(p[0] - old.points[i][0], p[1] - old.points[i][1], p[2] - old.points[i][2]) < 4);
+          const pose = smooth ? {
+            ...tether,
+            slack: blend(old.slack ?? 0, tether.slack ?? 0, t),
+            points: tether.points.map((p, i) => [
+              blend(old.points[i][0], p[0], t),
+              blend(old.points[i][1], p[1], t),
+              blend(old.points[i][2], p[2], t)
+            ])
+          } : tether;
+          const color = [(tether.color >>> 16) / 255, (tether.color >>> 8 & 255) / 255, (tether.color & 255) / 255];
+          for (const piece of tetherPieces(pose)) queue2(batchFor2(piece.joint ? tetherJoint : tetherRod), piece, color);
         }
         for (const batch of batches.values()) {
           if (!batch.count) continue;

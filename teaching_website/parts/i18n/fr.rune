@@ -6,6 +6,13 @@ MarbleRun {
     standalone = "Ouvrir le jeu dans un nouvel onglet"
     display_options = "Essayez la palette Pocket ou activez le rendu GPU expérimental. Le jeu affiche la cadence réelle lorsque vous changez la résolution ou le nombre d’images par seconde."
 }
+DogWalker {
+    title = "Dog Walker"
+    description = "Promenez votre chien dans le quartier à l’heure bleue. Marquez des points près des lampadaires et sur les pelouses, semez les voisins en colère et jouez à la balle au parc."
+    play = "Jouer à Dog Walker"
+    standalone = "Ouvrir Dog Walker dans un autre onglet"
+}
+
 Starfall {
     title = "Starfall Protocol"
     badge = "Metroidvania spatial Pixel 3D"

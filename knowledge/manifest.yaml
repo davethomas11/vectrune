@@ -69,6 +69,16 @@ pages:
       - runtime/rune-web/src/pixel3d/model.ts
       - examples/games/marble_run/models.rune
       - tests/pixel3d_shapes.rs
+  - id: runtime.dog-walker
+    path: runtime/dog-walker.md
+    kind: page
+    title: Dog Walker
+    audience:
+      - ai
+      - human
+    sources:
+      - examples/games/dog_walker/
+      - tests/browser/dog_walker.py
   - id: product.overview
     path: product/overview.md
     kind: page

@@ -66,6 +66,7 @@ view:
                     a .nav-link {.active when 'skybound-2'} href="{i18n.Common.base_path}skybound-2" data-route-link=true aria-current="{activePage == 'skybound-2' ? 'page' : 'false'}" click="navigate('skybound-2')" "%i18n.SkyboundTwo.title%"
                     a .nav-link {.active when 'starfall'} href="{i18n.Common.base_path}starfall" data-route-link=true aria-current="{activePage == 'starfall' ? 'page' : 'false'}" click="navigate('starfall')" "%i18n.Starfall.title%"
                     a .nav-link {.active when 'marble-run'} href="{i18n.Common.base_path}marble-run" data-route-link=true aria-current="{activePage == 'marble-run' ? 'page' : 'false'}" click="navigate('marble-run')" "%i18n.MarbleRun.title%"
+                    a .nav-link {.active when 'dog-walker'} href="{i18n.Common.base_path}dog-walker" data-route-link=true aria-current="{activePage == 'dog-walker' ? 'page' : 'false'}" click="navigate('dog-walker')" "%i18n.DogWalker.title%"
                 div .nav-group:
                     h3 "%i18n.Nav.music%"
                     a .nav-link {.active when 'studio'} href="{i18n.Common.base_path}studio" data-route-link=true aria-current="{activePage == 'studio' or activePage == 'music' ? 'page' : 'false'}" click="navigate('studio')" "%i18n.Nav.studio%"
@@ -90,6 +91,7 @@ view:
                     "skybound-2"      -> SkyboundTwoPage
                     "starfall"        -> StarfallPage
                     "marble-run"      -> MarbleRunPage
+                    "dog-walker"      -> DogWalkerPage
                     "studio"          -> RuneStudioPage
                     "music"           -> RuneStudioPage
                     "examples"        -> ExampleLab

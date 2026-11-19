@@ -33,9 +33,11 @@ import { validateHud, type GameHud } from './hud';
 import { validateWorld, validatedVoxelChunks } from './voxel';
 import { sampleCamera, type CameraTrack } from './camera';
 import { nearbyForRender, withEntityQueries } from './entities';
+import { validateTether, type Tether3D } from './tether';
 
 export interface TitleScene {
   things?: string[];
+  tethers?: string[];
   map: MapData;
   camera: CameraTrack;
   fov: number;
@@ -68,6 +70,7 @@ export interface Pixel3DConfig {
   maps?: Record<string, MapData>;
   camera: string; // state path to camera {x, y, angle}
   things?: string[]; // state paths to arrays of things
+  tethers?: string[]; // state paths to individual tethers or arrays of tethers
   weapon?: string; // state path to weapon {sprite, bob, flash}
   hud?: {
     health?: string;
@@ -143,6 +146,7 @@ export class Pixel3DEngine {
 
   /** The desktop host shares this renderer for features beyond its fixed-eye rasterizer. */
   get usesSharedRenderer(): boolean {
+    if (this.config.tethers?.length) return true;
     if (this.config.ui && (this.app.state[this.config.ui] as any)?.map) return true;
     if (this.config.pauseUi && (this.app.state[this.config.pauseUi] as any)?.map) return true;
     const map = this.config.maps?.[this.currentMapName] ?? this.config.map;
@@ -322,6 +326,7 @@ export class Pixel3DEngine {
     presentation_time: number;
     camera: Camera3D;
     things: Thing3D[];
+    tethers: Tether3D[];
     weapon?: ViewmodelWeapon;
     flash: number;
     status: string;
@@ -392,6 +397,16 @@ export class Pixel3DEngine {
       if (![thing.x, thing.y, thing.z ?? 0, thing.angle ?? 0, thing.scale ?? 1].every(Number.isFinite) ||
           (thing.scale ?? 1) <= 0) throw new Error('Pixel-3d model position/angle must be finite and scale must be positive');
     }
+    const tethers: Tether3D[] = [];
+    const tetherPaths = titleScene ? titleScene.tethers : this.config.tethers;
+    for (const path of tetherPaths ?? []) {
+      const value = path.split('.').reduce((v, k) => v?.[k], state);
+      for (const item of Array.isArray(value) ? value : [value]) {
+        if (item === null || item === undefined) continue;
+        if (tethers.length >= 64) throw new Error('Pixel-3d supports up to 64 tethers per frame');
+        tethers.push(validateTether(item));
+      }
+    }
 
     // 3. Resolve weapon
     let weapon: ViewmodelWeapon | undefined = undefined;
@@ -423,6 +438,7 @@ export class Pixel3DEngine {
       presentation_time: presentationTime,
       camera,
       things,
+      tethers,
       weapon: titleScene ? undefined : weapon,
       flash: titleScene ? 0 : flash,
       status,
@@ -482,7 +498,7 @@ export class Pixel3DEngine {
     const stats = this.renderState();
     this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, this.frameHud(stats),
       stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time,
-      this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : undefined);
+      this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : undefined, stats.tethers);
     return this.raycaster.buffer;
   }
 }
