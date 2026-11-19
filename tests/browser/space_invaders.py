@@ -11,6 +11,7 @@ import tempfile
 from threading import Thread
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from rune_web_guide import ROOT, QuietHandler, build_site
 
 SIZES = [(320, 640), (390, 844), (768, 1024), (1440, 900), (1440, 720), (844, 390)]
@@ -32,12 +33,10 @@ def check(base, browser_name="chromium"):
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     page.goto(f"{base}/{locale}?qa=arcade-fit")
-                    if width < 1024:
-                        page.locator(".navigation-toggle").click()
                     if placement == "games":
-                        page.locator('.sidebar [data-on-click="navigate(\'games\')"]').click()
+                        menu_link(page, '[data-on-click="navigate(\'games\')"]').click()
                     else:
-                        page.locator('.sidebar [data-on-click="openExample(\'app\')"]').click()
+                        menu_link(page, '[data-on-click="openExample(\'app\')"]').click()
                         page.locator('.example-picker [data-on-click="openExample(\'invaders\')"]').click()
                     frame = page.frame_locator(".example-preview")
                     expect(frame.locator(".start-btn")).to_be_visible()

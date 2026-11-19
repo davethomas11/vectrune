@@ -15,6 +15,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from teaching_ux import preview
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -152,7 +153,7 @@ def browser_checks(base, directory, screenshots=None):
                 parser = Anchors(); parser.feed((directory / path / 'index.html').read_text()); anchors[path] = parser.ids
             assert anchor in anchors[path], entry
         tab.goto(base + '/')
-        tab.locator('.sidebar a', has_text='Language & API reference').click()
+        menu_link(tab, 'a', has_text='Language & API reference').click()
         expect(tab.locator('h1:visible')).to_have_text('Vectrune reference manual')
         tab.keyboard.press('/')
         search = tab.locator('#reference-search')

@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from teaching_ux import preview
 
 parser = argparse.ArgumentParser()
@@ -93,7 +94,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
 
     # Tabs also initialize after a lazy route change, without reloading the page.
     page.goto(base + '/')
-    page.locator('.sidebar a[href$="vect-breach"]').click()
+    menu_link(page, 'a[href$="vect-breach"]').click()
     expect(page.get_by_role('tab', name='Game', exact=True)).to_have_attribute('aria-selected', 'true')
     iframe = page.locator('.example-preview')
     frame = iframe.element_handle().content_frame()

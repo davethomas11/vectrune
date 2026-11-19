@@ -75,6 +75,15 @@ Common {
     translation_source = "Contribuer aux traductions sur GitHub ↗"
     localization_guide = "Guide de localisation"
 }
+SiteMenu {
+    menu = "Menu"
+    learn = "Apprendre"
+    tools = "Outils"
+    api_reference = "Référence du langage et des API"
+    showcase_title = "Créé avec Vectrune"
+    showcase_description = "Découvrez comment ces jeux ont été créés et jouez dans votre navigateur."
+}
+
 Header {
     kicker = "Le langage Vectrune"
     home_label = "Accueil Vectrune"

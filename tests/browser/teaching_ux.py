@@ -14,6 +14,7 @@ import time
 from urllib.request import Request, urlopen
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from rune_web_guide import ROOT
 
 sys.path.insert(0, str(ROOT / 'teaching_website'))
@@ -117,8 +118,13 @@ def check(base, directory, screenshots):
             expect(page.locator('.skip-link')).to_be_focused()
             page.keyboard.press('Enter')
             expect(page.locator('#content')).to_be_focused()
-            expect(page.locator('.sidebar a.nav-link')).to_have_count(34)
-            expect(page.locator('.sidebar [aria-current="page"]')).to_have_count(1)
+            expect(page.locator('#site-navigation a.nav-link')).to_have_count(41)
+            expect(page.locator('#site-navigation [aria-current="page"]')).to_have_count(1)
+            categories = page.locator('#site-navigation .menu-category')
+            expect(categories).to_have_count(4)
+            learn = page.locator('[data-menu-category="learn"] > summary')
+            games = page.locator('[data-menu-category="games"] > summary')
+            expect(page.locator('.menu-panel')).to_have_count(4)
             for width in [320, 390, 768, 1440]:
                 page.set_viewport_size({'width': width, 'height': 844})
                 page.evaluate('scrollTo(0, 0)')
@@ -132,13 +138,29 @@ def check(base, directory, screenshots):
                     page.locator('.navigation-toggle').click()
                     expect(page.locator('.navigation-toggle')).to_have_attribute('aria-expanded', 'true')
                     expect(page.locator('.navigation-toggle')).to_be_focused()
+                    expect(learn).to_be_visible()
+                    expect(page.locator('.menu-panel-learn')).to_be_hidden()
+                    learn.click()
+                    expect(page.locator('.menu-panel-learn')).to_be_visible()
+                    page.keyboard.press('Escape')
+                    expect(page.locator('.menu-panel-learn')).to_be_hidden()
+                    expect(learn).to_be_focused()
                     page.keyboard.press('Escape')
                     expect(page.locator('.navigation-toggle')).to_have_attribute('aria-expanded', 'false')
                     expect(page.locator('.navigation-toggle')).to_be_focused()
             page.set_viewport_size({'width': 1440, 'height': 1000})
+            learn.focus()
+            page.keyboard.press('Enter')
+            expect(page.locator('.menu-panel-learn')).to_be_visible()
+            games.click()
+            expect(page.locator('.menu-panel-games')).to_be_visible()
+            expect(page.locator('.menu-panel-learn')).to_be_hidden()
+            page.keyboard.press('Escape')
+            expect(page.locator('.menu-panel-games')).to_be_hidden()
+            expect(games).to_be_focused()
             page.evaluate('scrollTo(0, 450)')
             page.wait_for_timeout(100)
-            page.locator('.sidebar [data-on-click="navigate(\'rest_get\')"]').click()
+            menu_link(page, '[data-on-click="navigate(\'rest_get\')"]').click()
             expect(page.locator('main h1')).to_be_focused()
             top = page.locator('main h1').bounding_box()['y']
             assert 70 <= top <= 180, (locale, top)
@@ -149,9 +171,9 @@ def check(base, directory, screenshots):
             expect(page.locator('main h1')).to_have_text(headline)
             page.wait_for_function('Math.abs(scrollY - 450) < 3')
             # Explicit anchors still land on the requested section.
-            page.locator('.site-nav a[href$="#quickstart"]').click()
+            menu_link(page, 'a[href$="#quickstart"]').click()
             page.wait_for_function('document.activeElement.id === "quickstart"')
-            page.locator('.sidebar [data-on-click="navigate(\'web_forms\')"]').click()
+            menu_link(page, '[data-on-click="navigate(\'web_forms\')"]').click()
             expect(page.locator('main h1')).to_be_focused()
             expect(page.locator('.example-preview')).to_be_visible()
             # The same lesson must work on refresh, with server content.
@@ -161,7 +183,7 @@ def check(base, directory, screenshots):
             assert page.url.rstrip('/') == url.rstrip('/')
             if screenshots and not locale:
                 page.screenshot(path=str(screenshots / 'lesson-desktop.png'))
-            page.locator('.sidebar [data-on-click="navigate(\'home\')"]').click()
+            menu_link(page, '[aria-current][data-on-click="navigate(\'home\')"]').click()
             expect(page.locator('main h1')).to_have_text(headline)
             command = page.locator('.command-block').first
             command.locator('.command-copy').click()
@@ -230,7 +252,7 @@ def check(base, directory, screenshots):
         print('Studio Save/Load works in the embedded preview and EXPORT .RUNE downloads the song', flush=True)
         # Destination links keep a useful URL for native new-tab navigation.
         with context.expect_page() as event:
-            page.locator('.sidebar [data-on-click="navigate(\'web_components\')"]').click(button='middle')
+            menu_link(page, '[data-on-click="navigate(\'web_components\')"]').click(button='middle')
         new_tab = event.value
         new_tab.wait_for_load_state()
         expect(new_tab.locator('main')).to_have_attribute('data-route', 'web_components')
@@ -278,7 +300,7 @@ def check_hosting_prefix():
                 page = browser.new_page()
                 page.goto(base + '/fr/')
                 expect(page.locator('main')).to_have_attribute('data-route', 'home')
-                link = page.locator('.sidebar [data-on-click="navigate(\'web_forms\')"]')
+                link = menu_link(page, '[data-on-click="navigate(\'web_forms\')"]')
                 expect(link).to_have_attribute('href', '/guide/fr/web_forms')
                 link.click()
                 expect(page.locator('main h1')).to_be_focused()

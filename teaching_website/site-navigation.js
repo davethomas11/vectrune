@@ -5,25 +5,47 @@
     if (!root) return;
     let pending = null;
     let queued = false;
-    let focusMenu = null;
+    const header = root.querySelector('.site-header');
+    const menu = header?.querySelector('#site-navigation');
+    const toggle = header?.querySelector('.navigation-toggle');
+    const narrow = matchMedia('(max-width: 900px)');
     const base = (document.querySelector('meta[name="rune-base-path"]')?.content || '').replace(/\/$/, '');
     history.scrollRestoration = 'manual';
+
+    function setMobileMenu(open) {
+      if (!header || !toggle) return;
+      header.dataset.mobileMenu = String(open);
+      toggle.setAttribute('aria-expanded', String(open));
+      if (!open) closeCategory();
+    }
+
+    function closeCategory() {
+      const category = menu?.querySelector('.menu-category[open]');
+      if (category) category.open = false;
+      return category;
+    }
+
+    function closeMenu() {
+      setMobileMenu(false);
+    }
+
+    toggle?.addEventListener('click', () => setMobileMenu(header.dataset.mobileMenu !== 'true'));
+    menu?.addEventListener('click', event => {
+      if (event.target.closest('a')) closeMenu();
+    });
+    document.addEventListener('pointerdown', event => {
+      if (!menu?.contains(event.target) && !toggle?.contains(event.target)) closeMenu();
+    });
+    document.addEventListener('focusin', event => {
+      if (!menu?.contains(event.target) && !toggle?.contains(event.target)) closeMenu();
+    });
+    narrow.addEventListener('change', closeMenu);
 
     function savePosition() {
       if (!pending) history.replaceState({ ...history.state, sitePosition: [scrollX, scrollY] }, '', location.href);
     }
     function finish() {
       queued = false;
-      const menu = root.querySelector('.navigation-toggle');
-      if (focusMenu && menu && menu.getAttribute('aria-expanded') === focusMenu) {
-        menu.focus({ preventScroll: true });
-        focusMenu = null;
-        if (menu.getAttribute('aria-expanded') === 'true') {
-          const nav = root.querySelector('.sidebar');
-          const active = nav?.querySelector('[aria-current="page"]');
-          if (active) nav.scrollTop += active.getBoundingClientRect().top - nav.getBoundingClientRect().top - 12;
-        }
-      }
       const main = root.querySelector('main[data-route]');
       const recovery = main?.querySelector('.not-found a');
       if (recovery) {
@@ -52,8 +74,6 @@
     }
     document.addEventListener('click', event => {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
-      const toggle = event.target.closest('.navigation-toggle');
-      if (toggle) { focusMenu = toggle.getAttribute('aria-expanded') === 'true' ? 'false' : 'true'; schedule(); return; }
       const link = event.target.closest('a[data-on-click]');
       if (!link || link.target === '_blank') return;
       const action = link.getAttribute('data-on-click');
@@ -70,19 +90,23 @@
       schedule();
     }, true);
     document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
       const language = root.querySelector('.language-control[open]');
-      if (event.key === 'Escape' && language) {
+      if (language) {
         language.open = false;
         language.querySelector('summary').focus();
         return;
       }
-      if (event.key === 'Escape' && window.runeWebApp?.state.navigationOpen) {
-        window.runeWebApp.state.navigationOpen = false;
-        focusMenu = 'false';
-        schedule();
+      const category = closeCategory();
+      if (category) {
+        category.querySelector('summary').focus({ preventScroll: true });
+      } else if (header?.dataset.mobileMenu === 'true') {
+        closeMenu();
+        toggle.focus({ preventScroll: true });
       }
     });
     window.addEventListener('popstate', event => {
+      closeMenu();
       // A new native fragment link has no saved position. Honor its anchor;
       // actual Back/Forward entries can restore their recorded position.
       pending = { route: window.runeWebApp?.state.activePage || 'home', position: event.state?.sitePosition || (location.hash ? null : [0, 0]), anchor: location.hash };

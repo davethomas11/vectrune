@@ -7,6 +7,7 @@ import time
 from urllib.request import Request, urlopen
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from rune_web_guide import ROOT
 
 
@@ -51,7 +52,7 @@ def check():
                     page.reload()
                     expect(page.locator('main')).to_have_attribute('data-route', route or 'home')
             page.goto(base + '/')
-            page.locator('.sidebar [data-on-click="navigate(\'studio\')"]').click()
+            menu_link(page, '[data-on-click="navigate(\'studio\')"]').click()
             expect(page.locator('.source-file')).to_have_count(15)
             assert not errors, errors
             browser.close()

@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
+from site_menu import menu_link
 from teaching_ux import preview
 
 parser = argparse.ArgumentParser()
@@ -19,7 +20,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(base + '/')
     expect(page.get_by_role('link', name='Play Starfall Protocol', exact=True)).to_be_visible()
-    page.locator('.sidebar a[href$="starfall"]').click()
+    menu_link(page, 'a[href$="starfall"]').click()
     expect(page.locator('main')).to_have_attribute('data-route', 'starfall')
     expect(page.locator('main h1')).to_have_text('Starfall Protocol', timeout=15000)
     expect(page).to_have_title('Starfall Protocol — Vectrune')

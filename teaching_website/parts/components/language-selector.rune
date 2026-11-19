@@ -1,7 +1,9 @@
 @Component/LanguageSelector
 view:
     details .language-control:
-        summary .language-summary "{i18n.Common.language_label} {i18n.Common.language_name}"
+        summary .language-summary aria-label="{i18n.Common.language_label} {i18n.Common.language_name}":
+            span .language-prefix "{i18n.Common.language_label} "
+            span "%i18n.Common.language_name%"
         div .language-selector:
             span .language-label "%i18n.Common.language_label%"
             a .language-link href="/{activePage == 'home' or activePage == 'es' or activePage == 'fr' ? '' : activePage}" aria-current="{i18n.Common.locale == 'en_us' ? 'page' : 'false'}" hreflang=en lang=en "English"

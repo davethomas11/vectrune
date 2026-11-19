@@ -29,8 +29,8 @@ class TeachingBuildTests(unittest.TestCase):
                 self.assertTrue(urljoin(base,manifest['start_url']).startswith(urljoin(base,manifest['scope'])))
                 self.assertEqual(urljoin(base,manifest['icons'][0]['src']), 'https://example.com'+prefix+'/assets/rune-logo.png')
     def test_games_menu_orders_examples_by_increasing_complexity(self):
-        layout = (Path(__file__).resolve().parents[2] / 'teaching_website/parts/components/layout.rune').read_text()
-        games = layout.split('h3 "%i18n.Nav.games%"', 1)[1].split('div .nav-group:', 1)[0]
+        header = (Path(__file__).resolve().parents[2] / 'teaching_website/parts/components/header.rune').read_text()
+        games = header.split('h3 "%i18n.Nav.games%"', 1)[1].split('a .menu-game', 1)[0]
         self.assertEqual(
             re.findall(r'click="navigate\(\'([\w-]+)\'\)"', games),
             ['games', 'vectworms', 'monster-city', 'vect-breach', 'rune-crypt', 'skybound-2', 'starfall', 'marble-run', 'dog-walker'],
