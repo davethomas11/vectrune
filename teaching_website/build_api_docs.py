@@ -65,7 +65,7 @@ def build_docs(destination, binary, base='/', site_url='https://vectrune.com', s
     catalog = inventory(binary)
     categories = catalog['categories']
     entries = catalog['entries']
-    guides = [page for page in json.loads(GUIDES.read_text())['pages'] if page['route'] != 'docs']
+    guides = [page for page in json.loads(GUIDES.read_text(encoding='utf-8'))['pages'] if page['route'] != 'docs']
     base = '/' + base.strip('/') + '/' if base.strip('/') else '/'
     destination = Path(destination)
     assets = destination / 'assets'
@@ -180,7 +180,7 @@ def build_docs(destination, binary, base='/', site_url='https://vectrune.com', s
             if section.get('items'):
                 body += '<ul>' + ''.join('<li>' + escape(item) + '</li>' for item in section['items']) + '</ul>'
             if section.get('source'):
-                body += code((ROOT / section['source']).read_text(), 'Rune source')
+                body += code((ROOT / section['source']).read_text(encoding='utf-8'), 'Rune source')
             if section.get('command'):
                 body += code(section['command'], 'Command / usage')
             for link in section.get('links', []):

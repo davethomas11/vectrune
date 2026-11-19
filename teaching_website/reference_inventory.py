@@ -9,7 +9,7 @@ CATALOG = ROOT / 'knowledge/reference/library.json'
 
 
 def native_names():
-    source = (ROOT / 'src/builtins.rs').read_text()
+    source = (ROOT / 'src/builtins.rs').read_text(encoding='utf-8')
     blocks = re.findall(r'let (?:core_builtins|ws_builtins|db_builtins) = \[([\s\S]*?)\];', source)
     if not blocks:
         raise ValueError('Native builtin registry changed; update reference inventory extraction')
@@ -18,12 +18,12 @@ def native_names():
 
 def web_commands():
     directory = ROOT / 'runtime/rune-web/src/builtins'
-    registered = set(re.findall(r'registerCommand\((\w+)\)', (directory / 'index.ts').read_text()))
+    registered = set(re.findall(r'registerCommand\((\w+)\)', (directory / 'index.ts').read_text(encoding='utf-8')))
     if not registered:
         raise ValueError('Frontend command registry changed; update reference inventory extraction')
     entries = []
     for path in sorted(directory.glob('*.ts')):
-        source = path.read_text()
+        source = path.read_text(encoding='utf-8')
         for symbol, body in re.findall(r'export const (\w+): BuiltinCommand = \{(.*?)^\}', source, re.S | re.M):
             if symbol not in registered:
                 continue
@@ -82,7 +82,7 @@ def help_entries(binary):
     queue = [((), 'Run scripts, serve apps, and convert structured documents.')]
     while queue:
         command, summary = queue.pop(0)
-        output = subprocess.run([str(Path(binary).resolve()), *command, '--help'], capture_output=True, text=True, check=True).stdout
+        output = subprocess.run([str(Path(binary).resolve()), *command, '--help'], capture_output=True, text=True, encoding='utf-8', check=True).stdout
         usage = re.search(r'^Usage: (.+)$', output, re.M)
         name = 'vectrune' + (' ' + ' '.join(command) if command else '')
         entries.append(dict(id='-'.join(command) or 'vectrune', category='cli', name=name,
@@ -103,7 +103,7 @@ def help_entries(binary):
 
 
 def inventory(binary=None):
-    catalog = json.loads(CATALOG.read_text())
+    catalog = json.loads(CATALOG.read_text(encoding='utf-8'))
     entries = catalog['entries'] + web_commands()
     covered = {name for entry in entries for name in [entry['name'], *entry.get('aliases', [])]}
     missing = native_names() - covered - {'#'}

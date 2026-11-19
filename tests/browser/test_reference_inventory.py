@@ -15,7 +15,7 @@ from build_api_docs import build_docs
 
 class ReferenceInventoryTests(unittest.TestCase):
     def test_example_catalog_sources_and_companions_exist(self):
-        catalog = json.loads((ROOT / 'language/docs/data/examples.json').read_text())
+        catalog = json.loads((ROOT / 'language/docs/data/examples.json').read_text(encoding='utf-8'))
         for entry in catalog['examples']:
             for source in [entry['source_path'], *(entry.get('companion_files') or [])]:
                 with self.subTest(example=entry['id'], source=source):
@@ -28,8 +28,8 @@ class ReferenceInventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with patch('reference_inventory.help_entries', return_value=[]):
                 build_docs(folder, ROOT / 'target/debug/vectrune', selected_routes=['docs/library/language'])
-            page = Path(folder, 'docs/library/language/index.html').read_text()
-            search = json.loads(Path(folder, 'docs/search-index.json').read_text())
+            page = Path(folder, 'docs/library/language/index.html').read_text(encoding='utf-8')
+            search = json.loads(Path(folder, 'docs/search-index.json').read_text(encoding='utf-8'))
             for topic in topics:
                 self.assertIn(f'id="{topic}"', page)
                 entry = next(item for item in search if item['url'].endswith('#' + topic))
@@ -64,11 +64,11 @@ class ReferenceInventoryTests(unittest.TestCase):
             self.assertEqual(set(routes), set(selected))
             self.assertTrue(Path(folder, 'assets/docs-search.js').is_file())
             self.assertTrue(Path(folder, 'assets/content/docs/app.rune').is_file())
-            page = Path(folder, 'docs/library/native/index.html').read_text()
+            page = Path(folder, 'docs/library/native/index.html').read_text(encoding='utf-8')
             self.assertIn('href="https://preview.example/guide/docs/library/native/"', page)
             self.assertIn('src="/guide/assets/docs-search.js?v=1"', page)
             self.assertIn('id="memory-set"', page)
-            index = json.loads(Path(folder, 'docs/search-index.json').read_text())
+            index = json.loads(Path(folder, 'docs/search-index.json').read_text(encoding='utf-8'))
             entry = next(item for item in index if item['name'] == 'memory.set')
             self.assertEqual(entry['url'], '/guide/docs/library/native/#memory-set')
             self.assertIn('set-memory', entry['aliases'])
@@ -77,7 +77,7 @@ class ReferenceInventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with patch('reference_inventory.help_entries', return_value=[]):
                 build_docs(folder, ROOT / 'target/debug/vectrune', '/guide/', selected_routes=['docs/storage'])
-            page = Path(folder, 'docs/storage/index.html').read_text()
+            page = Path(folder, 'docs/storage/index.html').read_text(encoding='utf-8')
             self.assertIn('One note. A shared source of truth.', page)
             self.assertIn('--secondary-app', page)
             self.assertIn('purchase.completed', page)

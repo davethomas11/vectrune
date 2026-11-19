@@ -23,7 +23,7 @@ class ManPageTests(unittest.TestCase):
         topics = {'object-property-shorthand', 'object-replication', 'object-grid',
                   'local-templates', 'object-overlays', 'matching-object-lookup',
                   'compound-assignment'}
-        catalog = json.loads((ROOT / 'knowledge/reference/library.json').read_text())
+        catalog = json.loads((ROOT / 'knowledge/reference/library.json').read_text(encoding='utf-8'))
         examples = [entry for entry in catalog['entries'] if entry['id'] in topics]
         self.assertEqual(len(examples), len(topics))
         with tempfile.TemporaryDirectory() as folder:
@@ -31,7 +31,7 @@ class ManPageTests(unittest.TestCase):
                 with self.subTest(topic=entry['id']):
                     source = Path(folder, entry['id'] + '.vect')
                     source.write_text(entry['example'] + '\nstdio -> "example complete"\n')
-                    result = subprocess.run([str(BINARY), str(source)], text=True,
+                    result = subprocess.run([str(BINARY), str(source)], text=True, encoding='utf-8',
                                             capture_output=True, check=True, cwd=folder)
                     self.assertEqual(result.stdout.strip(), 'example complete')
 
@@ -54,8 +54,8 @@ class ManPageTests(unittest.TestCase):
                              entries=[entry]),
             )
             subprocess.run([str(BINARY), str(SCRIPT)], input=json.dumps(payload) + '\n',
-                           text=True, check=True, cwd=folder)
-            page = Path(folder, 'man7/vectrune-language.7').read_text()
+                           text=True, encoding='utf-8', check=True, cwd=folder)
+            page = Path(folder, 'man7/vectrune-language.7').read_text(encoding='utf-8')
             for value in ['Aliases: other', 'value: Input', 'Returns / effects: Result',
                           'Errors / edge cases: Failure', 'Note: Limited',
                           'flag (bool; default: false): A flag', '\\&.literal',
@@ -68,7 +68,7 @@ class ManPageTests(unittest.TestCase):
             first = [page.read_bytes() for page in pages]
             build_man_pages(folder, BINARY)
             self.assertEqual(first, [page.read_bytes() for page in pages])
-            cli, language = [page.read_text() for page in pages]
+            cli, language = [page.read_text(encoding='utf-8') for page in pages]
             version = subprocess.check_output([str(BINARY), '--version'], text=True).strip()
             self.assertIn(f'"{version}"', cli)
             self.assertIn('Usage: vectrune', cli)
@@ -96,7 +96,7 @@ class ManPageTests(unittest.TestCase):
 
     @unittest.skipIf(os.name == 'nt', 'Release archive assembly runs on Linux')
     def test_release_packaging_preserves_binaries_and_bundles_both_manuals(self):
-        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        workflow = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
         step = workflow.split('      - name: Bundle offline manuals with every platform\n', 1)[1]
         script = textwrap.dedent(step.split('        run: |\n', 1)[1].split('\n      - name:', 1)[0])
         with tempfile.TemporaryDirectory() as folder:
