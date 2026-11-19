@@ -92,3 +92,5 @@ If Swagger/OpenAPI output changes:
 ## Done criteria
 
 A change with public user impact is not complete until the relevant `knowledge/` files have been reviewed and updated.
+
+For release metadata, teaching site validation, and versioned offline manuals, follow the release notes in [the repository's AGENTS.md](../../AGENTS.md).

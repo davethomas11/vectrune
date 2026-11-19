@@ -1,4 +1,11 @@
 @I18N/es
+MarbleRun {
+    title = "Marble Run"
+    description = "Recorre seis pistas sobre una fábrica flotante. Toma curvas peraltadas, salta huecos y pinchos y usa celdas de carga contra los guardianes."
+    play = "Jugar a Marble Run"
+    standalone = "Abrir el juego en otra pestaña"
+    display_options = "Prueba la paleta Pocket o activa el renderizado experimental por GPU. El juego muestra los FPS reales al cambiar la resolución y la frecuencia de imagen."
+}
 Starfall {
     title = "Starfall Protocol"
     badge = "Metroidvania espacial Pixel 3D"
@@ -611,7 +618,8 @@ Developer {
     testing = "Pruebas en Rune"
     quality = "Calidad del código"
     ci = "Integración continua"
-    release = "Novedades de 0.3.4"
+    release = "Novedades"
+    release_heading = "Novedades de"
     badge = "Herramientas de desarrollo · 0.3.4"
     start_intro = "Pasa de instalar la CLI a ejecutar cinco pruebas Rune correctas. El proyecto descargable incluye una API real, fixtures reutilizables y un flujo de GitHub Actions."
     install_title = "1. Instala o actualiza"
@@ -644,8 +652,6 @@ Developer {
     opaque_text = "El formateador conserva vistas, CSS y texto incrustado. Formatea el archivo de entrada y sus imports, valida todos los cambios antes de escribir y rechaza cambios que alteren el documento analizado. Revisa el diff."
     ci_intro = "Copia este flujo en .github/workflows/rune.yml de tu proyecto. También viene en el proyecto descargable. Usa Ubuntu x86-64 y fija la CLI en 0.3.4."
     ci_text = "El pipeline comprueba instalación, formato, diagnósticos y pruebas. Los informes JSON sirven para otras herramientas; una salida distinta de cero hace fallar el trabajo. No requiere herramientas de caché."
-    release_intro = "Juega a Starfall Protocol: un metroidvania espacial creado con el motor Pixel 3D."
-    release_text = "0.3.6 añade Starfall Protocol: sectores conectados, tres jefes principales y un guardián opcional, habilidades enlazadas, progreso guardado, música original, introducción cinematográfica y créditos de regreso. El motor incorpora mundos por bloques dispersos, procesamiento de entidades cercanas, renderizado de vóxeles más rápido, nombres de destinos, texto cinematográfico y pausa estable con mando."
     upgrade_title = "Actualiza y verifica"
     upgrade_text = "Con Homebrew, actualiza e instala la nueva versión. En otras plataformas, sustituye el ejecutable por 0.3.6 desde Releases. doctor muestra el ejecutable en uso para detectar versiones antiguas en PATH."
     cmd_1 = "brew install davethomas11/vectrune/vectrune\nvectrune --version"

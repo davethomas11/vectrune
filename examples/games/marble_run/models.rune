@@ -1,0 +1,209 @@
+@Palette/marble
+colors = {
+    "b": "#277eab",
+    "c": "#68e1e8",
+    "d": "#5f3157",
+    "g": "#f7d68b",
+    "o": "#d59968",
+    "p": "#ba5871",
+    "s": "#344f61",
+    "t": "#668b87",
+    "w": "#e5fbdf"
+}
+
+@Model/marble/ball
+palette = marble
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.55,"color":"c"}
+
+@Model/marble/stripe
+palette = marble
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.13,"color":"w"}
+
+@Model/marble/mote
+palette = marble
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.09,"color":"g"}
+
+@Model/marble/shard
+palette = marble
+unit = 0.125
+blocks:
+    {"from":[-1,-1,-1],"size":[2,2,2],"color":"p"}
+
+@Model/marble/deck
+palette = marble
+unit = 1
+blocks:
+    {"from":[0,-3,-1],"size":[8,6,1],"color":"t"}
+
+@Model/marble/landing
+palette = marble
+unit = 1
+blocks:
+    {"from":[0,-4,-1],"size":[8,8,1],"color":"t"}
+
+# A wedge rises along local +X. Rotating it 180 degrees makes a downhill run.
+@Model/marble/slope
+palette = marble
+unit = 1
+shapes:
+    {"type":"ramp","from":[0,-3,0],"size":[16,6,4],"color":"o"}
+blocks:
+    {"from":[0,-3,-1],"size":[16,6,1],"color":"s"}
+
+@Model/marble/wide_slope
+palette = marble
+unit = 1
+shapes:
+    {"type":"ramp","from":[0,-4,0],"size":[16,8,4],"color":"o"}
+blocks:
+    {"from":[0,-4,-1],"size":[16,8,1],"color":"s"}
+
+@Model/marble/sentry
+palette = marble
+unit = 1
+shapes:
+    {"type":"cylinder","center":[0,0,0.38],"radius":0.55,"height":0.76,"color":"d"}
+    {"type":"sphere","center":[0,0,0.8],"radius":0.48,"color":"p"}
+    {"type":"sphere","center":[-0.42,0,0.88],"radius":0.16,"color":"g"}
+
+@Model/marble/pillar
+palette = marble
+unit = 1
+shapes:
+    {"type":"cylinder","center":[0,0,0.6],"radius":0.4,"height":1.2,"color":"s"}
+    {"type":"cylinder","center":[0,0,1.22],"radius":0.48,"height":0.12,"color":"g"}
+
+@Model/marble/beacon
+palette = marble
+unit = 1
+shapes:
+    {"type":"cylinder","center":[0,0,0.12],"radius":1.5,"height":0.24,"color":"g"}
+    {"type":"cylinder","center":[0,0,1],"radius":0.12,"height":2,"color":"c"}
+    {"type":"sphere","center":[0,0,2.2],"radius":0.5,"color":"w"}
+
+@Model/marble/shadow
+palette = marble
+unit = 1
+shapes:
+    {"type":"cylinder","center":[0,0,0],"radius":0.6,"height":0.03,"color":"s"}
+
+@Model/marble/deck_glass
+palette = marble
+unit = 0.25
+blocks:
+    {"from":[0,-9,-4],"size":[32,18,4],"color":"t"}
+
+@Model/marble/deck_spine
+palette = marble
+unit = 0.25
+blocks:
+    {"from":[0,-7,-4],"size":[32,14,4],"color":"t"}
+
+@Model/marble/deck_finish
+palette = marble
+unit = 0.25
+blocks:
+    {"from":[0,-10,-4],"size":[32,20,4],"color":"t"}
+
+@Model/marble/deck_ridge
+palette = marble
+unit = 0.25
+blocks:
+    {"from":[0,-8,-4],"size":[32,16,4],"color":"t"}
+
+@Model/marble/deck_storm
+palette = marble
+unit = 0.25
+blocks:
+    {"from":[0,-6,-4],"size":[32,12,4],"color":"t"}
+
+@Model/marble/slope_glass
+palette = marble
+unit = 1
+shapes:
+    {"type":"ramp","from":[0,-2.25,0],"size":[16,4.5,4],"color":"b"}
+
+@Model/marble/slope_spine
+palette = marble
+unit = 1
+shapes:
+    {"type":"ramp","from":[0,-1.75,0],"size":[16,3.5,4],"color":"b"}
+
+@Model/marble/slope_storm
+palette = marble
+unit = 1
+shapes:
+    {"type":"ramp","from":[0,-1.5,0],"size":[16,3.0,4],"color":"p"}
+
+@Model/marble/corner
+palette = marble
+unit = 0.25
+blocks:
+    {"from":[-16,-16,-4],"size":[32,32,4],"color":"t"}
+
+@Model/marble/arrow
+palette = marble
+unit = 0.125
+blocks:
+    {"from":[-7,-1,0],"size":[10,2,1],"color":"g"}
+    {"from":[2,-4,0],"size":[2,8,1],"color":"g"}
+    {"from":[4,-3,0],"size":[2,6,1],"color":"g"}
+    {"from":[6,-1,0],"size":[2,2,1],"color":"g"}
+
+@Model/marble/spikes
+palette = marble
+unit = 0.125
+blocks:
+    {"from":[-5,-5,-1],"size":[10,10,1],"color":"g"}
+    {"from":[-4,-4,0],"size":[8,8,1],"color":"p"}
+    {"from":[-3,-3,1],"size":[6,6,1],"color":"p"}
+    {"from":[-2,-2,2],"size":[4,4,1],"color":"w"}
+    {"from":[-1,-1,3],"size":[2,2,2],"color":"w"}
+
+@Model/marble/pipe_bank_0
+palette = marble
+unit = 0.125
+shapes:
+    {"type":"ramp","from":[0,-16,0],"size":[5,32,1],"color":"b"}
+
+@Model/marble/pipe_bank_1
+palette = marble
+unit = 0.125
+shapes:
+    {"type":"ramp","from":[0,-16,0],"size":[5,32,3],"color":"b"}
+blocks:
+    {"from":[0,-16,-1],"size":[5,32,1],"color":"s"}
+
+@Model/marble/pipe_bank_2
+palette = marble
+unit = 0.125
+shapes:
+    {"type":"ramp","from":[0,-16,0],"size":[5,32,5],"color":"b"}
+blocks:
+    {"from":[0,-16,-4],"size":[5,32,4],"color":"s"}
+
+@Model/marble/pipe_bank_3
+palette = marble
+unit = 0.125
+shapes:
+    {"type":"ramp","from":[0,-16,0],"size":[5,32,7],"color":"b"}
+blocks:
+    {"from":[0,-16,-9],"size":[5,32,9],"color":"s"}
+
+@Model/marble/death_shard
+palette = marble
+unit = 0.125
+blocks:
+    {"from":[-1,-1,-1],"size":[2,2,2],"color":"c"}
+
+@Model/marble/death_glint
+palette = marble
+unit = 0.125
+blocks:
+    {"from":[-1,-1,-1],"size":[2,2,2],"color":"w"}

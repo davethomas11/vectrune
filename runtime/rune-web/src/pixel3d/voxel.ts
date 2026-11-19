@@ -525,8 +525,8 @@ export function renderVoxels(world: VoxelWorld, camera: Camera3D, textures: Reco
         dx, dy, dz, maxDistance, hitOutput, chunks, crossings, x, y);
       if (!hit) {
         depth[i] = Infinity;
-        buffer[i] = sky && rz > 0
-          ? skyPixel(sky, Math.atan2(ry, rx), Math.min(1, rz), time) : horizon;
+        buffer[i] = sky && (rz > 0 || sky.below !== undefined)
+          ? skyPixel(sky, Math.atan2(ry, rx), Math.max(-1, Math.min(1, rz)), time) : horizon;
       } else {
         depth[i] = hit.distance;
         const texture = materialTextures[hit.block - 1];

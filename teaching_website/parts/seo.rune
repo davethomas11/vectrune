@@ -118,33 +118,33 @@ title = %i18n.RuneWebGuide.views_title% — Vectrune
 title = %i18n.RuneWebGuide.styles_title% — Vectrune
 
 @SEO/developer
-title = %i18n.Developer.start% — Vectrune 0.3.4
+title = %i18n.Developer.start% — Vectrune
 description = %i18n.Developer.start_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_cli
-title = %i18n.Developer.cli% — Vectrune 0.3.4
+title = %i18n.Developer.cli% — Vectrune
 description = %i18n.Developer.cli_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_testing
-title = %i18n.Developer.testing% — Vectrune 0.3.4
+title = %i18n.Developer.testing% — Vectrune
 description = %i18n.Developer.testing_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_quality
-title = %i18n.Developer.quality% — Vectrune 0.3.4
+title = %i18n.Developer.quality% — Vectrune
 description = %i18n.Developer.quality_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_ci
-title = %i18n.Developer.ci% — Vectrune 0.3.4
+title = %i18n.Developer.ci% — Vectrune
 description = %i18n.Developer.ci_intro%
 image = /assets/rune-logo.png
 
 @SEO/developer_release
-title = %i18n.Developer.release% — Vectrune 0.3.6
-description = %i18n.Developer.release_intro%
+title = %i18n.Developer.release% — Vectrune
+description = %i18n.Developer.start_intro%
 image = /assets/rune-logo.png
 
 @SEO/monster-city
@@ -165,4 +165,9 @@ image = /assets/rune-logo.png
 @SEO/starfall
 title = %i18n.Starfall.title% — Vectrune
 description = %i18n.Starfall.description%
+image = /assets/rune-logo.png
+
+@SEO/marble-run
+title = %i18n.MarbleRun.title% — Vectrune
+description = %i18n.MarbleRun.description%
 image = /assets/rune-logo.png

@@ -92,6 +92,8 @@ if ($Cmp -le 0) {
     Write-Host "Error: New version $NewVersion must be greater than current $CurVersion" -ForegroundColor Red
     exit 1
 }
+python teaching_website/release_metadata.py --write --version $NewVersion
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # Update version in Cargo.toml - ONLY the [package] section version
 Write-Host "Updating $CargoFile..." -ForegroundColor Cyan
@@ -130,7 +132,7 @@ Write-Host "Version bumped from $CurVersion to $NewVersion in $CargoFile." -Fore
 
 # Git operations
 Write-Host "Staging changes..." -ForegroundColor Cyan
-git add $CargoFile
+git add $CargoFile teaching_website/release.json teaching_website/parts/release.generated.rune "docs/releases/v$NewVersion.md"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to stage Cargo.toml" -ForegroundColor Red
     exit 1
@@ -151,5 +153,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Success! Committed and tagged v$NewVersion" -ForegroundColor Green
-Write-Host "Push with: git push && git push --tags" -ForegroundColor Cyan
+Write-Host "After review, push the branch and the specific tag." -ForegroundColor Cyan
 

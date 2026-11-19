@@ -158,7 +158,10 @@ Explore the running apps, then read the Rune source behind them.
 | **Monster City** | A 2D kaiju game with destructible buildings, a shop, saved progress, and synthesized audio | [Play](https://vectrune.com/monster-city/) | [Rune source](examples/games/monster_city/) |
 | **VectRaiders** | An arcade game with reactive game state, collisions, input, and sound | [Play](https://vectrune.com/games/) | [Rune source](examples/games/space_invaders/) |
 | **Skybound 2** | A lantern-moth adventure across seven sky worlds, with squashable creatures, two bosses, and an original score | [Play](https://vectrune.com/skybound-2/) | [Rune source](examples/games/skybound_2/) |
+| **Marble Run** | Six downhill courses above Cloudworks, with jumps, banked turns, and a browser demo of GPU rendering, palettes, and frame rates | [Play](https://vectrune.com/marble-run/) | [Rune source](examples/games/marble_run/) |
 | **Learning site** | The site's own components, navigation, localization, and example explorer | [Visit](https://vectrune.com/) | [Site source](teaching_website/) |
+
+The [Pixel 3D model guide](knowledge/runtime/model-shapes.md) covers radius-based spheres, cylinders, and ramps.
 
 The [Rune Miners experiment](examples/games/rune_miners/) explores seeded voxel worlds, mining, inventory, and shared browser/native game logic on `main`. Authored worlds can use [sparse terrain chunks](knowledge/runtime/voxel-worlds.md) up to 4,096 tiles wide, while shared nearby-entity queries let real-time games sleep distant actors.
 

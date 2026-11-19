@@ -288,6 +288,7 @@ fn native_tall_rooms_raise_walls_and_model_clipping_without_moving_the_floor() {
     assert_eq!(rc.z_buffer, depth);
     assert_eq!(&rc.buffer[100 * 320..], &low[100 * 320..]);
     rc.models.insert("high".into(), BlockModel { blocks: vec![Block {
+        shape: Default::default(),
         from: [-0.5, -0.5, 1.0], size: [1.0, 1.0, 0.4], color: 0xff804020,
     }] });
     state.things = vec![serde_json::from_value(serde_json::json!({"x":4.5,"y":1.5,"model":"high"})).unwrap()];
@@ -413,7 +414,7 @@ fn compiles_block_models_and_rejects_invalid_geometry() {
 #[test]
 fn native_block_model_depth_rotation_and_inside_camera() {
     use pixel3d::model::{Block, BlockModel, render_model};
-    let model = BlockModel { blocks: vec![Block { from: [-0.5, -0.5, 0.0], size: [1.0, 1.0, 1.0], color: 0xff804020 }] };
+    let model = BlockModel { blocks: vec![Block { shape: Default::default(), from: [-0.5, -0.5, 0.0], size: [1.0, 1.0, 1.0], color: 0xff804020 }] };
     let mut instance = Thing3D {
         dissolve: None,
         x: 2.0, y: 0.0, z: None, angle: None, scale: None,
@@ -478,6 +479,7 @@ fn native_models_occlude_only_the_covered_sprite_pixels() {
     let mut rc = Rasterizer3D::new(64, 48, 66.0,
         vec![Texture { width: 8, height: 8, pixels: vec![0xff222222; 64] }], sprites, map);
     rc.models.insert("step".into(), BlockModel { blocks: vec![Block {
+        shape: Default::default(),
         from: [-0.5, -0.5, 0.0], size: [1.0, 1.0, 0.5], color: 0xff804020,
     }] });
     let mut state: RenderState = serde_json::from_value(serde_json::json!({
@@ -509,6 +511,7 @@ fn native_models_occlude_only_the_covered_sprite_pixels() {
 fn native_models_dissolve_without_occluding_the_background() {
     use rune_runtime::apps::pixel3d::model::{Block, BlockModel, render_model};
     let model = BlockModel { blocks: vec![Block {
+        shape: Default::default(),
         from: [-0.5, -0.5, 0.0], size: [1.0, 1.0, 1.0], color: 0xff804020,
     }] };
     let camera = Camera3D { x: 0.0, y: 0.0, angle: 0.0 };

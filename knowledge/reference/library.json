@@ -3358,7 +3358,7 @@
       "category": "games",
       "name": "@Model",
       "signature": "@Model/<name>",
-      "summary": "Declare a palette-colored block model. Models are visual geometry, not collision geometry.",
+      "summary": "Declare a palette-colored model using boxes, spheres, cylinders and ramps. Models are visual geometry; games author collision separately.",
       "sources": [
         "src/apps/pixel3d/mod.rs"
       ],
@@ -3384,8 +3384,14 @@
         {
           "name": "blocks",
           "type": "series",
-          "default": "required",
-          "description": "Palette-colored box records."
+          "default": "optional when shapes are present",
+          "description": "Palette-colored box records; 1-256 total blocks and shapes per model."
+        },
+        {
+          "name": "shapes",
+          "type": "series",
+          "default": "optional when blocks are present",
+          "description": "Sphere: type, center[3], radius, color. Cylinder: type, center[3], radius, height, color; axis is Z. Ramp: type, from[3], size[3], color; top rises along local +X. Dimensions use unit; centers and radii may be fractional. Rotate an instance with angle to turn a ramp."
         }
       ]
     },

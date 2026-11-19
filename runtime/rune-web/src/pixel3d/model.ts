@@ -2,6 +2,7 @@ export interface Block {
   from: [number, number, number];
   size: [number, number, number];
   color: number;
+  shape?: 'box' | 'sphere' | 'cylinder' | 'ramp';
 }
 
 export interface BlockModel {
@@ -29,7 +30,7 @@ function fragmentNoise(x: number, y: number): number {
   return (Math.imul(hash ^ (hash >>> 13), 1274126177) >>> 0) / 4294967296;
 }
 
-/** Ray/box rendering keeps block faces pixel crisp and uses the raycaster's depth convention. */
+/** Analytic box, sphere, cylinder and wedge hits share the raycaster's depth convention. */
 export function renderModel(
   model: BlockModel, instance: ModelInstance,
   camera: { x: number; y: number; height?: number; pitch?: number }, dirX: number, dirY: number, fovScale: number,
@@ -51,6 +52,7 @@ export function renderModel(
   const origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - (instance.z ?? 0)) / scale];
   for (const block of model.blocks) {
     const max = block.from.map((v, i) => v + block.size[i]);
+    const center = block.from.map((v, i) => v + block.size[i] / 2);
     let left = width, right = 0, top = height, bottom = 0, clipped = false, frontCorners = 0;
     let outsideLeft = 0, outsideRight = 0, outsideTop = 0, outsideBottom = 0;
     for (let corner = 0; corner < 8; corner++) {
@@ -109,12 +111,45 @@ export function renderModel(
             if (Math.max(a, b) < far) { far = Math.max(a, b); exitFace = axis; }
           }
         }
+        let curvedShade: number | undefined;
+        if (block.shape === 'sphere' || block.shape === 'cylinder') {
+          const px = origin[0]-center[0], py = origin[1]-center[1], pz = origin[2]-center[2];
+          const sphere = block.shape === 'sphere', radius = block.size[0]/2;
+          const a = rayX*rayX + rayY*rayY + (sphere ? rayZ*rayZ : 0);
+          const b = px*rayX + py*rayY + (sphere ? pz*rayZ : 0);
+          const k = px*px + py*py + (sphere ? pz*pz : 0) - radius*radius;
+          if (a < 1e-20) { if (k > 0) valid = false; }
+          else {
+            const discriminant = b*b - a*k;
+            if (discriminant < 0) valid = false;
+            else {
+              const root = Math.sqrt(discriminant);
+              near = Math.max(near, (-b-root)/a);
+              far = Math.min(far, (-b+root)/a);
+            }
+          }
+          const distance = near > .001 ? near : far;
+          const nx = px+rayX*distance, ny = py+rayY*distance, nz = pz+rayZ*distance;
+          const cap = !sphere && Math.abs(Math.abs(nz)-block.size[2]/2) < 1e-7;
+          const normalLength = sphere ? radius : Math.hypot(nx, ny);
+          const light = cap ? (nz > 0 ? .75 : -.75) : (-.4*nx-.5*ny+(sphere ? .75*nz : 0))/normalLength;
+          curvedShade = .55 + .45*Math.max(0, light);
+        } else if (block.shape === 'ramp') {
+          // Convex wedge: the top rises along local +X. Instance angle rotates it.
+          const slope = block.size[2]/block.size[0];
+          const offset = origin[2]-block.from[2]-slope*(origin[0]-block.from[0]);
+          const rate = rayZ-slope*rayX;
+          if (Math.abs(rate) < 1e-12) { if (offset > 0) valid = false; }
+          else if (rate < 0 && -offset/rate > near) { near = -offset/rate; face = 3; }
+          else if (rate > 0 && -offset/rate < far) { far = -offset/rate; exitFace = 3; }
+        }
         const index = y * width + x;
         const hit = near > 0.001 ? near : far;
         if (near <= 0.001) face = exitFace;
         if (valid && far >= near && hit > 0.001 && hit < depth[index]) {
           depth[index] = hit;
-          buffer[index] = face === 2 ? colorZ : face === 0 ? colorX : colorY;
+          buffer[index] = curvedShade !== undefined ? shade(block.color, curvedShade)
+            : face === 3 ? shade(block.color, .9) : face === 2 ? colorZ : face === 0 ? colorX : colorY;
         }
       }
     }

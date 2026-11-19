@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'teaching_website'))
 from build_site import build_site, starfall_web_app
+from release_metadata import sync_release
 
 
 class TeachingBuildTests(unittest.TestCase):
@@ -32,7 +33,7 @@ class TeachingBuildTests(unittest.TestCase):
         games = layout.split('h3 "%i18n.Nav.games%"', 1)[1].split('div .nav-group:', 1)[0]
         self.assertEqual(
             re.findall(r'click="navigate\(\'([\w-]+)\'\)"', games),
-            ['games', 'vectworms', 'monster-city', 'vect-breach', 'rune-crypt', 'skybound-2', 'starfall'],
+            ['games', 'vectworms', 'monster-city', 'vect-breach', 'rune-crypt', 'skybound-2', 'starfall', 'marble-run'],
         )
 
     def test_stale_compiler_is_rejected_before_overwriting_a_working_site(self):
@@ -42,17 +43,33 @@ class TeachingBuildTests(unittest.TestCase):
             previous = destination / 'index.html'
             previous.write_text('Working site')
             with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'vectrune 0.2.18\n')) as command:
-                with self.assertRaisesRegex(RuntimeError, '0.3.6.*Starfall Protocol'):
+                version, _ = sync_release()
+                with self.assertRaisesRegex(RuntimeError, f'requires Vectrune {re.escape(version)}'):
                     build_site(destination, Path(folder) / 'old-compiler')
                 self.assertEqual(command.call_count, 1)
             self.assertEqual(previous.read_text(), 'Working site')
             self.assertFalse((destination / 'assets').exists())
 
-    def test_previous_pixel_compiler_is_rejected_for_starfall(self):
+    def test_previous_pixel_compiler_is_rejected_for_marble_run(self):
+        version, _ = sync_release()
+        major, minor, patch_number = map(int, version.split("."))
+        older_version = f'{major}.{minor}.{patch_number - 1}' if patch_number else '0.0.0'
         with tempfile.TemporaryDirectory() as folder:
-            with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'vectrune 0.3.5\n')):
-                with self.assertRaisesRegex(RuntimeError, '0.3.6.*Starfall Protocol'):
+            with patch('build_site.subprocess.run', return_value=subprocess.CompletedProcess([], 0, f'vectrune {older_version}\n')):
+                with self.assertRaisesRegex(RuntimeError, f'requires Vectrune {re.escape(version)}'):
                     build_site(Path(folder) / 'site', Path(folder) / 'old-compiler')
+
+    def test_release_guard_rejects_a_stale_generated_site_module_and_wrong_tag(self):
+        with tempfile.TemporaryDirectory() as folder:
+            generated = Path(folder) / 'release.generated.rune'
+            generated.write_text('old version')
+            with patch('release_metadata.GENERATED', generated):
+                with self.assertRaisesRegex(ValueError, 'Stale release state'):
+                    sync_release()
+                version, _ = sync_release(write=True)
+                self.assertEqual(sync_release(tag=f'v{version}')[0], version)
+                with self.assertRaisesRegex(ValueError, 'Release tag .* does not match'):
+                    sync_release(tag='v0.0.0')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,20 @@
+@Perspective/marble_title_view
+fov = 70
+
+@Camera/marble_attract_camera
+duration = 28
+loop = true
+points = [
+    {"x":0,"y":2,"height":10,"angle":31,"pitch":-28},
+    {"x":16,"y":-2,"height":9,"angle":121,"pitch":-27},
+    {"x":20,"y":14,"height":10,"angle":211,"pitch":-28},
+    {"x":4,"y":18,"height":9,"angle":301,"pitch":-27}
+]
+
+@Scene/marble_title_scene
+map = valley
+things = ["factory","title_props"]
+camera = marble_attract_camera
+perspective = marble_title_view
+heading = MARBLE RUN
+prompt = ENTER START / L LEVELS

@@ -721,6 +721,11 @@ be between `0` (static) and `10`. `sky` and an explicit `ceiling` are mutually
 exclusive. Skies are map-wide; per-tile open ceilings and variable-height rooms
 are not implemented.
 
+For a floating course, add an opaque `"below"` color to the sky object and
+omit `floor`. The sky then extends beneath the horizon with a second gradient
+and two cloud layers that drift at different speeds. Models can still appear
+below world height zero, as in [Marble Run](../../examples/games/marble_run/).
+
 ## Room height
 
 `@Map ceiling_height = 3` raises the ceiling and wall tops to three world
@@ -831,6 +836,8 @@ references report an error.
 Meters default to `display = "counter"`. Use `display = "pips"` with `icon` and
 `emptyIcon` to show up to sixteen full/empty resource icons (wrapping within the meter slot), or `display = "bar"`
 for an icon counter with a compact bar. Pips require an integer maximum of 1–8.
+Use an empty label and `showValue = false` on a floating bar to display only
+its icon and gauge.
 The layout uses the actual sprite dimensions and draws at integer scale; small
 icons around 8–12 pixels work well. Meter `color` controls bar fill; icon colors
 come from their palettes.
@@ -1249,11 +1256,40 @@ lower dash approach, keeping jump jets from bypassing the main breach.
 
 ## Browser viewport fitting and Starfall touch layout
 
+Each Pixel 3D game sets its default framebuffer size with `@App resolution`.
+A browser shell can add `select data-pixel-resolution=true` with option values
+such as `"384x240"` and `"768x480"`. Use the app's aspect ratio for each option.
+Changing resolution rebuilds the framebuffer and scales the HUD to keep its
+on-screen size. The simulation continues at its authored tick rate.
+
+A `select data-pixel-palette=true` can offer `original` and options containing
+2 to 16 comma-separated six-digit RGB colors, without `#`, ordered from
+dark to light. The renderer maps each finished pixel by brightness to the
+selected color ramp. [Marble Run](../../examples/games/marble_run/shell.rune)
+uses both controls.
+Add `data-pixel-outline=true` to a palette option to draw depth-based
+silhouettes in its darkest color. Marble Run uses it for the Pocket palette.
+
+Marble Run also opts into an experimental WebGL 2 backend with
+`input data-pixel-gpu=true`. It draws model geometry and the procedural sky
+using cached meshes and shaders, with the shared HUD layered on top. The
+experiment supports scenes built entirely from models over a sky with
+`below` set. A browser that lacks accelerated WebGL 2 keeps the CPU renderer.
+The `data-pixel-fps` readout measures frames drawn by the active backend.
+A `select data-pixel-frame-rate=true` can offer `simulation`, `60`, and
+`display`. These draw at the simulation rate, cap rendering at 60 FPS, or
+draw on every browser animation frame, respectively. The browser and display
+still limit the last mode. Simulation always uses the authored tick rate.
+At higher render rates WebGL interpolates camera and model poses between
+simulation ticks, batches copies of each model, and retains the HUD until
+it changes.
+
 A Pixel 3D shell can opt a canvas into `data-pixel-fit=viewport`. In fullscreen,
 the browser host resizes the render target to the available aspect ratio while
-keeping approximately the authored pixel count and preserving the vertical
+keeping approximately the selected pixel count and preserving the vertical
 field of view. Wider phones show more world horizontally, with no cropped HUD
-or stretched models. Leaving fullscreen restores the authored resolution.
+or stretched models. Leaving fullscreen restores the selected resolution, or
+the authored resolution if there is no dropdown.
 Shell CSS must let the fullscreen canvas fill its surface; canvases without the
 attribute keep their existing aspect ratio. This presentation option is in the
 current website runtime; it does not change desktop game rules or save data.

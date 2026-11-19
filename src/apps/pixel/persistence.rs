@@ -102,6 +102,30 @@ mod tests {
         }
     }
     #[test]
+    fn marble_unlocks_survive_a_new_native_session() {
+        let dir = tempfile::tempdir().unwrap();
+        let doc = crate::rune_parser::load_rune_document_from_path(Path::new(
+            "examples/games/marble_run/marble_run.rune",
+        ))
+        .unwrap();
+        let game = crate::apps::pixel3d::compile(&doc).unwrap();
+        for first in [true, false] {
+            let runtime = rquickjs::Runtime::new().unwrap();
+            let context = rquickjs::Context::full(&runtime).unwrap();
+            install(&context, dir.path().to_path_buf()).unwrap();
+            context.with(|ctx| {
+                ctx.eval::<(), _>(game.script.as_str()).unwrap();
+                if first {
+                    ctx.eval::<(), _>("const g=__RunePixel3D,s=g.app.state;g.start();s.player={x:s.goal.x,y:s.goal.y,z:s.goal.z,vx:0,vy:0,vz:0};g.step({});").unwrap();
+                } else {
+                    assert!(ctx.eval::<bool, _>("__RunePixel3D.app.state.status==='title' && __RunePixel3D.app.state.progress.unlocked===2 && __RunePixel3D.app.state.progress.cleared===1").unwrap());
+                    ctx.eval::<(), _>("__RunePixel3D.invoke('open_selector');__RunePixel3D.invoke('select_course',[2]);__RunePixel3D.invoke('advance');").unwrap();
+                    assert_eq!(ctx.eval::<i32, _>("__RunePixel3D.app.state.level").unwrap(),2);
+                }
+            });
+        }
+    }
+    #[test]
     fn json_save_survives_reopen_and_atomic_replacement() {
         let dir = tempfile::tempdir().unwrap();
         assert_eq!(read(dir.path(), "game").unwrap(), None);

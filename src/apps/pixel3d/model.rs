@@ -1,11 +1,23 @@
 use super::raster::{Camera3D, Thing3D};
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ModelShape {
+    #[default]
+    Box,
+    Sphere,
+    Cylinder,
+    Ramp,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Block {
     pub from: [f64; 3],
     pub size: [f64; 3],
     pub color: u32,
+    #[serde(default)]
+    pub shape: ModelShape,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -96,11 +108,45 @@ pub fn render_model(
                         if a.max(b) < far { far = a.max(b); exit_face = axis; }
                     }
                 }
+                let mut curved_shade = None;
+                if matches!(block.shape, ModelShape::Sphere | ModelShape::Cylinder) {
+                    let sphere = block.shape == ModelShape::Sphere;
+                    let center = std::array::from_fn::<_, 3, _>(|i| block.from[i]+block.size[i]/2.0);
+                    let p = std::array::from_fn::<_, 3, _>(|i| origin[i]-center[i]);
+                    let radius = block.size[0]/2.0;
+                    let a = ray[0]*ray[0]+ray[1]*ray[1]+if sphere { ray[2]*ray[2] } else { 0.0 };
+                    let b = p[0]*ray[0]+p[1]*ray[1]+if sphere { p[2]*ray[2] } else { 0.0 };
+                    let k = p[0]*p[0]+p[1]*p[1]+if sphere { p[2]*p[2] } else { 0.0 }-radius*radius;
+                    if a < 1e-20 { if k > 0.0 { valid = false; } }
+                    else {
+                        let discriminant = b*b-a*k;
+                        if discriminant < 0.0 { valid = false; }
+                        else {
+                            let root = discriminant.sqrt();
+                            near = near.max((-b-root)/a);
+                            far = far.min((-b+root)/a);
+                        }
+                    }
+                    let distance = if near > 0.001 { near } else { far };
+                    let n = std::array::from_fn::<_, 3, _>(|i| p[i]+ray[i]*distance);
+                    let cap = !sphere && (n[2].abs()-block.size[2]/2.0).abs() < 1e-7;
+                    let length = if sphere { radius } else { n[0].hypot(n[1]) };
+                    let light = if cap { if n[2] > 0.0 { 0.75 } else { -0.75 } }
+                        else { (-0.4*n[0]-0.5*n[1]+if sphere { 0.75*n[2] } else { 0.0 })/length };
+                    curved_shade = Some(0.55+0.45*light.max(0.0));
+                } else if block.shape == ModelShape::Ramp {
+                    let slope = block.size[2]/block.size[0];
+                    let offset = origin[2]-block.from[2]-slope*(origin[0]-block.from[0]);
+                    let rate = ray[2]-slope*ray[0];
+                    if rate.abs() < 1e-12 { if offset > 0.0 { valid = false; } }
+                    else if rate < 0.0 && -offset/rate > near { near = -offset/rate; face = 3; }
+                    else if rate > 0.0 && -offset/rate < far { far = -offset/rate; exit_face = 3; }
+                }
                 let index = y * width + x;
                 let hit = if near > 0.001 { near } else { face = exit_face; far };
                 if valid && far >= near && hit > 0.001 && hit < depth[index] {
                     depth[index] = hit;
-                    buffer[index] = shade(block.color, if face == 2 { 1.0 } else if face == 0 { 0.8 } else { 0.65 });
+                    buffer[index] = shade(block.color, curved_shade.unwrap_or(if face == 3 { 0.9 } else if face == 2 { 1.0 } else if face == 0 { 0.8 } else { 0.65 }));
                 }
             }
         }

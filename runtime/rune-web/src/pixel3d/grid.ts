@@ -27,12 +27,15 @@ export function renderGrid(map: MapData, camera: Camera3D, textures: Texture[], 
   const billboards = things.filter(t => t.sprite && !t.model && t.visible !== false);
   for (let y = 0; y < height; y++) {
     const v = ((height >> 1) - y - .5) / height;
+    const rz = sp + cp * v;
+    const plane = map.sky?.below === undefined && rz < -1e-10
+      ? -eye / rz : !map.sky && rz > 1e-10 ? (top - eye) / rz : Infinity;
+    const altitude = rz < 0 ? Math.max(-1, rz) : Math.min(1, rz * 2);
     for (let x = 0; x < width; x++) {
       const u = (2 * x / width - 1) * scale;
-      const rx = dx * (cp - sp * v) - dy * u, ry = dy * (cp - sp * v) + dx * u, rz = sp + cp * v;
+      const rx = dx * (cp - sp * v) - dy * u, ry = dy * (cp - sp * v) + dx * u;
       let hit = Infinity;
       let color = sample(map.ceiling, 0, 0);
-      const plane = rz < -1e-10 ? -eye / rz : !map.sky && rz > 1e-10 ? (top - eye) / rz : Infinity;
       if (plane > 0 && Number.isFinite(plane)) {
         hit = plane;
         color = sample(rz < 0 ? map.floor : map.ceiling, camera.x + rx * hit, camera.y + ry * hit);
@@ -64,7 +67,7 @@ export function renderGrid(map: MapData, camera: Camera3D, textures: Texture[], 
         else { enter = nextY; nextY += ty; my += sy; side = 1; }
       }
       if (!Number.isFinite(hit) && map.sky) {
-        color = skyPixel(map.sky, Math.atan2(ry, rx), Math.max(0, Math.min(1, rz * 2)), time);
+        color = skyPixel(map.sky, Math.atan2(ry, rx), altitude, time);
       }
       // Vertical yaw-facing planes keep sprites grounded under true camera pitch.
       for (const thing of billboards) {

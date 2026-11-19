@@ -52,6 +52,7 @@ if verlte "$NEW_VERSION" "$CUR_VERSION"; then
   echo "Error: New version $NEW_VERSION must be greater than current $CUR_VERSION"
   exit 1
 fi
+python3 teaching_website/release_metadata.py --write --version "$NEW_VERSION"
 
 # Update version in Cargo.toml - ONLY in [package] section
 # Use awk to find and replace only the first `version =` line after [package]
@@ -70,8 +71,8 @@ mv "$CARGO_FILE.tmp" "$CARGO_FILE"
 
 echo "Version bumped from $CUR_VERSION to $NEW_VERSION in $CARGO_FILE."
 
-git add "$CARGO_FILE"
+git add "$CARGO_FILE" teaching_website/release.json teaching_website/parts/release.generated.rune "docs/releases/v$NEW_VERSION.md"
 git commit -m "chore: bump version to $NEW_VERSION"
 git tag "v$NEW_VERSION"
 
-echo "Committed and tagged v$NEW_VERSION. Push with: git push && git push --tags"
+echo "Committed and tagged v$NEW_VERSION. After review, push the branch and the specific tag."

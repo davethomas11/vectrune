@@ -133,6 +133,14 @@ export class Raycaster3D {
   zBuffer: Float64Array;
   pixelDepth: Float64Array;
   fov: number;
+  private hudScale = 1;
+  private drawScale = 1;
+  private palette?: Uint32Array;
+  private silhouettes = false;
+
+  get outlineRadius(): number {
+    return this.silhouettes ? Math.max(1, Math.round(this.hudScale)) : 0;
+  }
 
   constructor(readonly config: RaycasterConfig) {
     this.width = config.width;
@@ -152,16 +160,34 @@ export class Raycaster3D {
     this.config.map = map;
   }
 
-  resize(width: number, height: number): boolean {
+  resize(width: number, height: number, hudScale = 1): boolean {
     if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 ||
         width > 2048 || height > 2048 || width * height > 1048576) throw new Error('Invalid pixel3d viewport size');
-    if (width === this.width && height === this.height) return false;
+    if (!Number.isFinite(hudScale) || hudScale <= 0) throw new Error('Invalid pixel3d HUD scale');
+    const scaleChanged = this.hudScale !== hudScale;
+    this.hudScale = hudScale;
+    if (width === this.width && height === this.height) return scaleChanged;
     this.width = this.config.width = width;
     this.height = this.config.height = height;
     this.buffer = new Uint32Array(width * height);
     this.zBuffer = new Float64Array(width);
     this.pixelDepth = new Float64Array(width * height);
     return true;
+  }
+
+  setPalette(colors?: readonly number[], silhouettes = false): void {
+    if (colors === undefined) {
+      this.palette = undefined;
+      this.silhouettes = false;
+      return;
+    }
+    if (colors.length < 2 || colors.length > 16 ||
+        !colors.every(color => Number.isInteger(color) && color >= 0 && color <= 0xffffff)) {
+      throw new Error('Pixel-3d palette needs 2 to 16 RGB colors, from darkest to lightest');
+    }
+    this.palette = Uint32Array.from({ length: 256 }, (_, light) =>
+      packed(colors[Math.floor(light * colors.length / 256)]));
+    this.silhouettes = silhouettes;
   }
 
   render(
@@ -182,7 +208,8 @@ export class Raycaster3D {
     const py = camera.y;
     const ang = camera.angle;
 
-    const pitched = !this.config.world && ((camera.height ?? .5) !== .5 || (camera.pitch ?? 0) !== 0);
+    const pitched = !this.config.world && ((camera.height ?? .5) !== .5 || (camera.pitch ?? 0) !== 0 ||
+      map.sky?.below !== undefined);
     // Pitched terrain and models use the same unquantized camera basis.
     const freeCamera = pitched || !!this.config.world;
     const dirX = freeCamera ? Math.cos(ang * Math.PI / 180) : fastCos(ang);
@@ -227,6 +254,7 @@ export class Raycaster3D {
       this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
     }
 
+    if (this.silhouettes) this.drawSilhouettes();
     this.renderWorldTitles(camera, things, dirX, dirY, fovScale);
 
     // 4. Viewmodel Weapon (screen space, bottom-center)
@@ -248,11 +276,59 @@ export class Raycaster3D {
     }
 
     // 6. Retro HUD and status banners
-    if (stats) {
+    if (stats) this.drawHud(stats);
+    this.applyPalette();
+    return this.buffer;
+  }
+
+  /** Transparent HUD for the browser's model renderer. Uses the same layout and palette. */
+  renderOverlay(stats: Stats3D): void {
+    this.buffer.fill(0);
+    this.drawHud(stats);
+    this.applyPalette(true);
+  }
+
+  private drawHud(stats: Stats3D): void {
+    this.drawScale = this.hudScale;
+    try {
       this.renderHUD(stats);
+    } finally {
+      this.drawScale = 1;
+    }
+  }
+
+  private applyPalette(transparent = false): void {
+    const palette = this.palette;
+    if (palette) {
+      const pixels = this.buffer;
+      for (let i = 0; i < pixels.length; i++) {
+        const pixel = pixels[i];
+        if (transparent && pixel === 0) continue;
+        const light = ((pixel & 255) * 54 + ((pixel >>> 8) & 255) * 183 + ((pixel >>> 16) & 255) * 19) >>> 8;
+        pixels[i] = palette[light];
+      }
     }
 
-    return this.buffer;
+  }
+
+  private drawSilhouettes(): void {
+    const { width, height, pixelDepth: depth, buffer } = this;
+    const radius = this.outlineRadius;
+    const diagonal = radius > 1 ? Math.max(1, Math.floor(radius / Math.SQRT2)) : 0;
+    for (let y = 0; y < height; y++) {
+      const row = y * width, above = Math.max(0, y - radius) * width, below = Math.min(height - 1, y + radius) * width;
+      const upper = Math.max(0, y - diagonal) * width, lower = Math.min(height - 1, y + diagonal) * width;
+      for (let x = 0; x < width; x++) {
+        const i = row + x;
+        let edge = Math.min(depth[row + Math.max(0, x - radius)], depth[row + Math.min(width - 1, x + radius)],
+          depth[above + x], depth[below + x]);
+        if (diagonal) {
+          const left = Math.max(0, x - diagonal), right = Math.min(width - 1, x + diagonal);
+          edge = Math.min(edge, depth[upper + left], depth[upper + right], depth[lower + left], depth[lower + right]);
+        }
+        if (depth[i] - edge > Math.max(.12, edge * .025)) buffer[i] = 0xff000000;
+      }
+    }
   }
 
   /** Pixel-font plaques anchored above actors, using the same projection/depth as models. */
@@ -291,10 +367,11 @@ export class Raycaster3D {
 
   rect(x: number, y: number, width: number, height: number, color: number): void {
     const c = packed(color);
-    const left = Math.min(this.width, Math.max(0, Math.floor(x)));
-    const top = Math.max(0, Math.floor(y));
-    const right = Math.min(this.width, Math.floor(x + width));
-    const bottom = Math.min(this.height, Math.floor(y + height));
+    const scale = this.drawScale;
+    const left = Math.min(this.width, Math.max(0, Math.floor(x * scale)));
+    const top = Math.max(0, Math.floor(y * scale));
+    const right = Math.min(this.width, Math.floor((x + width) * scale));
+    const bottom = Math.min(this.height, Math.floor((y + height) * scale));
     for (let row = top; row < bottom; row++) {
       this.buffer.fill(c, row * this.width + left, row * this.width + Math.max(left, right));
     }
@@ -318,8 +395,8 @@ export class Raycaster3D {
   }
 
   private renderHUD(stats: Stats3D) {
-    const W = this.width;
-    const H = this.height;
+    const W = Math.floor(this.width / this.drawScale);
+    const H = Math.floor(this.height / this.drawScale);
     if (stats.titleScene) {
       const title = stats.titleScene;
       const scale = Math.max(1, Math.min(4, Math.floor((W - 32) / (title.heading.length * 4))));
@@ -341,7 +418,10 @@ export class Raycaster3D {
       return;
     }
     if (stats.ui) {
-      renderHud(this, stats.ui, stats.status || 'playing', stats.paused || false, this.config.sprites);
+      const canvas = this.drawScale === 1 ? this : {
+        width: W, height: H, rect: this.rect.bind(this), text: this.text.bind(this),
+      };
+      renderHud(canvas, stats.ui, stats.status || 'playing', stats.paused || false, this.config.sprites);
       return;
     }
     if (stats.presentation) {
