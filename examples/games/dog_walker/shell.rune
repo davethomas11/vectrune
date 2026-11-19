@@ -1,0 +1,154 @@
+@Page/dog_walker_cabinet
+title = Dog Walker
+logic = dog_walker_cabinet
+style = dog_walker_cabinet
+view:
+    main .cabinet:
+        section .machine:
+            div .toolbar:
+                div .settings:
+                    label:
+                        span "Palette"
+                        select data-pixel-palette=true:
+                            option value="080f26,1a2c50,31527c,527da7,83b3d4,daeffa" data-pixel-outline=true selected=true "Blue Pocket"
+                            option value=original "Original"
+                    label:
+                        input type=checkbox data-pixel-gpu=true
+                        span "GPU"
+                div .settings:
+                    button data-pixel-pause=true data-pixel-hidden=pause_hidden "Pause / P"
+                    button data-pixel-mute=true "Sound"
+                    button data-pixel-fullscreen=true "Fullscreen"
+            div .game-surface:
+                canvas data-rune-pixel-3d=true tabindex=0 autofocus=true aria-label="Dog Walker. Arrows steer, Space tells your dog to go or throws the ball, and X dashes."
+                div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
+                    h2 "Paused"
+                    button data-pixel-pause=true "Resume"
+                    button data-pixel-restart=true "Return to title"
+                div .launch data-pixel-hidden=title_hidden:
+                    button .primary data-pixel-start=true "Start walk"
+                    span .best data-pixel-text=best_label "Best 0"
+                div .launch data-pixel-hidden=launch_hidden hidden=true:
+                    button .primary data-pixel-action="advance" "Walk again"
+        details .guide:
+            summary "How to play"
+            p "You walk forward automatically. Use the arrows or WASD to steer. Up speeds up and Down lets you backtrack."
+            p "Tap Space at a hydrant or lamppost for a 10-point pee or on a lawn patch for a 40-point poop. Angry neighbors chase lawn visits. Dash with X or Shift. Getting caught costs one heart and 25 points."
+            p "Steer around garbage trucks. If a courier distracts your dog, steer away or dash. If the leash snaps, run after your dog and press Space when you're close enough to clip it back on."
+            p "At the park, steer into the lane with the lit ring and press Space to throw. Every completed fetch scores. Hit the lit ring for a bonus, then keep the streak going for all three throws."
+            p "On a controller, use the left stick, the bottom face button for Dog, and the left face button to dash. Touchscreen play has a stick and buttons."
+
+@Logic/dog_walker_cabinet
+state:
+    name = "Dog Walker"
+
+@Style/dog_walker_cabinet
+rules:
+    :root:
+        color-scheme = dark
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #0b142d
+        color = #daeffa
+        font-family = system-ui, sans-serif
+    .cabinet:
+        max-width = 1060px
+        margin = auto
+        padding = clamp(10px, 3vw, 30px)
+    .machine:
+        overflow = hidden
+        border = 1px solid #527da7
+        border-radius = 11px
+        background = #111f3a
+        box-shadow = 0 10px 0 #080e1c
+    .toolbar:
+        display = flex
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 8px
+        padding = 8px 12px
+    .settings:
+        display = flex
+        align-items = center
+        flex-wrap = wrap
+        gap = 7px
+    label:
+        display = flex
+        align-items = center
+        gap = 6px
+        font-size = 12px
+        font-weight = 700
+    input:
+        accent-color = #83b3d4
+    button, select:
+        min-height = 42px
+        cursor = pointer
+        padding = 7px 11px
+        font = inherit
+        font-size = 12px
+        font-weight = 700
+        color = #daeffa
+        background = #223953
+        border = 1px solid #527da7
+        border-radius = 5px
+    button:hover:
+        background = #31527c
+    button:focus-visible, select:focus-visible, summary:focus-visible:
+        outline = 2px solid #b8e1fc
+        outline-offset = 2px
+    .game-surface:
+        position = relative
+        background = #182948
+    canvas:
+        display = block
+        position = relative
+        width = 100%
+        height = auto
+        aspect-ratio = 8 / 5
+        outline-offset = -3px
+        image-rendering = pixelated
+        touch-action = none
+    .launch:
+        position = absolute
+        left = 12px
+        right = 12px
+        bottom = clamp(26px, 5.5vw, 54px)
+        display = flex
+        align-items = center
+        justify-content = center
+        gap = 10px
+    .primary:
+        color = #0b142d
+        background = #b8e1fc
+        border-color = #b8e1fc
+        padding = 9px 18px
+    .primary:hover:
+        background = #daeffa
+    .best:
+        padding = 6px 8px
+        border-radius = 4px
+        background = #0b142de6
+        font-size = 12px
+    .pause-menu:
+        position = absolute
+        inset = 0
+        display = flex
+        flex-direction = column
+        align-items = center
+        justify-content = center
+        gap = 10px
+        background = #0b142df2
+    .pause-menu h2:
+        margin = 0
+    .guide:
+        max-width = 640px
+        margin-top = 24px
+        font-size = 14px
+        line-height = 1.5
+    summary:
+        cursor = pointer
+        font-weight = 700
+    [hidden]:
+        display = none !important

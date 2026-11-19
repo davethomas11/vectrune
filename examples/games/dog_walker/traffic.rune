@@ -1,0 +1,114 @@
+@Logic/dog_walker
+state:
+    trucks = []
+    couriers = []
+    distracted_by = -1
+    pull_ticks = 0
+    dog_loose = false
+    runaway_ticks = 0
+    dog_escaped = false
+    leash_gap = 2
+
+action setup_traffic:
+    distracted_by = -1
+    pull_ticks = 0
+    dog_loose = false
+    dog_escaped = false
+    runaway_ticks = 0
+    trucks = [
+        {"x": 46, "y": 0.6, "home_x": 46, "home_y": 0.6, "angle": 0, "model": "walk/garbage_truck"},
+        {
+            "x": 77,
+            "y": -1.6,
+            "home_x": 77,
+            "home_y": -1.6,
+            "angle": 180,
+            "model": "walk/garbage_truck"
+        }
+    ]
+    couriers = []
+    for i in range(0,3):
+        address = 32+i*27
+        curb_side = i % 2 == 0 ? 1 : -1
+        couriers.push(
+            {
+                "x": address,
+                "y": curb_side * 5,
+                "curb_side": curb_side,
+                "angle": curb_side > 0 ? 270: 90,
+                "used": false,
+                "model": "walk/delivery"
+            }
+        )
+        properties.push({"x": address + 3.6, "y": curb_side * 8.7, "angle": 180, "model": "walk/delivery_van"})
+
+action update_traffic:
+    for i in range(0,trucks.length):
+        truck = trucks[i]
+        truck.x = truck.home_x+sin(ticks*1.2+i*54)*2.4
+        truck.y = truck.home_y+sin(ticks*0.95+i*30)*0.36
+        if safety == 0 && abs(player.x-truck.x) < 2.55 && abs(player.y-truck.y) < 1.18:
+            player.y = clamp(truck.y+(player.y < truck.y ? -1.65 : 1.65),-7.25,7.25)
+            call take_hit 15, "TRUCK / -15"
+    stop when status != "playing"
+    for i in range(0,couriers.length):
+        courier = couriers[i]
+        courier.y = courier.curb_side*(4.6+sin(ticks*1.6+i*75)*0.65)
+        courier.z = abs(sin(ticks*20+i*15))*0.055
+        if !dog_loose && distracted_by < 0 && !courier.used && dash_timer == 0 && potty_timer == 0 && safety == 0 && abs(dog.x-courier.x) < 1.9 && abs(dog.y-courier.y) < 1.65:
+            courier.used = true
+            distracted_by = i
+            pull_ticks = 39
+            notice = "COURIER!"
+            notice_timer = 42
+            sound.play "walk_alert"
+
+action distracted_walk:
+    courier = couriers[distracted_by]
+    pull_x = courier.x-player.x
+    pull_y = courier.y-player.y
+    if dash_timer > 0 || pull_x*pull_x+pull_y*pull_y > 19:
+        distracted_by = -1
+        pull_ticks = 0
+        stop when true
+    pull_ticks -= 1
+    if pull_ticks <= 0:
+        call snap_leash
+        stop when true
+    player.y = clamp(player.y+clamp(pull_y*0.04,-0.062,0.062),-7.25,7.25)
+    call move_dog courier.x, courier.y, 0.19
+
+action snap_leash:
+    distracted_by = -1
+    potty_timer = 0
+    potty_spot = -1
+    pee_pose = 0
+    ready_spot = -1
+    dog_loose = true
+    runaway_ticks = 135
+    dog.x = max(dog.x,player.x+1)
+    dog.angle = 0
+    leash_gap = 2
+    notice = "LEASH SNAPPED!"
+    notice_timer = 42
+    sound.play "walk_snap"
+
+action chase_dog:
+    runaway_ticks -= 1
+    speed = dash_timer > 0 ? 0.29 : 0.205
+    magnitude = max(1,sqrt(forward*forward+side*side))
+    player.x = clamp(player.x+forward*speed/magnitude,0.5,park_x+21)
+    player.y = clamp(player.y+side*speed/magnitude,-7.25,7.25)
+    dog.x = min(park_x+22,dog.x+0.168)
+    dog.y = clamp(dog.y+sin(runaway_ticks*10)*0.055,-7.1,7.1)
+    leash_gap = sqrt((dog.x-player.x)*(dog.x-player.x)+(dog.y-player.y)*(dog.y-player.y))
+    if fresh_use && leash_gap < 1.15:
+        dog_loose = false
+        safety = max(safety,35)
+        notice = "LEASH CLIPPED"
+        notice_timer = 40
+        sound.play "walk_mark"
+        stop when true
+    if runaway_ticks <= 0:
+        dog_escaped = true
+        call finish "gameover"

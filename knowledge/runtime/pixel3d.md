@@ -726,6 +726,26 @@ omit `floor`. The sky then extends beneath the horizon with a second gradient
 and two cloud layers that drift at different speeds. Models can still appear
 below world height zero, as in [Marble Run](../../examples/games/marble_run/).
 
+## 3D tethers
+
+Add `tethers = ["leash"]` to a gameplay or title `@Scene` to read a tether
+from logic state. A path can also name a list of tethers. Each tether lists
+two to 32 world-space points, a radius in tiles (.002 to 2), and an RGB
+integer color. Set `visible = false` or use null state to hide it.
+
+```rune
+leash = {"points":[[2,1,0.9],[3,2,0.5]],"radius":0.04,"color":13292015,"slack":0.2}
+```
+
+With two points, `slack` lowers the midpoint by the given number of tiles
+(0 to 32). Use three or more points for an authored bend, tow line, or a
+whip or swing whose motion is calculated in game logic. The engine draws
+rounded segments with world depth, including palette outlines. It does
+not solve tension, collisions, or swing physics. CPU and GPU rendering
+use the same sampled path. The native desktop host uses the shared CPU
+renderer for scenes with tethers. [Dog Walker](dog-walker.md) updates a
+leash between the walker's hand and the dog's collar.
+
 ## Room height
 
 `@Map ceiling_height = 3` raises the ceiling and wall tops to three world

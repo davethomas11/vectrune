@@ -36,6 +36,9 @@ fn camera(doc: &RuneDocument, name: &str) -> Result<Json> {
 
 pub(super) fn compile(doc: &RuneDocument, scene: &crate::rune_ast::Section, config: &mut Json) -> Result<()> {
     config["fov"] = json!(perspective(doc, scene)?);
+    if let Some(paths) = tether_paths(scene)? {
+        config["tethers"] = paths;
+    }
     if let Some(name) = text(scene, "camera") {
         if doc.sections.iter().any(|s| s.path == ["Camera", name]) {
             config["cameraTrack"] = camera(doc, name)?;
@@ -65,5 +68,22 @@ pub(super) fn compile(doc: &RuneDocument, scene: &crate::rune_ast::Section, conf
     config["titleScene"] = json!({"map":map,"camera":track,"fov":fov,
         "heading":heading,"subtitle":subtitle,"prompt":prompt,
         "things":title.kv.get("things").map(json_value).unwrap_or_else(|| config["things"].clone())});
+    if let Some(paths) = tether_paths(title)? {
+        config["titleScene"]["tethers"] = paths;
+    }
     Ok(())
+}
+
+fn tether_paths(scene: &crate::rune_ast::Section) -> Result<Option<Json>> {
+    let Some(value) = scene.kv.get("tethers") else { return Ok(None); };
+    let paths = json_value(value);
+    ensure!(
+        paths.as_array().is_some_and(|paths| paths.len() <= 32 && paths.iter().all(|path| {
+            path.as_str().is_some_and(|s| s.split('.').all(|part| {
+                !part.is_empty() && part.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_')
+            }))
+        })),
+        "Scene tethers must be an array of up to 32 state paths"
+    );
+    Ok(Some(paths))
 }

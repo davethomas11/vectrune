@@ -1,0 +1,334 @@
+@Palette/walk
+colors = {
+    ".": "transparent",
+    "a": "#667c8a",
+    "b": "#355269",
+    "d": "#e2d6b4",
+    "g": "#75958e",
+    "h": "#becad2",
+    "i": "#243141",
+    "k": "#111d34",
+    "l": "#91bcc5",
+    "p": "#9b7656",
+    "s": "#52677d",
+    "w": "#f1f7ee"
+}
+
+@Model/walk/road
+palette = walk
+unit = 1
+blocks:
+    {"from":[0,-14,-1],"size":[12,9,1],"color":"g"}
+    {"from":[0,-5,-1],"size":[12,2,1],"color":"h"}
+    {"from":[0,-3,-1],"size":[12,6,1],"color":"s"}
+    {"from":[0,3,-1],"size":[12,2,1],"color":"h"}
+    {"from":[0,5,-1],"size":[12,9,1],"color":"g"}
+
+@Model/walk/stripe
+palette = walk
+unit = 0.125
+blocks:
+    {"from":[0,-1,0],"size":[16,2,1],"color":"l"}
+
+@Model/walk/house
+palette = walk
+unit = 0.2
+blocks:
+    {"from":[-13,-10,0],"size":[26,21,13],"color":"h"}
+    {"from":[-14,-12,13],"size":[28,24,2],"color":"b"}
+    {"from":[-14,-9,15],"size":[28,18,2],"color":"b"}
+    {"from":[-14,-6,17],"size":[28,12,2],"color":"s"}
+    {"from":[-14,-3,19],"size":[28,6,2],"color":"s"}
+    {"from":[7,3,16],"size":[3,3,7],"color":"a"}
+    {"from":[-2,-11,1],"size":[4,1,8],"color":"i"}
+    {"from":[-10,-11,5],"size":[5,1,4],"color":"w"}
+    {"from":[5,-11,5],"size":[5,1,4],"color":"w"}
+    {"from":[-8,-11,5],"size":[1,1,4],"color":"s"}
+    {"from":[7,-11,5],"size":[1,1,4],"color":"s"}
+    {"from":[-3,-13,0],"size":[7,3,1],"color":"a"}
+
+@Model/walk/bungalow
+palette = walk
+unit = 0.15
+blocks:
+    {"from":[-14,-12,0],"size":[29,24,14],"color":"l"}
+    {"from":[-16,-14,14],"size":[31,27,2],"color":"i"}
+    {"from":[-14,-11,17],"size":[29,21,2],"color":"b"}
+    {"from":[-14,-7,19],"size":[29,14,2],"color":"b"}
+    {"from":[-14,-3,21],"size":[29,6,2],"color":"s"}
+    {"from":[-9,-13,1],"size":[5,1,10],"color":"i"}
+    {"from":[2,-12,6],"size":[9,1,6],"color":"w"}
+    {"from":[6,-13,6],"size":[1,1,6],"color":"s"}
+    {"from":[-11,-16,0],"size":[7,5,1],"color":"a"}
+
+@Model/walk/tree
+palette = walk
+unit = 1
+shapes:
+    {"type":"cylinder","center":[0,0,0.95],"radius":0.18,"height":1.9,"color":"p"}
+    {"type":"sphere","center":[0,0,2.5],"radius":1.05,"color":"b"}
+    {"type":"sphere","center":[-0.47,0.1,2.35],"radius":0.71,"color":"g"}
+    {"type":"sphere","center":[0.2,-0.32,2.88],"radius":0.72,"color":"g"}
+
+@Model/walk/lamp
+palette = walk
+unit = 0.1
+shapes:
+    {"type":"cylinder","center":[0.0,0.0,11.8],"radius":0.75,"height":23.6,"color":"i"}
+    {"type":"cylinder","center":[0.0,0.0,1.3],"radius":2.1,"height":2.6,"color":"b"}
+blocks:
+    {"from":[-2,-2,22],"size":[4,4,3],"color":"w"}
+    {"from":[-2,-2,26],"size":[5,5,1],"color":"b"}
+
+@Model/walk/hydrant
+palette = walk
+unit = 0.025
+shapes:
+    {"type":"cylinder","center":[0.0,0.0,4.4],"radius":13.6,"height":4.4,"color":"b"}
+    {"type":"cylinder","center":[0.0,0.0,15.2],"radius":8.8,"height":23.2,"color":"w"}
+    {"type":"sphere","center":[0.0,0.0,27.2],"radius":9.2,"color":"l"}
+blocks:
+    {"from":[-14,-4,14],"size":[29,8,8],"color":"l"}
+
+@Model/walk/lawn_spot
+palette = walk
+unit = 0.05
+shapes:
+    {"type":"cylinder","center":[0.0,0.0,0.5],"radius":20.8,"height":3.0,"color":"b"}
+    {"type":"cylinder","center":[0.0,0.0,2.08],"radius":15.6,"height":1.2,"color":"l"}
+blocks:
+    {"from":[-4,-4,3],"size":[4,7,5],"color":"g"}
+    {"from":[0,1,3],"size":[4,4,8],"color":"g"}
+
+@Model/walk/poop
+palette = walk
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0.17],"radius":0.26,"color":"p"}
+    {"type":"sphere","center":[0.08,0.03,0.36],"radius":0.16,"color":"p"}
+    {"type":"sphere","center":[0.14,0.03,0.48],"radius":0.08,"color":"d"}
+
+@Model/walk/pee
+palette = walk
+unit = 1
+shapes:
+    {"type":"cylinder","center":[0,0,0.12],"radius":0.4,"height":0.03,"color":"l"}
+
+@Model/walk/walker
+palette = walk
+unit = 0.055
+blocks:
+    {"from":[-4,-5,0],"size":[8,3,3],"color":"i"}
+    {"from":[-2,2,0],"size":[8,3,3],"color":"i"}
+    {"from":[-2,-4,3],"size":[5,3,9],"color":"s"}
+    {"from":[-2,1,3],"size":[5,3,9],"color":"s"}
+    {"from":[-4,-5,12],"size":[8,10,10],"color":"l"}
+    {"from":[-2,-7,13],"size":[5,3,8],"color":"h"}
+    {"from":[1,5,14],"size":[7,3,4],"color":"h"}
+    {"from":[-5,-4,13],"size":[3,9,8],"color":"b"}
+    {"from":[2,-5,27],"size":[6,10,1],"color":"b"}
+shapes:
+    {"type":"sphere","center":[1.0909,0.0,24.7273],"radius":4.3636,"color":"d"}
+    {"type":"cylinder","center":[0.1818,0.0,28.7273],"radius":4.9091,"height":3.2727,"color":"b"}
+
+@Model/walk/dog
+palette = walk
+unit = 0.055
+blocks:
+    {"from":[5,-4,0],"size":[3,3,7],"color":"w"}
+    {"from":[4,1,0],"size":[3,3,7],"color":"d"}
+    {"from":[-11,-4,6],"size":[20,8,9],"color":"d"}
+    {"from":[7,-4,11],"size":[9,8,8],"color":"w"}
+    {"from":[13,-3,11],"size":[5,6,4],"color":"w"}
+    {"from":[18,-2,13],"size":[2,4,2],"color":"k"}
+    {"from":[7,-5,13],"size":[4,2,6],"color":"p"}
+    {"from":[7,3,13],"size":[4,2,6],"color":"p"}
+    {"from":[13,-4,16],"size":[1,1,1],"color":"k"}
+    {"from":[13,4,16],"size":[1,1,1],"color":"k"}
+    {"from":[6,-4,8],"size":[3,9,3],"color":"s"}
+
+@Model/walk/dog_squat
+palette = walk
+unit = 0.055
+blocks:
+    {"from":[-10,-5,2],"size":[10,10,9],"color":"d"}
+    {"from":[-2,-4,5],"size":[11,8,9],"color":"d"}
+    {"from":[-10,-7,0],"size":[5,4,4],"color":"d"}
+    {"from":[-9,3,0],"size":[5,4,4],"color":"w"}
+    {"from":[5,-4,0],"size":[3,3,7],"color":"w"}
+    {"from":[4,1,0],"size":[3,3,7],"color":"d"}
+    {"from":[7,-4,11],"size":[9,8,8],"color":"w"}
+    {"from":[13,-3,11],"size":[5,6,4],"color":"w"}
+    {"from":[18,-2,13],"size":[2,4,2],"color":"k"}
+    {"from":[7,-5,12],"size":[4,2,7],"color":"p"}
+    {"from":[7,3,12],"size":[4,2,7],"color":"p"}
+    {"from":[13,-4,16],"size":[1,1,1],"color":"k"}
+    {"from":[13,4,16],"size":[1,1,1],"color":"k"}
+    {"from":[6,-4,8],"size":[3,9,3],"color":"s"}
+
+@Model/walk/dog_legs
+palette = walk
+unit = 0.055
+blocks:
+    {"from":[-8,-4,0],"size":[3,3,7],"color":"d"}
+    {"from":[-7,1,0],"size":[3,3,7],"color":"w"}
+
+@Model/walk/dog_pee_positive
+palette = walk
+unit = 0.055
+blocks:
+    {"from":[-8,-4,0],"size":[3,3,7],"color":"d"}
+    {"from":[-8,2,5],"size":[4,5,3],"color":"d"}
+    {"from":[-8,6,4],"size":[3,3,2],"color":"w"}
+
+@Model/walk/dog_pee_negative
+palette = walk
+unit = 0.055
+blocks:
+    {"from":[-7,1,0],"size":[3,3,7],"color":"w"}
+    {"from":[-8,-7,5],"size":[4,5,3],"color":"d"}
+    {"from":[-8,-9,4],"size":[3,3,2],"color":"w"}
+
+@Model/walk/tail
+palette = walk
+unit = 0.025
+blocks:
+    {"from":[-16,-3,0],"size":[17,6,6],"color":"d"}
+    {"from":[-20,-3,4],"size":[7,6,6],"color":"w"}
+
+@Model/walk/neighbor
+palette = walk
+unit = 0.055
+blocks:
+    {"from":[-3,-4,0],"size":[7,3,11],"color":"i"}
+    {"from":[-2,1,0],"size":[7,3,11],"color":"i"}
+    {"from":[-4,-5,11],"size":[8,10,11],"color":"p"}
+    {"from":[2,-7,17],"size":[8,3,3],"color":"d"}
+    {"from":[1,4,16],"size":[8,3,3],"color":"d"}
+shapes:
+    {"type":"sphere","center":[1.2727,0.0,25.2727],"radius":4.7273,"color":"w"}
+    {"type":"sphere","center":[-1.2727,0.0,27.6364],"radius":4.1818,"color":"s"}
+
+@Model/walk/alert
+palette = walk
+unit = 0.05
+blocks:
+    {"from":[-2,-2,0],"size":[4,4,4],"color":"w"}
+    {"from":[-2,-2,7],"size":[4,4,11],"color":"w"}
+
+@Model/walk/ball
+palette = walk
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.19,"color":"w"}
+
+@Model/walk/ready
+palette = walk
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.24,"color":"w"}
+    {"type":"cylinder","center":[0,0,-0.35],"radius":0.09,"height":0.14,"color":"w"}
+
+@Model/walk/park
+palette = walk
+unit = 1
+blocks:
+    {"from":[0,-13,-1],"size":[27,26,1],"color":"g"}
+    {"from":[0,-10,0],"size":[26,1,1],"color":"b"}
+    {"from":[0,9,0],"size":[26,1,1],"color":"b"}
+    {"from":[26,-10,0],"size":[1,20,1],"color":"b"}
+
+@Model/walk/gate
+palette = walk
+unit = 0.3
+blocks:
+    {"from":[0,-14,0],"size":[2,2,7],"color":"i"}
+    {"from":[0,-15,7],"size":[2,4,1],"color":"w"}
+    {"from":[0,13,0],"size":[2,2,7],"color":"i"}
+    {"from":[0,20,0],"size":[2,2,7],"color":"i"}
+    {"from":[-1,12,5],"size":[2,11,3],"color":"b"}
+    {"from":[-2,13,6],"size":[1,9,1],"color":"w"}
+
+@Model/walk/park_ring
+palette = walk
+unit = 1
+shapes:
+    {"type":"cylinder","center":[0,0,0.06],"radius":1.13,"height":0.12,"color":"b"}
+    {"type":"cylinder","center":[0,0,0.15],"radius":0.91,"height":0.08,"color":"g"}
+
+@Model/walk/park_lit
+palette = walk
+unit = 1
+shapes:
+    {"type":"cylinder","center":[0,0,0.06],"radius":1.13,"height":0.12,"color":"w"}
+    {"type":"cylinder","center":[0,0,0.15],"radius":0.91,"height":0.08,"color":"b"}
+    {"type":"cylinder","center":[0,0,0.25],"radius":0.24,"height":0.10,"color":"w"}
+
+@Sprite/walk/hud/heart
+palette = walk
+size = [7,6]
+origin = [0,0]
+pixels:
+    ".kk.kk."
+    "kwlklwk"
+    "klllllk"
+    ".klllk."
+    "..klk.."
+    "...k..."
+
+@Sprite/walk/hud/empty
+palette = walk
+size = [7,6]
+origin = [0,0]
+pixels:
+    ".kk.kk."
+    "k..k..k"
+    "k.....k"
+    ".k...k."
+    "..k.k.."
+    "...k..."
+
+@Model/walk/delivery
+palette = walk
+unit = 0.0625
+blocks:
+    {"from":[-3,-4,0],"size":[6,3,10],"color":"b"}
+    {"from":[-2,1,0],"size":[6,3,10],"color":"b"}
+    {"from":[-4,-5,10],"size":[8,10,9],"color":"l"}
+    {"from":[-5,-4,18],"size":[10,8,3],"color":"i"}
+    {"from":[-4,-3,21],"size":[8,6,3],"color":"w"}
+    {"from":[4,-6,10],"size":[6,12,7],"color":"d"}
+    {"from":[3,-1,17],"size":[8,2,1],"color":"h"}
+shapes:
+    {"type":"sphere","center":[1,0,21],"radius":3.8,"color":"h"}
+
+@Model/walk/delivery_van
+palette = walk
+unit = 0.2
+blocks:
+    {"from":[-10,-4,2],"size":[15,8,9],"color":"h"}
+    {"from":[4,-4,2],"size":[6,8,6],"color":"l"}
+    {"from":[8,-3,7],"size":[1,6,2],"color":"b"}
+    {"from":[-6,-5,4],"size":[4,1,3],"color":"w"}
+    {"from":[-7,4,4],"size":[7,1,3],"color":"w"}
+    {"from":[-8,-5,0],"size":[3,10,3],"color":"i"}
+    {"from":[6,-5,0],"size":[3,10,3],"color":"i"}
+
+@Model/walk/garbage_truck
+palette = walk
+unit = 0.2
+blocks:
+    {"from":[-12,-5,2],"size":[24,10,2],"color":"i"}
+    {"from":[-12,-5,4],"size":[16,10,8],"color":"s"}
+    {"from":[-10,-4,12],"size":[13,8,2],"color":"a"}
+    {"from":[-12,-6,8],"size":[16,1,1],"color":"l"}
+    {"from":[-12,5,8],"size":[16,1,1],"color":"l"}
+    {"from":[4,-5,4],"size":[9,10,6],"color":"h"}
+    {"from":[7,-4,10],"size":[4,8,1],"color":"b"}
+    {"from":[11,-4,9],"size":[1,8,1],"color":"i"}
+    {"from":[12,-5,5],"size":[2,2,2],"color":"w"}
+    {"from":[12,3,5],"size":[2,2,2],"color":"w"}
+    {"from":[-9,-6,0],"size":[4,12,4],"color":"i"}
+    {"from":[7,-6,0],"size":[4,12,4],"color":"i"}
+shapes:
+    {"type":"cylinder","center":[3,0,14],"radius":1.3,"height":2.5,"color":"w"}

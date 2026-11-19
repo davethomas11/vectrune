@@ -4,6 +4,7 @@ import type { Sprite } from '../pixel/engine';
 import { skyPixel, type Sky } from './sky';
 import { renderModel, type BlockModel } from './model';
 import { renderHud, type GameHud } from './hud';
+import { tetherModel, tetherPieces, type Tether3D } from './tether';
 import { renderVoxels, type VoxelWorld, type VoxelChunks } from './voxel';
 
 export interface Texture {
@@ -198,7 +199,8 @@ export class Raycaster3D {
     stats?: Stats3D,
     wallOverrides: WallOverride[] = [],
     time: number = 0,
-    preparedChunks?: VoxelChunks
+    preparedChunks?: VoxelChunks,
+    tethers: Tether3D[] = []
   ): Uint32Array {
     const W = this.width;
     const H = this.height;
@@ -219,7 +221,7 @@ export class Raycaster3D {
     const planeX = -dirY * fovScale;
     const planeY = dirX * fovScale;
     this.pixelDepth.fill(Infinity);
-    if (!this.config.world && things.some(t => t.model && t.visible !== false)) {
+    if (!this.config.world && (tethers.length || things.some(t => t.model && t.visible !== false))) {
       for (let y = 0; y < H; y++) {
         if (y < halfH && map.sky) continue;
         const planeHeight = y < halfH ? (map.ceilingHeight ?? 1) - 0.5 : 0.5;
@@ -241,12 +243,19 @@ export class Raycaster3D {
       this.renderFloorAndCeiling(px, py, dirX, dirY, planeX, planeY, time);
       this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
     }
+    const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
     for (const thing of things) {
       if (thing.visible === false || !thing.model) continue;
       const model = this.config.models?.[thing.model];
       if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
-      const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
       renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+    }
+    for (const tether of tethers) {
+      if (tether.visible === false) continue;
+      const rod = tetherModel(false, packed(tether.color)), joint = tetherModel(true, packed(tether.color));
+      for (const piece of tetherPieces(tether)) {
+        renderModel(piece.joint ? joint : rod, piece, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+      }
     }
 
     // 3. Billboards (Sprites / Things) sorted by distance

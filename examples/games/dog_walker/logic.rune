@@ -1,0 +1,513 @@
+@Logic/dog_walker
+state:
+    status = "title"
+    phase = "street"
+    record = {"best": 0}
+    score = 0
+    marked = 0
+    lawns = 0
+    catches = 0
+    bullseyes = 0
+    streak = 0
+    lives = 3
+    ticks = 0
+    park_x = 108
+    player = {"x": 2, "y": 0}
+    camera = {"x": -9, "y": -1.8, "height": 11, "angle": 8, "pitch": -37}
+    walker = {"x": 2, "y": 0, "model": "walk/walker"}
+    dog = {"x": 1, "y": 1.05, "z": 0.07, "angle": 0, "model": "walk/dog"}
+    dog_legs = {"x": 1, "y": 1.05, "z": 0.07, "angle": 0, "scale": 1, "model": "walk/dog_legs"}
+    tail = {"x": 0.4, "y": 1.05, "z": 0.66, "model": "walk/tail"}
+    ball = {"x": 0, "y": 0, "z": 0, "visible": false, "model": "walk/ball"}
+    marker = {"x": 0, "y": 0, "z": 0, "visible": false, "model": "walk/ready"}
+    street = []
+    properties = []
+    spots = []
+    walkers = []
+    chase_signs = []
+    leash = {
+        "points": [[2, 0.31, 0.91], [1.4, 1.05, 0.61]],
+        "radius": 0.038,
+        "slack": 0.16,
+        "color": 13292015,
+        "visible": true
+    }
+    targets = []
+    marks = []
+    ready_spot = -1
+    potty_spot = -1
+    potty_timer = 0
+    pee_pose = 0
+    dash_timer = 0
+    dash_cooldown = 0
+    safety = 0
+    flash = 0
+    use_held = false
+    dash_held = false
+    fresh_use = false
+    fresh_dash = false
+    forward = 0
+    side = 0
+    fetch = "ready"
+    flight = 0
+    throw_x = 0
+    throw_y = 0
+    landing_y = 0
+    aim = 1
+    target_order = [1, 2, 0]
+    notice = ""
+    notice_timer = 0
+    touch_ready = false
+    title_hidden = false
+    pause_hidden = true
+    launch_hidden = true
+    best_label = "Best 0"
+    ui = {
+        "style": "floating",
+        "meters": [],
+        "objective": "",
+        "detail": "",
+        "prompt": "",
+        "notice": "",
+        "panel": null
+    }
+    pause_ui = {
+        "style": "floating",
+        "meters": [],
+        "objective": "PAUSED",
+        "detail": "",
+        "prompt": "P RESUME / T TITLE",
+        "notice": "",
+        "panel": null
+    }
+
+action initialize:
+    call reset_route
+    status = "title"
+    call update_view
+
+action start:
+    call reset_route
+    status = "playing"
+    notice = "STEER TO THE FIRST HYDRANT"
+    notice_timer = 58
+    sound.play "walk_start"
+    music.play "walk_theme"
+    call update_view
+
+action advance:
+    stop when status == "playing"
+    call start
+
+action return_to_title:
+    music.stop
+    call initialize
+
+action reset_route:
+    call lay_route
+    call setup_traffic
+    player = {"x": 2, "y": 0}
+    dog.x = 1
+    dog.y = 1.05
+    dog.angle = 0
+    dog.visible = true
+    ball.visible = false
+    marker.visible = false
+    marks = []
+    phase = "street"
+    score = 0
+    marked = 0
+    lawns = 0
+    catches = 0
+    bullseyes = 0
+    streak = 0
+    lives = 3
+    ticks = 0
+    ready_spot = -1
+    potty_spot = -1
+    potty_timer = 0
+    pee_pose = 0
+    dash_timer = 0
+    dash_cooldown = 0
+    safety = 0
+    flash = 0
+    use_held = false
+    dash_held = false
+    fetch = "ready"
+    aim = 1
+    notice = ""
+    notice_timer = 0
+
+action tick(input):
+    if status == "title":
+        ticks += 1
+        call update_view
+    stop when status != "playing"
+    ticks += 1
+    dash_timer = max(0,dash_timer-1)
+    dash_cooldown = max(0,dash_cooldown-1)
+    safety = max(0,safety-1)
+    notice_timer = max(0,notice_timer-1)
+    flash = max(0,flash-0.025)
+    fresh_use = !!input.use && !use_held
+    fresh_dash = !!input.dash && !dash_held
+    use_held = !!input.use
+    dash_held = !!input.dash
+    forward = clamp((input.forward ? 1 : 0)-(input.back ? 1 : 0)+(input.move_y ? input.move_y : 0),-1,1)
+    side = clamp((input.right ? 1 : 0)-(input.left ? 1 : 0)+(input.move_x ? input.move_x : 0),-1,1)
+    if phase == "park":
+        call tick_park
+        call update_view
+        stop when true
+    call start_dash
+    was_loose = dog_loose
+    if was_loose:
+        call chase_dog
+    if !was_loose:
+        call tick_street
+    if phase == "street" && status == "playing":
+        call update_traffic
+    if phase == "street" && status == "playing":
+        call move_neighbors
+    call update_view
+
+action tick_street:
+    if potty_timer > 0:
+        call wait_for_dog
+        stop when true
+    call move_on_street
+    if distracted_by >= 0 || dog_loose:
+        ready_spot = -1
+        stop when true
+    call scan_spots
+    if fresh_use && ready_spot >= 0:
+        potty_spot = ready_spot
+        potty_timer = spots[potty_spot].kind == "lawn" ? 17 : 10
+        pee_pose = 0
+        dash_timer = 0
+    if player.x >= park_x+1:
+        call enter_park
+
+action start_dash:
+    if fresh_dash && dash_cooldown == 0 && potty_timer == 0:
+        dash_timer = 18
+        dash_cooldown = 82
+        sound.play "walk_dash"
+
+action move_on_street:
+    walk_stride = clamp(0.105+forward*0.145,-0.05,0.155)
+    if dash_timer > 0:
+        walk_stride = max(0.22,walk_stride)
+    if distracted_by >= 0 && dash_timer == 0:
+        walk_stride = min(walk_stride,0.065)
+    player.x = clamp(player.x+walk_stride,0.5,park_x+6)
+    player.y = clamp(player.y+side*(dash_timer > 0 ? 0.22 : 0.17),-7.25,7.25)
+    if distracted_by >= 0:
+        call distracted_walk
+        stop when distracted_by >= 0 || dog_loose
+    call move_dog player.x-0.92, clamp(player.y+0.83,-7.35,7.35), (dash_timer > 0 ? 0.30 : 0.20)
+    dog.angle = walk_stride < 0 ? 180-clamp(side*30,-30,30) : clamp(side*30,-30,30)
+
+action scan_spots:
+    ready_spot = -1
+    nearest = 2.10
+    for i in range(0,spots.length):
+        spot = spots[i]
+        distance = (spot.x-player.x)*(spot.x-player.x)+(spot.y-player.y)*(spot.y-player.y)
+        if !spot.used && distance <= nearest:
+            ready_spot = i
+            nearest = distance
+
+action wait_for_dog:
+    spot = spots[potty_spot]
+    if spot.kind == "lawn" && potty_timer > 12:
+        call move_dog spot.x-0.28, spot.y, 0.24
+        if potty_timer == 13:
+            stop when abs(dog.x-(spot.x-0.28))+abs(dog.y-spot.y) > 0.10
+            dog.angle = 0
+    if spot.kind != "lawn":
+        spot_side = spot.y > 0 ? 1 : -1
+        pee_x = spot.x+0.42
+        pee_y = spot.y-spot_side*0.59
+        call move_dog pee_x, pee_y, 0.32
+        stop when abs(dog.x-pee_x)+abs(dog.y-pee_y) > 0.10
+        dog.angle = 0
+        pee_pose = spot_side
+    potty_timer -= 1
+    if spot.kind == "lawn" && potty_timer == 4:
+        spot.used = true
+        lawns += 1
+        call award 40, "+40 / LAWN - RUN!"
+        marks.push({"x": spot.x - 0.87, "y": spot.y, "model": "walk/poop"})
+        walkers[potty_spot].reveal = 5
+        sound.play "walk_plop"
+    stop when potty_timer > 0
+    ready_spot = -1
+    if spot.kind != "lawn":
+        spot.used = true
+        marked += 1
+        mark_notice = spot.kind == "lamp" ? "+10 / LAMPPOST" : "+10 / HYDRANT"
+        call award 10, mark_notice
+        marks.push({"x": spot.x - 0.12, "y": spot.y - spot_side * 0.18, "model": "walk/pee"})
+        sound.play "walk_mark"
+        pee_pose = 0
+    potty_spot = -1
+
+action move_dog(x,y,speed):
+    dx = x-dog.x
+    dy = y-dog.y
+    distance = sqrt(dx*dx+dy*dy)
+    stop when distance < 0.04
+    stride = min(speed,distance)/distance
+    dog.x += dx*stride
+    dog.y += dy*stride
+    if distance > 0.35:
+        dog.angle = abs(dx) >= abs(dy) ? (dx >= 0 ? 0 : 180) : (dy >= 0 ? 90 : 270)
+
+action move_neighbors:
+    for i in range(0,walkers.length):
+        neighbor = walkers[i]
+        if neighbor.visible:
+            dx = player.x-neighbor.x
+            dy = player.y-neighbor.y
+            distance = sqrt(dx*dx+dy*dy)
+            if distance < 0.75 && safety == 0:
+                neighbor.visible = false
+                neighbor.timer = 0
+                call caught
+            if neighbor.visible:
+                stride = min(0.138+min(0.034,max(0,player.x-28)*0.00055),distance)/max(0.001,distance)
+                neighbor.x += dx*stride
+                neighbor.y += dy*stride
+                neighbor.angle = abs(dx) >= abs(dy) ? (dx >= 0 ? 0 : 180) : (dy >= 0 ? 90 : 270)
+                neighbor.z = abs(sin(ticks*32+i*15))*0.09
+                neighbor.timer -= 1
+                if neighbor.timer <= 0:
+                    neighbor.visible = false
+        if neighbor.reveal > 0:
+            neighbor.reveal -= 1
+            if neighbor.reveal == 0:
+                neighbor.x = neighbor.home_x
+                neighbor.y = neighbor.home_y
+                neighbor.timer = 145
+                neighbor.visible = true
+                sound.play "walk_alert"
+
+action caught:
+    call take_hit 25, "CAUGHT / -25"
+
+action take_hit(points,label):
+    lives -= 1
+    score = max(0,score-points)
+    safety = 58
+    flash = 0.32
+    potty_timer = 0
+    potty_spot = -1
+    pee_pose = 0
+    notice = label
+    notice_timer = 54
+    sound.play "walk_caught"
+    if lives == 0:
+        call finish "gameover"
+    if lives > 0 && distracted_by >= 0:
+        call snap_leash
+
+action enter_park:
+    phase = "park"
+    ready_spot = -1
+    for neighbor in walkers:
+        neighbor.visible = false
+    notice = "DOG PARK / THREE THROWS"
+    notice_timer = 90
+    sound.play "walk_start"
+
+action tick_park:
+    player.x = clamp(player.x+forward*0.12,park_x+1,park_x+6)
+    player.y = clamp(player.y+side*0.15,-6.2,6.2)
+    aim = player.y < -2 ? 0 : (player.y > 2 ? 2 : 1)
+    if fetch == "ready":
+        call move_dog player.x-0.90, player.y+0.83, 0.24
+        if fresh_use:
+            call throw_ball
+        stop when true
+    if fetch == "flight":
+        flight += 1
+        t = min(1,flight/25)
+        ball.x = throw_x+(park_x+17-throw_x)*t
+        ball.y = throw_y+(landing_y-throw_y)*t
+        ball.z = 0.27+0.85*(1-t)+sin(t*180)*3.25
+        call move_dog ball.x, ball.y, 0.27
+        if flight >= 25:
+            fetch = "chase"
+        stop when true
+    if fetch == "chase":
+        call move_dog ball.x, ball.y, 0.33
+        if abs(dog.x-ball.x)+abs(dog.y-ball.y) < 0.36:
+            fetch = "return"
+            sound.play "walk_grab"
+        stop when true
+    call move_dog player.x+0.42, player.y+0.50, 0.33
+    ball.x = dog.x+cos(dog.angle)*0.93
+    ball.y = dog.y+sin(dog.angle)*0.93
+    ball.z = 0.75
+    if abs(dog.x-player.x)+abs(dog.y-player.y) < 1.24:
+        call receive_ball
+
+action throw_ball:
+    throw_x = player.x+0.55
+    throw_y = player.y
+    landing_y = targets[aim].y
+    ball.x = throw_x
+    ball.y = throw_y
+    ball.z = 1.1
+    ball.visible = true
+    flight = 0
+    fetch = "flight"
+    sound.play "walk_throw"
+
+action receive_ball:
+    fetch = "ready"
+    ball.visible = false
+    hit_ring = landing_y == targets[target_order[catches]].y
+    if hit_ring:
+        bullseyes += 1
+        streak += 1
+        bonus = 50+15*(streak-1)
+        call award bonus, "BULLSEYE / +"+bonus
+    if !hit_ring:
+        streak = 0
+        call award 20, "FETCH / +20"
+    catches += 1
+    sound.play "walk_mark"
+    if catches == 3:
+        call finish "won"
+
+action award(points,label):
+    score += points
+    notice = label
+    notice_timer = 52
+
+action finish(result):
+    status = result
+    record.best = max(record.best,score)
+    music.stop
+    sound.play "walk_finish"
+
+action update_view:
+    walker.x = player.x
+    walker.y = player.y
+    walker.z = status == "playing" && potty_timer == 0 ? abs(sin(ticks*22))*0.067 : 0
+    walker.angle = phase == "park" ? 0 : clamp(side*29,-29,29)
+    walker.visible = safety == 0 || ticks % 6 < 4
+    dog.z = potty_timer > 0 ? 0.025 : 0.055+abs(sin(ticks*31))*0.082
+    dog.scale = potty_timer > 0 && pee_pose == 0 && spots[potty_spot].kind != "lawn" ? 0.91 : 1
+    dog.model = "walk/dog"
+    if potty_timer > 0 && potty_timer <= 12 && spots[potty_spot].kind == "lawn":
+        if potty_timer >= 4:
+            dog.model = "walk/dog_squat"
+            dog.z = 0.04+abs(sin(potty_timer*75))*0.048
+        if potty_timer < 4:
+            dog.z = 0.055+sin(potty_timer*45)*0.27
+    dog_legs.x = dog.x
+    dog_legs.y = dog.y
+    dog_legs.z = dog.z
+    dog_legs.angle = dog.angle
+    dog_legs.scale = dog.scale
+    dog_legs.visible = dog.model != "walk/dog_squat"
+    dog_legs.model = "walk/dog_legs"
+    if potty_timer > 0 && pee_pose != 0:
+        dog_legs.model = pee_pose > 0 ? "walk/dog_pee_positive" : "walk/dog_pee_negative"
+    tail.x = dog.x-cos(dog.angle)*0.57*dog.scale
+    tail.y = dog.y-sin(dog.angle)*0.57*dog.scale
+    tail.z = dog.z+0.64*dog.scale
+    tail.angle = dog.angle+sin(ticks*24)*24
+    if dog.model == "walk/dog_squat":
+        tail.z = dog.z+0.42
+        tail.angle = dog.angle+sin(ticks*72)*43
+    hand_x = walker.x+cos(walker.angle)*0.31-sin(walker.angle)*0.32
+    hand_y = walker.y+sin(walker.angle)*0.31+cos(walker.angle)*0.32
+    collar_x = dog.x+cos(dog.angle)*0.4*dog.scale
+    collar_y = dog.y+sin(dog.angle)*0.4*dog.scale
+    leash.points = [
+        [hand_x, hand_y, walker.z + 0.9],
+        [collar_x, collar_y, dog.z + 0.54 * dog.scale]
+    ]
+    leash_distance = sqrt((hand_x-collar_x)*(hand_x-collar_x)+(hand_y-collar_y)*(hand_y-collar_y))
+    leash.slack = distracted_by >= 0 ? 0 : clamp((1.75-leash_distance)*0.34,0,0.32)
+    leash.visible = phase == "street" && !dog_loose
+    for i in range(0,walkers.length):
+        neighbor = walkers[i]
+        sign = chase_signs[i]
+        sign.x = neighbor.x
+        sign.y = neighbor.y
+        sign.z = 1.9+abs(sin(ticks*14))*0.22
+        sign.visible = neighbor.visible && neighbor.timer > 105
+    for i in range(0,targets.length):
+        targets[i].model = phase == "park" && catches < 3 && i == target_order[catches] ? "walk/park_lit" : "walk/park_ring"
+    marker.visible = phase == "street" && !dog_loose && ready_spot >= 0 && potty_timer == 0
+    if marker.visible:
+        marker.x = spots[ready_spot].x
+        marker.y = spots[ready_spot].y
+        marker.z = 1.45+sin(ticks*15)*0.21
+    if distracted_by >= 0:
+        marker.visible = true
+        marker.x = couriers[distracted_by].x
+        marker.y = couriers[distracted_by].y
+        marker.z = 1.88+sin(ticks*18)*0.14
+    if phase == "park" && fetch == "ready" && catches < 3:
+        marker.visible = true
+        marker.x = targets[aim].x
+        marker.y = targets[aim].y
+        marker.z = 0.9+sin(ticks*15)*0.16
+    camera.x = player.x-10.8
+    camera.y = player.y*0.6-1.8
+    touch_ready = status == "playing"
+    title_hidden = status != "title"
+    launch_hidden = status != "won" && status != "gameover"
+    pause_hidden = status != "playing"
+    best_label = "Best "+record.best
+    call build_hud
+
+action build_hud:
+    hud_prompt = ""
+    if phase == "street" && ready_spot >= 0 && potty_timer == 0:
+        hud_prompt = spots[ready_spot].kind == "lawn" ? "DOG: POOP / +40" : "DOG: PEE / +10"
+    if phase == "park" && fetch == "ready":
+        hud_prompt = "DOG: THROW / AIM FOR THE LIT RING"
+    if dog_loose:
+        hud_prompt = leash_gap < 1.15 ? "DOG: CLIP LEASH" : "RUN AFTER YOUR DOG"
+    if distracted_by >= 0:
+        hud_prompt = "DASH TO RECALL"
+    ui = {
+        "style": "floating",
+        "meters": [
+            {
+                "label": "",
+                "display": "pips",
+                "icon": "walk/hud/heart",
+                "emptyIcon": "walk/hud/empty",
+                "value": lives,
+                "max": 3,
+                "color": 11920895
+            },
+            {
+                "label": "DASH",
+                "display": "bar",
+                "showValue": false,
+                "value": 82 - dash_cooldown,
+                "max": 82,
+                "color": 10274303
+            }
+        ],
+        "detail": "SCORE " + score,
+        "objective": dog_loose ? "DOG LOOSE / " + ceil(runaway_ticks / 30) + "S": (phase == "park" ? "FETCH " + catches + "/3": ""),
+        "notice": notice_timer > 0 ? notice: "",
+        "prompt": hud_prompt,
+        "panel": null
+    }
+    if !launch_hidden:
+        ui.meters = []
+        ui.heading = status == "won" ? "WALK COMPLETE" : (dog_escaped ? "DOG GOT AWAY" : "WALK OVER")
+        ui.objective = "BEST "+record.best
+        ui.notice = "MARKS "+marked+" / LAWNS "+lawns+" / BULLSEYES "+bullseyes
+        ui.prompt = "ENTER / WALK AGAIN"

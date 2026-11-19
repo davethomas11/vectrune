@@ -1,0 +1,268 @@
+#!RUNE
+import "dog_walker.rune"
+
+@Test/DogWalker/HydrantScoresOnce
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke beside_stop 0
+run:
+    invoke tick {"use":true}
+    assert state.potty_timer == 10
+    invoke idle 7
+    assert state.dog.angle == 0
+    assert state.dog_legs.model == "walk/dog_pee_positive"
+    invoke finish_stop
+    assert state.score == 10
+    assert state.marked == 1
+    assert state.marks[0].model == "walk/pee"
+    assert state.spots[0].used
+    assert state.walkers[0].visible == false
+    invoke tick {"forward":true}
+    assert state.dog.angle == 0
+    assert state.dog_legs.model == "walk/dog_legs"
+    invoke beside_stop 0
+    invoke tick {"use":true}
+    assert state.potty_timer == 0
+    assert state.score == 10
+
+@Test/DogWalker/LamppostLiftsOtherLeg
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke beside_stop 13
+run:
+    assert state.spots[13].kind == "lamp"
+    invoke tick {"use":true}
+    invoke idle 7
+    assert state.dog_legs.model == "walk/dog_pee_negative"
+    invoke finish_stop
+    assert state.score == 10
+    assert state.marked == 1
+    assert state.spots[13].used
+    assert state.dog_legs.model == "walk/dog_legs"
+
+@Test/DogWalker/LawnSendsNeighbor
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke beside_stop 2
+run:
+    invoke tick {"use":true}
+    assert state.potty_timer == 17
+    invoke idle 6
+    assert state.dog.model == "walk/dog_squat"
+    assert state.dog_legs.visible == false
+    assert state.score == 0
+    invoke idle 7
+    assert state.score == 40
+    assert state.lawns == 1
+    assert state.marks[0].model == "walk/poop"
+    assert state.walkers[2].visible == false
+    assert mock.audio[2].args[0] == "walk_plop"
+    invoke idle 1
+    assert state.dog.model == "walk/dog"
+    assert state.dog.z > 0.2
+    assert state.walkers[2].visible == false
+    invoke idle 3
+    assert state.walkers[2].visible
+    assert state.chase_signs[2].visible
+    assert mock.audio[3].args[0] == "walk_alert"
+    invoke tick {"dash":true}
+    assert state.dash_timer == 18
+    assert state.dash_cooldown == 82
+    invoke make_contact 2
+    invoke tick {}
+    assert state.score == 15
+    assert state.lives == 2
+    assert state.safety > 0
+    invoke make_contact 2
+    invoke tick {}
+    assert state.lives == 2
+
+@Test/DogWalker/ParkClearsChasersAndScoresMiss
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke at_park -4
+run:
+    assert state.phase == "park"
+    assert state.leash.visible == false
+    assert state.walkers[2].visible == false
+    assert state.targets[1].model == "walk/park_lit"
+    invoke tick {"use":true}
+    assert state.ball.visible
+    assert state.fetch == "flight"
+    assert state.landing_y == -4
+    invoke idle 12
+    assert state.ball.z > 3
+    invoke finish_fetch
+    assert state.catches == 1
+    assert state.score == 20
+    assert state.streak == 0
+    assert state.ball.visible == false
+
+@Test/DogWalker/ThreeBullseyesSaveHighScore
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke at_park 0
+run:
+    invoke tick {"use":true}
+    invoke finish_fetch
+    assert state.score == 50
+    invoke aim_at 4
+    invoke tick {"use":true}
+    invoke finish_fetch
+    assert state.score == 115
+    invoke aim_at -4
+    invoke tick {"use":true}
+    invoke finish_fetch
+    assert state.bullseyes == 3
+    assert state.catches == 3
+    assert state.status == "won"
+    assert state.score == 195
+    assert state.record.best == 195
+    invoke advance
+    assert state.score == 0
+    assert state.record.best == 195
+    assert state.phase == "street"
+
+@Test/DogWalker/LastHeartEndsTheWalk
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke last_heart
+run:
+    invoke make_contact 0
+    invoke tick {}
+    assert state.status == "gameover"
+    assert state.lives == 0
+    assert state.score == 35
+    assert state.record.best == 35
+
+@Test/DogWalker/DashRecallsDogFromCourier
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke at_courier
+run:
+    invoke tick {}
+    assert state.distracted_by == 0
+    assert state.leash.slack == 0
+    invoke tick {"dash":true}
+    assert state.distracted_by == -1
+    assert state.dog_loose == false
+    assert state.leash.visible
+
+@Test/DogWalker/RunAndReclipAfterSnap
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke at_courier
+run:
+    invoke tick {}
+    invoke idle 39
+    assert state.dog_loose
+    assert state.leash.visible == false
+    assert state.runaway_ticks == 135
+    invoke catch_up
+    assert state.leash_gap < 1.15
+    invoke tick {"use":true,"forward":true}
+    assert state.dog_loose == false
+    assert state.leash.visible
+    assert state.status == "playing"
+
+@Test/DogWalker/EscapedDogEndsTheRun
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke snap_leash
+run:
+    invoke idle 134
+    assert state.status == "playing"
+    assert state.runaway_ticks == 1
+    invoke tick {}
+    assert state.status == "gameover"
+    assert state.dog_escaped
+    assert state.ui.heading == "DOG GOT AWAY"
+
+@Test/DogWalker/TruckCostsAHeartAndPushesAside
+type = logic
+page = dog_walker
+setup:
+    invoke start
+    invoke in_truck_lane
+run:
+    invoke tick {}
+    assert state.lives == 2
+    assert state.score == 25
+    assert state.player.y > 2
+    assert state.notice == "TRUCK / -15"
+
+@Logic/dog_walker
+action beside_stop(index):
+    player.x = spots[index].x-0.12
+    player.y = spots[index].y
+    dog.x = player.x-0.92
+    dog.y = player.y+0.83
+
+action finish_stop:
+    for step in range(0,30):
+        stop when potty_timer == 0
+        call tick {}
+
+action idle(count):
+    for step in range(0,count):
+        call tick {}
+
+action make_contact(index):
+    walkers[index].visible = true
+    walkers[index].timer = 140
+    walkers[index].x = player.x
+    walkers[index].y = player.y
+
+action at_park(y):
+    call make_contact 2
+    player.x = park_x+1
+    player.y = y
+    dog.x = player.x-1
+    dog.y = y+0.8
+    call tick {}
+
+action aim_at(y):
+    player.y = y
+
+action finish_fetch:
+    for step in range(0,125):
+        stop when fetch == "ready" || status != "playing"
+        call tick {}
+
+action last_heart:
+    lives = 1
+    score = 60
+
+action at_courier:
+    player.x = couriers[0].x-0.2
+    player.y = 3.95
+    dog.x = player.x-0.3
+    dog.y = player.y+0.4
+
+action catch_up:
+    for step in range(0,100):
+        stop when leash_gap < 0.9 || status != "playing"
+        call tick {"forward":true,"move_x":clamp((dog.y-player.y)*5,-1,1)}
+
+action in_truck_lane:
+    player.x = trucks[0].home_x-0.15
+    player.y = trucks[0].home_y+0.1
+    score = 40

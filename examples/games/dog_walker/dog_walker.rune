@@ -1,0 +1,111 @@
+#!RUNE
+import "models.rune"
+import "route.rune"
+import "logic.rune"
+import "traffic.rune"
+import "sound.rune"
+import "shell.rune"
+
+@App
+name = Dog Walker
+type = pixel-3d
+runtime = hybrid
+scene = dog_walker
+resolution = [384,240]
+tick_rate = 30
+port = 3028
+shell = dog_walker_cabinet
+
+@Perspective/dog_walk
+fov = 68
+
+@Scene/dog_walker
+logic = dog_walker
+map = blue_street
+camera = camera
+perspective = dog_walk
+things = ["street","properties","spots","marks","targets","walkers","chase_signs","trucks","couriers","walker","dog","dog_legs","tail","ball","marker"]
+tethers = ["leash"]
+controls = dog_walker
+ui = ui
+pause_ui = pause_ui
+title_scene = dog_walker_title
+restart_action = return_to_title
+persistence = {"key":"dog-walker-best-v1","state":"record"}
+click_to_start = false
+mouse_look = false
+render_radius = 42
+
+@Scene/dog_walker_title
+map = blue_street
+things = ["street","properties","walker","dog","dog_legs","tail"]
+tethers = ["leash"]
+camera = dog_title_camera
+perspective = dog_walk
+heading = DOG WALKER
+subtitle = THE BLUE HOUR ROUTE
+prompt = ENTER START
+
+@Camera/dog_title_camera
+duration = 10
+loop = true
+points = [
+    {"x":-5,"y":-6,"height":7,"angle":31,"pitch":-26},
+    {"x":-4,"y":-5,"height":6.5,"angle":33,"pitch":-25}
+]
+
+@Map/blue_street
+sky = {
+    "below": "#3a5374",
+    "cloud": "#8da1ba",
+    "horizon": "#7795ae",
+    "seed": 23,
+    "speed": 0.075,
+    "zenith": "#253d61"
+}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Controls/dog_walker
+keys:
+    KeyW -> forward
+    ArrowUp -> forward
+    KeyS -> back
+    ArrowDown -> back
+    KeyA -> left
+    ArrowLeft -> left
+    KeyD -> right
+    ArrowRight -> right
+    Space -> use
+    KeyX -> dash
+    ShiftLeft -> dash
+    ShiftRight -> dash
+commands:
+    Enter -> host.advance
+    KeyP -> host.pause
+    KeyM -> host.mute
+    KeyF -> host.fullscreen
+    KeyT -> return_to_title
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.15}
+    Axis1 -> {"input":"move_y","invert":true,"deadzone":0.15}
+    Button0 -> use
+    Button2 -> dash
+    Button8 -> {"command":"host.advance"}
+    Button9 -> {"command":"host.pause"}
+touch = {
+    "buttons": [
+        {"id":"use","input":"use","label":"DOG","offset":[12,16],"size":64},
+        {"id":"dash","input":"dash","label":"DASH","offset":[88,16],"size":58}
+    ],
+    "joystick": {"size":84,"x":"move_x","y":"move_y"},
+    "visible": "touch_ready"
+}
+
+@Page/dog_walker
+logic = dog_walker
+view:
+    canvas data-rune-pixel-3d=true

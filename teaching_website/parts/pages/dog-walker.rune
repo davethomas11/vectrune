@@ -1,0 +1,11 @@
+@Component/DogWalkerPage
+view:
+    div .page .application-guide .space-invaders-page:
+        section .card .showcase-intro:
+            div .section-heading:
+                span .tag .tag-advanced "Pixel 3D"
+                h1 "%i18n.DogWalker.title%"
+                p .lead "%i18n.DogWalker.description%"
+            a .secondary-cta href="/assets/games/dog-walker/index.html" target=_blank rel=noopener "%i18n.DogWalker.standalone%"
+
+        WebExample game=true title="{i18n.DogWalker.title}" preview="/assets/games/dog-walker/index.html" files="{sources ../../../examples/games/dog_walker/dog_walker.rune}" show_heading=false

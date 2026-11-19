@@ -1,0 +1,73 @@
+@Sound/walk_start
+wave = triangle
+sequence = G4:65ms, B4:65ms, D5:100ms
+volume = 0.11
+
+@Sound/walk_mark
+wave = sine
+sequence = D5:55ms, G5:90ms
+volume = 0.12
+
+@Sound/walk_alert
+wave = square
+sequence = E4:95ms, F4:95ms, B3:135ms
+volume = 0.08
+
+@Sound/walk_plop
+wave = sine
+freq = 285 -> 72
+duration = 115ms
+volume = 0.2
+
+@Sound/walk_dash
+wave = triangle
+sequence = C4:40ms, G4:55ms, D5:65ms
+volume = 0.07
+
+@Sound/walk_caught
+wave = triangle
+sequence = F4:95ms, D4:95ms, A3:170ms
+volume = 0.13
+
+@Sound/walk_throw
+wave = triangle
+sequence = G4:38ms, A4:40ms, D5:65ms
+volume = 0.07
+
+@Sound/walk_grab
+wave = sine
+sequence = D5:45ms, E5:68ms
+volume = 0.09
+
+@Sound/walk_finish
+wave = triangle
+sequence = G4:95ms, B4:95ms, E5:95ms, G5:230ms
+volume = 0.13
+
+@Sound/walk_snap
+wave = noise
+sequence = G5:50ms, D4:90ms
+volume = 0.09
+
+@Music/walk_theme
+type = synth
+tempo = 116
+time_signature = 4/4
+loop = true
+volume = 0.05
+instruments = {"lead":"pluck","bass":"triangle","drums":"drums"}
+sections = {
+    "lamps": {
+        "bars": 4,
+        "bass": "G2:4 G3:4 D3:4 G3:4 | E2:4 E3:4 B2:4 E3:4 | C3:4 E3:4 G3:4 E3:4 | D3:4 F#3:4 A3:4 D3:4",
+        "drums": "kick:4 hihat:4 snare:4 hihat:4 | kick:4 hihat:4 snare:4 hihat:4 | kick:4 hihat:4 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 kick:4",
+        "lead": "D5:4 G5:8 F#5:8 E5:4 D5:4 | B4:4 E5:8 D5:8 B4:4 G4:4 | E5:4 G5:8 E5:8 C5:4 B4:4 | A4:8 D5:8 A4:4 F#4:4 G4:4"
+    },
+    "street": {
+        "bars": 4,
+        "bass": "G2:4 D3:4 G3:4 D3:4 | E2:4 B2:4 E3:4 B2:4 | C3:4 G3:4 C4:4 G3:4 | D3:4 A3:4 D4:4 A3:4",
+        "drums": "kick:4 hihat:4 snare:4 hihat:4 | kick:4 hihat:4 snare:4 hihat:4 | kick:4 hihat:4 snare:4 hihat:4 | kick:4 hihat:4 snare:8 hihat:8 kick:4",
+        "lead": "G4:8 B4:8 D5:4 B4:8 A4:8 G4:4 | E4:8 G4:8 B4:4 D5:8 B4:8 G4:4 | C5:8 B4:8 G4:4 E4:8 G4:8 A4:4 | D5:8 B4:8 A4:4 D4:8 A4:8 D5:4"
+    }
+}
+arrangement = ["street","lamps","street","lamps"]

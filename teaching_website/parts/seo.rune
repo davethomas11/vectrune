@@ -171,3 +171,8 @@ image = /assets/rune-logo.png
 title = %i18n.MarbleRun.title% — Vectrune
 description = %i18n.MarbleRun.description%
 image = /assets/rune-logo.png
+
+@SEO/dog-walker
+title = %i18n.DogWalker.title% — Vectrune
+description = %i18n.DogWalker.description%
+image = /assets/rune-logo.png

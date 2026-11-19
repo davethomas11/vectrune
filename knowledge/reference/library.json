@@ -3082,6 +3082,12 @@
           "description": "State collection names rendered as scene objects."
         },
         {
+          "name": "tethers",
+          "type": "list of strings",
+          "default": "[]",
+          "description": "State paths to depth-tested tethers or lists of tethers; each tether defines world points, radius, RGB color, and optional two-point slack."
+        },
+        {
           "name": "weapon",
           "type": "string",
           "default": "null",
