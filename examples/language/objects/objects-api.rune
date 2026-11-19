@@ -1,0 +1,22 @@
+#!RUNE
+# Run: vectrune examples/language/objects/objects-api.rune
+# Then: curl http://localhost:3000/objects/2
+
+@App
+name = Portable Objects API
+type = REST
+port = 3000
+
+@Route/GET /objects/{id}
+description = Build a batch and damage the first actor matching the URL id
+run:
+    name = "Workshop"
+    local batch = { id: i + 1, x: 10, stats: { hp: 3 } } * 3 inc x by 5
+    actors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }
+    # URL parameters are strings; lookup also matches numeric object IDs.
+    actors[]id.stats.hp -= 1
+    selected = actors[]id ?? null
+    profile = { name, copies: actors.length }
+    slots = grid 2 x 2 at (10, 20) step (5, 15) with { id: i + 1, tier: row + 1 }
+    result = { profile, actors, selected, original: batch, slots }
+    respond 200 result

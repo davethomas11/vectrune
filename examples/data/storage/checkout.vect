@@ -1,0 +1,19 @@
+#!VECT
+# Each run resets this demo product to stock 10, then purchases one item.
+packet = { op: "put", collection: "products", key: "tea", value: { name: "Rune tea", stock: 10 } }
+seed = db.request("local.rune", "main", packet)
+revision = seed.results[0].revision
+
+# Stock and the domain event commit together, or neither does.
+operations = [
+    { op: "increment", collection: "products", key: "tea", path: ["stock"], by: -1, expected: revision },
+    { op: "append", stream: "purchases", kind: "purchase.completed", value: { product: "tea", quantity: 1 } }
+]
+packet = { op: "batch", operations }
+receipt = db.request("local.rune", "main", packet)
+stdio -> "Stock remaining: {receipt.results[0].patch.value}"
+stdio -> "Stock commit: {receipt.commit}; event commit: {receipt.results[1].commit}"
+
+packet = { op: "get", collection: "products", key: "tea" }
+record = db.request("local.rune", "main", packet)
+stdio -> "Stored product: {json.stringify(record)}"

@@ -19,7 +19,7 @@ from rune_web_guide import QuietHandler, ROOT
 def studio_preview():
     with tempfile.TemporaryDirectory(prefix='rune-studio-browser-') as directory:
         result = subprocess.run(
-            [str(ROOT / 'target/debug/vectrune'), str(ROOT / 'examples/rune_studio/rune_studio.rune'), '-o', 'html'],
+            [str(ROOT / 'target/debug/vectrune'), str(ROOT / 'examples/rune-web/studio/rune_studio.rune'), '-o', 'html'],
             capture_output=True, text=True, check=True,
         )
         Path(directory, 'index.html').write_text(result.stdout, encoding='utf-8')

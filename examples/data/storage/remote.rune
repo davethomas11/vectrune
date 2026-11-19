@@ -1,0 +1,5 @@
+#!RUNE
+@DataSource/main
+type = rune-db
+mode = remote
+endpoint = http://localhost:7331

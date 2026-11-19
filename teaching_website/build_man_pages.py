@@ -31,7 +31,14 @@ def build_man_pages(destination, binary):
     destination = Path(destination).resolve()
     for section in ['man1', 'man7']:
         (destination / section).mkdir(parents=True, exist_ok=True)
-    payload = dict(version=version, date=date, catalog=catalog, output=str(destination))
+    # Share the storage walkthrough and runnable sources with the website.
+    guides = json.loads((ROOT / 'knowledge/reference/api-docs.json').read_text())['pages']
+    guides = [page for page in guides if page['route'] == 'docs/storage']
+    for guide in guides:
+        for section in guide['sections']:
+            if section.get('source'):
+                section['example'] = (ROOT / section['source']).read_text()
+    payload = dict(version=version, date=date, catalog=catalog, guides=guides, output=str(destination))
     subprocess.run(
         [str(binary), str(ROOT / 'teaching_website/generate_man_pages.vect')],
         input=json.dumps(payload, ensure_ascii=False) + '\n',

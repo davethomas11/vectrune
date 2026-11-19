@@ -1,0 +1,264 @@
+[
+  {
+    "request": {
+      "op": "get",
+      "collection": "notes",
+      "key": "a"
+    },
+    "expected": null
+  },
+  {
+    "request": {
+      "op": "put",
+      "collection": "notes",
+      "key": "a",
+      "value": {
+        "title": "One",
+        "count": 1,
+        "items": [
+          {
+            "sku": "B",
+            "qty": 3
+          }
+        ]
+      }
+    },
+    "expected": {
+      "commit": "1",
+      "results": [
+        {
+          "key": "a",
+          "value": {
+            "title": "One",
+            "count": 1,
+            "items": [
+              {
+                "sku": "B",
+                "qty": 3
+              }
+            ]
+          },
+          "revision": "1"
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "op": "increment",
+      "collection": "notes",
+      "key": "a",
+      "path": [
+        "count"
+      ],
+      "by": 2
+    },
+    "expected": {
+      "commit": "2",
+      "results": [
+        {
+          "key": "a",
+          "revision": "2",
+          "patch": {
+            "path": [
+              "count"
+            ],
+            "by": 2,
+            "value": 3
+          }
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "op": "batch",
+      "operations": [
+        {
+          "op": "append",
+          "stream": "orders",
+          "kind": "changed",
+          "value": {
+            "key": "a"
+          }
+        },
+        {
+          "op": "increment",
+          "collection": "notes",
+          "key": "a",
+          "path": [
+            "items",
+            {
+              "field": "sku",
+              "equals": "B"
+            },
+            "qty"
+          ],
+          "by": 4
+        }
+      ]
+    },
+    "expected": {
+      "commit": "3",
+      "results": [
+        {
+          "stream": "orders",
+          "sequence": "1",
+          "commit": "3",
+          "kind": "changed",
+          "value": {
+            "key": "a"
+          }
+        },
+        {
+          "key": "a",
+          "revision": "3",
+          "patch": {
+            "path": [
+              "items",
+              {
+                "field": "sku",
+                "equals": "B"
+              },
+              "qty"
+            ],
+            "by": 4,
+            "value": 7
+          }
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "op": "batch",
+      "operations": [
+        {
+          "op": "put",
+          "collection": "notes",
+          "key": "b",
+          "value": 99
+        },
+        {
+          "op": "increment",
+          "collection": "notes",
+          "key": "missing",
+          "by": 1
+        }
+      ]
+    },
+    "error": true
+  },
+  {
+    "request": {
+      "op": "get",
+      "collection": "notes",
+      "key": "b"
+    },
+    "expected": null
+  },
+  {
+    "request": {
+      "op": "get",
+      "collection": "notes",
+      "key": "a"
+    },
+    "expected": {
+      "key": "a",
+      "value": {
+        "title": "One",
+        "count": 3,
+        "items": [
+          {
+            "sku": "B",
+            "qty": 7
+          }
+        ]
+      },
+      "revision": "3"
+    }
+  },
+  {
+    "request": {
+      "op": "read",
+      "stream": "orders"
+    },
+    "expected": {
+      "events": [
+        {
+          "stream": "orders",
+          "sequence": "1",
+          "commit": "3",
+          "kind": "changed",
+          "value": {
+            "key": "a"
+          }
+        }
+      ],
+      "next": "1"
+    }
+  },
+  {
+    "request": {
+      "op": "scan",
+      "collection": "notes",
+      "prefix": "a",
+      "limit": 1
+    },
+    "expected": {
+      "items": [
+        {
+          "key": "a",
+          "value": {
+            "title": "One",
+            "count": 3,
+            "items": [
+              {
+                "sku": "B",
+                "qty": 7
+              }
+            ]
+          },
+          "revision": "3"
+        }
+      ],
+      "next": null
+    }
+  },
+  {
+    "request": {
+      "op": "delete",
+      "collection": "notes",
+      "key": "a",
+      "expected": "3"
+    },
+    "expected": {
+      "commit": "4",
+      "results": [
+        {
+          "key": "a",
+          "deleted": true,
+          "revision": "4"
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "op": "get",
+      "collection": "notes",
+      "key": "a"
+    },
+    "expected": null
+  },
+  {
+    "request": {
+      "op": "put",
+      "collection": "notes",
+      "key": "b",
+      "expected": "2",
+      "value": 0
+    },
+    "error": true
+  }
+]

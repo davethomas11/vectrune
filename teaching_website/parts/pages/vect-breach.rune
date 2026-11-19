@@ -9,7 +9,7 @@ view:
             p .showcase-try "%i18n.VectBreach.try_it%"
             a .secondary-cta href="/assets/games/vect-breach/index.html" target=_blank rel=noopener "%i18n.VectBreach.standalone%"
 
-        WebExample game=true title="{i18n.VectBreach.title}" preview="/assets/games/vect-breach/index.html" files="{sources ../../../examples/vect_breach/site_shell.rune}" show_heading=false
+        WebExample game=true title="{i18n.VectBreach.title}" preview="/assets/games/vect-breach/index.html" files="{sources ../../../examples/games/vect_breach/site_shell.rune}" show_heading=false
 
         section .card:
             h2 "%i18n.VectBreach.controls_title%"
@@ -21,8 +21,8 @@ view:
             summary "%i18n.VectBreach.source_title%"
             p "%i18n.VectBreach.source_text%"
             CommandBlock code="git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
-            CommandBlock code="vectrune examples/vect_breach/vect_breach.rune -o html > vect-breach.html"
-            CommandBlock code="vectrune examples/vect_breach/generate_guards.vect"
-            CommandBlock code="vectrune test examples/vect_breach --type logic"
+            CommandBlock code="vectrune examples/games/vect_breach/vect_breach.rune -o html > vect-breach.html"
+            CommandBlock code="vectrune examples/games/vect_breach/generate_guards.vect"
+            CommandBlock code="vectrune test examples/games/vect_breach --type logic"
             p "%i18n.VectBreach.native%"
-            CommandBlock code="cargo run --features pixel-desktop -- examples/vect_breach/vect_breach.rune --target desktop"
+            CommandBlock code="cargo run --features pixel-desktop -- examples/games/vect_breach/vect_breach.rune --target desktop"

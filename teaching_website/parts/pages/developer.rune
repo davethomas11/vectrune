@@ -84,7 +84,7 @@ view:
             h2 "%i18n.Developer.logic_title%"
             p "%i18n.Developer.logic_text%"
             CommandBlock code="{i18n.Developer.cmd_12}"
-            ExampleSource code="{raw ../../../examples/rune_studio/studio.logic.test.rune}"
+            ExampleSource code="{raw ../../../examples/rune-web/studio/studio.logic.test.rune}"
             p "%i18n.Developer.logic_limits%"
         section .card:
             h2 "%i18n.Developer.boundary_title%"

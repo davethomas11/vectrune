@@ -9,6 +9,9 @@ use std::collections::HashMap;
 /// A complete Rune-Web frontend definition.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuneWebFrontend {
+    /// Browser-safe datasource settings; native paths and secrets are excluded.
+    #[serde(default)]
+    pub data_sources: serde_json::Value,
     /// All page views, keyed by name (e.g., "tic-tac-toe")
     pub page_views: HashMap<String, PageDefinition>,
 

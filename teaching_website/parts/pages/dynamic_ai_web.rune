@@ -5,7 +5,7 @@ view:
             p .eyebrow "%i18n.DynamicAi.eyebrow%"
             h1 "%i18n.DynamicAi.title%"
             p .lead "%i18n.DynamicAi.intro%"
-            ExampleSource code="{raw ../../../examples/dynamic_ai_web.rune}"
+            ExampleSource code="{raw ../../../examples/rune-web/dynamic_ai_web.rune}"
             h3 "%i18n.Guide.syntax%"
             ul:
                 li "%i18n.DynamicAi.syntax_1%"
@@ -19,7 +19,7 @@ view:
             p "%i18n.DynamicAi.engines_body%"
             h3 "%i18n.Guide.run_locally%"
             pre:
-                code .code-block .language-bash "cargo run -- examples/dynamic_ai_web.rune --watch\n# http://127.0.0.1:3000/"
+                code .code-block .language-bash "cargo run -- examples/rune-web/dynamic_ai_web.rune --watch\n# http://127.0.0.1:3000/"
             p "%i18n.DynamicAi.behavior%"
             p "%i18n.DynamicAi.progress%"
             p "%i18n.DynamicAi.saved%"
@@ -27,4 +27,4 @@ view:
             h3 "%i18n.DynamicAi.demos_title%"
             p "%i18n.DynamicAi.demos_body%"
             pre:
-                code .code-block .language-bash "cargo run -- examples/dynamic_ai_web_codex.rune --watch\n# or\ncargo run -- examples/dynamic_ai_web_copilot.rune --watch"
+                code .code-block .language-bash "cargo run -- examples/rune-web/dynamic_ai_web_codex.rune --watch\n# or\ncargo run -- examples/rune-web/dynamic_ai_web_copilot.rune --watch"

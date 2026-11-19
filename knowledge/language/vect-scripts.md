@@ -194,7 +194,7 @@ file.write("numbers.json", json.stringify(numbers))
 stdio -> "Saved {numbers.length} numbers"
 ```
 
-Run `vectrune examples/vect_breach/generate_guards.vect` to regenerate all 40
+Run `vectrune examples/games/vect_breach/generate_guards.vect` to regenerate all 40
 directional guard views without Python or Node. `file.write(path, text)` resolves
 relative paths beside the script, regardless of the current working directory;
 absolute paths remain absolute. `script_dir` exposes that directory. Writes
@@ -226,6 +226,17 @@ and joining. Shared utility functions include `range(start, end?, step?)`,
 implements ties-to-even color quantization to preserve its original palette.
 `repeat` copies values shallowly; use a loop for independent mutable rows.
 
+Portable object syntax also includes `{ name, score }` property shorthand,
+`{ x: 10 } * 3 inc x by 5` replication, `grid 3 x 2 at (0, 0) step (10, 20)`,
+`template with { ... }` overlays and `[batch with { ... }] all { ... }` batches.
+Generators and overlays copy nested data; batches expand inside arrays while
+ordinary nested arrays remain nested. `i`, `row`/`r` and `col`/`c` are available
+in the corresponding generators. `local` and `let` declarations are accepted.
+`actors[]id` selects the first matching object using the current `id` binding;
+`actors[]id.hp -= 1` updates it. Missing-match writes do nothing. These forms are
+also supported in backend `.rune` `run:` blocks and Rune-Web. See
+[the portable object syntax specification](../../docs/SPECIFICATION.md#46-portable-object-construction-and-lookup-2026-11-18).
+
 Multiline array/object/function expressions and trailing `#` comments are
 supported. Strings must close on their source line; use escaped newlines.
 Actions have local assignment scope and read globals; passed arrays/objects
@@ -238,7 +249,7 @@ Migration remains incremental: legacy-only programs continue through the
 existing executor, including `repeat from line` and `.vectrune` shared IR.
 Extended programs use the shared script engine. The legacy `set` syntax keeps
 its literal/interpolation behavior; prefer `name = expression` in new scripts.
-Do not mix `repeat from line` with extended constructs. Imports, state generators,
-pattern matching, REPL integration, Rust backend `run:` expressions and emulator
-migration remain work under the language-parity roadmap. The CLI host's
+Do not mix `repeat from line` with extended constructs. Imports, pattern matching,
+REPL integration, the remaining Rust backend expression migration and emulator
+parser/statement consolidation remain work under the language-parity roadmap. The CLI host's
 `file.write` capability is not a browser filesystem API.

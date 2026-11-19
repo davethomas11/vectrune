@@ -47,8 +47,8 @@ it.each([NaN, Infinity, -Infinity])('rejects non-finite group values: %s', value
 });
 
 it('runs the complete CSV report example and parses a POST body', () => {
-  const source = readFileSync(new URL('../../../examples/sales_report.rune', import.meta.url), 'utf8');
-  const csv = readFileSync(new URL('../../../examples/sales_report.csv', import.meta.url), 'utf8').trim().split('\n');
+  const source = readFileSync(new URL('../../../examples/data/reports/sales_report.rune', import.meta.url), 'utf8');
+  const csv = readFileSync(new URL('../../../examples/data/reports/sales_report.csv', import.meta.url), 'utf8').trim().split('\n');
   const headers = csv.shift()!.split(',');
   const rows = csv.map(line => Object.fromEntries(line.split(',').map((value, index) => [headers[index], value])));
   const app = createApp(parse(source), { files: { 'sales_report.csv': rows } });

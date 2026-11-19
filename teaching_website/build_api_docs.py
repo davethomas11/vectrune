@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import zipfile
 from urllib.parse import quote
 from xml.sax.saxutils import escape as xml_escape
 
@@ -74,6 +75,14 @@ def build_docs(destination, binary, base='/', site_url='https://vectrune.com', s
         shutil.copyfile(site / name, assets / name)
     downloads = assets / 'content/docs'
     shutil.copytree(site / 'content/docs', downloads, dirs_exist_ok=True)
+    # Include provider imports and both fullstack processes, without local data.
+    examples = ROOT / 'examples/data/storage'
+    with zipfile.ZipFile(downloads / 'rune-storage.zip', 'w') as archive:
+        for source in sorted(examples.rglob('*')):
+            if source.is_file() and (source.suffix in {'.rune', '.vect'} or source.name == 'README.md'):
+                entry = zipfile.ZipInfo('rune_storage/' + source.relative_to(examples).as_posix())
+                entry.compress_type = zipfile.ZIP_DEFLATED
+                archive.writestr(entry, source.read_bytes())
     for name, source in [('graphql', 'graphql_example'), ('websocket', 'websocket_example')]:
         shutil.copyfile(site / f'parts/pages/examples/{source}.rune', downloads / f'{name}.rune')
     docs_base = base + 'docs/'
@@ -136,7 +145,7 @@ def build_docs(destination, binary, base='/', site_url='https://vectrune.com', s
         size = sum(entry['category'] == category['id'] for entry in entries)
         intro += f'<tr><th scope="row"><a href="{docs_base}library/{category["id"]}/">{escape(category["title"])}</a><small>{size} entries</small></th><td>{escape(category["description"])}</td></tr>'
     intro += '</tbody></table><aside class="note"><strong>Runtime matters.</strong><p>Native server functions and Rune-Web commands have separate interpreters. Each entry identifies its runtime; a browser command is not automatically available in an HTTP handler.</p></aside>'
-    intro += f'<h2>Learning and examples</h2><p><a href="{docs_base}getting-started/">Build your first REST API</a> · <a href="{docs_base}graphql/">GraphQL example</a> · <a href="{docs_base}websockets/">WebSocket example</a></p>'
+    intro += f'<h2>Learning and examples</h2><p><a href="{docs_base}getting-started/">Build your first REST API</a> · <a href="{docs_base}storage/">Rune DB, event streams and server-backed Rune-Web</a> · <a href="{docs_base}graphql/">GraphQL example</a> · <a href="{docs_base}websockets/">WebSocket example</a></p>'
     write('docs', 'Vectrune reference manual', 'Search the Vectrune language and library reference: functions, sections, parameters, returns, runtime support, and command-line tools.', intro)
     for category in categories:
         chapter = [entry for entry in entries if entry['category'] == category['id']]

@@ -152,7 +152,7 @@ All tests in `tests/integration_app.rs`:
 
 ## Example
 
-See `examples/i18n_demo.rune` for a complete multi-language demo with:
+See `examples/rune-web/i18n_demo.rune` for a complete multi-language demo with:
 - 3 locales (en_us, es, fr)
 - Multiple translation groups (Common, Nav, Hero, CTA)
 - Component references using i18n strings

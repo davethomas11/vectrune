@@ -29,7 +29,7 @@ As a developer, I want to deploy VectRune applications to AWS Lambda so that I c
    - Validate book GraphQL example and REST APIs work as expected in Lambda.
 6. **Documentation & Examples**
    - Write Lambda deployment walkthrough and update README.
-   - Provide a sample project in `examples/lambda/book_graphql_lambda/`.
+   - Provide a sample project in `examples/deployment/lambda/book_graphql_lambda/`.
 7. **Observability & Logging**
    - Ensure all logs are structured JSON and include request/trace IDs.
    - Add hooks for metrics and CloudWatch integration.

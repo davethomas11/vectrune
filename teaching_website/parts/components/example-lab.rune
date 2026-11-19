@@ -33,46 +33,46 @@ view:
     section .example-workspace:
         h2 "%i18n.Lab.first_title%"
         p "%i18n.Examples.rest_hint%"
-        SandboxSection code="{raw ../../../examples/app.rune}" show_output=true
+        SandboxSection code="{raw ../../../examples/beginner/app.rune}" show_output=true
 
 @Component/UserApiExample
 view:
     section .example-workspace:
         h2 "%i18n.Lab.users%"
         p "%i18n.Examples.users_hint%"
-        SandboxSection code="{raw ../../../examples/user_api.rune}" show_output=true
+        SandboxSection code="{raw ../../../examples/api/user_api.rune}" show_output=true
 
 @Component/DataDocumentExample
 view:
     section .example-workspace:
         h2 "%i18n.Lab.document_title%"
         p "%i18n.Examples.data_hint%"
-        SandboxSection code="{raw ../../../examples/skateboarders.rune}" show_output=true mode=data
+        SandboxSection code="{raw ../../../examples/beginner/skateboarders.rune}" show_output=true mode=data
 
 @Component/GraphqlExample
 view:
     section .example-workspace:
         h2 "%i18n.Lab.graphql_title%"
         p "%i18n.Examples.graphql_hint%"
-        SandboxSection code="{raw ../../../examples/book_graphql.rune}" show_output=true mode=graphql
+        SandboxSection code="{raw ../../../examples/api/book_graphql.rune}" show_output=true mode=graphql
 
 @Component/CounterExample
 view:
-    WebExample title="{i18n.Lab.counter}" preview="{preview ../../../examples/counter.rune}" files="{sources ../../../examples/counter.rune}"
+    WebExample title="{i18n.Lab.counter}" preview="{preview ../../../examples/beginner/counter.rune}" files="{sources ../../../examples/beginner/counter.rune}"
 
 @Component/TicTacToeExample
 view:
-    WebExample game=true title="{i18n.Lab.tic}" preview="/assets/games/tic-tac-toe/index.html" files="{sources ../../../examples/tic_tac_toe/tic_tac_toe.rune}"
+    WebExample game=true title="{i18n.Lab.tic}" preview="/assets/games/tic-tac-toe/index.html" files="{sources ../../../examples/games/tic_tac_toe/tic_tac_toe.rune}"
 
 @Component/SpaceInvadersExample
 view:
     div .space-invaders-page:
-        WebExample game=true title="{i18n.Lab.invaders_title}" preview="/assets/games/vectraiders/index.html" files="{sources ../../../examples/space_invaders/space_invaders.rune}"
+        WebExample game=true title="{i18n.Lab.invaders_title}" preview="/assets/games/vectraiders/index.html" files="{sources ../../../examples/games/space_invaders/space_invaders.rune}"
 
 @Component/VectWormsExample
 view:
     div .space-invaders-page:
-        WebExample game=true title="{i18n.Lab.worms_title}" preview="/assets/games/vectworms/index.html" files="{sources ../../../examples/vectworms/vectworms.rune}"
+        WebExample game=true title="{i18n.Lab.worms_title}" preview="/assets/games/vectworms/index.html" files="{sources ../../../examples/games/vectworms/vectworms.rune}"
 
 @Component/WebExample
 props: [title, preview, files, show_heading?, game?]
@@ -120,7 +120,7 @@ view:
         code .code-block .language-rune "{code}"
 
 @Component/RunExampleLocally
-props: [example]
+props: [example, source]
 view:
     section .card:
         h3 "%i18n.Guide.run_locally%"
@@ -131,4 +131,4 @@ view:
         div .command-block:
             button .command-copy type=button data-copied="%i18n.Quickstart.command_copied%" data-failed="%i18n.Quickstart.command_failed%" "%i18n.Quickstart.command_copy%"
             pre:
-                code .code-block .language-shell "vectrune examples/{example}/{example}.rune\nvectrune examples/{example}/{example}.rune -o html > {example}.html"
+                code .code-block .language-shell "vectrune {source}\nvectrune {source} -o html > {example}.html"

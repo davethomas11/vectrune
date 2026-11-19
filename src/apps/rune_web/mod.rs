@@ -506,6 +506,7 @@ fn render_frontend_shell(
         frontend.optimizer.clone(),
         frontend.sounds.clone(),
         frontend.music.clone(),
+        frontend.data_sources.clone(),
     );
 
     format!(
@@ -530,9 +531,7 @@ fn render_frontend_shell(
     <meta name="twitter:image" content="{image}">
 
     <!-- Favicon & Touch Icons -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">
-    <link rel="apple-touch-icon" href="/assets/favicon.png">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23166b73'/%3E%3Cpath d='m8 8 8 16 8-16h-5l-3 7-3-7z' fill='white'/%3E%3C/svg%3E">
 
     {style_html}
 </head>
@@ -1221,6 +1220,7 @@ fn render_logic(
     optimizer: Option<ast::OptimizerDefinition>,
     sounds: std::collections::HashMap<String, ast::SoundDefinition>,
     music: std::collections::HashMap<String, ast::MusicDefinition>,
+    data_sources: serde_json::Value,
 ) -> String {
     match (view_tree, logic) {
         (Some(tree), Some(logic)) => {
@@ -1238,7 +1238,7 @@ fn render_logic(
                 sounds,
                 music,
             );
-            let js_code = codegen.generate();
+            let js_code = codegen.with_data_sources(data_sources).generate();
             format!("<script>\n{}</script>", js_code)
         }
         _ => String::new(),

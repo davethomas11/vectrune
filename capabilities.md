@@ -189,7 +189,7 @@ Vectrune's power is best understood through practical examples. These demonstrat
 
 ### 4.3. AWS Lambda Integration
 
-*   **`examples/lambda/book_graphql_lambda/book_graphql_lambda.rune`**: Shows how to build a GraphQL API as an AWS Lambda function.
+*   **`examples/deployment/lambda/book_graphql_lambda/book_graphql_lambda.rune`**: Shows how to build a GraphQL API as an AWS Lambda function.
     *   *Illustrates:* Serverless computing, integrating GraphQL with Lambda runtime.
 
 ### 4.4. Game Development

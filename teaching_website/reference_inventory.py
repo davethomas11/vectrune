@@ -121,12 +121,12 @@ def inventory(binary=None):
         for source in entry['sources']:
             if not (ROOT / source).is_file():
                 raise ValueError(f'Reference source is missing: {source}')
-        entry['runtime'] = {
+        entry.setdefault('runtime', {
             'native': 'Native / server', 'collections': 'Native / server',
             'web': 'Rune-Web', 'expressions': 'Rune-Web / game logic', 'host': 'Rune-Web host',
             'cli': 'CLI', 'testing': 'Test harness', 'games': 'Pixel / Pixel 3D',
             'declarations': 'Declaration compiler / host-specific',
             'language': 'Document / runtime-specific syntax', 'environment': 'Native / CLI',
-        }.get(entry['category'], 'Host-specific')
+        }.get(entry['category'], 'Host-specific'))
     catalog['entries'] = entries
     return catalog

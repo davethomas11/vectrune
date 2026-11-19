@@ -1,0 +1,16 @@
+#!RUNE
+# A separate file lets both standalone examples run simultaneously.
+@DataSource/event_store
+type = rune-db
+native_path = .vectrune/events.rdb
+
+@DataSource/activity
+type = vect-event
+store = event_store
+
+@App
+name = Vect Event Workshop
+type = vect-event
+source = activity
+host = 127.0.0.1
+port = 7332

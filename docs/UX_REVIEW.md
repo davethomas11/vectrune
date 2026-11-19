@@ -53,7 +53,7 @@ Treat the locale prefix separately from the page route, with an empty page segme
 
 ### UX02 Make the quickstart self-contained
 
-**Observed:** The quickstart presents three installation routes, then asks the reader to run `vectrune examples/app.rune`. It does not explain how a release or Homebrew user obtains that example file. The source-install card begins with `cargo install --path .` without first establishing a checkout. These are missing prerequisites in the displayed journey; a clean-machine install was not executed during this review.
+**Observed:** The quickstart presents three installation routes, then asks the reader to run `vectrune examples/beginner/app.rune`. It does not explain how a release or Homebrew user obtains that example file. The source-install card begins with `cargo install --path .` without first establishing a checkout. These are missing prerequisites in the displayed journey; a clean-machine install was not executed during this review.
 
 Offer two explicit paths: **Try in browser** and **Run locally**. For local setup, show one selected platform at a time, installation prerequisites, the complete creation or download of `app.rune`, its run command, and the expected response. Keep building from a checkout under an advanced disclosure. Add copy buttons to installation and request commands.
 

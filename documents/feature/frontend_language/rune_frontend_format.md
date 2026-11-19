@@ -419,7 +419,7 @@ This proposal copies the patterns already familiar in the repo:
 
 The hand-written HTML equivalent for the tic-tac-toe example lives at:
 
-- `examples/tic_tac_toe/preview.html`
+- `examples/games/tic_tac_toe/preview.html`
 
 That file is useful as a visual target for any future compiler or renderer work.
 

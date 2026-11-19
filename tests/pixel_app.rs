@@ -63,7 +63,7 @@ fn rejects_bad_rows_palettes_dimensions_and_missing_frames() {
 #[tokio::test]
 async fn exports_self_contained_game_and_excludes_test_helpers() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune")).unwrap();
     let html = pixel::html(&doc).await.unwrap();
     assert!(html.starts_with("<!doctype html>"));
     assert!(html.contains("__RunePixelRuntime.boot"));
@@ -77,7 +77,7 @@ async fn exports_self_contained_game_and_excludes_test_helpers() {
 #[tokio::test]
 async fn custom_shell_uses_normal_rune_web_components_and_separate_runtime() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/monster_city/custom_shell.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/monster_city/custom_shell.rune")).unwrap();
     let html = pixel::html(&doc).await.unwrap();
     assert!(html.contains("Toggle instructions"));
     assert!(html.contains("__RuneWeb.boot"));
@@ -104,7 +104,7 @@ async fn custom_shell_uses_normal_rune_web_components_and_separate_runtime() {
 #[test]
 fn validates_clock_resolution_and_logic_contract() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune")).unwrap();
     let mut invalid = doc.clone();
     invalid
         .sections
@@ -142,7 +142,7 @@ fn validates_clock_resolution_and_logic_contract() {
 #[test]
 fn monster_music_uses_existing_declarative_sound_and_music_definitions() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune")).unwrap();
     let frontend =
         rune_runtime::apps::rune_web::parser::parse_rune_web_frontend(&doc, "city").unwrap();
     let music = &frontend.music["monster_city"];
@@ -159,7 +159,7 @@ fn monster_music_uses_existing_declarative_sound_and_music_definitions() {
 #[test]
 fn native_quickjs_can_run_the_musical_game_without_browser_audio_apis() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune")).unwrap();
     let game = pixel::compile(&doc).unwrap();
     let runtime = rquickjs::Runtime::new().unwrap();
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
@@ -180,7 +180,7 @@ fn native_quickjs_can_run_the_musical_game_without_browser_audio_apis() {
 #[ignore = "reports native QuickJS frame timings for manual performance comparisons"]
 fn native_pixel_frame_benchmark() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune")).unwrap();
     let game = pixel::compile(&doc).unwrap();
     let runtime = rquickjs::Runtime::new().unwrap();
     let context = rquickjs::Context::full(&runtime).unwrap();
@@ -218,7 +218,7 @@ fn native_pixel_frame_benchmark() {
 #[test]
 fn every_catalog_monster_has_renderable_idle_step_and_punch_frames() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune")).unwrap();
     let frontend =
         rune_runtime::apps::rune_web::parser::parse_rune_web_frontend(&doc, "city").unwrap();
     let catalog: serde_json::Value =

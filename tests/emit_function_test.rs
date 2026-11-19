@@ -9,7 +9,7 @@ mod emit_function_test {
     #[test]
     fn test_emit_function_in_generated_javascript() {
         // Load the reactivity contract example which uses emit
-        let path = Path::new("examples/reactivity-contract-rune-web.rune");
+        let path = Path::new("examples/rune-web/reactivity-contract-rune-web.rune");
         let result = load_rune_document_from_path(path);
 
         assert!(result.is_ok(), "Should parse reactivity-contract-rune-web.rune");
@@ -93,7 +93,7 @@ mod emit_function_test {
     #[test]
     fn test_emit_in_handler_context() {
         // This test verifies that emit can be called from within event handlers
-        let path = Path::new("examples/reactivity-contract-rune-web.rune");
+        let path = Path::new("examples/rune-web/reactivity-contract-rune-web.rune");
         let result = load_rune_document_from_path(path);
         assert!(result.is_ok());
 
@@ -120,7 +120,7 @@ mod emit_function_test {
     #[test]
     fn test_websocket_setup_in_javascript_codegen() {
         // Load the reactivity contract example
-        let path = Path::new("examples/reactivity-contract-rune-web.rune");
+        let path = Path::new("examples/rune-web/reactivity-contract-rune-web.rune");
         let result = load_rune_document_from_path(path);
         assert!(result.is_ok());
 
@@ -200,7 +200,7 @@ mod emit_function_test {
     #[test]
     fn test_event_name_parsing_strips_on_prefix() {
         // Verify that on_click is parsed and stored as click (without the on_ prefix)
-        let path = Path::new("examples/reactivity-contract-rune-web.rune");
+        let path = Path::new("examples/rune-web/reactivity-contract-rune-web.rune");
         let result = load_rune_document_from_path(path);
         assert!(result.is_ok());
 

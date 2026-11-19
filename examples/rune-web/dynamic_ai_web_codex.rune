@@ -1,21 +1,21 @@
 #!RUNE
-# Requires an installed, authenticated copilot CLI.
-# cargo run -- examples/dynamic_ai_web_copilot.rune --watch
+# Requires an installed, authenticated codex CLI.
+# cargo run -- examples/rune-web/dynamic_ai_web_codex.rune --watch
 
 # Save a page: /?generation=cafe-v1
 # Fresh preview: /?cache=off (does not change saved pages)
 
 @App
-name = The Little Rune Cafe — Copilot
+name = The Little Rune Cafe — Codex
 type = dynamic-ai-web
-engine = copilot
+engine = codex
 response_target_seconds = 30
 timeout_seconds = 180
 cache_seconds = 60
 max_concurrent = 2
 
 @Site
-title = The Little Rune Cafe — Copilot
+title = The Little Rune Cafe — Codex
 description = A welcoming neighborhood cafe where good coffee meets little ideas.
 style = Professional responsive design, deep teal, coral accents, soft gradients and a little glass shine. Use inline CSS and no remote assets.
 tone = Warm, concise, honest and helpful.

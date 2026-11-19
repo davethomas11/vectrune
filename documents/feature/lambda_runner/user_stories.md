@@ -71,7 +71,7 @@
 - **I want** a documented walkthrough (e.g., Book GraphQL API) plus deployment instructions
 - **So that** I can reproduce the setup and validate functionality end-to-end.
 - **Acceptance Criteria**:
-  - New example under `examples/lambda/book_graphql_lambda/` runnable locally and via Lambda, exposing both REST and GraphQL endpoints to demonstrate parity.
+  - New example under `examples/deployment/lambda/book_graphql_lambda/` runnable locally and via Lambda, exposing both REST and GraphQL endpoints to demonstrate parity.
   - README/Lambda guide covers packaging, deployment (zip + container), environment variables, and troubleshooting.
   - CI or manual checklist ensures the example passes integration tests before release.
 

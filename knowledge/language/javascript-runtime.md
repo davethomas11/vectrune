@@ -458,7 +458,7 @@ Each spawned particle object has `{ x, y, vx, vy, life, max_life, color, size }`
 div .particle <- p in particles:
     style = "left: calc({p.x} * 100% / 480); top: calc({p.y} * 100% / 460); opacity: calc({p.life} / {p.max_life}); width: {p.size}px; height: {p.size}px; background: {p.color};"
 ```
-Calling `particles.step()` or `particles.burst()` is isolated to declared emitters — regular arrays are unaffected. See `examples/space_invaders/` (VectRaiders) for a full example.
+Calling `particles.step()` or `particles.burst()` is isolated to declared emitters — regular arrays are unaffected. See `examples/games/space_invaders/` (VectRaiders) for a full example.
 
 ## Current Implementation Status
 
@@ -585,6 +585,6 @@ Server-side handlers receive these messages and can respond with state updates v
 - **JS Code Generator**: `src/apps/rune_web/jscodegen.rs`
 - **Parser**: `src/apps/rune_web/parser.rs` - action parsing
 - **AST Types**: `src/apps/rune_web/ast.rs` - `LogicDefinition`, `ActionDefinition`
-- **Example**: `examples/tic_tac_toe/parts/logic.rune`
+- **Example**: `examples/games/tic_tac_toe/parts/logic.rune`
 - **Integration Tests**: `tests/integration_app.rs`
 

@@ -130,5 +130,5 @@ The interpreter supports:
 - **Parser Implementation**: `src/apps/rune_web/parser.rs`
 - **CSS Compiler**: `src/apps/rune_web/css.rs`
 - **JS Codegen**: `src/apps/rune_web/jscodegen.rs`
-- **Example**: `examples/web.rune`
+- **Example**: `examples/rune-web/web.rune`
 - **Tests**: `src/apps/rune_web/parser.rs` (Unit), `tests/integration_app.rs` (Integration)

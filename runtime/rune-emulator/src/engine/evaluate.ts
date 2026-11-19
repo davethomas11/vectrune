@@ -1,13 +1,25 @@
 // ============================================================================
 // Expression evaluator — standalone, no DOM or ctx() dependency
 //
-// Adapted from rune-web/src/expression.ts but takes a plain scope object
-// rather than relying on the global context singleton.
+// Canonical expressions share Rune-Web / native Vect's cached Pratt evaluator.
+// Emulator-specific shorthand retains the legacy evaluator below.
 // ============================================================================
+
+import { compileCoreExpression } from '../../../rune-web/src/core_expression';
 
 export type Scope = Record<string, unknown>;
 
 const MAX_DEPTH = 64;
+const coreCache = new Map<string, ReturnType<typeof compileCoreExpression>>();
+
+function compiledCore(source: string): ReturnType<typeof compileCoreExpression> {
+  if (coreCache.has(source)) return coreCache.get(source)!;
+  const compiled = compileCoreExpression(source);
+  // Requests can supply arbitrary expressions; bound both successful and failed entries.
+  if (coreCache.size >= 512) coreCache.delete(coreCache.keys().next().value!);
+  coreCache.set(source, compiled);
+  return compiled;
+}
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -234,6 +246,13 @@ export function evaluateExpression(expr: string, scope: Scope, depth = 0): unkno
   const next = depth + 1;
   let t = String(expr ?? '').trim();
   if (!t) return undefined;
+
+  // Keep document-style bare words and missing simple paths compatible with
+  // the emulator. Inside canonical expressions, unknown names stay undefined.
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(t)
+      && !['true', 'false', 'null'].includes(t)) return resolveValue(t, scope);
+  const core = compiledCore(t);
+  if (core) return core(scope);
 
   // Strip balanced outer parens
   while (t.startsWith('(') && t.endsWith(')')) {

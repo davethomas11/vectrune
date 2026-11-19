@@ -1,5 +1,5 @@
 #!RUNE
-# JavaScript logic tests: vectrune test examples/rune_studio (or --type logic)
+# JavaScript logic tests: vectrune test examples/rune-web/studio (or --type logic)
 import "rune_studio.rune"
 
 @Test/StudioLogic/Tempo

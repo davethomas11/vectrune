@@ -57,4 +57,4 @@ __pycache__/
 # Rendered HTML exports
 /*.html
 examples/**/*.html
-!examples/worm_game/assets/index.html
+!examples/games/worm_game/assets/index.html

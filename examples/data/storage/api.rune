@@ -1,0 +1,26 @@
+#!RUNE
+import "data.rune"
+
+@App
+name = Embedded Rune DB API
+type = REST
+port = 3000
+
+@Route/POST /notes/{id}
+run:
+    parse-json
+    packet = { op: "put", collection: "notes", key: id, value: body }
+    receipt = db main packet
+    respond 201 receipt
+
+@Route/GET /notes/{id}
+run:
+    packet = { op: "get", collection: "notes", key: id }
+    record = db main packet
+    respond 200 record
+
+@Route/GET /changes
+run:
+    packet = { op: "read", stream: "$changes", limit: 20 }
+    page = events activity packet
+    respond 200 page

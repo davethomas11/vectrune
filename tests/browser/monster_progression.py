@@ -7,7 +7,7 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory(prefix='monster-progression-') as folder, sync_playwright() as playwright:
     game = Path(folder) / 'game.html'
-    export = subprocess.run([str(ROOT/'target/debug/vectrune'),str(ROOT/'examples/monster_city/monster_city.rune'),'-o','html'],capture_output=True,text=True,check=True)
+    export = subprocess.run([str(ROOT/'target/debug/vectrune'),str(ROOT/'examples/games/monster_city/monster_city.rune'),'-o','html'],capture_output=True,text=True,check=True)
     game.write_text(export.stdout,encoding='utf-8')
     browser = playwright.chromium.launch()
     context = browser.new_context(viewport={'width':1200,'height':1000})

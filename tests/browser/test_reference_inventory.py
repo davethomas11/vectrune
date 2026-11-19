@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import json
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'teaching_website'))
@@ -13,6 +14,30 @@ from build_api_docs import build_docs
 
 
 class ReferenceInventoryTests(unittest.TestCase):
+    def test_example_catalog_sources_and_companions_exist(self):
+        catalog = json.loads((ROOT / 'language/docs/data/examples.json').read_text())
+        for entry in catalog['examples']:
+            for source in [entry['source_path'], *(entry.get('companion_files') or [])]:
+                with self.subTest(example=entry['id'], source=source):
+                    self.assertTrue((ROOT / source).is_file(), source)
+
+    def test_portable_object_syntax_reaches_library_and_search(self):
+        topics = ['object-property-shorthand', 'object-replication', 'object-grid',
+                  'local-templates', 'object-overlays', 'matching-object-lookup',
+                  'compound-assignment']
+        with tempfile.TemporaryDirectory() as folder:
+            with patch('reference_inventory.help_entries', return_value=[]):
+                build_docs(folder, ROOT / 'target/debug/vectrune', selected_routes=['docs/library/language'])
+            page = Path(folder, 'docs/library/language/index.html').read_text()
+            search = json.loads(Path(folder, 'docs/search-index.json').read_text())
+            for topic in topics:
+                self.assertIn(f'id="{topic}"', page)
+                entry = next(item for item in search if item['url'].endswith('#' + topic))
+                self.assertEqual(entry['runtime'], 'Vect scripts / backend Rune / Rune-Web / browser emulator')
+            self.assertIn('orders[]id.items[]sku.qty += 4', page)
+            self.assertIn('Missing-match writes and compound writes do nothing.', page)
+            self.assertIn('Updating one generated or overlaid object does not change the template', page)
+
     def test_native_registry_and_aliases_are_documented(self):
         entries = inventory()['entries']
         names = {name for entry in entries for name in [entry['name'], *entry.get('aliases', [])]}
@@ -47,6 +72,23 @@ class ReferenceInventoryTests(unittest.TestCase):
             entry = next(item for item in index if item['name'] == 'memory.set')
             self.assertEqual(entry['url'], '/guide/docs/library/native/#memory-set')
             self.assertIn('set-memory', entry['aliases'])
+
+    def test_storage_guide_ships_runnable_sources_and_complete_download(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch('reference_inventory.help_entries', return_value=[]):
+                build_docs(folder, ROOT / 'target/debug/vectrune', '/guide/', selected_routes=['docs/storage'])
+            page = Path(folder, 'docs/storage/index.html').read_text()
+            self.assertIn('One note. A shared source of truth.', page)
+            self.assertIn('--secondary-app', page)
+            self.assertIn('purchase.completed', page)
+            self.assertIn('href="/guide/assets/content/docs/rune-storage.zip" download', page)
+            with zipfile.ZipFile(Path(folder, 'assets/content/docs/rune-storage.zip')) as archive:
+                for name in ['fullstack/database.rune', 'fullstack/app.rune', 'fullstack/single-server.rune',
+                             'fullstack/ui.rune', 'fullstack/style.rune', 'checkout.vect',
+                             'replay.vect', 'local.rune', 'README.md']:
+                    self.assertEqual(archive.read('rune_storage/' + name),
+                                     (ROOT / 'examples/data/storage' / name).read_bytes())
+                self.assertFalse(any('.vectrune/' in name for name in archive.namelist()))
 
 
 if __name__ == '__main__':

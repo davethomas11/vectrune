@@ -411,5 +411,41 @@
     "expr": "0 ?? 3",
     "context": {},
     "expected": 0
+  },
+  {
+    "category": "operators without whitespace",
+    "expr": "24/3*2-4+1",
+    "context": {},
+    "expected": 13
+  },
+  {
+    "category": "unary boolean precedence",
+    "expr": "!true || true && not false",
+    "context": {},
+    "expected": true
+  },
+  {
+    "category": "nested true ternary branch",
+    "expr": "true ? false ? 1 : 2 : 3",
+    "context": {},
+    "expected": 2
+  },
+  {
+    "category": "missing path coalescing",
+    "expr": "user.missing ?? \"fallback\"",
+    "context": { "user": {} },
+    "expected": "fallback"
+  },
+  {
+    "category": "false coalescing",
+    "expr": "false ?? true",
+    "context": {},
+    "expected": false
+  },
+  {
+    "category": "case insensitive contains",
+    "expr": "\"Hello World\" contains \"WORLD\"",
+    "context": {},
+    "expected": true
   }
 ]

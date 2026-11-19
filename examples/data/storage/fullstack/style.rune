@@ -1,0 +1,192 @@
+@Style/notes
+rules:
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #f2f5f0
+        color = #18352f
+        font-family = system-ui, -apple-system, sans-serif
+        line-height = 1.6
+    .workshop:
+        max-width = 1120px
+        margin = 0 auto
+        padding = clamp(1rem, 4vw, 3rem)
+    .intro:
+        max-width = 760px
+        margin-bottom = 2rem
+    .eyebrow:
+        font-size = 0.72rem
+        letter-spacing = 0.14em
+        font-weight = 750
+        color = #386b5e
+    h1:
+        font-size = clamp(2rem, 5vw, 3.4rem)
+        line-height = 1.12
+        letter-spacing = -0.045em
+        margin = 0.5rem 0 1rem
+    h2:
+        margin = 0
+        font-size = 1.2rem
+        letter-spacing = -0.02em
+    h3:
+        font-size = 1rem
+        margin = 0 0 0.4rem
+    p:
+        margin = 0.6rem 0
+    .lead:
+        font-size = 1.1rem
+        color = #4e665f
+    .connection:
+        display = flex
+        align-items = center
+        gap = 0.6rem
+        font-size = 0.8rem
+        margin-top = 1.5rem
+    .connection-dot:
+        color = #187960
+    .layout:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(min(100%, 340px), 1fr))
+        gap = 1.25rem
+        align-items = start
+    .panel:
+        padding = clamp(1.1rem, 3vw, 1.8rem)
+        background = white
+        border = 1px solid #dce6dd
+        border-radius = 20px
+        box-shadow = 0 8px 32px #18352f08
+        min-width = 0
+    .section-heading:
+        display = flex
+        gap = 0.85rem
+        align-items = flex-start
+        margin-bottom = 1.5rem
+    .step:
+        background = #e8f2e8
+        color = #386b5e
+        border-radius = 10px
+        padding = 0.4rem 0.6rem
+        font-size = 0.8rem
+        font-weight = 750
+    .muted, .hint, .footer:
+        color = #586e65
+    .muted, .hint:
+        font-size = 0.83rem
+    .muted:
+        margin = 0.3rem 0 0
+    label:
+        display = block
+        font-size = 0.85rem
+        font-weight = 650
+        margin-bottom = 0.4rem
+    input:
+        width = 100%
+        font = inherit
+        padding = 0.8rem 0.9rem
+        border = 1px solid #b6cbbc
+        border-radius = 9px
+        background = #fbfcf9
+        color = #18352f
+    .actions:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.5rem
+        margin = 1rem 0 0.8rem
+    button:
+        font = inherit
+        font-size = 0.85rem
+        font-weight = 650
+        border = 1px solid transparent
+        border-radius = 9px
+        padding = 0.7rem 1rem
+        cursor = pointer
+    .primary:
+        background = #21634e
+        color = white
+    .secondary:
+        background = #f4f7f1
+        color = #275744
+        border-color = #d4e0d2
+    button:hover:
+        filter = brightness(0.95)
+    button:disabled:
+        opacity = 0.45
+        cursor = not-allowed
+    button:focus-visible, input:focus-visible, summary:focus-visible:
+        outline = 3px solid #cf8d39
+        outline-offset = 3px
+    .saved-note:
+        margin-top = 1.7rem
+        padding-top = 1.2rem
+        border-top = 1px solid #e4ebe2
+    .saved-title:
+        font-size = 1.05rem
+        overflow-wrap = anywhere
+    .counter-row:
+        display = flex
+        flex-wrap = wrap
+        align-items = center
+        justify-content = space-between
+        gap = 0.5rem
+    .counter:
+        font-size = 1.7rem
+        font-weight = 700
+        letter-spacing = -0.03em
+    .commit, .stream-meta:
+        font-family = ui-monospace, monospace
+        font-size = 0.72rem
+        color = #586e65
+    .stream-meta:
+        display = flex
+        flex-wrap = wrap
+        justify-content = space-between
+        gap = 0.3rem
+        padding = 0.7rem 0
+        border-bottom = 1px solid #e4ebe2
+    .empty-state:
+        text-align = center
+        background = #f7f9f4
+        border = 1px dashed #cbdac8
+        border-radius = 12px
+        padding = 1.8rem 1rem
+        margin = 1rem 0
+        font-size = 0.85rem
+        color = #586e65
+    .event-card:
+        border = 1px solid #dce6dd
+        border-left = 3px solid #87ad81
+        border-radius = 8px
+        padding = 0.8rem 1rem
+        margin-top = 0.8rem
+        overflow-wrap = anywhere
+    .event-heading:
+        display = flex
+        justify-content = space-between
+        gap = 0.5rem
+        font-size = 0.8rem
+    .event-sequence:
+        color = #586e65
+    .raw-data:
+        font-size = 0.8rem
+        margin-top = 1rem
+    summary:
+        cursor = pointer
+    pre:
+        white-space = pre-wrap
+        overflow-wrap = anywhere
+        max-height = 240px
+        overflow = auto
+        background = #f4f7f1
+        border-radius = 8px
+        padding = 0.8rem
+        font-size = 0.7rem
+    .status:
+        padding = 0.8rem 1rem
+        margin = 1.25rem 0
+        background = #e6eee3
+        border-radius = 10px
+        font-size = 0.85rem
+    .footer:
+        font-size = 0.8rem
+        padding-bottom = 1rem

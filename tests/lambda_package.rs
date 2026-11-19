@@ -14,7 +14,7 @@ fn lambda_package_creates_zip_bundle() -> Result<(), Box<dyn std::error::Error>>
     // debug-symbol size and the size of the compiler used to run the test.
     let bootstrap = temp.path().join("bootstrap-fixture");
     fs::write(&bootstrap, b"test-bootstrap")?;
-    let rune_path = PathBuf::from("examples/book_graphql.rune");
+    let rune_path = PathBuf::from("examples/api/book_graphql.rune");
 
     let mut cmd = Command::new(&vectrune_bin);
     cmd.arg("lambda")

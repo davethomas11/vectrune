@@ -48,7 +48,7 @@ Once the binary exists, pass it to the CLI:
 ```bash
 vectrune lambda package \
   --binary dist/vectrune-lambda \
-  --rune examples/book_graphql.rune \
+  --rune examples/api/book_graphql.rune \
   --mode zip \
   --output dist/book-api-lambda.zip
 ```

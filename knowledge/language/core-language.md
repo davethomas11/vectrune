@@ -207,6 +207,57 @@ The runtime and parser support these common value categories:
 Inline objects and lists are used in runtime expressions as well as data definitions.
 For section key-value assignments, JSON-style object literals such as `player = { "x": 10 }` are parsed into map/object values rather than kept as raw strings.
 
+## Portable object syntax
+
+Extended `.vect` scripts, backend `.rune` `run:` blocks, Rune-Web actions and the
+browser emulator share these construction and lookup forms. Construction and
+reads also work in Rune-Web initial `@Logic` state; mutations belong in executable
+scripts, `run:` blocks or actions.
+
+```rune
+local batch = { id: i + 1, x: 10, stats: { hp: 3 } } * 3 inc x by 5
+actors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }
+id = 2
+actors[]id.stats.hp -= 1
+selected = actors[]id
+result = { actors, selected }
+```
+
+- `{ name, score }` means `{ name: name, score: score }`; explicit and shorthand
+  fields can be mixed and nested.
+- `{ template } * COUNT inc (x, start_x) by STEP with { overrides }` creates a
+  batch. `inc x` is accepted for one property. The template and overrides may use
+  zero-based `i`; increments apply before overrides. Counts are integers from 0
+  through 1,000,000 and steps are finite numbers.
+- `grid COLS x ROWS at (X, Y) step (DX, DY) with { overrides }` emits rows in
+  order with position, start position, column and row fields. Overrides may use
+  `i`, `row`/`r` and `col`/`c`. `from` is an alias for `at`.
+- `with { ... }` copies an object or overrides every object in an array;
+  `all { ... }` uses the same operation. Generated and overlaid batches expand
+  inside arrays; ordinary nested arrays stay nested. Copies have independent
+  nested data, so updates leave the template and other copies intact.
+- `objects[]id` selects the first object matching the current `id` binding;
+  numeric and string IDs compare by their string value. It supports reads,
+  replacements, nested writes and compound writes, including
+  `orders[]id.items[]sku.qty += 1`. Missing-match writes do nothing; use `??`
+  for a missing read's fallback.
+- `local` and `let` create bindings in the current execution scope. Rune-Web
+  initial-state locals are private templates and are omitted from public state.
+
+Backend construction fields support literals, paths, arithmetic, comparisons,
+booleans, nullish fallback and ternaries. Helper calls and other statements retain
+their host-specific support. Bare variable assignment retains each host's
+existing value/reference behavior.
+
+The searchable library and `man vectrune-language` document these forms under
+**object property shorthand**, **object replication**, **object grid**, **local
+templates**, **object overlays**, **matching object lookup** and **compound
+assignment**, all sourced from `knowledge/reference/library.json`.
+The shared examples are verified by `tests/conformance/objects.json`,
+`tests/conformance/object_programs.json` and `tests/object_syntax_parity.rs`.
+Runnable script, API and interactive web examples are in
+[`examples/language/objects/`](../../examples/language/objects/README.md).
+
 ## Execution model
 
 `run:` blocks are executed step-by-step.

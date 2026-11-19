@@ -25,7 +25,7 @@ async fn build_router_from_file(path: &str) -> Router {
 
 #[tokio::test]
 async fn test_book_graphql_queries() {
-    let app = build_router_from_file("examples/book_graphql.rune").await;
+    let app = build_router_from_file("examples/api/book_graphql.rune").await;
 
     // 1. Query all books
     let query = r#"{"query": "{ books { id title author_id published_year } }"}"#;
@@ -75,7 +75,7 @@ async fn test_book_graphql_queries() {
 async fn test_book_graphql_mutation() {
     set_log_level(LogLevel::Debug, true);
 
-    let app = build_router_from_file("examples/book_graphql.rune").await;
+    let app = build_router_from_file("examples/api/book_graphql.rune").await;
 
     let mutation = r#"{"query": "mutation { addBook(title: \"New Book\", author_id: 1, published_year: 2023) { id title } }"}"#;
     let req = Request::builder()

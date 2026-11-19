@@ -1,8 +1,8 @@
 // Headless Vect execution uses the same typed expressions as Rune-Web.
-import { parseCoreExpression, evaluateCoreExpression, coreFunctions, safeKey, type Expr } from './core_expression';
+import { parseCoreExpression, evaluateCoreExpression, assignCoreTarget, coreFunctions, type Expr } from './core_expression';
 type Stmt = Record<string, any>;
 type Scope = Record<string, any>;
-interface Host { print: (text: string) => void; read: () => string; write: (path: string, text: string) => void }
+interface Host { print: (text: string) => void; read: () => string; write: (path: string, text: string) => void; request?: (config: string, source: string, packet: string) => string }
 const text = (v: any): string => v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
 export function run(program: { statements: Stmt[] }, host: Host, scriptDir = '.'): void {
   const globals: Scope = { script_dir: scriptDir };
@@ -21,13 +21,7 @@ export function run(program: { statements: Stmt[] }, host: Host, scriptDir = '.'
     try { const value = expr(key, scope); return value === undefined ? match : text(value); } catch { return match; }
   });
   const assign = (target: string, value: any, scope: Scope) => {
-    const targetAst = ast(target);
-    if (targetAst.kind === 'id') { safeKey(targetAst.value); scope[targetAst.value] = value; return; }
-    if (targetAst.kind !== 'member') throw new Error('Invalid assignment target');
-    const parent = evaluateCoreExpression(targetAst.items[0], scope, functions);
-    const key = safeKey(evaluateCoreExpression(targetAst.items[1], scope, functions));
-    if (parent === undefined || parent === null) throw new Error(`Missing assignment receiver: ${target}`);
-    parent[key] = value;
+    assignCoreTarget(ast(target), value, scope, functions);
   };
   function block(stmts: Stmt[], scope: Scope): any {
     for (const stmt of stmts) {
@@ -48,7 +42,8 @@ export function run(program: { statements: Stmt[] }, host: Host, scriptDir = '.'
           case 'Expression': {
             let compiled = statements.get(s.source);
             if (!compiled) {
-              const m = s.source.match(/^([\w$]+(?:\.[\w$]+|\[[^\n]+\])*)\s*([+*/%-]?=)(?!=)\s*(.+)$/);
+              const source = s.source.replace(/^(?:local|let)\s+/, '');
+              const m = source.match(/^([\w$]+(?:\.[\w$]+|\[\][\w$]+|\[[^\n]+\])*)\s*([+*/%-]?=)(?!=)\s*([\s\S]+)$/);
               compiled = m
                 ? { target: m[1], value: ast(m[2] === '=' ? m[3] : `${m[1]} ${m[2][0]} (${m[3]})`) }
                 : { value: ast(s.source) };
@@ -121,6 +116,10 @@ export function run(program: { statements: Stmt[] }, host: Host, scriptDir = '.'
     } finally { depth--; }
   };
   functions['file.write'] = (path, contents) => host.write(String(path), text(contents));
+  functions['db.request'] = (config, source, packet) => {
+    if (!host.request) throw new Error('This Vect host does not provide storage access');
+    return JSON.parse(host.request(String(config), String(source), JSON.stringify(packet)));
+  };
   const flow = block(program.statements, globals);
   if (flow && flow.type !== 'stop') throw new Error(`${flow.type} outside action or loop`);
 }

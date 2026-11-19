@@ -7,7 +7,7 @@ mod reactivity_contract_test {
 
     #[test]
     fn test_reactivity_contract_rune_web_file() {
-        let path = Path::new("examples/reactivity-contract-rune-web.rune");
+        let path = Path::new("examples/rune-web/reactivity-contract-rune-web.rune");
         let result = load_rune_document_from_path(path);
 
         if let Err(ref e) = result {

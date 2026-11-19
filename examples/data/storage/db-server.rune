@@ -1,0 +1,9 @@
+#!RUNE
+import "data.rune"
+
+@App
+name = Rune DB Workshop
+type = rune-db
+source = main
+host = 127.0.0.1
+port = 7331

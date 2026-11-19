@@ -9,7 +9,7 @@ view:
             
             p .showcase-try "%i18n.Studio.try_it%"
 
-        WebExample title="{i18n.Studio.title}" preview="{preview ../../../examples/rune_studio/rune_studio.rune}" files="{sources ../../../examples/rune_studio/rune_studio.rune}" show_heading=false
+        WebExample title="{i18n.Studio.title}" preview="{preview ../../../examples/rune-web/studio/rune_studio.rune}" files="{sources ../../../examples/rune-web/studio/rune_studio.rune}" show_heading=false
 
         details .card .showcase-notes:
             summary "%i18n.Guide.how_it_works%"
@@ -31,4 +31,4 @@ view:
             p "🎵 %i18n.Studio.instructions_songs%"
             p "💾 %i18n.Studio.instructions_storage%"
 
-        RunExampleLocally example="rune_studio"
+        RunExampleLocally example="rune_studio" source="examples/rune-web/studio/rune_studio.rune"

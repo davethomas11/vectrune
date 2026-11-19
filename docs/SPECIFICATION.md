@@ -30,6 +30,7 @@ A Vectrune source file is UTF-8 encoded text. An optional shebang may appear as 
 - **Collections**:
   - Array literals: `[1, 2, "three", true]`.
   - Object / Map literals: `{ "x": 10, "y": 20 }` or `{ x: 10, y: 20 }`.
+  - Object property shorthand: `{ name, score }` means `{ name: name, score: score }`.
 
 ---
 
@@ -152,7 +153,49 @@ Declarative replication of data items:
 - 1D Generator: `{ template } * N inc (props) by STEP with { overrides }`
 - 2D Grid: `grid COLS x ROWS at (X, Y) step (DX, DY) with { overrides }`
 - Local Templates: `local template_name = { ... }`
-- Batch Modifiers: `all { prop = val }`
+- Batch Modifiers: `all { prop: val }`
+
+### 4.6 Portable object construction and lookup (2026-11-18)
+
+Object construction works in extended `.vect` scripts, backend `.rune` `run:`
+blocks, Rune-Web actions and initial `@Logic` state, and the browser emulator.
+Mutations belong in executable scripts, `run:` blocks or actions. Object fields
+use `:`. Names resolve from the current scope.
+
+```rune
+local batch = { id: i + 1, x: 10, stats: { hp: 3 } } * 3 inc x by 5
+actors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }
+id = 2
+actors[]id.stats.hp -= 1
+selected = actors[]id
+result = { actors, selected }
+```
+
+- Replication accepts `inc x` or `inc (x, start_x)`. The template and optional
+  `with { ... }` overrides can use the zero-based `i`; increments apply before
+  overrides. Counts are integers from 0 through 1,000,000; steps are finite numbers.
+- `grid COLS x ROWS at (X, Y) step (DX, DY) with { ... }` emits rows in order,
+  with `x`, `y`, `start_x`, `start_y`, `col`, and `row` fields. Overrides can use
+  `i`, `row`/`r`, and `col`/`c`. `from` is an alias for `at`.
+- `template with { ... }` copies an object or overlays every object in an array.
+  `all { ... }` is the same overlay operation. Generated batches and overlay
+  arrays expand inside array literals; ordinary nested arrays stay nested.
+- Generated objects and overlays copy nested data, so later updates do not
+  change the template or other copies. Bare variable assignment retains the
+  host's existing value/reference behavior.
+- `objects[]id` selects the first object whose `id` matches the scope's `id`.
+  Numeric and string IDs compare by their string value. Reads can use `??` for
+  a missing match; writes and compound writes to missing matches do nothing.
+  Lookups can nest, as in `orders[]id.items[]sku.qty += 1`.
+- `local` and `let` declare a binding in the current execution scope. Rune-Web
+  initial-state locals remain private templates and are omitted from public state.
+
+Portability covers these construction forms. Backend field expressions support
+literals, paths, arithmetic, comparisons, booleans, nullish fallback
+and ternaries. UI, game and filesystem adapters remain
+specific to their hosts; arbitrary helper calls and statements have their host's
+existing support. The fixtures in `tests/conformance/objects.json` and
+`object_programs.json` cover both values and mutation behavior across hosts.
 
 ## 5. Shared Expression / Vect Implementation Slice (2026-11-14)
 
@@ -160,9 +203,18 @@ Declarative replication of data items:
 precedence table above. Native extended `.vect` scripts embed the same evaluator
 used by Rune-Web; they do not use JavaScript `eval` for user expressions. Parsed
 expressions and assignment targets are cached for reuse. The JSON fixtures in
-`tests/conformance/expressions.json` run against both native Vect execution and
-the Rune-Web evaluator. This is an implementation slice, not a claim that every
-runtime implements the full draft.
+`tests/conformance/expressions.json` run against native Vect execution, Rune-Web
+and the browser emulator. This is an implementation slice, not a claim that
+every runtime implements the full draft.
+
+The browser emulator uses the same parser for supported expressions, with a
+bounded cache of compiled expressions evaluated against each request's current
+scope. This aligns precedence, unary operators, nullish fallback, ternaries,
+math helpers and explicit-lambda collection pipelines such as
+`items.filter(n => n > 2).map(n => n * 2)`. Its existing bare-text values and
+helper shorthand (`items.find it.id == 1`, `full`, `swap`, `mask`) retain the
+legacy evaluator. This does not add Rune-Web UI, game or statement features to
+the emulator.
 
 Extended Vect supports `action name(params):` and `return expression`, local
 action assignments, reference-valued array/object parameters, `for item, index
@@ -176,8 +228,10 @@ The native adapter supplies `file.write(path, text)` and `script_dir`. Relative
 output paths resolve beside the source script; absolute paths are preserved.
 Browser runtimes do not receive filesystem access from the common evaluator.
 Legacy-only Vect programs, including line jumps, retain their original executor.
-Rust backend steps, emulator expressions, imports, state generators and the REPL
-still need the migrations described in `LANGUAGE_PARITY_ROADMAP.md`.
+Backend object construction uses the portable Rust evaluator in
+`src/object_syntax.rs`, also used for Rune-Web initial state. The rest of the
+backend expression engine, imports and the REPL still need the migrations
+described in `LANGUAGE_PARITY_ROADMAP.md`.
 
 ### Pixel-3D map starts
 

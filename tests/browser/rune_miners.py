@@ -12,7 +12,7 @@ from rune_web_guide import QuietHandler
 ROOT = Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory(prefix="rune-miners-") as folder, sync_playwright() as pw, ExitStack() as cleanup:
     html = subprocess.run(
-        [str(ROOT / "target/debug/vectrune"), str(ROOT / "examples/rune_miners/rune_miners.rune"), "-o", "html"],
+        [str(ROOT / "target/debug/vectrune"), str(ROOT / "examples/games/rune_miners/rune_miners.rune"), "-o", "html"],
         capture_output=True, text=True, check=True,
     ).stdout
     game_file = Path(folder) / "game.html"

@@ -1,0 +1,96 @@
+#!RUNE
+# Run: vectrune examples/language/objects/objects-web.rune
+# Open http://localhost:3000/ or export with -o html.
+
+@App
+name = Portable Objects Playground
+type = REST
+port = 3000
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = objects
+
+@Page/objects
+title = Portable Objects Playground
+logic = objects
+style = objects
+view:
+    main .workshop:
+        p .eyebrow "ONE SYNTAX, THREE HOSTS"
+        h1 "Object workshop"
+        p "{profile.name}: {profile.copies} actor copies from one local template."
+        div .controls:
+            button click="select(1)" "Select ID 1"
+            button click="select(2)" "Select ID 2"
+            button click="select(3)" "Select ID 3"
+            button click="select(99)" "Select missing ID"
+        p "Selected ID: {id}. HP: {actors[]id.stats.hp ?? 'no match'}"
+        div .controls:
+            button click="damage()" "Damage first match"
+            button click="reset()" "Reset actors"
+        p "Original template ID 2 still has {original[1].stats.hp} HP."
+        h2 "Generated actors"
+        p "IDs repeat in the second row. Only the first matching object changes."
+        ul:
+            for actor in actors:
+                li "ID {actor.id} | x={actor.x}, y={actor.y} | HP {actor.stats.hp}"
+        h2 "Grid generator"
+        ul:
+            for slot in slots:
+                li "Slot {slot.id} | column {slot.col}, row {slot.row} | tier {slot.tier}"
+
+@Logic/objects
+state:
+    local batch = { id: i + 1, x: 10, stats: { hp: 3 } } * 3 inc x by 5
+    actors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }
+    original = batch with {}
+    id = 2
+    name = "Workshop"
+    profile = { name, copies: actors.length }
+    slots = grid 2 x 2 at (10, 20) step (5, 15) with { id: i + 1, tier: row + 1 }
+
+action select(next_id):
+    id = next_id
+
+action damage:
+    if actors[]id.stats.hp > 0:
+        actors[]id.stats.hp -= 1
+
+action reset:
+    local batch = { id: i + 1, x: 10, stats: { hp: 3 } } * 3 inc x by 5
+    actors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }
+    id = 2
+
+@Style/objects
+rules:
+    body:
+        margin = 0
+        font-family = system-ui, sans-serif
+        background = #f3f5f7
+        color = #182637
+    .workshop:
+        max-width = 760px
+        margin = 2rem auto
+        padding = 1.5rem
+        background = white
+        border-radius = 16px
+    .eyebrow:
+        font-size = 0.75rem
+        letter-spacing = 0.12em
+        color = #405b76
+    .controls:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.5rem
+        margin = 1rem 0
+    button:
+        padding = 0.65rem 0.9rem
+        border = 0
+        border-radius = 8px
+        background = #244d74
+        color = white
+        cursor = pointer
+    li:
+        padding = 0.3rem 0

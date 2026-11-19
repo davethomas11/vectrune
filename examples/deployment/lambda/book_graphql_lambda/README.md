@@ -10,12 +10,12 @@ This example demonstrates how to use VectRune to expose a Book API with GraphQL 
 
 ### Local
 ```
-vectrune examples/lambda/book_graphql_lambda/book_graphql_lambda.rune --port 4000
+vectrune examples/deployment/lambda/book_graphql_lambda/book_graphql_lambda.rune --port 4000
 ```
 
 ### Lambda Packaging
 ```
-vectrune lambda package --rune-path examples/lambda/book_graphql_lambda/book_graphql_lambda.rune --output dist/book_graphql_lambda.zip --mode zip
+vectrune lambda package --rune-path examples/deployment/lambda/book_graphql_lambda/book_graphql_lambda.rune --output dist/book_graphql_lambda.zip --mode zip
 ```
 
 ### Lambda Deployment (SAM CLI)

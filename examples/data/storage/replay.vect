@@ -1,0 +1,15 @@
+#!VECT
+# Run checkout.vect first. Keep a cursor on disk to resume between invocations.
+# Start from zero if this is the first consumer run; cursor positions are strings.
+packet = { op: "get", collection: "consumers", key: "purchase-printer" }
+saved = db.request("local.rune", "main", packet)
+after = saved.value.after ?? "0"
+packet = { op: "read", stream: "purchases", after, limit: 20 }
+page = db.request("local.rune", "activity", packet)
+for event in page.events:
+    stdio -> "Purchase {event.sequence}: {json.stringify(event.value)}"
+
+# Save only after processing this bounded page. Repeat to consume another page.
+packet = { op: "put", collection: "consumers", key: "purchase-printer", value: { after: page.next } }
+saved = db.request("local.rune", "main", packet)
+stdio -> "Resume after: {page.next}; events this page: {page.events.length}"

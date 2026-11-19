@@ -153,7 +153,7 @@ LanguageTour {
 Walkthrough {
     eyebrow = "Exemple guidé"
     headline = "Explorez une API sauvegardée par la mémoire"
-    description = "L'exemple examples/memory_api.rune enseigne le démarrage de l'application, la validation du schéma et les routes REST."
+    description = "L'exemple examples/data/memory/memory_api.rune enseigne le démarrage de l'application, la validation du schéma et les routes REST."
     step1_title = "1. Initialisez l'état de l'application"
     step1_code = "@App\nname = API d'exemple de mémoire\nversion = 1.0\ntype = REST\nrun:\n    skaters = load-rune skateboarders.rune\n    set-memory skaters"
     step1_desc = "Chargez les données de démarrage au démarrage et conservez-les en mémoire pour les routes ultérieures."
@@ -173,19 +173,19 @@ Examples {
     eyebrow = "Exemples de démarrage"
     headline = "Choisissez le prochain bon exemple"
     app_level = "Débutant"
-    app_title = "examples/app.rune"
+    app_title = "examples/beginner/app.rune"
     app_desc = "La plus petite application complète. Le meilleur premier arrêt pour comprendre @App, @Route et run:."
     skaters_level = "Débutant"
-    skaters_title = "examples/skateboarders.rune"
+    skaters_title = "examples/beginner/skateboarders.rune"
     skaters_desc = "Un document de données à faible surcharge cognitive pour apprendre les enregistrements, les entrées répétées et les flux de travail de transformation."
     user_api_level = "Pratique"
-    user_api_title = "examples/user_api.rune"
+    user_api_title = "examples/api/user_api.rune"
     user_api_desc = "Un exemple REST plus robuste avec schémas, routes de style CRUD, validation et paramètres de route."
     graphql_level = "Pratique"
-    graphql_title = "examples/book_graphql.rune"
+    graphql_title = "examples/api/book_graphql.rune"
     graphql_desc = "Apprenez les requêtes et mutations GraphQL avec un état sauvegardé en mémoire et une forme d'application compacte."
     tic_level = "Avancé"
-    tic_title = "examples/tic_tac_toe/"
+    tic_title = "examples/games/tic_tac_toe/"
     tic_desc = "Un exemple Rune-Web divisé en parties UI, logique et style. Bon une fois que les bases vous semblent naturelles."
     lab_eyebrow = "Exemples interactifs"
     lab_title = "Laboratoire d’exemples"
@@ -240,7 +240,7 @@ WhatsNext {
     intent_text = "Le bac à sable utilise un émulateur JavaScript pour REST, les documents et GraphQL. Les aperçus Rune-Web sont compilés depuis les exemples du dépôt. Utilisez le CLI natif pour les serveurs et le système de fichiers."
 }
 Sandbox {
-    dynamic_ai_native = "Les sites IA dynamiques nécessitent le serveur natif et un moteur IA. Lancez cargo run -- examples/dynamic_ai_web.rune pour essayer le café."
+    dynamic_ai_native = "Les sites IA dynamiques nécessitent le serveur natif et un moteur IA. Lancez cargo run -- examples/rune-web/dynamic_ai_web.rune pour essayer le café."
     edit_hint = "Ce bac à sable simule les requêtes dans le navigateur. Appliquez le code, choisissez un point de terminaison et appuyez sur Envoyer la requête."
     run = "Appliquer le code"
     run_changes = "Appliquer les modifications"
@@ -664,7 +664,7 @@ Developer {
     logic_title = "Tests de logique JavaScript · 0.3.4"
     logic_text = "Utilisez type = logic et page = studio pour tester les vraies actions Rune-Web. invoke appelle une action avec des arguments JSON facultatifs ; assert vérifie l’état, les valeurs dérivées ou les effets simulés. Les deux moteurs fonctionnent ensemble par défaut. Chaque test de logique reçoit un nouvel environnement JavaScript, avec setup et teardown facultatifs."
     logic_limits = "Ce premier moteur prend en charge les actions synchrones. DOM et mise en page, temporisateurs, tâches asynchrones, réseau simulé et fixtures de logique partagées restent à venir. Utilisez le script Playwright pour les interactions réelles du navigateur. Les exemples suivants se lancent depuis le dépôt Vectrune."
-    cmd_12 = "vectrune test examples/rune_studio\nvectrune test examples/rune_studio --type logic --json"
+    cmd_12 = "vectrune test examples/rune-web/studio\nvectrune test examples/rune-web/studio --type logic --json"
 }
 
 MonsterCity {

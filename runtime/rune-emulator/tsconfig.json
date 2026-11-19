@@ -9,10 +9,17 @@
     "noImplicitReturns": true,
     "esModuleInterop": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "ESNext.Disposable"
+    ]
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": [
+    "src/**/*",
+    "tests/**/*"
+  ]
 }

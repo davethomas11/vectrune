@@ -1,0 +1,18 @@
+#!RUNE
+# Split-server frontend. Start database.rune with --secondary-app or separately.
+import "ui.rune"
+
+@App
+name = Shared Rune DB notes (split server)
+type = REST
+host = 127.0.0.1
+port = 3000
+
+@DataSource/server
+type = rune-db
+mode = remote
+endpoint = http://127.0.0.1:7333
+
+@DataSource/activity
+type = vect-event
+store = server

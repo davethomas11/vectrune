@@ -46,7 +46,7 @@ probe.rms = () => {
 with tempfile.TemporaryDirectory(prefix='rune-pixel-audio-') as folder, sync_playwright() as playwright:
     folder = Path(folder)
     for source, name in [('monster_city.rune','game'), ('custom_shell.rune','shell')]:
-        result = subprocess.run([str(ROOT/'target/debug/vectrune'), str(ROOT/'examples/monster_city'/source), '-o','html'], capture_output=True, text=True, check=True)
+        result = subprocess.run([str(ROOT/'target/debug/vectrune'), str(ROOT/'examples/games/monster_city'/source), '-o','html'], capture_output=True, text=True, check=True)
         (folder/f'{name}.html').write_text(result.stdout, encoding='utf-8')
     browser = playwright.chromium.launch()
     page = browser.new_page(viewport={'width':1365,'height':1000})

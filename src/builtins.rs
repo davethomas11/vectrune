@@ -63,7 +63,7 @@ pub fn is_builtin(name: &str) -> bool {
     let ws_builtins: [&str; 0] = [];
 
     #[cfg(not(target_arch = "wasm32"))]
-    let db_builtins = ["datasource"];
+    let db_builtins = ["datasource", "db", "events"];
     #[cfg(target_arch = "wasm32")]
     let db_builtins: [&str; 0] = [];
 
@@ -133,6 +133,21 @@ pub async fn call_builtin(
     app_state: &AppState,
     assign_to: Option<&str>,
 ) -> BuiltinResult {
+    #[cfg(not(target_arch = "wasm32"))]
+    if matches!(name, "db" | "events") {
+        let result: anyhow::Result<JsonValue> = async {
+            anyhow::ensure!(args.len() == 2, "{name} requires a datasource name and a packet variable");
+            let packet = crate::core::resolve_path(ctx, &args[1], None).ok_or_else(|| anyhow::anyhow!("unknown storage packet: {}", args[1]))?;
+            let request = serde_json::from_value(packet)?;
+            let provider = crate::storage::provider::Provider::from_state(app_state, &args[0])?;
+            anyhow::ensure!(provider.events_only == (name == "events"), "use db with rune-db and events with vect-event");
+            provider.request(request).await
+        }.await;
+        return match result {
+            Ok(value) => { ctx.insert(assign_to.unwrap_or(LAST_EXEC_RESULT).to_string(), value.clone()); ctx.insert(LAST_EXEC_RESULT.into(), value); BuiltinResult::Ok }
+            Err(error) => BuiltinResult::Error(error.to_string()),
+        };
+    }
     #[cfg(not(target_arch = "wasm32"))]
     if matches!(name, "assert" | "test-request") {
         return crate::cli::testing::call(name, args, ctx, assign_to).await;

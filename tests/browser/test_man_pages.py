@@ -19,6 +19,22 @@ SCRIPT = ROOT / 'teaching_website/generate_man_pages.vect'
 
 
 class ManPageTests(unittest.TestCase):
+    def test_portable_object_examples_are_runnable(self):
+        topics = {'object-property-shorthand', 'object-replication', 'object-grid',
+                  'local-templates', 'object-overlays', 'matching-object-lookup',
+                  'compound-assignment'}
+        catalog = json.loads((ROOT / 'knowledge/reference/library.json').read_text())
+        examples = [entry for entry in catalog['entries'] if entry['id'] in topics]
+        self.assertEqual(len(examples), len(topics))
+        with tempfile.TemporaryDirectory() as folder:
+            for entry in examples:
+                with self.subTest(topic=entry['id']):
+                    source = Path(folder, entry['id'] + '.vect')
+                    source.write_text(entry['example'] + '\nstdio -> "example complete"\n')
+                    result = subprocess.run([str(BINARY), str(source)], text=True,
+                                            capture_output=True, check=True, cwd=folder)
+                    self.assertEqual(result.stdout.strip(), 'example complete')
+
     def test_reference_details_and_roff_escaping(self):
         entry = dict(
             name='sample', category='native', signature='sample <value>',
@@ -61,6 +77,20 @@ class ManPageTests(unittest.TestCase):
             self.assertIn('Runtime: Native / server', language)
             self.assertIn('Runtime: Rune\\-Web', language)
             self.assertIn('Implementation:', language)
+            self.assertIn('DATABASE AND EVENT EXAMPLES', cli)
+            self.assertIn('secondary\\-app', cli)
+            self.assertIn('single\\-server.rune', language)
+            self.assertIn('allow_origins', language)
+            self.assertIn('Run a server\\-side database with Rune\\-Web', language)
+            self.assertIn('purchase.completed', language)
+            self.assertIn('Replayed the first page of server events', language)
+            for topic in ['object property shorthand', 'object replication', 'object grid',
+                          'local templates', 'object overlays', 'matching object lookup',
+                          'compound assignment']:
+                self.assertIn('\\&' + topic, language)
+            self.assertIn('orders[]id.items[]sku.qty += 4', language)
+            self.assertIn('Missing\\-match writes and compound writes do nothing.', language)
+            self.assertIn('Runtime: Vect scripts / backend Rune / Rune\\-Web / browser emulator', language)
             if shutil.which('mandoc'):
                 subprocess.run(['mandoc', '-Tlint', *map(str, pages)], check=True)
 

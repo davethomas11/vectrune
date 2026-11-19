@@ -77,7 +77,7 @@ def check(base, screenshots):
         page.goto(base + '/developer_testing/')
         expect(page.locator('main')).to_contain_text('invoke changeTempo 4')
         expect(page.locator('main')).to_contain_text('mock.downloads[0].filename')
-        expect(page.locator('main')).to_contain_text('vectrune test examples/rune_studio --type logic --json')
+        expect(page.locator('main')).to_contain_text('vectrune test examples/rune-web/studio --type logic --json')
         for locale, label, lang in [('es', 'Español', 'es'), ('fr', 'Français', 'fr'), ('', 'English', 'en-us')] * 2:
             page.locator('.language-summary').click()
             page.locator('.language-link', has_text=label).click()

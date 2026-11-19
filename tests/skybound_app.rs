@@ -3,7 +3,7 @@ use std::path::Path;
 
 #[test]
 fn skybound_runs_and_renders_in_the_shared_desktop_runtime() {
-    let doc = load_rune_document_from_path(Path::new("examples/skybound/skybound.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/skybound/skybound.rune")).unwrap();
     let game = pixel3d::compile(&doc).unwrap();
     assert_eq!(game.config["camera"], "camera");
     assert_eq!(game.config["mouseLook"], false);

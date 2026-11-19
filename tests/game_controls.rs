@@ -7,8 +7,8 @@ use std::path::Path;
 #[test]
 fn exported_games_share_controls_with_native_quickjs() {
     for (path, is_3d, action) in [
-        ("examples/monster_city/monster_city.rune", false, "smash"),
-        ("examples/vect_breach/vect_breach.rune", true, "fire"),
+        ("examples/games/monster_city/monster_city.rune", false, "smash"),
+        ("examples/games/vect_breach/vect_breach.rune", true, "fire"),
     ] {
         let doc = load_rune_document_from_path(Path::new(path)).unwrap();
         let script = if is_3d {
@@ -50,7 +50,7 @@ fn exported_games_share_controls_with_native_quickjs() {
 #[test]
 fn scenes_without_profiles_retain_the_legacy_configuration() {
     let mut doc =
-        load_rune_document_from_path(Path::new("examples/vect_breach/vect_breach.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/vect_breach/vect_breach.rune")).unwrap();
     let scene = doc
         .sections
         .iter_mut()

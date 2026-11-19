@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse, createApp, toDocument } from '../src/index';
 
-const source = readFileSync(new URL('../../../examples/book_graphql.rune', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../../../examples/api/book_graphql.rune', import.meta.url), 'utf8');
 const makeApp = () => createApp(parse(source));
 
 describe('GraphQL execution', () => {

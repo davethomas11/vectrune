@@ -29,6 +29,16 @@ pub async fn build_app_router(state: AppState) -> Router {
         "REST" => build_rest_router(state).await,
         "STATIC" => build_static_router(state).await,
         "DYNAMIC-AI-WEB" => dynamic_ai_web::build_dynamic_ai_web_router(state).await,
+        "RUNE-DB" | "VECT-EVENT" => match crate::storage::server::router(state.clone()) {
+            Ok(router) => {
+                if state.doc.get_section("Frontend").and_then(|s| s.kv.get("type")).and_then(|v| v.as_str()) == Some("rune-web") {
+                    router.merge(rune_web::build_rune_web_router(state).await)
+                } else {
+                    router
+                }
+            },
+            Err(error) => { let error = error.to_string(); Router::new().fallback(move || { let message = error.clone(); async move { (axum::http::StatusCode::INTERNAL_SERVER_ERROR, message) } }) },
+        },
         other => {
             use axum::{routing::any};
             let other_owned = other.to_string();
@@ -40,7 +50,7 @@ pub async fn build_app_router(state: AppState) -> Router {
                         (
                             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                             format!(
-                                "Unsupported App type: {}. Supported types: REST, GRAPHQL, STATIC, DYNAMIC-AI-WEB, PIXEL, PIXEL-3D.",
+                                "Unsupported App type: {}. Supported types: REST, GRAPHQL, STATIC, DYNAMIC-AI-WEB, PIXEL, PIXEL-3D, RUNE-DB, VECT-EVENT.",
                                 other
                             ),
                         )
@@ -82,5 +92,5 @@ pub async fn build_vectrune_router(
 
 /// Returns true if the app type is supported for server launch
 pub fn app_type_supported(app_type: &str) -> bool {
-    matches!(app_type.to_uppercase().as_str(), "REST" | "GRAPHQL" | "STATIC" | "DYNAMIC-AI-WEB" | "PIXEL" | "PIXEL-3D")
+    matches!(app_type.to_uppercase().as_str(), "REST" | "GRAPHQL" | "STATIC" | "DYNAMIC-AI-WEB" | "PIXEL" | "PIXEL-3D" | "RUNE-DB" | "VECT-EVENT")
 }

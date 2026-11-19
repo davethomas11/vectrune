@@ -4,7 +4,7 @@ use std::path::Path;
 #[test]
 fn compiles_voxel_scene_and_rejects_unknown_world_binding() {
     let mut doc =
-        load_rune_document_from_path(Path::new("examples/rune_miners/rune_miners.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/rune_miners/rune_miners.rune")).unwrap();
     let game = pixel3d::compile(&doc).unwrap();
     assert_eq!(game.config["world"], "world");
     assert_eq!(game.config["controls"]["touch"]["look"]["y"], "look_y");
@@ -30,7 +30,7 @@ fn compiles_voxel_scene_and_rejects_unknown_world_binding() {
 #[cfg(feature = "pixel-desktop")]
 fn quickjs_voxel_framebuffer_and_turn_battle_work_without_a_browser() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/rune_miners/rune_miners.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/rune_miners/rune_miners.rune")).unwrap();
     let game = pixel3d::compile(&doc).unwrap();
     let runtime = rquickjs::Runtime::new().unwrap();
     let context = rquickjs::Context::full(&runtime).unwrap();

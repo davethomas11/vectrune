@@ -1,0 +1,154 @@
+#!RUNE
+# Shared by the same-server and split-server entrypoints.
+import "style.rune"
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = notes
+
+@Page/notes
+title = Rune DB · Shared notes workshop
+style = notes
+logic = notes
+view:
+    main .workshop:
+        header .intro:
+            p .eyebrow "RUNE DB / INTERACTIVE WORKSHOP"
+            h1 "One note. A shared source of truth."
+            p .lead "Write in this browser. Read it from another. Your Rune server keeps the note and its history."
+            div .connection:
+                span .connection-dot aria-hidden=true "●"
+                span "This browser → Rune server → database file"
+        div .layout:
+            section .panel:
+                div .section-heading:
+                    span .step "01"
+                    div:
+                        h2 "Write a note"
+                        p .muted "Save first, then try the counter or open another browser."
+                label for=note-title "Note title"
+                input #note-title type=text value="{draft}" change="setDraft(this.value)" maxlength=200
+                div .actions:
+                    button .primary disabled="{busy}" click="save()" "Save note"
+                    button .secondary disabled="{busy}" click="load()" "Load note"
+                p .hint "Save replaces this demo note and resets its views to zero. Load reads the latest version from the server."
+                div .saved-note:
+                    p .eyebrow "ON THE SERVER"
+                    p .saved-title "Saved title: {title}"
+                    div .counter-row:
+                        p .counter "Views: {views}"
+                        button .secondary disabled="{busy || !hasNote}" click="incrementViews()" "Add one view"
+                    p .hint "Each click adds one on the server, even when other browsers are updating it."
+                    p .commit "Last commit: {lastCommit}"
+            section .panel:
+                div .section-heading:
+                    span .step "02"
+                    div:
+                        h2 "Follow the history"
+                        p .muted "Saving a note also records an event in the same commit."
+                div .actions:
+                    button .primary disabled="{busy}" click="readEvents()" "Read new events"
+                    button .secondary disabled="{busy}" click="replayEvents()" "Replay events"
+                p .hint "Read advances one page. Replay starts at the beginning. Each page holds up to 20 events."
+                div .stream-meta:
+                    span "Resume after: {cursor}"
+                    span "Events in this page: {eventItems.length}"
+                if eventItems.length == 0:
+                    div .empty-state:
+                        h3 "No events in this page"
+                        p "Save a note, then read its event. Use Replay events to revisit earlier saves."
+                for event in eventItems:
+                    article .event-card:
+                        div .event-heading:
+                            strong "{event.kind}"
+                            span .event-sequence "#{event.sequence}"
+                        p "{event.value.title}"
+                        p .hint "Commit {event.commit} · note {event.value.key}"
+                details .raw-data:
+                    summary "Inspect the response data"
+                    pre "{eventText}"
+        p .status role=status aria-live=polite "{status}"
+        footer .footer:
+            p "Try it: save → add a view → reload → load. Open a second browser to read the same note."
+            p "Notes and events survive reloads. The event cursor belongs to this tab and resets on reload."
+
+@Logic/notes
+state:
+    draft = "Hello from Rune-Web"
+    title = "No note loaded"
+    views = 0
+    status = "Save a note to start"
+    busy = false
+    hasNote = false
+    lastCommit = "No commit yet"
+    eventItems = []
+    cursor = "0"
+    eventText = "No events read"
+
+action setDraft(value):
+    draft = value
+
+action save:
+    busy = true
+    status = "Saving the note and its event..."
+    operations = [
+        { op: "put", collection: "notes", key: "hello", value: { title: draft, views: 0 } },
+        { op: "append", stream: "notes", kind: "note.saved", value: { key: "hello", title: draft } }
+    ]
+    packet = { op: "batch", operations }
+    receipt = db server packet catch failed
+    busy = false
+    hasNote = true
+    lastCommit = receipt.commit
+    title = receipt.results[0].value.title
+    views = receipt.results[0].value.views
+    status = "Note and event committed together on the server"
+
+action load:
+    busy = true
+    status = "Loading the shared note..."
+    packet = { op: "get", collection: "notes", key: "hello" }
+    record = db server packet catch failed
+    busy = false
+    hasNote = record != null
+    lastCommit = record.revision ?? "No commit yet"
+    title = record.value.title ?? "No saved note"
+    views = record.value.views ?? 0
+    status = record ? "Loaded from server" : "No saved note yet. Save one to begin."
+
+action incrementViews:
+    busy = true
+    status = "Updating the view counter..."
+    packet = { op: "increment", collection: "notes", key: "hello", path: ["views"], by: 1 }
+    receipt = db server packet catch failed
+    busy = false
+    lastCommit = receipt.commit
+    views = receipt.results[0].patch.value
+    status = "View count incremented atomically on the server"
+
+action readEvents:
+    busy = true
+    status = "Reading the event stream..."
+    packet = { op: "read", stream: "notes", after: cursor, limit: 20 }
+    page = events activity packet catch failed
+    busy = false
+    eventItems = page.events
+    cursor = page.next
+    eventText = json.stringify(page.events)
+    status = "Read one page of server events"
+
+action replayEvents:
+    busy = true
+    status = "Reading the event stream..."
+    packet = { op: "read", stream: "notes", after: "0", limit: 20 }
+    page = events activity packet catch failed
+    busy = false
+    eventItems = page.events
+    cursor = page.next
+    eventText = json.stringify(page.events)
+    status = "Replayed the first page of server events"
+
+action failed(error):
+    busy = false
+    status = error.message

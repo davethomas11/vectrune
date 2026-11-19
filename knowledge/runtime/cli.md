@@ -14,6 +14,11 @@ Common entrypoints include:
 - `vectrune <script.rune> --merge-with <spec>`
 - `vectrune --ai <prompt>`
 
+Experimental persistent storage commands are `vectrune db` and `vectrune events`.
+They support direct files, named datasource configuration and remote standalone
+servers. See [Rune DB and Vect Event](storage.md) and
+[`examples/data/storage/`](../../examples/data/storage/README.md).
+
 ## Offline manuals
 
 Release archives include `man/man1/vectrune.1` and
@@ -30,6 +35,12 @@ content selection and roff escaping execute in `.vect`. The language manual
 uses `knowledge/reference/library.json` plus extracted frontend command metadata;
 the CLI manual uses the binary's recursively collected help. Runtime labels,
 examples, parameters, defaults and limitations are retained.
+
+`man vectrune-language` includes portable object property shorthand, replication
+and grid generators, local templates, `with`/`all` overlays, `objects[]id`
+lookup/update syntax and compound assignments. The website's **Language and
+documents** library chapter uses the same entries and examples, including runtime
+availability, independent-copy behavior and missing-match rules.
 
 From a checkout with a built CLI:
 
@@ -81,6 +92,7 @@ Current top-level flags include:
 - `--model` — select the model for `--ai`
 - `--host` — override app host for server runtimes
 - `-p`, `--port` — override app port for server runtimes
+- `--secondary-app <RUNE_PATH>` — launch an independent HTTP app alongside the primary; repeat for more apps. Each uses its configured port. Host/port overrides apply only to the primary. Ctrl-C stops the group; `--watch` reloads it. Export/transform/script execution flags cannot be combined with this option.
 - `-w`, `--watch` — watch for file changes and automatically restart the server (development mode)
 
 ## Merging documents with `--merge-with`
@@ -133,8 +145,8 @@ opaque view/style/source blocks can exceed the target width.
 For example, format Rune Crypt's touch controls with:
 
 ```bash
-vectrune fmt examples/rune_crypt --line-width 100
-vectrune fmt examples/rune_crypt --check
+vectrune fmt examples/games/rune_crypt --line-width 100
+vectrune fmt examples/games/rune_crypt --check
 ```
 
 The limit is a target, not a hard cap: individual strings, comments, expressions,

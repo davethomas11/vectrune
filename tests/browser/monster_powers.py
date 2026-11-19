@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[2]
 QUIET="""const g=__RunePixel,s=g.app.state; s.profile.level=15;s.profile.seed=42;g.start();s.soldiers=[];s.tanks=[];s.aircraft=[];s.next_drop=999999;for(const b of s.buildings)b.hp=1000;"""
 with tempfile.TemporaryDirectory(prefix='monster-powers-') as folder, sync_playwright() as pw:
     game=Path(folder)/'game.html'
-    result=subprocess.run([str(ROOT/'target/debug/vectrune'),str(ROOT/'examples/monster_city/monster_city.rune'),'-o','html'],capture_output=True,text=True,check=True)
+    result=subprocess.run([str(ROOT/'target/debug/vectrune'),str(ROOT/'examples/games/monster_city/monster_city.rune'),'-o','html'],capture_output=True,text=True,check=True)
     game.write_text(result.stdout,encoding='utf-8')
     browser=pw.chromium.launch();page=browser.new_page(viewport={'width':1200,'height':1000})
     errors=[];page.on('pageerror',lambda e:errors.append(str(e)))

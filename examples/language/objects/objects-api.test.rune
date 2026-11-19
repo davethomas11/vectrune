@@ -1,0 +1,26 @@
+#!RUNE
+import "objects-api.rune"
+
+@Test/Objects/MatchingActor
+run:
+    request = { path: "/objects/2" }
+    response = test-request request
+    assert response.status == 200
+    assert response.body.profile.name == "Workshop"
+    assert response.body.profile.copies == 6
+    assert response.body.selected.id == 2
+    assert response.body.selected.stats.hp == 2
+    assert response.body.actors[1].stats.hp == 2
+    assert response.body.actors[4].stats.hp == 3
+    assert response.body.original[1].stats.hp == 3
+    assert response.body.slots.length == 4
+    assert response.body.slots[3].tier == 2
+
+@Test/Objects/MissingActor
+run:
+    request = { path: "/objects/99" }
+    response = test-request request
+    assert response.status == 200
+    assert response.body.selected == null
+    assert response.body.actors[1].stats.hp == 3
+    assert response.body.actors[4].stats.hp == 3

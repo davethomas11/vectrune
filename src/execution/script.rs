@@ -51,10 +51,24 @@ pub fn run<R: BufRead, W: Write>(
                     result.recv().map_err(host_error)?.map_err(host_error)
                 })?)?;
                 let write_root = root.clone();
+                let storage_root = root.clone();
+                let storage_runtime = once_cell::unsync::OnceCell::new();
+                ctx.globals().set("__vectStorage", Function::new(ctx.clone(), move |config: String, source: String, packet: String| -> rquickjs::Result<String> {
+                    let run = async {
+                        let config = storage_root.join(config).canonicalize()?;
+                        let doc = crate::rune_parser::load_rune_document_from_path(&config)?;
+                        let provider = crate::storage::provider::Provider::open(&doc, config.parent().unwrap(), &source)?;
+                        let value = provider.request(serde_json::from_str(&packet)?).await?;
+                        anyhow::Result::<String>::Ok(serde_json::to_string(&value)?)
+                    };
+                    let runtime = storage_runtime.get_or_try_init(|| tokio::runtime::Builder::new_current_thread().enable_all().build()).map_err(host_error)?;
+                    let result = runtime.block_on(run);
+                    result.map_err(host_error)
+                })?)?;
                 ctx.globals().set("__vectWrite", Function::new(ctx.clone(), move |path: String, contents: String| -> rquickjs::Result<()> {
                     std::fs::write(write_root.join(path), contents).map_err(host_error)
                 })?)?;
-                let source = format!("{}\n__RuneVect.run({}, {{print:__vectPrint,read:__vectRead,write:__vectWrite}}, {});",
+                let source = format!("{}\n__RuneVect.run({}, {{print:__vectPrint,read:__vectRead,write:__vectWrite,request:__vectStorage}}, {});",
                     include_str!("../../runtime/rune-web/dist/rune-vect.js"), json,
                     serde_json::to_string(&root.to_string_lossy())?);
                 ctx.eval::<(), _>(source).map_err(|e| anyhow!(CaughtError::from_error(&ctx, e).to_string()))

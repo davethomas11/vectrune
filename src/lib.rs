@@ -15,6 +15,9 @@ pub mod util;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod lambda_main;
 pub mod arithmetic;
+pub mod object_syntax;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod storage;
 pub mod execution;
 pub mod vectrune;
 pub mod wasm;

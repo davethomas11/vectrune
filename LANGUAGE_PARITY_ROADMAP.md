@@ -32,24 +32,26 @@ Over successive releases, features were added to specific targets to solve immed
 | **Records (`+ name: val`)** | ✅ | ⚠️ (via memory) | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
 | **Multi-file Imports (`import`)** | ✅ | ✅ | ✅ | N/A | ❌ | ❌ | ❌ | ✅ |
 | **String Interpolation (`{var}`)** | ❌ (stores raw) | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
-| **Arithmetic (`+ - * / %`)** | ❌ | ⚠️ (limited) | ❌ | ✅ | ⚠️ (limited) | ⚠️ (via eval) | ❌ | ✅ Full |
+| **Arithmetic (`+ - * / %`)** | ❌ | ⚠️ (limited) | ❌ | ✅ | ✅ (shared AST) | ⚠️ (via eval) | ❌ | ✅ Full |
 | **Comparison (`== != < <= > >=`)** | ❌ | ✅ (`contains`) | ❌ | ✅ | ✅ | ✅ (`contains`) | ❌ | ✅ Full |
-| **Logical (`and`, `or`, `not` / `!`)** | ❌ | ⚠️ (if only) | ❌ | ✅ | ⚠️ (if only) | ⚠️ (if only) | ❌ | ✅ Full |
-| **Ternary (`cond ? a : b`)** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **Nullish Coalescing (`a ?? b`)** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **Unary Negation (`-x`)** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **Compound Assign (`+= -= *= /=`)** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **Logical (`and`, `or`, `not` / `!`)** | ❌ | ⚠️ (if only) | ❌ | ✅ | ✅ (shared AST) | ⚠️ (if only) | ❌ | ✅ Full |
+| **Ternary (`cond ? a : b`)** | ❌ | ❌ | ❌ | ✅ | ✅ (shared AST) | ❌ | ❌ | ✅ |
+| **Nullish Coalescing (`a ?? b`)** | ❌ | ❌ | ❌ | ✅ | ✅ (shared AST) | ❌ | ❌ | ✅ |
+| **Unary Negation (`-x`)** | ❌ | ❌ | ❌ | ✅ | ✅ (shared AST) | ❌ | ❌ | ✅ |
+| **Compound Assign (`+= -= *= /=`)** | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
 | **Control Flow (`if / else`)** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ (`else if`) | ❌ | ✅ Full |
 | **Loops (`for .. in ..`)** | ❌ | ⚠️ (limited) | ✅ | ✅ | ⚠️ (basic) | ❌ | ❌ | ✅ |
 | **While Loop (`while cond:`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
 | **Pattern Match (`match ..:`)** | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | **Early Exit (`stop`, `stop when`)** | ❌ | ✅ (`stop`) | ❌ | ✅ (`stop when`) | ✅ (`stop`) | ✅ (`stop`) | ❌ | ✅ Full |
-| **Collection Methods (`filter/find/any`)** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **Collection Methods (`filter/find/any`)** | ❌ | ❌ | ❌ | ✅ | ⚠️ (shared AST + shorthand) | ❌ | ❌ | ✅ |
 | **Array Mutators (`push`, `delete`)** | ❌ | ✅ (`append`, `del`) | ❌ | ✅ (`.push`, `delete`)| ✅ (`append`) | ⚠️ (`delete`) | ❌ | ✅ Full |
 | **Entity State Restore (`restore`)** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | **Spatial / Game (`collide`, `clamp`)** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **State Generators (`* N inc`, `grid`)** | ❌ | ❌ | ✅ | N/A | ❌ | ❌ | ❌ | ✅ |
-| **Local Templates & `all` Modifiers** | ❌ | ❌ | ✅ | N/A | ❌ | ❌ | ❌ | ✅ |
+| **State Generators (`* N inc`, `grid`)** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **Local Templates & `all` Modifiers** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **Object Property Shorthand (`{ name, score }`)** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **Object Lookup / Update (`objects[]id`)** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
 | **Type Coercion (`to-number`, etc.)** | ❌ | ✅ | ❌ | ✅ | ✅ | ⚠️ (builtins) | ❌ | ✅ |
 | **Emitters & Particles** | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | **Web Audio Synth (`sound`)** | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
@@ -109,6 +111,7 @@ Over successive releases, features were added to specific targets to solve immed
   - JSON-driven conformance test fixtures: input code snippet -> expected AST -> expected evaluated result.
   - Run identical test suites in Rust (`cargo test`) and TypeScript (`npm test` in both `rune-web` and `rune-emulator`).
   - **Progress (2026-11-14):** The existing expression fixture catalogue now runs through native `.vect`/QuickJS and Rune-Web, with additional precedence, scientific notation, nested calls/collections, degree math, map/filter, serialization and slicing cases. Both use the typed Pratt AST in `runtime/rune-web/src/core_expression.ts`. Emulator, Rust backend and expected-AST coverage remain open.
+  - **Progress (2026-11-18):** The browser emulator now runs the same expression catalogue using the shared Pratt evaluator for supported syntax, with bounded compilation caching and its existing shorthand fallback. Added fixtures cover compact operators, unary/logical precedence, nested true ternary branches, missing-path and false nullish fallback, and case-insensitive `contains`. Rust backend and expected-AST coverage remain open.
 
 ---
 
@@ -121,10 +124,12 @@ Over successive releases, features were added to specific targets to solve immed
 - [ ] **2.2 Unified Expression Parser in Rust (`src/core/expr.rs`)**:
   - Implement a fast Pratt parser producing an `Expr` enum (`Literal`, `Ident`, `Unary`, `Binary`, `Call`, `Member`, `Ternary`, `Coalesce`).
   - Pre-parse expressions in `run:` steps at document load time.
+  - **Progress (2026-11-18):** `src/object_syntax.rs` supplies a typed Pratt AST for portable object construction, generators, overlays and lookup paths. Backend construction and Rune-Web initial state share this Rust implementation; the browser/Vect AST implements matching syntax. Full backend expression migration and load-time compilation remain open.
 - [ ] **2.3 Language Parity in Backend `run:` Steps**:
   - Support ternary (`? :`), nullish (`??`), unary minus (`-x`), and compound assignments (`+=`, `-=`, `*=`, `/=`) in backend route logic.
   - Support collection methods (`.filter()`, `.find()`, `.any()`, `.max()`, `.length`) in backend execution.
   - Add pattern matching (`match`) to backend step execution.
+  - **Progress (2026-11-18):** Backend steps now accept property shorthand, replication/grid generators, `local`/`let` templates, `with`/`all` overlays, nested `[]id` reads/writes and compound assignments. Shared object expression/program fixtures run through backend execution, native Vect, Rune-Web, the emulator and initial state compilation. Remaining standalone expression and collection-method coverage is still open.
 
 ---
 
@@ -137,6 +142,7 @@ Over successive releases, features were added to specific targets to solve immed
 - [ ] **3.2 Emulator Core Replacement**:
   - Unify `runtime/rune-emulator/src/parser/` and `runtime/rune-web/src/` to share the same parsed AST representations.
   - Ensure any feature added to Rune-Web (generators, audio, emitters) is automatically recognized by the emulator.
+  - **Progress (2026-11-18):** Canonical expressions now share Rune-Web/native Vect's typed parser and evaluator. Existing emulator shorthand is preserved; document parsing, statement execution and platform-specific features remain separate.
 
 ---
 
@@ -154,7 +160,8 @@ Over successive releases, features were added to specific targets to solve immed
     ```
 - [-] **4.2 Elevate `.vect` Scripts to Full Language Parity**:
   - Allow `.vect` scripts to use full Rune expression syntax, collections, and state generators while preserving concise stdio syntax (`stdio ->`, `<- stdio`).
-  - **Progress (2026-11-14):** Extended scripts lower actions, for/while loops, returns, loop control and mutable collections into shared execution IR, with Rune-style assignments, reusable cached expression ASTs, math/JSON helpers and a native file-output adapter. `examples/vect_breach/generate_guards.vect` replaces the Python baker and reproduces the checked-in guard assets with canonicalized angles and stable coplanar-face ordering across platforms. Existing stdio/legacy scripts remain supported; generator reproducibility and shared native/web fixtures are tested. Imports, state generators, match, Rust backend/REPL integration and full legacy-executor migration remain open. See [Vect scripts](knowledge/language/vect-scripts.md).
+  - **Progress (2026-11-14):** Extended scripts lower actions, for/while loops, returns, loop control and mutable collections into shared execution IR, with Rune-style assignments, reusable cached expression ASTs, math/JSON helpers and a native file-output adapter. `examples/games/vect_breach/generate_guards.vect` replaces the Python baker and reproduces the checked-in guard assets with canonicalized angles and stable coplanar-face ordering across platforms. Existing stdio/legacy scripts remain supported; generator reproducibility and shared native/web fixtures are tested. Imports, state generators, match, Rust backend/REPL integration and full legacy-executor migration remain open. See [Vect scripts](knowledge/language/vect-scripts.md).
+  - **Progress (2026-11-18):** Vect now supports Rune-Web's object replication/grid syntax, local templates and overlays, object property shorthand and matching-object lookup/mutation. Shared fixtures verify independent generated copies and consistent update behavior across execution hosts.
 
 ---
 

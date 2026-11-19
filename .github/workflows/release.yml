@@ -98,12 +98,15 @@ jobs:
         run: |
           BIN="target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}"
           "$BIN" --version
-          "$BIN" test examples/rune_studio --json
-          "$BIN" test examples/vect_breach --type logic --json
-          "$BIN" test examples/rune_crypt --type logic --json
-          "$BIN" test examples/skybound --type logic --json
-          "$BIN" test examples/skybound_2 --type logic --timeout 60 --json
-          "$BIN" test examples/starfall --type logic --timeout 60 --json
+          "$BIN" examples/data/storage/checkout.vect
+          "$BIN" examples/data/storage/replay.vect
+          "$BIN" test examples/language/objects --json
+          "$BIN" test examples/rune-web/studio --json
+          "$BIN" test examples/games/vect_breach --type logic --json
+          "$BIN" test examples/games/rune_crypt --type logic --json
+          "$BIN" test examples/games/skybound --type logic --json
+          "$BIN" test examples/games/skybound_2 --type logic --timeout 60 --json
+          "$BIN" test examples/games/starfall --type logic --timeout 60 --json
 
       - name: Package
         shell: bash

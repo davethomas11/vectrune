@@ -91,7 +91,7 @@ def check(base):
                     file = page.locator('.source-file').filter(has=page.get_by_text(path, exact=True))
                     if not file.evaluate('(file) => file.open'):
                         file.locator('summary').click()
-                    assert file.locator('code').text_content() == (ROOT / 'examples/rune_web_guide' / path).read_text(encoding='utf-8')
+                    assert file.locator('code').text_content() == (ROOT / 'examples/rune-web/guide' / path).read_text(encoding='utf-8')
                 for width in [320, 390, 768, 1440]:
                     page.set_viewport_size({"width": width, "height": 1000})
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), (locale, lesson, width)

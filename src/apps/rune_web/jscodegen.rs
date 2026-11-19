@@ -12,6 +12,7 @@ use std::collections::HashMap;
 
 /// JavaScript code generator from a page + logic definition.
 pub struct JsCodegen {
+    data_sources: serde_json::Value,
     page: ViewNode,
     logic: LogicDefinition,
     i18n_json: String,
@@ -39,8 +40,10 @@ impl JsCodegen {
         sounds: HashMap<String, super::ast::SoundDefinition>,
         music: HashMap<String, super::ast::MusicDefinition>,
     ) -> Self {
-        JsCodegen { page, logic, i18n_json, ws_endpoint, memory_seed, navigator, seo, optimizer, sounds, music }
+        JsCodegen { data_sources: serde_json::json!({}), page, logic, i18n_json, ws_endpoint, memory_seed, navigator, seo, optimizer, sounds, music }
     }
+
+    pub fn with_data_sources(mut self, sources: serde_json::Value) -> Self { self.data_sources = sources; self }
 
     /// Generate complete JavaScript application code.
     pub fn generate(&self) -> String {
@@ -79,6 +82,7 @@ impl JsCodegen {
         let i18n_json = &self.i18n_json;
 
         let state_json = self.generate_state_json();
+        let data_sources = self.data_sources.to_string().replace('<', "\\u003c");
         let ws_endpoint = if let Some(endpoint) = &self.ws_endpoint {
             format!("'{}'", endpoint)
         } else {
@@ -112,6 +116,7 @@ __RuneWeb.boot({{
   actionDefinitions: {actions_json},
   i18nData: {i18n_json},
   stateJson: {state_json},
+  dataSources: {data_sources},
   wsEndpoint: {ws_endpoint},
   timer: {timer_json},
   keys: {keys_json},
@@ -128,23 +133,52 @@ __RuneWeb.boot({{
     }
 
     fn generate_state_json(&self) -> String {
-        let mut normalized = serde_json::Map::new();
-        let mut evaluated_locals: HashMap<String, serde_json::Value> = HashMap::new();
-        for (key, val) in &self.logic.locals {
-            evaluated_locals.insert(key.clone(), self.parse_value_with_locals(val, &evaluated_locals));
-        }
-        for (key, val) in &self.logic.state {
-            if Self::emitter_config_src(val).is_some() {
-                // Emitters start as an empty particle list; their settings go to `emitters`.
-                normalized.insert(key.clone(), serde_json::Value::Array(vec![]));
-                continue;
-            }
-            normalized.insert(key.clone(), self.parse_value_with_locals(val, &evaluated_locals));
-        }
+        let evaluated_locals = self.evaluate_bindings(&self.logic.locals, &HashMap::new());
+        // Emitters start as empty particle lists; configuration goes to `emitters`.
+        let definitions = self.logic.state.iter().map(|(key, val)|
+            (key.clone(), if Self::emitter_config_src(val).is_some() { "[]".to_string() } else { val.clone() })
+        ).collect();
+        let mut normalized: serde_json::Map<_, _> = self.evaluate_bindings(&definitions, &evaluated_locals).into_iter().collect();
         for (key, val) in &self.memory_seed {
             normalized.insert(key.clone(), val.clone());
         }
         serde_json::Value::Object(normalized).to_string()
+    }
+
+    /// Declarations live in maps, so resolve dependencies rather than depending
+    /// on hash iteration order. Keep the old value parser for legacy state forms.
+    fn evaluate_bindings(&self, definitions: &HashMap<String, String>, base: &HashMap<String, serde_json::Value>) -> HashMap<String, serde_json::Value> {
+        let mut values = HashMap::new();
+        let mut pending: Vec<_> = definitions.iter().collect();
+        pending.sort_by_key(|(key, _)| *key);
+        while !pending.is_empty() {
+            let mut remaining = Vec::new();
+            let before = values.len();
+            for (name, source) in pending {
+                let result = crate::object_syntax::evaluate(source, &|name| base.get(name).or_else(|| values.get(name)).cloned());
+                match result {
+                    Ok(value) => { values.insert(name.clone(), value); }
+                    Err(error) => {
+                        let waits = error.strip_prefix("Unknown variable: ").is_some_and(|missing|
+                            definitions.keys().any(|key| !values.contains_key(key) && (key == missing || key.starts_with(missing) || missing.starts_with(key.as_str()))));
+                        if waits { remaining.push((name, source)); }
+                        else {
+                            let mut scope = values.clone(); scope.extend(base.clone());
+                            values.insert(name.clone(), self.parse_value_with_locals(source, &scope));
+                        }
+                    }
+                }
+            }
+            if values.len() == before {
+                for (name, source) in remaining {
+                    let mut scope = values.clone(); scope.extend(base.clone());
+                    values.insert(name.clone(), self.parse_value_with_locals(source, &scope));
+                }
+                break;
+            }
+            pending = remaining;
+        }
+        values
     }
 
     /// If a state value is `emitter` or `emitter { ... }`, return the config source
@@ -183,6 +217,11 @@ __RuneWeb.boot({{
 
     pub fn parse_value_with_locals(&self, val: &str, locals: &HashMap<String, serde_json::Value>) -> serde_json::Value {
         let trimmed = val.trim();
+        if crate::object_syntax::is_structured(trimmed) {
+            if let Ok(value) = crate::object_syntax::evaluate(trimmed, &|name| locals.get(name).cloned()) {
+                return value;
+            }
+        }
         if trimmed.starts_with('[') {
             if let Some(arr) = self.parse_relaxed_array_with_locals(trimmed, locals) {
                 return arr;
@@ -543,6 +582,7 @@ fn parse_1d_generator(s: &str) -> Option<serde_json::Value> {
         .find(|c: char| !c.is_ascii_digit())
         .unwrap_or(after_mult.len());
     let count: usize = after_mult[..count_end].parse().ok()?;
+    if count > 1_000_000 { return None; }
     let mut rest = after_mult[count_end..].trim();
 
     let mut inc_props: Vec<String> = Vec::new();
@@ -575,6 +615,7 @@ fn parse_1d_generator(s: &str) -> Option<serde_json::Value> {
         }
     }
 
+    if !rest.is_empty() && !rest.starts_with("with") { return None; }
     let with_str = if rest.starts_with("with") {
         let with_body = rest[4..].trim();
         if with_body.starts_with('{') && with_body.ends_with('}') {
@@ -630,6 +671,7 @@ fn parse_grid_generator(s: &str) -> Option<serde_json::Value> {
         .find(|c: char| !c.is_ascii_digit())
         .unwrap_or(after.len());
     let rows: usize = after[..rows_end].parse().ok()?;
+    if cols > 1_000_000 || rows > 1_000_000 || cols.checked_mul(rows)? > 1_000_000 { return None; }
     let after = after[rows_end..].trim();
 
     let origin_kw_len = if after.starts_with("at ") {
@@ -871,6 +913,39 @@ mod tests {
     }
 
     #[test]
+    fn portable_object_fixtures_match_initial_state_compilation() {
+        let logic = LogicDefinition { state: HashMap::new(), locals: HashMap::new(), derived: HashMap::new(), helpers: HashMap::new(), actions: HashMap::new(), timer: None, keys: HashMap::new() };
+        let gen = JsCodegen::new(ViewNode::Text("".into()), logic, "{}".into(), None, HashMap::new(), None, None, None, HashMap::new(), HashMap::new());
+        let fixtures: serde_json::Value = serde_json::from_str(include_str!("../../../tests/conformance/objects.json")).unwrap();
+        for fixture in fixtures.as_array().unwrap() {
+            let locals = fixture["context"].as_object().unwrap().clone().into_iter().collect();
+            assert_eq!(gen.parse_value_with_locals(fixture["expr"].as_str().unwrap(), &locals), fixture["expected"], "{}", fixture["category"]);
+        }
+    }
+
+    #[test]
+    fn resolves_state_and_template_dependencies_before_property_shorthand() {
+        let logic = LogicDefinition {
+            locals: HashMap::from([
+                ("base".into(), "{ x: 10 } * 2 inc x by 5".into()),
+                ("batch".into(), "base with { alive: true }".into()),
+            ]),
+            state: HashMap::from([
+                ("name".into(), "\"Alex\"".into()), ("score".into(), "7".into()),
+                ("profile".into(), "{ name, score }".into()),
+                ("actors".into(), "[batch with { y: 20 }]".into()),
+            ]),
+            derived: HashMap::new(), helpers: HashMap::new(), actions: HashMap::new(), timer: None, keys: HashMap::new(),
+        };
+        let gen = JsCodegen::new(ViewNode::Text("".into()), logic, "{}".into(), None, HashMap::new(), None, None, None, HashMap::new(), HashMap::new());
+        let state: serde_json::Value = serde_json::from_str(&gen.generate_state_json()).unwrap();
+        assert_eq!(state["profile"], serde_json::json!({"name": "Alex", "score": 7}));
+        assert_eq!(state["actors"], serde_json::json!([{"x": 10, "y": 20, "alive": true}, {"x": 15, "y": 20, "alive": true}]));
+        assert!(state.get("base").is_none());
+        assert!(state.get("batch").is_none());
+    }
+
+    #[test]
     fn parses_local_templates_and_array_all_modifier() {
         let logic = LogicDefinition {
             state: HashMap::from([(
@@ -972,7 +1047,7 @@ mod tests {
 
     #[test]
     fn test_space_invaders_parse() {
-        let doc = crate::rune_parser::load_rune_document_from_path(std::path::Path::new("examples/space_invaders/space_invaders.rune")).unwrap();
+        let doc = crate::rune_parser::load_rune_document_from_path(std::path::Path::new("examples/games/space_invaders/space_invaders.rune")).unwrap();
         let frontend = crate::apps::rune_web::parser::parse_rune_web_frontend(&doc, "space-invaders").unwrap();
         let logic = frontend.logic_definitions.get("invaders").unwrap();
         assert!(logic.state.contains_key("aliens"));
@@ -980,7 +1055,7 @@ mod tests {
 
     #[test]
     fn test_vectworms_parse() {
-        let doc = crate::rune_parser::load_rune_document_from_path(std::path::Path::new("examples/vectworms/vectworms.rune")).unwrap();
+        let doc = crate::rune_parser::load_rune_document_from_path(std::path::Path::new("examples/games/vectworms/vectworms.rune")).unwrap();
         let frontend = crate::apps::rune_web::parser::parse_rune_web_frontend(&doc, "vectworms").unwrap();
         let logic = frontend.logic_definitions.get("vectworms").unwrap().clone();
         assert!(logic.state.contains_key("mushrooms"));

@@ -192,6 +192,7 @@ export interface MusicDefinition {
 
 /** Configuration passed to boot(). */
 export interface RuneWebConfig {
+  dataSources?: Record<string, import('./datasource').DataSource>;
   pageTree: ViewNode;
   derivedDefinitions: Record<string, DerivedDefinition>;
   helperDefinitions: Record<string, HelperDefinition>;

@@ -9,7 +9,7 @@ view:
             
             p .showcase-try "%i18n.SpaceInvaders.try_it%"
 
-        WebExample game=true title="{i18n.SpaceInvaders.title}" preview="/assets/games/vectraiders/index.html" files="{sources ../../../examples/space_invaders/space_invaders.rune}" show_heading=false
+        WebExample game=true title="{i18n.SpaceInvaders.title}" preview="/assets/games/vectraiders/index.html" files="{sources ../../../examples/games/space_invaders/space_invaders.rune}" show_heading=false
 
         details .card .showcase-notes:
             summary "%i18n.Guide.how_it_works%"
@@ -31,4 +31,4 @@ view:
             p "⌨️ %i18n.SpaceInvaders.instructions_keyboard%"
             p "📱 %i18n.SpaceInvaders.instructions_mobile%"
 
-        RunExampleLocally example="space_invaders"
+        RunExampleLocally example="space_invaders" source="examples/games/space_invaders/space_invaders.rune"

@@ -1,0 +1,356 @@
+{
+  "cache_bytes": 16777216,
+  "profile": "release",
+  "redb": "5.0.0 Immediate",
+  "results": [
+    {
+      "batch": 1,
+      "commit_us": {
+        "p50": 2996.958,
+        "p95": 3150.6659999999997,
+        "p99": 3607.416
+      },
+      "committed_records": 32,
+      "engine": "redb",
+      "live_files_bytes": 73728,
+      "payload_bytes": 137,
+      "warm_read_decode_us": {
+        "p50": 0.5,
+        "p95": 0.7080000000000001,
+        "p99": 0.791
+      },
+      "warm_read_per_second": 1745834.439028478,
+      "write_records_per_second": 351.8133018278658
+    },
+    {
+      "batch": 1,
+      "commit_us": {
+        "p50": 2979.667,
+        "p95": 3428.1670000000004,
+        "p99": 3987.3749999999995
+      },
+      "committed_records": 32,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 189336,
+      "payload_bytes": 137,
+      "warm_read_decode_us": {
+        "p50": 2.0829999999999997,
+        "p95": 2.3329999999999997,
+        "p99": 2.875
+      },
+      "warm_read_per_second": 455970.3619264747,
+      "write_records_per_second": 360.0312763670171
+    },
+    {
+      "batch": 32,
+      "commit_us": {
+        "p50": 2992.166,
+        "p95": 3637.292,
+        "p99": 5996.625
+      },
+      "committed_records": 1024,
+      "engine": "redb",
+      "live_files_bytes": 282624,
+      "payload_bytes": 137,
+      "warm_read_decode_us": {
+        "p50": 1.208,
+        "p95": 1.5,
+        "p99": 1.8339999999999999
+      },
+      "warm_read_per_second": 772996.4511732926,
+      "write_records_per_second": 10573.228513126833
+    },
+    {
+      "batch": 32,
+      "commit_us": {
+        "p50": 2988.542,
+        "p95": 3954.458,
+        "p99": 4083.0
+      },
+      "committed_records": 1024,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 881496,
+      "payload_bytes": 137,
+      "warm_read_decode_us": {
+        "p50": 9.667000000000002,
+        "p95": 11.0,
+        "p99": 14.917
+      },
+      "warm_read_per_second": 99969.17950195954,
+      "write_records_per_second": 11711.9757525502
+    },
+    {
+      "batch": 256,
+      "commit_us": {
+        "p50": 4091.125,
+        "p95": 7003.0,
+        "p99": 7297.625
+      },
+      "committed_records": 8192,
+      "engine": "redb",
+      "live_files_bytes": 2232320,
+      "payload_bytes": 137,
+      "warm_read_decode_us": {
+        "p50": 2.542,
+        "p95": 3.208,
+        "p99": 3.5829999999999997
+      },
+      "warm_read_per_second": 307873.8111452783,
+      "write_records_per_second": 59358.66269106613
+    },
+    {
+      "batch": 256,
+      "commit_us": {
+        "p50": 4114.125,
+        "p95": 5009.875,
+        "p99": 5060.708
+      },
+      "committed_records": 8192,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 2463576,
+      "payload_bytes": 137,
+      "warm_read_decode_us": {
+        "p50": 9.666,
+        "p95": 11.167,
+        "p99": 13.125
+      },
+      "warm_read_per_second": 108237.8062534609,
+      "write_records_per_second": 63050.041768343704
+    },
+    {
+      "batch": 1,
+      "commit_us": {
+        "p50": 3006.6670000000004,
+        "p95": 3267.875,
+        "p99": 4429.084
+      },
+      "committed_records": 32,
+      "engine": "redb",
+      "live_files_bytes": 110592,
+      "payload_bytes": 1034,
+      "warm_read_decode_us": {
+        "p50": 2.0420000000000003,
+        "p95": 2.1670000000000003,
+        "p99": 2.708
+      },
+      "warm_read_per_second": 456977.6140376211,
+      "write_records_per_second": 336.4021266921947
+    },
+    {
+      "batch": 1,
+      "commit_us": {
+        "p50": 3024.5,
+        "p95": 3987.875,
+        "p99": 4051.5000000000005
+      },
+      "committed_records": 32,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 531296,
+      "payload_bytes": 1034,
+      "warm_read_decode_us": {
+        "p50": 12.292,
+        "p95": 13.042,
+        "p99": 14.375
+      },
+      "warm_read_per_second": 85922.03537616409,
+      "write_records_per_second": 343.77074307292287
+    },
+    {
+      "batch": 32,
+      "commit_us": {
+        "p50": 4002.6669999999995,
+        "p95": 6053.0,
+        "p99": 7002.209
+      },
+      "committed_records": 1024,
+      "engine": "redb",
+      "live_files_bytes": 2232320,
+      "payload_bytes": 1034,
+      "warm_read_decode_us": {
+        "p50": 2.0,
+        "p95": 2.375,
+        "p99": 2.75
+      },
+      "warm_read_per_second": 468685.9218466225,
+      "write_records_per_second": 7860.521795868236
+    },
+    {
+      "batch": 32,
+      "commit_us": {
+        "p50": 3987.2090000000003,
+        "p95": 5738.25,
+        "p99": 15215.625
+      },
+      "committed_records": 1024,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 7885000,
+      "payload_bytes": 1034,
+      "warm_read_decode_us": {
+        "p50": 7.875,
+        "p95": 9.166,
+        "p99": 10.708
+      },
+      "warm_read_per_second": 135498.28885985914,
+      "write_records_per_second": 7753.818797404208
+    },
+    {
+      "batch": 256,
+      "commit_us": {
+        "p50": 4971.790999999999,
+        "p95": 8980.417,
+        "p99": 12989.0
+      },
+      "committed_records": 8192,
+      "engine": "redb",
+      "live_files_bytes": 17829888,
+      "payload_bytes": 1034,
+      "warm_read_decode_us": {
+        "p50": 0.958,
+        "p95": 1.333,
+        "p99": 1.542
+      },
+      "warm_read_per_second": 997092.4783331805,
+      "write_records_per_second": 46523.833651125045
+    },
+    {
+      "batch": 256,
+      "commit_us": {
+        "p50": 7119.125,
+        "p95": 19004.666999999998,
+        "p99": 19132.125
+      },
+      "committed_records": 8192,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 43372944,
+      "payload_bytes": 1034,
+      "warm_read_decode_us": {
+        "p50": 9.542,
+        "p95": 12.875,
+        "p99": 15.417000000000002
+      },
+      "warm_read_per_second": 101620.41887530178,
+      "write_records_per_second": 26040.32215464136
+    },
+    {
+      "batch": 1,
+      "commit_us": {
+        "p50": 3037.667,
+        "p95": 5010.041,
+        "p99": 6026.75
+      },
+      "committed_records": 32,
+      "engine": "redb",
+      "live_files_bytes": 1118208,
+      "payload_bytes": 16394,
+      "warm_read_decode_us": {
+        "p50": 1.0,
+        "p95": 1.375,
+        "p99": 1.625
+      },
+      "warm_read_per_second": 900832.7297754044,
+      "write_records_per_second": 307.3951334470477
+    },
+    {
+      "batch": 1,
+      "commit_us": {
+        "p50": 3017.625,
+        "p95": 3339.959,
+        "p99": 3987.4999999999995
+      },
+      "committed_records": 32,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 926816,
+      "payload_bytes": 16394,
+      "warm_read_decode_us": {
+        "p50": 6.5,
+        "p95": 15.583,
+        "p99": 16.708
+      },
+      "warm_read_per_second": 106743.52200250847,
+      "write_records_per_second": 355.2578652537114
+    },
+    {
+      "batch": 32,
+      "commit_us": {
+        "p50": 5027.375,
+        "p95": 8886.042,
+        "p99": 17100.209000000003
+      },
+      "committed_records": 1024,
+      "engine": "redb",
+      "live_files_bytes": 35655680,
+      "payload_bytes": 16394,
+      "warm_read_decode_us": {
+        "p50": 5.417,
+        "p95": 8.125,
+        "p99": 9.625
+      },
+      "warm_read_per_second": 199873.40018832072,
+      "write_records_per_second": 5502.144573684543
+    },
+    {
+      "batch": 32,
+      "commit_us": {
+        "p50": 5024.834,
+        "p95": 15055.542,
+        "p99": 17006.5
+      },
+      "committed_records": 1024,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 22005904,
+      "payload_bytes": 16394,
+      "warm_read_decode_us": {
+        "p50": 24.625,
+        "p95": 29.375,
+        "p99": 32.375
+      },
+      "warm_read_per_second": 39496.42063687978,
+      "write_records_per_second": 5216.033700467737
+    },
+    {
+      "batch": 256,
+      "commit_us": {
+        "p50": 9017.542,
+        "p95": 27022.375,
+        "p99": 27937.458
+      },
+      "committed_records": 8192,
+      "engine": "redb",
+      "live_files_bytes": 285216768,
+      "payload_bytes": 16394,
+      "warm_read_decode_us": {
+        "p50": 5.875,
+        "p95": 9.958,
+        "p99": 12.042
+      },
+      "warm_read_per_second": 153559.70593316315,
+      "write_records_per_second": 21112.803502993473
+    },
+    {
+      "batch": 256,
+      "commit_us": {
+        "p50": 29900.708000000002,
+        "p95": 31642.166999999998,
+        "p99": 34989.791
+      },
+      "committed_records": 8192,
+      "engine": "sqlite-wal",
+      "live_files_bytes": 143475920,
+      "payload_bytes": 16394,
+      "warm_read_decode_us": {
+        "p50": 33.417,
+        "p95": 39.709,
+        "p99": 43.875
+      },
+      "warm_read_per_second": 29456.889194612122,
+      "write_records_per_second": 8542.261553840191
+    }
+  ],
+  "scope": "Raw single-writer KV append-inserts and warm point read+MessagePack decode. Includes commit latency; no Rune change log, network, cold-cache or mixed-load claims. Fixed engine order may bias OS caches. Files measured with connections open, including WAL.",
+  "sqlite": "3.46.0",
+  "sqlite_settings": "WAL + synchronous FULL + fullfsync ON + checkpoint_fullfsync ON",
+  "host": {
+    "os": "Darwin",
+    "arch": "arm64"
+  }
+}

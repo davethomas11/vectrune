@@ -13,26 +13,26 @@ view:
                 p "{try_it}"
             h3 "%i18n.RuneWebGuide.local%"
             pre:
-                code .code-block .language-bash "cargo run -- examples/rune_web_guide/{filename}.rune\ncargo run -- examples/rune_web_guide/{filename}.rune -o html > index.html"
+                code .code-block .language-bash "cargo run -- examples/rune-web/guide/{filename}.rune\ncargo run -- examples/rune-web/guide/{filename}.rune -o html > index.html"
             p .document-note "%i18n.RuneWebGuide.shared%"
         WebExample title="{title}" preview="{preview}" files="{files}"
 
 @Component/RuneWebComponentsGuide
 view:
-    RuneWebLesson title="{i18n.RuneWebGuide.components_title}" intro="{i18n.RuneWebGuide.components_intro}" syntax="{i18n.RuneWebGuide.components_syntax}" behavior="{i18n.RuneWebGuide.components_behavior}" try_it="{i18n.RuneWebGuide.components_try}" filename="components" preview="{preview ../../../examples/rune_web_guide/components.rune}" files="{sources ../../../examples/rune_web_guide/components.rune}"
+    RuneWebLesson title="{i18n.RuneWebGuide.components_title}" intro="{i18n.RuneWebGuide.components_intro}" syntax="{i18n.RuneWebGuide.components_syntax}" behavior="{i18n.RuneWebGuide.components_behavior}" try_it="{i18n.RuneWebGuide.components_try}" filename="components" preview="{preview ../../../examples/rune-web/guide/components.rune}" files="{sources ../../../examples/rune-web/guide/components.rune}"
 
 @Component/RuneWebFormsGuide
 view:
-    RuneWebLesson title="{i18n.RuneWebGuide.forms_title}" intro="{i18n.RuneWebGuide.forms_intro}" syntax="{i18n.RuneWebGuide.forms_syntax}" behavior="{i18n.RuneWebGuide.forms_behavior}" try_it="{i18n.RuneWebGuide.forms_try}" filename="forms" preview="{preview ../../../examples/rune_web_guide/forms.rune}" files="{sources ../../../examples/rune_web_guide/forms.rune}"
+    RuneWebLesson title="{i18n.RuneWebGuide.forms_title}" intro="{i18n.RuneWebGuide.forms_intro}" syntax="{i18n.RuneWebGuide.forms_syntax}" behavior="{i18n.RuneWebGuide.forms_behavior}" try_it="{i18n.RuneWebGuide.forms_try}" filename="forms" preview="{preview ../../../examples/rune-web/guide/forms.rune}" files="{sources ../../../examples/rune-web/guide/forms.rune}"
 
 @Component/RuneWebActionsGuide
 view:
-    RuneWebLesson title="{i18n.RuneWebGuide.actions_title}" intro="{i18n.RuneWebGuide.actions_intro}" syntax="{i18n.RuneWebGuide.actions_syntax}" behavior="{i18n.RuneWebGuide.actions_behavior}" try_it="{i18n.RuneWebGuide.actions_try}" filename="packing" preview="{preview ../../../examples/rune_web_guide/packing.rune}" files="{sources ../../../examples/rune_web_guide/packing.rune}"
+    RuneWebLesson title="{i18n.RuneWebGuide.actions_title}" intro="{i18n.RuneWebGuide.actions_intro}" syntax="{i18n.RuneWebGuide.actions_syntax}" behavior="{i18n.RuneWebGuide.actions_behavior}" try_it="{i18n.RuneWebGuide.actions_try}" filename="packing" preview="{preview ../../../examples/rune-web/guide/packing.rune}" files="{sources ../../../examples/rune-web/guide/packing.rune}"
 
 @Component/RuneWebViewsGuide
 view:
-    RuneWebLesson title="{i18n.RuneWebGuide.views_title}" intro="{i18n.RuneWebGuide.views_intro}" syntax="{i18n.RuneWebGuide.views_syntax}" behavior="{i18n.RuneWebGuide.views_behavior}" try_it="{i18n.RuneWebGuide.views_try}" filename="navigation" preview="{preview ../../../examples/rune_web_guide/navigation.rune}" files="{sources ../../../examples/rune_web_guide/navigation.rune}"
+    RuneWebLesson title="{i18n.RuneWebGuide.views_title}" intro="{i18n.RuneWebGuide.views_intro}" syntax="{i18n.RuneWebGuide.views_syntax}" behavior="{i18n.RuneWebGuide.views_behavior}" try_it="{i18n.RuneWebGuide.views_try}" filename="navigation" preview="{preview ../../../examples/rune-web/guide/navigation.rune}" files="{sources ../../../examples/rune-web/guide/navigation.rune}"
 
 @Component/RuneWebStylesGuide
 view:
-    RuneWebLesson title="{i18n.RuneWebGuide.styles_title}" intro="{i18n.RuneWebGuide.styles_intro}" syntax="{i18n.RuneWebGuide.styles_syntax}" behavior="{i18n.RuneWebGuide.styles_behavior}" try_it="{i18n.RuneWebGuide.styles_try}" filename="styling" preview="{preview ../../../examples/rune_web_guide/styling.rune}" files="{sources ../../../examples/rune_web_guide/styling.rune}"
+    RuneWebLesson title="{i18n.RuneWebGuide.styles_title}" intro="{i18n.RuneWebGuide.styles_intro}" syntax="{i18n.RuneWebGuide.styles_syntax}" behavior="{i18n.RuneWebGuide.styles_behavior}" try_it="{i18n.RuneWebGuide.styles_try}" filename="styling" preview="{preview ../../../examples/rune-web/guide/styling.rune}" files="{sources ../../../examples/rune-web/guide/styling.rune}"

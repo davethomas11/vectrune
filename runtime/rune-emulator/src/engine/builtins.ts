@@ -22,61 +22,6 @@ function expandPlaceholders(template: string, scope: Record<string, unknown>): s
 }
 
 // ---------------------------------------------------------------------------
-// Path assignment helper (mirrors rune-web assignPath)
-// ---------------------------------------------------------------------------
-
-function assignPath(
-  pathExpr: string,
-  value: unknown,
-  ctx: RequestContext,
-): void {
-  const scope = buildScopeFromContext(ctx);
-  const segments = splitPathSegments(pathExpr);
-  if (!segments.length) return;
-  const baseKey = segments[0];
-
-  // Write to ctx.state
-  if (segments.length === 1) {
-    ctx.state[baseKey] = value;
-    return;
-  }
-
-  let current: unknown = ctx.state[baseKey];
-  if (current === undefined) {
-    current = {};
-    ctx.state[baseKey] = current;
-  }
-
-  for (let i = 1; i < segments.length - 1; i++) {
-    const seg = segments[i];
-    if (seg.startsWith('[') && seg.endsWith(']')) {
-      const innerExpr = seg.slice(1, -1);
-      const lookup = evaluateExpression(innerExpr, scope);
-      const key = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
-      if ((current as Record<string, unknown>)[key as string] === undefined) {
-        (current as Record<string, unknown>)[key as string] = {};
-      }
-      current = (current as Record<string, unknown>)[key as string];
-    } else {
-      if ((current as Record<string, unknown>)[seg] === undefined) {
-        (current as Record<string, unknown>)[seg] = {};
-      }
-      current = (current as Record<string, unknown>)[seg];
-    }
-  }
-
-  const finalKey = segments[segments.length - 1];
-  if (finalKey.startsWith('[') && finalKey.endsWith(']')) {
-    const innerExpr = finalKey.slice(1, -1);
-    const lookup = evaluateExpression(innerExpr, scope);
-    const key = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
-    (current as Record<string, unknown>)[key as string] = value;
-  } else {
-    (current as Record<string, unknown>)[finalKey] = value;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Validate builtin
 // ---------------------------------------------------------------------------
 

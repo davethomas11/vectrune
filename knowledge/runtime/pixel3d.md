@@ -11,7 +11,7 @@ The grid-map semantics below remain unchanged.
 ## Starfall Protocol: side-scrolling space adventure (v0.3.6)
 
 [Play Starfall Protocol](https://vectrune.com/starfall/) or explore its
-[Rune source](../../examples/starfall/starfall.rune). It is a space
+[Rune source](../../examples/games/starfall/starfall.rune). It is a space
 metroidvania built on pixel-3d, with movement confined to one plane and a fixed
 side-on camera. Explore Kepler Station, recover jump jets in the cargo bay,
 enter the overgrown Hydroponics sector, unlock air dash, and restore its relay.
@@ -28,8 +28,8 @@ axis, subject to the logical-volume and resident-chunk budgets described below.
 
 ```sh
 cargo build --bin vectrune
-target/debug/vectrune examples/starfall/starfall.rune -o html > starfall.html
-target/debug/vectrune test examples/starfall --type logic
+target/debug/vectrune examples/games/starfall/starfall.rune -o html > starfall.html
+target/debug/vectrune test examples/games/starfall --type logic
 cargo test --test starfall_app
 python3 tests/browser/starfall.py
 ```
@@ -188,7 +188,7 @@ The reusable `ui.cinema` HUD supports up to 64 text `lines`, a pixel scroll
 The fade darkens the world beneath the letterboxed text, keeping the story
 readable in both browser and shared desktop rendering. Starfall's cinematic
 worlds, ship animations, and text timing are authored in
-[`cinematics.rune`](../../examples/starfall/cinematics.rune).
+[`cinematics.rune`](../../examples/games/starfall/cinematics.rune).
 
 After finding plasma, hold fire for 24 ticks (0.8 seconds; 18 ticks with the optional capacitor), then release to fire
 a six-damage charged blast. The muzzle orb grows as it charges, the HUD displays
@@ -293,7 +293,7 @@ projectile damage. Keyboard, controller and touch ducking use the real adapters.
 
 ## Skybound: third-person platforming (v0.3.5)
 
-[Skybound](../../examples/skybound/skybound.rune) is an original, Mario-inspired
+[Skybound](../../examples/games/skybound/skybound.rune) is an original, Mario-inspired
 3D platform game built in Rune: six floating islands, twelve collectible coins,
 three patrolling bugs to stomp, three hearts, a blue checkpoint flag, and a
 golden summit star. Coins are optional for victory and remain collected after a
@@ -304,8 +304,8 @@ Build the current CLI from source, then export a self-contained browser game:
 
 ```sh
 cargo build --bin vectrune
-target/debug/vectrune examples/skybound/skybound.rune -o html > skybound.html
-target/debug/vectrune test examples/skybound --type logic
+target/debug/vectrune examples/games/skybound/skybound.rune -o html > skybound.html
+target/debug/vectrune test examples/games/skybound --type logic
 ```
 
 Open `skybound.html`, then select **Begin adventure** or press Enter with the
@@ -334,7 +334,7 @@ checks QuickJS rendering without opening a window.
 
 ## Skybound 2: Beyond the Concept (v0.3.5)
 
-[Skybound 2](../../examples/skybound_2/skybound_2.rune) is a separate campaign;
+[Skybound 2](../../examples/games/skybound_2/skybound_2.rune) is a separate campaign;
 the original Skybound sources and exported game remain intact. Its protagonist
 is **Nix, a lantern moth** with six feet, antennae, folding wings and a glowing
 abdomen. Hold jump while descending to glide. Movement, camera orbit, running,
@@ -407,8 +407,8 @@ retries the selected stage while preserving campaign progress.
 
 ```sh
 cargo build --bin vectrune
-target/debug/vectrune examples/skybound_2/skybound_2.rune -o html > skybound-2.html
-target/debug/vectrune test examples/skybound_2 --type logic
+target/debug/vectrune examples/games/skybound_2/skybound_2.rune -o html > skybound-2.html
+target/debug/vectrune test examples/games/skybound_2 --type logic
 python3 tests/browser/skybound_2.py
 ```
 
@@ -458,7 +458,7 @@ It also works on legacy songs. Arrangements expand once at registration and
 share the existing hardware-clock scheduler, pause, resume, mute and looping.
 `loop = true` repeats the complete arrangement. Non-looping scores let the
 final note finish before stopping. Existing songs retain their syntax and
-instrument defaults. See [the complete score](../../examples/skybound_2/sound.rune),
+instrument defaults. See [the complete score](../../examples/games/skybound_2/sound.rune),
 `runtime/rune-web/src/music_arrangement.ts`, and `tests/music_arrangement.rs`.
 
 ## Camera movement performance (v0.3.5)
@@ -698,8 +698,8 @@ themed textures without changing walkable geometry; multiple wall types appear
 in every layout. Six wall designs are 32x32; fluted pillars are 64x64 with
 carved bands, chips and cracks. Floors and ceilings are 32x32, including
 stone slabs, moss, inset ceiling ribs and glowing rune patterns.
-See [the compact texture assets](../../examples/rune_crypt/assets.rune) and
-[authored map variety](../../examples/rune_crypt/maps.rune).
+See [the compact texture assets](../../examples/games/rune_crypt/assets.rune) and
+[authored map variety](../../examples/games/rune_crypt/maps.rune).
 
 ## Dynamically generated skies
 
@@ -781,7 +781,7 @@ renderer so the diagram matches browser output, including pause maps.
 HUD in both browser and native rendering. It takes precedence over
 `presentation`'s legacy HUD; games without `ui` keep their existing rendering.
 Refresh the object in actions when resources, status, or nearby interactions
-change. Rune Crypt's [UX logic](../../examples/rune_crypt/ux.rune) is a complete
+change. Rune Crypt's [UX logic](../../examples/games/rune_crypt/ux.rune) is a complete
 example.
 
 ```rune
@@ -835,8 +835,8 @@ The layout uses the actual sprite dimensions and draws at integer scale; small
 icons around 8–12 pixels work well. Meter `color` controls bar fill; icon colors
 come from their palettes.
 
-For example, Skybound 2's [hud.rune](../../examples/skybound_2/hud.rune) owns its
-six HUD sprites and palette. Its [UX logic](../../examples/skybound_2/ux.rune)
+For example, Skybound 2's [hud.rune](../../examples/games/skybound_2/hud.rune) owns its
+six HUD sprites and palette. Its [UX logic](../../examples/games/skybound_2/ux.rune)
 selects the resources and display modes:
 
 ```rune
@@ -951,12 +951,12 @@ in English, Spanish and French. The game itself is currently English-only.
 Its stable same-origin standalone URL is
 `/assets/games/rune-crypt/index.html`, preserving browser saves across site
 locale changes. [`teaching_website/build_site.py`](../../teaching_website/build_site.py)
-exports the game from `examples/rune_crypt/rune_crypt.rune`; site builds require
+exports the game from `examples/games/rune_crypt/rune_crypt.rune`; site builds require
 0.3.4 or newer so older embedded renderers cannot silently omit engine features.
 
 ```sh
-vectrune examples/rune_crypt/rune_crypt.rune -o html > rune-crypt.html
-vectrune test examples/rune_crypt --type logic
+vectrune examples/games/rune_crypt/rune_crypt.rune -o html > rune-crypt.html
+vectrune test examples/games/rune_crypt --type logic
 ```
 
 Open the exported HTML in a browser. Five depths cross the outdoor courtyard,
@@ -974,7 +974,7 @@ buttons or 1/2/3, then Enter or **Begin a new run** starts gameplay.
 The title banner also identifies the game on death and victory menus.
 
 Four original synthesized chiptunes live in
-[`sound.rune`](../../examples/rune_crypt/sound.rune): `crypt_title` (84 BPM,
+[`sound.rune`](../../examples/games/rune_crypt/sound.rune): `crypt_title` (84 BPM,
 looping title/death theme), `crypt_dungeon` (104 BPM, looping depths 1-4),
 `crypt_warden` (132 BPM, looping final-depth boss theme), and `crypt_victory`
 (100 BPM, one-shot fanfare). Music switches on state transitions rather than
@@ -1011,7 +1011,7 @@ The browser pause menu also provides accessible resume/restart buttons.
 
 ### First-person weapon animation
 
-[`weapon.rune`](../../examples/rune_crypt/weapon.rune) animates 24x24
+[`weapon.rune`](../../examples/games/rune_crypt/weapon.rune) animates 24x24
 palette sprites: a shaded steel sword with a gold guard and gloved grip,
 a diagonal slash, and a glowing rune cast. Sword attacks animate anticipation,
 a lateral sweep and recovery over ten simulation ticks; casting uses a
@@ -1028,7 +1028,7 @@ The effect freezes when paused and clears on changing depth or restarting.
 The defeated enemy is immediately untargetable and cannot move or attack;
 kill rewards occur once and stairs do not wait for the animation to finish.
 The scene behind shows through discarded fragments in browser and native hosts.
-See [`combat.rune`](../../examples/rune_crypt/combat.rune) and the
+See [`combat.rune`](../../examples/games/rune_crypt/combat.rune) and the
 [model dissolve field](../language/pixel-models.md#pixel-dissolve).
 
 ### Combat readability
@@ -1095,19 +1095,19 @@ Sources: [compiler](../../src/apps/pixel3d/mod.rs),
 [native renderer](../../src/apps/pixel3d/raster.rs),
 [browser renderer](../../runtime/rune-web/src/pixel3d/raycaster.ts),
 [sky generator](../../runtime/rune-web/src/pixel3d/sky.ts),
-[game](../../examples/rune_crypt/rune_crypt.rune),
-[combat](../../examples/rune_crypt/combat.rune),
-[exploration and builds](../../examples/rune_crypt/exploration.rune),
+[game](../../examples/games/rune_crypt/rune_crypt.rune),
+[combat](../../examples/games/rune_crypt/combat.rune),
+[exploration and builds](../../examples/games/rune_crypt/exploration.rune),
 [portable HUD](../../runtime/rune-web/src/pixel3d/hud.ts),
 [native HUD](../../src/apps/pixel3d/hud.rs),
-[UX and choice state](../../examples/rune_crypt/ux.rune),
-[logic scenarios](../../examples/rune_crypt/crypt.logic.test.rune),
+[UX and choice state](../../examples/games/rune_crypt/ux.rune),
+[logic scenarios](../../examples/games/rune_crypt/crypt.logic.test.rune),
 [browser regressions](../../tests/browser/rune_crypt.py),
 [compiler/raster tests](../../tests/pixel3d_app.rs).
 
 ## Declarative cameras and cinematic title scenes (v0.3.6)
 
-Vect Breach's [title scene](../../examples/vect_breach/title.rune) demonstrates
+Vect Breach's [title scene](../../examples/games/vect_breach/title.rune) demonstrates
 an elevated, pitched camera tour of its actual first level, with glowing bitmap
 lettering. The game scene opts in with `title_scene = breach_title`; its normal
 `camera = player`, briefing, controls, combat and run state are preserved.

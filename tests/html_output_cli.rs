@@ -17,7 +17,7 @@ fn write_file(path: &Path, content: &str) {
 #[test]
 fn html_output_renders_root_mounted_rune_web_page() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let script = manifest_dir.join("examples/i18n_demo.rune");
+    let script = manifest_dir.join("examples/rune-web/i18n_demo.rune");
 
     let assert = vectrune_cmd()
         .current_dir(manifest_dir)
@@ -139,7 +139,7 @@ view:
 #[test]
 fn html_output_rejects_non_matching_rune_web_path() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let script = manifest_dir.join("examples/i18n_demo.rune");
+    let script = manifest_dir.join("examples/rune-web/i18n_demo.rune");
 
     let assert = vectrune_cmd()
         .current_dir(manifest_dir)
@@ -273,7 +273,7 @@ src = public
 #[test]
 fn html_output_requires_supported_frontend_type() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let script = manifest_dir.join("examples/book_graphql.rune");
+    let script = manifest_dir.join("examples/api/book_graphql.rune");
 
     let assert = vectrune_cmd()
         .current_dir(manifest_dir)

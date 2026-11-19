@@ -144,7 +144,7 @@ pub fn check(doc: &RuneDocument) -> Vec<Diagnostic> {
         };
         if kind == "App" {
             if let Some(value) = section.kv.get("type").and_then(|v| v.as_str()) {
-                if !["REST", "GRAPHQL", "STATIC", "DYNAMIC-AI-WEB", "PIXEL", "PIXEL-3D"]
+                if !["REST", "GRAPHQL", "STATIC", "DYNAMIC-AI-WEB", "PIXEL", "PIXEL-3D", "RUNE-DB", "VECT-EVENT"]
                     .contains(&value.to_uppercase().as_str())
                 {
                     report(
@@ -159,7 +159,7 @@ pub fn check(doc: &RuneDocument) -> Vec<Diagnostic> {
             for (key, target) in [("data_source", "DataSource"), ("schema", "Schema")] {
                 if let Some(reference) = section.kv.get(key).and_then(|v| v.as_str()) {
                     let reference = reference.trim_start_matches('#');
-                    if !doc.sections.iter().any(|s| s.path == [target, reference]) {
+                    if !doc.sections.iter().any(|s| s.path == [target, reference] || (target == "DataSource" && s.path == ["Datasource", reference])) {
                         report(
                             "error",
                             "route-reference",

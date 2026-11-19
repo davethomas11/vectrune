@@ -1,0 +1,46 @@
+#!RUNE
+# Browser-local data: IndexedDB, independent of the native server's file.
+@App
+name = Rune DB Browser Workshop
+type = REST
+port = 3000
+
+@DataSource/browser
+type = rune-db
+database = rune-storage-workshop
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = storage
+
+@Page/storage
+title = Persistent browser data
+logic = storage
+view:
+    main:
+        h1 "Rune DB in the browser"
+        p "{status}"
+        p "Saved title: {title}"
+        button click="save()" "Save a note"
+        button click="load()" "Load saved note"
+        p "Reload this page, then load the note. IndexedDB keeps it locally."
+
+@Logic/storage
+state:
+    status = "Ready"
+    title = "No note loaded"
+
+action save:
+    packet = { op: "put", collection: "notes", key: "hello", value: { title: "Hello from IndexedDB" } }
+    receipt = db browser packet catch failed
+    status = "Saved after transaction commit"
+
+action load:
+    packet = { op: "get", collection: "notes", key: "hello" }
+    record = db browser packet catch failed
+    title = record.value.title ?? "No saved note"
+    status = "Loaded from IndexedDB"
+
+action failed(error):
+    status = error.message

@@ -6,6 +6,8 @@
 // ============================================================================
 
 import { createLogicApp } from './logic';
+import { configureDataSources } from './datasource';
+export { requestDataSource, setDataSourceToken } from './datasource';
 import { beginGameLoading, markGameReady } from './game_ready';
 import { initContext, ctx } from './context';
 import { getWindowProp, setWindowProp } from './globals';
@@ -49,6 +51,7 @@ export {
  * (page tree, state, actions, derived definitions, etc).
  */
 export function boot(config: RuneWebConfig): RuneApp {
+  configureDataSources(config.dataSources);
   beginGameLoading();
   // Register programmable audio definitions from @Sound and @Music
   registerSounds(config.sounds);

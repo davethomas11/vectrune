@@ -10,7 +10,7 @@ with tempfile.TemporaryDirectory(prefix='rune-controls-') as folder, sync_playwr
     browser = pw.chromium.launch()
     for example, profile, action in [('vect_breach', 'breach', 'fire'), ('monster_city', 'monster', 'smash')]:
         game_dir = Path(folder)/example
-        shutil.copytree(ROOT/'examples'/example, game_dir)
+        shutil.copytree(ROOT/'examples/games'/example, game_dir)
         controls = game_dir/'controls.rune'
         original = controls.read_text().replace('@Controls/'+profile, '@Controls/defaults', 1)
         controls.write_text(original + f'\n@Controls/{profile}\nextends = defaults\nkeys:\n    Space -> null\n    KeyZ -> {action}\nmouse:\n    Left -> null\n    Right -> {action}\n')

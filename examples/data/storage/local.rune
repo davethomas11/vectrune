@@ -1,0 +1,9 @@
+#!RUNE
+# Independent from the standalone servers; no server is needed for these scripts.
+@DataSource/main
+type = rune-db
+native_path = .vectrune/checkout.rdb
+
+@DataSource/activity
+type = vect-event
+store = main

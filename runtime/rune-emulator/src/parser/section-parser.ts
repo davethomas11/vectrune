@@ -68,8 +68,11 @@ function parseRunSteps(lines: IndentedLine[], baseIndent: number): RunStep[] {
     }
     const assignMatch = text.match(/^(.+?)(?<![!<>=])=(?!=)(.*)$/);
     if (assignMatch && !text.match(/^.+?\.push\(/)) {
-      const lhs = assignMatch[1].trim();
+      const rawLhs = assignMatch[1].trim().replace(/^(?:local|let)\s+/, '');
+      const compound = rawLhs.match(/^(.+?)\s*([+*/-])$/);
+      const lhs = compound ? compound[1].trim() : rawLhs;
       let rhs = assignMatch[2].trim();
+      if (compound) rhs = `(${lhs}) ${compound[2]} (${rhs})`;
       if (/^[A-Za-z_][\w.\-[\]()]*$/.test(lhs) && !lhs.includes(" ")) {
         // If rhs opens an object or array that isn't closed on this line, gather subsequent lines
         const countBraces = (s: string) => (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
@@ -227,22 +230,18 @@ export function parseSections(source: string): RuneDocument {
   };
 
   const sectionBoundaries: SectionBoundary[] = [];
-  let preambleEnd = 0;
 
   for (let i = 0; i < tokens.length; i++) {
     const tok = tokens[i];
     if (tok.kind === 'Shebang') {
       doc.shebang = true;
-      preambleEnd = i + 1;
       continue;
     }
     if (tok.kind === 'Import') {
       doc.imports.push(tok.raw);
-      preambleEnd = i + 1;
       continue;
     }
     if (tok.kind === 'Comment' || tok.kind === 'Blank') {
-      if (sectionBoundaries.length === 0) preambleEnd = i + 1;
       continue;
     }
     if (tok.kind === 'Section') {

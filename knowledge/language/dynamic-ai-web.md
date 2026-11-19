@@ -174,7 +174,7 @@ AI responses are nondeterministic and their content depends on the model. JSON v
 ## Try the example
 
 ```sh
-cargo run -- examples/dynamic_ai_web.rune --watch
+cargo run -- examples/rune-web/dynamic_ai_web.rune --watch
 # Open http://127.0.0.1:3000/
 curl http://127.0.0.1:3000/api/menu
 curl -H 'Content-Type: application/json' -d '{"preferences":"vegan and creamy"}' http://127.0.0.1:3000/api/recommend
@@ -183,13 +183,13 @@ curl -H 'Content-Type: application/json' -d '{"preferences":"vegan and creamy"}'
 Ready-to-run CLI variants (install and authenticate the corresponding CLI first):
 
 ```sh
-cargo run -- examples/dynamic_ai_web_codex.rune --watch
-cargo run -- examples/dynamic_ai_web_copilot.rune --watch
+cargo run -- examples/rune-web/dynamic_ai_web_codex.rune --watch
+cargo run -- examples/rune-web/dynamic_ai_web_copilot.rune --watch
 ```
 
 Run one at a time, or pass different `--port` values. These variants use their CLI's default model rather than `phi4`.
 
-The [complete cafe](../../examples/dynamic_ai_web.rune) contains only descriptions and menu records. It generates a homepage, a menu page, and two AI-backed APIs. The existing `vectrune --ai` CLI shortcut is separate from this server mode.
+The [complete cafe](../../examples/rune-web/dynamic_ai_web.rune) contains only descriptions and menu records. It generates a homepage, a menu page, and two AI-backed APIs. The existing `vectrune --ai` CLI shortcut is separate from this server mode.
 
 ## Sources and extension points
 

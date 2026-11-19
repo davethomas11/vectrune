@@ -1,0 +1,171 @@
+[
+  {
+    "category": "local generators, overlays and lookup updates",
+    "statements": [
+      "local batch = { id: i + 1, x: 10, nested: { hp: 3 } } * 3 inc x by 5",
+      "actors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }",
+      "id = 2",
+      "actors[]id.x = 99",
+      "actors[]id.nested.hp = 1",
+      "result = { actors, original: batch }"
+    ],
+    "expected": {
+      "actors": [
+        {
+          "id": 1,
+          "x": 10,
+          "nested": {
+            "hp": 3
+          },
+          "y": 20,
+          "alive": true
+        },
+        {
+          "id": 2,
+          "x": 99,
+          "nested": {
+            "hp": 1
+          },
+          "y": 20,
+          "alive": true
+        },
+        {
+          "id": 3,
+          "x": 20,
+          "nested": {
+            "hp": 3
+          },
+          "y": 20,
+          "alive": true
+        },
+        {
+          "id": 1,
+          "x": 10,
+          "nested": {
+            "hp": 3
+          },
+          "y": 40,
+          "alive": true
+        },
+        {
+          "id": 2,
+          "x": 15,
+          "nested": {
+            "hp": 3
+          },
+          "y": 40,
+          "alive": true
+        },
+        {
+          "id": 3,
+          "x": 20,
+          "nested": {
+            "hp": 3
+          },
+          "y": 40,
+          "alive": true
+        }
+      ],
+      "original": [
+        {
+          "id": 1,
+          "x": 10,
+          "nested": {
+            "hp": 3
+          }
+        },
+        {
+          "id": 2,
+          "x": 15,
+          "nested": {
+            "hp": 3
+          }
+        },
+        {
+          "id": 3,
+          "x": 20,
+          "nested": {
+            "hp": 3
+          }
+        }
+      ]
+    }
+  },
+  {
+    "category": "replace first lookup match and ignore misses",
+    "statements": [
+      "actors = [{ id: 1, hp: 3 }, { id: 2, hp: 4 }]",
+      "id = 2",
+      "actors[]id = { id, hp: 8 }",
+      "id = 9",
+      "actors[]id.hp = 0",
+      "result = actors"
+    ],
+    "expected": [
+      {
+        "id": 1,
+        "hp": 3
+      },
+      {
+        "id": 2,
+        "hp": 8
+      }
+    ]
+  },
+  {
+    "category": "grid and multiline nested objects",
+    "statements": [
+      "cells = grid 2 x 1 at (1, 2) step (3, 4) with {\n    id: i + 1,\n    label: \"cell,\" + i\n}",
+      "result = cells"
+    ],
+    "expected": [
+      {
+        "x": 1,
+        "y": 2,
+        "start_x": 1,
+        "start_y": 2,
+        "col": 0,
+        "row": 0,
+        "id": 1,
+        "label": "cell,0"
+      },
+      {
+        "x": 4,
+        "y": 2,
+        "start_x": 4,
+        "start_y": 2,
+        "col": 1,
+        "row": 0,
+        "id": 2,
+        "label": "cell,1"
+      }
+    ]
+  },
+  {
+    "category": "nested lookups and compound updates",
+    "statements": [
+      "orders = [{ id: 1, items: [{ sku: \"A\", qty: 2 }, { sku: \"B\", qty: 3 }] }]",
+      "id = 1",
+      "sku = \"B\"",
+      "orders[]id.items[]sku.qty += 4",
+      "sku = \"missing\"",
+      "orders[]id.items[]sku.qty += 1",
+      "result = orders"
+    ],
+    "expected": [
+      {
+        "id": 1,
+        "items": [
+          {
+            "sku": "A",
+            "qty": 2
+          },
+          {
+            "sku": "B",
+            "qty": 7
+          }
+        ]
+      }
+    ]
+  }
+]

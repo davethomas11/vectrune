@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory(prefix='vect-breach-') as folder, sync_playwright() as pw:
     html = subprocess.run([str(ROOT/'target/debug/vectrune'),
-        str(ROOT/'examples/vect_breach/vect_breach.rune'), '-o', 'html'],
+        str(ROOT/'examples/games/vect_breach/vect_breach.rune'), '-o', 'html'],
         capture_output=True, text=True, check=True).stdout
     game_file = Path(folder)/'game.html'
     game_file.write_text(html)

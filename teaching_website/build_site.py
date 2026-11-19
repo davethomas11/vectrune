@@ -122,7 +122,7 @@ def build_site(destination, binary, base="/", selected_routes=None, site_url="ht
                         ("starfall", "starfall/starfall.rune")]:
         game = assets / "games" / slug
         game.mkdir(parents=True, exist_ok=True)
-        result = subprocess.run([binary, str(SITE.parent / "examples" / entry), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)
+        result = subprocess.run([binary, str(SITE.parent / "examples/games" / entry), "-o", "html"], capture_output=True, text=True, encoding="utf-8", check=True)
         if slug not in {"vectraiders", "vectworms", "tic-tac-toe"} and not re.search(r'"controls"\s*:\s*\{', result.stdout):
             raise RuntimeError(f"{binary} did not compile {slug}'s @Controls profile. "
                                "Build the compiler from this checkout (omit --binary).")

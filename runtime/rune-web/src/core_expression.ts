@@ -1,4 +1,4 @@
-// Canonical expression AST shared by Rune-Web and native Vect scripts.
+// Canonical expression AST shared by Rune-Web, the emulator and native Vect scripts.
 import { entitiesChanged } from './pixel3d/entities';
 // Host-specific commands stay in their adapters; math uses Rune's degree convention.
 export type Expr =
@@ -10,6 +10,10 @@ export type Expr =
   | { kind: 'array'; items: Expr[] }
   | { kind: 'object'; items: [string, Expr][] }
   | { kind: 'member'; items: [Expr, Expr] }
+  | { kind: 'lookup'; value: string; items: [Expr] }
+  | { kind: 'overlay'; items: [Expr, Expr] }
+  | { kind: 'generate'; props: string[]; items: [Expr, Expr, Expr, Expr] }
+  | { kind: 'grid'; items: [Expr, Expr, Expr, Expr, Expr, Expr, Expr] }
   | { kind: 'call'; items: [Expr, ...Expr[]] }
   | { kind: 'ternary'; items: [Expr, Expr, Expr] };
 type Token = { value: string; kind: string };
@@ -60,7 +64,12 @@ function tokenize(source: string): Token[] {
         if (c === quote) { closed = true; break; }
         if (c === '\\') {
           const e = source[i++];
-          const escapes: Record<string, string> = { n: '\n', r: '\r', t: '\t', '\\': '\\', '"': '"', "'": "'" };
+          const escapes: Record<string, string> = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', '/': '/', '\\': '\\', '"': '"', "'": "'" };
+          if (e === 'u') {
+            const hex = source.slice(i, i + 4);
+            if (!/^[\da-fA-F]{4}$/.test(hex)) throw new Error('Invalid Unicode escape');
+            value += String.fromCharCode(parseInt(hex, 16)); i += 4; continue;
+          }
           if (!(e in escapes)) throw new Error('Invalid string escape');
           value += escapes[e];
         } else value += c;
@@ -77,18 +86,27 @@ function tokenize(source: string): Token[] {
   out.push({ kind: 'eof', value: '' }); return out;
 }
 export function parseCoreExpression(source: string): Expr {
-  const tokens = tokenize(source); let pos = 0;
+  const tokens = tokenize(source); let pos = 0, depth = 0;
   const peek = () => tokens[pos].value;
   const take = () => tokens[pos++];
   const expect = (s: string) => { if (take().value !== s) throw new Error(`Expected ${s}`); };
   function expression(min = 0): Expr {
+    if (++depth > 128) throw new Error('Expression nesting exceeds 128');
     const t = take(); let left: Expr;
     if (t.kind === 'number') left = { kind: 'literal', value: Number(t.value) };
     else if (t.kind === 'string') left = { kind: 'literal', value: t.value };
     else if (['true', 'false', 'null'].includes(t.value)) left = { kind: 'literal', value: JSON.parse(t.value) };
     else if (['-', '+', '!', 'not'].includes(t.value)) left = { kind: 'unary', value: t.value, items: [expression(8)] };
     else if (t.value === '(') { left = expression(); expect(')'); }
-    else if (t.value === '[') {
+    else if (t.value === 'grid' && !['', '.', '['].includes(peek())) {
+      const cols = expression(8); expect('x'); const rows = expression(8);
+      if (!['at', 'from'].includes(take().value)) throw new Error('Expected at or from');
+      expect('('); const x = expression(); expect(','); const y = expression(); expect(')');
+      expect('step'); expect('('); const dx = expression(); expect(','); const dy = expression(); expect(')');
+      let overrides: Expr = { kind: 'object', items: [] };
+      if (peek() === 'with') { take(); overrides = expression(8); }
+      left = { kind: 'grid', items: [cols, rows, x, y, dx, dy, overrides] };
+    } else if (t.value === '[') {
       const items: Expr[] = [];
       while (peek() !== ']') { items.push(expression()); if (peek() !== ',') break; take(); }
       expect(']'); left = { kind: 'array', items };
@@ -96,7 +114,11 @@ export function parseCoreExpression(source: string): Expr {
       const items: [string, Expr][] = [];
       while (peek() !== '}') {
         const key = take(); if (!['id', 'string'].includes(key.kind)) throw new Error('Invalid object key');
-        expect(':'); items.push([safeKey(key.value), expression()]);
+        let value: Expr;
+        if (peek() === ':') { take(); value = expression(); }
+        else if (key.kind === 'id' && [',', '}'].includes(peek())) value = { kind: 'id', value: key.value };
+        else throw new Error('Expected : after object key');
+        items.push([safeKey(key.value), value]);
         if (peek() !== ',') break; take();
       }
       expect('}'); left = { kind: 'object', items };
@@ -109,11 +131,39 @@ export function parseCoreExpression(source: string): Expr {
         take(); const key = take(); if (key.kind !== 'id') throw new Error('Expected member name');
         left = { kind: 'member', items: [left, { kind: 'literal', value: safeKey(key.value) }] }; continue;
       }
-      if (peek() === '[') { take(); const key = expression(); expect(']'); left = { kind: 'member', items: [left, key] }; continue; }
+      if (peek() === '[') {
+        take();
+        if (peek() === ']') {
+          take(); const key = take(); if (key.kind !== 'id') throw new Error('Expected lookup property after []');
+          left = { kind: 'lookup', value: safeKey(key.value), items: [left] };
+        } else { const key = expression(); expect(']'); left = { kind: 'member', items: [left, key] }; }
+        continue;
+      }
       if (peek() === '(') {
         take(); const args: Expr[] = [];
         while (peek() !== ')') { args.push(expression()); if (peek() !== ',') break; take(); }
         expect(')'); left = { kind: 'call', items: [left, ...args] }; continue;
+      }
+      if (min <= 0 && ['with', 'all'].includes(peek())) {
+        take(); left = { kind: 'overlay', items: [left, expression(8)] }; continue;
+      }
+      // Object replication binds like multiplication; its count/step are unary
+      // expressions, so grouped arithmetic remains unambiguous.
+      if (peek() === '*' && min <= 7 && left.kind === 'object') {
+        take(); const count = expression(8); const props: string[] = [];
+        let step: Expr = { kind: 'literal', value: 0 };
+        if (peek() === 'inc') {
+          take(); const parens = peek() === '('; if (parens) take();
+          do {
+            const key = take(); if (!['id', 'string'].includes(key.kind)) throw new Error('Expected increment property');
+            props.push(safeKey(key.value));
+            if (peek() !== ',') break; take();
+          } while (true);
+          if (parens) expect(')'); expect('by'); step = expression(8);
+        }
+        let overrides: Expr = { kind: 'object', items: [] };
+        if (peek() === 'with') { take(); overrides = expression(8); }
+        left = { kind: 'generate', props, items: [left, count, step, overrides] }; continue;
       }
       const op = peek(), rank = precedence[op];
       if (rank === undefined || rank < min) break;
@@ -122,7 +172,7 @@ export function parseCoreExpression(source: string): Expr {
     if (min === 0 && peek() === '?') {
       take(); const yes = expression(); expect(':'); left = { kind: 'ternary', items: [left, yes, expression()] };
     }
-    return left;
+    depth--; return left;
   }
   const ast = expression();
   if (tokens[pos].kind !== 'eof') throw new Error(`Unexpected token: ${peek()}`);
@@ -133,15 +183,45 @@ function callName(e: Expr): string | undefined {
   if (e.kind === 'member' && e.items![1].kind === 'literal') {
     const parent = callName(e.items[0]); if (parent) return parent + '.' + e.items[1].value;
   }
+  return undefined;
 }
 export function evaluateCoreExpression(e: Expr, scope: Record<string, any>, functions = coreFunctions): any {
   const ev = (n: Expr) => evaluateCoreExpression(n, scope, functions);
   switch (e.kind) {
     case 'literal': return e.value;
     case 'id': return scope[e.value];
-    case 'array': return e.items!.map(ev);
+    case 'array': return e.items.flatMap(item => {
+      const value = ev(item);
+      return expandsCollection(item) && Array.isArray(value) ? value : [value];
+    });
     case 'object': return Object.fromEntries(e.items!.map(([k, v]) => [k, ev(v)]));
     case 'member': return ev(e.items[0])?.[safeKey(ev(e.items[1]))];
+    case 'lookup': {
+      const source = ev(e.items[0]);
+      if (scope[e.value] === undefined) return undefined;
+      return Array.isArray(source) ? source.find(item => String(item?.[e.value]) === String(scope[e.value])) : undefined;
+    }
+    case 'overlay': return overlay(ev(e.items[0]), ev(e.items[1]));
+    case 'generate': {
+      const count = collectionCount(ev(e.items[1]));
+      const step = finiteNumber(ev(e.items[2]));
+      return Array.from({ length: count }, (_, i) => {
+        const local = { ...scope, i };
+        const item = cloneData(evaluateCoreExpression(e.items[0], local, functions));
+        for (const prop of e.props) if (typeof item[prop] === 'number') item[prop] += i * step;
+        return overlay(item, evaluateCoreExpression(e.items[3], local, functions));
+      });
+    }
+    case 'grid': {
+      const [cols, rows] = e.items.slice(0, 2).map(item => collectionCount(ev(item)));
+      const count = collectionCount(cols * rows);
+      const [x, y, dx, dy] = e.items.slice(2, 6).map(item => finiteNumber(ev(item)));
+      return Array.from({ length: count }, (_, i) => {
+        const col = i % cols, row = Math.floor(i / cols);
+        const item = { x: x + col * dx, y: y + row * dy, start_x: x + col * dx, start_y: y + row * dy, col, row };
+        return overlay(item, evaluateCoreExpression(e.items[6], { ...scope, i, col, row, c: col, r: row }, functions));
+      });
+    }
     case 'unary': { const v = ev(e.items[0]); return e.value === '-' ? -v : e.value === '+' ? +v : !v; }
     case 'ternary': return ev(e.items[0]) ? ev(e.items[1]) : ev(e.items[2]);
     case 'lambda': return (value: any) => evaluateCoreExpression(e.items[0], { ...scope, [e.value]: value }, functions);
@@ -178,6 +258,51 @@ export function evaluateCoreExpression(e: Expr, scope: Record<string, any>, func
     }
   }
   throw new Error('Unknown expression');
+}
+function expandsCollection(e: Expr): boolean {
+  return e.kind === 'generate' || e.kind === 'grid' || e.kind === 'overlay';
+}
+function collectionCount(value: any): number {
+  if (!Number.isInteger(value) || value < 0 || value > 1_000_000) throw new Error('Invalid generator count (0..1000000)');
+  return value;
+}
+function finiteNumber(value: any): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error('Generator coordinates and steps must be finite numbers');
+  return value;
+}
+function cloneData(value: any): any {
+  if (Array.isArray(value)) return value.map(cloneData);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [safeKey(k), cloneData(v)]));
+  return value;
+}
+function overlay(source: any, overrides: any): any {
+  if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) throw new Error('with/all requires an object');
+  const copy = (item: any) => item && typeof item === 'object' && !Array.isArray(item)
+    ? { ...cloneData(item), ...cloneData(overrides) } : item;
+  if (Array.isArray(source)) return source.map(copy);
+  if (!source || typeof source !== 'object') throw new Error('with/all requires an object or array');
+  return copy(source);
+}
+
+/** Assignment shares lookup parsing with reads, including replacing a match. */
+export function assignCoreTarget(target: Expr, value: any, scope: Record<string, any>, functions = coreFunctions): void {
+  if (target.kind === 'id') { scope[safeKey(target.value)] = value; return; }
+  if (target.kind === 'lookup') {
+    const source = evaluateCoreExpression(target.items[0], scope, functions);
+    if (!Array.isArray(source)) throw new Error('Lookup requires an array');
+    if (scope[target.value] === undefined) return;
+    const index = source.findIndex(item => String(item?.[target.value]) === String(scope[target.value]));
+    if (index >= 0) { source[index] = value; entitiesChanged(source); }
+    return;
+  }
+  if (target.kind !== 'member') throw new Error('Invalid assignment target');
+  const parent = evaluateCoreExpression(target.items[0], scope, functions);
+  if (parent == null && containsLookup(target)) return;
+  if (parent == null) throw new Error('Missing assignment receiver');
+  parent[safeKey(evaluateCoreExpression(target.items[1], scope, functions))] = value;
+}
+function containsLookup(e: Expr): boolean {
+  return e.kind === 'lookup' || (e.kind === 'member' && containsLookup(e.items[0]));
 }
 // A conservative rollout in existing web apps: unsupported game/helper syntax
 // stays with the established evaluator. Vect's typed expressions are strict.

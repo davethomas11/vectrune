@@ -145,7 +145,7 @@ fn texture_patterns_and_runs_expand_losslessly_and_reject_invalid_rows() {
 
 #[tokio::test]
 async fn compiles_vect_breach_game_and_html() {
-    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/vect_breach.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/vect_breach/vect_breach.rune")).unwrap();
     let game = pixel3d::compile(&doc).unwrap();
 
     assert_eq!(game.title, "Vect Breach");
@@ -164,7 +164,7 @@ async fn compiles_vect_breach_game_and_html() {
 
 #[tokio::test]
 async fn compiles_rune_crypt_with_textured_interiors_and_generated_sky() {
-    let doc = load_rune_document_from_path(Path::new("examples/rune_crypt/rune_crypt.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/rune_crypt/rune_crypt.rune")).unwrap();
     let game = pixel3d::compile(&doc).unwrap();
     assert_eq!(game.title, "Rune Crypt");
     assert_eq!(game.config["maps"]["courtyard"]["sky"]["seed"], 731);
@@ -222,7 +222,7 @@ async fn compiles_rune_crypt_with_textured_interiors_and_generated_sky() {
 #[test]
 fn pause_and_restart_bindings_reject_invalid_scene_configuration() {
     use rune_runtime::rune_ast::Value;
-    let doc = load_rune_document_from_path(Path::new("examples/rune_crypt/rune_crypt.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/rune_crypt/rune_crypt.rune")).unwrap();
     for (field, value, error) in [
         ("render_radius", Value::Number(0.0), "render_radius"),
         ("render_radius", Value::Number(4097.0), "render_radius"),
@@ -316,7 +316,7 @@ fn native_tall_rooms_raise_walls_and_model_clipping_without_moving_the_floor() {
 #[test]
 #[cfg(feature = "pixel-desktop")]
 fn rune_crypt_native_logic_restores_training_and_exports_environment_state() {
-    let doc = load_rune_document_from_path(Path::new("examples/rune_crypt/rune_crypt.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/rune_crypt/rune_crypt.rune")).unwrap();
     let game = pixel3d::compile(&doc).unwrap();
     let saves = tempfile::tempdir().unwrap();
     for session in 0..2 {
@@ -696,7 +696,7 @@ fn native_rasterizer_renders_scene() {
 #[test]
 fn all_breach_maps_connect_spawn_to_every_floor_and_objective() {
     use std::collections::{HashSet, VecDeque};
-    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/vect_breach.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/vect_breach/vect_breach.rune")).unwrap();
     let game = pixel3d::compile(&doc).unwrap();
     let textures = game.config["textures"].as_object().unwrap();
     let objectives: Vec<_> = ["wall/switch", "wall/exit"].iter()
@@ -731,7 +731,7 @@ fn all_breach_maps_connect_spawn_to_every_floor_and_objective() {
 
 #[test]
 fn rejects_breach_spawns_inside_walls_or_outside_the_map() {
-    let source = std::fs::read_to_string("examples/vect_breach/map.rune").unwrap();
+    let source = std::fs::read_to_string("examples/games/vect_breach/map.rune").unwrap();
     for spawn in [r#"{"x":0.5,"y":0.5,"angle":0}"#, r#"{"x":99,"y":1.5,"angle":0}"#] {
         let source = source.replacen(r#"{"x":1.5,"y":1.5,"angle":0}"#, spawn, 1);
         let doc = parse_rune(&source).unwrap();
@@ -742,7 +742,7 @@ fn rejects_breach_spawns_inside_walls_or_outside_the_map() {
 
 #[tokio::test]
 async fn compiles_compact_breach_shell_and_validates_its_canvas() {
-    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/site_shell.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/vect_breach/site_shell.rune")).unwrap();
     let html = pixel3d::html(&doc).await.unwrap();
     assert!(html.contains("THREE SECTORS. ONE WAY OUT."));
     assert!(html.contains("__RunePixel3DRuntime.boot({"));
@@ -756,7 +756,7 @@ async fn compiles_compact_breach_shell_and_validates_its_canvas() {
 
 #[test]
 fn breach_title_scene_camera_and_start_are_independent_of_gameplay() {
-    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/vect_breach.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/vect_breach/vect_breach.rune")).unwrap();
     let game = pixel3d::compile(&doc).unwrap();
     assert_eq!(game.config["titleScene"]["camera"]["duration"], 36.0);
     assert_eq!(game.config["titleScene"]["fov"], 76.0);
@@ -799,7 +799,7 @@ fn breach_title_scene_camera_and_start_are_independent_of_gameplay() {
 
 #[test]
 fn declarative_camera_and_perspective_reject_invalid_values() {
-    let doc = load_rune_document_from_path(Path::new("examples/vect_breach/vect_breach.rune")).unwrap();
+    let doc = load_rune_document_from_path(Path::new("examples/games/vect_breach/vect_breach.rune")).unwrap();
     for (kind, key, value) in [
         ("Perspective", "fov", serde_json::json!(0)),
         ("Camera", "duration", serde_json::json!(0)),

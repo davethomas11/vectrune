@@ -10,7 +10,7 @@
     "src/apps/rest/swagger/",
     "src/apps/graphql/",
     "src/apps/rest/ws.rs",
-    "examples/vect_breach/"
+    "examples/games/vect_breach/"
   ],
   "pages": [
     {
@@ -251,7 +251,7 @@
         {
           "title": "Explore a stateful example",
           "paragraphs": [
-            "The repository also includes examples/book_graphql.rune, which demonstrates books, authors, memory-backed queries, and mutations. Use that as the next step after this minimal service."
+            "The repository also includes examples/api/book_graphql.rune, which demonstrates books, authors, memory-backed queries, and mutations. Use that as the next step after this minimal service."
           ],
           "links": [
             {
@@ -388,6 +388,123 @@
               "route": "rune-crypt",
               "label": "Explore Rune Crypt"
             }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "docs/storage",
+      "title": "Rune DB and Vect Event",
+      "label": "Database and event streams",
+      "description": "Run a server-side Rune DB with a Rune-Web frontend, embed providers in existing apps, and commit documents and durable events together.",
+      "sections": [
+        {
+          "title": "Declare reusable providers",
+          "paragraphs": [
+            "A rune-db datasource stores documents by collection and key. A vect-event datasource shares its store and transaction boundary. Native storage uses redb with MessagePack; browser-local storage uses IndexedDB. This feature requires a compiler built from current source."
+          ],
+          "source": "examples/data/storage/data.rune"
+        },
+        {
+          "title": "Run a server-side database with Rune-Web",
+          "paragraphs": [
+            "Recommended: run one server on port 3000. @App type = rune-db owns the native file and @Frontend type = rune-web serves the page. The browser datasource uses mode = remote and endpoint = /, so database requests use the page’s current origin. Both localhost and 127.0.0.1 work, including a --port override, without CORS configuration. Data remains on the server, rather than in IndexedDB.",
+            "Save a note, add a view, reload, then load it. Another browser and the CLI read the same server record. Save intentionally replaces this demo note, resets its views to zero and appends note.saved in one atomic batch.",
+            "Read new events advances the tab’s cursor through pages of up to 20 events. Replay events starts at zero. The server retains the events; the tab cursor resets on reload. The interface shows event cards, with the raw response under Inspect the response data."
+          ],
+          "source": "examples/data/storage/fullstack/single-server.rune",
+          "command": "vectrune examples/data/storage/fullstack/single-server.rune\n\n# Open http://127.0.0.1:3000 (or http://localhost:3000), then save a note.\nvectrune db get notes hello --endpoint http://127.0.0.1:3000\nvectrune events tail notes --endpoint http://127.0.0.1:3000",
+          "links": [
+            {
+              "label": "Download all storage examples (ZIP)",
+              "href": "/assets/content/docs/rune-storage.zip"
+            }
+          ]
+        },
+        {
+          "title": "Two listeners from one command",
+          "paragraphs": [
+            "Use --secondary-app to launch independent HTTP apps in the same Vectrune process. Each file keeps its own @App, datasource settings, routes and port. The primary frontend listens on 3000 and the secondary database on 7333. Multiple positional Rune files still merge documents; they do not start separate apps.",
+            "Repeat --secondary-app for additional apps. --port and --host override only the primary. Ctrl-C shuts down the group, --watch reloads it, and a bind failure aborts startup before any app starts serving. The option requires Rune app files/directories and cannot be combined with output, input, transform, merge or desktop-target flags.",
+            "You can still run app.rune and database.rune in two terminals. Stop the previous version first: the examples share the same native database file."
+          ],
+          "source": "examples/data/storage/fullstack/app.rune",
+          "command": "vectrune examples/data/storage/fullstack/app.rune --secondary-app examples/data/storage/fullstack/database.rune\n\n# The split database endpoint is port 7333:\nvectrune db get notes hello --endpoint http://127.0.0.1:7333"
+        },
+        {
+          "title": "CORS for the split-server example",
+          "paragraphs": [
+            "Separate ports have different origins. The split database explicitly allows http://127.0.0.1:3000 and http://localhost:3000 using allow_origins, an array of exact HTTP(S) origins. The single-origin allow_origin setting remains supported; use one setting at a time. Wildcard origins are not accepted.",
+            "If you change the split frontend port, update this list too. The browser’s origin must match by scheme, hostname and port. The recommended same-server example avoids this cross-origin configuration entirely."
+          ],
+          "source": "examples/data/storage/fullstack/database.rune"
+        },
+        {
+          "title": "The complete Rune-Web frontend",
+          "paragraphs": [
+            "Both hosts import ui.rune and style.rune, so the same note editor, view counter and event history work in either mode. The remote rune-db provider selects the native server; vect-event references that store. Top-level db/events assignments resume after I/O completes, with catch failed reporting errors and re-enabling the controls. The shared styles and all imports are included in the downloadable ZIP.",
+            "This unauthenticated example binds to loopback for local development. For external access, configure a server token and HTTPS termination, and supply browser credentials at runtime through __RuneWeb.setDataSourceToken. Use a trusted backend for application authorization; CORS only controls browser origins. Do not embed privileged tokens in downloadable Rune source."
+          ],
+          "source": "examples/data/storage/fullstack/ui.rune"
+        },
+        {
+          "title": "Atomic checkout without a server",
+          "paragraphs": [
+            "The local examples use a separate checkout.rdb file. Each checkout run intentionally seeds stock at 10, then atomically decrements it and appends purchase.completed. The expected revision comes from the seed receipt; a concurrent conflicting update rejects the entire batch. Stock and event receipts share a commit position.",
+            "Run the replay script twice: the first invocation prints purchases and stores its cursor; the second prints zero events if there are no new purchases. Run checkout again, then replay to resume after the saved position. Each call reads one bounded page. Persist the cursor after processing; a crash before saving can repeat events, so real handlers should tolerate duplicates."
+          ],
+          "source": "examples/data/storage/checkout.vect",
+          "command": "vectrune examples/data/storage/checkout.vect\nvectrune examples/data/storage/replay.vect\nvectrune examples/data/storage/replay.vect"
+        },
+        {
+          "title": "Resume a durable event consumer",
+          "paragraphs": [
+            "local.rune declares main as a rune-db provider and activity as a vect-event view with store = main. The script and its provider file are included in the example ZIP. Run consumers sequentially: this teaching cursor does not coordinate concurrent workers or provide exactly-once delivery."
+          ],
+          "source": "examples/data/storage/replay.vect"
+        },
+        {
+          "title": "Run an event-only server",
+          "paragraphs": [
+            "This host uses its own file and port 7332, so it can run alongside the database examples. It exposes append, replay and append-only batches; document operations are rejected. after is an exclusive decimal-string cursor. Tail waits for committed events until Ctrl-C."
+          ],
+          "source": "examples/data/storage/event-server.rune",
+          "command": "# Terminal 1:\nvectrune examples/data/storage/event-server.rune\n\n# Terminal 2:\nvectrune events append orders order.created --value '{\"id\":\"order-1\"}' --endpoint http://localhost:7332\nvectrune events read orders --after 0 --limit 20 --endpoint http://localhost:7332\nvectrune events tail orders --after 0 --endpoint http://localhost:7332"
+        },
+        {
+          "title": "Launch a standalone server",
+          "paragraphs": [
+            "Run this server, then use CLI commands from a second terminal. A rune-db host serves document and stream operations; a vect-event host accepts stream operations only. Stop an owning server before directly opening its native file."
+          ],
+          "source": "examples/data/storage/db-server.rune",
+          "command": "vectrune examples/data/storage/db-server.rune\n\n# In another terminal:\nvectrune db put notes hello --value '{\"count\":0}' --endpoint http://localhost:7331\nvectrune db increment notes hello --path '[\"count\"]' --by 1 --endpoint http://localhost:7331\nvectrune db get notes hello --endpoint http://localhost:7331\nvectrune events tail '$changes' --endpoint http://localhost:7331"
+        },
+        {
+          "title": "Compose with an existing app",
+          "paragraphs": [
+            "Import the provider declarations into a REST app and call db/events with an operation packet. Writes and their change entries commit atomically. The packet API includes get, put, delete, increment, bounded prefix scans, append, replay and fixed atomic batches."
+          ],
+          "source": "examples/data/storage/api.rune"
+        },
+        {
+          "title": "Keep browser data across reloads",
+          "paragraphs": [
+            "This example saves a note in IndexedDB. Save, reload the page, then load it again. Browser data is local to the origin and does not automatically replicate to the native store. Top-level Rune-Web action I/O resumes after transaction completion; catch handles failures. Use the server-side example above when data must be shared across browsers or devices."
+          ],
+          "command": "vectrune examples/data/storage/web.rune",
+          "source": "examples/data/storage/web.rune"
+        },
+        {
+          "title": "Scope and limits",
+          "paragraphs": [
+            "This is a small experimental core: no SQL, joins, consumer groups, automatic replication, branching or commit-block syntax. Names and cursors have defined bounds; values are limited to 1 MiB, packets to 8 MiB and atomic batches to 256 mutations. Revisions and positions are decimal strings.",
+            "For full packet forms, retention limitations, authentication and benchmark evidence, read knowledge/runtime/storage.md and examples/data/storage/README.md in the repository. The library db, events, db.request and @DataSource entries identify the supported hosts."
+          ],
+          "items": [
+            "get, put, delete and increment address one document by collection and key. Use expected = \"0\" for create-only, or a returned revision for optimistic concurrency.",
+            "scan (CLI alias: query) returns an ordered key-prefix page, not SQL or a property-filter query. Continue with items/next and --after.",
+            "append/read operate on ordered streams. Document writes also record $changes in the same transaction. Explicit appends to $changes are rejected.",
+            "batch accepts 1–256 put/delete/increment/append operations in one store. A failed operation rolls back all document, revision and event changes."
           ]
         }
       ]

@@ -114,6 +114,6 @@ boxes per prop.
 Sources: [compiler](../../src/apps/pixel3d/mod.rs),
 [browser model renderer](../../runtime/rune-web/src/pixel3d/model.ts),
 [native model renderer](../../src/apps/pixel3d/model.rs),
-[example stairs](../../examples/rune_crypt/models.rune),
+[example stairs](../../examples/games/rune_crypt/models.rune),
 [browser tests](../../runtime/rune-web/tests/pixel3d.test.ts),
 [compiler/native tests](../../tests/pixel3d_app.rs).

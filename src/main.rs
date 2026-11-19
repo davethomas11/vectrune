@@ -10,6 +10,8 @@ mod crud_web_fe;
 mod execution;
 mod lambda_main;
 mod memory;
+mod object_syntax;
+mod storage;
 mod rune_ast;
 mod rune_parser;
 mod util;
@@ -42,12 +44,23 @@ async fn main() -> anyhow::Result<()> {
         .author("David Thomas")
         .about("Vectrune: Structured data in motion.")
         .subcommands(cli::developer::commands())
+        .subcommands(cli::storage::commands())
         .arg(
             Arg::new("SCRIPT")
                 .help("Path to the .rune, .vect, or .vectrune script, directory, or '-' to read from STDIN")
                 .num_args(1..)
                 .action(clap::ArgAction::Append)
                 .conflicts_with("ai"),
+        )
+        .arg(
+            Arg::new("secondary-app")
+                .long("secondary-app")
+                .value_name("RUNE_PATH")
+                .action(clap::ArgAction::Append)
+                .num_args(1)
+                .requires("SCRIPT")
+                .conflicts_with_all(["input", "output", "calculate", "transform", "merge-with", "target", "ai", "filter", "chunks-dir"])
+                .help("Run another independent HTTP app on its configured host/port; repeat for more apps. Ctrl-C stops the group"),
         )
         .arg(
             Arg::new("input")
@@ -292,6 +305,11 @@ async fn main() -> anyhow::Result<()> {
         )
         .get_matches();
 
+    if let Some((name @ ("db" | "events"), args)) = matches.subcommand() {
+        set_log_level(LogLevel::Error, true);
+        return cli::storage::run(name, args).await;
+    }
+
     if let Some((name @ ("doctor" | "check" | "test" | "fmt"), args)) = matches.subcommand() {
         // Runtime logs must not corrupt machine-readable command output.
         set_log_level(LogLevel::Error, true);
@@ -411,6 +429,12 @@ async fn main() -> anyhow::Result<()> {
             process::exit(1);
         }
     };
+
+    if let Some(secondary) = matches.get_many::<String>("secondary-app") {
+        anyhow::ensure!(script_paths.len() == 1 && script_paths[0] != "-", "--secondary-app requires exactly one primary Rune app path");
+        let paths: Vec<_> = std::iter::once(script_paths[0]).chain(secondary.map(String::as_str)).map(std::path::PathBuf::from).collect();
+        return cli::serve::run(&paths, port_override, host_override, watch_files).await;
+    }
 
     if input_format.is_none()
         && calc_expr.is_none()
@@ -670,6 +694,9 @@ async fn main() -> anyhow::Result<()> {
 
             let schemas = std::sync::Arc::new(extract_schemas(&doc));
             let data_sources = std::sync::Arc::new(extract_data_sources(&doc));
+            if app_type.as_deref().is_some_and(|v| v.eq_ignore_ascii_case("rune-db") || v.eq_ignore_ascii_case("vect-event")) {
+                storage::server::validate(&crate::core::AppState { doc: std::sync::Arc::new(doc.clone()), schemas: schemas.clone(), data_sources: data_sources.clone(), path: rune_dir.clone() }, effective_host)?;
+            }
             let app = apps::build_vectrune_router(
                 std::sync::Arc::new(doc.clone()),
                 schemas.clone(),

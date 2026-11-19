@@ -1,0 +1,11 @@
+#!VECT
+# Connect to the running db-server.rune through a remote provider.
+packet = { op: "put", collection: "notes", key: "hello", value: { title: "Hello", count: 0 } }
+receipt = db.request("remote.rune", "main", packet)
+stdio -> "Committed: {receipt.commit}"
+packet = { op: "increment", collection: "notes", key: "hello", path: ["count"], by: 1 }
+receipt = db.request("remote.rune", "main", packet)
+stdio -> "Changed count: {receipt.results[0].patch.value}"
+packet = { op: "get", collection: "notes", key: "hello" }
+record = db.request("remote.rune", "main", packet)
+stdio -> "{json.stringify(record)}"

@@ -4,6 +4,20 @@ purpose:
   - shared knowledge source for AI and docs
   - stable reference layer between runtime behavior and rendered docs
 pages:
+  - id: runtime.storage
+    path: runtime/storage.md
+    kind: page
+    title: Rune DB and Vect Event
+    audience:
+      - ai
+      - human
+    sources:
+      - src/storage/
+      - src/cli/storage.rs
+      - runtime/rune-web/src/datasource.ts
+      - examples/data/storage/
+      - tests/storage_core.rs
+      - tests/storage_network.rs
   - id: runtime.voxel-worlds
     path: runtime/voxel-worlds.md
     kind: page
@@ -14,7 +28,7 @@ pages:
     sources:
       - runtime/rune-web/src/pixel3d/voxel.ts
       - src/apps/pixel3d/desktop.rs
-      - examples/rune_miners/
+      - examples/games/rune_miners/
       - tests/rune_miners_app.rs
       - tests/browser/rune_miners.py
   - id: language.pixel-models
@@ -28,7 +42,7 @@ pages:
       - src/apps/pixel3d/model.rs
       - src/apps/pixel3d/mod.rs
       - runtime/rune-web/src/pixel3d/model.ts
-      - examples/rune_crypt/models.rune
+      - examples/games/rune_crypt/models.rune
       - tests/pixel3d_app.rs
   - id: runtime.pixel3d
     path: runtime/pixel3d.md
@@ -40,7 +54,7 @@ pages:
     sources:
       - src/apps/pixel3d/
       - runtime/rune-web/src/pixel3d/
-      - examples/rune_crypt/
+      - examples/games/rune_crypt/
       - tests/pixel3d_app.rs
       - tests/browser/rune_crypt.py
   - id: product.overview
@@ -90,7 +104,7 @@ pages:
       - src/builtins/builtin/summarize.rs
       - runtime/rune-emulator/src/engine/summarize.ts
       - tests/summarize_builtin.rs
-      - examples/sales_report.rune
+      - examples/data/reports/sales_report.rune
   - id: language.dynamic-ai-web
     path: language/dynamic-ai-web.md
     kind: page
@@ -102,9 +116,9 @@ pages:
       - src/apps/dynamic_ai_web/
       - src/apps/dynamic_ai_web/generations.rs
       - src/cache.rs
-      - examples/dynamic_ai_web.rune
-      - examples/dynamic_ai_web_codex.rune
-      - examples/dynamic_ai_web_copilot.rune
+      - examples/rune-web/dynamic_ai_web.rune
+      - examples/rune-web/dynamic_ai_web_codex.rune
+      - examples/rune-web/dynamic_ai_web_copilot.rune
       - tests/dynamic_ai_web.rs
       - tests/dynamic_ai_cli.rs
   - id: language.rune-web-guide
@@ -118,8 +132,8 @@ pages:
       - src/apps/rune_web/parser.rs
       - runtime/rune-web/src/events.ts
       - runtime/rune-web/src/statement.ts
-      - examples/rune_web_guide/
-      - examples/space_invaders/
+      - examples/rune-web/guide/
+      - examples/games/space_invaders/
       - teaching_website/parts/pages/rune_web_guide.rune
       - tests/browser/rune_web_guide.py
       - tests/browser/space_invaders.py
@@ -132,7 +146,7 @@ pages:
       - human
     sources:
       - src/apps/rune_web/
-      - examples/tic_tac_toe/
+      - examples/games/tic_tac_toe/
       - tests/integration_app.rs
   - id: language.css-tokens-presets
     path: language/css-tokens-presets.md
@@ -143,7 +157,7 @@ pages:
       - human
     sources:
       - src/apps/rune_web/css.rs
-      - examples/tic_tac_toe/parts/style.rune
+      - examples/games/tic_tac_toe/parts/style.rune
   - id: language.javascript-runtime
     path: language/javascript-runtime.md
     kind: page
@@ -154,7 +168,7 @@ pages:
     sources:
       - src/apps/rune_web/jscodegen.rs
       - src/apps/rune_web/parser.rs
-      - examples/tic_tac_toe/parts/logic.rune
+      - examples/games/tic_tac_toe/parts/logic.rune
   - id: language.reactive-memory
     path: language/reactive-memory.md
     kind: page
@@ -226,8 +240,8 @@ pages:
       - src/builtins/builtin/http_fetch.rs
       - src/core/mod.rs
       - runtime/rune-web/src/builtins/fetch.ts
-      - examples/weather.rune
-      - examples/weather_web.rune
+      - examples/api/weather.rune
+      - examples/rune-web/weather_web.rune
       - tests/fetch_builtin.rs
       - runtime/rune-web/tests/builtins/fetch.test.ts
   - id: runtime.cli
@@ -244,7 +258,7 @@ pages:
       - src/rune_ast.rs
       - src/cli/watch.rs
       - tests/merge_tests.rs
-      - examples/merge/
+      - examples/data/merge/
       - Cargo.toml
   - id: runtime.execution-engine
     path: runtime/execution-engine.md

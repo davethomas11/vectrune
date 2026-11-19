@@ -1,0 +1,26 @@
+#!VECT
+# Run: vectrune examples/language/objects/objects.vect
+# Print one JSON result so it can also be piped into another tool.
+
+name = "Workshop"
+
+# i is available in the template; each copy has independent nested data.
+local batch = { id: i + 1, x: 10, stats: { hp: 3 } } * 3 inc x by 5
+actors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }
+
+# Only the first actor with id 2 changes. The template and second row stay intact.
+id = 2
+actors[]id.stats.hp -= 1
+selected = actors[]id
+profile = { name, copies: actors.length }
+
+# Grid overrides can use i, row/r and col/c.
+slots = grid 2 x 2 at (10, 20) step (5, 15) with { id: i + 1, tier: row + 1 }
+
+# Lookups can nest, with each property reading its corresponding scope binding.
+orders = [{ id: 2, items: [{ sku: "A", qty: 2 }, { sku: "B", qty: 3 }] }]
+sku = "B"
+orders[]id.items[]sku.qty += 4
+
+result = { profile, actors, selected, original: batch, slots, orders }
+stdio -> "{json.stringify(result)}"

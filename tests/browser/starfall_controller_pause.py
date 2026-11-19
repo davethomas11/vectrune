@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory(prefix='starfall-pad-pause-') as folder, sync_playwright() as pw:
-    html = subprocess.run([str(ROOT/'target/debug/vectrune'), str(ROOT/'examples/starfall/starfall.rune'), '-o','html'], capture_output=True, text=True, check=True).stdout
+    html = subprocess.run([str(ROOT/'target/debug/vectrune'), str(ROOT/'examples/games/starfall/starfall.rune'), '-o','html'], capture_output=True, text=True, check=True).stdout
     file = Path(folder)/'game.html'; file.write_text(html)
     browser = pw.chromium.launch()
     page = browser.new_page(viewport={'width':1100,'height':1000})

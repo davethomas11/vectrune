@@ -4,4 +4,4 @@
 
 
 # Generated guard art is identical across checkouts and native hosts.
-examples/vect_breach/guards.rune text eol=lf
+examples/games/vect_breach/guards.rune text eol=lf

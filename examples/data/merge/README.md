@@ -51,7 +51,7 @@ Ips:
 
 **Command:**
 ```bash
-vectrune -i yaml examples/merge/ip-list.yaml --merge-with 'examples/merge/config.yaml@environment.preview.[].(name=allowedIps on value from Ips)' -o yaml
+vectrune -i yaml examples/data/merge/ip-list.yaml --merge-with 'examples/data/merge/config.yaml@environment.preview.[].(name=allowedIps on value from Ips)' -o yaml
 ```
 
 ### 2. Custom Field Names
@@ -68,14 +68,14 @@ environment:
 
 **Command:**
 ```bash
-vectrune -i yaml examples/merge/ip-list.yaml --merge-with 'examples/merge/config_alt.yaml@environment.preview.[].(id=allowedIps on data from Ips)' -o yaml
+vectrune -i yaml examples/data/merge/ip-list.yaml --merge-with 'examples/data/merge/config_alt.yaml@environment.preview.[].(id=allowedIps on data from Ips)' -o yaml
 ```
 
 ### 3. Merging into multiple environments
 
 Using groupings and wildcards:
 ```bash
-vectrune -i yaml examples/merge/ip-list.yaml --merge-with 'examples/merge/config.yaml@environment.(preview|prod).[].(name=allowedIps on value from Ips)' -o yaml
+vectrune -i yaml examples/data/merge/ip-list.yaml --merge-with 'examples/data/merge/config.yaml@environment.(preview|prod).[].(name=allowedIps on value from Ips)' -o yaml
 ```
 
 ### 4. Rune-to-Rune Merge
@@ -99,7 +99,7 @@ perms:
 
 **Command:**
 ```bash
-vectrune examples/merge/patch.rune --merge-with 'examples/merge/base.rune@Roles.[].(name=admin on permissions from perms)' -o rune
+vectrune examples/data/merge/patch.rune --merge-with 'examples/data/merge/base.rune@Roles.[].(name=admin on permissions from perms)' -o rune
 ```
 
 ### 5. JSON-to-YAML Merge
@@ -108,7 +108,7 @@ Merge API keys from a JSON file into a YAML config.
 
 **Command:**
 ```bash
-vectrune -i json examples/merge/external_data.json --merge-with 'examples/merge/config.yaml@api_config.(keys from api_keys)' -o yaml
+vectrune -i json examples/data/merge/external_data.json --merge-with 'examples/data/merge/config.yaml@api_config.(keys from api_keys)' -o yaml
 ```
 
 ## Additional Supported Cases

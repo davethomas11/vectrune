@@ -123,7 +123,14 @@ var __RuneVect = (() => {
           }
           if (c === "\\") {
             const e = source[i++];
-            const escapes = { n: "\n", r: "\r", t: "	", "\\": "\\", '"': '"', "'": "'" };
+            const escapes = { n: "\n", r: "\r", t: "	", b: "\b", f: "\f", "/": "/", "\\": "\\", '"': '"', "'": "'" };
+            if (e === "u") {
+              const hex = source.slice(i, i + 4);
+              if (!/^[\da-fA-F]{4}$/.test(hex)) throw new Error("Invalid Unicode escape");
+              value += String.fromCharCode(parseInt(hex, 16));
+              i += 4;
+              continue;
+            }
             if (!(e in escapes)) throw new Error("Invalid string escape");
             value += escapes[e];
           } else value += c;
@@ -148,13 +155,14 @@ var __RuneVect = (() => {
   }
   function parseCoreExpression(source) {
     const tokens = tokenize(source);
-    let pos = 0;
+    let pos = 0, depth = 0;
     const peek = () => tokens[pos].value;
     const take = () => tokens[pos++];
     const expect = (s) => {
       if (take().value !== s) throw new Error(`Expected ${s}`);
     };
     function expression(min = 0) {
+      if (++depth > 128) throw new Error("Expression nesting exceeds 128");
       const t = take();
       let left;
       if (t.kind === "number") left = { kind: "literal", value: Number(t.value) };
@@ -164,6 +172,28 @@ var __RuneVect = (() => {
       else if (t.value === "(") {
         left = expression();
         expect(")");
+      } else if (t.value === "grid" && !["", ".", "["].includes(peek())) {
+        const cols = expression(8);
+        expect("x");
+        const rows = expression(8);
+        if (!["at", "from"].includes(take().value)) throw new Error("Expected at or from");
+        expect("(");
+        const x = expression();
+        expect(",");
+        const y = expression();
+        expect(")");
+        expect("step");
+        expect("(");
+        const dx = expression();
+        expect(",");
+        const dy = expression();
+        expect(")");
+        let overrides = { kind: "object", items: [] };
+        if (peek() === "with") {
+          take();
+          overrides = expression(8);
+        }
+        left = { kind: "grid", items: [cols, rows, x, y, dx, dy, overrides] };
       } else if (t.value === "[") {
         const items = [];
         while (peek() !== "]") {
@@ -178,8 +208,13 @@ var __RuneVect = (() => {
         while (peek() !== "}") {
           const key = take();
           if (!["id", "string"].includes(key.kind)) throw new Error("Invalid object key");
-          expect(":");
-          items.push([safeKey(key.value), expression()]);
+          let value;
+          if (peek() === ":") {
+            take();
+            value = expression();
+          } else if (key.kind === "id" && [",", "}"].includes(peek())) value = { kind: "id", value: key.value };
+          else throw new Error("Expected : after object key");
+          items.push([safeKey(key.value), value]);
           if (peek() !== ",") break;
           take();
         }
@@ -201,9 +236,16 @@ var __RuneVect = (() => {
         }
         if (peek() === "[") {
           take();
-          const key = expression();
-          expect("]");
-          left = { kind: "member", items: [left, key] };
+          if (peek() === "]") {
+            take();
+            const key = take();
+            if (key.kind !== "id") throw new Error("Expected lookup property after []");
+            left = { kind: "lookup", value: safeKey(key.value), items: [left] };
+          } else {
+            const key = expression();
+            expect("]");
+            left = { kind: "member", items: [left, key] };
+          }
           continue;
         }
         if (peek() === "(") {
@@ -218,6 +260,39 @@ var __RuneVect = (() => {
           left = { kind: "call", items: [left, ...args] };
           continue;
         }
+        if (min <= 0 && ["with", "all"].includes(peek())) {
+          take();
+          left = { kind: "overlay", items: [left, expression(8)] };
+          continue;
+        }
+        if (peek() === "*" && min <= 7 && left.kind === "object") {
+          take();
+          const count = expression(8);
+          const props = [];
+          let step = { kind: "literal", value: 0 };
+          if (peek() === "inc") {
+            take();
+            const parens = peek() === "(";
+            if (parens) take();
+            do {
+              const key = take();
+              if (!["id", "string"].includes(key.kind)) throw new Error("Expected increment property");
+              props.push(safeKey(key.value));
+              if (peek() !== ",") break;
+              take();
+            } while (true);
+            if (parens) expect(")");
+            expect("by");
+            step = expression(8);
+          }
+          let overrides = { kind: "object", items: [] };
+          if (peek() === "with") {
+            take();
+            overrides = expression(8);
+          }
+          left = { kind: "generate", props, items: [left, count, step, overrides] };
+          continue;
+        }
         const op = peek(), rank = precedence[op];
         if (rank === void 0 || rank < min) break;
         take();
@@ -229,6 +304,7 @@ var __RuneVect = (() => {
         expect(":");
         left = { kind: "ternary", items: [left, yes, expression()] };
       }
+      depth--;
       return left;
     }
     const ast = expression();
@@ -241,6 +317,7 @@ var __RuneVect = (() => {
       const parent = callName(e.items[0]);
       if (parent) return parent + "." + e.items[1].value;
     }
+    return void 0;
   }
   function evaluateCoreExpression(e, scope, functions = coreFunctions) {
     const ev = (n) => evaluateCoreExpression(n, scope, functions);
@@ -250,11 +327,41 @@ var __RuneVect = (() => {
       case "id":
         return scope[e.value];
       case "array":
-        return e.items.map(ev);
+        return e.items.flatMap((item) => {
+          const value = ev(item);
+          return expandsCollection(item) && Array.isArray(value) ? value : [value];
+        });
       case "object":
         return Object.fromEntries(e.items.map(([k, v]) => [k, ev(v)]));
       case "member":
         return ev(e.items[0])?.[safeKey(ev(e.items[1]))];
+      case "lookup": {
+        const source = ev(e.items[0]);
+        if (scope[e.value] === void 0) return void 0;
+        return Array.isArray(source) ? source.find((item) => String(item?.[e.value]) === String(scope[e.value])) : void 0;
+      }
+      case "overlay":
+        return overlay(ev(e.items[0]), ev(e.items[1]));
+      case "generate": {
+        const count = collectionCount(ev(e.items[1]));
+        const step = finiteNumber(ev(e.items[2]));
+        return Array.from({ length: count }, (_, i) => {
+          const local = { ...scope, i };
+          const item = cloneData(evaluateCoreExpression(e.items[0], local, functions));
+          for (const prop of e.props) if (typeof item[prop] === "number") item[prop] += i * step;
+          return overlay(item, evaluateCoreExpression(e.items[3], local, functions));
+        });
+      }
+      case "grid": {
+        const [cols, rows] = e.items.slice(0, 2).map((item) => collectionCount(ev(item)));
+        const count = collectionCount(cols * rows);
+        const [x, y, dx, dy] = e.items.slice(2, 6).map((item) => finiteNumber(ev(item)));
+        return Array.from({ length: count }, (_, i) => {
+          const col = i % cols, row = Math.floor(i / cols);
+          const item = { x: x + col * dx, y: y + row * dy, start_x: x + col * dx, start_y: y + row * dy, col, row };
+          return overlay(item, evaluateCoreExpression(e.items[6], { ...scope, i, col, row, c: col, r: row }, functions));
+        });
+      }
       case "unary": {
         const v = ev(e.items[0]);
         return e.value === "-" ? -v : e.value === "+" ? +v : !v;
@@ -317,6 +424,54 @@ var __RuneVect = (() => {
     }
     throw new Error("Unknown expression");
   }
+  function expandsCollection(e) {
+    return e.kind === "generate" || e.kind === "grid" || e.kind === "overlay";
+  }
+  function collectionCount(value) {
+    if (!Number.isInteger(value) || value < 0 || value > 1e6) throw new Error("Invalid generator count (0..1000000)");
+    return value;
+  }
+  function finiteNumber(value) {
+    if (typeof value !== "number" || !Number.isFinite(value)) throw new Error("Generator coordinates and steps must be finite numbers");
+    return value;
+  }
+  function cloneData(value) {
+    if (Array.isArray(value)) return value.map(cloneData);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [safeKey(k), cloneData(v)]));
+    return value;
+  }
+  function overlay(source, overrides) {
+    if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) throw new Error("with/all requires an object");
+    const copy = (item) => item && typeof item === "object" && !Array.isArray(item) ? { ...cloneData(item), ...cloneData(overrides) } : item;
+    if (Array.isArray(source)) return source.map(copy);
+    if (!source || typeof source !== "object") throw new Error("with/all requires an object or array");
+    return copy(source);
+  }
+  function assignCoreTarget(target, value, scope, functions = coreFunctions) {
+    if (target.kind === "id") {
+      scope[safeKey(target.value)] = value;
+      return;
+    }
+    if (target.kind === "lookup") {
+      const source = evaluateCoreExpression(target.items[0], scope, functions);
+      if (!Array.isArray(source)) throw new Error("Lookup requires an array");
+      if (scope[target.value] === void 0) return;
+      const index = source.findIndex((item) => String(item?.[target.value]) === String(scope[target.value]));
+      if (index >= 0) {
+        source[index] = value;
+        entitiesChanged(source);
+      }
+      return;
+    }
+    if (target.kind !== "member") throw new Error("Invalid assignment target");
+    const parent = evaluateCoreExpression(target.items[0], scope, functions);
+    if (parent == null && containsLookup(target)) return;
+    if (parent == null) throw new Error("Missing assignment receiver");
+    parent[safeKey(evaluateCoreExpression(target.items[1], scope, functions))] = value;
+  }
+  function containsLookup(e) {
+    return e.kind === "lookup" || e.kind === "member" && containsLookup(e.items[0]);
+  }
 
   // src/vect.ts
   var text = (v) => v === null || v === void 0 ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
@@ -345,17 +500,7 @@ var __RuneVect = (() => {
       }
     });
     const assign = (target, value, scope) => {
-      const targetAst = ast(target);
-      if (targetAst.kind === "id") {
-        safeKey(targetAst.value);
-        scope[targetAst.value] = value;
-        return;
-      }
-      if (targetAst.kind !== "member") throw new Error("Invalid assignment target");
-      const parent = evaluateCoreExpression(targetAst.items[0], scope, functions);
-      const key = safeKey(evaluateCoreExpression(targetAst.items[1], scope, functions));
-      if (parent === void 0 || parent === null) throw new Error(`Missing assignment receiver: ${target}`);
-      parent[key] = value;
+      assignCoreTarget(ast(target), value, scope, functions);
     };
     function block(stmts, scope) {
       for (const stmt of stmts) {
@@ -383,7 +528,8 @@ var __RuneVect = (() => {
             case "Expression": {
               let compiled = statements.get(s.source);
               if (!compiled) {
-                const m = s.source.match(/^([\w$]+(?:\.[\w$]+|\[[^\n]+\])*)\s*([+*/%-]?=)(?!=)\s*(.+)$/);
+                const source = s.source.replace(/^(?:local|let)\s+/, "");
+                const m = source.match(/^([\w$]+(?:\.[\w$]+|\[\][\w$]+|\[[^\n]+\])*)\s*([+*/%-]?=)(?!=)\s*([\s\S]+)$/);
                 compiled = m ? { target: m[1], value: ast(m[2] === "=" ? m[3] : `${m[1]} ${m[2][0]} (${m[3]})`) } : { value: ast(s.source) };
                 statements.set(s.source, compiled);
               }
@@ -475,6 +621,10 @@ var __RuneVect = (() => {
       }
     };
     functions["file.write"] = (path, contents) => host.write(String(path), text(contents));
+    functions["db.request"] = (config, source, packet) => {
+      if (!host.request) throw new Error("This Vect host does not provide storage access");
+      return JSON.parse(host.request(String(config), String(source), JSON.stringify(packet)));
+    };
     const flow = block(program.statements, globals);
     if (flow && flow.type !== "stop") throw new Error(`${flow.type} outside action or loop`);
   }

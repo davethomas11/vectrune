@@ -10,7 +10,7 @@ BINARY = ROOT / 'target/debug/vectrune'
 
 
 def export(entry, destination):
-    result = subprocess.run([str(BINARY), str(ROOT / 'examples/monster_city' / entry), '-o', 'html'], capture_output=True, text=True, check=True)
+    result = subprocess.run([str(BINARY), str(ROOT / 'examples/games/monster_city' / entry), '-o', 'html'], capture_output=True, text=True, check=True)
     destination.write_text(result.stdout, encoding='utf-8')
     assert result.stdout.startswith('<!'), result.stdout[:100]
     assert 'readyPunch' not in result.stdout

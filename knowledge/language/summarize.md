@@ -8,7 +8,7 @@ report = summarize sales by region sum amount
 respond 200 report
 ```
 
-For the [sample CSV](../../examples/sales_report.csv), the report is:
+For the [sample CSV](../../examples/data/reports/sales_report.csv), the report is:
 
 ```json
 [
@@ -77,7 +77,7 @@ A malformed invocation or invalid data stops the step sequence with the normal b
 ## Try it
 
 ```sh
-vectrune examples/sales_report.rune
+vectrune examples/data/reports/sales_report.rune
 curl http://127.0.0.1:3000/report
 curl http://127.0.0.1:3000/averages
 curl http://127.0.0.1:3000/counts

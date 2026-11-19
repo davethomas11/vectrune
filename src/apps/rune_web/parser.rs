@@ -16,7 +16,7 @@ thread_local! {
 }
 
 /// Compile a local Rune-Web example into an isolated iframe URL at render time.
-/// Usage: iframe src="{preview ../examples/counter.rune}" sandbox=allow-scripts
+/// Usage: iframe src="{preview ../examples/beginner/counter.rune}" sandbox=allow-scripts
 fn resolve_preview_attribute(value: &str) -> Result<String, ParseError> {
     let Some(relative_path) = value.strip_prefix("{preview ").and_then(|s| s.strip_suffix('}')) else {
         return Ok(value.to_string());
@@ -54,7 +54,7 @@ fn resolve_preview_attribute(value: &str) -> Result<String, ParseError> {
 }
 
 /// Embed a complete source bundle using the same recursive imports as the compiler.
-/// Usage: Example files="{sources ../examples/app.rune}"
+/// Usage: Example files="{sources ../examples/beginner/app.rune}"
 fn resolve_sources_attribute(value: &str) -> Result<String, ParseError> {
     let Some(relative) = value.strip_prefix("{sources ").and_then(|s| s.strip_suffix('}')) else {
         return Ok(value.to_string());
@@ -434,7 +434,14 @@ pub fn parse_rune_web_frontend(
         }
     }
 
+    let data_sources = doc.sections.iter().filter(|s| s.path.len() == 2 && matches!(s.path[0].as_str(), "DataSource" | "Datasource"))
+        .filter(|s| s.kv.get("type").and_then(Value::as_str).is_some_and(|v| matches!(v, "rune-db" | "vect-event")))
+        .map(|s| {
+            let config = ["type", "mode", "database", "endpoint", "store"].into_iter().filter_map(|key| s.kv.get(key).map(|v| (key.to_string(), v.to_json()))).collect::<serde_json::Map<_, _>>();
+            (s.path[1].clone(), serde_json::Value::Object(config))
+        }).collect::<serde_json::Map<_, _>>();
     Ok(RuneWebFrontend {
+        data_sources: serde_json::Value::Object(data_sources),
         page_views,
         component_definitions: resolved_components,
         style_definitions,
@@ -2221,7 +2228,7 @@ mod tests {
     fn compiles_real_web_previews_and_rejects_preview_cycles() {
         use base64::Engine;
         let example = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("examples/tic_tac_toe/tic_tac_toe.rune");
+            .join("examples/games/tic_tac_toe/tic_tac_toe.rune");
         let url = resolve_preview_attribute(&format!("{{preview {}}}", example.display())).unwrap();
         let html = base64::engine::general_purpose::STANDARD
             .decode(url.strip_prefix("data:text/html;base64,").unwrap()).unwrap();
@@ -2945,8 +2952,8 @@ view:
         assert!(default_html.contains("<title>Vectrune Framework</title>"));
         assert!(default_html.contains(r#"<meta name="description" content="Declarative full-stack language">"#));
         assert!(default_html.contains(r#"<meta property="og:title" content="Vectrune Framework">"#));
-        assert!(default_html.contains(r#"<link rel="icon" type="image/x-icon" href="/favicon.ico">"#));
-        assert!(default_html.contains(r#"<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">"#));
+        assert!(default_html.contains(r#"<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,"#));
+        assert!(!default_html.contains("/assets/favicon.png"));
 
         // Render shell with route-specific SEO (games)
         let games_html = super::super::render_frontend_shell(&frontend, "home", None, None, &serde_json::Map::new(), Some("games"));

@@ -489,6 +489,6 @@ Future versions will support:
 
 - **CSS Compiler**: `src/apps/rune_web/css.rs`
 - **AST Types**: `src/apps/rune_web/ast.rs` - `StyleDefinition`
-- **Example**: `examples/tic_tac_toe/parts/style.rune`
+- **Example**: `examples/games/tic_tac_toe/parts/style.rune`
 - **Tests**: `tests/` - CSS token and preset tests
 

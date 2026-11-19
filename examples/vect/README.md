@@ -39,6 +39,10 @@ if name contains "admin":
 
 ## Examples
 
+For object shorthand, generators, local templates and matching-object updates,
+see the [portable object examples](../language/objects/README.md). That folder pairs
+a `.vect` script with backend Rune and interactive Rune-Web versions.
+
 ### `introducing.vect`
 A simple text adventure with branching choices and a retry loop via `repeat from line`.
 

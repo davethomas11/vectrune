@@ -506,13 +506,13 @@ async fn explicitly_unacceptable_html_gets_direct_output() {
 #[tokio::test]
 async fn all_engine_demo_files_define_valid_native_sites() {
     for (source, expected_engine) in [
-        (include_str!("../examples/dynamic_ai_web.rune"), "ollama"),
+        (include_str!("../examples/rune-web/dynamic_ai_web.rune"), "ollama"),
         (
-            include_str!("../examples/dynamic_ai_web_codex.rune"),
+            include_str!("../examples/rune-web/dynamic_ai_web_codex.rune"),
             "codex",
         ),
         (
-            include_str!("../examples/dynamic_ai_web_copilot.rune"),
+            include_str!("../examples/rune-web/dynamic_ai_web_copilot.rune"),
             "copilot",
         ),
     ] {

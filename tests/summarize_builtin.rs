@@ -12,12 +12,12 @@ use std::sync::Arc;
 use tower::ServiceExt;
 
 async fn report_app() -> axum::Router {
-    let doc = parse_rune(include_str!("../examples/sales_report.rune")).unwrap();
+    let doc = parse_rune(include_str!("../examples/data/reports/sales_report.rune")).unwrap();
     let state = AppState {
         schemas: Arc::new(extract_schemas(&doc)),
         data_sources: Arc::new(extract_data_sources(&doc)),
         doc: Arc::new(doc),
-        path: std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples"),
+        path: std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/data/reports"),
     };
     build_app_router(state).await
 }

@@ -38,7 +38,7 @@
    - Integration tests using `cargo lambda` or local stack to emulate Lambda.
    - Manual deploy guide + sample project (e.g., book GraphQL API) deployed to Lambda.
 5. **Docs & Examples**
-   - Publish walkthrough in `examples/lambda/book_graphql_lambda/`.
+   - Publish walkthrough in `examples/deployment/lambda/book_graphql_lambda/`.
    - Update README with Lambda support badges and quickstart.
 
 ## 4. Risks & Mitigations

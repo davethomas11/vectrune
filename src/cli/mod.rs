@@ -7,6 +7,8 @@ pub mod testing;
 pub mod test_watch;
 pub mod calculate;
 pub mod knowledge;
+pub mod storage;
+pub mod serve;
 pub mod lambda;
 pub mod merge;
 pub mod transform;

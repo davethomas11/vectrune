@@ -9,7 +9,7 @@ view:
             p .showcase-try "%i18n.MonsterCity.try_it%"
             a .secondary-cta href="/assets/games/monster-city/index.html" target=_blank rel=noopener "%i18n.MonsterCity.standalone%"
 
-        WebExample game=true title="{i18n.MonsterCity.title}" preview="/assets/games/monster-city/index.html" files="{sources ../../../examples/monster_city/site_shell.rune}" show_heading=false
+        WebExample game=true title="{i18n.MonsterCity.title}" preview="/assets/games/monster-city/index.html" files="{sources ../../../examples/games/monster_city/site_shell.rune}" show_heading=false
 
         section .card:
             h2 "%i18n.MonsterCity.controls_title%"
@@ -24,5 +24,5 @@ view:
             h3 "%i18n.MonsterCity.local_title%"
             p "%i18n.MonsterCity.local_intro%"
             CommandBlock code="git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
-            CommandBlock code="cargo run --features pixel-desktop -- examples/monster_city/monster_city.rune --target desktop"
-            CommandBlock code="cargo run -- examples/monster_city/monster_city.rune -o html > monster-city.html"
+            CommandBlock code="cargo run --features pixel-desktop -- examples/games/monster_city/monster_city.rune --target desktop"
+            CommandBlock code="cargo run -- examples/games/monster_city/monster_city.rune -o html > monster-city.html"

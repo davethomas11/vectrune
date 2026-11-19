@@ -4,19 +4,1640 @@ var __RuneWeb = (() => {
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __defNormalProp = (obj, key2, value) => key2 in obj ? __defProp(obj, key2, { enumerable: true, configurable: true, writable: true, value }) : obj[key2] = value;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
   var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
+    for (var name2 in all)
+      __defProp(target, name2, { get: all[name2], enumerable: true });
   };
   var __copyProps = (to, from, except, desc) => {
     if (from && typeof from === "object" || typeof from === "function") {
-      for (let key of __getOwnPropNames(from))
-        if (!__hasOwnProp.call(to, key) && key !== except)
-          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+      for (let key2 of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key2) && key2 !== except)
+          __defProp(to, key2, { get: () => from[key2], enumerable: !(desc = __getOwnPropDesc(from, key2)) || desc.enumerable });
     }
     return to;
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+  var __publicField = (obj, key2, value) => __defNormalProp(obj, typeof key2 !== "symbol" ? key2 + "" : key2, value);
+
+  // node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs
+  function utf8Count(str) {
+    const strLength = str.length;
+    let byteLength = 0;
+    let pos = 0;
+    while (pos < strLength) {
+      let value = str.charCodeAt(pos++);
+      if ((value & 4294967168) === 0) {
+        byteLength++;
+        continue;
+      } else if ((value & 4294965248) === 0) {
+        byteLength += 2;
+      } else {
+        if (value >= 55296 && value <= 56319) {
+          if (pos < strLength) {
+            const extra = str.charCodeAt(pos);
+            if ((extra & 64512) === 56320) {
+              ++pos;
+              value = ((value & 1023) << 10) + (extra & 1023) + 65536;
+            }
+          }
+        }
+        if ((value & 4294901760) === 0) {
+          byteLength += 3;
+        } else {
+          byteLength += 4;
+        }
+      }
+    }
+    return byteLength;
+  }
+  function utf8EncodeJs(str, output, outputOffset) {
+    const strLength = str.length;
+    let offset = outputOffset;
+    let pos = 0;
+    while (pos < strLength) {
+      let value = str.charCodeAt(pos++);
+      if ((value & 4294967168) === 0) {
+        output[offset++] = value;
+        continue;
+      } else if ((value & 4294965248) === 0) {
+        output[offset++] = value >> 6 & 31 | 192;
+      } else {
+        if (value >= 55296 && value <= 56319) {
+          if (pos < strLength) {
+            const extra = str.charCodeAt(pos);
+            if ((extra & 64512) === 56320) {
+              ++pos;
+              value = ((value & 1023) << 10) + (extra & 1023) + 65536;
+            }
+          }
+        }
+        if ((value & 4294901760) === 0) {
+          output[offset++] = value >> 12 & 15 | 224;
+          output[offset++] = value >> 6 & 63 | 128;
+        } else {
+          output[offset++] = value >> 18 & 7 | 240;
+          output[offset++] = value >> 12 & 63 | 128;
+          output[offset++] = value >> 6 & 63 | 128;
+        }
+      }
+      output[offset++] = value & 63 | 128;
+    }
+  }
+  function utf8EncodeTE(str, output, outputOffset) {
+    sharedTextEncoder.encodeInto(str, output.subarray(outputOffset));
+  }
+  function utf8Encode(str, output, outputOffset) {
+    if (str.length > TEXT_ENCODER_THRESHOLD) {
+      utf8EncodeTE(str, output, outputOffset);
+    } else {
+      utf8EncodeJs(str, output, outputOffset);
+    }
+  }
+  function utf8DecodeJs(bytes, inputOffset, byteLength) {
+    let offset = inputOffset;
+    const end = offset + byteLength;
+    const units = [];
+    let result = "";
+    while (offset < end) {
+      const byte1 = bytes[offset++];
+      if ((byte1 & 128) === 0) {
+        units.push(byte1);
+      } else if ((byte1 & 224) === 192) {
+        const byte2 = bytes[offset++] & 63;
+        units.push((byte1 & 31) << 6 | byte2);
+      } else if ((byte1 & 240) === 224) {
+        const byte2 = bytes[offset++] & 63;
+        const byte3 = bytes[offset++] & 63;
+        units.push((byte1 & 31) << 12 | byte2 << 6 | byte3);
+      } else if ((byte1 & 248) === 240) {
+        const byte2 = bytes[offset++] & 63;
+        const byte3 = bytes[offset++] & 63;
+        const byte4 = bytes[offset++] & 63;
+        let unit = (byte1 & 7) << 18 | byte2 << 12 | byte3 << 6 | byte4;
+        if (unit > 65535) {
+          unit -= 65536;
+          units.push(unit >>> 10 & 1023 | 55296);
+          unit = 56320 | unit & 1023;
+        }
+        units.push(unit);
+      } else {
+        units.push(byte1);
+      }
+      if (units.length >= CHUNK_SIZE) {
+        result += String.fromCharCode(...units);
+        units.length = 0;
+      }
+    }
+    if (units.length > 0) {
+      result += String.fromCharCode(...units);
+    }
+    return result;
+  }
+  function utf8DecodeTD(bytes, inputOffset, byteLength) {
+    const stringBytes = bytes.subarray(inputOffset, inputOffset + byteLength);
+    return sharedTextDecoder.decode(stringBytes);
+  }
+  function utf8Decode(bytes, inputOffset, byteLength) {
+    if (byteLength > TEXT_DECODER_THRESHOLD) {
+      return utf8DecodeTD(bytes, inputOffset, byteLength);
+    } else {
+      return utf8DecodeJs(bytes, inputOffset, byteLength);
+    }
+  }
+  var sharedTextEncoder, TEXT_ENCODER_THRESHOLD, CHUNK_SIZE, sharedTextDecoder, TEXT_DECODER_THRESHOLD;
+  var init_utf8 = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs"() {
+      sharedTextEncoder = new TextEncoder();
+      TEXT_ENCODER_THRESHOLD = 50;
+      CHUNK_SIZE = 4096;
+      sharedTextDecoder = new TextDecoder();
+      TEXT_DECODER_THRESHOLD = 200;
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs
+  var ExtData;
+  var init_ExtData = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs"() {
+      ExtData = class {
+        constructor(type, data) {
+          __publicField(this, "type");
+          __publicField(this, "data");
+          this.type = type;
+          this.data = data;
+        }
+      };
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs
+  var DecodeError;
+  var init_DecodeError = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs"() {
+      DecodeError = class _DecodeError extends Error {
+        constructor(message) {
+          super(message);
+          const proto = Object.create(_DecodeError.prototype);
+          Object.setPrototypeOf(this, proto);
+          Object.defineProperty(this, "name", {
+            configurable: true,
+            enumerable: false,
+            value: _DecodeError.name
+          });
+        }
+      };
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs
+  function setUint64(view, offset, value) {
+    const high = value / 4294967296;
+    const low = value;
+    view.setUint32(offset, high);
+    view.setUint32(offset + 4, low);
+  }
+  function setInt64(view, offset, value) {
+    const high = Math.floor(value / 4294967296);
+    const low = value;
+    view.setUint32(offset, high);
+    view.setUint32(offset + 4, low);
+  }
+  function getInt64(view, offset) {
+    const high = view.getInt32(offset);
+    const low = view.getUint32(offset + 4);
+    return high * 4294967296 + low;
+  }
+  function getUint64(view, offset) {
+    const high = view.getUint32(offset);
+    const low = view.getUint32(offset + 4);
+    return high * 4294967296 + low;
+  }
+  var UINT32_MAX;
+  var init_int = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs"() {
+      UINT32_MAX = 4294967295;
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
+  function encodeTimeSpecToTimestamp({ sec, nsec }) {
+    if (sec >= 0 && nsec >= 0 && sec <= TIMESTAMP64_MAX_SEC) {
+      if (nsec === 0 && sec <= TIMESTAMP32_MAX_SEC) {
+        const rv = new Uint8Array(4);
+        const view = new DataView(rv.buffer);
+        view.setUint32(0, sec);
+        return rv;
+      } else {
+        const secHigh = sec / 4294967296;
+        const secLow = sec & 4294967295;
+        const rv = new Uint8Array(8);
+        const view = new DataView(rv.buffer);
+        view.setUint32(0, nsec << 2 | secHigh & 3);
+        view.setUint32(4, secLow);
+        return rv;
+      }
+    } else {
+      const rv = new Uint8Array(12);
+      const view = new DataView(rv.buffer);
+      view.setUint32(0, nsec);
+      setInt64(view, 4, sec);
+      return rv;
+    }
+  }
+  function encodeDateToTimeSpec(date) {
+    const msec = date.getTime();
+    const sec = Math.floor(msec / 1e3);
+    const nsec = (msec - sec * 1e3) * 1e6;
+    const nsecInSec = Math.floor(nsec / 1e9);
+    return {
+      sec: sec + nsecInSec,
+      nsec: nsec - nsecInSec * 1e9
+    };
+  }
+  function encodeTimestampExtension(object) {
+    if (object instanceof Date) {
+      const timeSpec = encodeDateToTimeSpec(object);
+      return encodeTimeSpecToTimestamp(timeSpec);
+    } else {
+      return null;
+    }
+  }
+  function decodeTimestampToTimeSpec(data) {
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    switch (data.byteLength) {
+      case 4: {
+        const sec = view.getUint32(0);
+        const nsec = 0;
+        return { sec, nsec };
+      }
+      case 8: {
+        const nsec30AndSecHigh2 = view.getUint32(0);
+        const secLow32 = view.getUint32(4);
+        const sec = (nsec30AndSecHigh2 & 3) * 4294967296 + secLow32;
+        const nsec = nsec30AndSecHigh2 >>> 2;
+        return { sec, nsec };
+      }
+      case 12: {
+        const sec = getInt64(view, 4);
+        const nsec = view.getUint32(0);
+        return { sec, nsec };
+      }
+      default:
+        throw new DecodeError(`Unrecognized data size for timestamp (expected 4, 8, or 12): ${data.length}`);
+    }
+  }
+  function decodeTimestampExtension(data) {
+    const timeSpec = decodeTimestampToTimeSpec(data);
+    return new Date(timeSpec.sec * 1e3 + timeSpec.nsec / 1e6);
+  }
+  var EXT_TIMESTAMP, TIMESTAMP32_MAX_SEC, TIMESTAMP64_MAX_SEC, timestampExtension;
+  var init_timestamp = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs"() {
+      init_DecodeError();
+      init_int();
+      EXT_TIMESTAMP = -1;
+      TIMESTAMP32_MAX_SEC = 4294967296 - 1;
+      TIMESTAMP64_MAX_SEC = 17179869184 - 1;
+      timestampExtension = {
+        type: EXT_TIMESTAMP,
+        encode: encodeTimestampExtension,
+        decode: decodeTimestampExtension
+      };
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
+  var _ExtensionCodec, ExtensionCodec;
+  var init_ExtensionCodec = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs"() {
+      init_ExtData();
+      init_timestamp();
+      _ExtensionCodec = class _ExtensionCodec {
+        constructor() {
+          // ensures ExtensionCodecType<X> matches ExtensionCodec<X>
+          // this will make type errors a lot more clear
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          __publicField(this, "__brand");
+          // built-in extensions
+          __publicField(this, "builtInEncoders", []);
+          __publicField(this, "builtInDecoders", []);
+          // custom extensions
+          __publicField(this, "encoders", []);
+          __publicField(this, "decoders", []);
+          this.register(timestampExtension);
+        }
+        register({ type, encode: encode3, decode: decode3 }) {
+          if (type >= 0) {
+            this.encoders[type] = encode3;
+            this.decoders[type] = decode3;
+          } else {
+            const index2 = -1 - type;
+            this.builtInEncoders[index2] = encode3;
+            this.builtInDecoders[index2] = decode3;
+          }
+        }
+        tryToEncode(object, context) {
+          for (let i = 0; i < this.builtInEncoders.length; i++) {
+            const encodeExt = this.builtInEncoders[i];
+            if (encodeExt != null) {
+              const data = encodeExt(object, context);
+              if (data != null) {
+                const type = -1 - i;
+                return new ExtData(type, data);
+              }
+            }
+          }
+          for (let i = 0; i < this.encoders.length; i++) {
+            const encodeExt = this.encoders[i];
+            if (encodeExt != null) {
+              const data = encodeExt(object, context);
+              if (data != null) {
+                const type = i;
+                return new ExtData(type, data);
+              }
+            }
+          }
+          if (object instanceof ExtData) {
+            return object;
+          }
+          return null;
+        }
+        decode(data, type, context) {
+          const decodeExt = type < 0 ? this.builtInDecoders[-1 - type] : this.decoders[type];
+          if (decodeExt) {
+            return decodeExt(data, type, context);
+          } else {
+            return new ExtData(type, data);
+          }
+        }
+      };
+      __publicField(_ExtensionCodec, "defaultCodec", new _ExtensionCodec());
+      ExtensionCodec = _ExtensionCodec;
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs
+  function isArrayBufferLike(buffer) {
+    return buffer instanceof ArrayBuffer || typeof SharedArrayBuffer !== "undefined" && buffer instanceof SharedArrayBuffer;
+  }
+  function ensureUint8Array(buffer) {
+    if (buffer instanceof Uint8Array) {
+      return buffer;
+    } else if (ArrayBuffer.isView(buffer)) {
+      return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    } else if (isArrayBufferLike(buffer)) {
+      return new Uint8Array(buffer);
+    } else {
+      return Uint8Array.from(buffer);
+    }
+  }
+  var init_typedArrays = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs"() {
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs
+  var DEFAULT_MAX_DEPTH, DEFAULT_INITIAL_BUFFER_SIZE, Encoder;
+  var init_Encoder = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs"() {
+      init_utf8();
+      init_ExtensionCodec();
+      init_int();
+      init_typedArrays();
+      DEFAULT_MAX_DEPTH = 100;
+      DEFAULT_INITIAL_BUFFER_SIZE = 2048;
+      Encoder = class _Encoder {
+        constructor(options) {
+          __publicField(this, "extensionCodec");
+          __publicField(this, "context");
+          __publicField(this, "useBigInt64");
+          __publicField(this, "maxDepth");
+          __publicField(this, "initialBufferSize");
+          __publicField(this, "sortKeys");
+          __publicField(this, "forceFloat32");
+          __publicField(this, "ignoreUndefined");
+          __publicField(this, "forceIntegerToFloat");
+          __publicField(this, "pos");
+          __publicField(this, "view");
+          __publicField(this, "bytes");
+          __publicField(this, "entered", false);
+          this.extensionCodec = options?.extensionCodec ?? ExtensionCodec.defaultCodec;
+          this.context = options?.context;
+          this.useBigInt64 = options?.useBigInt64 ?? false;
+          this.maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
+          this.initialBufferSize = options?.initialBufferSize ?? DEFAULT_INITIAL_BUFFER_SIZE;
+          this.sortKeys = options?.sortKeys ?? false;
+          this.forceFloat32 = options?.forceFloat32 ?? false;
+          this.ignoreUndefined = options?.ignoreUndefined ?? false;
+          this.forceIntegerToFloat = options?.forceIntegerToFloat ?? false;
+          this.pos = 0;
+          this.view = new DataView(new ArrayBuffer(this.initialBufferSize));
+          this.bytes = new Uint8Array(this.view.buffer);
+        }
+        clone() {
+          return new _Encoder({
+            extensionCodec: this.extensionCodec,
+            context: this.context,
+            useBigInt64: this.useBigInt64,
+            maxDepth: this.maxDepth,
+            initialBufferSize: this.initialBufferSize,
+            sortKeys: this.sortKeys,
+            forceFloat32: this.forceFloat32,
+            ignoreUndefined: this.ignoreUndefined,
+            forceIntegerToFloat: this.forceIntegerToFloat
+          });
+        }
+        reinitializeState() {
+          this.pos = 0;
+        }
+        /**
+         * This is almost equivalent to {@link Encoder#encode}, but it returns an reference of the encoder's internal buffer and thus much faster than {@link Encoder#encode}.
+         *
+         * @returns Encodes the object and returns a shared reference the encoder's internal buffer.
+         */
+        encodeSharedRef(object) {
+          if (this.entered) {
+            const instance = this.clone();
+            return instance.encodeSharedRef(object);
+          }
+          try {
+            this.entered = true;
+            this.reinitializeState();
+            this.doEncode(object, 1);
+            return this.bytes.subarray(0, this.pos);
+          } finally {
+            this.entered = false;
+          }
+        }
+        /**
+         * @returns Encodes the object and returns a copy of the encoder's internal buffer.
+         */
+        encode(object) {
+          if (this.entered) {
+            const instance = this.clone();
+            return instance.encode(object);
+          }
+          try {
+            this.entered = true;
+            this.reinitializeState();
+            this.doEncode(object, 1);
+            return this.bytes.slice(0, this.pos);
+          } finally {
+            this.entered = false;
+          }
+        }
+        doEncode(object, depth) {
+          if (depth > this.maxDepth) {
+            throw new Error(`Too deep objects in depth ${depth}`);
+          }
+          if (object == null) {
+            this.encodeNil();
+          } else if (typeof object === "boolean") {
+            this.encodeBoolean(object);
+          } else if (typeof object === "number") {
+            if (!this.forceIntegerToFloat) {
+              this.encodeNumber(object);
+            } else {
+              this.encodeNumberAsFloat(object);
+            }
+          } else if (typeof object === "string") {
+            this.encodeString(object);
+          } else if (this.useBigInt64 && typeof object === "bigint") {
+            this.encodeBigInt64(object);
+          } else {
+            this.encodeObject(object, depth);
+          }
+        }
+        ensureBufferSizeToWrite(sizeToWrite) {
+          const requiredSize = this.pos + sizeToWrite;
+          if (this.view.byteLength < requiredSize) {
+            this.resizeBuffer(requiredSize * 2);
+          }
+        }
+        resizeBuffer(newSize) {
+          const newBuffer = new ArrayBuffer(newSize);
+          const newBytes = new Uint8Array(newBuffer);
+          const newView = new DataView(newBuffer);
+          newBytes.set(this.bytes);
+          this.view = newView;
+          this.bytes = newBytes;
+        }
+        encodeNil() {
+          this.writeU8(192);
+        }
+        encodeBoolean(object) {
+          if (object === false) {
+            this.writeU8(194);
+          } else {
+            this.writeU8(195);
+          }
+        }
+        encodeNumber(object) {
+          if (!this.forceIntegerToFloat && Number.isSafeInteger(object)) {
+            if (object >= 0) {
+              if (object < 128) {
+                this.writeU8(object);
+              } else if (object < 256) {
+                this.writeU8(204);
+                this.writeU8(object);
+              } else if (object < 65536) {
+                this.writeU8(205);
+                this.writeU16(object);
+              } else if (object < 4294967296) {
+                this.writeU8(206);
+                this.writeU32(object);
+              } else if (!this.useBigInt64) {
+                this.writeU8(207);
+                this.writeU64(object);
+              } else {
+                this.encodeNumberAsFloat(object);
+              }
+            } else {
+              if (object >= -32) {
+                this.writeU8(224 | object + 32);
+              } else if (object >= -128) {
+                this.writeU8(208);
+                this.writeI8(object);
+              } else if (object >= -32768) {
+                this.writeU8(209);
+                this.writeI16(object);
+              } else if (object >= -2147483648) {
+                this.writeU8(210);
+                this.writeI32(object);
+              } else if (!this.useBigInt64) {
+                this.writeU8(211);
+                this.writeI64(object);
+              } else {
+                this.encodeNumberAsFloat(object);
+              }
+            }
+          } else {
+            this.encodeNumberAsFloat(object);
+          }
+        }
+        encodeNumberAsFloat(object) {
+          if (this.forceFloat32) {
+            this.writeU8(202);
+            this.writeF32(object);
+          } else {
+            this.writeU8(203);
+            this.writeF64(object);
+          }
+        }
+        encodeBigInt64(object) {
+          if (object >= BigInt(0)) {
+            this.writeU8(207);
+            this.writeBigUint64(object);
+          } else {
+            this.writeU8(211);
+            this.writeBigInt64(object);
+          }
+        }
+        writeStringHeader(byteLength) {
+          if (byteLength < 32) {
+            this.writeU8(160 + byteLength);
+          } else if (byteLength < 256) {
+            this.writeU8(217);
+            this.writeU8(byteLength);
+          } else if (byteLength < 65536) {
+            this.writeU8(218);
+            this.writeU16(byteLength);
+          } else if (byteLength < 4294967296) {
+            this.writeU8(219);
+            this.writeU32(byteLength);
+          } else {
+            throw new Error(`Too long string: ${byteLength} bytes in UTF-8`);
+          }
+        }
+        encodeString(object) {
+          const maxHeaderSize = 1 + 4;
+          const byteLength = utf8Count(object);
+          this.ensureBufferSizeToWrite(maxHeaderSize + byteLength);
+          this.writeStringHeader(byteLength);
+          utf8Encode(object, this.bytes, this.pos);
+          this.pos += byteLength;
+        }
+        encodeObject(object, depth) {
+          const ext = this.extensionCodec.tryToEncode(object, this.context);
+          if (ext != null) {
+            this.encodeExtension(ext);
+          } else if (Array.isArray(object)) {
+            this.encodeArray(object, depth);
+          } else if (ArrayBuffer.isView(object)) {
+            this.encodeBinary(object);
+          } else if (typeof object === "object") {
+            this.encodeMap(object, depth);
+          } else {
+            throw new Error(`Unrecognized object: ${Object.prototype.toString.apply(object)}`);
+          }
+        }
+        encodeBinary(object) {
+          const size = object.byteLength;
+          if (size < 256) {
+            this.writeU8(196);
+            this.writeU8(size);
+          } else if (size < 65536) {
+            this.writeU8(197);
+            this.writeU16(size);
+          } else if (size < 4294967296) {
+            this.writeU8(198);
+            this.writeU32(size);
+          } else {
+            throw new Error(`Too large binary: ${size}`);
+          }
+          const bytes = ensureUint8Array(object);
+          this.writeU8a(bytes);
+        }
+        encodeArray(object, depth) {
+          const size = object.length;
+          if (size < 16) {
+            this.writeU8(144 + size);
+          } else if (size < 65536) {
+            this.writeU8(220);
+            this.writeU16(size);
+          } else if (size < 4294967296) {
+            this.writeU8(221);
+            this.writeU32(size);
+          } else {
+            throw new Error(`Too large array: ${size}`);
+          }
+          for (const item of object) {
+            this.doEncode(item, depth + 1);
+          }
+        }
+        countWithoutUndefined(object, keys) {
+          let count = 0;
+          for (const key2 of keys) {
+            if (object[key2] !== void 0) {
+              count++;
+            }
+          }
+          return count;
+        }
+        encodeMap(object, depth) {
+          const keys = Object.keys(object);
+          if (this.sortKeys) {
+            keys.sort();
+          }
+          const size = this.ignoreUndefined ? this.countWithoutUndefined(object, keys) : keys.length;
+          if (size < 16) {
+            this.writeU8(128 + size);
+          } else if (size < 65536) {
+            this.writeU8(222);
+            this.writeU16(size);
+          } else if (size < 4294967296) {
+            this.writeU8(223);
+            this.writeU32(size);
+          } else {
+            throw new Error(`Too large map object: ${size}`);
+          }
+          for (const key2 of keys) {
+            const value = object[key2];
+            if (!(this.ignoreUndefined && value === void 0)) {
+              this.encodeString(key2);
+              this.doEncode(value, depth + 1);
+            }
+          }
+        }
+        encodeExtension(ext) {
+          if (typeof ext.data === "function") {
+            const data = ext.data(this.pos + 6);
+            const size2 = data.length;
+            if (size2 >= 4294967296) {
+              throw new Error(`Too large extension object: ${size2}`);
+            }
+            this.writeU8(201);
+            this.writeU32(size2);
+            this.writeI8(ext.type);
+            this.writeU8a(data);
+            return;
+          }
+          const size = ext.data.length;
+          if (size === 1) {
+            this.writeU8(212);
+          } else if (size === 2) {
+            this.writeU8(213);
+          } else if (size === 4) {
+            this.writeU8(214);
+          } else if (size === 8) {
+            this.writeU8(215);
+          } else if (size === 16) {
+            this.writeU8(216);
+          } else if (size < 256) {
+            this.writeU8(199);
+            this.writeU8(size);
+          } else if (size < 65536) {
+            this.writeU8(200);
+            this.writeU16(size);
+          } else if (size < 4294967296) {
+            this.writeU8(201);
+            this.writeU32(size);
+          } else {
+            throw new Error(`Too large extension object: ${size}`);
+          }
+          this.writeI8(ext.type);
+          this.writeU8a(ext.data);
+        }
+        writeU8(value) {
+          this.ensureBufferSizeToWrite(1);
+          this.view.setUint8(this.pos, value);
+          this.pos++;
+        }
+        writeU8a(values) {
+          const size = values.length;
+          this.ensureBufferSizeToWrite(size);
+          this.bytes.set(values, this.pos);
+          this.pos += size;
+        }
+        writeI8(value) {
+          this.ensureBufferSizeToWrite(1);
+          this.view.setInt8(this.pos, value);
+          this.pos++;
+        }
+        writeU16(value) {
+          this.ensureBufferSizeToWrite(2);
+          this.view.setUint16(this.pos, value);
+          this.pos += 2;
+        }
+        writeI16(value) {
+          this.ensureBufferSizeToWrite(2);
+          this.view.setInt16(this.pos, value);
+          this.pos += 2;
+        }
+        writeU32(value) {
+          this.ensureBufferSizeToWrite(4);
+          this.view.setUint32(this.pos, value);
+          this.pos += 4;
+        }
+        writeI32(value) {
+          this.ensureBufferSizeToWrite(4);
+          this.view.setInt32(this.pos, value);
+          this.pos += 4;
+        }
+        writeF32(value) {
+          this.ensureBufferSizeToWrite(4);
+          this.view.setFloat32(this.pos, value);
+          this.pos += 4;
+        }
+        writeF64(value) {
+          this.ensureBufferSizeToWrite(8);
+          this.view.setFloat64(this.pos, value);
+          this.pos += 8;
+        }
+        writeU64(value) {
+          this.ensureBufferSizeToWrite(8);
+          setUint64(this.view, this.pos, value);
+          this.pos += 8;
+        }
+        writeI64(value) {
+          this.ensureBufferSizeToWrite(8);
+          setInt64(this.view, this.pos, value);
+          this.pos += 8;
+        }
+        writeBigUint64(value) {
+          this.ensureBufferSizeToWrite(8);
+          this.view.setBigUint64(this.pos, value);
+          this.pos += 8;
+        }
+        writeBigInt64(value) {
+          this.ensureBufferSizeToWrite(8);
+          this.view.setBigInt64(this.pos, value);
+          this.pos += 8;
+        }
+      };
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/encode.mjs
+  function encode(value, options) {
+    const encoder = new Encoder(options);
+    return encoder.encodeSharedRef(value);
+  }
+  var init_encode = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/encode.mjs"() {
+      init_Encoder();
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
+  function prettyByte(byte) {
+    return `${byte < 0 ? "-" : ""}0x${Math.abs(byte).toString(16).padStart(2, "0")}`;
+  }
+  var init_prettyByte = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs"() {
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs
+  var DEFAULT_MAX_KEY_LENGTH, DEFAULT_MAX_LENGTH_PER_KEY, CachedKeyDecoder;
+  var init_CachedKeyDecoder = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs"() {
+      init_utf8();
+      DEFAULT_MAX_KEY_LENGTH = 16;
+      DEFAULT_MAX_LENGTH_PER_KEY = 16;
+      CachedKeyDecoder = class {
+        constructor(maxKeyLength = DEFAULT_MAX_KEY_LENGTH, maxLengthPerKey = DEFAULT_MAX_LENGTH_PER_KEY) {
+          __publicField(this, "hit", 0);
+          __publicField(this, "miss", 0);
+          __publicField(this, "caches");
+          __publicField(this, "maxKeyLength");
+          __publicField(this, "maxLengthPerKey");
+          this.maxKeyLength = maxKeyLength;
+          this.maxLengthPerKey = maxLengthPerKey;
+          this.caches = [];
+          for (let i = 0; i < this.maxKeyLength; i++) {
+            this.caches.push([]);
+          }
+        }
+        canBeCached(byteLength) {
+          return byteLength > 0 && byteLength <= this.maxKeyLength;
+        }
+        find(bytes, inputOffset, byteLength) {
+          const records = this.caches[byteLength - 1];
+          FIND_CHUNK: for (const record2 of records) {
+            const recordBytes = record2.bytes;
+            for (let j = 0; j < byteLength; j++) {
+              if (recordBytes[j] !== bytes[inputOffset + j]) {
+                continue FIND_CHUNK;
+              }
+            }
+            return record2.str;
+          }
+          return null;
+        }
+        store(bytes, value) {
+          const records = this.caches[bytes.length - 1];
+          const record2 = { bytes, str: value };
+          if (records.length >= this.maxLengthPerKey) {
+            records[Math.random() * records.length | 0] = record2;
+          } else {
+            records.push(record2);
+          }
+        }
+        decode(bytes, inputOffset, byteLength) {
+          const cachedValue = this.find(bytes, inputOffset, byteLength);
+          if (cachedValue != null) {
+            this.hit++;
+            return cachedValue;
+          }
+          this.miss++;
+          const str = utf8DecodeJs(bytes, inputOffset, byteLength);
+          const slicedCopyOfBytes = Uint8Array.prototype.slice.call(bytes, inputOffset, inputOffset + byteLength);
+          this.store(slicedCopyOfBytes, str);
+          return str;
+        }
+      };
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
+  var STATE_ARRAY, STATE_MAP_KEY, STATE_MAP_VALUE, mapKeyConverter, StackPool, HEAD_BYTE_REQUIRED, EMPTY_VIEW, EMPTY_BYTES, MORE_DATA, sharedCachedKeyDecoder, Decoder;
+  var init_Decoder = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs"() {
+      init_prettyByte();
+      init_ExtensionCodec();
+      init_int();
+      init_utf8();
+      init_typedArrays();
+      init_CachedKeyDecoder();
+      init_DecodeError();
+      STATE_ARRAY = "array";
+      STATE_MAP_KEY = "map_key";
+      STATE_MAP_VALUE = "map_value";
+      mapKeyConverter = (key2) => {
+        if (typeof key2 === "string" || typeof key2 === "number") {
+          return key2;
+        }
+        throw new DecodeError("The type of key must be string or number but " + typeof key2);
+      };
+      StackPool = class {
+        constructor() {
+          __publicField(this, "stack", []);
+          __publicField(this, "stackHeadPosition", -1);
+        }
+        get length() {
+          return this.stackHeadPosition + 1;
+        }
+        top() {
+          return this.stack[this.stackHeadPosition];
+        }
+        pushArrayState(size) {
+          const state = this.getUninitializedStateFromPool();
+          state.type = STATE_ARRAY;
+          state.position = 0;
+          state.size = size;
+          state.array = new Array(size);
+        }
+        pushMapState(size) {
+          const state = this.getUninitializedStateFromPool();
+          state.type = STATE_MAP_KEY;
+          state.readCount = 0;
+          state.size = size;
+          state.map = {};
+        }
+        getUninitializedStateFromPool() {
+          this.stackHeadPosition++;
+          if (this.stackHeadPosition === this.stack.length) {
+            const partialState = {
+              type: void 0,
+              size: 0,
+              array: void 0,
+              position: 0,
+              readCount: 0,
+              map: void 0,
+              key: null
+            };
+            this.stack.push(partialState);
+          }
+          return this.stack[this.stackHeadPosition];
+        }
+        release(state) {
+          const topStackState = this.stack[this.stackHeadPosition];
+          if (topStackState !== state) {
+            throw new Error("Invalid stack state. Released state is not on top of the stack.");
+          }
+          if (state.type === STATE_ARRAY) {
+            const partialState = state;
+            partialState.size = 0;
+            partialState.array = void 0;
+            partialState.position = 0;
+            partialState.type = void 0;
+          }
+          if (state.type === STATE_MAP_KEY || state.type === STATE_MAP_VALUE) {
+            const partialState = state;
+            partialState.size = 0;
+            partialState.map = void 0;
+            partialState.readCount = 0;
+            partialState.type = void 0;
+          }
+          this.stackHeadPosition--;
+        }
+        reset() {
+          this.stack.length = 0;
+          this.stackHeadPosition = -1;
+        }
+      };
+      HEAD_BYTE_REQUIRED = -1;
+      EMPTY_VIEW = new DataView(new ArrayBuffer(0));
+      EMPTY_BYTES = new Uint8Array(EMPTY_VIEW.buffer);
+      try {
+        EMPTY_VIEW.getInt8(0);
+      } catch (e) {
+        if (!(e instanceof RangeError)) {
+          throw new Error("This module is not supported in the current JavaScript engine because DataView does not throw RangeError on out-of-bounds access");
+        }
+      }
+      MORE_DATA = new RangeError("Insufficient data");
+      sharedCachedKeyDecoder = new CachedKeyDecoder();
+      Decoder = class _Decoder {
+        constructor(options) {
+          __publicField(this, "extensionCodec");
+          __publicField(this, "context");
+          __publicField(this, "useBigInt64");
+          __publicField(this, "rawStrings");
+          __publicField(this, "maxStrLength");
+          __publicField(this, "maxBinLength");
+          __publicField(this, "maxArrayLength");
+          __publicField(this, "maxMapLength");
+          __publicField(this, "maxExtLength");
+          __publicField(this, "keyDecoder");
+          __publicField(this, "mapKeyConverter");
+          __publicField(this, "totalPos", 0);
+          __publicField(this, "pos", 0);
+          __publicField(this, "view", EMPTY_VIEW);
+          __publicField(this, "bytes", EMPTY_BYTES);
+          __publicField(this, "headByte", HEAD_BYTE_REQUIRED);
+          __publicField(this, "stack", new StackPool());
+          __publicField(this, "entered", false);
+          this.extensionCodec = options?.extensionCodec ?? ExtensionCodec.defaultCodec;
+          this.context = options?.context;
+          this.useBigInt64 = options?.useBigInt64 ?? false;
+          this.rawStrings = options?.rawStrings ?? false;
+          this.maxStrLength = options?.maxStrLength ?? UINT32_MAX;
+          this.maxBinLength = options?.maxBinLength ?? UINT32_MAX;
+          this.maxArrayLength = options?.maxArrayLength ?? UINT32_MAX;
+          this.maxMapLength = options?.maxMapLength ?? UINT32_MAX;
+          this.maxExtLength = options?.maxExtLength ?? UINT32_MAX;
+          this.keyDecoder = options?.keyDecoder !== void 0 ? options.keyDecoder : sharedCachedKeyDecoder;
+          this.mapKeyConverter = options?.mapKeyConverter ?? mapKeyConverter;
+        }
+        clone() {
+          return new _Decoder({
+            extensionCodec: this.extensionCodec,
+            context: this.context,
+            useBigInt64: this.useBigInt64,
+            rawStrings: this.rawStrings,
+            maxStrLength: this.maxStrLength,
+            maxBinLength: this.maxBinLength,
+            maxArrayLength: this.maxArrayLength,
+            maxMapLength: this.maxMapLength,
+            maxExtLength: this.maxExtLength,
+            keyDecoder: this.keyDecoder
+          });
+        }
+        reinitializeState() {
+          this.totalPos = 0;
+          this.headByte = HEAD_BYTE_REQUIRED;
+          this.stack.reset();
+        }
+        setBuffer(buffer) {
+          const bytes = ensureUint8Array(buffer);
+          this.bytes = bytes;
+          this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          this.pos = 0;
+        }
+        appendBuffer(buffer) {
+          if (this.headByte === HEAD_BYTE_REQUIRED && !this.hasRemaining(1)) {
+            this.setBuffer(buffer);
+          } else {
+            const remainingData = this.bytes.subarray(this.pos);
+            const newData = ensureUint8Array(buffer);
+            const newBuffer = new Uint8Array(remainingData.length + newData.length);
+            newBuffer.set(remainingData);
+            newBuffer.set(newData, remainingData.length);
+            this.setBuffer(newBuffer);
+          }
+        }
+        hasRemaining(size) {
+          return this.view.byteLength - this.pos >= size;
+        }
+        createExtraByteError(posToShow) {
+          const { view, pos } = this;
+          return new RangeError(`Extra ${view.byteLength - pos} of ${view.byteLength} byte(s) found at buffer[${posToShow}]`);
+        }
+        /**
+         * @throws {@link DecodeError}
+         * @throws {@link RangeError}
+         */
+        decode(buffer) {
+          if (this.entered) {
+            const instance = this.clone();
+            return instance.decode(buffer);
+          }
+          try {
+            this.entered = true;
+            this.reinitializeState();
+            this.setBuffer(buffer);
+            const object = this.doDecodeSync();
+            if (this.hasRemaining(1)) {
+              throw this.createExtraByteError(this.pos);
+            }
+            return object;
+          } finally {
+            this.entered = false;
+          }
+        }
+        *decodeMulti(buffer) {
+          if (this.entered) {
+            const instance = this.clone();
+            yield* instance.decodeMulti(buffer);
+            return;
+          }
+          try {
+            this.entered = true;
+            this.reinitializeState();
+            this.setBuffer(buffer);
+            while (this.hasRemaining(1)) {
+              yield this.doDecodeSync();
+            }
+          } finally {
+            this.entered = false;
+          }
+        }
+        async decodeAsync(stream) {
+          if (this.entered) {
+            const instance = this.clone();
+            return instance.decodeAsync(stream);
+          }
+          try {
+            this.entered = true;
+            let decoded = false;
+            let object;
+            for await (const buffer of stream) {
+              if (decoded) {
+                this.entered = false;
+                throw this.createExtraByteError(this.totalPos);
+              }
+              this.appendBuffer(buffer);
+              try {
+                object = this.doDecodeSync();
+                decoded = true;
+              } catch (e) {
+                if (!(e instanceof RangeError)) {
+                  throw e;
+                }
+              }
+              this.totalPos += this.pos;
+            }
+            if (decoded) {
+              if (this.hasRemaining(1)) {
+                throw this.createExtraByteError(this.totalPos);
+              }
+              return object;
+            }
+            const { headByte, pos, totalPos } = this;
+            throw new RangeError(`Insufficient data in parsing ${prettyByte(headByte)} at ${totalPos} (${pos} in the current buffer)`);
+          } finally {
+            this.entered = false;
+          }
+        }
+        decodeArrayStream(stream) {
+          return this.decodeMultiAsync(stream, true);
+        }
+        decodeStream(stream) {
+          return this.decodeMultiAsync(stream, false);
+        }
+        async *decodeMultiAsync(stream, isArray) {
+          if (this.entered) {
+            const instance = this.clone();
+            yield* instance.decodeMultiAsync(stream, isArray);
+            return;
+          }
+          try {
+            this.entered = true;
+            let isArrayHeaderRequired = isArray;
+            let arrayItemsLeft = -1;
+            for await (const buffer of stream) {
+              if (isArray && arrayItemsLeft === 0) {
+                throw this.createExtraByteError(this.totalPos);
+              }
+              this.appendBuffer(buffer);
+              if (isArrayHeaderRequired) {
+                arrayItemsLeft = this.readArraySize();
+                isArrayHeaderRequired = false;
+                this.complete();
+              }
+              try {
+                while (true) {
+                  yield this.doDecodeSync();
+                  if (--arrayItemsLeft === 0) {
+                    break;
+                  }
+                }
+              } catch (e) {
+                if (!(e instanceof RangeError)) {
+                  throw e;
+                }
+              }
+              this.totalPos += this.pos;
+            }
+          } finally {
+            this.entered = false;
+          }
+        }
+        doDecodeSync() {
+          DECODE: while (true) {
+            const headByte = this.readHeadByte();
+            let object;
+            if (headByte >= 224) {
+              object = headByte - 256;
+            } else if (headByte < 192) {
+              if (headByte < 128) {
+                object = headByte;
+              } else if (headByte < 144) {
+                const size = headByte - 128;
+                if (size !== 0) {
+                  this.pushMapState(size);
+                  this.complete();
+                  continue DECODE;
+                } else {
+                  object = {};
+                }
+              } else if (headByte < 160) {
+                const size = headByte - 144;
+                if (size !== 0) {
+                  this.pushArrayState(size);
+                  this.complete();
+                  continue DECODE;
+                } else {
+                  object = [];
+                }
+              } else {
+                const byteLength = headByte - 160;
+                object = this.decodeString(byteLength, 0);
+              }
+            } else if (headByte === 192) {
+              object = null;
+            } else if (headByte === 194) {
+              object = false;
+            } else if (headByte === 195) {
+              object = true;
+            } else if (headByte === 202) {
+              object = this.readF32();
+            } else if (headByte === 203) {
+              object = this.readF64();
+            } else if (headByte === 204) {
+              object = this.readU8();
+            } else if (headByte === 205) {
+              object = this.readU16();
+            } else if (headByte === 206) {
+              object = this.readU32();
+            } else if (headByte === 207) {
+              if (this.useBigInt64) {
+                object = this.readU64AsBigInt();
+              } else {
+                object = this.readU64();
+              }
+            } else if (headByte === 208) {
+              object = this.readI8();
+            } else if (headByte === 209) {
+              object = this.readI16();
+            } else if (headByte === 210) {
+              object = this.readI32();
+            } else if (headByte === 211) {
+              if (this.useBigInt64) {
+                object = this.readI64AsBigInt();
+              } else {
+                object = this.readI64();
+              }
+            } else if (headByte === 217) {
+              const byteLength = this.lookU8();
+              object = this.decodeString(byteLength, 1);
+            } else if (headByte === 218) {
+              const byteLength = this.lookU16();
+              object = this.decodeString(byteLength, 2);
+            } else if (headByte === 219) {
+              const byteLength = this.lookU32();
+              object = this.decodeString(byteLength, 4);
+            } else if (headByte === 220) {
+              const size = this.readU16();
+              if (size !== 0) {
+                this.pushArrayState(size);
+                this.complete();
+                continue DECODE;
+              } else {
+                object = [];
+              }
+            } else if (headByte === 221) {
+              const size = this.readU32();
+              if (size !== 0) {
+                this.pushArrayState(size);
+                this.complete();
+                continue DECODE;
+              } else {
+                object = [];
+              }
+            } else if (headByte === 222) {
+              const size = this.readU16();
+              if (size !== 0) {
+                this.pushMapState(size);
+                this.complete();
+                continue DECODE;
+              } else {
+                object = {};
+              }
+            } else if (headByte === 223) {
+              const size = this.readU32();
+              if (size !== 0) {
+                this.pushMapState(size);
+                this.complete();
+                continue DECODE;
+              } else {
+                object = {};
+              }
+            } else if (headByte === 196) {
+              const size = this.lookU8();
+              object = this.decodeBinary(size, 1);
+            } else if (headByte === 197) {
+              const size = this.lookU16();
+              object = this.decodeBinary(size, 2);
+            } else if (headByte === 198) {
+              const size = this.lookU32();
+              object = this.decodeBinary(size, 4);
+            } else if (headByte === 212) {
+              object = this.decodeExtension(1, 0);
+            } else if (headByte === 213) {
+              object = this.decodeExtension(2, 0);
+            } else if (headByte === 214) {
+              object = this.decodeExtension(4, 0);
+            } else if (headByte === 215) {
+              object = this.decodeExtension(8, 0);
+            } else if (headByte === 216) {
+              object = this.decodeExtension(16, 0);
+            } else if (headByte === 199) {
+              const size = this.lookU8();
+              object = this.decodeExtension(size, 1);
+            } else if (headByte === 200) {
+              const size = this.lookU16();
+              object = this.decodeExtension(size, 2);
+            } else if (headByte === 201) {
+              const size = this.lookU32();
+              object = this.decodeExtension(size, 4);
+            } else {
+              throw new DecodeError(`Unrecognized type byte: ${prettyByte(headByte)}`);
+            }
+            this.complete();
+            const stack = this.stack;
+            while (stack.length > 0) {
+              const state = stack.top();
+              if (state.type === STATE_ARRAY) {
+                state.array[state.position] = object;
+                state.position++;
+                if (state.position === state.size) {
+                  object = state.array;
+                  stack.release(state);
+                } else {
+                  continue DECODE;
+                }
+              } else if (state.type === STATE_MAP_KEY) {
+                if (object === "__proto__") {
+                  throw new DecodeError("The key __proto__ is not allowed");
+                }
+                state.key = this.mapKeyConverter(object);
+                state.type = STATE_MAP_VALUE;
+                continue DECODE;
+              } else {
+                state.map[state.key] = object;
+                state.readCount++;
+                if (state.readCount === state.size) {
+                  object = state.map;
+                  stack.release(state);
+                } else {
+                  state.key = null;
+                  state.type = STATE_MAP_KEY;
+                  continue DECODE;
+                }
+              }
+            }
+            return object;
+          }
+        }
+        readHeadByte() {
+          if (this.headByte === HEAD_BYTE_REQUIRED) {
+            this.headByte = this.readU8();
+          }
+          return this.headByte;
+        }
+        complete() {
+          this.headByte = HEAD_BYTE_REQUIRED;
+        }
+        readArraySize() {
+          const headByte = this.readHeadByte();
+          switch (headByte) {
+            case 220:
+              return this.readU16();
+            case 221:
+              return this.readU32();
+            default: {
+              if (headByte < 160) {
+                return headByte - 144;
+              } else {
+                throw new DecodeError(`Unrecognized array type byte: ${prettyByte(headByte)}`);
+              }
+            }
+          }
+        }
+        pushMapState(size) {
+          if (size > this.maxMapLength) {
+            throw new DecodeError(`Max length exceeded: map length (${size}) > maxMapLengthLength (${this.maxMapLength})`);
+          }
+          this.stack.pushMapState(size);
+        }
+        pushArrayState(size) {
+          if (size > this.maxArrayLength) {
+            throw new DecodeError(`Max length exceeded: array length (${size}) > maxArrayLength (${this.maxArrayLength})`);
+          }
+          this.stack.pushArrayState(size);
+        }
+        decodeString(byteLength, headerOffset) {
+          if (!this.rawStrings || this.stateIsMapKey()) {
+            return this.decodeUtf8String(byteLength, headerOffset);
+          }
+          return this.decodeBinary(byteLength, headerOffset);
+        }
+        /**
+         * @throws {@link RangeError}
+         */
+        decodeUtf8String(byteLength, headerOffset) {
+          if (byteLength > this.maxStrLength) {
+            throw new DecodeError(`Max length exceeded: UTF-8 byte length (${byteLength}) > maxStrLength (${this.maxStrLength})`);
+          }
+          if (this.bytes.byteLength < this.pos + headerOffset + byteLength) {
+            throw MORE_DATA;
+          }
+          const offset = this.pos + headerOffset;
+          let object;
+          if (this.stateIsMapKey() && this.keyDecoder?.canBeCached(byteLength)) {
+            object = this.keyDecoder.decode(this.bytes, offset, byteLength);
+          } else {
+            object = utf8Decode(this.bytes, offset, byteLength);
+          }
+          this.pos += headerOffset + byteLength;
+          return object;
+        }
+        stateIsMapKey() {
+          if (this.stack.length > 0) {
+            const state = this.stack.top();
+            return state.type === STATE_MAP_KEY;
+          }
+          return false;
+        }
+        /**
+         * @throws {@link RangeError}
+         */
+        decodeBinary(byteLength, headOffset) {
+          if (byteLength > this.maxBinLength) {
+            throw new DecodeError(`Max length exceeded: bin length (${byteLength}) > maxBinLength (${this.maxBinLength})`);
+          }
+          if (!this.hasRemaining(byteLength + headOffset)) {
+            throw MORE_DATA;
+          }
+          const offset = this.pos + headOffset;
+          const object = this.bytes.subarray(offset, offset + byteLength);
+          this.pos += headOffset + byteLength;
+          return object;
+        }
+        decodeExtension(size, headOffset) {
+          if (size > this.maxExtLength) {
+            throw new DecodeError(`Max length exceeded: ext length (${size}) > maxExtLength (${this.maxExtLength})`);
+          }
+          const extType = this.view.getInt8(this.pos + headOffset);
+          const data = this.decodeBinary(
+            size,
+            headOffset + 1
+            /* extType */
+          );
+          return this.extensionCodec.decode(data, extType, this.context);
+        }
+        lookU8() {
+          return this.view.getUint8(this.pos);
+        }
+        lookU16() {
+          return this.view.getUint16(this.pos);
+        }
+        lookU32() {
+          return this.view.getUint32(this.pos);
+        }
+        readU8() {
+          const value = this.view.getUint8(this.pos);
+          this.pos++;
+          return value;
+        }
+        readI8() {
+          const value = this.view.getInt8(this.pos);
+          this.pos++;
+          return value;
+        }
+        readU16() {
+          const value = this.view.getUint16(this.pos);
+          this.pos += 2;
+          return value;
+        }
+        readI16() {
+          const value = this.view.getInt16(this.pos);
+          this.pos += 2;
+          return value;
+        }
+        readU32() {
+          const value = this.view.getUint32(this.pos);
+          this.pos += 4;
+          return value;
+        }
+        readI32() {
+          const value = this.view.getInt32(this.pos);
+          this.pos += 4;
+          return value;
+        }
+        readU64() {
+          const value = getUint64(this.view, this.pos);
+          this.pos += 8;
+          return value;
+        }
+        readI64() {
+          const value = getInt64(this.view, this.pos);
+          this.pos += 8;
+          return value;
+        }
+        readU64AsBigInt() {
+          const value = this.view.getBigUint64(this.pos);
+          this.pos += 8;
+          return value;
+        }
+        readI64AsBigInt() {
+          const value = this.view.getBigInt64(this.pos);
+          this.pos += 8;
+          return value;
+        }
+        readF32() {
+          const value = this.view.getFloat32(this.pos);
+          this.pos += 4;
+          return value;
+        }
+        readF64() {
+          const value = this.view.getFloat64(this.pos);
+          this.pos += 8;
+          return value;
+        }
+      };
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/decode.mjs
+  function decode(buffer, options) {
+    const decoder = new Decoder(options);
+    return decoder.decode(buffer);
+  }
+  function decodeMulti(buffer, options) {
+    const decoder = new Decoder(options);
+    return decoder.decodeMulti(buffer);
+  }
+  var init_decode = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/decode.mjs"() {
+      init_Decoder();
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs
+  function isAsyncIterable(object) {
+    return object[Symbol.asyncIterator] != null;
+  }
+  async function* asyncIterableFromStream(stream) {
+    const reader = stream.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          return;
+        }
+        yield value;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+  function ensureAsyncIterable(streamLike) {
+    if (isAsyncIterable(streamLike)) {
+      return streamLike;
+    } else {
+      return asyncIterableFromStream(streamLike);
+    }
+  }
+  var init_stream = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs"() {
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs
+  async function decodeAsync(streamLike, options) {
+    const stream = ensureAsyncIterable(streamLike);
+    const decoder = new Decoder(options);
+    return decoder.decodeAsync(stream);
+  }
+  function decodeArrayStream(streamLike, options) {
+    const stream = ensureAsyncIterable(streamLike);
+    const decoder = new Decoder(options);
+    return decoder.decodeArrayStream(stream);
+  }
+  function decodeMultiStream(streamLike, options) {
+    const stream = ensureAsyncIterable(streamLike);
+    const decoder = new Decoder(options);
+    return decoder.decodeStream(stream);
+  }
+  var init_decodeAsync = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs"() {
+      init_Decoder();
+      init_stream();
+    }
+  });
+
+  // node_modules/@msgpack/msgpack/dist.esm/index.mjs
+  var dist_exports = {};
+  __export(dist_exports, {
+    DecodeError: () => DecodeError,
+    Decoder: () => Decoder,
+    EXT_TIMESTAMP: () => EXT_TIMESTAMP,
+    Encoder: () => Encoder,
+    ExtData: () => ExtData,
+    ExtensionCodec: () => ExtensionCodec,
+    decode: () => decode,
+    decodeArrayStream: () => decodeArrayStream,
+    decodeAsync: () => decodeAsync,
+    decodeMulti: () => decodeMulti,
+    decodeMultiStream: () => decodeMultiStream,
+    decodeTimestampExtension: () => decodeTimestampExtension,
+    decodeTimestampToTimeSpec: () => decodeTimestampToTimeSpec,
+    encode: () => encode,
+    encodeDateToTimeSpec: () => encodeDateToTimeSpec,
+    encodeTimeSpecToTimestamp: () => encodeTimeSpecToTimestamp,
+    encodeTimestampExtension: () => encodeTimestampExtension
+  });
+  var init_dist = __esm({
+    "node_modules/@msgpack/msgpack/dist.esm/index.mjs"() {
+      init_encode();
+      init_decode();
+      init_decodeAsync();
+      init_Decoder();
+      init_DecodeError();
+      init_Encoder();
+      init_ExtensionCodec();
+      init_ExtData();
+      init_timestamp();
+    }
+  });
 
   // src/testing/index.ts
   var index_exports = {};
@@ -34,6 +1655,15 @@ var __RuneWeb = (() => {
   function ctx() {
     if (!_ctx) throw new Error("RuneWeb context not initialized \u2014 call boot() first");
     return _ctx;
+  }
+  function withContext(context, run) {
+    const previous = _ctx;
+    _ctx = context;
+    try {
+      return run();
+    } finally {
+      _ctx = previous;
+    }
   }
 
   // src/ownership.ts
@@ -68,13 +1698,13 @@ var __RuneWeb = (() => {
     if (known) return known;
     const raw = { ...value };
     const proxy = new Proxy(raw, {
-      set: (target, key, next) => {
-        Reflect.set(target, key, next);
-        if (["x", "y", "z", "visible", "scale"].includes(String(key))) entityMoved(proxy);
+      set: (target, key2, next2) => {
+        Reflect.set(target, key2, next2);
+        if (["x", "y", "z", "visible", "scale"].includes(String(key2))) entityMoved(proxy);
         return true;
       },
-      deleteProperty: (target, key) => {
-        Reflect.deleteProperty(target, key);
+      deleteProperty: (target, key2) => {
+        Reflect.deleteProperty(target, key2);
         entityMoved(proxy);
         return true;
       },
@@ -94,20 +1724,20 @@ var __RuneWeb = (() => {
     const importedEntities = /* @__PURE__ */ new WeakMap();
     const target = values.map((value) => ownEntity(value, importedEntities));
     const proxy = new Proxy(target, {
-      set: (array, key, value) => {
-        if (key === "length") {
+      set: (array, key2, value) => {
+        if (key2 === "length") {
           if (!Number.isInteger(value) || value < 0 || value > array.length) throw new Error("Grow entity groups with push or indexed writes");
-          Reflect.set(array, key, value);
-        } else if (typeof key === "string" && /^\d+$/.test(key)) {
-          const i = Number(key);
+          Reflect.set(array, key2, value);
+        } else if (typeof key2 === "string" && /^\d+$/.test(key2)) {
+          const i = Number(key2);
           if (i > array.length || i >= 1e6) throw new Error("Entity group indices must be contiguous");
-          Reflect.set(array, key, ownEntity(value, importedEntities));
+          Reflect.set(array, key2, ownEntity(value, importedEntities));
         } else throw new Error("Invalid entity group property");
         entitiesChanged(proxy);
         return true;
       },
-      deleteProperty: (array, key) => {
-        Reflect.deleteProperty(array, key);
+      deleteProperty: (array, key2) => {
+        Reflect.deleteProperty(array, key2);
         entitiesChanged(proxy);
         return true;
       },
@@ -162,13 +1792,13 @@ var __RuneWeb = (() => {
       if (entity.visible === false) return;
       const x = entity.x, y = entity.y, z = this.dimensions === 3 ? entity.z ?? 0 : 0;
       if (![x, y, z].every(Number.isFinite)) throw new Error("nearby entity coordinates must be finite");
-      const key = this.key(x, y, z), bucket = this.buckets.get(key) ?? /* @__PURE__ */ new Set();
+      const key2 = this.key(x, y, z), bucket = this.buckets.get(key2) ?? /* @__PURE__ */ new Set();
       bucket.add(i);
-      this.buckets.set(key, bucket);
+      this.buckets.set(key2, bucket);
       const scale = Number.isFinite(entity.scale) && entity.scale > 0 ? entity.scale : 1;
       this.scales.set(scale, (this.scales.get(scale) ?? 0) + 1);
       this.maxScale = Math.max(this.maxScale, scale);
-      this.rows.set(i, { entity, key, x, y, z, scale });
+      this.rows.set(i, { entity, key: key2, x, y, z, scale });
     }
     move(entity) {
       if (this.dirty) return;
@@ -312,10 +1942,10 @@ var __RuneWeb = (() => {
     "json.parse": JSON.parse
   };
   var forbidden = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-  function safeKey(key) {
-    key = String(key);
-    if (forbidden.has(key)) throw new Error(`Invalid member: ${key}`);
-    return key;
+  function safeKey(key2) {
+    key2 = String(key2);
+    if (forbidden.has(key2)) throw new Error(`Invalid member: ${key2}`);
+    return key2;
   }
   function tokenize(source) {
     const out = [];
@@ -344,7 +1974,14 @@ var __RuneWeb = (() => {
           }
           if (c === "\\") {
             const e = source[i++];
-            const escapes = { n: "\n", r: "\r", t: "	", "\\": "\\", '"': '"', "'": "'" };
+            const escapes = { n: "\n", r: "\r", t: "	", b: "\b", f: "\f", "/": "/", "\\": "\\", '"': '"', "'": "'" };
+            if (e === "u") {
+              const hex = source.slice(i, i + 4);
+              if (!/^[\da-fA-F]{4}$/.test(hex)) throw new Error("Invalid Unicode escape");
+              value += String.fromCharCode(parseInt(hex, 16));
+              i += 4;
+              continue;
+            }
             if (!(e in escapes)) throw new Error("Invalid string escape");
             value += escapes[e];
           } else value += c;
@@ -368,14 +2005,15 @@ var __RuneWeb = (() => {
     return out;
   }
   function parseCoreExpression(source) {
-    const tokens = tokenize(source);
-    let pos = 0;
-    const peek = () => tokens[pos].value;
-    const take = () => tokens[pos++];
+    const tokens2 = tokenize(source);
+    let pos = 0, depth = 0;
+    const peek = () => tokens2[pos].value;
+    const take = () => tokens2[pos++];
     const expect = (s) => {
       if (take().value !== s) throw new Error(`Expected ${s}`);
     };
     function expression(min = 0) {
+      if (++depth > 128) throw new Error("Expression nesting exceeds 128");
       const t = take();
       let left;
       if (t.kind === "number") left = { kind: "literal", value: Number(t.value) };
@@ -385,6 +2023,28 @@ var __RuneWeb = (() => {
       else if (t.value === "(") {
         left = expression();
         expect(")");
+      } else if (t.value === "grid" && !["", ".", "["].includes(peek())) {
+        const cols = expression(8);
+        expect("x");
+        const rows = expression(8);
+        if (!["at", "from"].includes(take().value)) throw new Error("Expected at or from");
+        expect("(");
+        const x = expression();
+        expect(",");
+        const y = expression();
+        expect(")");
+        expect("step");
+        expect("(");
+        const dx = expression();
+        expect(",");
+        const dy = expression();
+        expect(")");
+        let overrides = { kind: "object", items: [] };
+        if (peek() === "with") {
+          take();
+          overrides = expression(8);
+        }
+        left = { kind: "grid", items: [cols, rows, x, y, dx, dy, overrides] };
       } else if (t.value === "[") {
         const items = [];
         while (peek() !== "]") {
@@ -397,10 +2057,15 @@ var __RuneWeb = (() => {
       } else if (t.value === "{") {
         const items = [];
         while (peek() !== "}") {
-          const key = take();
-          if (!["id", "string"].includes(key.kind)) throw new Error("Invalid object key");
-          expect(":");
-          items.push([safeKey(key.value), expression()]);
+          const key2 = take();
+          if (!["id", "string"].includes(key2.kind)) throw new Error("Invalid object key");
+          let value;
+          if (peek() === ":") {
+            take();
+            value = expression();
+          } else if (key2.kind === "id" && [",", "}"].includes(peek())) value = { kind: "id", value: key2.value };
+          else throw new Error("Expected : after object key");
+          items.push([safeKey(key2.value), value]);
           if (peek() !== ",") break;
           take();
         }
@@ -415,16 +2080,23 @@ var __RuneWeb = (() => {
       while (true) {
         if (peek() === ".") {
           take();
-          const key = take();
-          if (key.kind !== "id") throw new Error("Expected member name");
-          left = { kind: "member", items: [left, { kind: "literal", value: safeKey(key.value) }] };
+          const key2 = take();
+          if (key2.kind !== "id") throw new Error("Expected member name");
+          left = { kind: "member", items: [left, { kind: "literal", value: safeKey(key2.value) }] };
           continue;
         }
         if (peek() === "[") {
           take();
-          const key = expression();
-          expect("]");
-          left = { kind: "member", items: [left, key] };
+          if (peek() === "]") {
+            take();
+            const key2 = take();
+            if (key2.kind !== "id") throw new Error("Expected lookup property after []");
+            left = { kind: "lookup", value: safeKey(key2.value), items: [left] };
+          } else {
+            const key2 = expression();
+            expect("]");
+            left = { kind: "member", items: [left, key2] };
+          }
           continue;
         }
         if (peek() === "(") {
@@ -439,6 +2111,39 @@ var __RuneWeb = (() => {
           left = { kind: "call", items: [left, ...args] };
           continue;
         }
+        if (min <= 0 && ["with", "all"].includes(peek())) {
+          take();
+          left = { kind: "overlay", items: [left, expression(8)] };
+          continue;
+        }
+        if (peek() === "*" && min <= 7 && left.kind === "object") {
+          take();
+          const count = expression(8);
+          const props = [];
+          let step = { kind: "literal", value: 0 };
+          if (peek() === "inc") {
+            take();
+            const parens = peek() === "(";
+            if (parens) take();
+            do {
+              const key2 = take();
+              if (!["id", "string"].includes(key2.kind)) throw new Error("Expected increment property");
+              props.push(safeKey(key2.value));
+              if (peek() !== ",") break;
+              take();
+            } while (true);
+            if (parens) expect(")");
+            expect("by");
+            step = expression(8);
+          }
+          let overrides = { kind: "object", items: [] };
+          if (peek() === "with") {
+            take();
+            overrides = expression(8);
+          }
+          left = { kind: "generate", props, items: [left, count, step, overrides] };
+          continue;
+        }
         const op = peek(), rank = precedence[op];
         if (rank === void 0 || rank < min) break;
         take();
@@ -450,10 +2155,11 @@ var __RuneWeb = (() => {
         expect(":");
         left = { kind: "ternary", items: [left, yes, expression()] };
       }
+      depth--;
       return left;
     }
     const ast = expression();
-    if (tokens[pos].kind !== "eof") throw new Error(`Unexpected token: ${peek()}`);
+    if (tokens2[pos].kind !== "eof") throw new Error(`Unexpected token: ${peek()}`);
     return ast;
   }
   function callName(e) {
@@ -462,6 +2168,7 @@ var __RuneWeb = (() => {
       const parent = callName(e.items[0]);
       if (parent) return parent + "." + e.items[1].value;
     }
+    return void 0;
   }
   function evaluateCoreExpression(e, scope, functions = coreFunctions) {
     const ev = (n) => evaluateCoreExpression(n, scope, functions);
@@ -471,11 +2178,41 @@ var __RuneWeb = (() => {
       case "id":
         return scope[e.value];
       case "array":
-        return e.items.map(ev);
+        return e.items.flatMap((item) => {
+          const value = ev(item);
+          return expandsCollection(item) && Array.isArray(value) ? value : [value];
+        });
       case "object":
         return Object.fromEntries(e.items.map(([k, v]) => [k, ev(v)]));
       case "member":
         return ev(e.items[0])?.[safeKey(ev(e.items[1]))];
+      case "lookup": {
+        const source = ev(e.items[0]);
+        if (scope[e.value] === void 0) return void 0;
+        return Array.isArray(source) ? source.find((item) => String(item?.[e.value]) === String(scope[e.value])) : void 0;
+      }
+      case "overlay":
+        return overlay(ev(e.items[0]), ev(e.items[1]));
+      case "generate": {
+        const count = collectionCount(ev(e.items[1]));
+        const step = finiteNumber(ev(e.items[2]));
+        return Array.from({ length: count }, (_, i) => {
+          const local2 = { ...scope, i };
+          const item = cloneData(evaluateCoreExpression(e.items[0], local2, functions));
+          for (const prop of e.props) if (typeof item[prop] === "number") item[prop] += i * step;
+          return overlay(item, evaluateCoreExpression(e.items[3], local2, functions));
+        });
+      }
+      case "grid": {
+        const [cols, rows] = e.items.slice(0, 2).map((item) => collectionCount(ev(item)));
+        const count = collectionCount(cols * rows);
+        const [x, y, dx, dy] = e.items.slice(2, 6).map((item) => finiteNumber(ev(item)));
+        return Array.from({ length: count }, (_, i) => {
+          const col = i % cols, row = Math.floor(i / cols);
+          const item = { x: x + col * dx, y: y + row * dy, start_x: x + col * dx, start_y: y + row * dy, col, row };
+          return overlay(item, evaluateCoreExpression(e.items[6], { ...scope, i, col, row, c: col, r: row }, functions));
+        });
+      }
       case "unary": {
         const v = ev(e.items[0]);
         return e.value === "-" ? -v : e.value === "+" ? +v : !v;
@@ -486,20 +2223,20 @@ var __RuneWeb = (() => {
         return (value) => evaluateCoreExpression(e.items[0], { ...scope, [e.value]: value }, functions);
       case "call": {
         const a = e.items[0];
-        const name = callName(a);
+        const name2 = callName(a);
         const args = e.items.slice(1).map(ev);
-        if (name && Object.prototype.hasOwnProperty.call(functions, name)) return functions[name](...args);
+        if (name2 && Object.prototype.hasOwnProperty.call(functions, name2)) return functions[name2](...args);
         if (a.kind === "member") {
-          const receiver = ev(a.items[0]), key = safeKey(ev(a.items[1]));
+          const receiver = ev(a.items[0]), key2 = safeKey(ev(a.items[1]));
           const arrays = ["push", "pop", "join", "slice", "map", "filter", "find", "some", "every", "includes", "indexOf"];
           const strings = ["join", "slice", "includes", "indexOf", "split", "toLowerCase", "toUpperCase", "padStart"];
-          if (Array.isArray(receiver) && arrays.includes(key) || typeof receiver === "string" && strings.includes(key)) {
-            const result = receiver[key](...args);
-            if (key === "push" || key === "pop") entitiesChanged(receiver);
+          if (Array.isArray(receiver) && arrays.includes(key2) || typeof receiver === "string" && strings.includes(key2)) {
+            const result = receiver[key2](...args);
+            if (key2 === "push" || key2 === "pop") entitiesChanged(receiver);
             return result;
           }
         }
-        throw new Error(`Unknown function: ${name || "expression"}`);
+        throw new Error(`Unknown function: ${name2 || "expression"}`);
       }
       case "binary": {
         const [a, b] = e.items;
@@ -537,6 +2274,29 @@ var __RuneWeb = (() => {
       }
     }
     throw new Error("Unknown expression");
+  }
+  function expandsCollection(e) {
+    return e.kind === "generate" || e.kind === "grid" || e.kind === "overlay";
+  }
+  function collectionCount(value) {
+    if (!Number.isInteger(value) || value < 0 || value > 1e6) throw new Error("Invalid generator count (0..1000000)");
+    return value;
+  }
+  function finiteNumber(value) {
+    if (typeof value !== "number" || !Number.isFinite(value)) throw new Error("Generator coordinates and steps must be finite numbers");
+    return value;
+  }
+  function cloneData(value) {
+    if (Array.isArray(value)) return value.map(cloneData);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [safeKey(k), cloneData(v)]));
+    return value;
+  }
+  function overlay(source, overrides) {
+    if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) throw new Error("with/all requires an object");
+    const copy = (item) => item && typeof item === "object" && !Array.isArray(item) ? { ...cloneData(item), ...cloneData(overrides) } : item;
+    if (Array.isArray(source)) return source.map(copy);
+    if (!source || typeof source !== "object") throw new Error("with/all requires an object or array");
+    return copy(source);
   }
   function compileCoreExpression(source) {
     try {
@@ -584,8 +2344,8 @@ var __RuneWeb = (() => {
   }
 
   // src/globals.ts
-  function getWindowProp(key) {
-    return window[key];
+  function getWindowProp(key2) {
+    return window[key2];
   }
 
   // src/utils.ts
@@ -600,12 +2360,12 @@ var __RuneWeb = (() => {
   }
   var operatorCache = /* @__PURE__ */ new Map();
   function includesTopLevel(input, delimiter) {
-    const key = delimiter + "\0" + input;
-    if (operatorCache.has(key)) return operatorCache.get(key);
+    const key2 = delimiter + "\0" + input;
+    if (operatorCache.has(key2)) return operatorCache.get(key2);
     const result = scanTopLevel(input, delimiter);
     if (input.length <= 2048) {
       if (operatorCache.size >= 8192) operatorCache.delete(operatorCache.keys().next().value);
-      operatorCache.set(key, result);
+      operatorCache.set(key2, result);
     }
     return result;
   }
@@ -695,16 +2455,16 @@ var __RuneWeb = (() => {
       const ch = input[i];
       if (ch === "\\" && i + 1 < input.length) {
         i += 1;
-        const next = input[i];
-        if (next === "n") output += "\n";
-        else if (next === "r") output += "\r";
-        else if (next === "t") output += "	";
-        else if (next === '"') output += '"';
-        else if (next === "'") output += "'";
-        else if (next === "\\") output += "\\";
-        else if (next === "{") output += OPEN;
-        else if (next === "}") output += CLOSE;
-        else output += next;
+        const next2 = input[i];
+        if (next2 === "n") output += "\n";
+        else if (next2 === "r") output += "\r";
+        else if (next2 === "t") output += "	";
+        else if (next2 === '"') output += '"';
+        else if (next2 === "'") output += "'";
+        else if (next2 === "\\") output += "\\";
+        else if (next2 === "{") output += OPEN;
+        else if (next2 === "}") output += CLOSE;
+        else output += next2;
         continue;
       }
       output += ch;
@@ -752,12 +2512,12 @@ var __RuneWeb = (() => {
   // src/navigator.ts
   var isNavigatingFromUrl = false;
   var lastKnownRoute = null;
-  function setMetaTag(attr, key, content) {
+  function setMetaTag(attr, key2, content) {
     if (typeof document === "undefined") return;
-    let el = document.querySelector(`meta[${attr}="${key}"]`);
+    let el = document.querySelector(`meta[${attr}="${key2}"]`);
     if (!el) {
       el = document.createElement("meta");
-      el.setAttribute(attr, key);
+      el.setAttribute(attr, key2);
       document.head.appendChild(el);
     }
     el.setAttribute("content", content);
@@ -944,10 +2704,10 @@ var __RuneWeb = (() => {
         expressionNames.set(expression, names);
       }
       const scope = {};
-      for (const name of names) {
+      for (const name2 of names) {
         for (const source of [locals, c.app.derived, c.app.state]) {
-          if (source && Object.prototype.propertyIsEnumerable.call(source, name)) {
-            scope[name] = source[name];
+          if (source && Object.prototype.propertyIsEnumerable.call(source, name2)) {
+            scope[name2] = source[name2];
             break;
           }
         }
@@ -1026,32 +2786,32 @@ var __RuneWeb = (() => {
       return null;
     }
   }
-  function getStorageItem(key) {
+  function getStorageItem(key2) {
     try {
       const store = browserStorage();
-      const val = native().__runeStoreGet ? native().__runeStoreGet(key) : store?.getItem(key);
+      const val = native().__runeStoreGet ? native().__runeStoreGet(key2) : store?.getItem(key2);
       persistent = !!native().__runeStoreGet || !!store;
       if (val != null) return val;
     } catch {
     }
-    return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null;
+    return Object.prototype.hasOwnProperty.call(memoryStorage, key2) ? memoryStorage[key2] : null;
   }
-  function setStorageItem(key, val) {
-    memoryStorage[key] = val;
+  function setStorageItem(key2, val) {
+    memoryStorage[key2] = val;
     try {
       const store = browserStorage();
-      if (native().__runeStoreSet) native().__runeStoreSet(key, val);
-      else store?.setItem(key, val);
+      if (native().__runeStoreSet) native().__runeStoreSet(key2, val);
+      else store?.setItem(key2, val);
       persistent = !!native().__runeStoreSet || !!store;
     } catch {
       persistent = false;
     }
   }
-  function removeStorageItem(key) {
-    delete memoryStorage[key];
+  function removeStorageItem(key2) {
+    delete memoryStorage[key2];
     try {
-      if (native().__runeStoreRemove) native().__runeStoreRemove(key);
-      else browserStorage()?.removeItem(key);
+      if (native().__runeStoreRemove) native().__runeStoreRemove(key2);
+      else browserStorage()?.removeItem(key2);
     } catch {
     }
   }
@@ -1064,8 +2824,8 @@ var __RuneWeb = (() => {
     } catch {
     }
   }
-  function hasStorageItem(key) {
-    return getStorageItem(key) !== null;
+  function hasStorageItem(key2) {
+    return getStorageItem(key2) !== null;
   }
 
   // src/pixel3d/math.ts
@@ -1168,9 +2928,9 @@ var __RuneWeb = (() => {
     }
     return true;
   }
-  function mapSpawn(name) {
-    const map = globalThis.__RuneSpatialMaps?.[name];
-    if (!map?.spawn) throw new Error(`Map ${name} has no spawn`);
+  function mapSpawn(name2) {
+    const map = globalThis.__RuneSpatialMaps?.[name2];
+    if (!map?.spawn) throw new Error(`Map ${name2} has no spawn`);
     return { ...map.spawn };
   }
 
@@ -1192,15 +2952,15 @@ var __RuneWeb = (() => {
       this.occupied = this.cw * this.ch * this.cd <= 65536 ? new Uint8Array(this.cw * this.ch * this.cd) : /* @__PURE__ */ Object.create(null);
       this.materialCount = world.materials.length;
       this.publicChunks = new Proxy(/* @__PURE__ */ Object.create(null), {
-        get: (_t, key) => typeof key === "string" && /^\d+$/.test(key) ? this.proxies.get(Number(key)) : void 0,
+        get: (_t, key2) => typeof key2 === "string" && /^\d+$/.test(key2) ? this.proxies.get(Number(key2)) : void 0,
         ownKeys: () => [...this.raw.keys()].map(String),
-        getOwnPropertyDescriptor: (_t, key) => this.raw.has(Number(key)) ? { enumerable: true, configurable: true } : void 0,
-        set: (_t, key, value) => {
-          this.replace(Number(key), value);
+        getOwnPropertyDescriptor: (_t, key2) => this.raw.has(Number(key2)) ? { enumerable: true, configurable: true } : void 0,
+        set: (_t, key2, value) => {
+          this.replace(Number(key2), value);
           return true;
         },
-        deleteProperty: (_t, key) => {
-          this.remove(Number(key));
+        deleteProperty: (_t, key2) => {
+          this.remove(Number(key2));
           return true;
         },
         defineProperty: () => {
@@ -1211,15 +2971,15 @@ var __RuneWeb = (() => {
       const target = [];
       target.length = volume;
       this.cells = new Proxy(target, {
-        get: (t, key, receiver) => key === "length" ? volume : typeof key === "string" && /^\d+$/.test(key) ? this.readFlat(Number(key)) : Reflect.get(t, key, receiver),
-        set: (_t, key, value) => {
-          if (typeof key !== "string" || !/^\d+$/.test(key)) throw new Error("Chunked cells have a fixed length; write a cell index");
-          this.writeFlat(Number(key), value);
+        get: (t, key2, receiver) => key2 === "length" ? volume : typeof key2 === "string" && /^\d+$/.test(key2) ? this.readFlat(Number(key2)) : Reflect.get(t, key2, receiver),
+        set: (_t, key2, value) => {
+          if (typeof key2 !== "string" || !/^\d+$/.test(key2)) throw new Error("Chunked cells have a fixed length; write a cell index");
+          this.writeFlat(Number(key2), value);
           return true;
         },
-        has: (t, key) => typeof key === "string" && /^\d+$/.test(key) ? Number(key) < volume : Reflect.has(t, key),
-        deleteProperty: (_t, key) => {
-          this.writeFlat(Number(key), 0);
+        has: (t, key2) => typeof key2 === "string" && /^\d+$/.test(key2) ? Number(key2) < volume : Reflect.has(t, key2),
+        deleteProperty: (_t, key2) => {
+          this.writeFlat(Number(key2), 0);
           return true;
         },
         defineProperty: () => {
@@ -1228,7 +2988,7 @@ var __RuneWeb = (() => {
       });
       const entries = Object.entries(imported);
       if (entries.length > MAX_RESIDENT_CHUNKS) throw new Error("Chunked world exceeds resident chunk budget");
-      for (const [key, values] of entries) this.replace(Number(key), values);
+      for (const [key2, values] of entries) this.replace(Number(key2), values);
     }
     /** Bounded render accelerator; large worlds retain sparse lookup. */
     prepareRenderCells() {
@@ -1271,14 +3031,14 @@ var __RuneWeb = (() => {
       this.occupied[id] = 1;
       this.mirror(id, raw);
       this.proxies.set(id, new Proxy(raw, {
-        get: (t, key, receiver) => typeof key === "string" && /^\d+$/.test(key) ? this.raw.get(id)?.[Number(key)] ?? 0 : Reflect.get(t, key, receiver),
-        set: (_t, key, value) => {
-          if (typeof key !== "string" || !/^\d+$/.test(key) || Number(key) >= 64) throw new Error("Voxel chunks have fixed length");
-          this.writeChunk(id, Number(key), value);
+        get: (t, key2, receiver) => typeof key2 === "string" && /^\d+$/.test(key2) ? this.raw.get(id)?.[Number(key2)] ?? 0 : Reflect.get(t, key2, receiver),
+        set: (_t, key2, value) => {
+          if (typeof key2 !== "string" || !/^\d+$/.test(key2) || Number(key2) >= 64) throw new Error("Voxel chunks have fixed length");
+          this.writeChunk(id, Number(key2), value);
           return true;
         },
-        deleteProperty: (_t, key) => {
-          const cell = Number(key);
+        deleteProperty: (_t, key2) => {
+          const cell = Number(key2);
           if (!Number.isInteger(cell) || cell < 0 || cell >= 64) throw new Error("Invalid chunk cell");
           this.writeChunk(id, cell, 0);
           return true;
@@ -1446,7 +3206,7 @@ var __RuneWeb = (() => {
     if (world.storage !== "chunked" && world.width * world.height * world.depth > 48 * 48 * 24) {
       throw new Error("Voxel world must contain at most 55296 cells");
     }
-    if (!Array.isArray(world.materials) || world.materials.length < 1 || world.materials.length > 256 || !world.materials.every((name) => typeof name === "string" && name.length > 0)) {
+    if (!Array.isArray(world.materials) || world.materials.length < 1 || world.materials.length > 256 || !world.materials.every((name2) => typeof name2 === "string" && name2.length > 0)) {
       throw new Error("Voxel world needs material names and an exactly sized array of valid block IDs");
     }
     if (world.storage === "chunked") {
@@ -1587,11 +3347,11 @@ var __RuneWeb = (() => {
     while (true) {
       if (chunks.occupied[cellIndex]) return entry;
       const axis = ex < ey && ex < ez ? 0 : ey < ez ? 1 : 2;
-      const next = axis === 0 ? ex : axis === 1 ? ey : ez;
-      if (!Number.isFinite(next) || next > maxDistance) return Infinity;
-      const tolerance = 1e-9 * Math.max(1, next);
-      if (axis === 0 ? ey - next <= tolerance || ez - next <= tolerance : axis === 1 ? ex - next <= tolerance || ez - next <= tolerance : ex - next <= tolerance || ey - next <= tolerance) return entry;
-      entry = next;
+      const next2 = axis === 0 ? ex : axis === 1 ? ey : ez;
+      if (!Number.isFinite(next2) || next2 > maxDistance) return Infinity;
+      const tolerance = 1e-9 * Math.max(1, next2);
+      if (axis === 0 ? ey - next2 <= tolerance || ez - next2 <= tolerance : axis === 1 ? ex - next2 <= tolerance || ez - next2 <= tolerance : ex - next2 <= tolerance || ey - next2 <= tolerance) return entry;
+      entry = next2;
       if (axis === 0) {
         x += sx;
         ex += stepX;
@@ -1764,7 +3524,7 @@ var __RuneWeb = (() => {
   }
   function voxelMove(worldValue, playerValue, dxValue, dyValue, jumpValue = false, movementValue = {}) {
     const world = validateWorld(worldValue), p = { ...validatePlayer(playerValue, world) };
-    if (!movementValue || typeof movementValue !== "object" || Array.isArray(movementValue) || Object.keys(movementValue).some((key) => !["jumpSpeed", "gravity", "autoStep"].includes(key))) {
+    if (!movementValue || typeof movementValue !== "object" || Array.isArray(movementValue) || Object.keys(movementValue).some((key2) => !["jumpSpeed", "gravity", "autoStep"].includes(key2))) {
       throw new Error("Voxel movement options accept jumpSpeed, gravity and autoStep");
     }
     const { jumpSpeed = 0.28, gravity = 0.035, autoStep = true } = movementValue;
@@ -1906,10 +3666,10 @@ var __RuneWeb = (() => {
     }
     const firstSpace = trimmed.indexOf(" ");
     if (firstSpace > 0) {
-      const name = trimmed.slice(0, firstSpace);
-      if (helperDefinitions[name]) {
+      const name2 = trimmed.slice(0, firstSpace);
+      if (helperDefinitions[name2]) {
         return {
-          name,
+          name: name2,
           args: trimmed.slice(firstSpace + 1).split(/\s+/).filter(Boolean)
         };
       }
@@ -1919,9 +3679,9 @@ var __RuneWeb = (() => {
     }
     return null;
   }
-  function callHelper(name, args, scope, depth) {
+  function callHelper(name2, args, scope, depth) {
     const { helperDefinitions } = ctx();
-    const helper = helperDefinitions[name];
+    const helper = helperDefinitions[name2];
     if (!helper) return void 0;
     const helperLocals = Object.assign({}, scope || {});
     (helper.params || []).forEach((param, index2) => {
@@ -1945,8 +3705,8 @@ var __RuneWeb = (() => {
     const segments = splitPathSegments(expr);
     if (!segments.length) return () => void 0;
     if (segments.length === 1 && !segments[0].includes("[")) {
-      const key = segments[0];
-      return (scope) => scope?.[key];
+      const key2 = segments[0];
+      return (scope) => scope?.[key2];
     }
     if (segments.length === 2 && !segments[0].includes("[") && !segments[1].includes("[")) {
       const k0 = segments[0];
@@ -2121,18 +3881,18 @@ var __RuneWeb = (() => {
       const inner = compileExpression(trimmed.slice(1).trim(), nextDepth);
       return (scope) => !Boolean(inner(scope));
     }
-    for (const [name, fn] of Object.entries(voxelFunctions)) {
-      if (trimmed.startsWith(name + "(") && trimmed.endsWith(")")) {
-        const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ",");
-        const [required, maximum] = voxelArity[name];
-        if (parts.length < required || parts.length > maximum) throw new Error(`${name} needs ${required}-${maximum} arguments`);
+    for (const [name2, fn] of Object.entries(voxelFunctions)) {
+      if (trimmed.startsWith(name2 + "(") && trimmed.endsWith(")")) {
+        const parts = splitTopLevel(trimmed.slice(name2.length + 1, -1), ",");
+        const [required, maximum] = voxelArity[name2];
+        if (parts.length < required || parts.length > maximum) throw new Error(`${name2} needs ${required}-${maximum} arguments`);
         const args = parts.map((part) => compileExpression(part, nextDepth));
         return (scope) => fn(...args.map((arg) => arg(scope)));
       }
     }
     if (trimmed.startsWith("map_spawn(") && trimmed.endsWith(")")) {
-      const name = compileExpression(trimmed.slice(10, -1), nextDepth);
-      return (scope) => mapSpawn(String(name(scope)));
+      const name2 = compileExpression(trimmed.slice(10, -1), nextDepth);
+      return (scope) => mapSpawn(String(name2(scope)));
     }
     if (trimmed.startsWith("collide(") && trimmed.endsWith(")")) {
       const parts = splitTopLevel(trimmed.slice(8, -1), ",");
@@ -2302,16 +4062,16 @@ var __RuneWeb = (() => {
         };
       }
     }
-    for (const name of ["shuffle", "pick"]) {
-      if (trimmed.startsWith(name + "(") && trimmed.endsWith(")")) {
-        const parts = splitTopLevel(trimmed.slice(name.length + 1, -1), ",");
+    for (const name2 of ["shuffle", "pick"]) {
+      if (trimmed.startsWith(name2 + "(") && trimmed.endsWith(")")) {
+        const parts = splitTopLevel(trimmed.slice(name2.length + 1, -1), ",");
         const cValues = compileExpression(parts[0], nextDepth);
         const cSeed = parts.length > 1 ? compileExpression(parts[1], nextDepth) : null;
         return (scope) => {
           const values = cValues(scope);
           if (!Array.isArray(values)) return void 0;
           const seed = cSeed ? Number(cSeed(scope)) : randomInt(0, 2147483647);
-          return name === "shuffle" ? shuffled(values, seed) : values.length ? values[randomInt(0, values.length - 1, seed)] : null;
+          return name2 === "shuffle" ? shuffled(values, seed) : values.length ? values[randomInt(0, values.length - 1, seed)] : null;
         };
       }
     }
@@ -2332,9 +4092,9 @@ var __RuneWeb = (() => {
       const cKey = compileExpression(parts[0], nextDepth);
       const cDef = parts.length > 1 ? compileExpression(parts[1], nextDepth) : null;
       return (scope) => {
-        const key = String(cKey(scope));
+        const key2 = String(cKey(scope));
         const defVal = cDef ? cDef(scope) : null;
-        const item = getStorageItem(key);
+        const item = getStorageItem(key2);
         let result = defVal;
         if (item !== null) {
           try {
@@ -2358,8 +4118,8 @@ var __RuneWeb = (() => {
     const helperCall = parseHelperCall(trimmed);
     if (helperCall) {
       const cArgs = helperCall.args.map((arg) => compileExpression(arg, nextDepth));
-      const name = helperCall.name;
-      return (scope) => callHelper(name, cArgs.map((fn) => fn(scope)), scope, nextDepth);
+      const name2 = helperCall.name;
+      return (scope) => callHelper(name2, cArgs.map((fn) => fn(scope)), scope, nextDepth);
     }
     const methodMatch = trimmed.match(
       /^(.+?)\.(any|mask|filter|find|max)(?:\((.*)\)|\s+(.+?))(?:\.(length))?$/
@@ -2544,10 +4304,10 @@ var __RuneWeb = (() => {
       };
     }
     if (trimmed.startsWith("swap ")) {
-      const tokens = trimmed.split(/\s+/);
-      const cCurr = compileExpression(tokens[1], nextDepth);
-      const cL = compileExpression(tokens[2], nextDepth);
-      const cR = compileExpression(tokens[3], nextDepth);
+      const tokens2 = trimmed.split(/\s+/);
+      const cCurr = compileExpression(tokens2[1], nextDepth);
+      const cL = compileExpression(tokens2[2], nextDepth);
+      const cR = compileExpression(tokens2[3], nextDepth);
       return (scope) => {
         const current = valueToString(cCurr(scope));
         const left = valueToString(cL(scope));
@@ -2639,12 +4399,12 @@ var __RuneWeb = (() => {
         return frames.length;
       },
       localStorage: {
-        getItem: (key) => storage.get(key) ?? null,
-        setItem: (key, value) => {
-          storage.set(key, value);
+        getItem: (key2) => storage.get(key2) ?? null,
+        setItem: (key2, value) => {
+          storage.set(key2, value);
         },
-        removeItem: (key) => {
-          storage.delete(key);
+        removeItem: (key2) => {
+          storage.delete(key2);
         },
         clear: () => storage.clear()
       },
@@ -2661,14 +4421,425 @@ var __RuneWeb = (() => {
         frames = [];
         current.forEach((callback) => callback(0));
       }
-      mock.storage = Object.fromEntries([...storage].map(([key, value]) => {
+      mock.storage = Object.fromEntries([...storage].map(([key2, value]) => {
         try {
-          return [key, JSON.parse(value)];
+          return [key2, JSON.parse(value)];
         } catch {
-          return [key, value];
+          return [key2, value];
         }
       }));
     };
+  }
+
+  // src/datasource.ts
+  var encode2;
+  var decode2;
+  var codec;
+  function loadCodec() {
+    return codec ?? (codec = Promise.resolve().then(() => (init_dist(), dist_exports)).then((module) => {
+      encode2 = module.encode;
+      decode2 = module.decode;
+    }));
+  }
+  var MAX_PACKET = 8 * 1024 * 1024;
+  var MAX_PAGE = 4 * 1024 * 1024;
+  var MAX_VALUE = 1024 * 1024;
+  var own = (value, key2) => Object.prototype.hasOwnProperty.call(value, key2);
+  var CHANGES = "$changes";
+  var MAX_SEQUENCE = 18446744073709551615n;
+  var databases = /* @__PURE__ */ new Map();
+  var listeners = /* @__PURE__ */ new Map();
+  var channels = /* @__PURE__ */ new Map();
+  var definitions = {};
+  var tokens = /* @__PURE__ */ new Map();
+  function check(ok, message) {
+    if (!ok) throw new Error(message);
+  }
+  function jsonValue(value, depth = 0) {
+    check(depth <= 100, "JSON nesting exceeds 100");
+    if (value === null || typeof value === "string" || typeof value === "boolean") return;
+    if (typeof value === "number") {
+      check(Number.isFinite(value), "JSON values must be finite");
+      check(!Number.isInteger(value) || Number.isSafeInteger(value), "integer exceeds portable browser precision");
+      return;
+    }
+    check(value && typeof value === "object" && (Array.isArray(value) || Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null), "storage accepts JSON values only");
+    for (const item of Object.values(value)) jsonValue(item, depth + 1);
+  }
+  function unpack(bytes) {
+    const value = decode2(bytes);
+    jsonValue(value);
+    return value;
+  }
+  function utf8(value) {
+    return new TextEncoder().encode(value).buffer;
+  }
+  function name(value) {
+    check(typeof value === "string" && value.length > 0 && utf8(value).byteLength <= 256 && !value.includes("\0"), "invalid name (1..256 UTF-8 bytes required)");
+  }
+  function key(value) {
+    check(typeof value === "string" && utf8(value).byteLength <= 4096, "key exceeds 4096 bytes");
+  }
+  function cursor(value) {
+    check(typeof value === "string" && /^\d+$/.test(value), "invalid cursor");
+    const n = BigInt(value);
+    check(n <= MAX_SEQUENCE, "invalid cursor");
+    return n;
+  }
+  function padded(value) {
+    return cursor(value).toString().padStart(20, "0");
+  }
+  function next(value) {
+    const n = cursor(value) + 1n;
+    check(n <= MAX_SEQUENCE, "sequence counter exhausted");
+    return n.toString();
+  }
+  function request(value) {
+    return new Promise((resolve2, reject) => {
+      value.onsuccess = () => resolve2(value.result);
+      value.onerror = () => reject(value.error);
+    });
+  }
+  function finished(tx) {
+    return new Promise((resolve2, reject) => {
+      tx.oncomplete = () => resolve2();
+      tx.onabort = () => reject(tx.error ?? new Error("storage transaction aborted"));
+      tx.onerror = () => {
+      };
+    });
+  }
+  function wake(database) {
+    for (const listener of listeners.get(database) ?? []) listener();
+  }
+  function notify(database) {
+    wake(database);
+    channels.get(database)?.postMessage("commit");
+  }
+  function open(database) {
+    name(database);
+    let db = databases.get(database);
+    if (!db) {
+      check(typeof indexedDB !== "undefined", "IndexedDB is unavailable in this host");
+      check(databases.size < 64, "host limit of 64 open databases reached");
+      db = new Promise((resolve2, reject) => {
+        const opening = indexedDB.open(`rune-db:${database}`, 1);
+        opening.onupgradeneeded = () => {
+          for (const table of ["records", "events", "meta"]) opening.result.createObjectStore(table);
+        };
+        opening.onerror = () => reject(opening.error);
+        opening.onblocked = () => reject(new Error("IndexedDB upgrade blocked by another tab"));
+        opening.onsuccess = () => {
+          const db2 = opening.result;
+          db2.onversionchange = () => {
+            db2.close();
+            databases.delete(database);
+          };
+          if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined" && !channels.has(database)) {
+            const channel = new BroadcastChannel(`rune-db:${database}`);
+            channel.onmessage = () => wake(database);
+            channels.set(database, channel);
+          }
+          resolve2(db2);
+        };
+      });
+      databases.set(database, db);
+      db.catch(() => databases.delete(database));
+    }
+    return db;
+  }
+  function packedValue(value) {
+    const bytes = encode2(value);
+    check(bytes.length <= MAX_VALUE, "value exceeds 1 MiB");
+    return bytes;
+  }
+  function numericAdd(a, b) {
+    check(typeof a === "number" && typeof b === "number", "increment requires numeric operands");
+    const value = a + b;
+    check(Number.isFinite(value), "numeric overflow");
+    check(!Number.isInteger(value) || Number.isSafeInteger(value), "integer exceeds portable browser precision");
+    return value;
+  }
+  function increment(record2, path, by) {
+    check(Array.isArray(path) && path.length <= 32, "mutation path exceeds 32 segments");
+    const box = { value: record2 };
+    let parent = box, property = "value";
+    for (const segment of path) {
+      parent = parent[property];
+      check(parent != null, "mutation target not found");
+      if (typeof segment === "string") {
+        check(!Array.isArray(parent) && own(parent, segment), "mutation target not found");
+        property = segment;
+      } else if (Number.isInteger(segment) && segment >= 0) {
+        check(Array.isArray(parent) && segment < parent.length, "mutation target not found");
+        property = segment;
+      } else {
+        check(segment && typeof segment.field === "string" && Array.isArray(parent), "invalid selector");
+        property = parent.findIndex((v) => v && own(v, segment.field) && JSON.stringify(v[segment.field]) === JSON.stringify(segment.equals));
+        check(property !== -1, "mutation target not found");
+      }
+    }
+    parent[property] = numericAdd(parent[property], by);
+    return { value: box.value, changed: parent[property] };
+  }
+  function validate(packet) {
+    const fields = {
+      get: ["collection", "key"],
+      scan: ["collection", "prefix", "after", "limit"],
+      put: ["collection", "key", "value", "expected"],
+      delete: ["collection", "key", "expected"],
+      increment: ["collection", "key", "path", "by", "expected"],
+      append: ["stream", "kind", "value"],
+      read: ["stream", "after", "limit", "wait_ms"],
+      batch: ["operations"]
+    };
+    check(packet && typeof packet === "object" && own(fields, packet.op), "unknown storage operation");
+    for (const field of Object.keys(packet)) check(field === "op" || fields[packet.op].includes(field), `unknown packet field: ${field}`);
+    if (["get", "scan", "put", "delete", "increment"].includes(packet.op)) name(packet.collection);
+    if (["get", "put", "delete", "increment"].includes(packet.op)) key(packet.key);
+    if (["put", "append"].includes(packet.op)) {
+      check(own(packet, "value"), "value required");
+      packedValue(packet.value);
+    }
+    if (packet.op === "increment") check(typeof packet.by === "number" && Number.isFinite(packet.by), "increment must be numeric");
+    if (packet.expected != null) cursor(packet.expected);
+    if (["scan", "read"].includes(packet.op)) check(Number.isInteger(packet.limit ?? 100) && (packet.limit ?? 100) >= 1 && (packet.limit ?? 100) <= 1e3, "limit must be 1..1000");
+    if (packet.op === "read") {
+      name(packet.stream);
+      cursor(packet.after ?? "0");
+      check(Number.isInteger(packet.wait_ms ?? 0) && (packet.wait_ms ?? 0) >= 0 && (packet.wait_ms ?? 0) <= 3e4, "wait_ms exceeds 30000");
+    }
+    if (packet.op === "scan") {
+      key(packet.prefix ?? "");
+      if (packet.after != null) {
+        key(packet.after);
+        check(packet.after.startsWith(packet.prefix ?? ""), "scan cursor does not match prefix");
+      }
+    }
+    if (packet.op === "append") {
+      name(packet.stream);
+      name(packet.kind);
+      check(packet.stream !== CHANGES, "$changes is reserved");
+    }
+    if (packet.op === "batch") {
+      check(Array.isArray(packet.operations) && packet.operations.length > 0 && packet.operations.length <= 256, "batch requires 1..256 mutations");
+      for (const op of packet.operations) {
+        check(["put", "delete", "increment", "append"].includes(op.op), "batch accepts only mutations");
+        validate(op);
+      }
+    }
+  }
+  async function page(store, range, match, limit) {
+    return new Promise((resolve2, reject) => {
+      const values = [];
+      let size = 0;
+      const opening = store.openCursor(range);
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const cursor2 = opening.result;
+        if (!cursor2 || !match(cursor2.key)) {
+          resolve2({ values, more: false });
+          return;
+        }
+        const bytes = cursor2.value;
+        if (values.length === limit || values.length > 0 && size + bytes.length > MAX_PAGE) {
+          resolve2({ values, more: true });
+          return;
+        }
+        values.push(unpack(bytes));
+        size += bytes.length;
+        cursor2.continue();
+      };
+    });
+  }
+  async function local(database, packet) {
+    const db = await open(database);
+    const read = ["get", "scan", "read"].includes(packet.op);
+    const tx = db.transaction(read ? [packet.op === "read" ? "events" : "records"] : ["records", "events", "meta"], read ? "readonly" : "readwrite", read ? void 0 : { durability: "strict" });
+    const done = finished(tx);
+    done.catch(() => {
+    });
+    const records = () => tx.objectStore("records");
+    const events = () => tx.objectStore("events");
+    const meta = () => tx.objectStore("meta");
+    const recordKey = (op) => [op.collection, utf8(op.key)];
+    try {
+      let result;
+      if (packet.op === "get") {
+        const value = await request(records().get(recordKey(packet)));
+        result = value == null ? null : unpack(value);
+      } else if (packet.op === "scan") {
+        const prefix = packet.prefix ?? "", start = packet.after ?? prefix;
+        const resultPage = await page(records(), IDBKeyRange.lowerBound([packet.collection, utf8(start)], packet.after != null), (k) => {
+          const [collection, key2] = k;
+          return collection === packet.collection && new TextDecoder().decode(key2).startsWith(prefix);
+        }, packet.limit ?? 100);
+        result = { items: resultPage.values, next: resultPage.more ? resultPage.values[resultPage.values.length - 1]?.key ?? null : null };
+      } else if (packet.op === "read") {
+        const after = packet.after ?? "0";
+        const resultPage = await page(events(), IDBKeyRange.lowerBound([packet.stream, padded(after)], true), (k) => k[0] === packet.stream, packet.limit ?? 100);
+        result = { events: resultPage.values, next: resultPage.values[resultPage.values.length - 1]?.sequence ?? after };
+      } else {
+        const commit = next(await request(meta().get("commit")) ?? "0");
+        const operations = packet.op === "batch" ? packet.operations : [packet];
+        const results = [];
+        const append = async (stream, kind, value) => {
+          const sequence = next(await request(meta().get(`stream:${stream}`)) ?? "0");
+          const event = { stream, sequence, commit, kind, value };
+          await request(events().put(encode2(event), [stream, padded(sequence)]));
+          await request(meta().put(sequence, `stream:${stream}`));
+          return event;
+        };
+        for (const op of operations) {
+          if (op.op === "append") {
+            results.push(await append(op.stream, op.kind, op.value));
+            continue;
+          }
+          const bytes = await request(records().get(recordKey(op)));
+          const current = bytes == null ? null : unpack(bytes);
+          if (op.expected != null) check((current?.revision ?? "0") === op.expected, `conflict: expected revision ${op.expected}, found ${current?.revision ?? "0"}`);
+          let value = op.value, patch = null;
+          if (op.op === "increment") {
+            check(current, "mutation record not found");
+            const changed = increment(current.value, op.path ?? [], op.by);
+            value = changed.value;
+            patch = { path: op.path ?? [], by: op.by, value: changed.changed };
+          }
+          let receipt;
+          if (op.op === "delete") {
+            await request(records().delete(recordKey(op)));
+            receipt = { key: op.key, deleted: current != null, revision: commit };
+          } else {
+            packedValue(value);
+            const record2 = { key: op.key, value, revision: commit };
+            await request(records().put(encode2(record2), recordKey(op)));
+            receipt = op.op === "increment" ? { key: op.key, revision: commit, patch } : record2;
+          }
+          const change = op.op === "increment" ? { collection: op.collection, key: op.key, revision: commit, patch } : { collection: op.collection, key: op.key, record: receipt };
+          await append(CHANGES, op.op, change);
+          results.push(receipt);
+        }
+        result = { commit, results };
+        check(new TextEncoder().encode(JSON.stringify(result)).length <= MAX_PACKET - 256, "commit response exceeds 8 MiB");
+        await request(meta().put(commit, "commit"));
+      }
+      await done;
+      if (!read) notify(database);
+      return result;
+    } catch (error) {
+      try {
+        tx.abort();
+      } catch {
+      }
+      await done.catch(() => {
+      });
+      throw error;
+    }
+  }
+  function resolve(source, seen = /* @__PURE__ */ new Set()) {
+    check(!seen.has(source), "datasource cycle");
+    seen.add(source);
+    const config2 = definitions[source];
+    check(config2, `unknown datasource: ${source}`);
+    check(["rune-db", "vect-event"].includes(config2.type), "unsupported storage provider");
+    if (config2.type === "vect-event" && config2.mode !== "remote") {
+      check(config2.store, "vect-event requires store");
+      const parent = resolve(config2.store, seen);
+      check(!parent.eventsOnly, "vect-event store must be rune-db");
+      return { config: parent.config, eventsOnly: true };
+    }
+    check(config2.mode == null || ["embedded", "remote"].includes(config2.mode), "invalid datasource mode");
+    const database = config2.database ?? source;
+    if (config2.mode !== "remote") check(/^[A-Za-z0-9_-]{1,128}$/.test(database), "database name must contain only letters, numbers, _ or -");
+    return { config: { ...config2, database }, eventsOnly: config2.type === "vect-event" };
+  }
+  function eventsOnly(packet) {
+    return ["append", "read"].includes(packet.op) || packet.op === "batch" && packet.operations.every(eventsOnly);
+  }
+  async function requestDataSource(source, packet, options = {}) {
+    const { config: config2, eventsOnly: restricted } = resolve(source);
+    if (options.kind) check(restricted === (options.kind === "events"), "use db with rune-db and events with vect-event");
+    check(config2.mode === "remote" ? typeof fetch !== "undefined" : typeof indexedDB !== "undefined", "This host does not provide the requested datasource adapter");
+    await loadCodec();
+    jsonValue(packet);
+    const bytes = encode2(packet);
+    check(bytes.length <= MAX_PACKET, "packet exceeds 8 MiB");
+    packet = decode2(bytes);
+    validate(packet);
+    check(!restricted || eventsOnly(packet), "vect-event accepts only event operations");
+    if (config2.mode === "remote") {
+      check(config2.endpoint, "remote datasource requires endpoint");
+      const url = new URL(config2.endpoint, typeof location !== "undefined" ? location.href : void 0);
+      check(["http:", "https:"].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash, "invalid storage endpoint");
+      const headers = { "content-type": "application/msgpack", accept: "application/msgpack" };
+      const token = tokens.get(source);
+      if (token) headers.authorization = `Bearer ${token}`;
+      const timeout = new AbortController();
+      const timer = setTimeout(() => timeout.abort(), 4e4);
+      const abort = () => timeout.abort();
+      options.signal?.addEventListener("abort", abort, { once: true });
+      try {
+        if (options.signal?.aborted) timeout.abort();
+        const response = await fetch(url.href.replace(/\/$/, "") + "/v1/execute", { method: "POST", headers, body: bytes, signal: timeout.signal, redirect: "error" });
+        const reader = response.body?.getReader();
+        check(reader, "storage response has no body");
+        const chunks = [];
+        let length = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          length += value.length;
+          if (length > MAX_PACKET) {
+            await reader.cancel();
+            throw new Error("storage response exceeds 8 MiB");
+          }
+          chunks.push(value);
+        }
+        const body = new Uint8Array(length);
+        let offset = 0;
+        for (const chunk of chunks) {
+          body.set(chunk, offset);
+          offset += chunk.length;
+        }
+        const reply = response.headers.get("content-type")?.startsWith("application/msgpack") ? unpack(body) : JSON.parse(new TextDecoder().decode(body));
+        check(response.ok && reply.ok, reply.error?.message ?? "storage request failed");
+        return reply.data;
+      } finally {
+        clearTimeout(timer);
+        options.signal?.removeEventListener("abort", abort);
+      }
+    }
+    const database = config2.database;
+    const deadline = Date.now() + (packet.op === "read" ? packet.wait_ms ?? 0 : 0);
+    do {
+      if (options.signal?.aborted) throw new Error("storage request aborted");
+      let cleanup = () => {
+      };
+      const changed = new Promise((resolve2) => {
+        const set = listeners.get(database) ?? /* @__PURE__ */ new Set();
+        listeners.set(database, set);
+        const wake2 = () => {
+          cleanup();
+          resolve2();
+        };
+        const timer = setTimeout(wake2, Math.max(0, Math.min(200, deadline - Date.now())));
+        cleanup = () => {
+          clearTimeout(timer);
+          set.delete(wake2);
+          options.signal?.removeEventListener("abort", wake2);
+        };
+        set.add(wake2);
+        options.signal?.addEventListener("abort", wake2, { once: true });
+      });
+      const result = await local(database, packet).catch((error) => {
+        cleanup();
+        throw error;
+      });
+      if (packet.op !== "read" || result.events.length || Date.now() >= deadline) {
+        cleanup();
+        return result;
+      }
+      await changed;
+    } while (true);
   }
 
   // src/builtins/command.ts
@@ -2722,11 +4893,11 @@ var __RuneWeb = (() => {
   function handleIncrement(statement, locals) {
     if (statement.startsWith("increment") || statement.startsWith("inc")) {
       const trimmed = statement.replace("increment ", "").replace("inc ", "");
-      const tokens = trimmed.split(" ");
-      if (tokens.length != 3) return void 0;
-      if (tokens[1] != "by") return void 0;
-      const path2 = tokens[0];
-      const valueExpression = tokens[2];
+      const tokens2 = trimmed.split(" ");
+      if (tokens2.length != 3) return void 0;
+      if (tokens2[1] != "by") return void 0;
+      const path2 = tokens2[0];
+      const valueExpression = tokens2[2];
       const value = evaluateExpression(valueExpression, buildScope(locals));
       return incrementBy(path2, Number(value), locals);
     }
@@ -2755,11 +4926,11 @@ var __RuneWeb = (() => {
   function handleDecrement(statement, locals) {
     if (statement.startsWith("decrement") || statement.startsWith("dec")) {
       const trimmed = statement.replace("decrement ", "").replace("dec ", "");
-      const tokens = trimmed.split(" ");
-      if (tokens.length != 3) return void 0;
-      if (tokens[1] != "by") return void 0;
-      const path2 = tokens[0];
-      const valueExpression = tokens[2];
+      const tokens2 = trimmed.split(" ");
+      if (tokens2.length != 3) return void 0;
+      if (tokens2[1] != "by") return void 0;
+      const path2 = tokens2[0];
+      const valueExpression = tokens2[2];
       const value = evaluateExpression(valueExpression, buildScope(locals));
       return decrementBy(path2, Number(value), locals);
     }
@@ -2787,16 +4958,16 @@ var __RuneWeb = (() => {
   // src/builtins/swap.ts
   function handleSwap(statement, locals) {
     if (!statement.startsWith("swap ")) return void 0;
-    const tokens = statement.split(/\s+/);
-    if (tokens.length < 3) return void 0;
-    const targetPath = tokens[1];
-    if (tokens.length === 3) {
-      const val = evaluateExpression(tokens[2], buildScope(locals));
+    const tokens2 = statement.split(/\s+/);
+    if (tokens2.length < 3) return void 0;
+    const targetPath = tokens2[1];
+    if (tokens2.length === 3) {
+      const val = evaluateExpression(tokens2[2], buildScope(locals));
       assignPath(targetPath, val, locals);
       return true;
     }
-    const aExpr = tokens[2];
-    const bExpr = tokens[3];
+    const aExpr = tokens2[2];
+    const bExpr = tokens2[3];
     const aValue = evaluateExpression(aExpr, buildScope(locals));
     const bValue = evaluateExpression(bExpr, buildScope(locals));
     const current = evaluateExpression(targetPath, buildScope(locals));
@@ -2829,10 +5000,10 @@ var __RuneWeb = (() => {
   // src/builtins/push.ts
   function handlePush(statement, locals) {
     if (!statement.startsWith("push ")) return void 0;
-    const tokens = statement.split(/\s+/);
-    if (tokens.length < 3) return void 0;
-    const targetPath = tokens[1];
-    const valueExpr = tokens.slice(2).join(" ");
+    const tokens2 = statement.split(/\s+/);
+    if (tokens2.length < 3) return void 0;
+    const targetPath = tokens2[1];
+    const valueExpr = tokens2.slice(2).join(" ");
     const collection = evaluateExpression(targetPath, buildScope(locals));
     if (!Array.isArray(collection)) return void 0;
     const value = evaluateExpression(valueExpr, buildScope(locals));
@@ -3238,12 +5409,12 @@ var __RuneWeb = (() => {
     app2.invokeAction(action, [payload]);
     app2.render();
   }
-  function makeHandler(name) {
+  function makeHandler(name2) {
     return (statement, locals) => {
-      const match = statement.trim().match(new RegExp(`^${name}\\s+(.+?)\\s+then\\s+(\\S+)(?:\\s+catch\\s+(\\S+))?$`));
+      const match = statement.trim().match(new RegExp(`^${name2}\\s+(.+?)\\s+then\\s+(\\S+)(?:\\s+catch\\s+(\\S+))?$`));
       if (!match) return void 0;
       const [, urlExpr, onSuccess, onError] = match;
-      const run = name === "fetch" ? runFetch : runFetchJson;
+      const run = name2 === "fetch" ? runFetch : runFetchJson;
       Promise.resolve().then(() => run(evaluateExpression(urlExpr, buildScope(locals, statement)))).then(
         (value) => deliver(onSuccess, value),
         (error) => reportFetchFailure(error, onError)
@@ -3306,14 +5477,14 @@ var __RuneWeb = (() => {
   var prefixMap = {};
   var infixMap = {};
   function registerCommand(cmd) {
-    for (const name of cmd.prefix || []) {
-      prefixMap[name] = cmd;
+    for (const name2 of cmd.prefix || []) {
+      prefixMap[name2] = cmd;
     }
-    for (const name of cmd.postfix || []) {
-      postfixMap[name] = cmd;
+    for (const name2 of cmd.postfix || []) {
+      postfixMap[name2] = cmd;
     }
-    for (const name of cmd.infix || []) {
-      infixMap[name] = cmd;
+    for (const name2 of cmd.infix || []) {
+      infixMap[name2] = cmd;
     }
   }
   registerCommand(logCommand);
@@ -3420,17 +5591,17 @@ var __RuneWeb = (() => {
       } else if (segment.startsWith("[") && segment.endsWith("]")) {
         const innerExpr = segment.slice(1, -1);
         const lookup = evaluateExpression(innerExpr, scopeValue2, 0);
-        const key = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
-        if (current[key] === void 0) {
-          current[key] = {};
+        const key2 = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+        if (current[key2] === void 0) {
+          current[key2] = {};
         }
-        current = current[key];
+        current = current[key2];
       } else {
-        const key = segment;
-        if (current[key] === void 0) {
-          current[key] = {};
+        const key2 = segment;
+        if (current[key2] === void 0) {
+          current[key2] = {};
         }
-        current = current[key];
+        current = current[key2];
       }
     }
     const finalRawKey = segments[segments.length - 1];
@@ -3492,13 +5663,13 @@ var __RuneWeb = (() => {
       } else if (segment.startsWith("[") && segment.endsWith("]")) {
         const innerExpr = segment.slice(1, -1);
         const lookup = evaluateExpression(innerExpr, scopeValue2, 0);
-        const key = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
-        if (current[key] === void 0) return;
-        current = current[key];
+        const key2 = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+        if (current[key2] === void 0) return;
+        current = current[key2];
       } else {
-        const key = segment;
-        if (current[key] === void 0) return;
-        current = current[key];
+        const key2 = segment;
+        if (current[key2] === void 0) return;
+        current = current[key2];
       }
     }
     const finalRawKey = segments[segments.length - 1];
@@ -3536,6 +5707,7 @@ var __RuneWeb = (() => {
   function executeStatement(statement, locals) {
     const trimmed = String(statement || "").trim();
     if (!trimmed) return true;
+    if (storageAssignment(trimmed)) throw new Error("Storage I/O must be a top-level action step");
     if (parseFetchAssignment(trimmed)) {
       throw new Error(`'${trimmed}' is only supported as a top-level action step`);
     }
@@ -3606,7 +5778,7 @@ var __RuneWeb = (() => {
         const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
         const parts = splitTopLevel(inner, ",");
         if (parts.length >= 4) {
-          const name = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+          const name2 = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
           const tempo = Number(evaluateExpression(parts[1], buildScope(locals, trimmed))) || 128;
           const lead = String(evaluateExpression(parts[2], buildScope(locals, trimmed)));
           const bass = String(evaluateExpression(parts[3], buildScope(locals, trimmed)));
@@ -3614,7 +5786,7 @@ var __RuneWeb = (() => {
           const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals, trimmed))) : "4/4";
           const songBars = Number(ctx().app?.state?.bars) || 4;
           registerMusic({
-            [name]: {
+            [name2]: {
               music_type: "8bit",
               tempo,
               time_signature: timeSig,
@@ -3633,11 +5805,11 @@ var __RuneWeb = (() => {
         const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
         const parts = splitTopLevel(inner, ",");
         if (parts.length >= 2) {
-          const name = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+          const name2 = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
           const songConfig = evaluateExpression(parts[1], buildScope(locals, trimmed));
           if (songConfig && typeof songConfig === "object") {
             registerMusic({
-              [name]: songConfig
+              [name2]: songConfig
             });
           }
         }
@@ -3716,7 +5888,7 @@ var __RuneWeb = (() => {
     }
     function syncMusicState(state) {
       if (!state || !state.selected_song) return;
-      const name = String(state.selected_song);
+      const name2 = String(state.selected_song);
       const tempo = Number(state.tempo) || 128;
       const timeSig = String(state.time_signature || "4/4");
       const bars = Number(state.bars) || 4;
@@ -3724,7 +5896,7 @@ var __RuneWeb = (() => {
       const bass = String(state.bass_track || "");
       const drums = String(state.drums_track || "");
       registerMusic({
-        [name]: {
+        [name2]: {
           music_type: "8bit",
           tempo,
           time_signature: timeSig,
@@ -3746,10 +5918,10 @@ var __RuneWeb = (() => {
         const score = String(state[voice + "_track"] || "");
         const timeSig = String(state.time_signature || "4/4");
         const selectedBar = Number(state.selected_bar ?? 0);
-        const tokens = score.trim().split(/\s+/).filter(Boolean);
-        if (id >= 0 && id < tokens.length) {
-          tokens.splice(id, 1);
-          state[voice + "_track"] = tokens.join(" ");
+        const tokens2 = score.trim().split(/\s+/).filter(Boolean);
+        if (id >= 0 && id < tokens2.length) {
+          tokens2.splice(id, 1);
+          state[voice + "_track"] = tokens2.join(" ");
           state.selected_step_id = -1;
           state.active_steps = parseTrackToSteps(state[voice + "_track"], -1, timeSig, selectedBar);
           syncMusicState(state);
@@ -3771,9 +5943,9 @@ var __RuneWeb = (() => {
         const score = String(state[voice + "_track"] || "");
         const timeSig = String(state.time_signature || "4/4");
         const selectedBar = Number(state.selected_bar ?? 0);
-        const tokens = score.trim().split(/\s+/).filter(Boolean);
-        if (id >= 0 && id < tokens.length) {
-          const raw = tokens[id];
+        const tokens2 = score.trim().split(/\s+/).filter(Boolean);
+        if (id >= 0 && id < tokens2.length) {
+          const raw = tokens2[id];
           if (raw !== "|") {
             const DURS = [":16", ":8", ":4", ":2", ":1"];
             let currentDur = ":8";
@@ -3790,8 +5962,8 @@ var __RuneWeb = (() => {
             let durIdx = DURS.indexOf(currentDur);
             if (durIdx === -1) durIdx = 1;
             const newDurIdx = Math.max(0, Math.min(DURS.length - 1, durIdx + delta));
-            tokens[id] = `${prefix}${DURS[newDurIdx]}`;
-            state[voice + "_track"] = tokens.join(" ");
+            tokens2[id] = `${prefix}${DURS[newDurIdx]}`;
+            state[voice + "_track"] = tokens2.join(" ");
             state.active_steps = parseTrackToSteps(state[voice + "_track"], id, timeSig, selectedBar);
             syncMusicState(state);
             if (typeof ctx().app.render === "function") {
@@ -3813,26 +5985,26 @@ var __RuneWeb = (() => {
         const score = String(state[voice + "_track"] || "").trim();
         const timeSig = String(state.time_signature || "4/4");
         const selectedBar = Number(state.selected_bar ?? 0);
-        const tokens = score.length > 0 ? score.split(/\s+/).filter(Boolean) : [];
-        if (tokens.length > 0) {
-          const lastToken = tokens[tokens.length - 1];
+        const tokens2 = score.length > 0 ? score.split(/\s+/).filter(Boolean) : [];
+        if (tokens2.length > 0) {
+          const lastToken = tokens2[tokens2.length - 1];
           if (lastToken.startsWith("[") && lastToken.includes("]")) {
             const closeIdx = lastToken.indexOf("]");
             const currentNotes = lastToken.slice(1, closeIdx).split(/[,+]/).map((s) => s.trim()).filter(Boolean);
             const currentDur = lastToken.slice(closeIdx + 1) || dur;
             if (!currentNotes.includes(note)) {
               currentNotes.push(note);
-              tokens[tokens.length - 1] = `[${currentNotes.join(",")}]${currentDur}`;
+              tokens2[tokens2.length - 1] = `[${currentNotes.join(",")}]${currentDur}`;
             }
           } else {
-            tokens.push(`[${note}]${dur}`);
+            tokens2.push(`[${note}]${dur}`);
           }
         } else {
-          tokens.push(`[${note}]${dur}`);
+          tokens2.push(`[${note}]${dur}`);
         }
-        state[voice + "_track"] = tokens.join(" ");
+        state[voice + "_track"] = tokens2.join(" ");
         state.selected_note = note;
-        state.active_steps = parseTrackToSteps(state[voice + "_track"], tokens.length - 1, timeSig, selectedBar);
+        state.active_steps = parseTrackToSteps(state[voice + "_track"], tokens2.length - 1, timeSig, selectedBar);
         syncMusicState(state);
         if (typeof ctx().app.render === "function") {
           ctx().app.render();
@@ -3906,10 +6078,10 @@ var __RuneWeb = (() => {
       const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
       const parts = splitTopLevel(inner, ",");
       if (parts.length >= 2) {
-        const key = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+        const key2 = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
         const val = evaluateExpression(parts[1], buildScope(locals, trimmed));
         const serialized = typeof val === "string" ? val : JSON.stringify(val);
-        setStorageItem(key, serialized);
+        setStorageItem(key2, serialized);
       }
       return true;
     }
@@ -3917,17 +6089,17 @@ var __RuneWeb = (() => {
       const rest = trimmed.slice(12).trim();
       const parts = splitTopLevel(rest, ",");
       if (parts.length >= 2) {
-        const key = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
+        const key2 = String(evaluateExpression(parts[0], buildScope(locals, trimmed)));
         const val = evaluateExpression(parts[1], buildScope(locals, trimmed));
         const serialized = typeof val === "string" ? val : JSON.stringify(val);
-        setStorageItem(key, serialized);
+        setStorageItem(key2, serialized);
       }
       return true;
     }
     if (trimmed.startsWith("storage.remove(") || trimmed.startsWith("storage.delete(") || trimmed.startsWith("local_storage.remove(")) {
       const inner = trimmed.slice(trimmed.indexOf("(") + 1, -1);
-      const key = String(evaluateExpression(inner, buildScope(locals, trimmed)));
-      removeStorageItem(key);
+      const key2 = String(evaluateExpression(inner, buildScope(locals, trimmed)));
+      removeStorageItem(key2);
       return true;
     }
     if (trimmed === "storage.clear()" || trimmed === "storage.clear" || trimmed === "local_storage.clear()") {
@@ -4009,11 +6181,11 @@ var __RuneWeb = (() => {
     }
     const emitterMatch = trimmed.match(/^([A-Za-z_][\w]*)\.(burst|step)\((.*)\)$/);
     if (emitterMatch && ctx().emitters && Object.prototype.hasOwnProperty.call(ctx().emitters, emitterMatch[1])) {
-      const name = emitterMatch[1];
+      const name2 = emitterMatch[1];
       const method = emitterMatch[2];
-      const cfg = ctx().emitters[name] || {};
+      const cfg = ctx().emitters[name2] || {};
       const scope = buildScope(locals, trimmed);
-      const existing = evaluateExpression(name, scope);
+      const existing = evaluateExpression(name2, scope);
       const current = Array.isArray(existing) ? existing : [];
       if (method === "step") {
         if (current.length === 0) return true;
@@ -4036,12 +6208,12 @@ var __RuneWeb = (() => {
           p.life = life2;
           surviving.push(p);
         }
-        assignPath(name, surviving, locals);
+        assignPath(name2, surviving, locals);
         return true;
       }
       const parts = emitterMatch[3].trim() ? splitTopLevel(emitterMatch[3], ",") : [];
       if (parts.length < 2) {
-        console.warn(`[rune-web] ${name}.burst(x, y, [count, color, speed]) needs at least x and y`);
+        console.warn(`[rune-web] ${name2}.burst(x, y, [count, color, speed]) needs at least x and y`);
         return true;
       }
       const arg = (i) => parts.length > i ? evaluateExpression(parts[i], scope) : void 0;
@@ -4071,7 +6243,7 @@ var __RuneWeb = (() => {
       }
       const combined = rawCurrent.concat(newParticles);
       const capped = combined.length > maxParticles ? combined.slice(combined.length - maxParticles) : combined;
-      assignPath(name, capped, locals);
+      assignPath(name2, capped, locals);
       return true;
     }
     const restoreMatch = trimmed.match(/^(?:restore|reset)\s+([a-zA-Z0-9_.[\]'"]+)$/) || trimmed.match(/^([a-zA-Z0-9_.[\]'"]+)\.(?:restore|reset)\(\)$/);
@@ -4086,10 +6258,10 @@ var __RuneWeb = (() => {
       if (Array.isArray(targetVal)) {
         for (const item of targetVal) {
           if (item && typeof item === "object") {
-            for (const key of Object.keys(item)) {
-              if (key.startsWith("start_")) {
-                const baseProp = key.slice(6);
-                item[baseProp] = item[key];
+            for (const key2 of Object.keys(item)) {
+              if (key2.startsWith("start_")) {
+                const baseProp = key2.slice(6);
+                item[baseProp] = item[key2];
               }
             }
             if ("alive" in item) {
@@ -4101,9 +6273,9 @@ var __RuneWeb = (() => {
         return true;
       } else if (targetVal && typeof targetVal === "object") {
         const item = targetVal;
-        for (const key of Object.keys(item)) {
-          if (key.startsWith("start_")) {
-            item[key.slice(6)] = item[key];
+        for (const key2 of Object.keys(item)) {
+          if (key2.startsWith("start_")) {
+            item[key2.slice(6)] = item[key2];
           }
         }
         if ("alive" in item) {
@@ -4139,9 +6311,10 @@ var __RuneWeb = (() => {
       return true;
     }
     if (trimmed.includes("=") && !trimmed.match(/^.+?\.push\(/)) {
-      const assignmentMatch = trimmed.match(/^(.*?)(?<![!<>=])=(?!=)(.*)$/);
+      const assignmentMatch = trimmed.match(/^(.*?)(?<![!<>=])=(?!=)([\s\S]*)$/);
       if (assignmentMatch) {
-        const left = assignmentMatch[1].trim();
+        const rawLeft = assignmentMatch[1].trim();
+        const left = rawLeft.replace(/^(?:local|let)\s+/, "");
         const right = assignmentMatch[2].trim();
         const builtinVal = handleBuiltin(right, locals);
         if (builtinVal == STOP) {
@@ -4151,7 +6324,8 @@ var __RuneWeb = (() => {
           return true;
         }
         const value = builtinVal !== void 0 ? builtinVal : evaluateExpression(right, buildScope(locals, trimmed));
-        assignPath(left, value, locals);
+        if (left !== rawLeft) locals[left] = value;
+        else assignPath(left, value, locals);
         return true;
       }
     }
@@ -4209,6 +6383,25 @@ var __RuneWeb = (() => {
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       if (Object.prototype.hasOwnProperty.call(step, "Statement")) {
+        const storage = storageAssignment(step.Statement);
+        if (storage) {
+          if (nested) throw new Error("Storage I/O must be a top-level action step");
+          const context = ctx();
+          const packet = evaluateExpression(storage.packet, buildScope(locals, step.Statement));
+          requestDataSource(storage.source, packet, { kind: storage.kind }).then(
+            (result) => withContext(context, () => {
+              assignPath(storage.target, result, locals);
+              executeSteps(steps.slice(i + 1), locals);
+              context.app.render();
+            }),
+            (error) => withContext(context, () => {
+              if (storage.onError) context.app.invokeAction(storage.onError, [{ message: String(error.message ?? error) }], locals);
+              else console.error(error);
+              context.app.render();
+            })
+          );
+          return false;
+        }
         const pending = parseFetchAssignment(step.Statement);
         if (pending) {
           if (nested) {
@@ -4256,6 +6449,10 @@ var __RuneWeb = (() => {
       }
     }
     return true;
+  }
+  function storageAssignment(source) {
+    const match = source.trim().match(/^([\w$.[\]'\"]+)\s*=\s*(db|events)\s+([A-Za-z_][\w-]*)\s+([\s\S]+?)(?:\s+catch\s+([\w]+))?$/);
+    return match ? { target: match[1], kind: match[2], source: match[3], packet: match[4], onError: match[5] } : null;
   }
   var PITCH_ROWS = {
     "C5": 0,
@@ -4333,15 +6530,15 @@ var __RuneWeb = (() => {
   }
   function parseTrackToSteps(scoreStr, selectedIdx, timeSignature = "4/4", selectedBar = 0) {
     if (!scoreStr) return [];
-    const tokens = String(scoreStr).trim().split(/\s+/).filter(Boolean);
+    const tokens2 = String(scoreStr).trim().split(/\s+/).filter(Boolean);
     const steps = [];
     const beatsPerBar = timeSignature.startsWith("3/") ? 3 : 4;
     let barNum = 1;
     let currentBeatInBar = 0;
     let totalBeatOffset = 0;
     let stepInBar = 1;
-    for (let i = 0; i < tokens.length; i++) {
-      const raw = tokens[i];
+    for (let i = 0; i < tokens2.length; i++) {
+      const raw = tokens2[i];
       if (raw === "|") {
         const totalLeft2 = Math.round(totalBeatOffset * 120);
         const barLeft2 = Math.round(currentBeatInBar * 120);
@@ -4461,7 +6658,7 @@ var __RuneWeb = (() => {
       totalBeatOffset += beats;
       currentBeatInBar += beats;
       stepInBar += 1;
-      if (currentBeatInBar >= beatsPerBar && !tokens.includes("|")) {
+      if (currentBeatInBar >= beatsPerBar && !tokens2.includes("|")) {
         barNum += 1;
         currentBeatInBar = 0;
         stepInBar = 1;
@@ -4483,7 +6680,7 @@ var __RuneWeb = (() => {
       computeDerived() {
         const context = ctx();
         const baseScope = buildScope({});
-        for (const [name, def] of Object.entries(
+        for (const [name2, def] of Object.entries(
           context.derivedDefinitions
         )) {
           const sourceValue = resolveValue(def.source, baseScope);
@@ -4499,16 +6696,16 @@ var __RuneWeb = (() => {
               break;
             }
           }
-          this.derived[name] = resolved;
+          this.derived[name2] = resolved;
         }
       },
       render,
-      invokeAction(name, args, locals) {
+      invokeAction(name2, args, locals) {
         const context = ctx();
-        const def = context.actionDefinitions[name];
+        const def = context.actionDefinitions[name2];
         if (!def) {
-          if (typeof window !== "undefined" && typeof window[name] === "function") {
-            window[name](...args);
+          if (typeof window !== "undefined" && typeof window[name2] === "function") {
+            window[name2](...args);
           }
           return;
         }
@@ -4555,11 +6752,11 @@ var __RuneWeb = (() => {
     app.computeDerived();
     flush();
   }
-  function invoke(name, args) {
-    if (!Object.prototype.hasOwnProperty.call(config.actionDefinitions, name)) {
-      throw new Error(`Unknown Rune-Web action: ${name}`);
+  function invoke(name2, args) {
+    if (!Object.prototype.hasOwnProperty.call(config.actionDefinitions, name2)) {
+      throw new Error(`Unknown Rune-Web action: ${name2}`);
     }
-    app.invokeAction(name, args);
+    app.invokeAction(name2, args);
     flush();
     app.computeDerived();
   }

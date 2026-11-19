@@ -1,10 +1,107 @@
 version: 1
 status: starter
 examples:
+  - id: example.storage.core
+    title: Rune DB and Vect Event Workshop
+    summary: Server-side Rune DB with a Rune-Web frontend, atomic checkout and resumable event replay, standalone hosts and browser-local persistence.
+    source_path: examples/data/storage/db-server.rune
+    companion_files:
+      - examples/data/storage/data.rune
+      - examples/data/storage/event-server.rune
+      - examples/data/storage/api.rune
+      - examples/data/storage/client.vect
+      - examples/data/storage/remote.rune
+      - examples/data/storage/web.rune
+      - examples/data/storage/README.md
+      - examples/data/storage/fullstack/database.rune
+      - examples/data/storage/fullstack/app.rune
+      - examples/data/storage/fullstack/single-server.rune
+      - examples/data/storage/fullstack/ui.rune
+      - examples/data/storage/fullstack/style.rune
+      - examples/data/storage/local.rune
+      - examples/data/storage/checkout.vect
+      - examples/data/storage/replay.vect
+    app_type: rune-db
+    concepts:
+      - reusable named datasources
+      - durable key/value documents and event streams
+      - atomic mutation packets and change history
+      - standalone network and CLI adapters
+      - browser IndexedDB persistence
+      - server-backed Rune-Web data shared with CLI clients
+      - atomic stock updates and domain events
+      - persisted replay cursors
+    builtins:
+      - db
+      - events
+    runtime_context: []
+    cli_workflows:
+      - vectrune examples/data/storage/db-server.rune
+      - vectrune examples/data/storage/event-server.rune
+      - vectrune examples/data/storage/api.rune
+      - vectrune examples/data/storage/client.vect
+      - vectrune examples/data/storage/web.rune
+      - vectrune examples/data/storage/fullstack/database.rune
+      - vectrune examples/data/storage/fullstack/app.rune
+      - vectrune examples/data/storage/fullstack/single-server.rune
+      - vectrune examples/data/storage/fullstack/app.rune --secondary-app examples/data/storage/fullstack/database.rune
+      - vectrune examples/data/storage/checkout.vect
+      - vectrune examples/data/storage/replay.vect
+    test_refs:
+      - tests/storage_core.rs
+      - tests/storage_network.rs
+      - tests/multi_app_cli.rs
+      - runtime/rune-web/tests/datasource.test.ts
+      - tests/browser/storage.py
+    related_knowledge:
+      - runtime.storage
+    status: experimental
+    notes:
+      - Requires a compiler built from this checkout.
+      - One native process owns a store; use network access while a standalone server owns it.
+      - Embedded browser data is local to its origin; remote frontend providers share the server's records.
+      - Automatic replication and branching are not implemented. Replay consumers must tolerate duplicates.
+  - id: example.language.portable-objects
+    title: Portable Object Syntax
+    summary: The same object shorthand, generators, templates and lookup updates in Vect, backend Rune and Rune-Web.
+    source_path: examples/language/objects/objects.vect
+    companion_files:
+      - examples/language/objects/objects-api.rune
+      - examples/language/objects/objects-web.rune
+      - examples/language/objects/objects-api.test.rune
+      - examples/language/objects/objects-web.test.rune
+      - examples/language/objects/README.md
+    app_type: multi-host
+    concepts:
+      - object property shorthand
+      - independent replication and grid generators
+      - local templates and with/all overlays
+      - matching-object lookups and compound updates
+      - missing-match behavior
+    builtins:
+      - respond
+    runtime_context:
+      - id
+    cli_workflows:
+      - vectrune examples/language/objects/objects.vect
+      - vectrune examples/language/objects/objects-api.rune
+      - vectrune examples/language/objects/objects-web.rune
+      - vectrune test examples/language/objects
+    test_refs:
+      - tests/object_syntax_parity.rs
+      - examples/language/objects/objects-api.test.rune
+      - examples/language/objects/objects-web.test.rune
+    related_knowledge:
+      - language.core-language
+      - language.vect-scripts
+    status: recommended
+    notes:
+      - Requires a compiler built from current source with portable object syntax support.
+      - API data is rebuilt per request; the web example mutates only local page state.
   - id: example.game.rune-miners
     title: Rune Miners
     summary: Unreleased small voxel RPG expedition with mineable terrain, seeded biome variants, crafting, one recruit and turn-based guardian combat with timed defense.
-    source_path: examples/rune_miners/rune_miners.rune
+    source_path: examples/games/rune_miners/rune_miners.rune
     app_type: pixel-3d
     concepts:
       - solid 3D terrain and terraced caves
@@ -25,16 +122,16 @@ examples:
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/rune_miners/rune_miners.rune -o html
-      - vectrune test examples/rune_miners --type logic
+      - vectrune examples/games/rune_miners/rune_miners.rune -o html
+      - vectrune test examples/games/rune_miners --type logic
     test_refs:
       - runtime/rune-web/tests/voxel.test.ts
       - tests/rune_miners_app.rs
       - tests/browser/rune_miners.py
-      - examples/rune_miners/miners.logic.test.rune
-      - examples/rune_miners/miners.inventory.test.rune
-      - examples/rune_miners/miners.tutorial.test.rune
-      - examples/rune_miners/miners.ux.test.rune
+      - examples/games/rune_miners/miners.logic.test.rune
+      - examples/games/rune_miners/miners.inventory.test.rune
+      - examples/games/rune_miners/miners.tutorial.test.rune
+      - examples/games/rune_miners/miners.ux.test.rune
     related_knowledge:
       - runtime.voxel-worlds
       - language.pixel-models
@@ -46,7 +143,7 @@ examples:
   - id: example.game.rune-crypt
     title: Rune Crypt
     summary: Five-depth pixel-3d roguelite RPG with readable resource bars, visible choices, progressive control hints, tactical combat, and persistent training.
-    source_path: examples/rune_crypt/rune_crypt.rune
+    source_path: examples/games/rune_crypt/rune_crypt.rune
     app_type: pixel-3d
     concepts:
       - procedural sky
@@ -69,15 +166,15 @@ examples:
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/rune_crypt/rune_crypt.rune -o html
-      - vectrune test examples/rune_crypt --type logic
+      - vectrune examples/games/rune_crypt/rune_crypt.rune -o html
+      - vectrune test examples/games/rune_crypt --type logic
     test_refs:
       - tests/pixel3d_app.rs
       - tests/browser/rune_crypt.py
-      - examples/rune_crypt/crypt.logic.test.rune
-      - examples/rune_crypt/crypt.audio.test.rune
-      - examples/rune_crypt/crypt.weapon.test.rune
-      - examples/rune_crypt/crypt.death.test.rune
+      - examples/games/rune_crypt/crypt.logic.test.rune
+      - examples/games/rune_crypt/crypt.audio.test.rune
+      - examples/games/rune_crypt/crypt.weapon.test.rune
+      - examples/games/rune_crypt/crypt.death.test.rune
     related_knowledge:
       - runtime.pixel3d
     status: recommended
@@ -90,7 +187,7 @@ examples:
   - id: example.rest.minimal
     title: Minimal REST App
     summary: Smallest complete REST app example with one GET route and one POST route.
-    source_path: examples/app.rune
+    source_path: examples/beginner/app.rune
     app_type: REST
     concepts:
       - app section
@@ -107,7 +204,7 @@ examples:
       - body
       - ___last_exec_result___
     cli_workflows:
-      - vectrune examples/app.rune
+      - vectrune examples/beginner/app.rune
     related_knowledge:
       - product.overview
       - language.core
@@ -118,7 +215,7 @@ examples:
   - id: example.data.skateboarders
     title: Skateboarder Data Document
     summary: Simple section/record example useful for parser and CLI transform/calculate teaching.
-    source_path: examples/skateboarders.rune
+    source_path: examples/beginner/skateboarders.rune
     app_type: data-document
     concepts:
       - sections
@@ -129,8 +226,8 @@ examples:
     builtins: [ ]
     runtime_context: [ ]
     cli_workflows:
-      - vectrune examples/skateboarders.rune --calculate "avg Skateboarder.age"
-      - vectrune examples/skateboarders.rune --transform "@Skaters name:[@Skateboarder.name]"
+      - vectrune examples/beginner/skateboarders.rune --calculate "avg Skateboarder.age"
+      - vectrune examples/beginner/skateboarders.rune --transform "@Skaters name:[@Skateboarder.name]"
     test_refs:
       - tests/integration_cli.rs
     related_knowledge:
@@ -143,9 +240,7 @@ examples:
   - id: example.rest.user-api
     title: User API
     summary: Schema-backed REST API using CSV storage, validation, path params, and Swagger-enabled configuration.
-    source_path: examples/user_api.rune
-    companion_files:
-      - examples/users.csv
+    source_path: examples/api/user_api.rune
     app_type: REST
     concepts:
       - app section
@@ -170,7 +265,7 @@ examples:
       - id
       - ___last_exec_result___
     cli_workflows:
-      - vectrune examples/user_api.rune
+      - vectrune examples/api/user_api.rune
     test_refs:
       - tests/integration_user_api.rs
       - tests/logger_parameter_expansion_test.rs
@@ -184,10 +279,11 @@ examples:
     status: recommended
     notes:
       - Primary example for teaching REST request lifecycle behavior.
+      - Supply users.csv beside user_api.rune for initial reads; API mutations write this runtime data file.
   - id: example.graphql.book-api
     title: Book GraphQL API
     summary: GraphQL example using in-memory state, queries, mutations, and derived IDs.
-    source_path: examples/book_graphql.rune
+    source_path: examples/api/book_graphql.rune
     app_type: GraphQL
     concepts:
       - graphql queries
@@ -204,8 +300,8 @@ examples:
     runtime_context:
       - ___last_exec_result___
     cli_workflows:
-      - vectrune examples/book_graphql.rune
-      - vectrune lambda package --rune examples/book_graphql.rune --binary <path> --mode zip --output <artifact>
+      - vectrune examples/api/book_graphql.rune
+      - vectrune lambda package --rune examples/api/book_graphql.rune --binary <path> --mode zip --output <artifact>
     test_refs:
       - tests/integration_book_graphql.rs
       - tests/lambda_package.rs
@@ -220,10 +316,10 @@ examples:
   - id: example.websocket.worm-game
     title: Multiplayer Worm Game
     summary: Real-time WebSocket example featuring event dispatch, direct self-identification messages, rotating player colors, worm growth up to length 10, score tracking, and an HTML5 canvas frontend.
-    source_path: examples/worm_game/worm_game.rune
+    source_path: examples/games/worm_game/worm_game.rune
     companion_files:
-      - examples/worm_game/assets/index.html
-      - examples/worm_game/worm_colors.json
+      - examples/games/worm_game/assets/index.html
+      - examples/games/worm_game/worm_colors.json
     app_type: WebSocket
     concepts:
       - websocket sections
@@ -253,7 +349,7 @@ examples:
       - ws_id
       - body
     cli_workflows:
-      - vectrune examples/worm_game/
+      - vectrune examples/games/worm_game/
     related_knowledge:
       - product.overview
       - language.core
@@ -272,11 +368,10 @@ examples:
   - id: example.frontend.tic-tac-toe-proposal
     title: Tic Tac Toe Frontend Proposal
     summary: Proposed rune-web example showing multi-file frontend authoring with imports, page structure, reusable style tokens and presets, and client logic blocks.
-    source_path: examples/tic_tac_toe/tic_tac_toe.rune
+    source_path: examples/games/tic_tac_toe/tic_tac_toe.rune
     companion_files:
-      - examples/tic_tac_toe/parts/style.rune
-      - examples/tic_tac_toe/parts/logic.rune
-      - examples/tic_tac_toe/preview.html
+      - examples/games/tic_tac_toe/parts/style.rune
+      - examples/games/tic_tac_toe/parts/logic.rune
     app_type: REST
     concepts:
       - frontend rune-web proposal
@@ -289,7 +384,7 @@ examples:
     builtins: [ ]
     runtime_context: [ ]
     cli_workflows:
-      - vectrune examples/tic_tac_toe/ -o json
+      - vectrune examples/games/tic_tac_toe/ -o json
     related_knowledge:
       - language.core
       - runtime.cli
@@ -297,7 +392,7 @@ examples:
     status: emerging
     notes:
       - Demonstrates importing a directory of `.rune` files before parsing the root document.
-      - Style and logic sections are split into companion files under `examples/tic_tac_toe/parts/`.
+      - Style and logic sections are split into companion files under `examples/games/tic_tac_toe/parts/`.
   - id: example.vectrune.weight-timeline
     title: Weight Timeline Natural-Language Script
     summary: Prototype `.vectrune` example that compiles an English natural-language request into a deterministic interactive survey and ASCII graph.
@@ -328,7 +423,7 @@ examples:
   - id: example.rest.sales-report
     title: One-line Sales Reports
     summary: Group CSV or JSON records into totals, averages, counts, medians, distinct counts, and first/last values.
-    source_path: examples/sales_report.rune
+    source_path: examples/data/reports/sales_report.rune
     app_type: REST
     concepts:
       - grouped aggregation
@@ -343,7 +438,7 @@ examples:
       - body
       - ___last_exec_result___
     cli_workflows:
-      - vectrune examples/sales_report.rune
+      - vectrune examples/data/reports/sales_report.rune
     test_refs:
       - tests/summarize_builtin.rs
       - runtime/rune-emulator/tests/summarize.test.ts
@@ -354,7 +449,7 @@ examples:
   - id: example.ai.dynamic-cafe
     title: Dynamic AI Cafe
     summary: Generate HTML pages and JSON APIs from descriptive Rune sections and menu records.
-    source_path: examples/dynamic_ai_web.rune
+    source_path: examples/rune-web/dynamic_ai_web.rune
     app_type: dynamic-ai-web
     concepts:
       - descriptive websites
@@ -364,7 +459,7 @@ examples:
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/dynamic_ai_web.rune --watch
+      - vectrune examples/rune-web/dynamic_ai_web.rune --watch
     test_refs:
       - tests/dynamic_ai_web.rs
       - tests/dynamic_ai_cli.rs
@@ -375,7 +470,7 @@ examples:
   - id: example.ai.dynamic-cafe-codex
     title: Dynamic AI Cafe (Codex CLI)
     summary: Generate a cafe and recommendation API using an authenticated Codex CLI.
-    source_path: examples/dynamic_ai_web_codex.rune
+    source_path: examples/rune-web/dynamic_ai_web_codex.rune
     app_type: dynamic-ai-web
     concepts:
       - descriptive websites
@@ -384,7 +479,7 @@ examples:
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/dynamic_ai_web_codex.rune --watch
+      - vectrune examples/rune-web/dynamic_ai_web_codex.rune --watch
     test_refs:
       - tests/dynamic_ai_web.rs
       - tests/dynamic_ai_cli.rs
@@ -395,7 +490,7 @@ examples:
   - id: example.ai.dynamic-cafe-copilot
     title: Dynamic AI Cafe (Copilot CLI)
     summary: Generate a cafe and recommendation API using an authenticated Copilot CLI.
-    source_path: examples/dynamic_ai_web_copilot.rune
+    source_path: examples/rune-web/dynamic_ai_web_copilot.rune
     app_type: dynamic-ai-web
     concepts:
       - descriptive websites
@@ -404,7 +499,7 @@ examples:
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/dynamic_ai_web_copilot.rune --watch
+      - vectrune examples/rune-web/dynamic_ai_web_copilot.rune --watch
     test_refs:
       - tests/dynamic_ai_web.rs
       - tests/dynamic_ai_cli.rs
@@ -415,15 +510,15 @@ examples:
   - id: example.rune-web.guide-components
     title: Workshop Cards
     summary: Rune-Web teaching example for components and props.
-    source_path: examples/rune_web_guide/components.rune
+    source_path: examples/rune-web/guide/components.rune
     app_type: REST
     concepts:
       - components and props
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/rune_web_guide/components.rune
-      - vectrune examples/rune_web_guide/components.rune -o html
+      - vectrune examples/rune-web/guide/components.rune
+      - vectrune examples/rune-web/guide/components.rune -o html
     test_refs:
       - tests/browser/rune_web_guide.py
     related_knowledge:
@@ -434,15 +529,15 @@ examples:
   - id: example.rune-web.guide-forms
     title: Workshop RSVP
     summary: Rune-Web teaching example for state and explicit form events.
-    source_path: examples/rune_web_guide/forms.rune
+    source_path: examples/rune-web/guide/forms.rune
     app_type: REST
     concepts:
       - state and explicit form events
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/rune_web_guide/forms.rune
-      - vectrune examples/rune_web_guide/forms.rune -o html
+      - vectrune examples/rune-web/guide/forms.rune
+      - vectrune examples/rune-web/guide/forms.rune -o html
     test_refs:
       - tests/browser/rune_web_guide.py
     related_knowledge:
@@ -453,15 +548,15 @@ examples:
   - id: example.rune-web.guide-packing
     title: Weekend Packing List
     summary: Rune-Web teaching example for actions, repeated views and empty states.
-    source_path: examples/rune_web_guide/packing.rune
+    source_path: examples/rune-web/guide/packing.rune
     app_type: REST
     concepts:
       - actions, repeated views and empty states
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/rune_web_guide/packing.rune
-      - vectrune examples/rune_web_guide/packing.rune -o html
+      - vectrune examples/rune-web/guide/packing.rune
+      - vectrune examples/rune-web/guide/packing.rune -o html
     test_refs:
       - tests/browser/rune_web_guide.py
     related_knowledge:
@@ -472,15 +567,15 @@ examples:
   - id: example.rune-web.guide-navigation
     title: Trip Planner
     summary: Rune-Web teaching example for selection bindings and match views.
-    source_path: examples/rune_web_guide/navigation.rune
+    source_path: examples/rune-web/guide/navigation.rune
     app_type: REST
     concepts:
       - selection bindings and match views
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/rune_web_guide/navigation.rune
-      - vectrune examples/rune_web_guide/navigation.rune -o html
+      - vectrune examples/rune-web/guide/navigation.rune
+      - vectrune examples/rune-web/guide/navigation.rune -o html
     test_refs:
       - tests/browser/rune_web_guide.py
     related_knowledge:
@@ -491,15 +586,15 @@ examples:
   - id: example.rune-web.guide-styling
     title: Responsive Reading Shelf
     summary: Rune-Web teaching example for style tokens, presets and responsive layout.
-    source_path: examples/rune_web_guide/styling.rune
+    source_path: examples/rune-web/guide/styling.rune
     app_type: REST
     concepts:
       - style tokens, presets and responsive layout
     builtins: []
     runtime_context: []
     cli_workflows:
-      - vectrune examples/rune_web_guide/styling.rune
-      - vectrune examples/rune_web_guide/styling.rune -o html
+      - vectrune examples/rune-web/guide/styling.rune
+      - vectrune examples/rune-web/guide/styling.rune -o html
     test_refs:
       - tests/browser/rune_web_guide.py
     related_knowledge:

@@ -592,7 +592,7 @@
 
         <h3 id="aws-lambda-integration">4.3. AWS Lambda Integration</h3>
         <ul>
-            <li><strong><code>examples/lambda/book_graphql_lambda/book_graphql_lambda.rune</code></strong>: Shows how to build a GraphQL API as an AWS Lambda function.
+            <li><strong><code>examples/deployment/lambda/book_graphql_lambda/book_graphql_lambda.rune</code></strong>: Shows how to build a GraphQL API as an AWS Lambda function.
                 <ul>
                     <li><em>Illustrates:</em> Serverless computing, integrating GraphQL with Lambda runtime.</li>
                 </ul>
@@ -643,14 +643,14 @@ blocks:
     {"from":[-2,1,0],"size":[4,1,4],"color":"s"}</code></pre>
         <p>Define a <code>@Palette/stone</code> with symbol <code>s</code>, then place <code>{"x":11.5,"y":11.5,"model":"stairs","angle":90}</code> in the scene's things. Models depth-test against walls and sprites but do not add collision or stair climbing. See <a href="https://github.com/davethomas11/rune/blob/main/knowledge/language/pixel-models.md">block-model authoring</a>.</p>
         <p><code>@Map ceiling_height = 3</code> raises wall tops and the ceiling to three tiles while preserving floor perspective and collision. Heights default to one tile and must be greater than 0.5 and at most 16. Walls repeat their textures vertically. Rune Crypt's indoor heights grow from 1.5 tiles in the crypt to 3 in the vault; its courtyard keeps an open sky.</p>
-        <pre><code>vectrune examples/rune_crypt/rune_crypt.rune -o html &gt; rune-crypt.html
-vectrune test examples/rune_crypt --type logic</code></pre>
+        <pre><code>vectrune examples/games/rune_crypt/rune_crypt.rune -o html &gt; rune-crypt.html
+vectrune test examples/games/rune_crypt --type logic</code></pre>
         <p>Open the exported HTML. WASD moves, click/Space swings, Q casts, Shift dodges, E interacts, 1/2/3 or visible buttons select choices, and R trains between runs. E confirms your reward; Enter begins a run. C remains a cycling fallback. Enemies still move while choosing; pause to read safely. Yellow warns before red damages. See the <a href="https://github.com/davethomas11/rune/blob/main/knowledge/runtime/pixel3d.md">canonical Pixel 3D environment and progression reference</a>.</p>
 
         <h3 id="voxel-worlds">Voxel Worlds and Rune Miners (unreleased)</h3>
         <p>Opt into solid 3D terrain with <code>@Scene world = world</code>, binding a declared state field. <code>voxel_generate(319, "meadow")</code> creates a bounded 20x20x10 starter biome; <code>"ember"</code> varies materials and terrain. Use <code>voxel_fill</code> to author or carve box volumes, <code>voxel_get</code> to read cells, <code>voxel_move</code> for gravity/jump/auto-step movement, and <code>voxel_target</code>/<code>voxel_mine</code> for three-tile aiming and mining. Models share voxel depth occlusion; grid-map games retain their existing behavior.</p>
-        <pre><code>vectrune examples/rune_miners/rune_miners.rune -o html &gt; rune-miners.html
-vectrune test examples/rune_miners --type logic</code></pre>
+        <pre><code>vectrune examples/games/rune_miners/rune_miners.rune -o html &gt; rune-miners.html
+vectrune test examples/games/rune_miners --type logic</code></pre>
         <p>Requires a current source build, not released 0.3.4. Rune Miners introduces mining, six recipes, four equipment slots, Mira recruitment and one turn-based guardian encounter with timed guard/dodge. WASD moves, mouse/arrows aim, click/E mines and Space jumps. Gather 3 timber, 3 stone and 2 copper; craft with 1/2 at camp and recruit with R. Native voxel scenes currently use the shared JavaScript renderer inside QuickJS; the Rust rasterizer remains grid-only. Portals, building and saved worlds are future work. See the <a href="https://github.com/davethomas11/vectrune/blob/main/knowledge/runtime/voxel-worlds.md">voxel API and scope reference</a>.</p>
         <p>Rune Miners highlights mineable blocks with a gold frame and named yield, emits dissolving chips, and counts remaining recipe materials. A cyan camp flag and torch trail guide exploration. Combat switches to a wider cave shot; raised gold arms, a green impact bar and explicit timing prompts signal defense. Browser buttons disable unavailable actions, and victory/defeat show distinct outcomes.</p>
         <p>The ivory/gold guardian contrasts with cave stone. First combat teaches Strike, Guard, Skill and Dodge without damage or costs, holding defense windows open until success. G skips; H replays practice. I opens backpack/equipment, K opens the camp workbench, 1/2/3 select, N/V page and I closes. Recipes include stone/copper picks, copper blade/mail, a heart charm and herb bundles. Crafting auto-equips; swap owned gear outside combat. Menus freeze exploration and crafting requires camp.</p>

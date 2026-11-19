@@ -32,7 +32,7 @@ run:
     respond 200 weather
 ```
 
-Run it: `vectrune examples/weather.rune`, then `curl localhost:3000/weather`.
+Run it: `vectrune examples/api/weather.rune`, then `curl localhost:3000/weather`.
 
 - `fetch url` assigns `{ status, ok, url, content_type, body }`. A non-2xx status is returned, not raised.
 - `fetch-json url` assigns parsed JSON. A non-2xx or non-JSON answer responds `502`; a timeout responds `504`.
@@ -68,7 +68,7 @@ action weatherFailed(failure):
     error = failure.message
 ```
 
-Full example: `examples/weather_web.rune` (`vectrune examples/weather_web.rune`).
+Full example: `examples/rune-web/weather_web.rune` (`vectrune examples/rune-web/weather_web.rune`).
 
 - `x = fetch-json <url> [catch <action>]` is a **top-level action step**. The action pauses there, and the remaining steps run when the response arrives, followed by a re-render. `x` is assigned like any other step (a local if one exists, otherwise page state).
 - `x = fetch ...` followed by `y = parse-json x.body` is the explicit form; `parse-json` is also new in Rune-Web (`x = parse-json <string expr>`, invalid JSON throws).
@@ -94,4 +94,4 @@ Methods other than GET, fetch assignment inside nested Rune-Web blocks, serializ
 
 ## Sources
 
-`src/builtins/builtin/http_fetch.rs`, `src/core/mod.rs`, `runtime/rune-web/src/builtins/fetch.ts`, `tests/fetch_builtin.rs`, `runtime/rune-web/tests/builtins/fetch.test.ts`, `examples/weather.rune`.
+`src/builtins/builtin/http_fetch.rs`, `src/core/mod.rs`, `runtime/rune-web/src/builtins/fetch.ts`, `tests/fetch_builtin.rs`, `runtime/rune-web/tests/builtins/fetch.test.ts`, `examples/api/weather.rune`.

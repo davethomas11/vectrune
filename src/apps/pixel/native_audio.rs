@@ -438,7 +438,7 @@ mod tests {
     fn game(context: &rquickjs::Context, bridge: &Bridge) {
         bridge.install(context).unwrap();
         let doc =
-            load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune"))
+            load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune"))
                 .unwrap();
         let game = crate::apps::pixel::compile(&doc).unwrap();
         context.with(|ctx| {
@@ -477,7 +477,7 @@ mod tests {
         let (mut mixer, bridge) = Mixer::new(48000);
         bridge.install(&context).unwrap();
         let doc =
-            load_rune_document_from_path(Path::new("examples/monster_city/monster_city.rune"))
+            load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune"))
                 .unwrap();
         let compiled = crate::apps::pixel::compile(&doc).unwrap();
         context

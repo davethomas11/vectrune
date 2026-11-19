@@ -68,6 +68,9 @@ cli += heading("COMMANDS AND OPTIONS")
 for entry in catalog.entries:
     if entry.category == "cli" and entry.help:
         cli += subsection(entry.name) + literal(entry.help)
+cli += heading("DATABASE AND EVENT EXAMPLES")
+cli += paragraph("Open a local file directly, or start a Rune DB server and connect with --endpoint. A native file has one owning process; stop its server before opening it directly. See the database guide in vectrune-language(7) for runnable Rune-Web, atomic batch and replay examples.")
+cli += literal("vectrune db put notes hello --value '{\"count\":0}' --file notes.rdb\nvectrune db get notes hello --file notes.rdb\nvectrune examples/data/storage/db-server.rune\n# In another terminal, connect to the server's configured port:\nvectrune db get notes hello --endpoint http://localhost:7331\nvectrune events tail '$changes' --endpoint http://localhost:7331")
 cli += heading("SEE ALSO") + paragraph("vectrune-language(7), https://vectrune.com/docs/")
 
 language = header("VECTRUNE-LANGUAGE", "7")
@@ -80,6 +83,18 @@ for category in catalog.categories:
     for entry in catalog.entries:
         if entry.category == category.id:
             language += render_entry(entry)
+for guide in request.guides ?? []:
+    language += heading(guide.title.toUpperCase()) + paragraph(guide.description)
+    for section in guide.sections:
+        language += subsection(section.title)
+        for value in section.paragraphs ?? []:
+            language += paragraph(value)
+        for value in section.items ?? []:
+            language += paragraph(value)
+        if section.example:
+            language += literal(section.example)
+        if section.command:
+            language += literal(section.command)
 language += heading("SEE ALSO") + paragraph("vectrune(1), https://vectrune.com/docs/")
 file.write(request.output + "/man1/vectrune.1", finish(cli))
 file.write(request.output + "/man7/vectrune-language.7", finish(language))

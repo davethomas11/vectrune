@@ -877,7 +877,285 @@
       "parameters": [],
       "aliases": [],
       "notes": [
-        "Path resolution differs between builtins; see the per-function entry for argument lookup behavior."
+        "Path resolution differs between builtins; see the per-function entry for argument lookup behavior.",
+        "Portable matching-object lookup and updates use objects[]id; see matching object lookup for first-match and missing-match behavior."
+      ],
+      "fields": []
+    },
+    {
+      "id": "object-property-shorthand",
+      "category": "language",
+      "name": "object property shorthand",
+      "signature": "{ name, score, label: expression }",
+      "summary": "Construct an object using current-scope bindings as field values; mix shorthand and explicit fields, including nested objects.",
+      "sources": [
+        "src/object_syntax.rs",
+        "src/core/mod.rs",
+        "src/apps/rune_web/jscodegen.rs",
+        "runtime/rune-web/src/core_expression.ts",
+        "tests/object_syntax_parity.rs",
+        "examples/language/objects/objects.vect",
+        "examples/language/objects/objects-api.rune",
+        "examples/language/objects/objects-web.rune"
+      ],
+      "runtime": "Vect scripts / backend Rune / Rune-Web / browser emulator",
+      "returns": "{ name, score } has the same fields and values as { name: name, score: score }.",
+      "errors": "Quoted keys require an explicit value. __proto__, constructor and prototype are rejected as member keys.",
+      "example": "name = \"Alex\"\nscore = 7\nprofile = { name, stats: { score }, active: true }",
+      "parameters": [
+        {
+          "name": "name, score",
+          "description": "Identifiers whose current values become properties with the same names."
+        },
+        {
+          "name": "label: expression",
+          "description": "An explicit field using colon syntax."
+        }
+      ],
+      "aliases": [],
+      "notes": [
+        "Supported in extended .vect scripts, backend .rune run: blocks, Rune-Web actions and the browser emulator. Construction expressions also work in Rune-Web initial @Logic state.",
+        "Backend field expressions support literals, paths, arithmetic, comparisons, booleans, nullish fallback and ternaries. Helper calls and other statements retain their host-specific support.",
+        "Runnable script, REST API and interactive Rune-Web examples: examples/language/objects/. Run vectrune test examples/language/objects to check the API and web examples."
+      ],
+      "fields": []
+    },
+    {
+      "id": "object-replication",
+      "category": "language",
+      "name": "object replication",
+      "signature": "{ template } * COUNT inc PROPERTY by STEP with { overrides }",
+      "summary": "Generate independent objects from a template, optionally incrementing numeric properties and applying per-copy overrides.",
+      "sources": [
+        "src/object_syntax.rs",
+        "src/core/mod.rs",
+        "src/apps/rune_web/jscodegen.rs",
+        "runtime/rune-web/src/core_expression.ts",
+        "tests/object_syntax_parity.rs"
+      ],
+      "runtime": "Vect scripts / backend Rune / Rune-Web / browser emulator",
+      "returns": "Array of COUNT objects. Evaluate the template with zero-based i, apply i * STEP to each selected numeric property, then apply overrides. Nested data is copied.",
+      "errors": "Negative, fractional, nonnumeric or excessive counts and nonfinite steps are invalid.",
+      "example": "batch = { id: i + 1, x: 10, start_x: 10 } * 3 inc (x, start_x) by 5 with { active: true }",
+      "parameters": [
+        {
+          "name": "COUNT",
+          "description": "Integer from 0 through 1000000; zero produces an empty array."
+        },
+        {
+          "name": "PROPERTY",
+          "description": "One property, or a parenthesized comma-separated list such as (x, start_x)."
+        },
+        {
+          "name": "STEP",
+          "description": "Finite numeric increment; negative steps are supported."
+        },
+        {
+          "name": "overrides",
+          "description": "Optional object evaluated for each copy with zero-based i in scope."
+        }
+      ],
+      "aliases": [],
+      "notes": [
+        "Supported in extended .vect scripts, backend .rune run: blocks, Rune-Web actions and the browser emulator. Construction expressions also work in Rune-Web initial @Logic state.",
+        "Backend field expressions support literals, paths, arithmetic, comparisons, booleans, nullish fallback and ternaries. Helper calls and other statements retain their host-specific support.",
+        "inc and with are optional. Generated batches expand when used inside array literals; ordinary nested arrays stay nested."
+      ],
+      "fields": []
+    },
+    {
+      "id": "object-grid",
+      "category": "language",
+      "name": "object grid",
+      "signature": "grid COLS x ROWS at (X, Y) step (DX, DY) with { overrides }",
+      "summary": "Generate a rectangular batch of positioned objects in row order.",
+      "sources": [
+        "src/object_syntax.rs",
+        "src/core/mod.rs",
+        "src/apps/rune_web/jscodegen.rs",
+        "runtime/rune-web/src/core_expression.ts",
+        "tests/object_syntax_parity.rs"
+      ],
+      "runtime": "Vect scripts / backend Rune / Rune-Web / browser emulator",
+      "returns": "Array with x, y, start_x, start_y, col and row on each object. x = X + col * DX; y = Y + row * DY. Overrides are evaluated after these fields are created.",
+      "errors": "Invalid dimensions, excessive cell counts and nonfinite coordinates or spacing are invalid.",
+      "example": "cells = grid 2 x 2 at (10, 20) step (5, 15) with { id: i + 1, type: row + 1 }",
+      "parameters": [
+        {
+          "name": "COLS, ROWS",
+          "description": "Nonnegative integer dimensions; each dimension and the total cell count must be at most 1000000."
+        },
+        {
+          "name": "X, Y",
+          "description": "Finite numeric origin coordinates."
+        },
+        {
+          "name": "DX, DY",
+          "description": "Finite numeric spacing between columns and rows."
+        },
+        {
+          "name": "overrides",
+          "description": "Optional object with zero-based i, row/r and col/c bindings in scope."
+        }
+      ],
+      "aliases": [
+        "grid"
+      ],
+      "notes": [
+        "Supported in extended .vect scripts, backend .rune run: blocks, Rune-Web actions and the browser emulator. Construction expressions also work in Rune-Web initial @Logic state.",
+        "Backend field expressions support literals, paths, arithmetic, comparisons, booleans, nullish fallback and ternaries. Helper calls and other statements retain their host-specific support.",
+        "from is an alias for at. Either zero dimension produces an empty array. Generated objects have independent nested data."
+      ],
+      "fields": []
+    },
+    {
+      "id": "local-templates",
+      "category": "language",
+      "name": "local templates",
+      "signature": "local NAME = expression\nlet NAME = expression",
+      "summary": "Declare a reusable binding or object batch in the current execution scope.",
+      "sources": [
+        "src/object_syntax.rs",
+        "src/core/mod.rs",
+        "src/apps/rune_web/jscodegen.rs",
+        "runtime/rune-web/src/core_expression.ts",
+        "tests/object_syntax_parity.rs"
+      ],
+      "runtime": "Vect scripts / backend Rune / Rune-Web / browser emulator",
+      "returns": "Binds the evaluated value to NAME. Rune-Web initial-state locals are private templates and are omitted from public state.",
+      "errors": "",
+      "example": "local batch = { id: i + 1, x: 10 } * 3 inc x by 5\nactors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }",
+      "parameters": [
+        {
+          "name": "NAME",
+          "description": "Name used by subsequent expressions."
+        },
+        {
+          "name": "expression",
+          "description": "A value, object template or generated batch."
+        }
+      ],
+      "aliases": [
+        "local",
+        "let"
+      ],
+      "notes": [
+        "Supported in extended .vect scripts, backend .rune run: blocks, Rune-Web actions and the browser emulator. Construction expressions also work in Rune-Web initial @Logic state.",
+        "Backend field expressions support literals, paths, arithmetic, comparisons, booleans, nullish fallback and ternaries. Helper calls and other statements retain their host-specific support.",
+        "let is accepted as an alias for local. These keywords do not make a binding immutable.",
+        "Rune-Web resolves initial-state and template dependencies before evaluating dependent declarations. Backend run: bindings live in the request context; Vect and Rune-Web retain their existing action scopes."
+      ],
+      "fields": []
+    },
+    {
+      "id": "object-overlays",
+      "category": "language",
+      "name": "object overlays",
+      "signature": "template with { overrides }\n[batch with { overrides }, ...] all { overrides }",
+      "summary": "Copy an object, or apply overrides to every object in a batch, without changing the template.",
+      "sources": [
+        "src/object_syntax.rs",
+        "src/core/mod.rs",
+        "src/apps/rune_web/jscodegen.rs",
+        "runtime/rune-web/src/core_expression.ts",
+        "tests/object_syntax_parity.rs"
+      ],
+      "runtime": "Vect scripts / backend Rune / Rune-Web / browser emulator",
+      "returns": "Fresh objects with nested data copied and override properties replacing existing properties. For array sources, scalar elements are preserved. Overlay batches expand inside array literals.",
+      "errors": "The source must be an object or array; overrides must be an object.",
+      "example": "local batch = { x: 10, stats: { hp: 3 } } * 2 inc x by 5\nactors = [batch with { y: 20 }, batch with { y: 40 }] all { alive: true }",
+      "parameters": [
+        {
+          "name": "template",
+          "description": "Object or array of objects to copy."
+        },
+        {
+          "name": "overrides",
+          "description": "An object whose fields override copied fields."
+        }
+      ],
+      "aliases": [
+        "with",
+        "all"
+      ],
+      "notes": [
+        "Supported in extended .vect scripts, backend .rune run: blocks, Rune-Web actions and the browser emulator. Construction expressions also work in Rune-Web initial @Logic state.",
+        "Backend field expressions support literals, paths, arithmetic, comparisons, booleans, nullish fallback and ternaries. Helper calls and other statements retain their host-specific support.",
+        "with and all use the same overlay operation. Ordinary nested arrays remain nested.",
+        "Updating one generated or overlaid object does not change the template or its other copies. Bare variable assignment retains the host's existing value/reference behavior."
+      ],
+      "fields": []
+    },
+    {
+      "id": "matching-object-lookup",
+      "category": "language",
+      "name": "matching object lookup",
+      "signature": "objects[]id\nobjects[]id.field = expression\norders[]id.items[]sku.qty += expression",
+      "summary": "Select the first object whose named property matches the current binding of the same name, and optionally update it.",
+      "sources": [
+        "src/object_syntax.rs",
+        "src/core/mod.rs",
+        "src/apps/rune_web/jscodegen.rs",
+        "runtime/rune-web/src/core_expression.ts",
+        "tests/object_syntax_parity.rs"
+      ],
+      "runtime": "Vect scripts / backend Rune / Rune-Web / browser emulator",
+      "returns": "objects[]id selects the first matching id. Numeric and string IDs compare by their string value. A target may replace the whole matching object or update a nested property. Nested lookups are supported.",
+      "errors": "Missing-match writes and compound writes do nothing. Use ?? for a fallback on reads; hosts retain their null/undefined representation for missing values.",
+      "example": "actors = [{ id: 1, hp: 3 }, { id: 2, hp: 4 }]\nid = 2\nactors[]id.hp -= 1\nselected = actors[]id\nmissing = actors[]missing_id ?? null",
+      "parameters": [
+        {
+          "name": "objects",
+          "description": "Array to search in source order."
+        },
+        {
+          "name": "id, sku",
+          "description": "Property names that also identify lookup values in the current scope."
+        }
+      ],
+      "aliases": [
+        "objects[]id"
+      ],
+      "notes": [
+        "Supported in extended .vect scripts, backend .rune run: blocks, Rune-Web actions and the browser emulator. Construction expressions also work in Rune-Web initial @Logic state.",
+        "Backend field expressions support literals, paths, arithmetic, comparisons, booleans, nullish fallback and ternaries. Helper calls and other statements retain their host-specific support.",
+        "Writes belong in executable scripts, run: blocks or actions; initial @Logic state supports construction and reads.",
+        "The first match is updated when IDs repeat."
+      ],
+      "fields": []
+    },
+    {
+      "id": "compound-assignment",
+      "category": "language",
+      "name": "compound assignment",
+      "signature": "target += expression\ntarget -= expression\ntarget *= expression\ntarget /= expression",
+      "summary": "Read a target, combine it with an expression and write the result back, including matching-object targets.",
+      "sources": [
+        "src/object_syntax.rs",
+        "src/core/mod.rs",
+        "src/apps/rune_web/jscodegen.rs",
+        "runtime/rune-web/src/core_expression.ts",
+        "tests/object_syntax_parity.rs"
+      ],
+      "runtime": "Vect scripts / backend Rune / Rune-Web / browser emulator",
+      "returns": "Updates the variable or path using the selected operator. Addition also supports string concatenation; the other operators are numeric.",
+      "errors": "Missing lookup matches are not created. Backend @Values names remain read-only, including through local/let and compound assignments.",
+      "example": "orders = [{ id: 1, items: [{ sku: \"B\", qty: 3 }] }]\nid = 1\nsku = \"B\"\norders[]id.items[]sku.qty += 4",
+      "parameters": [
+        {
+          "name": "target",
+          "description": "Variable, member path or matching-object path."
+        },
+        {
+          "name": "expression",
+          "description": "Right-hand operand evaluated in the current scope."
+        }
+      ],
+      "aliases": [],
+      "notes": [
+        "Supported in extended .vect scripts, backend .rune run: blocks, Rune-Web actions and the browser emulator. Construction expressions also work in Rune-Web initial @Logic state.",
+        "Backend field expressions support literals, paths, arithmetic, comparisons, booleans, nullish fallback and ternaries. Helper calls and other statements retain their host-specific support.",
+        "Use compound assignments in executable scripts, run: blocks or actions."
       ],
       "fields": []
     },
@@ -913,7 +1191,8 @@
       "parameters": [],
       "aliases": [],
       "notes": [
-        "The script engine supports actions, for/while loops, break/continue, return, input, print, and builtin statements. This does not imply every form is accepted in native REST run series."
+        "The script engine supports actions, for/while loops, break/continue, return, input, print, and builtin statements. This does not imply every form is accepted in native REST run series.",
+        "Portable object syntax includes property shorthand, replication/grid generators, local templates, with/all overlays and objects[]id lookup/update syntax."
       ],
       "fields": []
     },
@@ -1067,13 +1346,15 @@
       "example": "@App\nname = Example\ntype = REST\nport = 3000",
       "parameters": [],
       "aliases": [],
-      "notes": [],
+      "notes": [
+        "rune-db and vect-event hosts can also serve @Frontend type = rune-web on the same listener. Use a browser remote provider with endpoint = / for same-origin storage requests."
+      ],
       "fields": [
         {
           "name": "type",
           "type": "string",
           "default": "REST",
-          "description": "REST, GraphQL, STATIC, DYNAMIC-AI-WEB, PIXEL, or PIXEL-3D; dispatch is case-insensitive."
+          "description": "REST, GraphQL, STATIC, DYNAMIC-AI-WEB, PIXEL, PIXEL-3D, RUNE-DB or VECT-EVENT; dispatch is case-insensitive."
         },
         {
           "name": "name",
@@ -1134,6 +1415,30 @@
           "type": "string",
           "default": "—",
           "description": "Application metadata; does not select a versioned docs path."
+        },
+        {
+          "name": "source",
+          "type": "datasource name",
+          "default": "required for storage servers",
+          "description": "For rune-db/vect-event, select the embedded provider to host."
+        },
+        {
+          "name": "token_env",
+          "type": "environment variable",
+          "default": "unset",
+          "description": "Storage server bearer token source; required for non-loopback binds."
+        },
+        {
+          "name": "allow_origin",
+          "type": "origin URL",
+          "default": "disabled",
+          "description": "One exact HTTP(S) browser origin for the storage protocol CORS adapter."
+        },
+        {
+          "name": "allow_origins",
+          "type": "JSON array of strings",
+          "default": "disabled",
+          "description": "Storage protocol CORS allowlist of exact HTTP(S) origins. Alternative to allow_origin; the two settings are mutually exclusive."
         }
       ]
     },
@@ -1331,28 +1636,72 @@
       "category": "declarations",
       "name": "@DataSource",
       "signature": "@DataSource/<name>",
-      "summary": "Configure a native database adapter.",
+      "summary": "Declare a named SQL, embedded Rune DB, event stream or remote storage provider.",
       "sources": [
-        "src/builtins/builtin/data_source.rs"
+        "src/builtins/builtin/data_source.rs",
+        "src/storage/provider.rs",
+        "runtime/rune-web/src/datasource.ts"
       ],
       "returns": "",
       "errors": "",
-      "example": "",
+      "example": "@DataSource/main\ntype = rune-db\nnative_path = .vectrune/notes.rdb\n\n@DataSource/activity\ntype = vect-event\nstore = main",
       "parameters": [],
-      "aliases": [],
-      "notes": [],
+      "aliases": [
+        "@Datasource"
+      ],
+      "notes": [
+        "rune-db and vect-event providers compose with an existing @App. Standalone @App wrappers host the same providers.",
+        "Native storage uses redb and MessagePack; browser embedded providers use IndexedDB. Native paths and token environment variables are not exported to browser configuration.",
+        "See knowledge/runtime/storage.md for packet forms, limits, durability and examples."
+      ],
       "fields": [
         {
           "name": "type",
           "type": "string",
           "default": "required",
-          "description": "mysql or postgres adapter."
+          "description": "mysql, postgres, rune-db or vect-event."
         },
         {
           "name": "connection",
           "type": "string",
-          "default": "required",
-          "description": "Database connection string."
+          "default": "SQL adapters only",
+          "description": "MySQL/Postgres connection string; not required by rune-db or vect-event."
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "default": "embedded",
+          "description": "embedded or remote for storage providers."
+        },
+        {
+          "name": "database",
+          "type": "string",
+          "default": "source name",
+          "description": "Browser database name and default native filename stem."
+        },
+        {
+          "name": "native_path",
+          "type": "path",
+          "default": ".vectrune/data/<database>.rdb",
+          "description": "Native file, relative to the declaring source file."
+        },
+        {
+          "name": "store",
+          "type": "source name",
+          "default": "required for embedded vect-event",
+          "description": "rune-db provider whose transactions hold the event log."
+        },
+        {
+          "name": "endpoint",
+          "type": "URL",
+          "default": "required for remote",
+          "description": "Storage server base URL; one versioned HTTP operation protocol."
+        },
+        {
+          "name": "token_env",
+          "type": "environment variable",
+          "default": "unset",
+          "description": "Native bearer token source; never exported to the browser."
         }
       ]
     },
@@ -1389,7 +1738,9 @@
       "example": "",
       "parameters": [],
       "aliases": [],
-      "notes": [],
+      "notes": [
+        "Rune-Web can be mounted alongside a rune-db or vect-event @App on the same server. Default favicons are embedded SVGs and require no static asset files."
+      ],
       "fields": [
         {
           "name": "type",
@@ -4033,6 +4384,107 @@
       "notes": [
         "Use as a command target in @Controls, not as an ordinary native builtin."
       ]
+    },
+    {
+      "id": "db",
+      "category": "native",
+      "name": "db",
+      "signature": "result = db <source> <packet>",
+      "summary": "Execute one Rune DB operation packet against a named datasource.",
+      "runtime": "Native Rune / Rune-Web action I/O",
+      "sources": [
+        "src/storage/mod.rs",
+        "src/storage/provider.rs",
+        "src/builtins.rs",
+        "runtime/rune-web/src/datasource.ts"
+      ],
+      "returns": "Operation result or atomic commit receipt. Pure expressions remain synchronous; browser top-level actions resume after completion.",
+      "errors": "Invalid packets, revision conflicts and persistence failures reject the operation. Batches roll back together.",
+      "example": "packet = { op: \"get\", collection: \"notes\", key: \"hello\" }\nrecord = db main packet",
+      "parameters": [
+        {
+          "name": "source",
+          "description": "Named rune-db provider for db, or vect-event provider for events."
+        },
+        {
+          "name": "packet",
+          "description": "Context variable containing the operation object. See knowledge/runtime/storage.md."
+        }
+      ],
+      "aliases": [],
+      "notes": [
+        "Standalone hosts use @App type = rune-db or vect-event with source = <provider>.",
+        "CLI: vectrune db get/put/delete/increment/scan/batch; vectrune events append/read/tail. Connect with --endpoint, --file or --config plus --source.",
+        "Rune-Web supports optional catch <action> on top-level I/O assignments; native Vect uses db.request(config, source, packet).",
+        "Example applications and commands: examples/data/storage/README.md.",
+        "Server-side database + Rune-Web frontend: examples/data/storage/fullstack/database.rune and fullstack/app.rune. Site walkthrough: /docs/storage/.",
+        "Atomic checkout and saved-cursor replay: examples/data/storage/checkout.vect and replay.vect. The offline Rune DB and Vect Event guide includes runnable sources.",
+        "One server: examples/data/storage/fullstack/single-server.rune. Separate apps in one command: vectrune <frontend.rune> --secondary-app <database.rune>."
+      ],
+      "fields": []
+    },
+    {
+      "id": "events",
+      "category": "native",
+      "name": "events",
+      "signature": "result = events <source> <packet>",
+      "summary": "Append or read durable events through a named vect-event provider.",
+      "runtime": "Native Rune / Rune-Web action I/O",
+      "sources": [
+        "src/storage/mod.rs",
+        "src/storage/provider.rs",
+        "src/builtins.rs",
+        "runtime/rune-web/src/datasource.ts"
+      ],
+      "returns": "Operation result or atomic commit receipt. Pure expressions remain synchronous; browser top-level actions resume after completion.",
+      "errors": "Invalid packets, revision conflicts and persistence failures reject the operation. Batches roll back together.",
+      "example": "packet = { op: \"read\", stream: \"orders\", after: \"0\", limit: 20 }\npage = events activity packet",
+      "parameters": [
+        {
+          "name": "source",
+          "description": "Named rune-db provider for db, or vect-event provider for events."
+        },
+        {
+          "name": "packet",
+          "description": "Context variable containing the operation object. See knowledge/runtime/storage.md."
+        }
+      ],
+      "aliases": [],
+      "notes": [
+        "Standalone hosts use @App type = rune-db or vect-event with source = <provider>.",
+        "CLI: vectrune db get/put/delete/increment/scan/batch; vectrune events append/read/tail. Connect with --endpoint, --file or --config plus --source.",
+        "Rune-Web supports optional catch <action> on top-level I/O assignments; native Vect uses db.request(config, source, packet).",
+        "Example applications and commands: examples/data/storage/README.md.",
+        "Server-side database + Rune-Web frontend: examples/data/storage/fullstack/database.rune and fullstack/app.rune. Site walkthrough: /docs/storage/.",
+        "Atomic checkout and saved-cursor replay: examples/data/storage/checkout.vect and replay.vect. The offline Rune DB and Vect Event guide includes runnable sources.",
+        "One server: examples/data/storage/fullstack/single-server.rune. Separate apps in one command: vectrune <frontend.rune> --secondary-app <database.rune>."
+      ],
+      "fields": []
+    },
+    {
+      "id": "vect-db-request",
+      "category": "language",
+      "name": "db.request",
+      "signature": "record = db.request(config_path, source, packet)",
+      "summary": "Access embedded or remote storage from a native extended Vect script.",
+      "runtime": "Native Vect host",
+      "sources": [
+        "src/execution/script.rs",
+        "runtime/rune-web/src/vect.ts",
+        "examples/data/storage/client.vect"
+      ],
+      "returns": "Decoded operation result; I/O errors include the Vect source line.",
+      "errors": "The host must supply storage access; configuration paths resolve beside the script.",
+      "example": "packet = { op: \"get\", collection: \"notes\", key: \"hello\" }\nrecord = db.request(\"remote.rune\", \"main\", packet)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Uses the same provider/packet contract as native db/events statements and standalone CLI clients.",
+        "Server-side database + Rune-Web frontend: examples/data/storage/fullstack/database.rune and fullstack/app.rune. Site walkthrough: /docs/storage/.",
+        "Atomic checkout and saved-cursor replay: examples/data/storage/checkout.vect and replay.vect. The offline Rune DB and Vect Event guide includes runnable sources.",
+        "One server: examples/data/storage/fullstack/single-server.rune. Separate apps in one command: vectrune <frontend.rune> --secondary-app <database.rune>."
+      ],
+      "fields": []
     }
   ],
   "coverage": {

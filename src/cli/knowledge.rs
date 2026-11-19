@@ -420,7 +420,7 @@ examples:
   - id: example.rest.minimal
     title: Minimal REST App
     summary: Small REST app.
-    source_path: examples/app.rune
+    source_path: examples/beginner/app.rune
     app_type: REST
     status: recommended
 "#,

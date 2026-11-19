@@ -8,7 +8,7 @@ fn load_example(path: &str) -> rune_runtime::rune_ast::RuneDocument {
 
 #[test]
 fn calculate_basic_functions() {
-    let doc = load_example("examples/skateboarders.rune");
+    let doc = load_example("examples/beginner/skateboarders.rune");
 
     let avg = calculate::calculate_to_string(&doc, "avg Skateboarder.age").unwrap();
     assert_eq!(avg, "36");
@@ -31,7 +31,7 @@ fn calculate_basic_functions() {
 
 #[test]
 fn transform_baseline_names_list() {
-    let doc = load_example("examples/skateboarders.rune");
+    let doc = load_example("examples/beginner/skateboarders.rune");
     let out = transform::transform_to_string(&doc, "@Skaters name:[@Skateboarder.name]").unwrap();
     let expected = "#!RUNE\n@Skaters\nname:\n  Tony Hawk\n  Nyjah Huston\n  Leticia Bufoni\n";
     assert_eq!(out.trim_end(), expected.trim_end());
@@ -39,7 +39,7 @@ fn transform_baseline_names_list() {
 
 #[test]
 fn transform_unique_and_sort_modifiers() {
-    let doc = load_example("examples/skateboarders.rune");
+    let doc = load_example("examples/beginner/skateboarders.rune");
     let out = transform::transform_to_string(
         &doc,
         "@Skaters names:[@Skateboarder.name|unique|sort] ages:[@Skateboarder.age|sort:desc]",

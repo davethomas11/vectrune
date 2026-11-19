@@ -7,7 +7,7 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory(prefix="pixel3d-fullscreen-") as folder, sync_playwright() as pw:
     html = subprocess.run(
-        [str(ROOT / "target/debug/vectrune"), str(ROOT / "examples/skybound_2/skybound_2.rune"), "-o", "html"],
+        [str(ROOT / "target/debug/vectrune"), str(ROOT / "examples/games/skybound_2/skybound_2.rune"), "-o", "html"],
         capture_output=True, text=True, check=True,
     ).stdout
     game = Path(folder) / "game.html"

@@ -153,7 +153,7 @@ LanguageTour {
 Walkthrough {
     eyebrow = "Guided example"
     headline = "Walk through a memory-backed API"
-    description = "The examples/memory_api.rune example teaches app startup, schema validation, and REST routes together."
+    description = "The examples/data/memory/memory_api.rune example teaches app startup, schema validation, and REST routes together."
     step1_title = "1. Initialize app state"
     step1_code = "@App\nname = Memory Example API\nversion = 1.0\ntype = REST\nrun:\n    skaters = load-rune skateboarders.rune\n    set-memory skaters"
     step1_desc = "Load starter data at boot and keep it in memory for later routes."
@@ -173,19 +173,19 @@ Examples {
     eyebrow = "Starter examples"
     headline = "Pick the right next example"
     app_level = "Beginner"
-    app_title = "examples/app.rune"
+    app_title = "examples/beginner/app.rune"
     app_desc = "The smallest complete app. Best first stop for understanding @App, @Route, and run:."
     skaters_level = "Beginner"
-    skaters_title = "examples/skateboarders.rune"
+    skaters_title = "examples/beginner/skateboarders.rune"
     skaters_desc = "A low-cognitive-overhead data document for learning records, repeated entries, and transform workflows."
     user_api_level = "Practical"
-    user_api_title = "examples/user_api.rune"
+    user_api_title = "examples/api/user_api.rune"
     user_api_desc = "A stronger REST example with schemas, CRUD-style routes, validation, and path parameters."
     graphql_level = "Practical"
-    graphql_title = "examples/book_graphql.rune"
+    graphql_title = "examples/api/book_graphql.rune"
     graphql_desc = "Learn GraphQL queries and mutations with memory-backed state and a compact app shape."
     tic_level = "Advanced"
-    tic_title = "examples/tic_tac_toe/"
+    tic_title = "examples/games/tic_tac_toe/"
     tic_desc = "A Rune-Web example split into UI, logic, and style parts. Good once the basics already feel natural."
     lab_eyebrow = "Interactive examples"
     lab_title = "Example Lab"
@@ -240,7 +240,7 @@ WhatsNext {
     intent_text = "The browser sandbox runs a JavaScript emulator for REST, data documents, and GraphQL. Rune-Web previews are compiled from the repository examples. Use the native CLI for server and filesystem behavior."
 }
 Sandbox {
-    dynamic_ai_native = "Dynamic AI sites need the native server and an AI engine. Run cargo run -- examples/dynamic_ai_web.rune to try the cafe."
+    dynamic_ai_native = "Dynamic AI sites need the native server and an AI engine. Run cargo run -- examples/rune-web/dynamic_ai_web.rune to try the cafe."
     edit_hint = "This playground simulates requests in your browser. Apply the code, then choose an endpoint and press Send Request."
     run = "Apply code"
     run_changes = "Apply changes"
@@ -664,7 +664,7 @@ Developer {
     logic_title = "JavaScript logic tests · 0.3.4"
     logic_text = "Use type = logic and page = studio to test the real Rune-Web actions. invoke calls an action with optional JSON arguments; assert checks state, derived values or recorded mock effects. Native and logic tests run together by default. Each logic test gets a fresh JavaScript runtime, with optional setup and teardown."
     logic_limits = "This first runner supports synchronous actions. DOM/layout, timers, asynchronous jobs, network mocks and shared logic fixtures remain future work. Use the Playwright companion for actual browser interactions. The examples below run from the Vectrune repository."
-    cmd_12 = "vectrune test examples/rune_studio\nvectrune test examples/rune_studio --type logic --json"
+    cmd_12 = "vectrune test examples/rune-web/studio\nvectrune test examples/rune-web/studio --type logic --json"
 }
 
 MonsterCity {

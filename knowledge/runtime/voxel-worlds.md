@@ -29,7 +29,7 @@ action tick(input):
 ```
 
 This is a scene/logic excerpt, not a complete app. See
-[`examples/rune_miners/`](../../examples/rune_miners/) for the required
+[`examples/games/rune_miners/`](../../examples/games/rune_miners/) for the required
 atmosphere map, material textures, controls, models and shell.
 `world` must name a declared state field, populated before the first frame.
 The map supplies the optional generated sky; its grid, plane textures and
@@ -135,7 +135,7 @@ than zero, at most 1), `gravity` (greater than zero, at most 0.3), and boolean
 `autoStep`. Defaults remain `0.28`, `0.035`, and `true`. Gravity is applied
 before each tick's vertical movement; falling speed is capped at 0.3 tiles per
 tick. Unknown options and invalid values report errors. For example,
-[Skybound](../../examples/skybound/skybound.rune) uses:
+[Skybound](../../examples/games/skybound/skybound.rune) uses:
 
 ```rune
 player = voxel_move(world, player, dx, dy, jump_pressed, {"jumpSpeed":0.44,"gravity":0.035,"autoStep":false})
@@ -168,8 +168,8 @@ edits, or `frame()` to force rendering immediately.
 ## Play Rune Miners
 
 ```sh
-vectrune examples/rune_miners/rune_miners.rune -o html > rune-miners.html
-vectrune test examples/rune_miners --type logic
+vectrune examples/games/rune_miners/rune_miners.rune -o html > rune-miners.html
+vectrune test examples/games/rune_miners --type logic
 ```
 
 Open the HTML. Choose Meadow/Ember and a seed, then explicitly begin.
@@ -284,7 +284,7 @@ building, saved worlds and larger parties are future work, not implemented.
 Sources: `runtime/rune-web/src/pixel3d/voxel.ts`, `model.ts`, `raycaster.ts`,
 `engine.ts`, `src/apps/pixel3d/mod.rs`, `desktop.rs`,
 `runtime/rune-web/tests/voxel.test.ts`, `tests/rune_miners_app.rs`,
-`examples/rune_miners/miners.logic.test.rune`,
+`examples/games/rune_miners/miners.logic.test.rune`,
 `miners.inventory.test.rune`, `miners.tutorial.test.rune`,
 `miners.ux.test.rune`, `ux.rune`, `runtime/rune-web/src/pixel3d/hud.ts`,
 `src/apps/pixel3d/hud.rs`, `runtime/rune-web/src/input/touch.ts`,

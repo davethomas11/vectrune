@@ -8,6 +8,7 @@ import type { RequestContext } from './context';
 import { buildScopeFromContext } from './context';
 import { evaluateExpression, resolvePath, splitPathSegments, valueToString } from './evaluate';
 import { executeBuiltin, RESPONDED, isBuiltin } from './builtins';
+import { assignCoreTarget, parseCoreExpression } from '../../../rune-web/src/core_expression';
 
 // ---------------------------------------------------------------------------
 // Assign a value into context state at a dotted/bracketed path
@@ -15,6 +16,10 @@ import { executeBuiltin, RESPONDED, isBuiltin } from './builtins';
 
 function assignPath(pathExpr: string, value: unknown, ctx: RequestContext): void {
   const scope = buildScopeFromContext(ctx);
+  if (pathExpr.includes('[]')) {
+    assignCoreTarget(parseCoreExpression(pathExpr), value, scope);
+    return;
+  }
   const segments = splitPathSegments(pathExpr);
   if (!segments.length) return;
   const baseKey = segments[0];

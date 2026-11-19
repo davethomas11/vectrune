@@ -13,19 +13,19 @@ this order across locales and mobile navigation; routes remain unchanged.
 
 `@Frontend type = rune-web` selects a named `@Page` with `page = workshops`. The page's `view:` composes elements and `@Component` views. A component declares inputs with `props: [title, level, note?]`; a trailing `?` marks an optional prop. Named values at the call site supply each instance's content. `note ?? 'Bring your curiosity.'` provides a fallback.
 
-[Workshop cards](../../examples/rune_web_guide/components.rune) render two instances of the same component with different required and optional inputs. Components reuse view structure; they do not declare server routes or imply independent state stores.
+[Workshop cards](../../examples/rune-web/guide/components.rune) render two instances of the same component with different required and optional inputs. Components reuse view structure; they do not declare server routes or imply independent state stores.
 
 ## Reactive state and forms
 
 State values are declared under `state:` on a page or referenced `@Logic`. Interpolation reads state in text and attributes. A named action updates state and the reactive runtime renders the resulting view.
 
-[Workshop RSVP](../../examples/rune_web_guide/forms.rune) uses `change="setGuest(this.value)"` and `change="setSession(this.value)"`. Event arguments can read the event element through `this`. The action assigns its argument to state. Text `change` commits when the user leaves the field; the preview explains this behavior. This example deliberately uses named actions rather than inline assignment of `this.value`.
+[Workshop RSVP](../../examples/rune-web/guide/forms.rune) uses `change="setGuest(this.value)"` and `change="setSession(this.value)"`. Event arguments can read the event element through `this`. The action assigns its argument to state. Text `change` commits when the user leaves the field; the preview explains this behavior. This example deliberately uses named actions rather than inline assignment of `this.value`.
 
 `<->` is a selection/class binding in the current compiler, not a general input-value binding. Use explicit form events rather than promising automatic two-way form synchronization. The pass is a browser-local preview, not a persisted booking or backend validation flow.
 
 ## Actions and repeated views
 
-[Weekend packing list](../../examples/rune_web_guide/packing.rune) demonstrates a complete small app instead of another counter:
+[Weekend packing list](../../examples/rune-web/guide/packing.rune) demonstrates a complete small app instead of another counter:
 
 - Named `@Logic` actions receive parameters.
 - `items.push(...)` adds a record with a stable ID.
@@ -39,7 +39,7 @@ The input updates the draft through a named `change` handler; the Add button cal
 
 ## Selection bindings and view switching
 
-[Trip planner](../../examples/rune_web_guide/navigation.rune) declares:
+[Trip planner](../../examples/rune-web/guide/navigation.rune) declares:
 
 ```rune
 state:
@@ -109,13 +109,13 @@ Rune-Web actions support concise expression and assignment forms:
 
 ## Styles and responsive layout
 
-[Reading shelf](../../examples/rune_web_guide/styling.rune) and the other lessons import [parts/style.rune](../../examples/rune_web_guide/parts/style.rune). `@Style/guide` defines shared `tokens:`, reusable `presets:` and selector `rules:`. A rule uses a preset with `use = (panel)`, references tokens with `{brand}`, and attaches to a page through `style = guide`.
+[Reading shelf](../../examples/rune-web/guide/styling.rune) and the other lessons import [parts/style.rune](../../examples/rune-web/guide/parts/style.rune). `@Style/guide` defines shared `tokens:`, reusable `presets:` and selector `rules:`. A rule uses a preset with `use = (panel)`, references tokens with `{brand}`, and attaches to a page through `style = guide`.
 
 The shared grid adapts its column count to the available width; focus-visible rules preserve visible keyboard focus. Styling declarations are separate from reactive application state. The complete main file and imported style file are visible alongside each live preview.
 
 ## Fitting a game board
 
-The [VectRaiders arcade](../../examples/space_invaders/space_invaders.rune) keeps game logic in a fixed 480 by 460 coordinate system. The HTML view maps logical coordinates to percentage positions, with proportional player, invader and shot sizes inside a fluid arena. Physics coordinates remain unchanged; container-relative font sizing keeps alien symbols proportional. The arena uses border-box sizing so its borders fit inside the visible rectangle. This avoids clipping a fixed-size board inside a smaller mobile container.
+The [VectRaiders arcade](../../examples/games/space_invaders/space_invaders.rune) keeps game logic in a fixed 480 by 460 coordinate system. The HTML view maps logical coordinates to percentage positions, with proportional player, invader and shot sizes inside a fluid arena. Physics coordinates remain unchanged; container-relative font sizing keeps alien symbols proportional. The arena uses border-box sizing so its borders fit inside the visible rectangle. This avoids clipping a fixed-size board inside a smaller mobile container.
 
 Cabinet width also respects available viewport height, leaving space for its header and controls. Short landscape views use compact labels and keep touch controls at least 44 pixels high. Both the Games page and Example Lab use the same bounded preview height. The teaching document can scroll normally; the game iframe fits its entire cabinet without an internal scrollbar.
 
@@ -124,15 +124,15 @@ Run `python3 tests/browser/space_invaders.py` to verify both placements in three
 ## Run and verify
 
 ```sh
-cargo run -- examples/rune_web_guide/packing.rune
-cargo run -- examples/rune_web_guide/packing.rune -o html > index.html
+cargo run -- examples/rune-web/guide/packing.rune
+cargo run -- examples/rune-web/guide/packing.rune -o html > index.html
 ```
 
 Keep the imported `parts/style.rune` next to the example when copying it. Each app uses a native compiled Rune-Web preview inside the teaching site's iframe sandbox, rather than a simulated counter or JavaScript implementation of the example.
 
 The guide and instructions are localized in English, Spanish and French. Canonical example code and its small demo UI remain in English so the displayed source matches the runnable files exactly.
 
-The teaching site's shared `WebExample` takes a single source bundle prop, for example `files="{sources ../../../examples/rune_studio/rune_studio.rune}"`. The build-time `sources` directive follows the compiler's imports, including recursive directory imports, and embeds an array of `{path, code}` records. The entry file appears first, followed by imported files in path order. Paths resolve relative to the declaring Rune file. Missing files and import cycles fail the build with loader diagnostics. Only loaded Rune files are included; unrelated sibling files are excluded.
+The teaching site's shared `WebExample` takes a single source bundle prop, for example `files="{sources ../../../examples/rune-web/studio/rune_studio.rune}"`. The build-time `sources` directive follows the compiler's imports, including recursive directory imports, and embeds an array of `{path, code}` records. The entry file appears first, followed by imported files in path order. Paths resolve relative to the declaring Rune file. Missing files and import cycles fail the build with loader diagnostics. Only loaded Rune files are included; unrelated sibling files are excluded.
 
 The source explorer provides filename filtering, file counts, copy and download controls, and native keyboard-accessible disclosures. The first file opens automatically, with one file expanded at a time. Source content preserves its newlines, indentation, quotes, backslashes and literal template braces through both server and browser rendering. Run `python3 tests/browser/source_explorer.py` to verify all source files for the games and Rune Studio, controls, Example Lab, three locales and mobile widths.
 

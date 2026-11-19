@@ -31,6 +31,7 @@ fn worm_game_app_state() -> AppState {
         path: std::env::current_dir()
             .expect("current_dir should be available")
             .join("examples")
+            .join("games")
             .join("worm_game"),
     }
 }

@@ -3,6 +3,14 @@
   "status": "starter",
   "app_types": [
     {
+      "name": "rune-db",
+      "summary": "Experimental standalone Rune DB host for persistent key/value documents, atomic intent packets and durable streams."
+    },
+    {
+      "name": "vect-event",
+      "summary": "Experimental standalone host restricted to durable event append and replay/tail operations."
+    },
+    {
       "name": "pixel-3d",
       "summary": "Pixel-art first-person games using shared Rune logic and browser or native raycasting."
     },

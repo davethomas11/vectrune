@@ -1,0 +1,38 @@
+#!RUNE
+import "objects-web.rune"
+
+@Test/ObjectsWeb/TemplateAndFirstMatch
+type = logic
+page = objects
+run:
+    assert state.profile.name == "Workshop"
+    assert state.profile.copies == 6
+    assert state.slots.length == 4
+    assert state.slots[3].x == 15
+    assert state.slots[3].y == 35
+    invoke damage
+    assert state.actors[1].stats.hp == 2
+    assert state.actors[4].stats.hp == 3
+    assert state.original[1].stats.hp == 3
+    invoke select 3
+    invoke damage
+    assert state.actors[2].stats.hp == 2
+    invoke reset
+    assert state.id == 2
+    assert state.actors[1].stats.hp == 3
+    assert state.actors[2].stats.hp == 3
+
+@Test/ObjectsWeb/MissingMatchAndZeroHealth
+type = logic
+page = objects
+run:
+    invoke select 99
+    invoke damage
+    assert state.actors[1].stats.hp == 3
+    invoke select 2
+    invoke damage
+    invoke damage
+    invoke damage
+    invoke damage
+    assert state.actors[1].stats.hp == 0
+    assert state.actors[4].stats.hp == 3

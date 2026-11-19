@@ -2,7 +2,7 @@
 view:
     div .page:
         HeroSection
-        SandboxSection code="{raw ../../../examples/app.rune}"
+        SandboxSection code="{raw ../../../examples/beginner/app.rune}"
         section .card:
             h2 "%i18n.Developer.badge%"
             p "%i18n.Developer.start_intro%"

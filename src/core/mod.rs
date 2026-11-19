@@ -55,7 +55,7 @@ pub fn extract_schemas(doc: &RuneDocument) -> HashMap<String, Section> {
 pub fn extract_data_sources(doc: &RuneDocument) -> HashMap<String, Section> {
     let mut data_sources = HashMap::new();
     for section in &doc.sections {
-        if section.path.first().map(|s| s.as_str()) == Some("DataSource") {
+        if section.path.first().is_some_and(|s| matches!(s.as_str(), "DataSource" | "Datasource")) {
             if let Some(name) = section.path.get(1) {
                 data_sources.insert(name.clone(), section.clone());
             }
@@ -149,6 +149,9 @@ pub fn resolve_path(
     ident: &str,
     it: Option<&serde_json::Value>,
 ) -> Option<serde_json::Value> {
+    if ident.contains("[]") {
+        return crate::object_syntax::evaluate(ident, &|name| resolve_path(ctx, name, it)).ok();
+    }
     // literals
     if ident == "null" {
         return Some(serde_json::Value::Null);
@@ -397,7 +400,12 @@ pub fn mutate_path(
     ident: &str,
     new_val: serde_json::Value,
 ) -> bool {
-    let raw_parts = split_path_parts(ident);
+    let raw_parts = if ident.contains("[]") {
+        match crate::object_syntax::assignment_path(ident, &|name| resolve_path(ctx, name, None)) {
+            Ok(Some(parts)) => parts,
+            _ => return false,
+        }
+    } else { split_path_parts(ident) };
     let mut parts = Vec::with_capacity(raw_parts.len());
 
     for part in raw_parts {
@@ -594,6 +602,9 @@ async fn handle_assignment(
     var: &str,
     cmd: &str,
 ) -> Option<(u16, String)> {
+    let var = var.strip_prefix("local ").or_else(|| var.strip_prefix("let ")).unwrap_or(var).trim();
+    let compound = var.chars().last().filter(|c| "+-*/".contains(*c));
+    let var = if compound.is_some() { var[..var.len() - 1].trim_end() } else { var };
     if is_value_name(&state.doc, var) {
         return Some((
             500,
@@ -601,11 +612,22 @@ async fn handle_assignment(
         ));
     }
 
-    // 1. Object Construction: var = { ... }
-    if cmd.starts_with('{') {
-        let map = parse_object_literal(ctx, cmd);
-        mutate_path(ctx, var, serde_json::Value::Object(map));
-        return None;
+    if let Some(op) = compound {
+        if var.contains("[]") && matches!(crate::object_syntax::assignment_path(var, &|name| resolve_path(ctx, name, None)), Ok(None)) {
+            return None;
+        }
+        return match crate::object_syntax::evaluate(&format!("({var}) {op} ({cmd})"), &|name| resolve_path(ctx, name, None)) {
+            Ok(value) => { mutate_path(ctx, var, value); None }
+            Err(error) => Some((500, format!("Invalid assignment expression: {error}"))),
+        };
+    }
+
+    // Portable construction syntax is shared with Rune-Web state and Vect.
+    if crate::object_syntax::is_structured(cmd) {
+        return match crate::object_syntax::evaluate(cmd, &|name| resolve_path(ctx, name, None)) {
+            Ok(value) => { mutate_path(ctx, var, value); None }
+            Err(error) => Some((500, format!("Invalid object expression: {error}"))),
+        };
     }
 
     // 2. Arithmetic: var = x + y
@@ -614,17 +636,12 @@ async fn handle_assignment(
         return None;
     }
 
-    // 3. Nested or Path Assignment
-    if var.contains('.') || var.contains('[') {
-        // Resolve the RHS
-        if let Some(val) = resolve_path(ctx, cmd, None) {
-             if mutate_path(ctx, var, val) {
-                 return None;
-             }
-        }
+    if let Some(value) = resolve_path(ctx, cmd, None) {
+        mutate_path(ctx, var, value);
+        return None;
     }
 
-    // 4. Default: Builtin Function Assignment
+    // Default: Builtin Function Assignment
     let parts: Vec<String> = cmd.split_whitespace().map(|s| s.to_string()).collect();
     if parts.is_empty() {
         return None;
@@ -653,55 +670,6 @@ async fn handle_plain_command(
 
     let res = call_builtin(&parts[0], &parts[1..], ctx, state, None).await;
     handle_builtin_result(res)
-}
-
-/// Parses the "key: value" syntax inside curly braces
-fn parse_object_literal(
-    ctx: &mut Context,
-    cmd: &str,
-) -> serde_json::Map<String, serde_json::Value> {
-    let mut map = serde_json::Map::new();
-    let content = cmd.strip_prefix('{').and_then(|s| s.strip_suffix('}')).unwrap_or(cmd);
-
-    for pair in split_outside_quotes(content, ',') {
-        let pair = pair.trim();
-        if pair.is_empty() {
-            continue;
-        }
-
-        if let Some(colon_pos) = find_char_outside_quotes(pair, ':') {
-            let (key, val_expr) = pair.split_at(colon_pos);
-            let key = key
-                .trim()
-                .trim_start_matches('{')
-                .trim()
-                .trim_matches('"');
-            let val_expr = val_expr[1..].trim();
-
-            let mut value = if val_expr.starts_with('{') && val_expr.ends_with('}') {
-                serde_json::Value::Object(parse_object_literal(ctx, val_expr))
-            } else if let Ok(value) = serde_json::from_str(val_expr) {
-                value
-            } else {
-                resolve_path(ctx, val_expr, None).unwrap_or(serde_json::Value::Null)
-            };
-
-            // Preserve explicitly quoted strings (e.g. IDs and header values).
-            if let serde_json::Value::String(ref s) = value {
-                if !val_expr.starts_with('"') {
-                    if let Ok(n) = s.parse::<i64>() {
-                        value = serde_json::Value::Number(n.into());
-                    } else if let Ok(n) = s.parse::<f64>() {
-                        if let Some(num) = serde_json::Number::from_f64(n) {
-                            value = serde_json::Value::Number(num);
-                        }
-                    }
-                }
-            }
-            map.insert(key.to_string(), value);
-        }
-    }
-    map
 }
 
 /// Like execute_steps_inner but does NOT call resolve_last_response at the end.
@@ -809,48 +777,6 @@ pub(crate) fn find_assignment_equals(s: &str) -> Option<usize> {
     None
 }
 
-fn find_char_outside_quotes(s: &str, target: char) -> Option<usize> {
-    let mut in_quotes = false;
-    let mut escaped = false;
-    for (i, c) in s.char_indices() {
-        if escaped { escaped = false; continue; }
-        if in_quotes && c == '\\' { escaped = true; continue; }
-        if c == '"' {
-            in_quotes = !in_quotes;
-        }
-        if c == target && !in_quotes {
-            return Some(i);
-        }
-    }
-    None
-}
-
-fn split_outside_quotes<'a>(s: &'a str, delimiter: char) -> Vec<&'a str> {
-    let mut parts = Vec::new();
-    let mut start = 0usize;
-    let mut in_quotes = false;
-    let mut escaped = false;
-    let mut depth = 0usize;
-
-    for (i, c) in s.char_indices() {
-        if escaped { escaped = false; continue; }
-        if in_quotes && c == '\\' { escaped = true; continue; }
-        if c == '"' {
-            in_quotes = !in_quotes;
-        }
-        if !in_quotes {
-            match c { '{' | '[' => depth += 1, '}' | ']' => depth = depth.saturating_sub(1), _ => {} }
-        }
-        if c == delimiter && !in_quotes && depth == 0 {
-            parts.push(&s[start..i]);
-            start = i + c.len_utf8();
-        }
-    }
-
-    parts.push(&s[start..]);
-    parts
-}
-
 async fn try_execute_arithmetic(
     state: &AppState,
     ctx: &mut Context,
@@ -955,6 +881,8 @@ fn is_known_command_name(ctx: &Context, name: &str) -> bool {
             | "csv.append"
             | "json.read"
             | "datasource"
+            | "db"
+            | "events"
             | "load-rune"
             | "set-memory"
             | "memory.set"

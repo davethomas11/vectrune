@@ -9,7 +9,7 @@ view:
             p .showcase-try "%i18n.Starfall.try_it%"
             a .secondary-cta href="/assets/games/starfall/index.html" target=_blank rel=noopener "%i18n.Starfall.standalone%"
 
-        WebExample game=true title="{i18n.Starfall.title}" preview="/assets/games/starfall/index.html" files="{sources ../../../examples/starfall/starfall.rune}" show_heading=false
+        WebExample game=true title="{i18n.Starfall.title}" preview="/assets/games/starfall/index.html" files="{sources ../../../examples/games/starfall/starfall.rune}" show_heading=false
 
         section .card:
             h2 "%i18n.Starfall.controls_title%"
@@ -26,5 +26,5 @@ view:
             summary "%i18n.Starfall.source_title%"
             p "%i18n.Starfall.source_text%"
             CommandBlock code="git clone https://github.com/davethomas11/vectrune.git\ncd vectrune"
-            CommandBlock code="vectrune examples/starfall/starfall.rune -o html > starfall.html"
-            CommandBlock code="vectrune test examples/starfall --type logic"
+            CommandBlock code="vectrune examples/games/starfall/starfall.rune -o html > starfall.html"
+            CommandBlock code="vectrune test examples/games/starfall --type logic"

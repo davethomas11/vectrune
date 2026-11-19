@@ -1,0 +1,13 @@
+#!RUNE
+# Native server owns this file. The browser and CLI both connect over HTTP.
+@DataSource/main
+type = rune-db
+native_path = .vectrune/notes.rdb
+
+@App
+name = Shared notes database
+type = rune-db
+source = main
+host = 127.0.0.1
+port = 7333
+allow_origins = ["http://127.0.0.1:3000", "http://localhost:3000"]

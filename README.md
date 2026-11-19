@@ -108,7 +108,7 @@ If port 3000 is occupied, use `vectrune app.rune --port 8080` and update the req
 
 ### Calling other APIs
 
-`fetch-json` makes an outbound GET (http/https, 10s timeout, 1 MiB cap); `@Values` holds read-only constants. See `examples/weather.rune` (server) and `examples/weather_web.rune` (browser, subject to CORS).
+`fetch-json` makes an outbound GET (http/https, 10s timeout, 1 MiB cap); `@Values` holds read-only constants. See `examples/api/weather.rune` (server) and `examples/rune-web/weather_web.rune` (browser, subject to CORS).
 
 ```rune
 @Values
@@ -146,46 +146,51 @@ Explore the running apps, then read the Rune source behind them.
     <td width="50%"><a href="https://vectrune.com/vect-breach/"><img src="docs/images/vect-breach.png" alt="Vect Breach's first-person pixel game and cinematic title screen"></a></td>
   </tr>
   <tr>
-    <td><strong>Rune Studio</strong> — compose, edit, play, save, and export chiptune music.<br><a href="https://vectrune.com/studio/">Open the app</a> · <a href="examples/rune_studio/">Read the source</a></td>
-    <td><strong>Vect Breach</strong> — a first-person pixel game with maps, enemies, controls, sound, and cinematic cameras.<br><a href="https://vectrune.com/vect-breach/">Play</a> · <a href="examples/vect_breach/">Read the source</a></td>
+    <td><strong>Rune Studio</strong> — compose, edit, play, save, and export chiptune music.<br><a href="https://vectrune.com/studio/">Open the app</a> · <a href="examples/rune-web/studio/">Read the source</a></td>
+    <td><strong>Vect Breach</strong> — a first-person pixel game with maps, enemies, controls, sound, and cinematic cameras.<br><a href="https://vectrune.com/vect-breach/">Play</a> · <a href="examples/games/vect_breach/">Read the source</a></td>
   </tr>
 </table>
 
 | App | What it demonstrates | Try it | Source |
 | --- | --- | --- | --- |
-| **Starfall Protocol** | A space metroidvania with connected sectors, linked abilities, four bosses and cinematic flight sequences | [Play](https://vectrune.com/starfall/) | [Rune source](examples/starfall/) |
-| **Rune Crypt** | A dungeon roguelite with block models, combat, equipment, and exploration | [Play](https://vectrune.com/rune-crypt/) | [Rune source](examples/rune_crypt/) |
-| **Monster City** | A 2D kaiju game with destructible buildings, a shop, saved progress, and synthesized audio | [Play](https://vectrune.com/monster-city/) | [Rune source](examples/monster_city/) |
-| **VectRaiders** | An arcade game with reactive game state, collisions, input, and sound | [Play](https://vectrune.com/games/) | [Rune source](examples/space_invaders/) |
-| **Skybound 2** | A lantern-moth adventure across seven sky worlds, with squashable creatures, two bosses, and an original score | [Play](https://vectrune.com/skybound-2/) | [Rune source](examples/skybound_2/) |
+| **Starfall Protocol** | A space metroidvania with connected sectors, linked abilities, four bosses and cinematic flight sequences | [Play](https://vectrune.com/starfall/) | [Rune source](examples/games/starfall/) |
+| **Rune Crypt** | A dungeon roguelite with block models, combat, equipment, and exploration | [Play](https://vectrune.com/rune-crypt/) | [Rune source](examples/games/rune_crypt/) |
+| **Monster City** | A 2D kaiju game with destructible buildings, a shop, saved progress, and synthesized audio | [Play](https://vectrune.com/monster-city/) | [Rune source](examples/games/monster_city/) |
+| **VectRaiders** | An arcade game with reactive game state, collisions, input, and sound | [Play](https://vectrune.com/games/) | [Rune source](examples/games/space_invaders/) |
+| **Skybound 2** | A lantern-moth adventure across seven sky worlds, with squashable creatures, two bosses, and an original score | [Play](https://vectrune.com/skybound-2/) | [Rune source](examples/games/skybound_2/) |
 | **Learning site** | The site's own components, navigation, localization, and example explorer | [Visit](https://vectrune.com/) | [Site source](teaching_website/) |
 
-The [Rune Miners experiment](examples/rune_miners/) explores seeded voxel worlds, mining, inventory, and shared browser/native game logic on `main`. Authored worlds can use [sparse terrain chunks](knowledge/runtime/voxel-worlds.md) up to 4,096 tiles wide, while shared nearby-entity queries let real-time games sleep distant actors.
+The [Rune Miners experiment](examples/games/rune_miners/) explores seeded voxel worlds, mining, inventory, and shared browser/native game logic on `main`. Authored worlds can use [sparse terrain chunks](knowledge/runtime/voxel-worlds.md) up to 4,096 tiles wide, while shared nearby-entity queries let real-time games sleep distant actors.
 
 ## Example library
+
+Browse the [examples index and beginner path](examples/README.md). Examples are
+grouped into `beginner/`, `games/`, `rune-web/`, `api/`, `data/`, `language/`,
+`vect/`, `vectrune/`, `testing/` and `deployment/`.
 
 From a repository checkout, run an example with `vectrune <path>`:
 
 | Start here | Example | What to look for |
 | --- | --- | --- |
-| Minimal API | [`examples/app.rune`](examples/app.rune) | `@App`, `@Route`, and explicit responses |
+| Minimal API | [`examples/beginner/app.rune`](examples/beginner/app.rune) | `@App`, `@Route`, and explicit responses |
 | Validated requests | [`teaching_website/content/docs/app.rune`](teaching_website/content/docs/app.rune) | The complete quickstart above, with [five request tests](teaching_website/content/docs/api.test.rune) |
-| File-backed API | [`examples/user_api.rune`](examples/user_api.rune) | CSV reads/writes, schemas, and CRUD-style routes |
-| GraphQL | [`examples/book_graphql.rune`](examples/book_graphql.rune) | Queries, mutations, and memory-backed books/authors |
-| Reactive UI | [`examples/counter.rune`](examples/counter.rune) | State, events, and styles in one file |
-| 3D platformer | [`examples/skybound/skybound.rune`](examples/skybound/skybound.rune) | Third-person camera, jumping, coins, enemies, and checkpoints; [play/build instructions](knowledge/runtime/pixel3d.md#skybound-third-person-platforming-v035) |
-| Platform adventure | [`examples/skybound_2/skybound_2.rune`](examples/skybound_2/skybound_2.rune) | Nix the lantern moth, a seven-level atlas, two bosses, saved progression, and arranged music; [play/build instructions](knowledge/runtime/pixel3d.md#skybound-2-beyond-the-concept-v035) |
-| Space metroidvania | [`examples/starfall/starfall.rune`](examples/starfall/starfall.rune) | Connected sectors, four bosses, exploration map, optional movement-puzzle rooms and saved upgrades; [play/build instructions](knowledge/runtime/pixel3d.md#starfall-protocol-side-scrolling-space-adventure) |
-| Forms and components | [`examples/rune_web_guide/`](examples/rune_web_guide/) | Run an individual lesson such as `forms.rune` or `packing.rune` |
-| Reports | [`examples/sales_report.rune`](examples/sales_report.rune) | Grouped counts, sums, averages, medians, and distinct values |
-| Structured data | [`examples/skateboarders.rune`](examples/skateboarders.rune) | Named sections and records |
-| Generated AI site | [`examples/dynamic_ai_web.rune`](examples/dynamic_ai_web.rune) | Descriptive content and routes; requires a configured AI engine |
+| File-backed API | [`examples/api/user_api.rune`](examples/api/user_api.rune) | CSV reads/writes, schemas, and CRUD-style routes |
+| GraphQL | [`examples/api/book_graphql.rune`](examples/api/book_graphql.rune) | Queries, mutations, and memory-backed books/authors |
+| Reactive UI | [`examples/beginner/counter.rune`](examples/beginner/counter.rune) | State, events, and styles in one file |
+| 3D platformer | [`examples/games/skybound/skybound.rune`](examples/games/skybound/skybound.rune) | Third-person camera, jumping, coins, enemies, and checkpoints; [play/build instructions](knowledge/runtime/pixel3d.md#skybound-third-person-platforming-v035) |
+| Platform adventure | [`examples/games/skybound_2/skybound_2.rune`](examples/games/skybound_2/skybound_2.rune) | Nix the lantern moth, a seven-level atlas, two bosses, saved progression, and arranged music; [play/build instructions](knowledge/runtime/pixel3d.md#skybound-2-beyond-the-concept-v035) |
+| Space metroidvania | [`examples/games/starfall/starfall.rune`](examples/games/starfall/starfall.rune) | Connected sectors, four bosses, exploration map, optional movement-puzzle rooms and saved upgrades; [play/build instructions](knowledge/runtime/pixel3d.md#starfall-protocol-side-scrolling-space-adventure) |
+| Forms and components | [`examples/rune-web/guide/`](examples/rune-web/guide/) | Run an individual lesson such as `forms.rune` or `packing.rune` |
+| Reports | [`examples/data/reports/sales_report.rune`](examples/data/reports/sales_report.rune) | Grouped counts, sums, averages, medians, and distinct values |
+| Database and events | [`examples/data/storage/README.md`](examples/data/storage/README.md) | Server-backed Rune-Web, atomic document/event batches, replay and browser-local persistence |
+| Structured data | [`examples/beginner/skateboarders.rune`](examples/beginner/skateboarders.rune) | Named sections and records |
+| Generated AI site | [`examples/rune-web/dynamic_ai_web.rune`](examples/rune-web/dynamic_ai_web.rune) | Descriptive content and routes; requires a configured AI engine |
 
 For example:
 
 ```sh
-vectrune examples/counter.rune
-vectrune examples/sales_report.rune
+vectrune examples/beginner/counter.rune
+vectrune examples/data/reports/sales_report.rune
 ```
 
 Run these servers separately, or give each a different `--port`.
@@ -212,7 +217,7 @@ import "shared/schema.rune"
 
 The importing file resolves paths relative to its location. Configuration values can read environment variables with `secret = $API_SECRET$`.
 
-See [document syntax](https://vectrune.com/documents/), the [language reference](https://vectrune.com/docs/library/language/), and [merge examples](examples/merge/). The CLI also supports [`.vect` scripts](knowledge/language/vect-scripts.md) and the experimental [`.vectrune` workflow surface](knowledge/language/vectrune-scripts.md).
+See [document syntax](https://vectrune.com/documents/), the [language reference](https://vectrune.com/docs/library/language/), and [merge examples](examples/data/merge/). The CLI also supports [`.vect` scripts](knowledge/language/vect-scripts.md) and the experimental [`.vectrune` workflow surface](knowledge/language/vectrune-scripts.md).
 
 ## Test what you build
 
@@ -248,7 +253,7 @@ vectrune test examples/testing --json
 Frontend actions can also run in the embedded QuickJS logic-test harness:
 
 ```sh
-vectrune test examples/rune_studio --type logic --json
+vectrune test examples/rune-web/studio --type logic --json
 ```
 
 The logic harness runs without a browser and records supported storage, download, clipboard, and audio effects. Use the [Playwright checks](tests/browser/) for rendered UI and browser interactions.
@@ -262,10 +267,10 @@ The logic harness runs without a browser and records supported storage, download
 | Run an app | `vectrune app.rune` |
 | Choose a port | `vectrune app.rune --port 8080` |
 | Bind to all interfaces | `vectrune app.rune --host 0.0.0.0` |
-| Convert a document | `vectrune examples/skateboarders.rune -o json` |
-| Calculate an aggregate | `vectrune examples/skateboarders.rune --calculate "avg Skateboarder.age"` |
+| Convert a document | `vectrune examples/beginner/skateboarders.rune -o json` |
+| Calculate an aggregate | `vectrune examples/beginner/skateboarders.rune --calculate "avg Skateboarder.age"` |
 | Read Rune from stdin | `cat app.rune \| vectrune -` |
-| Export a frontend | `vectrune examples/counter.rune -o html > counter.html` |
+| Export a frontend | `vectrune examples/beginner/counter.rune -o html > counter.html` |
 | Get command help | `vectrune --help` or `vectrune test --help` |
 
 Homebrew installs offline manuals from releases that bundle them:
@@ -299,7 +304,7 @@ On macOS/Linux:
 
 ```sh
 ./target/release/vectrune --version
-./target/release/vectrune examples/app.rune
+./target/release/vectrune examples/beginner/app.rune
 ```
 
 On Windows, the executable is `target\release\vectrune.exe`. The [PowerShell development installer](install-dev.ps1) builds the current checkout, installs it into your user bin directory, updates your user `PATH`, and creates a `v` shortcut:
@@ -314,7 +319,7 @@ vectrune --version
 The default game target is the browser. The optional desktop host is built with `pixel-desktop`:
 
 ```sh
-cargo run --features pixel-desktop -- examples/monster_city/monster_city.rune --target desktop
+cargo run --features pixel-desktop -- examples/games/monster_city/monster_city.rune --target desktop
 ```
 
 Desktop builds use native window, input, and audio libraries. See [Pixel 3D runtime notes](knowledge/runtime/pixel3d.md), [voxel worlds](knowledge/runtime/voxel-worlds.md), and the [controls reference](https://vectrune.com/docs/library/games/#controls) for host-specific behavior.

@@ -1,4 +1,6 @@
 import { downloadText, copyText } from './effects';
+import { requestDataSource, type Packet } from './datasource';
+import { withContext } from './context';
 // ============================================================================
 // Statement execution — actions, assignments, mutations
 // ============================================================================
@@ -233,6 +235,7 @@ export function executeStatement(
 ): boolean {
   const trimmed = String(statement || '').trim();
   if (!trimmed) return true;
+  if (storageAssignment(trimmed)) throw new Error('Storage I/O must be a top-level action step');
 
   if (parseFetchAssignment(trimmed)) {
     throw new Error(`'${trimmed}' is only supported as a top-level action step`);
@@ -917,9 +920,10 @@ function syncMusicState(state: any): void {
   // Assignment handling – placed before builtin processing so RHS can be a builtin expression
   // Exclude push syntax which is handled separately
   if (trimmed.includes('=') && !trimmed.match(/^.+?\.push\(/)) {
-    const assignmentMatch = trimmed.match(/^(.*?)(?<![!<>=])=(?!=)(.*)$/);
+    const assignmentMatch = trimmed.match(/^(.*?)(?<![!<>=])=(?!=)([\s\S]*)$/);
     if (assignmentMatch) {
-      const left = assignmentMatch[1].trim();
+      const rawLeft = assignmentMatch[1].trim();
+      const left = rawLeft.replace(/^(?:local|let)\s+/, '');
       const right = assignmentMatch[2].trim();
 
       // Try builtin expression first
@@ -931,7 +935,8 @@ function syncMusicState(state: any): void {
         return true;
       }
       const value = builtinVal !== undefined ? builtinVal : evaluateExpression(right, buildScope(locals, trimmed));
-      assignPath(left, value, locals);
+      if (left !== rawLeft) locals[left] = value;
+      else assignPath(left, value, locals);
       return true;
     }
   }
@@ -1014,6 +1019,21 @@ export function executeSteps(
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
     if (Object.prototype.hasOwnProperty.call(step, 'Statement')) {
+      const storage = storageAssignment(step.Statement!);
+      if (storage) {
+        if (nested) throw new Error('Storage I/O must be a top-level action step');
+        const context = ctx();
+        const packet = evaluateExpression(storage.packet, buildScope(locals, step.Statement!)) as Packet;
+        requestDataSource(storage.source, packet, { kind: storage.kind }).then(
+          result => withContext(context, () => { assignPath(storage.target, result, locals); executeSteps(steps.slice(i + 1), locals); context.app.render(); }),
+          error => withContext(context, () => {
+            if (storage.onError) context.app.invokeAction(storage.onError, [{ message: String(error.message ?? error) }], locals);
+            else console.error(error);
+            context.app.render();
+          }),
+        );
+        return false;
+      }
       const pending = parseFetchAssignment(step.Statement!);
       if (pending) {
         if (nested) {
@@ -1065,6 +1085,11 @@ export function executeSteps(
     }
   }
   return true;
+}
+
+function storageAssignment(source: string): { target: string; kind: 'db' | 'events'; source: string; packet: string; onError?: string } | null {
+  const match = source.trim().match(/^([\w$.[\]'\"]+)\s*=\s*(db|events)\s+([A-Za-z_][\w-]*)\s+([\s\S]+?)(?:\s+catch\s+([\w]+))?$/);
+  return match ? { target: match[1], kind: match[2] as 'db' | 'events', source: match[3], packet: match[4], onError: match[5] } : null;
 }
 
 const PITCH_ROWS: Record<string, number> = {

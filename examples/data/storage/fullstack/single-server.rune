@@ -1,0 +1,25 @@
+#!RUNE
+# One process, one port: the UI and database protocol share the same origin.
+import "ui.rune"
+
+@App
+name = Shared Rune DB notes
+type = rune-db
+source = main
+host = 127.0.0.1
+port = 3000
+
+# The native host owns this file.
+@DataSource/main
+type = rune-db
+native_path = .vectrune/notes.rdb
+
+# Browser requests go back to this server, never to IndexedDB.
+@DataSource/server
+type = rune-db
+mode = remote
+endpoint = /
+
+@DataSource/activity
+type = vect-event
+store = server

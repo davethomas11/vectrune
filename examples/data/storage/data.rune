@@ -1,0 +1,10 @@
+#!RUNE
+# Import providers into an app without importing another @App.
+@DataSource/main
+type = rune-db
+database = workshop
+native_path = .vectrune/workshop.rdb
+
+@Datasource/activity
+type = vect-event
+store = main

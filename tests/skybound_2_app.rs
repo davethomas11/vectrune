@@ -7,7 +7,7 @@ use std::path::Path;
 #[test]
 fn sequel_compiles_arranged_score_and_renders_every_destination_in_quickjs() {
     let doc =
-        load_rune_document_from_path(Path::new("examples/skybound_2/skybound_2.rune")).unwrap();
+        load_rune_document_from_path(Path::new("examples/games/skybound_2/skybound_2.rune")).unwrap();
     let frontend = parse_rune_web_frontend(&doc, "beyond").unwrap();
     assert_eq!(frontend.music.len(), 10);
     for song in frontend.music.values() {

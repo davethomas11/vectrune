@@ -9,7 +9,7 @@ view:
             p .showcase-try "%i18n.SkyboundTwo.try_it%"
             a .secondary-cta href="/assets/games/skybound-2/index.html" target=_blank rel=noopener "%i18n.SkyboundTwo.standalone%"
 
-        WebExample game=true title="{i18n.SkyboundTwo.title}" preview="/assets/games/skybound-2/index.html" files="{sources ../../../examples/skybound_2/skybound_2.rune}" show_heading=false
+        WebExample game=true title="{i18n.SkyboundTwo.title}" preview="/assets/games/skybound-2/index.html" files="{sources ../../../examples/games/skybound_2/skybound_2.rune}" show_heading=false
 
         section .card:
             h2 "%i18n.SkyboundTwo.controls_title%"
@@ -21,6 +21,6 @@ view:
             summary "%i18n.SkyboundTwo.source_title%"
             p "%i18n.SkyboundTwo.source_text%"
             CommandBlock code="git clone https://github.com/davethomas11/rune.git\ncd rune"
-            CommandBlock code="vectrune examples/skybound_2/skybound_2.rune -o html > skybound-2.html"
-            CommandBlock code="vectrune test examples/skybound_2 --type logic"
-            CommandBlock code="vectrune fmt examples/skybound_2 --line-width 100"
+            CommandBlock code="vectrune examples/games/skybound_2/skybound_2.rune -o html > skybound-2.html"
+            CommandBlock code="vectrune test examples/games/skybound_2 --type logic"
+            CommandBlock code="vectrune fmt examples/games/skybound_2 --line-width 100"

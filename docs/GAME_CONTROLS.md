@@ -41,8 +41,8 @@ gamepad:
 touch = {"joystick":{"x":"move_x","y":"move_y","size":96},"look":{"x":"look_x","sensitivity":1},"buttons":[{"id":"fire","input":"fire","label":"FIRE","size":60,"offset":[12,12],"drag_x":"look_x"},{"id":"use","input":"use","label":"USE","size":48,"offset":[80,18]}]}
 ```
 
-See [Vect Breach](../examples/vect_breach/controls.rune) and
-[Monster City](../examples/monster_city/controls.rune) for complete profiles.
+See [Vect Breach](../examples/games/vect_breach/controls.rune) and
+[Monster City](../examples/games/monster_city/controls.rune) for complete profiles.
 Use a compiler built from this checkout; this feature is newer than 0.3.3.
 
 ## Custom profiles

@@ -80,7 +80,7 @@ mod tests {
     fn native_game_restores_purchased_skin_wallet_and_progress() {
         let dir = tempfile::tempdir().unwrap();
         let doc = crate::rune_parser::load_rune_document_from_path(Path::new(
-            "examples/monster_city/monster_city.rune",
+            "examples/games/monster_city/monster_city.rune",
         ))
         .unwrap();
         let game = crate::apps::pixel::compile(&doc).unwrap();

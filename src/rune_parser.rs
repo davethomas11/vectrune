@@ -602,13 +602,14 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                 if let Some((_, path)) = series_stack.last().cloned() {
                     // Compute the target list safely
                     let logic_expression = sec.path.first().is_some_and(|part| part == "Logic");
+                    let executable_expression = logic_expression || path.first().is_some_and(|part| matches!(part.as_str(), "run" | "setup" | "teardown"));
                     let style_expression = sec.path.first().is_some_and(|part| part == "Style");
                     let maybe_list = resolve_series_path_mut(&mut sec.series, &path, false);
 
                     if let Some(list) = maybe_list {
                         // Logic expressions may span lines inside balanced containers/calls.
                         // Keep them as one statement, including arrays and method calls.
-                        if logic_expression && expression_depth(line) > 0 {
+                        if executable_expression && expression_depth(line) > 0 {
                             let mut statement = line.trim().to_string();
                             while expression_depth(&statement) > 0 {
                                 if lines.peek().is_none_or(|next| next.starts_with('@')) { break; }
@@ -902,7 +903,8 @@ fn looks_like_object_literal_start(value_raw: &str) -> bool {
     }
 
     let rest = trimmed[1..].trim_start();
-    rest.is_empty() || rest.starts_with('"') || rest.starts_with('}')
+    rest.is_empty() || rest.starts_with('"') || rest.starts_with('\'') || rest.starts_with('}')
+        || rest.chars().next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_' || c == '$')
 }
 
 /// Quote-aware tokens for continuation boundaries and formatter equivalence.
