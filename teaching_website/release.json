@@ -17,9 +17,9 @@
   "releases": [
     {
       "tag": "v0.3.11",
-      "tagged_on": null,
-      "github_tag": false,
-      "published_on": null,
+      "tagged_on": "2026-11-19",
+      "github_tag": true,
+      "published_on": "2026-11-19",
       "summary": "Added HTTP request options and Rune DB snapshot batch reads. Restored named generator overlays across runtimes and the full VectRaiders alien formation."
     },
     {
