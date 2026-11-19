@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { readNavigatorUrl, updateNavigatorUrl, setupNavigator, updateSeoMetadata } from '../src/navigator';
+import { handleNavigatorStateChange, readNavigatorUrl, updateNavigatorUrl, setupNavigator, updateSeoMetadata } from '../src/navigator';
 import { initContext } from '../src/context';
 import type { NavigatorConfig, RuneApp, SeoConfig } from '../src/types';
 
@@ -134,6 +134,58 @@ describe('Rune-Web Navigator', () => {
     setupNavigator(config, mockApp);
     expect(mockApp.state.activePage).toBe('rest_post');
     expect(typeof (mockWindow as any).navigate).toBe('function');
+  });
+
+  it.each([
+    ['path', '/fr/guide?theme=dark#%C3%A9tape', '/fr/other?theme=dark#%C3%A9tape%202'],
+    ['query', '/?page=guide&theme=dark#%C3%A9tape', '/?page=other&theme=dark#%C3%A9tape%202'],
+  ] as const)('binds fragments and writes a single history entry in %s mode', async (mode, initial, destination) => {
+    mockWindow.location = new URL(initial, 'https://vectrune.com');
+    const config: NavigatorConfig = { bind: 'route', fragment: 'section', mode };
+    const app: RuneApp = {
+      state: { route: 'home', section: '' },
+      derived: {},
+      computeDerived: vi.fn(),
+      render: vi.fn(),
+      invokeAction: vi.fn(),
+    };
+    initContext({
+      pageTree: {},
+      derivedDefinitions: {},
+      helperDefinitions: {},
+      actionDefinitions: {},
+      i18nData: {},
+      app,
+      isRendering: false,
+      memorySubscriptions: {},
+      navigator: config,
+      loadedChunks: {},
+      loadingChunks: {},
+    });
+    setupNavigator(config, app);
+    expect(app.state).toEqual({ route: 'guide', section: 'étape' });
+    expect(mockWindow.history.pushState).not.toHaveBeenCalled();
+
+    app.state.route = 'other';
+    handleNavigatorStateChange('route', 'other');
+    app.state.section = 'étape 2';
+    handleNavigatorStateChange('section', 'étape 2');
+    await Promise.resolve();
+    expect(mockWindow.history.pushState).toHaveBeenCalledExactlyOnceWith({ route: 'other' }, '', destination);
+
+    const on = (event: string) => mockWindow.addEventListener.mock.calls.find(([name]: [string]) => name === event)[1]();
+    mockWindow.location = new URL(destination, 'https://vectrune.com');
+    app.state.section = '';
+    handleNavigatorStateChange('section', '');
+    await Promise.resolve();
+    expect(mockWindow.history.pushState).toHaveBeenLastCalledWith({ route: 'other' }, '', destination.split('#')[0]);
+    mockWindow.location.hash = '#first%20steps';
+    on('hashchange');
+    expect(app.state.section).toBe('first steps');
+    mockWindow.location = new URL(initial, 'https://vectrune.com');
+    on('popstate');
+    expect(app.state).toEqual({ route: 'guide', section: 'étape' });
+    expect(mockWindow.history.pushState).toHaveBeenCalledTimes(2);
   });
 
   it('updates document.title and meta tags dynamically based on SEO configuration', () => {

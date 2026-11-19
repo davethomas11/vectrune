@@ -111,6 +111,7 @@ export interface NavigatorConfig {
   bind: string;
   mode?: 'auto' | 'query' | 'hash' | 'path';
   param?: string;
+  fragment?: string;
 }
 
 /** Particle emitter settings declared with `name = emitter { ... }` in state. */

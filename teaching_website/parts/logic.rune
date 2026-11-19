@@ -1,7 +1,22 @@
 @Logic/teaching
+derive:
+    homeSectionSelected from activeSection:
+        quickstart then true
+        tour then true
+        walkthrough then true
+        examples then true
+        next then true
+        _ then false
+
 action navigate(page):
     activePage = page
+    activeSection = ""
+
+action navigateSection(section):
+    activePage = "home"
+    activeSection = section
 
 action openExample(example):
     selectedExample = example
     activePage = "examples"
+    activeSection = ""

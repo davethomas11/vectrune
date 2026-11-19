@@ -2515,6 +2515,14 @@ var __RuneWeb = (() => {
   // src/navigator.ts
   var isNavigatingFromUrl = false;
   var lastKnownRoute = null;
+  var pendingUrlUpdates = /* @__PURE__ */ new WeakSet();
+  function updateFragment(url, config2, state) {
+    if (config2.fragment) {
+      url.hash = encodeURIComponent(String(state[config2.fragment] ?? ""));
+    } else if (url.hash && !url.hash.startsWith("#/")) {
+      url.hash = "";
+    }
+  }
   function setMetaTag(attr, key2, content) {
     if (typeof document === "undefined") return;
     let el = document.querySelector(`meta[${attr}="${key2}"]`);
@@ -2605,9 +2613,7 @@ var __RuneWeb = (() => {
         url.searchParams.delete(param);
         url.searchParams.delete("p");
         url.searchParams.delete(config2.bind);
-        if (url.hash && !url.hash.startsWith("#/")) {
-          url.hash = "";
-        }
+        updateFragment(url, config2, context.app.state);
         const finalUrl = newPath + (url.search ? url.search : "") + (url.hash ? url.hash : "");
         const stateObj = { [config2.bind]: cleanRoute };
         if (replace) {
@@ -2627,9 +2633,7 @@ var __RuneWeb = (() => {
       } else {
         url.searchParams.set(param, cleanRoute);
       }
-      if (url.hash && !url.hash.startsWith("#/")) {
-        url.hash = "";
-      }
+      updateFragment(url, config2, context.app.state);
       const newUrl = url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : "");
       const stateObj = { [config2.bind]: cleanRoute };
       if (replace) {
@@ -2645,8 +2649,28 @@ var __RuneWeb = (() => {
     if (isNavigatingFromUrl) return;
     const context = ctx();
     const config2 = context.navigator;
-    if (!config2 || prop !== config2.bind) return;
-    updateNavigatorUrl(String(value ?? ""));
+    if (!config2) return;
+    if (!config2.fragment) {
+      if (prop === config2.bind) updateNavigatorUrl(String(value ?? ""));
+      return;
+    }
+    const app2 = context.app;
+    if (pendingUrlUpdates.has(app2) || typeof window === "undefined") return;
+    pendingUrlUpdates.add(app2);
+    queueMicrotask(() => {
+      pendingUrlUpdates.delete(app2);
+      const route = String(app2.state[config2.bind] ?? "").trim();
+      if (route !== lastKnownRoute) {
+        withContext(context, () => updateNavigatorUrl(route));
+        return;
+      }
+      const url = new URL(window.location.href);
+      const previousHash = url.hash;
+      updateFragment(url, config2, app2.state);
+      if (url.hash !== previousHash) {
+        window.history.pushState({ [config2.bind]: route }, "", url.pathname + url.search + url.hash);
+      }
+    });
   }
 
   // src/scope.ts
@@ -2765,7 +2789,8 @@ var __RuneWeb = (() => {
         const rawValue2 = value !== null && typeof value === "object" && value.__raw ? value.__raw : value;
         if (target[prop] === rawValue2) return true;
         target[prop] = rawValue2;
-        if (typeof prop === "string" && context.navigator && prop === context.navigator.bind) {
+        const navigator = context.navigator;
+        if (typeof prop === "string" && navigator && (prop === navigator.bind || prop === navigator.fragment)) {
           handleNavigatorStateChange(prop, rawValue2);
         }
         scheduleRender();

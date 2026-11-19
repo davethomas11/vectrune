@@ -61,13 +61,35 @@ url bound to activePage
 
 Options:
 - `bind`: Name of the reactive state variable bound to the URL (e.g. `activePage`).
-- `mode`: Navigation mode — `"auto"` (default, query with hash fallback), `"query"`, or `"hash"`.
+- `mode`: Navigation mode. Use `auto` (the default), `path`, `query`, or `hash`.
 - `param`: Query parameter or hash prefix name (defaults to `"page"`).
 
 Features:
 - **Direct Link & Refresh**: When opening `https://vectrune.com/?page=documents` or hitting refresh, `activePage` is initialized directly from the URL.
 - **Browser History**: Mutating `activePage` (or clicking links with `navigate('target')`) updates the URL using `history.pushState`.
 - **Back / Forward Support**: Clicking browser Back or Forward automatically triggers `popstate` to update reactive state and re-render the view.
+
+### Section links
+
+In path or query mode, bind the URL fragment to a separate state property. The property holds the decoded section ID without the leading `#`, or an empty string when the URL has no fragment. Opening a direct link, refreshing, following a native anchor, or using Back and Forward updates that property.
+
+```rune
+@Navigator
+url bound to activePage
+mode = path
+fragment = activeSection
+
+@Logic/guide
+state:
+    activePage = "home"
+    activeSection = ""
+
+action openSection(page, section):
+    activePage = page
+    activeSection = section
+```
+
+Updating both properties in one action creates one history entry. Route and fragment state are independent. Pass an empty string as the section to clear the fragment when opening a page overview. The [teaching header](../../teaching_website/parts/components/header.rune) uses `activeSection` to mark its current section with `aria-current="location"`. Focus and scroll after a lazy route loads are handled by the site shell.
 
 ## State Replication & Grid Generators
 
@@ -163,7 +185,7 @@ The [release archive](https://vectrune.com/releases/) is a Rune-Web view over `t
 
 Locale roots resolve to home. Localized direct routes choose their locale and route before server rendering, and the browser starts with matching state. Static chunk export includes home so a reader can navigate back from a deep link. Lesson metadata uses localized labels. Unknown destinations have a recovery page; the recovery link uses the URL's locale even when static hosting served the English 404 shell.
 
-The teaching shell groups Learn, Developer, Games, and Tools in an expandable header. On desktop, each category opens a panel with grouped links. On narrow screens, the Menu button opens the same categories as an accordion. The desktop Games menu and arcade page share a preview slideshow for all nine showcases. Players can pause or step through the slides, and reduced-motion settings disable autoplay by default. The shell provides native destination links, a skip link, current-page semantics, a language disclosure, and Escape with focus return. `site-navigation.js` waits for lazy content before moving focus or scrolling. It handles explicit anchors separately and stores scroll positions in history for Back/Forward. Attribution stays in document flow. The first browser example precedes installation; the local quickstart supplies a complete downloadable `app.rune`, working-directory instructions, command copying, expected responses and port/terminal guidance.
+The teaching shell groups Learn, Developer, Games, and Tools in an expandable header. On desktop, each category opens a panel with grouped links. On narrow screens, the Menu button opens the same categories as an accordion. The desktop Games menu and arcade page share a preview slideshow for all nine showcases. Players can pause or step through the slides, and reduced-motion settings disable autoplay by default. The shell provides native destination links, a skip link, current-page semantics, a language disclosure, and Escape with focus return. Rune binds the route and section to the URL and drives the current menu link. `site-navigation.js` waits for lazy content before moving focus and restores saved scroll positions on Back and Forward. Attribution stays in document flow. The first browser example precedes installation; the local quickstart supplies a complete downloadable `app.rune`, working-directory instructions, command copying, expected responses and port/terminal guidance.
 
 Run `python3 tests/browser/teaching_ux.py` after building the CLI. It checks the static route inventory, locale entry/switching, mobile widths and action visibility, skip links, keyboard focus, history restoration, anchors, lazy loading, refresh, native new-tab links, labeled search, copy/download, not-found recovery and repository-prefix hosting. It also runs the downloaded starter from a temporary project folder using an available local port. Use `--site-dir /path/to/generated/site` to reuse a build and `--screenshots /tmp/teaching-ux` to capture the checked layouts. Existing guide and source-explorer regressions remain separate interaction checks.
 

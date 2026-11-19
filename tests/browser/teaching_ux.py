@@ -118,6 +118,7 @@ def check(base, directory, screenshots):
             page.keyboard.press('Tab')
             expect(page.locator('.skip-link')).to_be_focused()
             page.keyboard.press('Enter')
+            page.wait_for_function('document.querySelector("main").dataset.section === "content"')
             expect(page.locator('#content')).to_be_focused()
             expect(page.locator('#site-navigation a.nav-link')).to_have_count(42)
             expect(page.locator('#site-navigation [aria-current="page"]')).to_have_count(1)
@@ -190,6 +191,8 @@ def check(base, directory, screenshots):
             expect(page.locator('a.nav-link[href$="#quickstart"]')).to_have_attribute('aria-current', 'location')
             page.go_forward()
             expect(page.locator('a.nav-link[href$="#tour"]')).to_have_attribute('aria-current', 'location')
+            page.reload()
+            expect(page.locator('a.nav-link[href$="#tour"]')).to_have_attribute('aria-current', 'location')
             menu_link(page, '[data-home-overview]').click()
             expect(overview).to_have_attribute('aria-current', 'page')
             expect(page.locator('main h1')).to_be_focused()
@@ -205,8 +208,14 @@ def check(base, directory, screenshots):
             assert page.url.rstrip('/') == url.rstrip('/')
             if screenshots and not locale:
                 page.screenshot(path=str(screenshots / 'lesson-desktop.png'))
-            menu_link(page, '[data-home-overview]').click()
+            menu_link(page, 'a.nav-link[href$="#quickstart"]').click()
             expect(page.locator('main h1')).to_have_text(headline)
+            expect(page.locator('#quickstart')).to_be_focused()
+            assert page.url == f'{base}/{locale}#quickstart'
+            page.go_back()
+            expect(page.locator('main')).to_have_attribute('data-route', 'web_forms')
+            page.go_forward()
+            expect(page.locator('a.nav-link[href$="#quickstart"]')).to_have_attribute('aria-current', 'location')
             command = page.locator('.command-block').first
             command.locator('.command-copy').click()
             assert page.evaluate('navigator.clipboard.readText()') == command.locator('code').text_content()

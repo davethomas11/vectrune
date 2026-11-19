@@ -44,21 +44,6 @@
     function savePosition() {
       if (!pending) history.replaceState({ ...history.state, sitePosition: [scrollX, scrollY] }, '', location.href);
     }
-    function updateHomeSelection(main) {
-      const home = main?.dataset.route === 'home';
-      const menu = root.querySelector('#site-navigation');
-      if (!menu) return;
-      let sectionSelected = false;
-      for (const link of menu.querySelectorAll('.nav-link[href*="#"]')) {
-        if (home && link.hash === location.hash) {
-          sectionSelected = true;
-          link.setAttribute('aria-current', 'location');
-        } else {
-          link.removeAttribute('aria-current');
-        }
-      }
-      menu.querySelector('[data-home-overview]')?.setAttribute('aria-current', home && !sectionSelected ? 'page' : 'false');
-    }
     function finish() {
       queued = false;
       const main = root.querySelector('main[data-route]');
@@ -67,18 +52,15 @@
         const locale = location.pathname.slice(base.length).split('/')[1];
         recovery.href = base + (locale === 'fr' || locale === 'es' ? `/${locale}/` : '/');
       }
-      if (!pending || !main || main.dataset.route !== pending.route || main.querySelector('.rune-lazy-placeholder')) {
-        updateHomeSelection(main);
-        return;
-      }
+      if (!pending || !main || main.dataset.route !== pending.route || main.querySelector('.rune-lazy-placeholder')) return;
+      // A same-page action can queue its render after this frame callback.
+      if (main.dataset.section !== window.runeWebApp?.state.activeSection) return;
       const navigation = pending;
       pending = null;
       let target = main.querySelector('h1') || main;
       if (navigation.anchor) {
         try { target = document.getElementById(decodeURIComponent(navigation.anchor.slice(1))) || target; } catch (_) { /* Use page title. */ }
-        history.replaceState(history.state, '', location.pathname + location.search + navigation.anchor);
       }
-      updateHomeSelection(main);
       target.setAttribute('tabindex', '-1');
       target.focus({ preventScroll: true });
       if (navigation.position) {
@@ -98,22 +80,14 @@
       if (link.closest('#site-navigation')) closeMenu();
       const action = link.getAttribute('data-on-click');
       if (!action) return;
-      const route = action.match(/^navigate\('([^']+)'\)/)?.[1] || (action.startsWith('openExample(') ? 'examples' : null);
+      const route = action.match(/^navigate\('([^']+)'\)/)?.[1]
+        || (action.startsWith('navigateSection(') ? 'home' : null)
+        || (action.startsWith('openExample(') ? 'examples' : null);
       if (!route) return;
       savePosition();
       const anchor = new URL(link.href).hash;
-      if (route === 'home' && root.querySelector('main[data-route="home"]')) {
-        // The homepage is already rendered. Keep the fragment navigation
-        // independent of the Rune-Web route action.
-        event.preventDefault();
-        event.stopPropagation();
-        if (location.hash !== anchor) {
-          history.pushState({ ...history.state, sitePosition: null }, '', location.pathname + location.search + anchor);
-        }
-      } else if (anchor) {
-        // Wait for the destination route to render before jumping to its section.
-        event.preventDefault();
-      }
+      // Rune owns route and fragment updates. Focus moves after rendering.
+      if (anchor) event.preventDefault();
       pending = { route, anchor: anchor === '#app' ? '' : anchor };
       schedule();
     }, true);
@@ -136,14 +110,17 @@
         }
       }
     });
-    window.addEventListener('popstate', event => {
+    function restoreNavigation(position) {
       closeMenu();
       // A new native fragment link has no saved position. Honor its anchor;
       // actual Back/Forward entries can restore their recorded position.
-      pending = { route: window.runeWebApp?.state.activePage || 'home', position: event.state?.sitePosition || (location.hash ? null : [0, 0]), anchor: location.hash };
+      pending = { route: window.runeWebApp?.state.activePage || 'home', position: position || (location.hash ? null : [0, 0]), anchor: location.hash };
       schedule();
+    }
+    window.addEventListener('popstate', event => restoreNavigation(event.state?.sitePosition));
+    window.addEventListener('hashchange', () => {
+      if (!pending) restoreNavigation(history.state?.sitePosition);
     });
-    window.addEventListener('hashchange', schedule);
     let saving = false;
     window.addEventListener('scroll', () => {
       if (!saving) requestAnimationFrame(() => { saving = false; savePosition(); });

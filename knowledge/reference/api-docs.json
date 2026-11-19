@@ -352,7 +352,8 @@
         {
           "title": "Web interfaces and deployment",
           "paragraphs": [
-            "Rune-Web is a frontend mode mounted through @Frontend on a REST app. Static hosting, dynamic AI sites, and Lambda packaging are separate parts of the runtime surface."
+            "Rune-Web is a frontend mode mounted through @Frontend on a REST app. Static hosting, dynamic AI sites, and Lambda packaging are separate parts of the runtime surface.",
+            "In Rune-Web, @Navigator can bind the active route and a separate section fragment. Use fragment = activeSection with mode = path or mode = query to share links such as /#quickstart and restore the selected section on refresh or Back and Forward."
           ],
           "links": [
             {

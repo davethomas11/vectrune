@@ -2531,6 +2531,22 @@ var __RuneWeb = (() => {
   // src/navigator.ts
   var isNavigatingFromUrl = false;
   var lastKnownRoute = null;
+  var pendingUrlUpdates = /* @__PURE__ */ new WeakSet();
+  function readFragment() {
+    const fragment = window.location.hash.slice(1);
+    try {
+      return decodeURIComponent(fragment);
+    } catch {
+      return fragment;
+    }
+  }
+  function updateFragment(url, config, state) {
+    if (config.fragment) {
+      url.hash = encodeURIComponent(String(state[config.fragment] ?? ""));
+    } else if (url.hash && !url.hash.startsWith("#/")) {
+      url.hash = "";
+    }
+  }
   function readNavigatorUrl(config) {
     if (typeof window === "undefined" || !window.location) return null;
     const param = config.param || "page";
@@ -2673,9 +2689,7 @@ var __RuneWeb = (() => {
         url.searchParams.delete(param);
         url.searchParams.delete("p");
         url.searchParams.delete(config.bind);
-        if (url.hash && !url.hash.startsWith("#/")) {
-          url.hash = "";
-        }
+        updateFragment(url, config, context.app.state);
         const finalUrl = newPath + (url.search ? url.search : "") + (url.hash ? url.hash : "");
         const stateObj = { [config.bind]: cleanRoute };
         if (replace) {
@@ -2695,9 +2709,7 @@ var __RuneWeb = (() => {
       } else {
         url.searchParams.set(param, cleanRoute);
       }
-      if (url.hash && !url.hash.startsWith("#/")) {
-        url.hash = "";
-      }
+      updateFragment(url, config, context.app.state);
       const newUrl = url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : "");
       const stateObj = { [config.bind]: cleanRoute };
       if (replace) {
@@ -2713,20 +2725,43 @@ var __RuneWeb = (() => {
     if (isNavigatingFromUrl) return;
     const context = ctx();
     const config = context.navigator;
-    if (!config || prop !== config.bind) return;
-    updateNavigatorUrl(String(value ?? ""));
+    if (!config) return;
+    if (!config.fragment) {
+      if (prop === config.bind) updateNavigatorUrl(String(value ?? ""));
+      return;
+    }
+    const app = context.app;
+    if (pendingUrlUpdates.has(app) || typeof window === "undefined") return;
+    pendingUrlUpdates.add(app);
+    queueMicrotask(() => {
+      pendingUrlUpdates.delete(app);
+      const route = String(app.state[config.bind] ?? "").trim();
+      if (route !== lastKnownRoute) {
+        withContext(context, () => updateNavigatorUrl(route));
+        return;
+      }
+      const url = new URL(window.location.href);
+      const previousHash = url.hash;
+      updateFragment(url, config, app.state);
+      if (url.hash !== previousHash) {
+        window.history.pushState({ [config.bind]: route }, "", url.pathname + url.search + url.hash);
+      }
+    });
   }
   function setupNavigator(config, app) {
     if (typeof window === "undefined") return;
     const boundVar = config.bind;
     if (!boundVar) return;
+    const fragmentVar = config.fragment;
     const initialUrlRoute = readNavigatorUrl(config);
-    if (initialUrlRoute) {
-      app.state[boundVar] = initialUrlRoute;
-      lastKnownRoute = initialUrlRoute;
-    } else {
-      lastKnownRoute = String(app.state[boundVar] || "home");
+    isNavigatingFromUrl = true;
+    try {
+      if (initialUrlRoute) app.state[boundVar] = initialUrlRoute;
+      if (fragmentVar) app.state[fragmentVar] = readFragment();
+    } finally {
+      isNavigatingFromUrl = false;
     }
+    lastKnownRoute = String(app.state[boundVar] || "home");
     updateSeoMetadata(lastKnownRoute);
     window.navigate = function(target) {
       if (typeof app.state[boundVar] !== "undefined") {
@@ -2735,34 +2770,26 @@ var __RuneWeb = (() => {
         updateSeoMetadata(target);
       }
     };
-    window.addEventListener("popstate", (_event) => {
-      const currentRoute = readNavigatorUrl(config) || "home";
-      if (currentRoute !== app.state[boundVar]) {
-        isNavigatingFromUrl = true;
-        try {
+    function syncFromUrl(routeFallback) {
+      const currentRoute = readNavigatorUrl(config) || routeFallback;
+      const routeChanged = currentRoute !== null && currentRoute !== app.state[boundVar];
+      const fragment = fragmentVar ? readFragment() : "";
+      if (!routeChanged && (!fragmentVar || fragment === app.state[fragmentVar])) return;
+      isNavigatingFromUrl = true;
+      try {
+        if (routeChanged) {
           lastKnownRoute = currentRoute;
           app.state[boundVar] = currentRoute;
-          if (app.render) app.render();
           updateSeoMetadata(currentRoute);
-        } finally {
-          isNavigatingFromUrl = false;
         }
+        if (fragmentVar) app.state[fragmentVar] = fragment;
+        if (!fragmentVar && app.render) app.render();
+      } finally {
+        isNavigatingFromUrl = false;
       }
-    });
-    window.addEventListener("hashchange", (_event) => {
-      const currentRoute = readNavigatorUrl(config);
-      if (currentRoute && currentRoute !== app.state[boundVar]) {
-        isNavigatingFromUrl = true;
-        try {
-          lastKnownRoute = currentRoute;
-          app.state[boundVar] = currentRoute;
-          if (app.render) app.render();
-          updateSeoMetadata(currentRoute);
-        } finally {
-          isNavigatingFromUrl = false;
-        }
-      }
-    });
+    }
+    window.addEventListener("popstate", () => syncFromUrl("home"));
+    window.addEventListener("hashchange", () => syncFromUrl(null));
   }
 
   // src/scope.ts
@@ -2881,7 +2908,8 @@ var __RuneWeb = (() => {
         const rawValue2 = value !== null && typeof value === "object" && value.__raw ? value.__raw : value;
         if (target[prop] === rawValue2) return true;
         target[prop] = rawValue2;
-        if (typeof prop === "string" && context.navigator && prop === context.navigator.bind) {
+        const navigator2 = context.navigator;
+        if (typeof prop === "string" && navigator2 && (prop === navigator2.bind || prop === navigator2.fragment)) {
           handleNavigatorStateChange(prop, rawValue2);
         }
         scheduleRender();
