@@ -270,15 +270,11 @@ Examples {
     graphql_schema = "View GraphQL schema"
 }
 WhatsNext {
-    eyebrow = "What next"
-    headline = "Where the teaching site is going"
-    coming_title = "Coming next"
-    coming_1 = "More browser sandbox features"
-    coming_2 = "Step-by-step language tour pages"
-    coming_3 = "Builtin reference pages sourced from knowledge/"
-    coming_4 = "More guided walkthroughs for REST, GraphQL, and Rune-Web"
-    intent_title = "Current intent"
-    intent_text = "The browser sandbox runs a JavaScript emulator for REST, data documents, and GraphQL. Rune-Web previews are compiled from the repository examples. Use the native CLI for server and filesystem behavior."
+    headline = "What we’re building next"
+    coming_1 = "Mobile-first web apps and games."
+    coming_2 = "Continued development of the native compiler."
+    coming_3 = "Further work on the Rune language and its behavior across runtimes."
+    releases_title = "What’s shipped"
 }
 Sandbox {
     dynamic_ai_native = "Dynamic AI sites need the native server and an AI engine. Run cargo run -- examples/rune-web/dynamic_ai_web.rune to try the cafe."
