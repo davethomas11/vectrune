@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'teaching_website'))
 from build_site import build_site, starfall_web_app
-from release_metadata import sync_release
+from release_metadata import GITHUB, release_archive, sync_release
 
 
 class TeachingBuildTests(unittest.TestCase):
@@ -70,6 +70,26 @@ class TeachingBuildTests(unittest.TestCase):
                 self.assertEqual(sync_release(tag=f'v{version}')[0], version)
                 with self.assertRaisesRegex(ValueError, 'Release tag .* does not match'):
                     sync_release(tag='v0.0.0')
+
+    def test_archive_destinations_match_publication_status(self):
+        entries = [
+            dict(tag='v1.0.2', tagged_on=None, github_tag=False, published_on=None, summary='Current'),
+            dict(tag='v1.0.1', tagged_on='2026-01-12', github_tag=True, published_on='2026-01-13', summary='Released'),
+            dict(tag='v1.0.0', tagged_on='2026-01-10', github_tag=True, published_on=None, summary='Tagged'),
+        ]
+        metadata = {'version': '1.0.2', 'releases': entries}
+        current, published, tagged = release_archive(metadata)
+        self.assertIsNone(current['url'])
+        self.assertTrue(current['current'])
+        self.assertEqual(published['url'], f'{GITHUB}/releases/tag/v1.0.1')
+        self.assertEqual(published['date'], '2026-01-13')
+        self.assertEqual(tagged['url'], f'{GITHUB}/tree/v1.0.0')
+        self.assertEqual(tagged['date'], '2026-01-10')
+        with self.assertRaisesRegex(ValueError, 'unique and newest first'):
+            release_archive({'version': '1.0.2', 'releases': [*entries, entries[-1]]})
+        entries[1]['github_tag'] = False
+        with self.assertRaisesRegex(ValueError, 'inconsistent GitHub publication'):
+            release_archive(metadata)
 
 
 if __name__ == '__main__':

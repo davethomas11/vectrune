@@ -140,4 +140,5 @@ view:
             h2 "%i18n.Developer.upgrade_title%"
             p "%i18n.Developer.upgrade_text%"
             CommandBlock code="{i18n.Developer.cmd_11}"
-            a .content-link href="https://github.com/davethomas11/vectrune/releases/tag/v{release_info.version}" target=_blank rel="noopener noreferrer" "%i18n.Developer.releases%"
+            a .content-link href="{release_info.current_url}" target=_blank rel="noopener noreferrer" "%i18n.Developer.releases%"
+            a .content-link href="{i18n.Common.base_path}releases" data-route-link=true click="navigate('releases')" "%i18n.Releases.title%"

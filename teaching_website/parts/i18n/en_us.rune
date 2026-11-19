@@ -75,6 +75,15 @@ Common {
     translation_source = "Help translate on GitHub ↗"
     localization_guide = "Localization guide"
 }
+Releases {
+    title = "Release history"
+    description = "See what changed in each version of Vectrune, from the first CLI releases to the latest games and developer tools."
+    github_all = "All releases on GitHub"
+    github_release = "GitHub release"
+    github_tag = "View Git tag"
+    unpublished = "Pending GitHub publication"
+}
+
 GamePreview {
     label = "Game previews"
     more_games = "Explore the arcade"

@@ -51,6 +51,7 @@ view:
                     "developer_quality" -> DeveloperQuality
                     "developer_ci" -> DeveloperCi
                     "developer_release" -> DeveloperRelease
+                    "releases" -> ReleasesPage
                     _ -> NotFoundPage
 
 @Component/NotFoundPage

@@ -56,6 +56,7 @@ view:
                             a .nav-link href="{i18n.Common.base_path}developer_release" data-route-link=true aria-current="{activePage == 'developer_release' ? 'page' : 'false'}" click="navigate('developer_release')" "{i18n.Developer.release_heading} {release_info.version}"
                         div .nav-group:
                             h3 "%i18n.Nav.reference%"
+                            a .nav-link href="{i18n.Common.base_path}releases" data-route-link=true aria-current="{activePage == 'releases' ? 'page' : 'false'}" click="navigate('releases')" "%i18n.Releases.title%"
                             a .nav-link href="{i18n.Common.base_path}docs/" "%i18n.SiteMenu.api_reference%"
                             a .nav-link href="{i18n.Common.base_path}builtins" data-route-link=true aria-current="{activePage == 'builtins' ? 'page' : 'false'}" click="navigate('builtins')" "%i18n.Nav.builtins%"
             details .menu-category data-menu-category=games name=site-sections:

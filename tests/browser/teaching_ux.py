@@ -19,6 +19,7 @@ from rune_web_guide import ROOT
 
 sys.path.insert(0, str(ROOT / 'teaching_website'))
 from build_site import build_site
+from release_metadata import GITHUB, SOURCE, release_archive
 
 
 def check_starter(directory):
@@ -118,7 +119,7 @@ def check(base, directory, screenshots):
             expect(page.locator('.skip-link')).to_be_focused()
             page.keyboard.press('Enter')
             expect(page.locator('#content')).to_be_focused()
-            expect(page.locator('#site-navigation a.nav-link')).to_have_count(41)
+            expect(page.locator('#site-navigation a.nav-link')).to_have_count(42)
             expect(page.locator('#site-navigation [aria-current="page"]')).to_have_count(1)
             categories = page.locator('#site-navigation .menu-category')
             expect(categories).to_have_count(4)
@@ -290,6 +291,36 @@ def run(directory, screenshots):
     with preview(directory) as base:
         check(base, directory, screenshots)
         check_game_previews(base)
+        check_release_archive(base)
+
+
+def check_release_archive(base):
+    data = json.loads(SOURCE.read_text(encoding='utf-8'))
+    archive = release_archive(data)
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={'width': 390, 'height': 844})
+        for prefix, title in (('', 'Release history'), ('/es', 'Historial de versiones'),
+                              ('/fr', 'Historique des versions')):
+            page.goto(f'{base}{prefix}/')
+            page.locator('.dev-banner-link').click()
+            expect(page.locator('main h1')).to_have_text(title)
+            expect(page.locator('main h1')).to_be_focused()
+            expect(page.locator('.release-entry h2')).to_have_text([item['tag'] for item in archive])
+            expect(page.locator('.release-archive-header a')).to_have_attribute('href', f'{GITHUB}/releases')
+            for item in archive:
+                row = page.locator(f'.release-entry[id="{item["tag"]}"]')
+                if item['url']:
+                    expect(row.locator('a')).to_have_attribute('href', item['url'])
+                else:
+                    expect(row.locator('a')).to_have_count(0)
+                if item['date']:
+                    expect(row.locator('time')).to_have_attribute('datetime', item['date'])
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+            page.reload()
+            expect(page.locator('main h1')).to_have_text(title)
+        browser.close()
+    print('Release history renders all JSON entries and their GitHub destinations in all three locales', flush=True)
 
 
 def check_game_previews(base):
