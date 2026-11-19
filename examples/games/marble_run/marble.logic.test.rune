@@ -103,11 +103,15 @@ run:
     invoke burn_cell
     invoke burn_cell
     assert state.charges_left == 0
+    assert state.charge_cooldown == 0
+    assert state.charge_held == false
     invoke tick {"charge":true}
     assert state.charging == false
     invoke lose_life
+    invoke age 36
+    assert state.death_timer == 0
+    assert state.lives == 2
     assert state.charges_left == 0
-    invoke tick {}
     invoke tick {"charge":true}
     assert state.charging == false
 
@@ -496,7 +500,9 @@ action clear_level:
 
 action burn_cell:
     call charge_for 24
-    call age 90
+    # The held-button test runs the full cooldown. Only its final tick is needed here.
+    charge_cooldown = 1
+    call tick {}
 
 action outside_blast:
     player = {"x": 14.5, "y": 0, "z": 8.375, "vx": 0, "vy": 0, "vz": 0}

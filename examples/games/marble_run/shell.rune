@@ -11,13 +11,13 @@ view:
                         span "Resolution"
                         select data-pixel-resolution=true:
                             option value="384x240" "384 × 240"
-                            option value="576x360" "576 × 360"
+                            option value="576x360" selected=true "576 × 360"
                             option value="768x480" "768 × 480"
                     label:
                         span "Palette"
                         select data-pixel-palette=true:
                             option value=original "Original"
-                            option value="09120c,39533a,78944f,b9ce77,e7edaf" data-pixel-outline=true "Pocket"
+                            option value="09120c,39533a,78944f,b9ce77,e7edaf" data-pixel-outline=true selected=true "Pocket"
                             option value="26160d,4e2616,784421,a86931,d39745,f0c87a,fff1ba" "Amber"
                             option value="151325,2f314f,535675,7b8aad,adcbd3,eff5cf" "Moonlight"
                     label:
