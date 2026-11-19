@@ -14,17 +14,17 @@ source.add_argument('--url')
 args = parser.parse_args()
 
 
-def assert_stable_cabinet(frame):
-    samples = frame.evaluate('''() => new Promise(resolve => {
+def assert_stable_game_size(frame, selector='.arcade-cabinet'):
+    samples = frame.evaluate('''selector => new Promise(resolve => {
         const samples = [];
         function sample() {
-            const cabinet = document.querySelector('.arcade-cabinet').getBoundingClientRect();
-            samples.push([innerHeight, cabinet.width, cabinet.height]);
+            const game = document.querySelector(selector).getBoundingClientRect();
+            samples.push([innerHeight, game.width, game.height]);
             if (samples.length === 36) resolve(samples.slice(12));
             else requestAnimationFrame(sample);
         }
         requestAnimationFrame(sample);
-    })''')
+    })''', selector)
     # Fractional text metrics can settle by a subpixel as web fonts arrive.
     assert all(max(s[i] for s in samples) - min(s[i] for s in samples) <= 1
                for i in range(3)), samples
@@ -57,10 +57,10 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
             assert frame.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (route, width)
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (route, width)
             if route in {'games', 'vectworms'}:
-                assert_stable_cabinet(frame)
+                assert_stable_game_size(frame)
         if route in {'games', 'vectworms'}:
             frame.locator('.start-btn').click()
-            assert_stable_cabinet(frame)
+            assert_stable_game_size(frame)
         source_tab.click()
         expect(iframe).to_be_hidden()
         expect(page.locator('.source-filter')).to_be_visible()
@@ -72,7 +72,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
         expect(iframe).to_be_visible()
         assert frame.evaluate('window.__tabState.saved') == 42
         if route in {'games', 'vectworms'}:
-            assert_stable_cabinet(frame)
+            assert_stable_game_size(frame)
         game_tab.press('End')
         expect(source_tab).to_be_focused()
         expect(page.locator('.source-filter')).to_have_value('no-such-file')
@@ -94,7 +94,7 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
 
     # Tabs also initialize after a lazy route change, without reloading the page.
     page.goto(base + '/')
-    menu_link(page, 'a[href$="vect-breach"]').click()
+    menu_link(page, 'a.nav-link[href$="vect-breach"]').click()
     expect(page.get_by_role('tab', name='Game', exact=True)).to_have_attribute('aria-selected', 'true')
     iframe = page.locator('.example-preview')
     frame = iframe.element_handle().content_frame()
@@ -105,6 +105,21 @@ with (preview(Path(args.site_dir)) if args.site_dir else nullcontext(args.url.rs
     frame.evaluate("parent.postMessage({type:'toggle_fullscreen',is_fullscreen:false},'*')")
     expect(iframe).to_have_class('example-preview')
     frame.wait_for_function('document.documentElement.scrollHeight <= innerHeight + 1')
+
+    # Tic Tac Toe fills the viewport when standalone. Its embedded layout must
+    # size to content or each iframe resize will make the screen taller again.
+    page.goto(base + '/examples/')
+    page.get_by_role('button', name='Tic Tac Toe', exact=True).click()
+    expect(page.locator('.web-example')).to_have_attribute('data-load-state', 'ready')
+    frame = page.locator('.example-preview').element_handle().content_frame()
+    for width in [1440, 390, 1440]:
+        page.set_viewport_size({'width': width, 'height': 844})
+        frame.wait_for_function('document.documentElement.scrollHeight <= innerHeight + 1')
+        assert_stable_game_size(frame, '.screen')
+    frame.locator('.cell').first.click()
+    expect(frame.locator('.cell').first).to_have_text('X')
+    assert_stable_game_size(frame, '.screen')
+
     assert not errors, errors
     browser.close()
 print('Game embeds: localized tabs, retained game/source state, responsive sizing, lazy navigation and fullscreen passed')
