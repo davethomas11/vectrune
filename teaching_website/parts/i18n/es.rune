@@ -270,15 +270,11 @@ Examples {
     graphql_schema = "Ver esquema GraphQL"
 }
 WhatsNext {
-    eyebrow = "Qué sigue"
-    headline = "Hacia dónde va el sitio de enseñanza"
-    coming_title = "Próximamente"
-    coming_1 = "Más funciones para el entorno del navegador"
-    coming_2 = "Páginas de tour de lenguaje paso a paso"
-    coming_3 = "Páginas de referencia de función incorporada originarias de knowledge/"
-    coming_4 = "Más tutoriales guiados para REST, GraphQL y Rune-Web"
-    intent_title = "Intención actual"
-    intent_text = "El entorno del navegador usa un emulador JavaScript para REST, documentos y GraphQL. Las vistas Rune-Web se compilan desde los ejemplos del repositorio. Usa el CLI nativo para servidores y acceso al sistema de archivos."
+    headline = "En qué estamos trabajando"
+    coming_1 = "Aplicaciones y juegos web pensados para móviles."
+    coming_2 = "Desarrollo del compilador nativo."
+    coming_3 = "Más trabajo en el lenguaje Rune y su comportamiento en los distintos entornos de ejecución."
+    releases_title = "Versiones publicadas"
 }
 Sandbox {
     dynamic_ai_native = "Los sitios de IA dinámicos necesitan el servidor nativo y un motor de IA. Ejecuta cargo run -- examples/rune-web/dynamic_ai_web.rune para probar el café."

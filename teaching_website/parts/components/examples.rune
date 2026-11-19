@@ -2,91 +2,18 @@
 view:
     section #examples .card:
         div .section-heading:
-            p .eyebrow "%i18n.Examples.eyebrow%"
             h2 "%i18n.Examples.headline%"
         div .examples-grid:
             article .example-card:
-                span .tag .tag-beginner "%i18n.Examples.app_level%"
                 h3 "%i18n.Examples.app_title%"
                 p "%i18n.Examples.app_desc%"
-                a .secondary-cta href=#app click="openExample('app')" "%i18n.Examples.run_label%"
+                a .secondary-cta href="{i18n.Common.base_path}examples" data-route-link=true click="openExample('app')" "%i18n.Examples.run_label%"
             article .example-card:
-                span .tag .tag-beginner "%i18n.Examples.skaters_level%"
                 h3 "%i18n.Examples.skaters_title%"
                 p "%i18n.Examples.skaters_desc%"
-                a .secondary-cta href=#app click="openExample('skaters')" "%i18n.Examples.run_label%"
+                a .secondary-cta href="{i18n.Common.base_path}examples" data-route-link=true click="openExample('skaters')" "%i18n.Examples.run_label%"
             article .example-card:
-                span .tag .tag-practical "%i18n.Examples.user_api_level%"
-                h3 "%i18n.Examples.user_api_title%"
-                p "%i18n.Examples.user_api_desc%"
-                a .secondary-cta href=#app click="openExample('users')" "%i18n.Examples.run_label%"
-            article .example-card:
-                span .tag .tag-practical "%i18n.Examples.graphql_level%"
-                h3 "%i18n.Examples.graphql_title%"
-                p "%i18n.Examples.graphql_desc%"
-                a .secondary-cta href=#app click="openExample('graphql')" "%i18n.Examples.run_label%"
-            article .example-card:
-                span .tag .tag-advanced "%i18n.Examples.tic_level%"
-                h3 "%i18n.Examples.tic_title%"
-                p "%i18n.Examples.tic_desc%"
-                a .secondary-cta href=#app click="openExample('tic')" "%i18n.Examples.play_label%"
-
-            article .example-card:
-                span .tag .tag-beginner "Rune-Web"
                 h3 "%i18n.Examples.counter_title%"
                 p "%i18n.Examples.counter_desc%"
-                a .secondary-cta href=#app click="openExample('counter')" "%i18n.Examples.play_label%"
-
-            article .example-card:
-                span .tag .tag-advanced "%i18n.VectBreach.badge%"
-                h3 "%i18n.VectBreach.title%"
-                p "%i18n.VectBreach.description%"
-                a .secondary-cta href="{i18n.Common.base_path}vect-breach" data-route-link=true click="navigate('vect-breach')" "%i18n.VectBreach.play%"
-
-            article .example-card:
-                span .tag .tag-advanced "%i18n.RuneCrypt.badge%"
-                h3 "%i18n.RuneCrypt.title%"
-                p "%i18n.RuneCrypt.description%"
-                a .secondary-cta href="{i18n.Common.base_path}rune-crypt" data-route-link=true click="navigate('rune-crypt')" "%i18n.RuneCrypt.play%"
-
-            article .example-card:
-                span .tag .tag-advanced "%i18n.MonsterCity.badge%"
-                h3 "%i18n.MonsterCity.title%"
-                p "%i18n.MonsterCity.description%"
-                a .secondary-cta href="{i18n.Common.base_path}monster-city" data-route-link=true click="navigate('monster-city')" "%i18n.MonsterCity.play%"
-
-            article .example-card:
-                span .tag .tag-advanced "%i18n.SpaceInvaders.badge%"
-                h3 "%i18n.Examples.invaders_title%"
-                p "%i18n.Examples.invaders_desc%"
-                a .secondary-cta href=#app click="navigate('games')" "%i18n.SpaceInvaders.play_label%"
-
-            article .example-card:
-                span .tag .tag-advanced "%i18n.VectWorms.badge%"
-                h3 "%i18n.Examples.worms_title%"
-                p "%i18n.Examples.worms_desc%"
-                a .secondary-cta href=#app click="navigate('vectworms')" "%i18n.VectWorms.play_label%"
-
-            article .example-card:
-                span .tag .tag-advanced "%i18n.SkyboundTwo.badge%"
-                h3 "%i18n.SkyboundTwo.title%"
-                p "%i18n.SkyboundTwo.description%"
-                a .secondary-cta href="{i18n.Common.base_path}skybound-2" data-route-link=true click="navigate('skybound-2')" "%i18n.SkyboundTwo.play%"
-
-            article .example-card:
-                span .tag .tag-advanced "%i18n.Starfall.badge%"
-                h3 "%i18n.Starfall.title%"
-                p "%i18n.Starfall.description%"
-                a .secondary-cta href="{i18n.Common.base_path}starfall" data-route-link=true click="navigate('starfall')" "%i18n.Starfall.play%"
-
-            article .example-card:
-                span .tag .tag-advanced "Pixel 3D"
-                h3 "%i18n.MarbleRun.title%"
-                p "%i18n.MarbleRun.description%"
-                a .secondary-cta href="{i18n.Common.base_path}marble-run" data-route-link=true click="navigate('marble-run')" "%i18n.MarbleRun.play%"
-
-            article .example-card:
-                span .tag .tag-advanced "Pixel 3D"
-                h3 "%i18n.DogWalker.title%"
-                p "%i18n.DogWalker.description%"
-                a .secondary-cta href="{i18n.Common.base_path}dog-walker" data-route-link=true click="navigate('dog-walker')" "%i18n.DogWalker.play%"
+                a .secondary-cta href="{i18n.Common.base_path}examples" data-route-link=true click="openExample('counter')" "%i18n.Examples.play_label%"
+        a .content-link .examples-more href="{i18n.Common.base_path}examples" data-route-link=true click="openExample('app')" "%i18n.Hero.lab_link%"
