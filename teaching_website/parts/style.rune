@@ -668,10 +668,14 @@ rules:
         content = '""'
         background = linear-gradient(0deg, rgba(6, 18, 24, 0.92), transparent 70%)
 
+    .showcase-tile strong:
+        color = #102f36
+        -webkit-text-stroke = 2.6px #fffdfa
+        paint-order = stroke fill
+
     .showcase-tile strong::after:
         content = '"↗"'
         padding-left = 0.6rem
-        color = #bdf0d1
 
     .showcase-tile:hover strong:
         text-decoration = underline
