@@ -70,6 +70,7 @@ export function bindEvent(eventName: string): void {
       element.getAttribute(`data-on-${eventName}`) || '',
     );
     if (!spec) return;
+    if (eventName === 'contextmenu') event.preventDefault();
     if (typeof event.stopPropagation === 'function') {
       event.stopPropagation();
     }
@@ -77,7 +78,10 @@ export function bindEvent(eventName: string): void {
     
     if (spec.name) {
       const scope = buildScope(
-        Object.assign({}, locals, { this: element }),
+        Object.assign({}, locals, {
+          this: element,
+          event: { offsetX: mouse.offsetX, offsetY: mouse.offsetY },
+        }),
       );
       const args = spec.args.map((arg) =>
         evaluateExpression(arg, scope),

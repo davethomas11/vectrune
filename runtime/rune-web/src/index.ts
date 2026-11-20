@@ -14,7 +14,9 @@ import { getWindowProp, setWindowProp } from './globals';
 import { makeReactive } from './scope';
 import { hostedUrl } from './utils';
 import { renderNode } from './rendering';
-import { parseTrackToSteps } from './statement';
+import { syncSequencerState } from './statement';
+import { bindStudioNoteDrag } from './studio_drag';
+import { bindStudioTransport, paintStudioPlayhead } from './studio_transport';
 import { bindEvent, setupMemoryUpdateListener } from './events';
 import { setupNavigator, updateSeoMetadata } from './navigator';
 import {
@@ -65,7 +67,38 @@ export function boot(config: RuneWebConfig): RuneApp {
       this.computeDerived();
       const root = document.getElementById('app');
       if (!root) return;
+      const studio = this.state.studio_fixed_bars === true;
+      const previousTimeline = studio ? root.querySelector<HTMLElement>('[data-studio-scroll]') : null;
+      const left = previousTimeline?.scrollLeft ?? 0;
+      const top = previousTimeline?.scrollTop ?? 0;
+      const title = studio ? root.querySelector<HTMLInputElement>('[data-studio-song-title]:focus') : null;
+      const start = title?.selectionStart ?? 0;
+      const end = title?.selectionEnd ?? start;
       root.innerHTML = renderNode(context.pageTree, {});
+      if (studio) {
+        paintStudioPlayhead(root, this.state);
+        const timeline = root.querySelector<HTMLElement>('[data-studio-scroll]');
+        if (previousTimeline && timeline) {
+          if (timeline.dataset.studioScroll === previousTimeline.dataset.studioScroll) timeline.scrollLeft = left;
+        }
+        if (timeline?.dataset.studioVoice) {
+          if (previousTimeline?.dataset.studioViewportReady && timeline.dataset.studioVoice === previousTimeline.dataset.studioVoice) {
+            timeline.scrollTop = top;
+          } else {
+            const firstNote = timeline.querySelector<HTMLElement>('.matrix-note-block');
+            timeline.scrollTop = (firstNote?.offsetTop ?? 8 * 28) - timeline.clientHeight * 0.19;
+          }
+          timeline.dataset.studioViewportReady = 'true';
+        }
+        const nextTitle = root.querySelector<HTMLInputElement>('[data-studio-song-title]');
+        if (nextTitle) {
+          nextTitle.value = String(this.state.song_title ?? '');
+          if (title && nextTitle.dataset.studioSongTitle === title.dataset.studioSongTitle) {
+            nextTitle.focus({ preventScroll: true });
+            nextTitle.setSelectionRange(start, end);
+          }
+        }
+      }
     } finally {
       context.isRendering = false;
     }
@@ -213,6 +246,11 @@ export function boot(config: RuneWebConfig): RuneApp {
   // Wire up events
   setupMemoryUpdateListener();
   bindEvent('click');
+  bindEvent('contextmenu');
+  if (app.state.studio_fixed_bars === true) {
+    bindStudioNoteDrag(app.state);
+    bindStudioTransport(app);
+  }
   bindEvent('change');
   bindEvent('input');
   bindEvent('pointerdown');
@@ -291,14 +329,9 @@ export function boot(config: RuneWebConfig): RuneApp {
     });
   }
 
-  if (app.state && app.state.active_voice) {
-    const voice = String(app.state.active_voice);
-    const score = app.state[voice + '_track'];
-    if (score && !app.state.active_steps) {
-      const timeSig = String(app.state.time_signature || '4/4');
-      const selectedBar = Number(app.state.selected_bar ?? 0);
-      app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1), timeSig, selectedBar);
-    }
+  if (app.state?.active_voice && !app.state.active_steps) syncSequencerState(app.state);
+  if (app.state.studio_fixed_bars === true && config.actionDefinitions.loadSongLibrary) {
+    app.invokeAction('loadSongLibrary', []);
   }
 
   app.render();
@@ -334,17 +367,8 @@ function setupWebSocket(endpoint: string, app: RuneApp): void {
       const message = JSON.parse(event.data);
       if (message.type === 'memory_update') {
         app.state[message.key] = message.value;
-        if (app.state && app.state.active_voice) {
-    const voice = String(app.state.active_voice);
-    const score = app.state[voice + '_track'];
-    if (score && !app.state.active_steps) {
-      const timeSig = String(app.state.time_signature || '4/4');
-      const selectedBar = Number(app.state.selected_bar ?? 0);
-      app.state.active_steps = parseTrackToSteps(String(score), Number(app.state.selected_step_id ?? -1), timeSig, selectedBar);
-    }
-  }
-
-  app.render();
+        if (app.state?.active_voice && !app.state.active_steps) syncSequencerState(app.state);
+        app.render();
       }
     } catch (_err) {
       // Ignore malformed messages

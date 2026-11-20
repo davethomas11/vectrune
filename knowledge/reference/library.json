@@ -2727,14 +2727,14 @@
       "id": "music-play",
       "category": "host",
       "name": "music.play",
-      "signature": "music.play([name])",
+      "signature": "music.play([name[, start_beat]])",
       "summary": "Start a declared or composed music track.",
       "sources": [
         "runtime/rune-web/src/statement.ts"
       ],
       "returns": "Audio playback side effect.",
       "errors": "",
-      "example": "music.play(\"theme\")",
+      "example": "music.play(\"theme\", 4)",
       "parameters": [],
       "aliases": [
         "play_music"
@@ -2882,6 +2882,28 @@
       "parameters": [],
       "aliases": [],
       "notes": [],
+      "fields": []
+    },
+    {
+      "id": "music-edit-steps",
+      "category": "host",
+      "name": "music.edit_steps",
+      "signature": "music.edit_steps(operation[, first[, second]])",
+      "summary": "Edit a note or bar in Rune Studio's fixed-measure sequencer.",
+      "sources": [
+        "runtime/rune-web/src/statement.ts",
+        "runtime/rune-web/src/studio_sequencer.ts"
+      ],
+      "returns": "Mutates Studio track, grid, and selection state.",
+      "errors": "",
+      "example": "music.edit_steps(\"matrix\", x, y)",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Available in the browser Rune-Web host and its logic-test harness with studio_fixed_bars enabled.",
+        "Use matrix with grid-relative pixel coordinates, or audition with a pitch. Use instrument with a waveform name to update the active pitched voice and its playback layers.",
+        "Use delete with a step ID or stretch with a step ID and direction. addBar, duplicateBar, and deleteBar act on the song's measures."
+      ],
       "fields": []
     },
     {

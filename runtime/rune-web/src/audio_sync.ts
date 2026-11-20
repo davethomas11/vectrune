@@ -1,3 +1,5 @@
+import { STUDIO_STEP_IDS_PER_VOICE } from './studio_sequencer';
+
 // ============================================================================
 // Internal Audio Sync Engine for VectRune / Rune-Web
 //
@@ -51,10 +53,12 @@ class AudioSyncEngine {
   private totalBars = 4;
   private totalBeats = 16;
   private musicStartTime = 0;
+  private parkedBeat = 0;
   private syncPage = true;
   private getAudioCtx: (() => AudioContext | null) | null = null;
 
   private lastActiveStepId = -1;
+  private lastActiveStepIds: number[] = [];
   private lastActiveBar = -1;
   private channelStepIds: Record<string, number> = {};
 
@@ -96,6 +100,7 @@ class AudioSyncEngine {
     totalBars: number;
     totalBeats: number;
     startTime: number;
+    startBeat?: number;
   }): void {
     this.isPlaying = true;
     this.isPaused = false;
@@ -105,8 +110,10 @@ class AudioSyncEngine {
     this.totalBars = params.totalBars;
     this.totalBeats = params.totalBeats;
     this.musicStartTime = params.startTime;
+    this.parkedBeat = params.startBeat ?? 0;
     this.scheduledNotes = [];
     this.lastActiveStepId = -1;
+    this.lastActiveStepIds = [];
     this.lastActiveBar = -1;
     this.channelStepIds = {};
 
@@ -116,9 +123,12 @@ class AudioSyncEngine {
   /**
    * Notify sync engine that playback has paused.
    */
-  public onPause(): void {
+  public onPause(beat = this.getSnapshot().currentBeat): void {
+    this.parkedBeat = beat;
     this.isPaused = true;
     this.stopLoop();
+    const snapshot = this.getSnapshot();
+    this.updatePageState(snapshot.currentBeat, snapshot.currentBar, snapshot.progressPercent, snapshot.activeStepId);
     this.broadcastSnapshot();
   }
 
@@ -129,9 +139,11 @@ class AudioSyncEngine {
     this.isPlaying = false;
     this.isPaused = false;
     this.activeTrackName = null;
+    this.parkedBeat = 0;
     this.scheduledNotes = [];
     this.channelStepIds = {};
     this.lastActiveStepId = -1;
+    this.lastActiveStepIds = [];
     this.lastActiveBar = -1;
 
     this.stopLoop();
@@ -147,10 +159,12 @@ class AudioSyncEngine {
     const outputLatency = ctx ? (ctx.outputLatency || 0) + (ctx.baseLatency || 0) : 0;
     const visualTime = ctx ? Math.max(0, ctx.currentTime - outputLatency) : 0;
     const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-    const elapsedSec = this.isPlaying && !this.isPaused ? Math.max(0, visualTime - this.musicStartTime) : 0;
+    const beat = this.isPlaying && !this.isPaused && this.totalBeats > 0
+      ? Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat) % this.totalBeats
+      : this.parkedBeat;
 
     const beatsPerBar = this.timeSignature.startsWith('3/') ? 3 : 4;
-    const currentBeat = this.totalBeats > 0 ? (elapsedSec / secondsPerBeat) % this.totalBeats : 0;
+    const currentBeat = beat;
     const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
     const progressPercent = this.totalBeats > 0 ? (currentBeat / this.totalBeats) * 100 : 0;
 
@@ -210,23 +224,27 @@ class AudioSyncEngine {
 
     // Find sounding step for each channel right now
     const activeVoice = this.getActiveVoice();
-    let currentStepId = -1;
+    const currentStepIds: number[] = [];
     this.channelStepIds = {};
 
     for (const note of this.scheduledNotes) {
-      if (visualTime >= note.startTime && visualTime < note.endTime) {
-        this.channelStepIds[note.channel] = note.stepId;
-        if (note.channel === activeVoice) {
-          currentStepId = note.stepId;
-        }
+      if (visualTime < note.startTime || visualTime >= note.endTime) continue;
+      this.channelStepIds[note.channel] = note.stepId;
+      if (note.channel === activeVoice) currentStepIds.push(note.stepId);
+      else if (note.channel.startsWith(activeVoice + '_studio_')) {
+        const lane = Number(note.channel.slice(activeVoice.length + '_studio_'.length));
+        if (Number.isInteger(lane) && lane > 0) currentStepIds.push(note.stepId + lane * STUDIO_STEP_IDS_PER_VOICE);
       }
     }
+    const currentStepId = currentStepIds[0] ?? -1;
+    const changedSteps = currentStepIds.length !== this.lastActiveStepIds.length ||
+      currentStepIds.some((id, index) => id !== this.lastActiveStepIds[index]);
 
     // Calculate current beat and bar based on exact hardware audio clock
     const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-    const elapsedSec = Math.max(0, visualTime - this.musicStartTime);
+    const elapsedBeat = Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat);
     const beatsPerBar = this.timeSignature.startsWith('3/') ? 3 : 4;
-    const currentBeat = this.totalBeats > 0 ? (elapsedSec / secondsPerBeat) % this.totalBeats : (elapsedSec / secondsPerBeat);
+    const currentBeat = this.totalBeats > 0 ? elapsedBeat % this.totalBeats : elapsedBeat;
     const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
     const progressPercent = this.totalBeats > 0 ? (currentBeat / this.totalBeats) * 100 : 0;
 
@@ -241,35 +259,40 @@ class AudioSyncEngine {
     }
 
     // 2. Update generic declarative DOM data attributes
-    if (this.syncPage) this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
+    if (this.syncPage) this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepIds, changedSteps);
 
     // 3. Update reactive state if app is present (on note/bar transitions)
-    if (currentStepId !== this.lastActiveStepId || currentBar !== this.lastActiveBar) {
+    if (changedSteps || currentBar !== this.lastActiveBar) {
+      this.lastActiveStepIds = currentStepIds;
       this.lastActiveStepId = currentStepId;
       this.lastActiveBar = currentBar;
 
-      try {
-        const appState = this.syncPage ? (window as any)?.__RuneWeb?.ctx?.()?.app?.state : null;
-        if (appState) {
-          appState.playback_step_id = currentStepId;
-          appState.playback_bar = currentBar;
-          appState.playback_beat = currentBeat;
-          appState.playback_progress = progressPercent;
-          appState.playback_playing = this.isPlaying;
-        }
-      } catch (_) {
-        // Safe fallback
-      }
+      this.updatePageState(currentBeat, currentBar, progressPercent, currentStepId);
 
       this.broadcastSnapshot();
     }
+  }
+
+  private updatePageState(beat: number, bar: number, progress: number, step: number): void {
+    if (!this.syncPage || typeof window === 'undefined') return;
+    try {
+      const state = (window as any)?.__RuneWeb?.ctx?.()?.app?.state;
+      if (state) {
+        state.playback_step_id = step;
+        state.playback_bar = bar;
+        state.playback_beat = beat;
+        state.playback_progress = progress;
+        state.playback_playing = this.isPlaying && !this.isPaused;
+      }
+    } catch (_) {}
   }
 
   private updateDeclarativeDom(
     currentBeat: number,
     progressPercent: number,
     currentBar: number,
-    currentStepId: number,
+    currentStepIds: number[],
+    changedSteps: boolean,
   ): void {
     if (typeof document === 'undefined') return;
 
@@ -286,10 +309,17 @@ class AudioSyncEngine {
     const beatPlayheads = document.querySelectorAll<HTMLElement>(
       '[data-sync-playhead="beat"], #seq-playhead',
     );
-    const pxLeft = Math.round(currentBeat * 120);
+    const beatPosition = (el: HTMLElement): number | undefined => {
+      const bar = Number(el.dataset.syncViewBar) || 0;
+      if (bar && currentBar !== bar) return;
+      const beatsPerBar = this.timeSignature.startsWith('3/') ? 3 : 4;
+      const beat = bar ? currentBeat - (bar - 1) * beatsPerBar : currentBeat;
+      return Math.round(beat * (Number(el.dataset.syncPixelsPerBeat) || 120));
+    };
     beatPlayheads.forEach((el) => {
-      el.style.left = `${pxLeft}px`;
-      el.style.display = 'block';
+      const pxLeft = beatPosition(el.parentElement ?? el);
+      el.style.display = pxLeft === undefined ? 'none' : 'block';
+      if (pxLeft !== undefined) el.style.left = `${pxLeft}px`;
     });
 
     // Auto-scroll sync container: [data-sync-scroll="beat"] or .matrix-timeline-scroll
@@ -297,6 +327,8 @@ class AudioSyncEngine {
       '[data-sync-scroll="beat"], .matrix-timeline-scroll',
     );
     scrollContainers.forEach((container) => {
+      const pxLeft = beatPosition(container);
+      if (pxLeft === undefined) return;
       if (pxLeft > container.scrollLeft + container.clientWidth - 140) {
         container.scrollLeft = pxLeft - 60;
       } else if (pxLeft < container.scrollLeft) {
@@ -320,22 +352,18 @@ class AudioSyncEngine {
         });
     }
 
-    // Step chip / note block highlights: [data-sync-step="X"] or [data-step-idx="X"]
-    if (currentStepId !== this.lastActiveStepId) {
-      document.querySelectorAll('.playing-step-now, [data-sync-playing-step]').forEach((el) => {
+    // Apply all sounding steps. Reactive rendering may have replaced the note DOM.
+    if (changedSteps) {
+      document.querySelectorAll('.playing-step-now, [data-sync-playing-step]').forEach(el => {
         el.classList.remove('playing-step-now');
         el.removeAttribute('data-sync-playing-step');
       });
-      if (currentStepId >= 0) {
-        document
-          .querySelectorAll(
-            `[data-sync-step="${currentStepId}"], .step-chip[data-step-idx="${currentStepId}"], .matrix-note-block[data-step-idx="${currentStepId}"]`,
-          )
-          .forEach((el) => {
-            el.classList.add('playing-step-now');
-            el.setAttribute('data-sync-playing-step', 'true');
-          });
-      }
+    }
+    for (const id of currentStepIds) {
+      document.querySelectorAll(`[data-sync-step="${id}"], [data-step-idx="${id}"]`).forEach(el => {
+        el.classList.add('playing-step-now');
+        el.setAttribute('data-sync-playing-step', 'true');
+      });
     }
   }
 

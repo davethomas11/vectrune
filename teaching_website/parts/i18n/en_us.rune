@@ -454,9 +454,9 @@ Studio {
     feature_export_title = "Export your song"
     feature_export_desc = "EXPORT .RUNE downloads the song’s @Music code. It is separate from the complete Studio application and its source files."
     instructions_title = "How to Use"
-    instructions_songs = "Choose a preset, press PLAY to listen, and STOP to finish. Select an editing voice and use the piano roll or STRIP view to edit notes."
-    instructions_storage = "SAVE stores the current arrangement in the browser; LOAD restores it. EXPORT .RUNE downloads your song code as a file. Keep that export before leaving or reloading the preview."
-    try_it = "Choose a preset and press PLAY, then STOP. Select a voice and click a note to edit your arrangement."
+    instructions_songs = "Choose a preset and press Space to play or pause. Use the transport arrows to jump between bars. Edit notes in the piano roll and follow playback in STRIP view."
+    instructions_storage = "Select New Song for a blank arrangement, name it, and choose Save. Open song lists saved arrangements and presets. Export .rune downloads a copy."
+    try_it = "Press Space to play or pause. Drag the parked playhead to set the start, and stack pitches in one column to build a chord."
 }
 
 Reference {

@@ -23,7 +23,7 @@ var __RunePixel3DRuntime = (() => {
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
   var __publicField = (obj, key2, value) => __defNormalProp(obj, typeof key2 !== "symbol" ? key2 + "" : key2, value);
 
-  // node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs
   function utf8Count(str) {
     const strLength = str.length;
     let byteLength = 0;
@@ -150,7 +150,7 @@ var __RunePixel3DRuntime = (() => {
   }
   var sharedTextEncoder, TEXT_ENCODER_THRESHOLD, CHUNK_SIZE, sharedTextDecoder, TEXT_DECODER_THRESHOLD;
   var init_utf8 = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs"() {
       sharedTextEncoder = new TextEncoder();
       TEXT_ENCODER_THRESHOLD = 50;
       CHUNK_SIZE = 4096;
@@ -159,10 +159,10 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs
   var ExtData;
   var init_ExtData = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs"() {
       ExtData = class {
         constructor(type, data) {
           __publicField(this, "type");
@@ -174,10 +174,10 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs
   var DecodeError;
   var init_DecodeError = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs"() {
       DecodeError = class _DecodeError extends Error {
         constructor(message) {
           super(message);
@@ -193,7 +193,7 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs
   function setUint64(view, offset, value) {
     const high = value / 4294967296;
     const low = value;
@@ -218,12 +218,12 @@ var __RunePixel3DRuntime = (() => {
   }
   var UINT32_MAX;
   var init_int = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs"() {
       UINT32_MAX = 4294967295;
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
   function encodeTimeSpecToTimestamp({ sec, nsec }) {
     if (sec >= 0 && nsec >= 0 && sec <= TIMESTAMP64_MAX_SEC) {
       if (nsec === 0 && sec <= TIMESTAMP32_MAX_SEC) {
@@ -296,7 +296,7 @@ var __RunePixel3DRuntime = (() => {
   }
   var EXT_TIMESTAMP, TIMESTAMP32_MAX_SEC, TIMESTAMP64_MAX_SEC, timestampExtension;
   var init_timestamp = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs"() {
       init_DecodeError();
       init_int();
       EXT_TIMESTAMP = -1;
@@ -310,10 +310,10 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
   var _ExtensionCodec, ExtensionCodec;
   var init_ExtensionCodec = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs"() {
       init_ExtData();
       init_timestamp();
       _ExtensionCodec = class _ExtensionCodec {
@@ -380,7 +380,7 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs
   function isArrayBufferLike(buffer) {
     return buffer instanceof ArrayBuffer || typeof SharedArrayBuffer !== "undefined" && buffer instanceof SharedArrayBuffer;
   }
@@ -396,14 +396,14 @@ var __RunePixel3DRuntime = (() => {
     }
   }
   var init_typedArrays = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs"() {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs
   var DEFAULT_MAX_DEPTH, DEFAULT_INITIAL_BUFFER_SIZE, Encoder;
   var init_Encoder = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs"() {
       init_utf8();
       init_ExtensionCodec();
       init_int();
@@ -812,30 +812,30 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/encode.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/encode.mjs
   function encode(value, options) {
     const encoder = new Encoder(options);
     return encoder.encodeSharedRef(value);
   }
   var init_encode = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/encode.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/encode.mjs"() {
       init_Encoder();
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
   function prettyByte(byte) {
     return `${byte < 0 ? "-" : ""}0x${Math.abs(byte).toString(16).padStart(2, "0")}`;
   }
   var init_prettyByte = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs"() {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs
   var DEFAULT_MAX_KEY_LENGTH, DEFAULT_MAX_LENGTH_PER_KEY, CachedKeyDecoder;
   var init_CachedKeyDecoder = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs"() {
       init_utf8();
       DEFAULT_MAX_KEY_LENGTH = 16;
       DEFAULT_MAX_LENGTH_PER_KEY = 16;
@@ -894,10 +894,10 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
   var STATE_ARRAY, STATE_MAP_KEY, STATE_MAP_VALUE, mapKeyConverter, StackPool, HEAD_BYTE_REQUIRED, EMPTY_VIEW, EMPTY_BYTES, MORE_DATA, sharedCachedKeyDecoder, Decoder;
   var init_Decoder = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs"() {
       init_prettyByte();
       init_ExtensionCodec();
       init_int();
@@ -1536,7 +1536,7 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/decode.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decode.mjs
   function decode(buffer, options) {
     const decoder = new Decoder(options);
     return decoder.decode(buffer);
@@ -1546,12 +1546,12 @@ var __RunePixel3DRuntime = (() => {
     return decoder.decodeMulti(buffer);
   }
   var init_decode = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/decode.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decode.mjs"() {
       init_Decoder();
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs
   function isAsyncIterable(object) {
     return object[Symbol.asyncIterator] != null;
   }
@@ -1577,11 +1577,11 @@ var __RunePixel3DRuntime = (() => {
     }
   }
   var init_stream = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs"() {
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs
   async function decodeAsync(streamLike, options) {
     const stream = ensureAsyncIterable(streamLike);
     const decoder = new Decoder(options);
@@ -1598,13 +1598,13 @@ var __RunePixel3DRuntime = (() => {
     return decoder.decodeStream(stream);
   }
   var init_decodeAsync = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs"() {
       init_Decoder();
       init_stream();
     }
   });
 
-  // node_modules/@msgpack/msgpack/dist.esm/index.mjs
+  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/index.mjs
   var dist_exports = {};
   __export(dist_exports, {
     DecodeError: () => DecodeError,
@@ -1626,7 +1626,7 @@ var __RunePixel3DRuntime = (() => {
     encodeTimestampExtension: () => encodeTimestampExtension
   });
   var init_dist = __esm({
-    "node_modules/@msgpack/msgpack/dist.esm/index.mjs"() {
+    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/index.mjs"() {
       init_encode();
       init_decode();
       init_decodeAsync();
@@ -6214,6 +6214,168 @@ var __RunePixel3DRuntime = (() => {
     return void 0;
   }
 
+  // src/studio_sequencer.ts
+  var TICKS_PER_WHOLE = 16;
+  var STUDIO_TICK_WIDTH = 30;
+  var STUDIO_STRIP_TICK_WIDTH = 48;
+  function studioBarTicks(timeSignature) {
+    return timeSignature === "3/4" ? 12 : 16;
+  }
+  function studioTokenTicks(token, barTicks) {
+    const denominator = Number(token.match(/:([\d.]+)$/)?.[1]) || 8;
+    return denominator === 1 ? barTicks : Math.max(1, Math.round(TICKS_PER_WHOLE / denominator));
+  }
+  function withTicks(token, ticks) {
+    return token.replace(/:[\d.]+$/, "") + ":" + TICKS_PER_WHOLE / ticks;
+  }
+  function isStudioRest(token) {
+    return /^(?:-|rest|r|_)(?::|$)/i.test(token);
+  }
+  function scoreMeasures(score, barTicks) {
+    const clean = score.replace(/^\s*#.*$/gm, "").replace(/\s+#.*$/gm, "");
+    const tokens2 = (part) => part.trim().match(/\[[^\]]*\](?::[^\s]+)?|\S+/g) ?? [];
+    if (clean.includes("|")) return clean.split("|").map(tokens2);
+    const measures = [[]];
+    let tick = 0;
+    for (const token of tokens2(clean)) {
+      if (tick >= barTicks) {
+        measures.push([]);
+        tick = 0;
+      }
+      measures[measures.length - 1].push(token);
+      tick += studioTokenTicks(token, barTicks);
+    }
+    return measures;
+  }
+  function measureSpans(tokens2, barTicks, clip) {
+    const spans = [];
+    let tick = 0;
+    for (const token of tokens2) {
+      if (clip && tick >= barTicks) break;
+      const duration = studioTokenTicks(token, barTicks);
+      const ticks = clip ? Math.min(duration, barTicks - tick) : duration;
+      if (!isStudioRest(token)) spans.push({ token, tick, ticks });
+      tick += ticks;
+    }
+    return spans;
+  }
+  function appendRests(tokens2, ticks) {
+    for (const length of [16, 8, 4, 2, 1]) {
+      while (ticks >= length) {
+        tokens2.push(withTicks("-", length));
+        ticks -= length;
+      }
+    }
+  }
+  function serializeMeasure(spans, barTicks, pad) {
+    const tokens2 = [];
+    let tick = 0;
+    for (const span of spans) {
+      appendRests(tokens2, span.tick - tick);
+      tokens2.push(withTicks(span.token.replace(/\s+/g, ""), span.ticks));
+      tick = span.tick + span.ticks;
+    }
+    if (pad) appendRests(tokens2, barTicks - tick);
+    return tokens2.join(" ");
+  }
+  function studioTrackPattern(score, barTicks, bars) {
+    const measures = scoreMeasures(score, barTicks);
+    return Array.from(
+      { length: bars },
+      (_, index2) => serializeMeasure(measureSpans(measures[index2] ?? [], barTicks, true), barTicks, true)
+    ).join(" | ");
+  }
+  function editStudioTrack(score, barTicks, bars, edit) {
+    const measures = scoreMeasures(score, barTicks);
+    while (measures.length < bars) measures.push([]);
+    if (edit.kind === "addBar" || edit.kind === "duplicateBar" || edit.kind === "deleteBar") {
+      if (edit.kind === "deleteBar") measures.splice(edit.bar - 1, 1);
+      else measures.splice(bars, 0, edit.kind === "duplicateBar" ? measures[edit.bar - 1] : []);
+      return { score: measures.map((tokens2) => tokens2.join(" ")).join(" | "), bar: 0, tick: -1 };
+    }
+    if (edit.kind === "delete" && edit.tick !== void 0) {
+      const spans = measureSpans(measures[edit.bar - 1] ?? [], barTicks, false);
+      const index2 = spans.findIndex((span) => span.tick === edit.tick);
+      if (index2 < 0) return;
+      spans.splice(index2, 1);
+      measures[edit.bar - 1] = [serializeMeasure(spans, barTicks, false)];
+      return { score: measures.map((tokens2) => tokens2.join(" ")).join(" | ").trim(), bar: edit.bar, tick: edit.tick };
+    }
+  }
+  function studioStretchTicks(ticks, delta, limit) {
+    const lengths = [.../* @__PURE__ */ new Set([1, 2, 4, 8, limit])].filter((length) => length > 0 && length <= limit).sort((a, b) => a - b);
+    if (delta > 0) return lengths.find((length) => length > ticks) ?? ticks;
+    return lengths.filter((length) => length < ticks).pop() ?? ticks;
+  }
+  var STUDIO_STEP_IDS_PER_VOICE = 1e3;
+  function tokenPitches(token) {
+    return token.replace(/:[\d.]+$/, "").replace(/[\[\]]/g, "").split(/[,+]/);
+  }
+  function studioScoreLanes(score, barTicks) {
+    return score.split("\n").flatMap((line) => {
+      if (!/[\[+,]/.test(line)) return [line];
+      const measures = scoreMeasures(line, barTicks).map((tokens2) => measureSpans(tokens2, barTicks, false));
+      const count = Math.max(1, ...measures.flatMap((spans) => spans.map((span) => tokenPitches(span.token).length)));
+      return Array.from({ length: count }, (_, index2) => measures.map((spans) => {
+        const part = [];
+        for (const span of spans) {
+          const pitch = tokenPitches(span.token)[index2];
+          if (pitch) part.push({ ...span, token: pitch });
+        }
+        return serializeMeasure(part, barTicks, false);
+      }).join(" | "));
+    });
+  }
+  function studioTrackPatterns(score, barTicks, bars) {
+    return studioScoreLanes(score, barTicks).map((lane) => studioTrackPattern(lane, barTicks, bars));
+  }
+  function pitchKey(pitch) {
+    const match = /^([A-G])([#b]?)(\d+)$/i.exec(pitch);
+    if (!match) return pitch.toLowerCase();
+    const semitones = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+    const accidental = match[2] === "#" ? 1 : match[2] ? -1 : 0;
+    return String(Number(match[3]) * 12 + semitones[match[1].toUpperCase()] + accidental);
+  }
+  function placeStudioNote(score, barTicks, bars, edit) {
+    const { bar, tick, source, resizeBy } = edit;
+    if (bar < 1 || bar > bars || tick < 0 || tick >= barTicks) return;
+    const lanes = studioScoreLanes(score, barTicks).map((lane2) => scoreMeasures(lane2, barTicks));
+    for (const lane2 of lanes) while (lane2.length < bars) lane2.push([]);
+    const sourceSpans = source ? measureSpans(lanes[source.lane]?.[source.bar - 1] ?? [], barTicks, false) : void 0;
+    const original = sourceSpans?.find((span) => span.tick === source?.tick);
+    if (source && !original) return;
+    const originalTicks = original && source ? Math.min(original.ticks, barTicks - source.tick) : 0;
+    const targetSpans = lanes.map((lane2, index2) => {
+      const spans = measureSpans(lane2[bar - 1] ?? [], barTicks, false);
+      return source?.bar === bar && source.lane === index2 ? spans.filter((span) => span.tick !== source.tick) : spans;
+    });
+    const samePitch = targetSpans.flat().filter((span) => pitchKey(tokenPitches(span.token)[0]) === pitchKey(edit.pitch));
+    const next2 = Math.min(barTicks, ...samePitch.filter((span) => span.tick > tick).map((span) => span.tick));
+    const requested = source ? originalTicks + (resizeBy ?? 0) : edit.ticks ?? 1;
+    const ticks = !source || resizeBy !== void 0 ? Math.max(1, Math.min(next2 - tick, requested)) : requested;
+    const overlaps = (span) => tick < span.tick + span.ticks && span.tick < tick + ticks;
+    if (tick + ticks > barTicks || samePitch.some(overlaps)) return { ticks, valid: false };
+    if (source && source.bar === bar && source.tick === tick && original && tokenPitches(original.token)[0] === edit.pitch && ticks === originalTicks) return { ticks, valid: true, lane: source.lane };
+    const preferred = source?.lane ?? 0;
+    let lane = targetSpans[preferred] && !targetSpans[preferred].some(overlaps) ? preferred : targetSpans.findIndex((spans) => !spans.some(overlaps));
+    if (lane === -1) {
+      lane = lanes.length;
+      lanes.push(Array.from({ length: bars }, () => []));
+      targetSpans.push([]);
+    }
+    if (source && sourceSpans) {
+      const remaining = sourceSpans.filter((span) => span.tick !== source.tick);
+      lanes[source.lane][source.bar - 1] = [serializeMeasure(remaining, barTicks, false)];
+    }
+    const target = targetSpans[lane];
+    target.push({ token: edit.pitch, tick, ticks });
+    target.sort((a, b) => a.tick - b.tick);
+    lanes[lane][bar - 1] = [serializeMeasure(target, barTicks, false)];
+    const joined = lanes.map((measures) => Array.from(measures, (tokens2) => tokens2?.join(" ") || "").join(" | ").trim());
+    while (joined.length > 1 && !/[^|\s]/.test(joined[joined.length - 1])) joined.pop();
+    return { ticks, valid: true, lane, score: joined.join("\n") };
+  }
+
   // src/audio_sync.ts
   var AudioSyncEngine = class {
     constructor() {
@@ -6228,9 +6390,11 @@ var __RunePixel3DRuntime = (() => {
       this.totalBars = 4;
       this.totalBeats = 16;
       this.musicStartTime = 0;
+      this.parkedBeat = 0;
       this.syncPage = true;
       this.getAudioCtx = null;
       this.lastActiveStepId = -1;
+      this.lastActiveStepIds = [];
       this.lastActiveBar = -1;
       this.channelStepIds = {};
     }
@@ -6268,8 +6432,10 @@ var __RunePixel3DRuntime = (() => {
       this.totalBars = params.totalBars;
       this.totalBeats = params.totalBeats;
       this.musicStartTime = params.startTime;
+      this.parkedBeat = params.startBeat ?? 0;
       this.scheduledNotes = [];
       this.lastActiveStepId = -1;
+      this.lastActiveStepIds = [];
       this.lastActiveBar = -1;
       this.channelStepIds = {};
       this.startLoop();
@@ -6277,9 +6443,12 @@ var __RunePixel3DRuntime = (() => {
     /**
      * Notify sync engine that playback has paused.
      */
-    onPause() {
+    onPause(beat = this.getSnapshot().currentBeat) {
+      this.parkedBeat = beat;
       this.isPaused = true;
       this.stopLoop();
+      const snapshot = this.getSnapshot();
+      this.updatePageState(snapshot.currentBeat, snapshot.currentBar, snapshot.progressPercent, snapshot.activeStepId);
       this.broadcastSnapshot();
     }
     /**
@@ -6289,9 +6458,11 @@ var __RunePixel3DRuntime = (() => {
       this.isPlaying = false;
       this.isPaused = false;
       this.activeTrackName = null;
+      this.parkedBeat = 0;
       this.scheduledNotes = [];
       this.channelStepIds = {};
       this.lastActiveStepId = -1;
+      this.lastActiveStepIds = [];
       this.lastActiveBar = -1;
       this.stopLoop();
       this.clearVisuals();
@@ -6305,9 +6476,9 @@ var __RunePixel3DRuntime = (() => {
       const outputLatency = ctx2 ? (ctx2.outputLatency || 0) + (ctx2.baseLatency || 0) : 0;
       const visualTime = ctx2 ? Math.max(0, ctx2.currentTime - outputLatency) : 0;
       const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-      const elapsedSec = this.isPlaying && !this.isPaused ? Math.max(0, visualTime - this.musicStartTime) : 0;
+      const beat = this.isPlaying && !this.isPaused && this.totalBeats > 0 ? Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat) % this.totalBeats : this.parkedBeat;
       const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
-      const currentBeat = this.totalBeats > 0 ? elapsedSec / secondsPerBeat % this.totalBeats : 0;
+      const currentBeat = beat;
       const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
       const progressPercent = this.totalBeats > 0 ? currentBeat / this.totalBeats * 100 : 0;
       return {
@@ -6355,20 +6526,23 @@ var __RunePixel3DRuntime = (() => {
       const visualTime = ctx2.currentTime - outputLatency;
       this.scheduledNotes = this.scheduledNotes.filter((n) => n.endTime >= visualTime - 0.5);
       const activeVoice = this.getActiveVoice();
-      let currentStepId = -1;
+      const currentStepIds = [];
       this.channelStepIds = {};
       for (const note of this.scheduledNotes) {
-        if (visualTime >= note.startTime && visualTime < note.endTime) {
-          this.channelStepIds[note.channel] = note.stepId;
-          if (note.channel === activeVoice) {
-            currentStepId = note.stepId;
-          }
+        if (visualTime < note.startTime || visualTime >= note.endTime) continue;
+        this.channelStepIds[note.channel] = note.stepId;
+        if (note.channel === activeVoice) currentStepIds.push(note.stepId);
+        else if (note.channel.startsWith(activeVoice + "_studio_")) {
+          const lane = Number(note.channel.slice(activeVoice.length + "_studio_".length));
+          if (Number.isInteger(lane) && lane > 0) currentStepIds.push(note.stepId + lane * STUDIO_STEP_IDS_PER_VOICE);
         }
       }
+      const currentStepId = currentStepIds[0] ?? -1;
+      const changedSteps = currentStepIds.length !== this.lastActiveStepIds.length || currentStepIds.some((id, index2) => id !== this.lastActiveStepIds[index2]);
       const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-      const elapsedSec = Math.max(0, visualTime - this.musicStartTime);
+      const elapsedBeat = Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat);
       const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
-      const currentBeat = this.totalBeats > 0 ? elapsedSec / secondsPerBeat % this.totalBeats : elapsedSec / secondsPerBeat;
+      const currentBeat = this.totalBeats > 0 ? elapsedBeat % this.totalBeats : elapsedBeat;
       const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
       const progressPercent = this.totalBeats > 0 ? currentBeat / this.totalBeats * 100 : 0;
       if (this.syncPage && typeof document !== "undefined" && document.documentElement) {
@@ -6379,25 +6553,30 @@ var __RunePixel3DRuntime = (() => {
         rootStyle.setProperty("--music-seq-left", `${Math.round(currentBeat * 120)}px`);
         rootStyle.setProperty("--music-playing", this.isPlaying ? "1" : "0");
       }
-      if (this.syncPage) this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId);
-      if (currentStepId !== this.lastActiveStepId || currentBar !== this.lastActiveBar) {
+      if (this.syncPage) this.updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepIds, changedSteps);
+      if (changedSteps || currentBar !== this.lastActiveBar) {
+        this.lastActiveStepIds = currentStepIds;
         this.lastActiveStepId = currentStepId;
         this.lastActiveBar = currentBar;
-        try {
-          const appState = this.syncPage ? window?.__RuneWeb?.ctx?.()?.app?.state : null;
-          if (appState) {
-            appState.playback_step_id = currentStepId;
-            appState.playback_bar = currentBar;
-            appState.playback_beat = currentBeat;
-            appState.playback_progress = progressPercent;
-            appState.playback_playing = this.isPlaying;
-          }
-        } catch (_) {
-        }
+        this.updatePageState(currentBeat, currentBar, progressPercent, currentStepId);
         this.broadcastSnapshot();
       }
     }
-    updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepId) {
+    updatePageState(beat, bar, progress, step) {
+      if (!this.syncPage || typeof window === "undefined") return;
+      try {
+        const state = window?.__RuneWeb?.ctx?.()?.app?.state;
+        if (state) {
+          state.playback_step_id = step;
+          state.playback_bar = bar;
+          state.playback_beat = beat;
+          state.playback_progress = progress;
+          state.playback_playing = this.isPlaying && !this.isPaused;
+        }
+      } catch (_) {
+      }
+    }
+    updateDeclarativeDom(currentBeat, progressPercent, currentBar, currentStepIds, changedSteps) {
       if (typeof document === "undefined") return;
       const progressPlayheads = document.querySelectorAll(
         '[data-sync-playhead="progress"], #ruler-playhead'
@@ -6409,15 +6588,24 @@ var __RunePixel3DRuntime = (() => {
       const beatPlayheads = document.querySelectorAll(
         '[data-sync-playhead="beat"], #seq-playhead'
       );
-      const pxLeft = Math.round(currentBeat * 120);
+      const beatPosition = (el) => {
+        const bar = Number(el.dataset.syncViewBar) || 0;
+        if (bar && currentBar !== bar) return;
+        const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
+        const beat = bar ? currentBeat - (bar - 1) * beatsPerBar : currentBeat;
+        return Math.round(beat * (Number(el.dataset.syncPixelsPerBeat) || 120));
+      };
       beatPlayheads.forEach((el) => {
-        el.style.left = `${pxLeft}px`;
-        el.style.display = "block";
+        const pxLeft = beatPosition(el.parentElement ?? el);
+        el.style.display = pxLeft === void 0 ? "none" : "block";
+        if (pxLeft !== void 0) el.style.left = `${pxLeft}px`;
       });
       const scrollContainers = document.querySelectorAll(
         '[data-sync-scroll="beat"], .matrix-timeline-scroll'
       );
       scrollContainers.forEach((container) => {
+        const pxLeft = beatPosition(container);
+        if (pxLeft === void 0) return;
         if (pxLeft > container.scrollLeft + container.clientWidth - 140) {
           container.scrollLeft = pxLeft - 60;
         } else if (pxLeft < container.scrollLeft) {
@@ -6436,19 +6624,17 @@ var __RunePixel3DRuntime = (() => {
           el.setAttribute("data-sync-playing-bar", "true");
         });
       }
-      if (currentStepId !== this.lastActiveStepId) {
+      if (changedSteps) {
         document.querySelectorAll(".playing-step-now, [data-sync-playing-step]").forEach((el) => {
           el.classList.remove("playing-step-now");
           el.removeAttribute("data-sync-playing-step");
         });
-        if (currentStepId >= 0) {
-          document.querySelectorAll(
-            `[data-sync-step="${currentStepId}"], .step-chip[data-step-idx="${currentStepId}"], .matrix-note-block[data-step-idx="${currentStepId}"]`
-          ).forEach((el) => {
-            el.classList.add("playing-step-now");
-            el.setAttribute("data-sync-playing-step", "true");
-          });
-        }
+      }
+      for (const id of currentStepIds) {
+        document.querySelectorAll(`[data-sync-step="${id}"], [data-step-idx="${id}"]`).forEach((el) => {
+          el.classList.add("playing-step-now");
+          el.setAttribute("data-sync-playing-step", "true");
+        });
       }
     }
     clearVisuals() {
@@ -6587,7 +6773,7 @@ var __RunePixel3DRuntime = (() => {
     const context = getAudioContext();
     const track = pendingMusic;
     pendingMusic = null;
-    if (track) playMusic(track);
+    if (track) playMusic(track.track, track.beat);
     return context;
   }
   function setAudioMuted(muted) {
@@ -6873,9 +7059,7 @@ var __RunePixel3DRuntime = (() => {
   var musicLoop = true;
   var isMusicPaused = false;
   var musicStartTime = 0;
-  var musicPauseTime = 0;
-  var musicPausedElapsed = 0;
-  var nextScheduleTime = 0;
+  var musicPausedBeat = 0;
   var tracksState = {};
   function parseTrackPattern(patternStr) {
     const events = [];
@@ -6932,9 +7116,9 @@ var __RunePixel3DRuntime = (() => {
     }
     return events;
   }
-  function playMusic(trackName) {
+  function playMusic(trackName, startBeat = 0) {
     if (!playbackUnlocked) {
-      pendingMusic = trackName;
+      pendingMusic = { track: trackName, beat: startBeat };
       return;
     }
     const ctx2 = getAudioContext();
@@ -6950,9 +7134,6 @@ var __RunePixel3DRuntime = (() => {
     musicLoop = def.loop_track !== false;
     musicVolume = def.volume !== void 0 ? def.volume : 0.2;
     isMusicPaused = false;
-    musicMasterGain = ctx2.createGain();
-    musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
-    musicMasterGain.connect(audioOutput(ctx2));
     tracksState = {};
     if (def.lead) {
       tracksState.lead = { events: parseTrackPattern(def.lead), index: 0, nextBeat: 0, instrument: "square" };
@@ -7001,30 +7182,39 @@ var __RunePixel3DRuntime = (() => {
     for (const [channel, instrument] of Object.entries(def.instruments ?? {})) {
       if (Object.prototype.hasOwnProperty.call(tracksState, channel)) tracksState[channel].instrument = instrument;
     }
-    const beatsPerBar = def.time_signature?.startsWith("3/") ? 3 : 4;
-    let maxTrackBeats = 0;
+    startMusicAtBeat(ctx2, key2, startBeat);
+  }
+  function musicTiming(track) {
+    const def = registeredMusic[track];
+    const timeSignature = def?.time_signature || "4/4";
+    const beatsPerBar = timeSignature.startsWith("3/") ? 3 : 4;
+    const maxTrackBeats = Math.max(0, ...Object.values(tracksState).map(
+      (state) => state.events.reduce((sum, event) => sum + event.beats, 0)
+    ));
+    const appBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
+    const totalBars = appBars > 0 ? appBars : def?.bars || (maxTrackBeats ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
+    return { timeSignature, totalBars, totalBeats: Math.max(maxTrackBeats, totalBars * beatsPerBar) };
+  }
+  function startMusicAtBeat(ctx2, trackName, startBeat) {
+    const timing = musicTiming(trackName);
+    const beat = Math.max(0, Math.min(timing.totalBeats - 1e-6, Number.isFinite(startBeat) ? startBeat : 0));
     for (const track of Object.values(tracksState)) {
-      if (track && track.events && track.events.length > 0) {
-        const trackBeats = track.events.reduce((sum, e) => sum + (e.beats || 0), 0);
-        if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
-      }
+      let onset = 0;
+      track.index = track.events.findIndex((event) => {
+        if (onset + event.beats > beat) return true;
+        onset += event.beats;
+        return false;
+      });
+      if (track.index < 0) track.index = track.events.length;
+      track.nextBeat = track.index === track.events.length ? onset : beat;
+      track.elapsedInNote = track.index === track.events.length ? 0 : beat - onset;
     }
-    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
-    const totalBars = appStateBars > 0 ? appStateBars : def.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
-    const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
-    musicStartTime = ctx2.currentTime + 0.05;
-    nextScheduleTime = musicStartTime;
-    musicPauseTime = 0;
-    musicPausedElapsed = 0;
+    musicMasterGain = ctx2.createGain();
+    musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
+    musicMasterGain.connect(audioOutput(ctx2));
+    musicStartTime = ctx2.currentTime + 0.05 - beat * 60 / musicTempoBpm;
     audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
-    audioSync.onPlay({
-      track: key2,
-      tempo: musicTempoBpm,
-      timeSignature: def.time_signature || "4/4",
-      totalBars,
-      totalBeats,
-      startTime: musicStartTime
-    });
+    audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
     scheduleMusicTicks();
     musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
   }
@@ -7036,91 +7226,41 @@ var __RunePixel3DRuntime = (() => {
       musicSchedulerTimer = null;
     }
     activeMusicTrackName = null;
-    musicPauseTime = 0;
-    musicPausedElapsed = 0;
+    musicPausedBeat = 0;
     isMusicPaused = false;
     tracksState = {};
-    if (musicMasterGain) {
-      try {
-        musicMasterGain.disconnect();
-      } catch {
-      }
-      musicMasterGain = null;
-    }
+    disconnectMusicGain();
+  }
+  function disconnectMusicGain() {
+    if (!musicMasterGain) return;
+    musicMasterGain.disconnect();
+    musicMasterGain = null;
   }
   function pauseMusic() {
-    const ctx2 = getAudioContext();
-    if (!ctx2 || isMusicPaused || !activeMusicTrackName) return;
+    if (isMusicPaused || !activeMusicTrackName) return;
+    musicPausedBeat = audioSync.getSnapshot().currentBeat;
     isMusicPaused = true;
     if (musicSchedulerTimer) {
       clearInterval(musicSchedulerTimer);
       musicSchedulerTimer = null;
     }
-    musicPauseTime = ctx2.currentTime;
-    musicPausedElapsed = Math.max(0, musicPauseTime - musicStartTime);
-    if (musicMasterGain) {
-      try {
-        musicMasterGain.gain.setValueAtTime(0, ctx2.currentTime);
-      } catch (_) {
-      }
-    }
-    audioSync.onPause();
+    disconnectMusicGain();
+    audioSync.onPause(musicPausedBeat);
   }
   function resumeMusic() {
     const ctx2 = getAudioContext();
     if (!ctx2 || !isMusicPaused || !activeMusicTrackName) return;
-    const pausedDuration = ctx2.currentTime - musicPauseTime;
-    musicStartTime += pausedDuration;
-    const secondsPerBeat = 60 / musicTempoBpm;
-    const currentBeat = musicPausedElapsed / secondsPerBeat;
-    for (const track of Object.values(tracksState)) {
-      if (!track || !track.events.length) continue;
-      let accum = 0;
-      track.index = 0;
-      track.nextBeat = 0;
-      for (let i = 0; i < track.events.length; i++) {
-        const ev = track.events[i];
-        if (accum + ev.beats > currentBeat) {
-          track.index = i;
-          track.nextBeat = accum;
-          break;
-        }
-        accum += ev.beats;
-      }
-    }
-    if (musicMasterGain) {
-      try {
-        musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
-      } catch (_) {
-      }
-    }
     isMusicPaused = false;
-    const def = registeredMusic[activeMusicTrackName];
-    const beatsPerBar = def?.time_signature?.startsWith("3/") ? 3 : 4;
-    let maxTrackBeats = 0;
-    for (const track of Object.values(tracksState)) {
-      if (track && track.events && track.events.length > 0) {
-        const trackBeats = track.events.reduce((sum, e) => sum + (e.beats || 0), 0);
-        if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
-      }
-    }
-    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
-    const totalBars = appStateBars > 0 ? appStateBars : def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
-    const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
-    audioSync.onPlay({
-      track: activeMusicTrackName,
-      tempo: musicTempoBpm,
-      timeSignature: def?.time_signature || "4/4",
-      totalBars,
-      totalBeats,
-      startTime: musicStartTime
-    });
-    scheduleMusicTicks();
-    musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
+    startMusicAtBeat(ctx2, activeMusicTrackName, musicPausedBeat);
   }
   function setMusicTempo(bpm) {
-    if (bpm > 20 && bpm < 400) {
-      musicTempoBpm = bpm;
+    if (!(bpm > 20 && bpm < 400) || bpm === musicTempoBpm) return;
+    const beat = audioSync.getSnapshot().currentBeat;
+    musicTempoBpm = bpm;
+    if (audioCtx && activeMusicTrackName && !isMusicPaused) {
+      if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
+      disconnectMusicGain();
+      startMusicAtBeat(audioCtx, activeMusicTrackName, beat);
     }
   }
   function setMusicVolume(vol) {
@@ -7129,23 +7269,19 @@ var __RunePixel3DRuntime = (() => {
       musicMasterGain.gain.setValueAtTime(musicVolume, audioCtx.currentTime);
     }
   }
+  function setTrackInstrument(channel, instrument, includeStudioLayers = false) {
+    for (const [name2, track] of Object.entries(tracksState)) {
+      if (name2 === channel || includeStudioLayers && name2.startsWith(channel + "_studio_")) {
+        track.instrument = instrument;
+      }
+    }
+  }
   function scheduleMusicTicks() {
     const ctx2 = getAudioContext();
     if (!ctx2 || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
     const secondsPerBeat = 60 / musicTempoBpm;
     const lookaheadWindow = ctx2.currentTime + 0.25;
-    const def = registeredMusic[activeMusicTrackName];
-    const beatsPerBar = def?.time_signature?.startsWith("3/") ? 3 : 4;
-    let maxTrackBeats = 0;
-    for (const t of Object.values(tracksState)) {
-      if (t && t.events && t.events.length > 0) {
-        const tb = t.events.reduce((sum, e) => sum + (e.beats || 0), 0);
-        if (tb > maxTrackBeats) maxTrackBeats = tb;
-      }
-    }
-    const appStateBars = syncPageAudio ? Number(window?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
-    const totalBars = appStateBars > 0 ? appStateBars : def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
-    const songTotalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
+    const { totalBeats: songTotalBeats } = musicTiming(activeMusicTrackName);
     let allFinished = true;
     for (const [trackKey, track] of Object.entries(tracksState)) {
       if (!track || !track.events.length || track.muted) continue;
@@ -7163,11 +7299,13 @@ var __RunePixel3DRuntime = (() => {
         }
         const event = track.events[track.index];
         const eventTime = musicStartTime + track.nextBeat * secondsPerBeat;
-        const eventDurationSec = event.beats * secondsPerBeat;
+        const remainingBeats = event.beats - (track.elapsedInNote ?? 0);
+        const eventDurationSec = remainingBeats * secondsPerBeat;
         if (!event.isRest && eventTime >= ctx2.currentTime - 0.05) {
           scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, musicMasterGain, track.instrument);
         }
-        track.nextBeat += event.beats;
+        track.nextBeat += remainingBeats;
+        track.elapsedInNote = 0;
         track.index += 1;
       }
       if (track.index < track.events.length || musicLoop) {
@@ -7177,6 +7315,13 @@ var __RunePixel3DRuntime = (() => {
     if (allFinished && !musicLoop && ctx2.currentTime >= musicStartTime + songTotalBeats * secondsPerBeat) {
       stopMusic();
     }
+  }
+  function auditionMusicNote(note, instrument) {
+    if (audioMuted) return;
+    const event = parseTrackPattern(note)[0];
+    if (!event || event.isRest) return;
+    const ctx2 = getAudioContext();
+    if (ctx2) playTrackNote(ctx2, "", event, ctx2.currentTime, 0.24, audioOutput(ctx2), instrument);
   }
   function scheduleTrackNote(ctx2, channel, event, time, durationSec, destination, instrumentOverride) {
     audioSync.enqueueNote({
@@ -7188,6 +7333,9 @@ var __RunePixel3DRuntime = (() => {
       beat: 0,
       bar: 1
     });
+    playTrackNote(ctx2, channel, event, time, durationSec, destination, instrumentOverride);
+  }
+  function playTrackNote(ctx2, channel, event, time, durationSec, destination, instrumentOverride) {
     const isDrumChannel = channel === "drums" || instrumentOverride === "drums" || event.isDrum;
     const pitchesToPlay = event.pitches && event.pitches.length > 0 ? event.pitches : [event.pitch];
     const chordGainMultiplier = 1 / Math.sqrt(Math.max(1, pitchesToPlay.length));
@@ -7554,7 +7702,10 @@ var __RunePixel3DRuntime = (() => {
           const bass = String(evaluateExpression(parts[3], buildScope(locals, trimmed)));
           const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals, trimmed))) : "";
           const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals, trimmed))) : "4/4";
-          const songBars = Number(ctx().app?.state?.bars) || 4;
+          const state = ctx().app.state;
+          const songBars = Number(state.bars) || 4;
+          const locked = state.studio_fixed_bars === true;
+          const studioParts = locked ? studioSongParts(state, studioBarTicks(timeSig), songBars) : void 0;
           registerMusic({
             [name2]: {
               music_type: "8bit",
@@ -7563,9 +7714,13 @@ var __RunePixel3DRuntime = (() => {
               bars: songBars,
               loop_track: true,
               volume: 0.2,
-              lead,
-              bass,
-              drums
+              lead: studioParts?.lead[0] ?? lead,
+              bass: studioParts?.bass[0] ?? bass,
+              drums: studioParts?.drums[0] ?? drums,
+              ...studioParts ? {
+                tracks: { chords: studioParts.chords[0], ...studioParts.layers },
+                instruments: studioParts.instruments
+              } : {}
             }
           });
         }
@@ -7587,29 +7742,29 @@ var __RunePixel3DRuntime = (() => {
       }
       if (trimmed === "music.play" || trimmed === "music.play()" || trimmed.startsWith("music.play(") || trimmed.startsWith("music.play ") || trimmed.startsWith("play_music(") || trimmed.startsWith("music ") && !trimmed.startsWith("music.tempo") && !trimmed.startsWith("music.volume")) {
         let trackName = "";
-        if (trimmed.startsWith("music.play(") && trimmed.endsWith(")")) {
-          trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals, trimmed)) || "");
-        } else if (trimmed.startsWith("play_music(") && trimmed.endsWith(")")) {
-          trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals, trimmed)) || "");
+        let startBeat;
+        if ((trimmed.startsWith("music.play(") || trimmed.startsWith("play_music(")) && trimmed.endsWith(")")) {
+          const [name2, beat] = splitTopLevel(trimmed.slice(trimmed.indexOf("(") + 1, -1), ",");
+          const scope = buildScope(locals, trimmed);
+          trackName = String(evaluateExpression(name2, scope) || "");
+          if (beat !== void 0) startBeat = Number(evaluateExpression(beat, scope));
         } else if (trimmed.startsWith("music.play ")) {
           trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || "");
         } else if (trimmed.startsWith("music ")) {
           trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals, trimmed)) || "");
         }
         trackName = normalizeLiteral(trackName);
-        if (trackName) playMusic(trackName);
+        if (trackName) {
+          if (startBeat === void 0) playMusic(trackName);
+          else playMusic(trackName, startBeat);
+        }
         return true;
       }
     }
     if (trimmed === "music.sync_steps" || trimmed === "music.sync_steps()") {
       const state = ctx().app?.state;
       if (state) {
-        const voice = String(state.active_voice || "lead");
-        const score = String(state[voice + "_track"] || "");
-        const selectedId = Number(state.selected_step_id ?? -1);
-        const timeSig = String(state.time_signature || "4/4");
-        const selectedBar = Number(state.selected_bar ?? 0);
-        state.active_steps = parseTrackToSteps(score, selectedId, timeSig, selectedBar);
+        syncSequencerState(state);
         if (typeof ctx().app.render === "function") {
           ctx().app.render();
         }
@@ -7623,14 +7778,13 @@ var __RunePixel3DRuntime = (() => {
       if (state) {
         state.selected_step_id = id;
         const voice = String(state.active_voice || "lead");
-        const score = String(state[voice + "_track"] || "");
-        const timeSig = String(state.time_signature || "4/4");
-        const selectedBar = Number(state.selected_bar ?? 0);
-        state.active_steps = parseTrackToSteps(score, id, timeSig, selectedBar);
+        syncSequencerState(state);
         const step = state.active_steps.find((s) => s.id === id);
         if (step && !step.is_bar && !step.is_rest) {
-          state.selected_note = step.note;
-          if (step.is_chord && step.chord_notes && step.chord_notes.length > 0) {
+          state.selected_note = state.studio_fixed_bars === true ? step.chord_notes[0] : step.note;
+          if (state.studio_fixed_bars === true) {
+            auditionStudioNote(state, voice, String(state.selected_note));
+          } else if (step.is_chord && step.chord_notes && step.chord_notes.length > 0) {
             for (const cn of step.chord_notes) {
               if (voice === "drums" || ["kick", "snare", "hihat"].includes(cn)) {
                 playSound("drum_" + cn);
@@ -7653,6 +7807,16 @@ var __RunePixel3DRuntime = (() => {
         if (typeof ctx().app.render === "function") {
           ctx().app.render();
         }
+      }
+      return true;
+    }
+    if (trimmed.startsWith("music.edit_steps(") && trimmed.endsWith(")")) {
+      const state = ctx().app.state;
+      if (state.studio_fixed_bars === true) {
+        const scope = buildScope(locals, trimmed);
+        const args = splitTopLevel(trimmed.slice("music.edit_steps(".length, -1), ",");
+        const [kind, first, second] = args.map((arg) => evaluateExpression(arg, scope));
+        editStudioSequence(state, String(kind), first, second);
       }
       return true;
     }
@@ -8298,7 +8462,7 @@ var __RunePixel3DRuntime = (() => {
     }
     return 12;
   }
-  function parseTrackToSteps(scoreStr, selectedIdx, timeSignature = "4/4", selectedBar = 0) {
+  function parseTrackToSteps(scoreStr, selectedIdx, timeSignature = "4/4", selectedBar = 0, fixedBars = false) {
     if (!scoreStr) return [];
     const tokens2 = String(scoreStr).trim().split(/\s+/).filter(Boolean);
     const steps = [];
@@ -8377,7 +8541,10 @@ var __RunePixel3DRuntime = (() => {
         beats = 2;
       } else if (dur === ":1") {
         lenLabel = "1/1";
-        beats = beatsPerBar;
+        beats = fixedBars ? 4 : beatsPerBar;
+      } else if (fixedBars) {
+        beats = 4 / Number(dur.slice(1));
+        lenLabel = Math.round(beats * 4) + "/16";
       }
       let pitchClass = "step-note";
       if (isRest) pitchClass = "step-rest";
@@ -8397,7 +8564,7 @@ var __RunePixel3DRuntime = (() => {
       const totalLeft = Math.round(totalBeatOffset * 120);
       const barLeft = Math.round(currentBeatInBar * 120);
       const matrixLeft = selectedBar > 0 ? barLeft : totalLeft;
-      const matrixWidth = Math.max(34, Math.round(beats * 120) - 4);
+      const matrixWidth = Math.max(fixedBars ? 1 : 34, Math.round(beats * 120) - 4);
       const stripWidth = Math.max(54, Math.round(beats * 140));
       const displayNote = isRest ? "REST" : isChord ? pitch.startsWith("[") ? pitch : `[${pitch}]` : pitch;
       steps.push({
@@ -8435,6 +8602,182 @@ var __RunePixel3DRuntime = (() => {
       }
     }
     return steps;
+  }
+  var STUDIO_VOICES = ["lead", "bass", "chords", "drums"];
+  var STUDIO_PITCHES = Object.keys(PITCH_ROWS).filter((pitch) => /^[A-G]#?\d$/.test(pitch)).sort((a, b) => PITCH_ROWS[a] - PITCH_ROWS[b]);
+  var DRUM_PITCHES = ["hihat", "snare", "kick"];
+  function studioSongParts(state, barTicks, bars) {
+    const voicePatterns = (voice) => studioTrackPatterns(String(state[voice + "_track"] || ""), barTicks, bars);
+    const lead = voicePatterns("lead");
+    const bass = voicePatterns("bass");
+    const chords = voicePatterns("chords");
+    const drums = voicePatterns("drums");
+    const layers = {};
+    const instruments = {};
+    for (const [voice, patterns] of Object.entries({ lead, bass, chords, drums })) {
+      const instrument = String(state[voice + "_instrument"]);
+      instruments[voice] = instrument;
+      for (let lane = 1; lane < patterns.length; lane++) {
+        const name2 = voice + "_studio_" + lane;
+        layers[name2] = patterns[lane];
+        instruments[name2] = instrument;
+      }
+    }
+    return { lead, bass, chords, drums, layers, instruments };
+  }
+  function syncSequencerState(state) {
+    const voice = String(state.active_voice || "lead");
+    const timeSignature = String(state.time_signature || "4/4");
+    const selectedBar = Number(state.selected_bar ?? 0);
+    const selectedId = Number(state.selected_step_id ?? -1);
+    const score = String(state[voice + "_track"] || "");
+    if (state.studio_fixed_bars !== true) {
+      state.active_steps = parseTrackToSteps(score, selectedId, timeSignature, selectedBar);
+      return;
+    }
+    state.active_instrument = state[voice + "_instrument"];
+    const barTicks = studioBarTicks(timeSignature);
+    const bars = Number(state.bars) || 1;
+    const parts = studioSongParts(state, barTicks, bars);
+    const patterns = parts[voice] ?? parts.lead;
+    const steps = patterns.flatMap(
+      (pattern, lane) => parseTrackToSteps(pattern, selectedId - lane * STUDIO_STEP_IDS_PER_VOICE, timeSignature, selectedBar, true).map((step) => ({ ...step, id: Number(step.id) + lane * STUDIO_STEP_IDS_PER_VOICE, lane }))
+    );
+    state.studio_timeline_width = (selectedBar ? 1 : bars) * barTicks * STUDIO_TICK_WIDTH;
+    const stripTickWidth = STUDIO_STRIP_TICK_WIDTH;
+    state.studio_strip_width = (selectedBar ? 1 : bars) * barTicks * stripTickWidth;
+    state.studio_strip_height = patterns.length * 88 - 4;
+    for (const step of steps) {
+      step.strip_top = Number(step.lane) * 88;
+      step.strip_left = Math.round(Number(step.matrix_left) / STUDIO_TICK_WIDTH) * stripTickWidth;
+      if (step.is_bar) {
+        step.bar_num = Number(step.bar_num) + 1;
+        step.len_label = "BAR " + step.bar_num;
+        continue;
+      }
+      const tick = Math.round(Number(step.matrix_bar_left) / STUDIO_TICK_WIDTH);
+      const ticks = Math.round(Number(step.beats) * 4);
+      step.step_num = tick + 1;
+      step.strip_width = ticks * stripTickWidth - 4;
+      if (!step.is_rest) {
+        const limit = studioNoteLimit(steps, step, barTicks);
+        step.can_stretch = studioStretchTicks(ticks, 1, limit) > ticks;
+        step.can_shorten = ticks > 1;
+      }
+    }
+    state.active_steps = steps;
+    for (const channel of STUDIO_VOICES) {
+      state[channel + "_export"] = parts[channel][0];
+    }
+    state.layer_exports = Object.entries(parts.layers).map(([name2, pattern]) => "\n" + name2 + ":\n    " + pattern + "\n").join("");
+    state.export_instruments_body = JSON.stringify(parts.instruments).slice(1, -1);
+  }
+  function studioNoteLimit(steps, step, barTicks) {
+    const start = Number(step.matrix_bar_left) / STUDIO_TICK_WIDTH;
+    const next2 = steps.filter((other) => !other.is_bar && !other.is_rest && other.bar_num === step.bar_num && other.pitch_row === step.pitch_row).map((other) => Number(other.matrix_bar_left) / STUDIO_TICK_WIDTH).filter((tick) => tick > start);
+    return Math.min(barTicks, ...next2) - start;
+  }
+  function auditionStudioNote(state, voice, note) {
+    auditionMusicNote(note, String(state[voice + "_instrument"]));
+  }
+  function editStudioSequence(state, kind, first, second) {
+    const voice = String(state.active_voice || "lead");
+    if (kind === "audition") {
+      const note2 = String(first);
+      state.selected_note = note2;
+      auditionStudioNote(state, voice, note2);
+      return;
+    }
+    if (kind === "instrument") {
+      if (voice === "drums") return;
+      const instrument = String(first);
+      state[voice + "_instrument"] = instrument;
+      setTrackInstrument(voice, instrument, true);
+      syncSequencerState(state);
+      state.status_message = "Set " + voice + " instrument sound to " + instrument;
+      return;
+    }
+    const barTicks = studioBarTicks(String(state.time_signature));
+    const bars = Number(state.bars) || 1;
+    const selectedBar = Number(state.selected_bar) || 0;
+    const trackKey = voice + "_track";
+    const score = String(state[trackKey] || "");
+    let bar = selectedBar;
+    let tick = -1;
+    let note = "";
+    let lane = 0;
+    if (kind === "addBar" || kind === "duplicateBar" || kind === "deleteBar") {
+      if (kind === "deleteBar" ? bars <= 1 : bars >= 8) return;
+      for (const channel of STUDIO_VOICES) {
+        const key2 = channel + "_track";
+        state[key2] = studioScoreLanes(String(state[key2] || ""), barTicks).map(
+          (voiceScore) => editStudioTrack(voiceScore, barTicks, bars, { kind, bar: selectedBar || bars })?.score ?? voiceScore
+        ).join("\n");
+      }
+      state.bars = bars + (kind === "deleteBar" ? -1 : 1);
+      state.selected_bar = kind === "deleteBar" ? Math.min(selectedBar || bars, bars - 1) : state.bars;
+      state.selected_step_id = -1;
+      syncSequencerState(state);
+      state.status_message = kind === "deleteBar" ? "Deleted bar " + (selectedBar || bars) : "Added bar " + state.bars;
+      return;
+    }
+    if (kind === "matrix") {
+      const column = Math.floor(Number(first) / STUDIO_TICK_WIDTH);
+      const pitches = voice === "drums" ? DRUM_PITCHES : STUDIO_PITCHES;
+      note = pitches[Math.floor(Number(second) / (voice === "drums" ? 48 : 28))];
+      bar = selectedBar || Math.floor(column / barTicks) + 1;
+      tick = column % barTicks;
+      if (!note) return;
+      const ticks = studioTokenTicks(note + String(state.active_duration || ":8"), barTicks);
+      const result = placeStudioNote(score, barTicks, bars, { bar, tick, pitch: note, ticks });
+      if (!result?.score) return;
+      state[trackKey] = result.score;
+      selectStudioPosition(state, bar, tick, result.lane ?? 0);
+    } else {
+      const lanes = studioScoreLanes(score, barTicks);
+      if (kind === "delete" || kind === "stretch") {
+        const steps = state.active_steps;
+        const step = steps.find((step2) => step2.id === Number(first) && !step2.is_rest && !step2.is_bar);
+        if (!step) return;
+        bar = Number(step.bar_num);
+        tick = Math.round(Number(step.matrix_bar_left) / STUDIO_TICK_WIDTH);
+        lane = Number(step.lane);
+        if (kind === "stretch") {
+          const ticks = Math.round(Number(step.beats) * 4);
+          const targetTicks = studioStretchTicks(ticks, Number(second), studioNoteLimit(steps, step, barTicks));
+          const pitch = step.chord_notes[0];
+          const result = placeStudioNote(score, barTicks, bars, {
+            bar,
+            tick,
+            pitch,
+            source: { bar, tick, lane },
+            resizeBy: targetTicks - ticks
+          });
+          if (!result?.score) return;
+          state[trackKey] = result.score;
+          selectStudioPosition(state, bar, tick, result.lane ?? 0);
+        } else {
+          const result = editStudioTrack(lanes[lane], barTicks, bars, { kind, bar, tick });
+          if (!result) return;
+          lanes[lane] = result.score;
+          while (lanes.length > 1 && !/[^|\s]/.test(lanes[lanes.length - 1])) lanes.pop();
+          state[trackKey] = lanes.join("\n");
+          selectStudioPosition(state, bar, tick, lane, false);
+        }
+      } else return;
+    }
+    if (note) {
+      state.selected_note = note;
+      auditionStudioNote(state, voice, note);
+      state.status_message = "Placed " + note + " in bar " + bar;
+    } else {
+      state.status_message = (kind === "delete" ? "Removed note from bar " : "Resized note in bar ") + bar;
+    }
+  }
+  function selectStudioPosition(state, bar, tick, lane, select = true) {
+    syncSequencerState(state);
+    const selected = select ? state.active_steps.find((step) => !step.is_rest && !step.is_bar && step.bar_num === bar && step.lane === lane && step.matrix_bar_left === tick * STUDIO_TICK_WIDTH) : void 0;
+    state.selected_step_id = selected?.id ?? -1;
   }
 
   // src/logic.ts

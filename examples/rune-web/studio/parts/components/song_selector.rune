@@ -1,14 +1,23 @@
 @Component/SongSelector
-props: [selected_song?]
 view:
-    div .song-selector:
-        button .song-tab {.active when selected_song == 'vectraiders'} click="selectSong('vectraiders')":
-            "👾 VectRaiders (144 BPM)"
-        button .song-tab {.active when selected_song == 'vectworms'} click="selectSong('vectworms')":
-            "🐛 VectWorms (136 BPM)"
-        button .song-tab {.active when selected_song == 'cyber_run'} click="selectSong('cyber_run')":
-            "⚡ Cyber Run (152 BPM)"
-        button .song-tab {.active when selected_song == 'moonlight'} click="selectSong('moonlight')":
-            "🌙 Moonlight (108 BPM • 3/4)"
-        button .song-tab {.active when selected_song == 'victory'} click="selectSong('victory')":
-            "🏆 Victory (140 BPM)"
+    section .song-selector aria-label="Song":
+        label .song-title-label for=studio-song-title:
+            span .ctrl-label "Song title"
+            input #studio-song-title .song-title-input type=text aria-label="Song title" maxlength="80" value="{song_title}" data-studio-song-title="{selected_song}" on_input="renameSong(this.value)"
+        div .song-actions:
+            button .btn-storage .btn-new-song click="newSong" "New Song"
+            select .song-open aria-label="Open song" change="openSong(this.value)":
+                option value="" selected=true disabled=true "Open…"
+                option value=reload_saved "Reload current saved song"
+                if saved_songs.length > 0:
+                    optgroup label="Saved songs":
+                        for song in saved_songs:
+                            option value="{song.key}" "{song.title}"
+                optgroup label="Presets":
+                    option value=vectraiders "VectRaiders"
+                    option value=vectworms "VectWorms"
+                    option value=cyber_run "Cyber Run"
+                    option value=moonlight "Moonlight Dungeon"
+                    option value=victory "Victory Fanfare"
+            button .btn-storage click="saveToStorage" "Save"
+            button .btn-storage click="exportRune" "Export .rune"

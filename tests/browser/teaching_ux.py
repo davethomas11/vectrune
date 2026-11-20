@@ -274,7 +274,7 @@ def check(base, directory, screenshots):
         studio.get_by_role('button', name='+4', exact=True).click()
         studio.locator('[data-on-click="saveToStorage"]').click()
         studio.get_by_role('button', name='+4', exact=True).click()
-        studio.locator('[data-on-click="loadFromStorage"]').click()
+        studio.get_by_label("Open song").select_option("reload_saved")
         assert studio.locator('body').evaluate('() => runeWebApp.state.tempo') == tempo + 4
         with page.expect_download() as exported:
             studio.locator('[data-on-click="exportRune"]').click()

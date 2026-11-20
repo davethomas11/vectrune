@@ -19,19 +19,12 @@ action toggleTrackMute(voice):
         drums_muted = !drums_muted
 
 action playTrack:
-    if is_paused:
-        music.resume
-        is_playing = true
-        is_paused = false
-        status_message = "Resumed: " + song_title
-        flash_type = "success"
-    if !is_paused:
-        music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
-        music.play(selected_song)
-        is_playing = true
-        is_paused = false
-        status_message = "Playing: " + song_title + " (" + tempo + " BPM • " + time_signature + ")"
-        flash_type = "success"
+    music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
+    music.play(selected_song, playback_beat)
+    is_playing = true
+    is_paused = false
+    status_message = "Playing: " + song_title + " (" + tempo + " BPM • " + time_signature + ")"
+    flash_type = "success"
 
 action pauseTrack:
     music.pause
@@ -40,15 +33,11 @@ action pauseTrack:
     status_message = "Paused: " + song_title
     flash_type = "info"
 
-action resumeTrack:
-    music.resume
-    is_playing = true
-    is_paused = false
-    status_message = "Resumed: " + song_title
-    flash_type = "success"
-
 action stopTrack:
     music.stop
+    playback_beat = 0
+    playback_bar = 1
+    playback_progress = 0
     is_playing = false
     is_paused = false
     status_message = "Stopped playback"

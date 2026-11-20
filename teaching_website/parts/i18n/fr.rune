@@ -454,9 +454,9 @@ Studio {
     feature_export_title = "Exporter votre morceau"
     feature_export_desc = "EXPORT .RUNE télécharge le code @Music du morceau, distinct de l’application Studio complète et de ses fichiers sources."
     instructions_title = "Comment utiliser"
-    instructions_songs = "Choisissez un morceau, utilisez PLAY pour l’écouter et STOP pour terminer. Sélectionnez une voix et modifiez les notes dans le piano roll ou la vue STRIP."
-    instructions_storage = "SAVE enregistre l’arrangement dans le navigateur ; LOAD le restaure. EXPORT .RUNE télécharge le code du morceau. Conservez cet export avant de quitter ou recharger l’aperçu."
-    try_it = "Choisissez un morceau et appuyez sur PLAY, puis STOP. Sélectionnez une voix et cliquez sur une note pour la modifier."
+    instructions_songs = "Choisissez un morceau et appuyez sur Espace pour le lire ou le mettre en pause. Utilisez les flèches du transport pour changer de mesure. Modifiez les notes dans le piano roll et suivez la lecture dans la vue STRIP."
+    instructions_storage = "Choisissez New Song pour créer un arrangement vide, nommez-le et utilisez Save. Open song affiche les arrangements enregistrés et les préréglages. Export .rune télécharge une copie."
+    try_it = "Appuyez sur Espace pour lire ou mettre en pause. Faites glisser la tête de lecture à l’arrêt et superposez des notes dans une colonne pour former un accord."
 }
 
 Reference {

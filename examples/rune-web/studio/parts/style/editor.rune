@@ -1,52 +1,65 @@
 @Style/studio
 
 rules:
-    .note-editor-panel:
+    .studio-tracks, .note-editor-panel:
         background = {rack_bg}
-        border = 2px solid {neon_cyan}
-        box-shadow = 0 0 20px rgba(0, 229, 255, 0.2)
-        border-radius = 12px
-        padding = 1.25rem
-        margin-bottom = 1.25rem
+        border = 1px solid {grid_border}
+        border-radius = 9px
+        min-width = 0
+        padding = 0.7rem
+
+    .tracks-heading:
+        margin = 0 0 0.55rem
+        color = {text_muted}
+        font-size = 0.76rem
+        font-weight = 650
+
+    .voice-tabs:
+        display = grid
+        gap = 0.3rem
+
+    .voice-tab:
+        display = grid
+        gap = 0.1rem
+        width = 100%
+        background = {card_bg}
+        color = #e7f3ff
+        border = 1px solid {grid_border}
+        border-radius = 6px
+        padding = 0.45rem 0.55rem
+        text-align = left
+        cursor = pointer
+        font-family = inherit
+        touch-action = manipulation
+
+    .voice-tab.active:
+        border-color = {neon_cyan}
+        background = #173546
+
+    .voice-tab:hover:
+        border-color = {neon_cyan}
+
+    .voice-name:
+        font-size = 0.82rem
+        font-weight = 700
+
+    .voice-sound:
+        color = {text_muted}
+        font-size = 0.68rem
+        text-transform = capitalize
 
     .editor-header:
         display = flex
-        flex-direction = column
-        gap = 0.85rem
-        margin-bottom = 1rem
-        border-bottom = 1px solid {grid_border}
-        padding-bottom = 1rem
+        flex-wrap = wrap
+        align-items = center
+        gap = 0.4rem 0.8rem
+        margin-bottom = 0.5rem
 
     .editor-label:
         font-size = 0.75rem
         color = {text_muted}
-        font-weight = bold
-        letter-spacing = 1px
+        font-weight = 650
         align-self = center
-
-    .voice-tabs:
-        display = flex
-        gap = 0.5rem
-        flex-wrap = wrap
-
-    .voice-tab:
-        background = {card_bg}
-        color = {text_muted}
-        border = 1px solid {grid_border}
-        padding = 0.5rem 0.9rem
-        border-radius = 6px
-        cursor = pointer
-        font-family = inherit
-        font-weight = bold
-        font-size = 0.85rem
-        transition = all 0.15s ease
-        touch-action = manipulation
-
-    .voice-tab.active:
-        background = {neon_cyan}
-        color = #000000
-        border-color = {neon_cyan}
-        box-shadow = 0 0 12px {neon_cyan}
 
     .instrument-picker:
         display = flex
@@ -75,23 +88,6 @@ rules:
         color = #000000
         border-color = {neon_cyan}
         box-shadow = 0 0 12px {neon_cyan}
-
-    .btn-chord-toggle:
-        background = {card_bg}
-        color = {neon_amber}
-        border = 1px solid {neon_amber}
-        padding = 0.4rem 0.75rem
-        border-radius = 6px
-        cursor = pointer
-        font-size = 0.75rem
-        font-weight = bold
-        transition = all 0.15s ease
-        touch-action = manipulation
-
-    .btn-chord-toggle.chord-active:
-        background = {neon_amber}
-        color = #000000
-        box-shadow = 0 0 14px {neon_amber}
 
     .duration-picker:
         display = flex
@@ -193,6 +189,7 @@ rules:
         font-size = 1rem
 
     .step-title-text:
+        margin = 0
         font-size = 0.8rem
         font-weight = bold
         letter-spacing = 1px
@@ -205,76 +202,43 @@ rules:
 
     .step-strip-scroll:
         overflow-x = auto
-        padding = 0.4rem 0.2rem
+        padding = 0.4rem 0
         -webkit-overflow-scrolling = touch
         position = relative
 
     .step-strip:
-        display = flex
-        gap = 6px
-        align-items = stretch
-        min-width = min-content
+        position = relative
 
-    .step-card-bar:
-        display = flex
-        flex-direction = column
-        align-items = center
-        justify-content = center
-        background = rgba(255, 170, 0, 0.12)
-        border-left = 3px solid {neon_amber}
-        border-right = 1px solid rgba(255, 255, 255, 0.08)
-        padding = 0.4rem 0.5rem
-        border-radius = 6px
-        min-width = 54px
-        cursor = pointer
-        transition = all 0.15s ease
-
-    .step-card-bar:hover:
-        background = rgba(255, 170, 0, 0.22)
-        border-left-color = {neon_lime}
-
-    .step-bar-label:
-        font-size = 0.7rem
-        font-weight = 900
-        color = {neon_amber}
-        letter-spacing = 1px
-
-    .step-bar-hint:
-        font-size = 0.55rem
-        color = {text_muted}
-        margin-top = 2px
+    .step-bar-divider:
+        position = absolute
+        top = 0
+        bottom = 0
+        margin-left = -3px
+        border-left = 2px solid {neon_amber}
+        pointer-events = none
 
     .step-chip:
         background = {card_bg}
         border = 1px solid {grid_border}
         border-radius = 8px
-        padding = 0.4rem 0.5rem
+        padding = 0.35rem 0.15rem
+        box-sizing = border-box
+        height = 84px
         display = flex
         flex-direction = column
         align-items = center
+        justify-content = center
         gap = 0.15rem
-        cursor = pointer
         font-family = inherit
-        min-width = 52px
         transition = all 0.12s ease
-        touch-action = manipulation
-        position = relative
-
-    .step-chip:hover:
-        border-color = {neon_cyan}
-        transform = translateY(-2px)
-
-    .step-chip.selected-step:
-        border-color = {neon_lime} !important
-        background = rgba(57, 255, 20, 0.18) !important
-        box-shadow = 0 0 16px rgba(57, 255, 20, 0.4) !important
-        transform = scale(1.06)
+        position = absolute
+        top = 0
+        user-select = none
 
     .step-chip.playing-step-now:
         border-color = {neon_cyan} !important
         background = rgba(0, 229, 255, 0.35) !important
         box-shadow = 0 0 18px {neon_cyan} !important
-        transform = scale(1.08) !important
         z-index = 15 !important
 
     .step-num:
@@ -289,29 +253,6 @@ rules:
     .step-len:
         font-size = 0.65rem
         color = {neon_cyan}
-
-    .step-delete-btn:
-        position = absolute
-        top = -6px
-        right = -6px
-        width = 20px
-        height = 20px
-        border-radius = 50%
-        background = {neon_pink}
-        color = #ffffff
-        border = 1px solid rgba(255, 255, 255, 0.4)
-        padding = 0
-        font-size = 13px
-        display = flex
-        align-items = center
-        justify-content = center
-        line-height = 1
-        cursor = pointer
-        z-index = 20
-        box-shadow = 0 0 8px rgba(255, 42, 133, 0.6)
-
-    .step-delete-btn:hover:
-        transform = scale(1.2)
 
     .chip-step-high .step-pitch:
         color = {neon_cyan}
@@ -342,30 +283,20 @@ rules:
         border-color = {neon_amber}
         background = rgba(255, 170, 0, 0.15)
 
-    .badge-poly:
-        position = absolute
-        bottom = -5px
-        right = 4px
-        font-size = 8px
-        font-weight = 900
-        background = {neon_amber}
-        color = #000000
-        padding = 1px 4px
-        border-radius = 4px
-        letter-spacing = 0.5px
 
     .timeline-ruler:
         background = #080c1a
         border = 1px solid {grid_border}
         border-radius = 8px
         padding = 0.6rem 0.8rem
-        margin = 0.75rem 0
+        margin = 0.45rem 0
         display = flex
         flex-direction = column
         gap = 0.35rem
 
     .ruler-header-row:
         display = flex
+        gap = 0.5rem
         justify-content = space-between
         align-items = center
 
@@ -376,12 +307,31 @@ rules:
         letter-spacing = 1px
 
     .ruler-hint:
+        margin-left = auto
         font-size = 0.65rem
         color = {text_muted}
 
     .ruler-track:
         position = relative
         width = 100%
+
+    .ruler-scrub:
+        height = 22px
+        border-bottom = 1px solid {grid_border}
+        touch-action = none
+
+    .ruler-scrub.can-seek:
+        cursor = ew-resize
+
+    .ruler-playhead::before:
+        content = ""
+        position = absolute
+        left = -4px
+        top = 2px
+        width = 11px
+        height = 11px
+        background = {neon_cyan}
+        border-radius = 3px
 
     .ruler-playhead:
         position = absolute
@@ -397,34 +347,26 @@ rules:
 
     .ruler-bars:
         display = flex
-        gap = 0.5rem
+        gap = 0.35rem
         width = 100%
 
-    .ruler-bar-item:
+    .ruler-bars .ruler-bar-item:
         flex = 1
-        min-width = 50px
-        background = {card_bg}
-        border = 1px solid {grid_border}
-        border-radius = 6px
-        padding = 0.4rem 0.5rem
-        display = flex
-        flex-direction = column
-        align-items = center
-        gap = 2px
-        cursor = pointer
-        transition = all 0.15s ease
-        touch-action = manipulation
+        min-width = 0
+        padding = 0.35rem 0.1rem
+        color = {text_muted}
+        text-align = center
 
     .ruler-bar-item:hover:
         border-color = {neon_cyan}
         background = rgba(0, 229, 255, 0.08)
 
-    .ruler-bar-item.active-bar:
+    .ruler-bars .ruler-bar-item.active-bar:
         border-color = {neon_cyan}
         background = rgba(0, 229, 255, 0.18)
         box-shadow = 0 0 10px rgba(0, 229, 255, 0.3)
 
-    .ruler-bar-item.playing-bar:
+    .ruler-bars .ruler-bar-item.playing-bar:
         border-color = {neon_lime} !important
         background = rgba(57, 255, 20, 0.22) !important
         box-shadow = 0 0 14px {neon_lime} !important
@@ -433,34 +375,6 @@ rules:
         font-size = 0.75rem
         font-weight = 900
         color = {neon_cyan}
-
-    .ruler-sub:
-        font-size = 0.65rem
-        color = {text_muted}
-
-    .bar-selector-strip:
-        display = flex
-        justify-content = space-between
-        align-items = center
-        background = #080c1a
-        border = 1px solid {grid_border}
-        border-radius = 8px
-        padding = 0.5rem 0.8rem
-        margin = 0.6rem 0
-        gap = 0.5rem
-        flex-wrap = wrap
-
-    .bar-tabs:
-        display = flex
-        gap = 0.4rem
-        align-items = center
-        flex-wrap = wrap
-
-    .bar-selector-label:
-        font-size = 0.7rem
-        font-weight = bold
-        color = {text_muted}
-        margin-right = 0.2rem
 
     .bar-tab:
         background = {card_bg}
@@ -526,12 +440,24 @@ rules:
         left = 0%
         display = block
 
+    .seq-seek-grip:
+        position = absolute
+        top = 1px
+        left = -4px
+        width = 13px
+        height = 19px
+        background = {neon_cyan}
+        border-radius = 3px
+        pointer-events = auto
+        cursor = ew-resize
+        touch-action = none
+
     .piano-matrix-rack:
         background = #050814
         border = 1px solid {grid_border}
         border-radius = 8px
         padding = 0.75rem
-        margin = 0.75rem 0
+        margin = 0.45rem 0
 
     .matrix-header:
         display = flex
@@ -542,6 +468,7 @@ rules:
         gap = 0.5rem
 
     .matrix-title:
+        margin = 0
         font-size = 0.8rem
         font-weight = 900
         color = {neon_lime}
@@ -555,9 +482,15 @@ rules:
         display = flex
         border = 1px solid {grid_border}
         border-radius = 6px
-        overflow = hidden
+        overflow = auto
+        max-height = clamp(300px, 48vh, 580px)
+        background = #080c1a
+        position = relative
 
     .matrix-keys-column:
+        position = sticky
+        left = 0
+        z-index = 27
         display = flex
         flex-direction = column
         background = #03050c
@@ -577,6 +510,7 @@ rules:
         transition = all 0.1s ease
         touch-action = manipulation
         height = 28px
+        flex-shrink = 0
         box-sizing = border-box
         display = flex
         align-items = center
@@ -603,23 +537,20 @@ rules:
         box-shadow = 0 0 10px {neon_cyan} !important
         font-weight = 900
 
-    .matrix-timeline-scroll:
-        flex = 1
-        overflow-x = auto
-        background = #080c1a
-        padding = 0
+    .matrix-note-timeline:
         position = relative
+        flex = none
 
     .matrix-grid-surface:
         position = relative
-        min-height = 784px
-        min-width = 1920px
+        height = 1008px
+        cursor = crosshair
         background-color = #070b18
         background-image = linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to right, rgba(0, 229, 255, 0.18) 1px, transparent 1px, transparent 119px, rgba(0, 229, 255, 0.18) 120px), linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px)
         background-size = 100% 28px, 120px 100%, 30px 100%
 
     .matrix-grid-surface.surface-drums:
-        min-height = 144px
+        height = 144px
         background-image = linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px), linear-gradient(to right, rgba(0, 229, 255, 0.18) 1px, transparent 1px, transparent 119px, rgba(0, 229, 255, 0.18) 120px), linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px)
         background-size = 100% 48px, 120px 100%, 30px 100%
 
@@ -645,6 +576,33 @@ rules:
         border-radius = 3px
         pointer-events = none
 
+    .note-resize-grip:
+        position = absolute
+        top = 1px
+        bottom = 1px
+        right = 0
+        width = 8px
+        z-index = 21
+        background = linear-gradient(to left, rgba(255, 255, 255, 0.38) 2px, transparent 2px)
+        cursor = ew-resize
+        touch-action = none
+
+    .note-resize-grip:hover:
+        background = rgba(255, 255, 255, 0.28)
+
+    .studio-drag-preview:
+        position = fixed
+        pointer-events = none
+        box-sizing = border-box
+        z-index = 1000
+        background = rgba(0, 229, 255, 0.25)
+        border = 2px solid {neon_cyan}
+        border-radius = 4px
+
+    .studio-drag-preview.studio-drag-blocked:
+        background = rgba(255, 42, 133, 0.25)
+        border-color = {neon_pink}
+
     .matrix-note-block:
         position = absolute
         height = 24px
@@ -655,12 +613,23 @@ rules:
         display = flex
         align-items = center
         justify-content = space-between
-        padding = 0 4px
-        cursor = pointer
+        padding = 0 8px 0 2px
+        overflow = hidden
+        cursor = grab
         transition = transform 0.1s ease, box-shadow 0.1s ease
-        touch-action = manipulation
+        touch-action = none
         z-index = 10
         user-select = none
+
+    .matrix-note-block.compact-note:
+        padding = 0 5px 0 0
+
+    .compact-note .note-resize-grip:
+        width = 5px
+
+    .compact-note .matrix-delete-btn:
+        width = 8px
+        margin-left = 0
 
     .surface-drums .matrix-note-block:
         height = 42px
@@ -685,6 +654,8 @@ rules:
 
     .matrix-note-body:
         display = flex
+        flex = 1
+        min-width = 0
         align-items = baseline
         gap = 4px
         overflow = hidden
@@ -706,27 +677,10 @@ rules:
     .playing-step-now .matrix-note-len:
         color = rgba(0, 0, 0, 0.8)
 
-    .btn-note-stretch:
-        background = rgba(0, 0, 0, 0.4)
-        color = #ffffff
-        border = 1px solid rgba(255, 255, 255, 0.3)
-        border-radius = 3px
-        width = 16px
-        height = 18px
-        font-size = 9px
+    .matrix-length-controls:
         display = flex
-        align-items = center
-        justify-content = center
-        cursor = pointer
-        padding = 0
-        transition = all 0.1s ease
-        flex-shrink = 0
-        z-index = 12
-
-    .btn-note-stretch:hover:
-        background = {neon_lime}
-        color = #000000
-        border-color = {neon_lime}
+        gap = 6px
+        margin-left = auto
 
     .matrix-delete-btn:
         background = {neon_pink}
@@ -749,15 +703,6 @@ rules:
     .matrix-delete-btn:hover:
         transform = scale(1.2)
         box-shadow = 0 0 8px {neon_pink}
-
-    .badge-matrix-poly:
-        font-size = 8px
-        font-weight = 900
-        background = {neon_amber}
-        color = #000000
-        padding = 1px 3px
-        border-radius = 3px
-        margin-right = 2px
 
     .chip-step-high.matrix-note-block:
         border-left = 4px solid {neon_cyan}
@@ -783,11 +728,6 @@ rules:
     .chip-step-rest.matrix-note-block:
         border-style = dashed
         opacity = 0.5
-
-    .step-chip-actions:
-        display = flex
-        gap = 4px
-        margin-top = 2px
 
     .step-stretch-btn:
         background = rgba(255, 255, 255, 0.1)

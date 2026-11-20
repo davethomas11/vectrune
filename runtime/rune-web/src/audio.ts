@@ -13,7 +13,7 @@ let masterGain: GainNode | null = null;
 let audioMuted = false;
 let syncPageAudio = true;
 let playbackUnlocked = true;
-let pendingMusic: string | null = null;
+let pendingMusic: { track: string; beat: number } | null = null;
 
 /** Canvas hosts can use the synthesizer without touching their Rune-Web shell. */
 export function configureAudioHost(options: { syncPage: boolean; deferPlayback?: boolean }): void {
@@ -28,7 +28,7 @@ export function unlockAudio(): AudioContext | null {
   playbackUnlocked = true;
   const context = getAudioContext();
   const track = pendingMusic; pendingMusic = null;
-  if (track) playMusic(track);
+  if (track) playMusic(track.track, track.beat);
   return context;
 }
 
@@ -403,6 +403,7 @@ export interface TrackPlaybackState {
   events: ParsedNoteEvent[];
   index: number;
   nextBeat: number;
+  elapsedInNote?: number;
   instrument?: string;
   volume?: number;
   pan?: number;
@@ -417,9 +418,7 @@ let musicTempoBpm = 128;
 let musicLoop = true;
 let isMusicPaused = false;
 let musicStartTime = 0;
-let musicPauseTime = 0;
-let musicPausedElapsed = 0;
-let nextScheduleTime = 0;
+let musicPausedBeat = 0;
 let tracksState: Record<string, TrackPlaybackState> = {};
 
 export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
@@ -491,8 +490,8 @@ export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
   return events;
 }
 
-export function playMusic(trackName: string): void {
-  if (!playbackUnlocked) { pendingMusic = trackName; return; }
+export function playMusic(trackName: string, startBeat = 0): void {
+  if (!playbackUnlocked) { pendingMusic = { track: trackName, beat: startBeat }; return; }
   const ctx = getAudioContext();
   if (!ctx) return;
 
@@ -509,10 +508,6 @@ export function playMusic(trackName: string): void {
   musicLoop = def.loop_track !== false;
   musicVolume = def.volume !== undefined ? def.volume : 0.2;
   isMusicPaused = false;
-
-  musicMasterGain = ctx.createGain();
-  musicMasterGain.gain.setValueAtTime(musicVolume, ctx.currentTime);
-  musicMasterGain.connect(audioOutput(ctx));
 
   tracksState = {};
   if (def.lead) {
@@ -562,34 +557,42 @@ export function playMusic(trackName: string): void {
     if (Object.prototype.hasOwnProperty.call(tracksState, channel)) tracksState[channel].instrument = instrument;
   }
 
-  const beatsPerBar = def.time_signature?.startsWith('3/') ? 3 : 4;
-  let maxTrackBeats = 0;
+  startMusicAtBeat(ctx, key, startBeat);
+}
+
+function musicTiming(track: string) {
+  const def = registeredMusic[track];
+  const timeSignature = def?.time_signature || '4/4';
+  const beatsPerBar = timeSignature.startsWith('3/') ? 3 : 4;
+  const maxTrackBeats = Math.max(0, ...Object.values(tracksState).map(state =>
+    state.events.reduce((sum, event) => sum + event.beats, 0),
+  ));
+  const appBars = syncPageAudio ? Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
+  const totalBars = appBars > 0 ? appBars : (def?.bars || (maxTrackBeats ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
+  return { timeSignature, totalBars, totalBeats: Math.max(maxTrackBeats, totalBars * beatsPerBar) };
+}
+
+function startMusicAtBeat(ctx: AudioContext, trackName: string, startBeat: number): void {
+  const timing = musicTiming(trackName);
+  const beat = Math.max(0, Math.min(timing.totalBeats - 0.000001, Number.isFinite(startBeat) ? startBeat : 0));
   for (const track of Object.values(tracksState)) {
-    if (track && track.events && track.events.length > 0) {
-      const trackBeats = track.events.reduce((sum, e) => sum + (e.beats || 0), 0);
-      if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
-    }
+    let onset = 0;
+    track.index = track.events.findIndex(event => {
+      if (onset + event.beats > beat) return true;
+      onset += event.beats;
+      return false;
+    });
+    if (track.index < 0) track.index = track.events.length;
+    track.nextBeat = track.index === track.events.length ? onset : beat;
+    track.elapsedInNote = track.index === track.events.length ? 0 : beat - onset;
   }
 
-  const appStateBars = syncPageAudio ? Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
-  const totalBars = appStateBars > 0 ? appStateBars : (def.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
-  const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
-
-  musicStartTime = ctx.currentTime + 0.05;
-  nextScheduleTime = musicStartTime;
-  musicPauseTime = 0;
-  musicPausedElapsed = 0;
-
+  musicMasterGain = ctx.createGain();
+  musicMasterGain.gain.setValueAtTime(musicVolume, ctx.currentTime);
+  musicMasterGain.connect(audioOutput(ctx));
+  musicStartTime = ctx.currentTime + 0.05 - beat * 60 / musicTempoBpm;
   audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
-  audioSync.onPlay({
-    track: key,
-    tempo: musicTempoBpm,
-    timeSignature: def.time_signature || '4/4',
-    totalBars,
-    totalBeats,
-    startTime: musicStartTime,
-  });
-
+  audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
   scheduleMusicTicks();
   musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
 }
@@ -610,97 +613,45 @@ export function stopMusic(): void {
     musicSchedulerTimer = null;
   }
   activeMusicTrackName = null;
-  musicPauseTime = 0;
-  musicPausedElapsed = 0;
+  musicPausedBeat = 0;
   isMusicPaused = false;
   tracksState = {};
-  if (musicMasterGain) {
-    try {
-      musicMasterGain.disconnect();
-    } catch {
-      // Ignore
-    }
-    musicMasterGain = null;
-  }
+  disconnectMusicGain();
+}
+
+function disconnectMusicGain(): void {
+  if (!musicMasterGain) return;
+  musicMasterGain.disconnect();
+  musicMasterGain = null;
 }
 
 export function pauseMusic(): void {
-  const ctx = getAudioContext();
-  if (!ctx || isMusicPaused || !activeMusicTrackName) return;
+  if (isMusicPaused || !activeMusicTrackName) return;
+  musicPausedBeat = audioSync.getSnapshot().currentBeat;
   isMusicPaused = true;
-  if (musicSchedulerTimer) { clearInterval(musicSchedulerTimer); musicSchedulerTimer = null; }
-  musicPauseTime = ctx.currentTime;
-  musicPausedElapsed = Math.max(0, musicPauseTime - musicStartTime);
-  if (musicMasterGain) {
-    try {
-      musicMasterGain.gain.setValueAtTime(0, ctx.currentTime);
-    } catch (_) {}
+  if (musicSchedulerTimer) {
+    clearInterval(musicSchedulerTimer);
+    musicSchedulerTimer = null;
   }
-  audioSync.onPause();
+  disconnectMusicGain();
+  audioSync.onPause(musicPausedBeat);
 }
 
 export function resumeMusic(): void {
   const ctx = getAudioContext();
   if (!ctx || !isMusicPaused || !activeMusicTrackName) return;
-
-  const pausedDuration = ctx.currentTime - musicPauseTime;
-  musicStartTime += pausedDuration;
-
-  const secondsPerBeat = 60 / musicTempoBpm;
-  const currentBeat = musicPausedElapsed / secondsPerBeat;
-
-  for (const track of Object.values(tracksState)) {
-    if (!track || !track.events.length) continue;
-    let accum = 0;
-    track.index = 0;
-    track.nextBeat = 0;
-    for (let i = 0; i < track.events.length; i++) {
-      const ev = track.events[i];
-      if (accum + ev.beats > currentBeat) {
-        track.index = i;
-        track.nextBeat = accum;
-        break;
-      }
-      accum += ev.beats;
-    }
-  }
-
-  if (musicMasterGain) {
-    try {
-      musicMasterGain.gain.setValueAtTime(musicVolume, ctx.currentTime);
-    } catch (_) {}
-  }
-
   isMusicPaused = false;
-
-  const def = registeredMusic[activeMusicTrackName];
-  const beatsPerBar = def?.time_signature?.startsWith('3/') ? 3 : 4;
-  let maxTrackBeats = 0;
-  for (const track of Object.values(tracksState)) {
-    if (track && track.events && track.events.length > 0) {
-      const trackBeats = track.events.reduce((sum, e) => sum + (e.beats || 0), 0);
-      if (trackBeats > maxTrackBeats) maxTrackBeats = trackBeats;
-    }
-  }
-  const appStateBars = syncPageAudio ? Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
-  const totalBars = appStateBars > 0 ? appStateBars : (def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
-  const totalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
-
-  audioSync.onPlay({
-    track: activeMusicTrackName,
-    tempo: musicTempoBpm,
-    timeSignature: def?.time_signature || '4/4',
-    totalBars,
-    totalBeats,
-    startTime: musicStartTime,
-  });
-  scheduleMusicTicks();
-  musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
+  startMusicAtBeat(ctx, activeMusicTrackName, musicPausedBeat);
 }
 
 export function setMusicTempo(bpm: number): void {
-  if (bpm > 20 && bpm < 400) {
-    musicTempoBpm = bpm;
+  if (!(bpm > 20 && bpm < 400) || bpm === musicTempoBpm) return;
+  const beat = audioSync.getSnapshot().currentBeat;
+  musicTempoBpm = bpm;
+  if (audioCtx && activeMusicTrackName && !isMusicPaused) {
+    if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
+    disconnectMusicGain();
+    startMusicAtBeat(audioCtx, activeMusicTrackName, beat);
   }
 }
 
@@ -711,9 +662,11 @@ export function setMusicVolume(vol: number): void {
   }
 }
 
-export function setTrackInstrument(channel: string, instrument: string): void {
-  if (tracksState[channel]) {
-    tracksState[channel].instrument = instrument;
+export function setTrackInstrument(channel: string, instrument: string, includeStudioLayers = false): void {
+  for (const [name, track] of Object.entries(tracksState)) {
+    if (name === channel || (includeStudioLayers && name.startsWith(channel + '_studio_'))) {
+      track.instrument = instrument;
+    }
   }
 }
 
@@ -730,18 +683,7 @@ function scheduleMusicTicks(): void {
   const secondsPerBeat = 60 / musicTempoBpm;
   const lookaheadWindow = ctx.currentTime + 0.25;
 
-  const def = registeredMusic[activeMusicTrackName];
-  const beatsPerBar = def?.time_signature?.startsWith('3/') ? 3 : 4;
-  let maxTrackBeats = 0;
-  for (const t of Object.values(tracksState)) {
-    if (t && t.events && t.events.length > 0) {
-      const tb = t.events.reduce((sum, e) => sum + (e.beats || 0), 0);
-      if (tb > maxTrackBeats) maxTrackBeats = tb;
-    }
-  }
-  const appStateBars = syncPageAudio ? Number((window as any)?.__RuneWeb?.ctx?.()?.app?.state?.bars) : 0;
-  const totalBars = appStateBars > 0 ? appStateBars : (def?.bars || (maxTrackBeats > 0 ? Math.ceil(maxTrackBeats / beatsPerBar) : 4));
-  const songTotalBeats = Math.max(maxTrackBeats, totalBars * beatsPerBar);
+  const { totalBeats: songTotalBeats } = musicTiming(activeMusicTrackName);
 
   let allFinished = true;
 
@@ -763,13 +705,15 @@ function scheduleMusicTicks(): void {
 
       const event = track.events[track.index];
       const eventTime = musicStartTime + track.nextBeat * secondsPerBeat;
-      const eventDurationSec = event.beats * secondsPerBeat;
+      const remainingBeats = event.beats - (track.elapsedInNote ?? 0);
+      const eventDurationSec = remainingBeats * secondsPerBeat;
 
       if (!event.isRest && eventTime >= ctx.currentTime - 0.05) {
         scheduleTrackNote(ctx, trackKey, event, eventTime, eventDurationSec, musicMasterGain, track.instrument);
       }
 
-      track.nextBeat += event.beats;
+      track.nextBeat += remainingBeats;
+      track.elapsedInNote = 0;
       track.index += 1;
     }
 
@@ -782,6 +726,14 @@ function scheduleMusicTicks(): void {
   if (allFinished && !musicLoop && ctx.currentTime >= musicStartTime + songTotalBeats * secondsPerBeat) {
     stopMusic();
   }
+}
+
+export function auditionMusicNote(note: string, instrument: string): void {
+  if (audioMuted) return;
+  const event = parseTrackPattern(note)[0];
+  if (!event || event.isRest) return;
+  const ctx = getAudioContext();
+  if (ctx) playTrackNote(ctx, '', event, ctx.currentTime, 0.24, audioOutput(ctx), instrument);
 }
 
 function scheduleTrackNote(
@@ -804,6 +756,18 @@ function scheduleTrackNote(
     bar: 1,
   });
 
+  playTrackNote(ctx, channel, event, time, durationSec, destination, instrumentOverride);
+}
+
+function playTrackNote(
+  ctx: AudioContext,
+  channel: string,
+  event: ParsedNoteEvent,
+  time: number,
+  durationSec: number,
+  destination: GainNode,
+  instrumentOverride?: string,
+): void {
   const isDrumChannel = channel === 'drums' || instrumentOverride === 'drums' || event.isDrum;
 
   // Single pitch or array of chord pitches

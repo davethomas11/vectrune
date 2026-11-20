@@ -1,5 +1,54 @@
 @Logic/studio
 
+action loadSongLibrary:
+    saved_songs = storage.get("rune_studio_song_library")
+    if saved_songs == null:
+        saved_songs = []
+
+action renameSong(title):
+    song_title = title
+
+action newSong:
+    call stopTrack
+    let number = storage.get("rune_studio_song_number")
+    number = (number ?? 0) + 1
+    storage.set("rune_studio_song_number", number)
+    selected_song = "song_" + number
+    song_title = "Untitled " + number
+    tempo = 120
+    time_signature = "4/4"
+    bars = 4
+    selected_bar = 0
+    selected_step_id = -1
+    selected_note = "E4"
+    active_duration = ":8"
+    active_voice = "lead"
+    lead_instrument = "square"
+    bass_instrument = "triangle"
+    chords_instrument = "sawtooth"
+    lead_track = ""
+    bass_track = ""
+    chords_track = ""
+    drums_track = ""
+    lead_muted = false
+    bass_muted = false
+    chords_muted = false
+    drums_muted = false
+    editor_mode = "matrix"
+    active_lower_tab = "tracks"
+    music.sync_steps
+    status_message = "New song ready. Name it and place notes in the piano roll."
+
+action openSong(key):
+    if key == "reload_saved":
+        call loadFromStorage
+    if key == "vectraiders" or key == "vectworms" or key == "cyber_run" or key == "moonlight" or key == "victory":
+        call selectSong key
+    for entry in saved_songs:
+        if entry.key == key:
+            selected_song = entry.id
+            call loadFromStorage
+
 action selectSong(name):
     selected_song = name
     if name == "vectraiders":
@@ -65,6 +114,9 @@ action selectSong(name):
 
     selected_step_id = -1
     selected_bar = 0
+    playback_beat = 0
+    playback_bar = 1
+    playback_progress = 0
     is_paused = false
     music.sync_steps
     music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
@@ -76,12 +128,15 @@ action selectSong(name):
 
 action setTimeSignature(sig):
     time_signature = sig
+    selected_step_id = -1
     music.sync_steps
     music.compose(selected_song, tempo, lead_track, bass_track, drums_track, time_signature)
     status_message = "Time signature set to " + sig
     flash_type = "info"
 
 action saveToStorage:
+    if song_title == "":
+        song_title = "Untitled song"
     storage.set("rune_studio_last_song", selected_song)
     storage.set(
         "rune_studio_" + selected_song,
@@ -89,12 +144,20 @@ action saveToStorage:
             "title": song_title,
             "tempo": tempo,
             "time_signature": time_signature,
+            "bars": bars,
+            "lead_instrument": lead_instrument,
+            "bass_instrument": bass_instrument,
+            "chords_instrument": chords_instrument,
             "lead": lead_track,
             "bass": bass_track,
             "chords": chords_track,
             "drums": drums_track
         }
     )
+    call loadSongLibrary
+    saved_songs = saved_songs.filter it.id != selected_song
+    saved_songs.push({ "id": selected_song, "key": "saved:" + selected_song, "title": song_title })
+    storage.set("rune_studio_song_library", saved_songs)
     status_message = "Saved " + song_title + " in this browser. EXPORT .RUNE keeps a file copy."
     flash_type = "success"
 
@@ -104,6 +167,15 @@ action loadFromStorage:
         song_title = saved.title ?? song_title
         tempo = saved.tempo ?? tempo
         time_signature = saved.time_signature ?? time_signature
+        bars = saved.bars ?? bars
+        lead_instrument = saved.lead_instrument ?? lead_instrument
+        bass_instrument = saved.bass_instrument ?? bass_instrument
+        chords_instrument = saved.chords_instrument ?? chords_instrument
+        selected_bar = 0
+        playback_beat = 0
+        playback_bar = 1
+        playback_progress = 0
+        is_paused = false
         lead_track = saved.lead ?? lead_track
         bass_track = saved.bass ?? bass_track
         chords_track = saved.chords ?? chords_track
@@ -121,13 +193,13 @@ action loadFromStorage:
         flash_type = "warning"
 
 action exportRune:
-    code = "# " + song_title + " — Generated with Rune Studio\n\n@Music/" + selected_song + "\ntype = 8bit\ntempo = " + tempo + "\ntime_signature = " + time_signature + "\nbars = " + bars + "\nloop = true\nvolume = 0.2\n\nlead:\n    " + lead_track + "\n\nbass:\n    " + bass_track + "\n\nchords:\n    " + chords_track + "\n\ndrums:\n    " + drums_track + "\n"
+    code = "# " + song_title + " — Generated with Rune Studio\n\n@Music/" + selected_song + "\ntype = 8bit\ntempo = " + tempo + "\ntime_signature = " + time_signature + "\nbars = " + bars + "\nloop = true\nvolume = 0.2\ninstruments = {" + export_instruments_body + "}\n\nlead:\n    " + lead_export + "\n\nbass:\n    " + bass_export + "\n\nchords:\n    " + chords_export + "\n\ndrums:\n    " + drums_export + "\n" + layer_exports
     download(selected_song + ".rune", code)
     status_message = "Exported " + selected_song + ".rune!"
     flash_type = "success"
 
 action copyCode:
-    code = "# " + song_title + " — Generated with Rune Studio\n\n@Music/" + selected_song + "\ntype = 8bit\ntempo = " + tempo + "\ntime_signature = " + time_signature + "\nbars = " + bars + "\nloop = true\nvolume = 0.2\n\nlead:\n    " + lead_track + "\n\nbass:\n    " + bass_track + "\n\nchords:\n    " + chords_track + "\n\ndrums:\n    " + drums_track + "\n"
+    code = "# " + song_title + " — Generated with Rune Studio\n\n@Music/" + selected_song + "\ntype = 8bit\ntempo = " + tempo + "\ntime_signature = " + time_signature + "\nbars = " + bars + "\nloop = true\nvolume = 0.2\ninstruments = {" + export_instruments_body + "}\n\nlead:\n    " + lead_export + "\n\nbass:\n    " + bass_export + "\n\nchords:\n    " + chords_export + "\n\ndrums:\n    " + drums_export + "\n" + layer_exports
     copy(code)
     status_message = "Copied .rune code to clipboard!"
     flash_type = "success"
