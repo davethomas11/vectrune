@@ -1,7 +1,7 @@
 import { initContext } from '../context';
 import { createLogicApp } from '../logic';
 import { makeReactive } from '../scope';
-import { parseTrackToSteps } from '../statement';
+import { syncSequencerState } from '../statement';
 import { installHost, mock } from './host';
 import type { RuneApp, RuneWebConfig } from '../types';
 
@@ -25,9 +25,7 @@ export function boot(options: RuneWebConfig): void {
     emitters: config.emitters || {}, loadedChunks: {}, loadingChunks: {},
   });
   app.state = makeReactive({ ...config.stateJson, i18n: config.i18nData });
-  if (typeof app.state.active_voice === 'string') {
-    app.state.active_steps = parseTrackToSteps(String(app.state[`${app.state.active_voice}_track`] || ''), Number(app.state.selected_step_id ?? -1), String(app.state.time_signature || '4/4'), Number(app.state.selected_bar ?? 0));
-  }
+  if (typeof app.state.active_voice === 'string') syncSequencerState(app.state);
   app.computeDerived();
   flush();
 }

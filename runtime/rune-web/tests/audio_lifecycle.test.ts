@@ -115,6 +115,40 @@ describe('shared audio lifecycle', () => {
     audio.playMusic('march'); expect(vi.getTimerCount()).toBe(1);
     audio.stopMusic(); expect(vi.getTimerCount()).toBe(0);
   });
+  it('updates the active instrument on the base voice and its polyphonic lanes', () => {
+    audio.configureAudioHost({ syncPage: false });
+    audio.registerMusic({ layers: {
+      tempo: 120, lead: 'C4:4 D4:4', bass: 'C2:4 D2:4',
+      tracks: { lead_studio_1: 'E4:4 F4:4' },
+      instruments: { lead_studio_1: 'square' },
+    } });
+    audio.playMusic('layers');
+    const context = Context.instances[0];
+    const initial = context.oscillators.length;
+    audio.setTrackInstrument('lead', 'sine', true);
+    context.currentTime = 0.4;
+    vi.advanceTimersByTime(25);
+    expect(context.oscillators.slice(initial).map(oscillator => oscillator.type)).toEqual(['sine', 'triangle', 'sine']);
+  });
+
+  it('holds the audible beat in a later loop and resumes only the remainder of its note', () => {
+    audio.configureAudioHost({ syncPage: false });
+    audio.playMusic('march');
+    const context = Context.instances[0];
+    context.currentTime = 8.7;
+    audio.pauseMusic();
+    const parked = sync.audioSync.getSnapshot().currentBeat;
+    expect(parked).toBeCloseTo(1.3);
+    expect(context.gains[0].disconnect).toHaveBeenCalledOnce();
+    context.currentTime = 12;
+    expect(sync.audioSync.getSnapshot().currentBeat).toBe(parked);
+    audio.resumeMusic();
+    expect(sync.audioSync.getSnapshot().currentBeat).toBe(parked);
+    const resumedNote = context.oscillators[context.oscillators.length - 1];
+    expect(resumedNote.start.mock.calls[0][0]).toBeCloseTo(12.05);
+    expect(resumedNote.stop.mock.calls[0][0]).toBeCloseTo(12.05 + 0.35 * 0.9 + 0.01);
+  });
+
   it('keeps canvas-host music out of Rune-Web state and DOM updates', () => {
     const style = {setProperty:vi.fn()};
     vi.stubGlobal('document',{documentElement:{style},querySelectorAll:vi.fn(() => [])});

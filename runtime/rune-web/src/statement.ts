@@ -13,10 +13,11 @@ import { splitPathSegments, buildScope } from './scope';
 import { handleBuiltin } from "./builtins";
 import { parseFetchAssignment, runFetchAssignment, reportFetchFailure } from "./builtins/fetch";
 import { splitTopLevel, valueToString, normalizeLiteral } from './utils';
-import { playSound, playMusic, stopMusic, pauseMusic, resumeMusic, setMusicTempo, setMusicVolume, registerMusic, registerSounds } from './audio';
+import { auditionMusicNote, playSound, playMusic, setTrackInstrument, stopMusic, pauseMusic, resumeMusic, setMusicTempo, setMusicVolume, registerMusic, registerSounds } from './audio';
 import { setStorageItem, removeStorageItem, clearStorage } from './storage';
 import type { ActionStep, Scope } from './types';
 import { NO_ACTION, STOP } from './builtins/command';
+import { editStudioTrack, placeStudioNote, STUDIO_STEP_IDS_PER_VOICE, STUDIO_STRIP_TICK_WIDTH, STUDIO_TICK_WIDTH, studioBarTicks, studioScoreLanes, studioStretchTicks, studioTokenTicks, studioTrackPatterns } from './studio_sequencer';
 import { entityMoved, entitiesChanged } from './pixel3d/entities';
 
 // ---------------------------------------------------------------------------
@@ -320,7 +321,10 @@ export function executeStatement(
         const bass = String(evaluateExpression(parts[3], buildScope(locals, trimmed)));
         const drums = parts.length > 4 ? String(evaluateExpression(parts[4], buildScope(locals, trimmed))) : '';
         const timeSig = parts.length > 5 ? String(evaluateExpression(parts[5], buildScope(locals, trimmed))) : '4/4';
-        const songBars = Number((ctx().app as any)?.state?.bars) || 4;
+        const state = ctx().app.state;
+        const songBars = Number(state.bars) || 4;
+        const locked = state.studio_fixed_bars === true;
+        const studioParts = locked ? studioSongParts(state, studioBarTicks(timeSig), songBars) : undefined;
         registerMusic({
           [name]: {
             music_type: '8bit',
@@ -329,9 +333,13 @@ export function executeStatement(
             bars: songBars,
             loop_track: true,
             volume: 0.2,
-            lead,
-            bass,
-            drums,
+            lead: studioParts?.lead[0] ?? lead,
+            bass: studioParts?.bass[0] ?? bass,
+            drums: studioParts?.drums[0] ?? drums,
+            ...(studioParts ? {
+              tracks: { chords: studioParts.chords[0], ...studioParts.layers },
+              instruments: studioParts.instruments,
+            } : {}),
           },
         });
       }
@@ -361,17 +369,22 @@ export function executeStatement(
       (trimmed.startsWith('music ') && !trimmed.startsWith('music.tempo') && !trimmed.startsWith('music.volume'))
     ) {
       let trackName = '';
-      if (trimmed.startsWith('music.play(') && trimmed.endsWith(')')) {
-        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals, trimmed)) || '');
-      } else if (trimmed.startsWith('play_music(') && trimmed.endsWith(')')) {
-        trackName = String(evaluateExpression(trimmed.slice(11, -1), buildScope(locals, trimmed)) || '');
+      let startBeat: number | undefined;
+      if ((trimmed.startsWith('music.play(') || trimmed.startsWith('play_music(')) && trimmed.endsWith(')')) {
+        const [name, beat] = splitTopLevel(trimmed.slice(trimmed.indexOf('(') + 1, -1), ',');
+        const scope = buildScope(locals, trimmed);
+        trackName = String(evaluateExpression(name, scope) || '');
+        if (beat !== undefined) startBeat = Number(evaluateExpression(beat, scope));
       } else if (trimmed.startsWith('music.play ')) {
         trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || '');
       } else if (trimmed.startsWith('music ')) {
         trackName = String(evaluateExpression(trimmed.slice(6), buildScope(locals, trimmed)) || '');
       }
       trackName = normalizeLiteral(trackName);
-      if (trackName) playMusic(trackName);
+      if (trackName) {
+        if (startBeat === undefined) playMusic(trackName);
+        else playMusic(trackName, startBeat);
+      }
       return true;
     }
   }
@@ -380,12 +393,7 @@ export function executeStatement(
   if (trimmed === 'music.sync_steps' || trimmed === 'music.sync_steps()') {
     const state = (ctx().app as any)?.state;
     if (state) {
-      const voice = String(state.active_voice || 'lead');
-      const score = String(state[voice + '_track'] || '');
-      const selectedId = Number(state.selected_step_id ?? -1);
-      const timeSig = String(state.time_signature || '4/4');
-      const selectedBar = Number(state.selected_bar ?? 0);
-      state.active_steps = parseTrackToSteps(score, selectedId, timeSig, selectedBar);
+      syncSequencerState(state);
       if (typeof (ctx().app as any).render === 'function') {
         (ctx().app as any).render();
       }
@@ -400,14 +408,13 @@ export function executeStatement(
     if (state) {
       state.selected_step_id = id;
       const voice = String(state.active_voice || 'lead');
-      const score = String(state[voice + '_track'] || '');
-      const timeSig = String(state.time_signature || '4/4');
-      const selectedBar = Number(state.selected_bar ?? 0);
-      state.active_steps = parseTrackToSteps(score, id, timeSig, selectedBar);
+      syncSequencerState(state);
       const step = (state.active_steps as Array<any>).find((s: any) => s.id === id);
       if (step && !step.is_bar && !step.is_rest) {
-        state.selected_note = step.note;
-        if (step.is_chord && step.chord_notes && step.chord_notes.length > 0) {
+        state.selected_note = state.studio_fixed_bars === true ? step.chord_notes[0] : step.note;
+        if (state.studio_fixed_bars === true) {
+          auditionStudioNote(state, voice, String(state.selected_note));
+        } else if (step.is_chord && step.chord_notes && step.chord_notes.length > 0) {
           for (const cn of step.chord_notes) {
             if (voice === 'drums' || ['kick', 'snare', 'hihat'].includes(cn)) {
               playSound('drum_' + cn);
@@ -430,6 +437,17 @@ export function executeStatement(
       if (typeof (ctx().app as any).render === 'function') {
         (ctx().app as any).render();
       }
+    }
+    return true;
+  }
+
+  if (trimmed.startsWith('music.edit_steps(') && trimmed.endsWith(')')) {
+    const state = ctx().app.state;
+    if (state.studio_fixed_bars === true) {
+      const scope = buildScope(locals, trimmed);
+      const args = splitTopLevel(trimmed.slice('music.edit_steps('.length, -1), ',');
+      const [kind, first, second] = args.map(arg => evaluateExpression(arg, scope));
+      editStudioSequence(state, String(kind), first, second);
     }
     return true;
   }
@@ -1161,6 +1179,7 @@ export function parseTrackToSteps(
   selectedIdx: number,
   timeSignature: string = '4/4',
   selectedBar: number = 0,
+  fixedBars = false,
 ): Array<Record<string, unknown>> {
   if (!scoreStr) return [];
   const tokens = String(scoreStr).trim().split(/\s+/).filter(Boolean);
@@ -1236,7 +1255,11 @@ export function parseTrackToSteps(
     else if (dur === ':8') { lenLabel = '1/8'; beats = 0.5; }
     else if (dur === ':4') { lenLabel = '1/4'; beats = 1.0; }
     else if (dur === ':2') { lenLabel = '1/2'; beats = 2.0; }
-    else if (dur === ':1') { lenLabel = '1/1'; beats = beatsPerBar; }
+    else if (dur === ':1') { lenLabel = '1/1'; beats = fixedBars ? 4 : beatsPerBar; }
+    else if (fixedBars) {
+      beats = 4 / Number(dur.slice(1));
+      lenLabel = Math.round(beats * 4) + '/16';
+    }
 
     let pitchClass = 'step-note';
     if (isRest) pitchClass = 'step-rest';
@@ -1257,7 +1280,7 @@ export function parseTrackToSteps(
     const totalLeft = Math.round(totalBeatOffset * 120);
     const barLeft = Math.round(currentBeatInBar * 120);
     const matrixLeft = selectedBar > 0 ? barLeft : totalLeft;
-    const matrixWidth = Math.max(34, Math.round(beats * 120) - 4);
+    const matrixWidth = Math.max(fixedBars ? 1 : 34, Math.round(beats * 120) - 4);
     const stripWidth = Math.max(54, Math.round(beats * 140));
 
     const displayNote = isRest ? 'REST' : isChord ? (pitch.startsWith('[') ? pitch : `[${pitch}]`) : pitch;
@@ -1299,4 +1322,232 @@ export function parseTrackToSteps(
     }
   }
   return steps;
+}
+
+
+const STUDIO_VOICES = ['lead', 'bass', 'chords', 'drums'];
+const STUDIO_PITCHES = Object.keys(PITCH_ROWS)
+  .filter(pitch => /^[A-G]#?\d$/.test(pitch))
+  .sort((a, b) => PITCH_ROWS[a] - PITCH_ROWS[b]);
+const DRUM_PITCHES = ['hihat', 'snare', 'kick'];
+
+function studioSongParts(state: Scope, barTicks: number, bars: number) {
+  const voicePatterns = (voice: string) => studioTrackPatterns(String(state[voice + '_track'] || ''), barTicks, bars);
+  const lead = voicePatterns('lead');
+  const bass = voicePatterns('bass');
+  const chords = voicePatterns('chords');
+  const drums = voicePatterns('drums');
+  const layers: Record<string, string> = {};
+  const instruments: Record<string, string> = {};
+  for (const [voice, patterns] of Object.entries({ lead, bass, chords, drums })) {
+    const instrument = String(state[voice + '_instrument']);
+    instruments[voice] = instrument;
+    for (let lane = 1; lane < patterns.length; lane++) {
+      const name = voice + '_studio_' + lane;
+      layers[name] = patterns[lane];
+      instruments[name] = instrument;
+    }
+  }
+  return { lead, bass, chords, drums, layers, instruments };
+}
+
+export function syncSequencerState(state: Scope): void {
+  const voice = String(state.active_voice || 'lead');
+  const timeSignature = String(state.time_signature || '4/4');
+  const selectedBar = Number(state.selected_bar ?? 0);
+  const selectedId = Number(state.selected_step_id ?? -1);
+  const score = String(state[voice + '_track'] || '');
+  if (state.studio_fixed_bars !== true) {
+    state.active_steps = parseTrackToSteps(score, selectedId, timeSignature, selectedBar);
+    return;
+  }
+
+  state.active_instrument = state[voice + '_instrument'];
+  const barTicks = studioBarTicks(timeSignature);
+  const bars = Number(state.bars) || 1;
+  const parts = studioSongParts(state, barTicks, bars);
+  const patterns = parts[voice as 'lead' | 'bass' | 'chords' | 'drums'] ?? parts.lead;
+  const steps = patterns.flatMap((pattern, lane) =>
+    parseTrackToSteps(pattern, selectedId - lane * STUDIO_STEP_IDS_PER_VOICE, timeSignature, selectedBar, true)
+      .map(step => ({ ...step, id: Number(step.id) + lane * STUDIO_STEP_IDS_PER_VOICE, lane }) as Scope),
+  );
+  state.studio_timeline_width = (selectedBar ? 1 : bars) * barTicks * STUDIO_TICK_WIDTH;
+  const stripTickWidth = STUDIO_STRIP_TICK_WIDTH;
+  state.studio_strip_width = (selectedBar ? 1 : bars) * barTicks * stripTickWidth;
+  state.studio_strip_height = patterns.length * 88 - 4;
+  for (const step of steps) {
+    step.strip_top = Number(step.lane) * 88;
+    step.strip_left = Math.round(Number(step.matrix_left) / STUDIO_TICK_WIDTH) * stripTickWidth;
+    if (step.is_bar) {
+      step.bar_num = Number(step.bar_num) + 1;
+      step.len_label = 'BAR ' + step.bar_num;
+      continue;
+    }
+    const tick = Math.round(Number(step.matrix_bar_left) / STUDIO_TICK_WIDTH);
+    const ticks = Math.round(Number(step.beats) * 4);
+    step.step_num = tick + 1;
+    step.strip_width = ticks * stripTickWidth - 4;
+    if (!step.is_rest) {
+      const limit = studioNoteLimit(steps, step, barTicks);
+      step.can_stretch = studioStretchTicks(ticks, 1, limit) > ticks;
+      step.can_shorten = ticks > 1;
+    }
+  }
+  state.active_steps = steps;
+  for (const channel of STUDIO_VOICES) {
+    state[channel + '_export'] = parts[channel as 'lead' | 'bass' | 'chords' | 'drums'][0];
+  }
+  state.layer_exports = Object.entries(parts.layers).map(([name, pattern]) => '\n' + name + ':\n    ' + pattern + '\n').join('');
+  state.export_instruments_body = JSON.stringify(parts.instruments).slice(1, -1);
+}
+
+function studioNoteLimit(steps: Scope[], step: Scope, barTicks: number): number {
+  const start = Number(step.matrix_bar_left) / STUDIO_TICK_WIDTH;
+  const next = steps
+    .filter(other => !other.is_bar && !other.is_rest && other.bar_num === step.bar_num && other.pitch_row === step.pitch_row)
+    .map(other => Number(other.matrix_bar_left) / STUDIO_TICK_WIDTH)
+    .filter(tick => tick > start);
+  return Math.min(barTicks, ...next) - start;
+}
+
+function auditionStudioNote(state: Scope, voice: string, note: string): void {
+  auditionMusicNote(note, String(state[voice + '_instrument']));
+}
+
+function editStudioSequence(state: Scope, kind: string, first: unknown, second: unknown): void {
+  const voice = String(state.active_voice || 'lead');
+  if (kind === 'audition') {
+    const note = String(first);
+    state.selected_note = note;
+    auditionStudioNote(state, voice, note);
+    return;
+  }
+  if (kind === 'instrument') {
+    if (voice === 'drums') return;
+    const instrument = String(first);
+    state[voice + '_instrument'] = instrument;
+    setTrackInstrument(voice, instrument, true);
+    syncSequencerState(state);
+    state.status_message = 'Set ' + voice + ' instrument sound to ' + instrument;
+    return;
+  }
+  const barTicks = studioBarTicks(String(state.time_signature));
+  const bars = Number(state.bars) || 1;
+  const selectedBar = Number(state.selected_bar) || 0;
+  const trackKey = voice + '_track';
+  const score = String(state[trackKey] || '');
+  let bar = selectedBar;
+  let tick = -1;
+  let note = '';
+  let lane = 0;
+  if (kind === 'addBar' || kind === 'duplicateBar' || kind === 'deleteBar') {
+    if (kind === 'deleteBar' ? bars <= 1 : bars >= 8) return;
+    for (const channel of STUDIO_VOICES) {
+      const key = channel + '_track';
+      state[key] = studioScoreLanes(String(state[key] || ''), barTicks).map(voiceScore =>
+        editStudioTrack(voiceScore, barTicks, bars, { kind, bar: selectedBar || bars })?.score ?? voiceScore,
+      ).join('\n');
+    }
+    state.bars = bars + (kind === 'deleteBar' ? -1 : 1);
+    state.selected_bar = kind === 'deleteBar' ? Math.min(selectedBar || bars, bars - 1) : state.bars;
+    state.selected_step_id = -1;
+    syncSequencerState(state);
+    state.status_message = kind === 'deleteBar' ? 'Deleted bar ' + (selectedBar || bars) : 'Added bar ' + state.bars;
+    return;
+  }
+
+  if (kind === 'matrix') {
+    const column = Math.floor(Number(first) / STUDIO_TICK_WIDTH);
+    const pitches = voice === 'drums' ? DRUM_PITCHES : STUDIO_PITCHES;
+    note = pitches[Math.floor(Number(second) / (voice === 'drums' ? 48 : 28))];
+    bar = selectedBar || Math.floor(column / barTicks) + 1;
+    tick = column % barTicks;
+    if (!note) return;
+    const ticks = studioTokenTicks(note + String(state.active_duration || ':8'), barTicks);
+    const result = placeStudioNote(score, barTicks, bars, { bar, tick, pitch: note, ticks });
+    if (!result?.score) return;
+    state[trackKey] = result.score;
+    selectStudioPosition(state, bar, tick, result.lane ?? 0);
+  } else {
+    const lanes = studioScoreLanes(score, barTicks);
+    if (kind === 'delete' || kind === 'stretch') {
+      const steps = state.active_steps as Scope[];
+      const step = steps.find(step => step.id === Number(first) && !step.is_rest && !step.is_bar);
+      if (!step) return;
+      bar = Number(step.bar_num);
+      tick = Math.round(Number(step.matrix_bar_left) / STUDIO_TICK_WIDTH);
+      lane = Number(step.lane);
+      if (kind === 'stretch') {
+        const ticks = Math.round(Number(step.beats) * 4);
+        const targetTicks = studioStretchTicks(ticks, Number(second), studioNoteLimit(steps, step, barTicks));
+        const pitch = (step.chord_notes as string[])[0];
+        const result = placeStudioNote(score, barTicks, bars, {
+          bar, tick, pitch, source: { bar, tick, lane }, resizeBy: targetTicks - ticks,
+        });
+        if (!result?.score) return;
+        state[trackKey] = result.score;
+        selectStudioPosition(state, bar, tick, result.lane ?? 0);
+      } else {
+        const result = editStudioTrack(lanes[lane], barTicks, bars, { kind, bar, tick });
+        if (!result) return;
+        lanes[lane] = result.score;
+        while (lanes.length > 1 && !/[^|\s]/.test(lanes[lanes.length - 1])) lanes.pop();
+        state[trackKey] = lanes.join('\n');
+        selectStudioPosition(state, bar, tick, lane, false);
+      }
+    } else return;
+  }
+  if (note) {
+    state.selected_note = note;
+    auditionStudioNote(state, voice, note);
+    state.status_message = 'Placed ' + note + ' in bar ' + bar;
+  } else {
+    state.status_message = (kind === 'delete' ? 'Removed note from bar ' : 'Resized note in bar ') + bar;
+  }
+}
+
+function selectStudioPosition(state: Scope, bar: number, tick: number, lane: number, select = true): void {
+  syncSequencerState(state);
+  const selected = select ? (state.active_steps as Scope[]).find(step =>
+    !step.is_rest && !step.is_bar && step.bar_num === bar && step.lane === lane &&
+    step.matrix_bar_left === tick * STUDIO_TICK_WIDTH) : undefined;
+  state.selected_step_id = selected?.id ?? -1;
+}
+
+export function updateStudioNoteDrag(
+  state: Scope, id: number, columnDelta: number, rowDelta: number, resize: boolean, commit = false,
+) {
+  const step = (state.active_steps as Scope[]).find(item => item.id === id && !item.is_rest && !item.is_bar);
+  if (!step) return;
+  const voice = String(state.active_voice);
+  const pitches = voice === 'drums' ? DRUM_PITCHES : STUDIO_PITCHES;
+  const trackKey = voice + '_track';
+  const barTicks = studioBarTicks(String(state.time_signature));
+  const bars = Number(state.bars);
+  const selectedBar = Number(state.selected_bar);
+  const bar = Number(step.bar_num);
+  const tick = Number(step.matrix_bar_left) / STUDIO_TICK_WIDTH;
+  const sourceColumn = (bar - 1) * barTicks + tick;
+  const first = selectedBar ? (selectedBar - 1) * barTicks : 0;
+  const last = selectedBar ? selectedBar * barTicks - 1 : bars * barTicks - 1;
+  const column = resize ? sourceColumn : Math.max(first, Math.min(last, sourceColumn + columnDelta));
+  const targetBar = Math.floor(column / barTicks) + 1;
+  const targetTick = column % barTicks;
+  const sourceRow = Number(step.pitch_row);
+  const row = resize ? sourceRow : Math.max(0, Math.min(pitches.length - 1, sourceRow + rowDelta));
+  const fromPitch = (step.chord_notes as string[])[0];
+  const toPitch = row === sourceRow ? fromPitch : pitches[row];
+  const result = placeStudioNote(String(state[trackKey] || ''), barTicks, bars, {
+    bar: targetBar, tick: targetTick, pitch: toPitch,
+    source: { bar, tick, lane: Number(step.lane) },
+    resizeBy: resize ? columnDelta : undefined,
+  });
+  if (!result) return;
+  if (commit && result.score !== undefined) {
+    state[trackKey] = result.score;
+    selectStudioPosition(state, targetBar, targetTick, result.lane ?? 0);
+    state.selected_note = toPitch;
+    state.status_message = (resize ? 'Resized note in bar ' : 'Moved note to bar ') + targetBar;
+  }
+  return { valid: result.valid, ticks: result.ticks, column: column - first, row };
 }

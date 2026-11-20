@@ -193,4 +193,22 @@ The first implementation pass addresses UX01–UX06 in [the UX review](../../doc
 
 The following pass addresses UX07, UX08 and UX11. Standalone games and Studio now show a compact introduction and live preview before optional implementation notes; their run-local section explains repository setup and imported folders. The sandbox uses Apply code followed by Send Request, groups document/AST inspection under a disclosure, and provides Reset example. Reset invalidates an in-flight Apply so its later result cannot overwrite the reset state. Studio's SAVE/LOAD use session fallback when iframe storage access is denied, including when reading the `localStorage` property itself throws. EXPORT .RUNE is explicitly a song export, separate from downloading the complete application source.
 
+
+
+### Start and reopen a Rune Studio song
+
+Select **New Song** to start a blank four-bar arrangement in 4/4 at 120 BPM. Enter a title above the transport and choose **Save** before switching songs. **Open song** lists saved arrangements and presets and can reload the current song's saved version. **Export .rune** downloads the arrangement for use outside the browser. The track list sits next to the editor on wide screens and directly above it on narrow screens. The piano roll scrolls on both axes and keeps the pitch keys visible when you move through time.
+
+### Rune Studio's fixed measures
+
+Open the [Rune Studio example](../../examples/rune-web/studio/rune_studio.rune) and choose **4/4** or **3/4** in the transport. Each bar has 16 or 12 sixteenth-note positions, respectively. Tap the piano roll to place a note at that pitch and position. Stack pitches in the same column to build a chord, or stagger the pitches to make them overlap with independent timing. The **STRIP** is a playback view that shows overlapping pitches on separate rows. Right-click a note or tap its **×** to remove that pitch. Drag one note to move it in time, drag it vertically in the piano roll to change its pitch, or drag its right edge to resize it. Each note stays within its bar and leaves existing notes in place. Separate pitches can overlap.
+
+The piano-roll keys, bottom keyboard, and drum pads audition their pitches without adding steps. The **Sound** buttons set the instrument for the active pitched voice. That instrument applies to auditioning, upcoming playback notes, and every overlapping layer in the voice. **Save** includes these choices.
+
+Press **Space** to play or pause. While stopped or paused, click or drag the top of the master ruler, or drag the piano roll or Strip playhead handle, to choose a starting beat. Play resumes at that position. The arrows beside Play jump to the previous or next bar while paused. The double-left arrow returns to the beginning. These controls hide during playback. The bar controls apply to all instruments, and Save and Load remember every pitch and the bar count. Playback and .rune exports include the silence between notes and at the ends of bars, and export overlapping pitches as parallel named tracks.
+
+Older scores with notes beyond an explicit bar boundary show and play only the portion that fits the selected meter. The saved score retains those notes, so widening the meter can reveal them again.
+
+Studio sets `studio_fixed_bars = true` and uses the browser host's `music.edit_steps` action statement. Its matrix supplies the click coordinates through `event.offsetX` and `event.offsetY`. An element with `on_contextmenu="deleteStep(step.id)"` handles right-clicks and suppresses the browser menu over that element.
+
 The deployed v0.2.20 site passed `python3 tests/browser/teaching_ux.py --url https://vectrune.com` on 12 November 2026: 75 successful route/locale responses, repeated language switches with refresh, malformed-locale recovery, desktop/mobile layouts, sandbox Apply/Send/Reset, source downloads, and Studio Save/Load/export. Use `--url` for future deployment smoke checks; this mode reads the public route inventory and does not rebuild or start a local server. The implementation is commit `749ba4a` and deployment run [43281949980](https://github.com/davethomas11/vectrune/actions/runs/43281949980).

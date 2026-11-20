@@ -12,6 +12,8 @@ export function downloadText(filename: string, content: string): void {
 export function copyText(text: string): void { mock.clipboard.push(text); }
 const record = (operation: string, args: unknown[]) => { mock.audio.push({ operation, args }); };
 export const playSound = (...args: unknown[]) => record('sound.play', args);
+export const auditionMusicNote = (...args: unknown[]) => record('music.audition', args);
+export const setTrackInstrument = (...args: unknown[]) => record('music.instrument', args);
 export const playMusic = (...args: unknown[]) => record('music.play', args);
 export const stopMusic = () => record('music.stop', []);
 export const pauseMusic = () => record('music.pause', []);

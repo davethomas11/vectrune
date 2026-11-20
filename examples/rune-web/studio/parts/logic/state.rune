@@ -3,20 +3,21 @@
 state:
     selected_song = "vectraiders"
     song_title = "VectRaiders"
+    saved_songs = []
     tempo = 144
     time_signature = "4/4"
     bars = 4
+    studio_fixed_bars = true
     volume = 20
     is_playing = false
     is_paused = false
     is_fullscreen = false
-    status_message = "Ready to compose. Choose a preset, click notes, or step-edit!"
+    status_message = "Open a preset or start a new song."
     flash_type = "info"
     active_voice = "lead"
     active_duration = ":8"
     selected_note = "E4"
     selected_step_id = -1
-    chord_mode = false
     editor_mode = "matrix"
     selected_bar = 0
     active_lower_tab = "tracks"
