@@ -16,6 +16,7 @@ import { hostedUrl } from './utils';
 import { renderNode } from './rendering';
 import { syncSequencerState } from './statement';
 import { bindStudioNoteDrag } from './studio_drag';
+import { bindStudioNoteTools } from './studio_note_tools';
 import { bindStudioTransport, paintStudioPlayhead } from './studio_transport';
 import { bindEvent, setupMemoryUpdateListener } from './events';
 import { setupNavigator, updateSeoMetadata } from './navigator';
@@ -249,6 +250,7 @@ export function boot(config: RuneWebConfig): RuneApp {
   bindEvent('contextmenu');
   if (app.state.studio_fixed_bars === true) {
     bindStudioNoteDrag(app.state);
+    bindStudioNoteTools(app.state);
     bindStudioTransport(app);
   }
   bindEvent('change');

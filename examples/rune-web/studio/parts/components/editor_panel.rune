@@ -99,9 +99,20 @@ view:
             div .piano-matrix-rack:
                 div .matrix-header:
                     h2 .matrix-title "Piano roll · {active_voice}"
-                    span .matrix-sub "Tap to add · Drag to move · Drag the edge to resize · Right-click or × to remove"
+                    div .matrix-note-tools aria-label="Note selection and clipboard":
+                        button .step-stretch-btn {.active when studio_note_tool == 'select'} type=button data-studio-note-tool="select" aria-pressed="{studio_note_tool == 'select'}" "Select"
+                        button .step-stretch-btn type=button data-studio-note-tool="copy" disabled="{studio_selection_count == 0 and selected_step_id < 0}" aria-keyshortcuts="Control+C Meta+C" "Copy"
+                        button .step-stretch-btn {.active when studio_note_tool == 'paste'} type=button data-studio-note-tool="paste" disabled="{studio_clipboard_count == 0}" aria-pressed="{studio_note_tool == 'paste'}" aria-keyshortcuts="Control+V Meta+V" "Paste"
+                        if studio_selection_count > 0:
+                            span .matrix-sub "{studio_selection_count} selected"
+                    if studio_note_tool == 'edit':
+                        span .matrix-sub "Tap to add · Drag to move · Drag the edge to resize · Right-click or × to remove"
+                    if studio_note_tool == 'select':
+                        span .matrix-sub "Tap notes or drag a box to select"
+                    if studio_note_tool == 'paste':
+                        span .matrix-sub "Tap the grid where the copied notes should start"
                     for step in active_steps:
-                        if !step.is_bar and !step.is_rest and selected_step_id == step.id:
+                        if !step.is_bar and !step.is_rest and selected_step_id == step.id and studio_note_tool == 'edit':
                             div .matrix-length-controls:
                                 if step.can_shorten:
                                     button .step-stretch-btn click="stretchStep(step.id, -1)":
@@ -204,14 +215,14 @@ view:
                         div .seq-playhead #seq-playhead data-sync-playhead="beat":
                             if !is_playing:
                                 span .seq-seek-grip data-studio-seek="beat" title="Drag to set playback position":
-                        div .matrix-grid-surface {.surface-drums when active_voice == 'drums'} style="width: {studio_timeline_width}px;" click="placeMatrixNote(event.offsetX, event.offsetY)":
+                        div .matrix-grid-surface {.surface-drums when active_voice == 'drums'} {.selection-tool when studio_note_tool == 'select'} {.paste-tool when studio_note_tool == 'paste'} style="width: {studio_timeline_width}px;" click="placeMatrixNote(event.offsetX, event.offsetY)":
                             for step in active_steps:
                                 if selected_bar == 0 or step.bar_num == selected_bar:
                                     if step.is_bar and selected_bar == 0 and step.lane == 0:
                                         div .matrix-bar-divider style="left: {step.matrix_left}px;" click="selectBar(step.bar_num)":
                                             span .matrix-bar-divider-label "{step.len_label}"
                                     if !step.is_bar and !step.is_rest:
-                                        div .matrix-note-block .chip-{step.pitch_class} {.compact-note when step.beats == 0.25} {.selected-step when selected_step_id == step.id} {.playing-step-now when playback_step_id == step.id} data-sync-step="{step.id}" data-step-idx="{step.id}" data-studio-note="matrix" title="{step.note} · {step.len_label}" style="top: {step.matrix_top}px; left: {step.matrix_left}px; width: {step.matrix_width}px;" click="selectStep(step.id)" on_contextmenu="deleteStep(step.id)":
+                                        div .matrix-note-block .chip-{step.pitch_class} {.compact-note when step.beats == 0.25} {.selected-step when selected_step_id == step.id or studio_selected_notes[step.id]} {.playing-step-now when playback_step_id == step.id} data-sync-step="{step.id}" data-step-idx="{step.id}" data-studio-note="matrix" title="{step.note} · {step.len_label}" style="top: {step.matrix_top}px; left: {step.matrix_left}px; width: {step.matrix_width}px;" click="selectStep(step.id)" on_contextmenu="deleteStep(step.id)":
                                             div .matrix-note-body:
                                                 span .matrix-note-pitch "{step.note}"
                                                 span .matrix-note-len "{step.len_label}"

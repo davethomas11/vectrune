@@ -8,6 +8,10 @@ state:
     time_signature = "4/4"
     bars = 4
     studio_fixed_bars = true
+    studio_note_tool = "edit"
+    studio_selected_notes = {}
+    studio_selection_count = 0
+    studio_clipboard_count = 0
     volume = 20
     is_playing = false
     is_paused = false

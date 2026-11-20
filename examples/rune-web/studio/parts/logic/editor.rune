@@ -1,6 +1,7 @@
 @Logic/studio
 
 action setEditorMode(mode):
+    studio_note_tool = "edit"
     editor_mode = mode
 
 action setLowerTab(tab):

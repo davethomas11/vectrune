@@ -160,6 +160,59 @@ def check_polyphony(page):
     page.get_by_label('Open song').select_option('vectraiders')
 
 
+def check_copy_paste(page):
+    page.locator('[data-on-click="clearActiveTrack"]').click()
+    grid = page.locator('.matrix-grid-surface')
+    for tick, row in ((0, 8), (0, 5), (2, 12), (4, 13)):
+        grid.click(position={'x': tick * 30 + 15, 'y': row * 28 + 12})
+    notes = grid.locator('.matrix-note-block')
+    selected = grid.locator('.selected-step')
+    expect(notes).to_have_count(4)
+    page.keyboard.press('Escape')
+
+    for pitch in ('E4', 'G4'):
+        notes.filter(has=page.locator('.matrix-note-pitch', has_text=pitch)).click(
+            position={'x': 10, 'y': 12}, modifiers=['Shift'],
+        )
+    expect(selected).to_have_count(2)
+
+    tools = page.locator('.matrix-note-tools')
+    tools.get_by_role('button', name='Select', exact=True).click()
+    viewport = page.locator('.matrix-container')
+    viewport.evaluate("element => { element.scrollLeft = 0; element.scrollTop = 0; }")
+    page.evaluate("window.scrollTo(0, 0)")
+    bounds = grid.bounding_box()
+    x, y = bounds['x'], bounds['y']
+    page.mouse.move(x + 5, y + 4 * 28)
+    page.mouse.down()
+    page.mouse.move(x + 119, y + 13 * 28 - 1, steps=6)
+    expect(page.locator('.studio-note-marquee')).to_be_visible()
+    page.mouse.up()
+    expect(selected).to_have_count(3)
+    page.keyboard.press('Control+c')
+    expect(page.locator('.status-txt')).to_have_text('Copied 3 notes')
+
+    tools.get_by_role('button', name='Paste', exact=True).click()
+    grid.click(position={'x': 15, 'y': 8 * 28 + 12})
+    expect(page.locator('.status-txt')).to_contain_text('overlaps an existing note')
+    expect(notes).to_have_count(4)
+
+    page.locator('.bar-tab[data-on-click="selectBar(2)"]').click()
+    grid.click(position={'x': 45, 'y': 8 * 28 + 12})
+    expect(page.locator('.status-txt')).to_have_text('Pasted 3 notes')
+    expect(selected).to_have_count(3)
+    for pitch, left in (('E4', '30px'), ('G4', '30px'), ('C4', '90px')):
+        copy = selected.filter(has=page.locator('.matrix-note-pitch', has_text=pitch))
+        expect(copy).to_have_css('left', left)
+        expect(copy).to_have_css('width', '56px')
+
+    page.keyboard.press('Control+v')
+    expect(grid).to_have_class(re.compile('paste-tool'))
+    page.keyboard.press('Escape')
+    expect(selected).to_have_count(0)
+    page.get_by_label('Open song').select_option('vectraiders')
+
+
 def check_transport(page):
     page.locator('.bar-tab[data-on-click="selectBar(0)"]').click()
     rail = page.get_by_role('slider', name='Playback position in beats')
@@ -279,6 +332,27 @@ def check_touch_editor_and_strip(browser, base):
     expect(note).to_have_css('width', '86px')
     note.get_by_title('Delete').tap()
     expect(note).to_have_count(0)
+    for y in (12, 108):
+        grid.tap(position={'x': 45, 'y': y})
+    tools = page.locator('.matrix-note-tools')
+    tools.get_by_role('button', name='Select', exact=True).tap()
+    expect(grid).to_have_class(re.compile('selection-tool'))
+    grid.tap(position={'x': 105, 'y': 54})
+    expect(grid.locator('.selected-step')).to_have_count(0)
+    for pitch in ('hihat', 'kick'):
+        note.filter(has=page.locator('.matrix-note-pitch', has_text=pitch)).tap(position={'x': 10, 'y': 12})
+    expect(grid.locator('.selected-step')).to_have_count(2)
+    tools.get_by_role('button', name='Copy', exact=True).tap()
+    expect(page.locator('.status-txt')).to_have_text('Copied 2 notes')
+    tools.get_by_role('button', name='Paste', exact=True).tap()
+    expect(grid).to_have_class(re.compile('paste-tool'))
+    grid.tap(position={'x': 195, 'y': 54})
+    expect(page.locator('.status-txt')).to_have_text('Pasted 2 notes')
+    expect(note).to_have_count(4)
+    pasted = grid.locator('.selected-step')
+    expect(pasted).to_have_count(2)
+    for item in pasted.all():
+        expect(item).to_have_css('left', '180px')
     context.close()
 
 
@@ -364,6 +438,7 @@ def check(base):
         check_song_projects(page)
         check_note_drags(page)
         check_polyphony(page)
+        check_copy_paste(page)
         check_fixed_bars(page)
         check_transport(page)
 
@@ -435,7 +510,7 @@ def check(base):
         context.close()
         check_touch_editor_and_strip(browser, base)
         browser.close()
-    print('Studio browser checks pass: new and saved songs, fixed 4/4 and 3/4 bars, polyphonic playback, keyboard audition and instrument switching, pause/resume and seek, grid placement, mouse and touch matrix editing, read-only Strip playback, right-click and touch removal, Save/Load, Play/Pause, and .rune export', flush=True)
+    print('Studio browser checks pass: new and saved songs, fixed 4/4 and 3/4 bars, polyphonic playback and copy/paste, keyboard audition and instrument switching, pause/resume and seek, grid placement, mouse and touch matrix editing, read-only Strip playback, right-click and touch removal, Save/Load, Play/Pause, and .rune export', flush=True)
 
 
 if __name__ == '__main__':
