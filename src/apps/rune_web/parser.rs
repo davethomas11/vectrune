@@ -269,7 +269,31 @@ pub fn parse_rune_web_frontend(
                 .and_then(|v| v.as_str())
                 .unwrap_or("page")
                 .to_string();
-            navigator = Some(NavigatorDefinition { bind, mode, param });
+            let fragment = if let Some(value) = section.kv.get("fragment") {
+                let name = value.as_str().unwrap_or_default().trim();
+                if !matches!(mode.as_str(), "path" | "query") {
+                    return Err(ParseError(
+                        "@Navigator fragment requires mode = path or mode = query".to_string(),
+                    ));
+                }
+                let valid_name = name.chars().enumerate().all(|(index, ch)| {
+                    ch == '_' || ch.is_ascii_alphabetic() || (index > 0 && ch.is_ascii_digit())
+                });
+                if name.is_empty() || name == bind || !valid_name {
+                    return Err(ParseError(
+                        "@Navigator fragment must name a separate state property".to_string(),
+                    ));
+                }
+                Some(name.to_string())
+            } else {
+                None
+            };
+            navigator = Some(NavigatorDefinition {
+                bind,
+                mode,
+                param,
+                fragment,
+            });
         }
     }
 
@@ -287,6 +311,7 @@ pub fn parse_rune_web_frontend(
                                 bind: target.trim().to_string(),
                                 mode: "auto".to_string(),
                                 param: "page".to_string(),
+                                fragment: None,
                             });
                             break;
                         }

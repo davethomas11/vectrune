@@ -7,13 +7,31 @@
 // - Listens to popstate / hashchange for browser Back / Forward buttons
 // ============================================================================
 
-import { ctx } from './context';
+import { ctx, withContext } from './context';
 import { interpolate } from './interpolation';
 import { hostingPrefix, hostedUrl } from './utils';
 import type { NavigatorConfig, RuneApp, Scope } from './types';
 
 let isNavigatingFromUrl = false;
 let lastKnownRoute: string | null = null;
+const pendingUrlUpdates = new WeakSet<RuneApp>();
+
+function readFragment(): string {
+  const fragment = window.location.hash.slice(1);
+  try {
+    return decodeURIComponent(fragment);
+  } catch {
+    return fragment;
+  }
+}
+
+function updateFragment(url: URL, config: NavigatorConfig, state: RuneApp['state']): void {
+  if (config.fragment) {
+    url.hash = encodeURIComponent(String(state[config.fragment] ?? ''));
+  } else if (url.hash && !url.hash.startsWith('#/')) {
+    url.hash = '';
+  }
+}
 
 /**
  * Read the current route from the browser's URL.
@@ -203,9 +221,7 @@ export function updateNavigatorUrl(route: string, replace = false): void {
       url.searchParams.delete('p');
       url.searchParams.delete(config.bind);
 
-      if (url.hash && !url.hash.startsWith('#/')) {
-        url.hash = '';
-      }
+      updateFragment(url, config, context.app.state);
 
       const finalUrl = newPath + (url.search ? url.search : '') + (url.hash ? url.hash : '');
       const stateObj = { [config.bind]: cleanRoute };
@@ -232,10 +248,7 @@ export function updateNavigatorUrl(route: string, replace = false): void {
       url.searchParams.set(param, cleanRoute);
     }
 
-    // Clean up temporary in-page anchor hash (e.g. #app, #quickstart) when navigating
-    if (url.hash && !url.hash.startsWith('#/')) {
-      url.hash = '';
-    }
+    updateFragment(url, config, context.app.state);
 
     const newUrl = url.pathname + (url.search ? url.search : '') + (url.hash ? url.hash : '');
     const stateObj = { [config.bind]: cleanRoute };
@@ -259,9 +272,30 @@ export function handleNavigatorStateChange(prop: string, value: unknown): void {
   if (isNavigatingFromUrl) return;
   const context = ctx();
   const config = context.navigator;
-  if (!config || prop !== config.bind) return;
+  if (!config) return;
+  if (!config.fragment) {
+    if (prop === config.bind) updateNavigatorUrl(String(value ?? ''));
+    return;
+  }
 
-  updateNavigatorUrl(String(value ?? ''));
+  // Coalesce route and fragment assignments in one action into one entry.
+  const app = context.app;
+  if (pendingUrlUpdates.has(app) || typeof window === 'undefined') return;
+  pendingUrlUpdates.add(app);
+  queueMicrotask(() => {
+    pendingUrlUpdates.delete(app);
+    const route = String(app.state[config.bind] ?? '').trim();
+    if (route !== lastKnownRoute) {
+      withContext(context, () => updateNavigatorUrl(route));
+      return;
+    }
+    const url = new URL(window.location.href);
+    const previousHash = url.hash;
+    updateFragment(url, config, app.state);
+    if (url.hash !== previousHash) {
+      window.history.pushState({ [config.bind]: route }, '', url.pathname + url.search + url.hash);
+    }
+  });
 }
 
 /**
@@ -273,14 +307,17 @@ export function setupNavigator(config: NavigatorConfig, app: RuneApp): void {
   const boundVar = config.bind;
   if (!boundVar) return;
 
-  // 1. Initial route read from URL (on page load or refresh)
+  const fragmentVar = config.fragment;
+  // Read the initial URL without writing a browser history entry.
   const initialUrlRoute = readNavigatorUrl(config);
-  if (initialUrlRoute) {
-    app.state[boundVar] = initialUrlRoute;
-    lastKnownRoute = initialUrlRoute;
-  } else {
-    lastKnownRoute = String(app.state[boundVar] || 'home');
+  isNavigatingFromUrl = true;
+  try {
+    if (initialUrlRoute) app.state[boundVar] = initialUrlRoute;
+    if (fragmentVar) app.state[fragmentVar] = readFragment();
+  } finally {
+    isNavigatingFromUrl = false;
   }
+  lastKnownRoute = String(app.state[boundVar] || 'home');
   updateSeoMetadata(lastKnownRoute);
 
   // 2. Global helper `navigate(target)` fallback if not defined in @Logic
@@ -292,34 +329,27 @@ export function setupNavigator(config: NavigatorConfig, app: RuneApp): void {
     }
   };
 
-  // 3. Listen to browser Back / Forward events (popstate & hashchange)
-  window.addEventListener('popstate', (_event: PopStateEvent) => {
-    const currentRoute = readNavigatorUrl(config) || 'home';
-    if (currentRoute !== app.state[boundVar]) {
-      isNavigatingFromUrl = true;
-      try {
+  function syncFromUrl(routeFallback: string | null): void {
+    const currentRoute = readNavigatorUrl(config) || routeFallback;
+    const routeChanged = currentRoute !== null && currentRoute !== app.state[boundVar];
+    const fragment = fragmentVar ? readFragment() : '';
+    if (!routeChanged && (!fragmentVar || fragment === app.state[fragmentVar])) return;
+    isNavigatingFromUrl = true;
+    try {
+      if (routeChanged) {
         lastKnownRoute = currentRoute;
         app.state[boundVar] = currentRoute;
-        if (app.render) app.render();
         updateSeoMetadata(currentRoute);
-      } finally {
-        isNavigatingFromUrl = false;
       }
+      if (fragmentVar) app.state[fragmentVar] = fragment;
+      // Fragment bindings update reactive state. Let the queued render run
+      // once so a native anchor's focus is not lost to a second render.
+      if (!fragmentVar && app.render) app.render();
+    } finally {
+      isNavigatingFromUrl = false;
     }
-  });
+  }
 
-  window.addEventListener('hashchange', (_event: HashChangeEvent) => {
-    const currentRoute = readNavigatorUrl(config);
-    if (currentRoute && currentRoute !== app.state[boundVar]) {
-      isNavigatingFromUrl = true;
-      try {
-        lastKnownRoute = currentRoute;
-        app.state[boundVar] = currentRoute;
-        if (app.render) app.render();
-        updateSeoMetadata(currentRoute);
-      } finally {
-        isNavigatingFromUrl = false;
-      }
-    }
-  });
+  window.addEventListener('popstate', () => syncFromUrl('home'));
+  window.addEventListener('hashchange', () => syncFromUrl(null));
 }

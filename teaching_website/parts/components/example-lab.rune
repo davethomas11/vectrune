@@ -125,7 +125,7 @@ view:
     section .card:
         h3 "%i18n.Guide.run_locally%"
         p "%i18n.Guide.project_setup%"
-        a .content-link href="{i18n.Common.base_path}#quickstart" data-route-link=true click="navigate('home')" "%i18n.Header.nav_quickstart%"
+        a .content-link href="{i18n.Common.base_path}#quickstart" data-route-link=true click="navigateSection('quickstart')" "%i18n.Header.nav_quickstart%"
         CommandBlock code="{i18n.Guide.clone_cmd}"
         p "%i18n.Guide.project_folder%"
         div .command-block:

@@ -1,17 +1,19 @@
 @Navigator
 url bound to activePage
 mode = path
+fragment = activeSection
 
 @Component/SiteLayout
 state:
     activePage = "home"
+    activeSection = ""
 view:
     div .app-layout:
         a .skip-link href=#content "%i18n.Nav.skip%"
         DevBanner
         TeachingHeader
         div .app-body:
-            main #content .content-area tabindex=-1 data-route="{activePage}":
+            main #content .content-area tabindex=-1 data-route="{activePage}" data-section="{activeSection}":
                 match activePage:
                     "home"            -> HomeContent
                     "documents"       -> DocumentSyntaxPage

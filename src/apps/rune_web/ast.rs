@@ -176,6 +176,9 @@ pub struct NavigatorDefinition {
     pub mode: String,
     /// Parameter name in query string or hash prefix (e.g. "page", defaults to "page")
     pub param: String,
+    /// Optional state property for the decoded fragment in path or query mode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fragment: Option<String>,
 }
 
 /// An i18n locale bundle from `@I18N/<locale>`.

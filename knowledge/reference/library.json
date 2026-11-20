@@ -2005,13 +2005,13 @@
       "category": "declarations",
       "name": "@Navigator",
       "signature": "@Navigator",
-      "summary": "Synchronize a state variable with path, query, or hash navigation.",
+      "summary": "Synchronize a route state variable with the URL and optionally bind the page fragment separately.",
       "sources": [
         "src/apps/rune_web/parser.rs"
       ],
       "returns": "",
       "errors": "",
-      "example": "@Navigator\nurl bound to activePage\nmode = path",
+      "example": "@Navigator\nurl bound to activePage\nmode = path\nfragment = activeSection",
       "parameters": [],
       "aliases": [],
       "notes": [],
@@ -2033,6 +2033,12 @@
           "type": "string",
           "default": "page",
           "description": "Query parameter used by query navigation."
+        },
+        {
+          "name": "fragment",
+          "type": "state property",
+          "default": "—",
+          "description": "In path or query mode, bind the decoded section ID without the leading #. An empty string removes the fragment. Assign the route and fragment in one action to create one history entry."
         }
       ]
     },

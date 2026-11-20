@@ -24,6 +24,34 @@ url bound to activePage
     assert_eq!(nav.bind, "activePage");
     assert_eq!(nav.mode, "auto");
     assert_eq!(nav.param, "page");
+    assert_eq!(nav.fragment, None);
+}
+
+#[test]
+fn test_navigator_fragment_binding() {
+    let source = r#"
+@Page/test
+title = Test Page
+view:
+    div "Hello"
+
+@Navigator
+url bound to activePage
+mode = path
+fragment = activeSection
+"#;
+
+    let doc = parse_rune(source).unwrap();
+    let frontend = parse_rune_web_frontend(&doc, "test").unwrap();
+    assert_eq!(frontend.navigator.unwrap().fragment.as_deref(), Some("activeSection"));
+
+    for invalid in [
+        source.replace("mode = path", "mode = hash"),
+        source.replace("fragment = activeSection", "fragment = activePage"),
+    ] {
+        let doc = parse_rune(&invalid).unwrap();
+        assert!(parse_rune_web_frontend(&doc, "test").is_err());
+    }
 }
 
 #[test]

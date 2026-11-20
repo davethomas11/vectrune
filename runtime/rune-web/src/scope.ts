@@ -159,7 +159,8 @@ export function makeReactive(obj: Record<string, unknown>): Record<string, unkno
           : value;
       if (target[prop as string] === rawValue) return true;
       target[prop as string] = rawValue;
-      if (typeof prop === 'string' && context.navigator && prop === context.navigator.bind) {
+      const navigator = context.navigator;
+      if (typeof prop === 'string' && navigator && (prop === navigator.bind || prop === navigator.fragment)) {
         handleNavigatorStateChange(prop, rawValue);
       }
       scheduleRender();
