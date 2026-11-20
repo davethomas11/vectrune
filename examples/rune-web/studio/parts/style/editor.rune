@@ -461,6 +461,7 @@ rules:
 
     .matrix-header:
         display = flex
+        flex-wrap = wrap
         justify-content = space-between
         align-items = center
         margin-bottom = 0.5rem
@@ -486,6 +487,44 @@ rules:
         max-height = clamp(300px, 48vh, 580px)
         background = #080c1a
         position = relative
+
+    .matrix-note-tools:
+        display = flex
+        flex-wrap = wrap
+        align-items = center
+        gap = 0.35rem
+
+    .matrix-note-tools .step-stretch-btn:
+        font-family = inherit
+        font-size = 0.75rem
+        padding = 0.3rem 0.55rem
+        touch-action = manipulation
+
+    .matrix-note-tools .step-stretch-btn.active:
+        background = #173546
+        border-color = {neon_cyan}
+        color = #e7f3ff
+
+    .matrix-note-tools .step-stretch-btn:disabled:
+        opacity = 0.45
+        cursor = default
+
+    .matrix-grid-surface.selection-tool:
+        touch-action = none
+
+    .matrix-grid-surface.selection-tool .matrix-note-block, .matrix-grid-surface.paste-tool .matrix-note-block:
+        cursor = crosshair
+
+    .matrix-grid-surface.selection-tool .matrix-delete-btn, .matrix-grid-surface.selection-tool .note-resize-grip, .matrix-grid-surface.paste-tool .matrix-delete-btn, .matrix-grid-surface.paste-tool .note-resize-grip:
+        visibility = hidden
+
+    .studio-note-marquee:
+        position = fixed
+        z-index = 100000
+        box-sizing = border-box
+        pointer-events = none
+        border = 1px solid {neon_cyan}
+        background = rgba(0, 229, 255, 0.17)
 
     .matrix-keys-column:
         position = sticky

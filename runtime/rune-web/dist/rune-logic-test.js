@@ -7012,6 +7012,10 @@ var __RuneWeb = (() => {
       return;
     }
     state.active_instrument = state[voice + "_instrument"];
+    if (state.studio_selection_count) {
+      state.studio_selected_notes = {};
+      state.studio_selection_count = 0;
+    }
     const barTicks = studioBarTicks(timeSignature);
     const bars = Number(state.bars) || 1;
     const parts = studioSongParts(state, barTicks, bars);

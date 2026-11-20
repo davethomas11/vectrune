@@ -19,7 +19,8 @@ export function bindStudioNoteDrag(state: Scope): void {
   let drag: NoteDrag | undefined;
 
   document.addEventListener('pointerdown', (event: PointerEvent) => {
-    if (drag || event.button !== 0 || !event.isPrimary || !(event.target instanceof Element)) return;
+    if (drag || event.button !== 0 || !event.isPrimary || event.shiftKey ||
+        state.studio_note_tool === 'select' || state.studio_note_tool === 'paste' || !(event.target instanceof Element)) return;
     const note = event.target.closest<HTMLElement>('[data-studio-note]');
     if (!note || event.target.closest('button')) return;
     const grid = note.closest<HTMLElement>('.matrix-grid-surface');

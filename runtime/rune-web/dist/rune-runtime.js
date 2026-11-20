@@ -3718,7 +3718,7 @@ var __RuneWeb = (() => {
   var MAX_DEPTH = 64;
   var voxelFunctions = {
     voxel_world: (width, height, depth, materials, options) => voxelWorld(width, height, depth, materials, options),
-    nearby: (entities, position, radius) => nearby(entities, position, radius),
+    nearby: (entities, position2, radius) => nearby(entities, position2, radius),
     entity_group: (entities) => entityGroup(entities),
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
     voxel_move: (world, player, dx, dy, jump, movement) => voxelMove(world, player, dx, dy, jump, movement),
@@ -5862,8 +5862,8 @@ var __RuneWeb = (() => {
       return Array.from({ length: count }, (_, index2) => measures.map((spans) => {
         const part = [];
         for (const span of spans) {
-          const pitch = tokenPitches(span.token)[index2];
-          if (pitch) part.push({ ...span, token: pitch });
+          const pitch2 = tokenPitches(span.token)[index2];
+          if (pitch2) part.push({ ...span, token: pitch2 });
         }
         return serializeMeasure(part, barTicks, false);
       }).join(" | "));
@@ -5872,9 +5872,9 @@ var __RuneWeb = (() => {
   function studioTrackPatterns(score, barTicks, bars) {
     return studioScoreLanes(score, barTicks).map((lane) => studioTrackPattern(lane, barTicks, bars));
   }
-  function pitchKey(pitch) {
-    const match = /^([A-G])([#b]?)(\d+)$/i.exec(pitch);
-    if (!match) return pitch.toLowerCase();
+  function pitchKey(pitch2) {
+    const match = /^([A-G])([#b]?)(\d+)$/i.exec(pitch2);
+    if (!match) return pitch2.toLowerCase();
     const semitones = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
     const accidental = match[2] === "#" ? 1 : match[2] ? -1 : 0;
     return String(Number(match[3]) * 12 + semitones[match[1].toUpperCase()] + accidental);
@@ -5917,6 +5917,41 @@ var __RuneWeb = (() => {
     const joined = lanes.map((measures) => Array.from(measures, (tokens2) => tokens2?.join(" ") || "").join(" | ").trim());
     while (joined.length > 1 && !/[^|\s]/.test(joined[joined.length - 1])) joined.pop();
     return { ticks, valid: true, lane, score: joined.join("\n") };
+  }
+  function pasteStudioNotes(score, barTicks, bars, start, notes) {
+    const lanes = studioScoreLanes(score, barTicks).map((lane) => scoreMeasures(lane, barTicks));
+    const measures = /* @__PURE__ */ new Map();
+    for (const note of notes) {
+      const column = start + note.offset;
+      const bar = Math.floor(column / barTicks);
+      const tick = column % barTicks;
+      if (bar < 0 || bar >= bars || tick + note.ticks > barTicks) return { error: "bars" };
+      let spans = measures.get(bar);
+      if (!spans) {
+        spans = lanes.map((lane2) => measureSpans(lane2[bar] ?? [], barTicks, false));
+        measures.set(bar, spans);
+      }
+      const pitch2 = pitchKey(note.pitch);
+      const overlaps = (span) => tick < span.tick + span.ticks && span.tick < tick + note.ticks;
+      if (spans.some((lane2) => lane2.some((span) => overlaps(span) && pitchKey(tokenPitches(span.token)[0]) === pitch2))) {
+        return { error: "overlap" };
+      }
+      let lane = spans.findIndex((part) => !part.some(overlaps));
+      if (lane === -1) {
+        lane = spans.length;
+        lanes.push([]);
+        for (const measure of measures.values()) measure.push([]);
+      }
+      spans[lane].push({ token: note.pitch, tick, ticks: note.ticks });
+    }
+    for (const [bar, spans] of measures) {
+      for (const [index2, lane] of spans.entries()) {
+        lane.sort((a, b) => a.tick - b.tick);
+        lanes[index2][bar] = [serializeMeasure(lane, barTicks, false)];
+      }
+    }
+    for (const lane of lanes) while (lane.length < bars) lane.push([]);
+    return { score: lanes.map((lane) => Array.from(lane, (tokens2) => tokens2?.join(" ") ?? "").join(" | ").trim()).join("\n") };
   }
 
   // src/audio_sync.ts
@@ -7968,14 +8003,14 @@ var __RuneWeb = (() => {
     "snare": 1,
     "kick": 2
   };
-  function getPitchRow(pitch, isDrum) {
+  function getPitchRow(pitch2, isDrum) {
     if (isDrum) {
-      const p = pitch.toLowerCase();
+      const p = pitch2.toLowerCase();
       if (p.includes("hihat") || p.includes("crash")) return 0;
       if (p.includes("snare") || p.includes("tom")) return 1;
       return 2;
     }
-    const clean = pitch.toUpperCase().trim();
+    const clean = pitch2.toUpperCase().trim();
     if (clean in PITCH_ROWS) return PITCH_ROWS[clean];
     const match = clean.match(/^([A-G][#B]?)([0-8])$/);
     if (match) {
@@ -8029,27 +8064,27 @@ var __RuneWeb = (() => {
         stepInBar = 1;
         continue;
       }
-      let pitch = raw;
+      let pitch2 = raw;
       let dur = ":8";
       let isChord = false;
       let chordNotes = [];
       if (raw.startsWith("[") && raw.includes("]")) {
         const closeIdx = raw.indexOf("]");
-        pitch = raw.slice(1, closeIdx);
+        pitch2 = raw.slice(1, closeIdx);
         const after = raw.slice(closeIdx + 1);
         dur = after.startsWith(":") ? after : ":8";
         isChord = true;
-        chordNotes = pitch.split(/[,+]/).map((s) => s.trim()).filter(Boolean);
+        chordNotes = pitch2.split(/[,+]/).map((s) => s.trim()).filter(Boolean);
       } else {
         const colonIdx = raw.indexOf(":");
-        pitch = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
+        pitch2 = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
         dur = colonIdx !== -1 ? raw.slice(colonIdx) : ":8";
-        if (pitch.includes("+")) {
+        if (pitch2.includes("+")) {
           isChord = true;
-          chordNotes = pitch.split("+").map((s) => s.trim()).filter(Boolean);
+          chordNotes = pitch2.split("+").map((s) => s.trim()).filter(Boolean);
         }
       }
-      const isRest = pitch === "-" || pitch.toLowerCase() === "rest";
+      const isRest = pitch2 === "-" || pitch2.toLowerCase() === "rest";
       let lenLabel = "1/8";
       let beats = 0.5;
       if (dur === ":16") {
@@ -8074,14 +8109,14 @@ var __RuneWeb = (() => {
       let pitchClass = "step-note";
       if (isRest) pitchClass = "step-rest";
       else if (isChord) pitchClass = "step-chord";
-      else if (pitch.includes("2") || pitch.includes("1")) pitchClass = "step-bass";
-      else if (pitch.includes("3")) pitchClass = "step-mid-low";
-      else if (pitch.includes("4")) pitchClass = "step-mid";
-      else if (pitch.includes("5")) pitchClass = "step-high";
-      else if (pitch === "kick") pitchClass = "step-kick";
-      else if (pitch === "snare") pitchClass = "step-snare";
-      else if (pitch === "hihat") pitchClass = "step-hihat";
-      const rootPitch = isChord && chordNotes.length > 0 ? chordNotes[0] : pitch;
+      else if (pitch2.includes("2") || pitch2.includes("1")) pitchClass = "step-bass";
+      else if (pitch2.includes("3")) pitchClass = "step-mid-low";
+      else if (pitch2.includes("4")) pitchClass = "step-mid";
+      else if (pitch2.includes("5")) pitchClass = "step-high";
+      else if (pitch2 === "kick") pitchClass = "step-kick";
+      else if (pitch2 === "snare") pitchClass = "step-snare";
+      else if (pitch2 === "hihat") pitchClass = "step-hihat";
+      const rootPitch = isChord && chordNotes.length > 0 ? chordNotes[0] : pitch2;
       const isDrumPitch = ["kick", "snare", "hihat", "crash", "tom"].includes(rootPitch.toLowerCase());
       const row = getPitchRow(rootPitch, isDrumPitch);
       const rowHeight = isDrumPitch ? 48 : 28;
@@ -8091,12 +8126,12 @@ var __RuneWeb = (() => {
       const matrixLeft = selectedBar > 0 ? barLeft : totalLeft;
       const matrixWidth = Math.max(fixedBars ? 1 : 34, Math.round(beats * 120) - 4);
       const stripWidth = Math.max(54, Math.round(beats * 140));
-      const displayNote = isRest ? "REST" : isChord ? pitch.startsWith("[") ? pitch : `[${pitch}]` : pitch;
+      const displayNote = isRest ? "REST" : isChord ? pitch2.startsWith("[") ? pitch2 : `[${pitch2}]` : pitch2;
       steps.push({
         id: i,
         raw,
         note: displayNote,
-        chord_notes: isChord ? chordNotes : [pitch],
+        chord_notes: isChord ? chordNotes : [pitch2],
         duration: dur,
         len_label: lenLabel,
         beats,
@@ -8129,7 +8164,7 @@ var __RuneWeb = (() => {
     return steps;
   }
   var STUDIO_VOICES = ["lead", "bass", "chords", "drums"];
-  var STUDIO_PITCHES = Object.keys(PITCH_ROWS).filter((pitch) => /^[A-G]#?\d$/.test(pitch)).sort((a, b) => PITCH_ROWS[a] - PITCH_ROWS[b]);
+  var STUDIO_PITCHES = Object.keys(PITCH_ROWS).filter((pitch2) => /^[A-G]#?\d$/.test(pitch2)).sort((a, b) => PITCH_ROWS[a] - PITCH_ROWS[b]);
   var DRUM_PITCHES = ["hihat", "snare", "kick"];
   function studioSongParts(state, barTicks, bars) {
     const voicePatterns = (voice) => studioTrackPatterns(String(state[voice + "_track"] || ""), barTicks, bars);
@@ -8161,6 +8196,10 @@ var __RuneWeb = (() => {
       return;
     }
     state.active_instrument = state[voice + "_instrument"];
+    if (state.studio_selection_count) {
+      state.studio_selected_notes = {};
+      state.studio_selection_count = 0;
+    }
     const barTicks = studioBarTicks(timeSignature);
     const bars = Number(state.bars) || 1;
     const parts = studioSongParts(state, barTicks, bars);
@@ -8270,11 +8309,11 @@ var __RuneWeb = (() => {
         if (kind === "stretch") {
           const ticks = Math.round(Number(step.beats) * 4);
           const targetTicks = studioStretchTicks(ticks, Number(second), studioNoteLimit(steps, step, barTicks));
-          const pitch = step.chord_notes[0];
+          const pitch2 = step.chord_notes[0];
           const result = placeStudioNote(score, barTicks, bars, {
             bar,
             tick,
-            pitch,
+            pitch: pitch2,
             source: { bar, tick, lane },
             resizeBy: targetTicks - ticks
           });
@@ -8299,9 +8338,9 @@ var __RuneWeb = (() => {
       state.status_message = (kind === "delete" ? "Removed note from bar " : "Resized note in bar ") + bar;
     }
   }
-  function selectStudioPosition(state, bar, tick, lane, select = true) {
+  function selectStudioPosition(state, bar, tick, lane, select2 = true) {
     syncSequencerState(state);
-    const selected = select ? state.active_steps.find((step) => !step.is_rest && !step.is_bar && step.bar_num === bar && step.lane === lane && step.matrix_bar_left === tick * STUDIO_TICK_WIDTH) : void 0;
+    const selected = select2 ? state.active_steps.find((step) => !step.is_rest && !step.is_bar && step.bar_num === bar && step.lane === lane && step.matrix_bar_left === tick * STUDIO_TICK_WIDTH) : void 0;
     state.selected_step_id = selected?.id ?? -1;
   }
   function updateStudioNoteDrag(state, id, columnDelta, rowDelta, resize, commit = false) {
@@ -8572,7 +8611,7 @@ var __RuneWeb = (() => {
   function bindStudioNoteDrag(state) {
     let drag;
     document.addEventListener("pointerdown", (event) => {
-      if (drag || event.button !== 0 || !event.isPrimary || !(event.target instanceof Element)) return;
+      if (drag || event.button !== 0 || !event.isPrimary || event.shiftKey || state.studio_note_tool === "select" || state.studio_note_tool === "paste" || !(event.target instanceof Element)) return;
       const note = event.target.closest("[data-studio-note]");
       if (!note || event.target.closest("button")) return;
       const grid = note.closest(".matrix-grid-surface");
@@ -8640,6 +8679,190 @@ var __RuneWeb = (() => {
       if (event.key === "Escape") stop();
     });
     window.addEventListener("blur", stop);
+  }
+
+  // src/studio_note_tools.ts
+  var GRID = ".matrix-grid-surface";
+  var NOTE = "[data-studio-note]";
+  function notesInView(state) {
+    const bar = Number(state.selected_bar) || 0;
+    return (state.active_steps ?? []).filter((step) => !step.is_bar && !step.is_rest && (!bar || step.bar_num === bar));
+  }
+  function selection(state) {
+    const group = state.studio_selected_notes;
+    return notesInView(state).filter((step) => group?.[String(step.id)] || step.id === state.selected_step_id).map((step) => Number(step.id));
+  }
+  function select(state, ids) {
+    const unique = [...new Set(ids)];
+    state.selected_step_id = -1;
+    state.studio_selected_notes = Object.fromEntries(unique.map((id) => [id, true]));
+    state.studio_selection_count = unique.length;
+  }
+  function position(step, barTicks) {
+    return (Number(step.bar_num) - 1) * barTicks + Math.round(Number(step.matrix_bar_left) / STUDIO_TICK_WIDTH);
+  }
+  function pitch(step) {
+    return step.chord_notes[0];
+  }
+  function bindStudioNoteTools(state) {
+    let clipboard;
+    let marquee;
+    function copy() {
+      const ids = new Set(selection(state));
+      const selected = notesInView(state).filter((step) => ids.has(Number(step.id)));
+      if (!selected.length) return false;
+      const barTicks = studioBarTicks(String(state.time_signature));
+      const start = Math.min(...selected.map((step) => position(step, barTicks)));
+      clipboard = {
+        notes: selected.map((step) => ({
+          offset: position(step, barTicks) - start,
+          pitch: pitch(step),
+          ticks: Math.round(Number(step.beats) * 4)
+        })),
+        percussion: state.active_voice === "drums"
+      };
+      state.studio_clipboard_count = selected.length;
+      state.status_message = "Copied " + selected.length + (selected.length === 1 ? " note" : " notes");
+      return true;
+    }
+    function armPaste() {
+      if (!clipboard) return false;
+      if (clipboard.percussion !== (state.active_voice === "drums")) {
+        state.status_message = "Paste pitched notes into a pitched voice, or drum hits into Drums.";
+        return true;
+      }
+      state.studio_note_tool = state.studio_note_tool === "paste" ? "edit" : "paste";
+      return true;
+    }
+    function paste(grid, x) {
+      if (!clipboard) return;
+      if (clipboard.percussion !== (state.active_voice === "drums")) {
+        state.status_message = "Paste pitched notes into a pitched voice, or drum hits into Drums.";
+        return;
+      }
+      const barTicks = studioBarTicks(String(state.time_signature));
+      const start = Math.floor((x - grid.getBoundingClientRect().left) / STUDIO_TICK_WIDTH) + Math.max(0, Number(state.selected_bar) - 1) * barTicks;
+      const key2 = String(state.active_voice) + "_track";
+      const result = pasteStudioNotes(String(state[key2] || ""), barTicks, Number(state.bars), start, clipboard.notes);
+      if ("error" in result) {
+        state.status_message = result.error === "overlap" ? "A pasted note overlaps an existing note at the same pitch. Choose another step." : "The pasted notes must fit inside the existing bars. Choose another step or add a bar.";
+        return;
+      }
+      const pasted = new Set(clipboard.notes.map((note) => start + note.offset + ":" + note.pitch));
+      state[key2] = result.score;
+      syncSequencerState(state);
+      select(state, notesInView(state).filter((step) => pasted.has(position(step, barTicks) + ":" + pitch(step))).map((step) => Number(step.id)));
+      state.studio_note_tool = "select";
+      state.status_message = "Pasted " + clipboard.notes.length + (clipboard.notes.length === 1 ? " note" : " notes");
+    }
+    document.addEventListener("click", (event) => {
+      if (state.editor_mode !== "matrix" || !(event.target instanceof Element)) return;
+      const tool = event.target.closest("[data-studio-note-tool]")?.dataset.studioNoteTool;
+      if (tool === "select") state.studio_note_tool = state.studio_note_tool === "select" ? "edit" : "select";
+      if (tool === "copy") copy();
+      if (tool === "paste") armPaste();
+      const grid = event.target.closest(GRID);
+      if (!grid || state.studio_note_tool === "edit" && !event.shiftKey) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (state.studio_note_tool === "paste") {
+        paste(grid, event.clientX);
+        return;
+      }
+      const note = event.target.closest(NOTE);
+      if (!note) {
+        if (!event.shiftKey) select(state, []);
+        return;
+      }
+      const id = Number(note.dataset.stepIdx);
+      const ids = selection(state);
+      select(state, ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]);
+    }, true);
+    document.addEventListener("contextmenu", (event) => {
+      if (state.studio_note_tool === "edit" || !(event.target instanceof Element) || !event.target.closest(GRID)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+    document.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || !event.isPrimary || state.studio_note_tool !== "select" && !(state.studio_note_tool === "edit" && event.shiftKey) || !(event.target instanceof Element) || !event.target.closest(GRID)) return;
+      marquee = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, additive: event.shiftKey };
+    });
+    function rectangle(event) {
+      const scroller = document.querySelector(".matrix-container");
+      const viewport = scroller?.getBoundingClientRect();
+      if (!marquee || !viewport) return;
+      const keys = scroller?.querySelector(".matrix-keys-column")?.getBoundingClientRect();
+      const x = Math.max(keys?.right ?? viewport.left, Math.min(viewport.right, event.clientX));
+      const y = Math.max(viewport.top, Math.min(viewport.bottom, event.clientY));
+      return {
+        left: Math.min(x, marquee.x),
+        right: Math.max(x, marquee.x),
+        top: Math.min(y, marquee.y),
+        bottom: Math.max(y, marquee.y)
+      };
+    }
+    document.addEventListener("pointermove", (event) => {
+      if (event.pointerId !== marquee?.pointerId) return;
+      if (!marquee.box && Math.max(Math.abs(event.clientX - marquee.x), Math.abs(event.clientY - marquee.y)) < 5) return;
+      const bounds = rectangle(event);
+      if (!bounds) return;
+      if (!marquee.box) {
+        document.documentElement.setPointerCapture(event.pointerId);
+        marquee.box = document.createElement("div");
+        marquee.box.className = "studio-note-marquee";
+        marquee.box.setAttribute("aria-hidden", "true");
+        (document.fullscreenElement ?? document.body).append(marquee.box);
+      }
+      Object.assign(marquee.box.style, {
+        left: bounds.left + "px",
+        top: bounds.top + "px",
+        width: bounds.right - bounds.left + "px",
+        height: bounds.bottom - bounds.top + "px"
+      });
+    });
+    function clearMarquee() {
+      marquee?.box?.remove();
+      marquee = void 0;
+    }
+    document.addEventListener("pointerup", (event) => {
+      if (event.pointerId !== marquee?.pointerId) return;
+      const bounds = marquee.box && rectangle(event);
+      if (bounds) {
+        const ids = marquee.additive ? selection(state) : [];
+        document.querySelectorAll(GRID + " " + NOTE).forEach((note) => {
+          const rect = note.getBoundingClientRect();
+          if (rect.left < bounds.right && rect.right > bounds.left && rect.top < bounds.bottom && rect.bottom > bounds.top) {
+            ids.push(Number(note.dataset.stepIdx));
+          }
+        });
+        select(state, ids);
+      }
+      clearMarquee();
+    });
+    document.addEventListener("pointercancel", (event) => {
+      if (event.pointerId === marquee?.pointerId) clearMarquee();
+    });
+    window.addEventListener("blur", clearMarquee);
+    window.addEventListener("keydown", (event) => {
+      if (event.defaultPrevented || state.editor_mode !== "matrix" || event.altKey) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.isContentEditable || target?.closest("input, textarea, select")) return;
+      if (event.key === "Escape") {
+        clearMarquee();
+        state.studio_note_tool = "edit";
+        select(state, []);
+        return;
+      }
+      if (!event.ctrlKey && !event.metaKey || event.shiftKey) return;
+      const key2 = event.key.toLowerCase();
+      if (key2 === "c" && window.getSelection()?.isCollapsed !== false && copy()) event.preventDefault();
+      if (key2 === "v" && armPaste()) event.preventDefault();
+      if (key2 === "a") {
+        event.preventDefault();
+        select(state, notesInView(state).map((step) => Number(step.id)));
+        state.studio_note_tool = "select";
+      }
+    });
   }
 
   // src/studio_transport.ts
@@ -8745,10 +8968,10 @@ var __RuneWeb = (() => {
       if (target?.dataset.studioSeek !== "progress" || app.state.is_playing) return;
       const beat = Number(app.state.playback_beat) || 0;
       const wanted = { ArrowLeft: beat - 0.25, ArrowRight: beat + 0.25, Home: 0, End: studioDuration(app.state) };
-      const position = wanted[event.key];
-      if (typeof position === "number") {
+      const position2 = wanted[event.key];
+      if (typeof position2 === "number") {
         event.preventDefault();
-        parkAt(position);
+        parkAt(position2);
         requestAnimationFrame(() => document.querySelector('[data-studio-seek="progress"]')?.focus());
       }
     });
@@ -9034,6 +9257,7 @@ var __RuneWeb = (() => {
     bindEvent("contextmenu");
     if (app.state.studio_fixed_bars === true) {
       bindStudioNoteDrag(app.state);
+      bindStudioNoteTools(app.state);
       bindStudioTransport(app);
     }
     bindEvent("change");

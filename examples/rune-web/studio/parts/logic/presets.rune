@@ -35,6 +35,7 @@ action newSong:
     chords_muted = false
     drums_muted = false
     editor_mode = "matrix"
+    studio_note_tool = "edit"
     active_lower_tab = "tracks"
     music.sync_steps
     status_message = "New song ready. Name it and place notes in the piano roll."

@@ -206,3 +206,55 @@ export function placeStudioNote(score: string, barTicks: number, bars: number, e
   while (joined.length > 1 && !/[^|\s]/.test(joined[joined.length - 1])) joined.pop();
   return { ticks, valid: true, lane, score: joined.join('\n') };
 }
+
+export interface StudioCopiedNote {
+  offset: number;
+  pitch: string;
+  ticks: number;
+}
+
+/** Build the entire paste before committing, keeping every original note in place. */
+export function pasteStudioNotes(
+  score: string,
+  barTicks: number,
+  bars: number,
+  start: number,
+  notes: StudioCopiedNote[],
+): { score: string } | { error: 'bars' | 'overlap' } {
+  const lanes = studioScoreLanes(score, barTicks).map(lane => scoreMeasures(lane, barTicks));
+  const measures = new Map<number, StudioSpan[][]>();
+  for (const note of notes) {
+    const column = start + note.offset;
+    const bar = Math.floor(column / barTicks);
+    const tick = column % barTicks;
+    if (bar < 0 || bar >= bars || tick + note.ticks > barTicks) return { error: 'bars' };
+
+    let spans = measures.get(bar);
+    if (!spans) {
+      spans = lanes.map(lane => measureSpans(lane[bar] ?? [], barTicks, false));
+      measures.set(bar, spans);
+    }
+    const pitch = pitchKey(note.pitch);
+    const overlaps = (span: StudioSpan) => tick < span.tick + span.ticks && span.tick < tick + note.ticks;
+    if (spans.some(lane => lane.some(span => overlaps(span) && pitchKey(tokenPitches(span.token)[0]) === pitch))) {
+      return { error: 'overlap' };
+    }
+
+    let lane = spans.findIndex(part => !part.some(overlaps));
+    if (lane === -1) {
+      lane = spans.length;
+      lanes.push([]);
+      for (const measure of measures.values()) measure.push([]);
+    }
+    spans[lane].push({ token: note.pitch, tick, ticks: note.ticks });
+  }
+
+  for (const [bar, spans] of measures) {
+    for (const [index, lane] of spans.entries()) {
+      lane.sort((a, b) => a.tick - b.tick);
+      lanes[index][bar] = [serializeMeasure(lane, barTicks, false)];
+    }
+  }
+  for (const lane of lanes) while (lane.length < bars) lane.push([]);
+  return { score: lanes.map(lane => Array.from(lane, tokens => tokens?.join(' ') ?? '').join(' | ').trim()).join('\n') };
+}
