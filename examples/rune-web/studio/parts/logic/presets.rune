@@ -156,7 +156,7 @@ action saveToStorage:
     )
     call loadSongLibrary
     saved_songs = saved_songs.filter it.id != selected_song
-    saved_songs.push({ "id": selected_song, "key": "saved:" + selected_song, "title": song_title })
+    saved_songs.push({"id": selected_song, "key": "saved:" + selected_song, "title": song_title})
     storage.set("rune_studio_song_library", saved_songs)
     status_message = "Saved " + song_title + " in this browser. EXPORT .RUNE keeps a file copy."
     flash_type = "success"
