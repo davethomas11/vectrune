@@ -336,6 +336,7 @@ action step_shots:
                 for e in enemies:
                     if alive && e.alive && abs(e.x - s.x) < 1.1 && abs((e.z + 0.8) - s.z) < 1.1:
                         e.hp = e.hp - s.dmg
+                        e.hurt_ticks = 4
                         sound.play "nc_hit"
                         if e.kind != "turret":
                             e.x = e.x + (s.vx > 0 ? 0.22 : -0.22)
@@ -375,21 +376,81 @@ action step_enemies:
             dist = abs(e.x - player.x)
             if dist > 26:
                 continue
+            if e.base_model == null:
+                e.base_model = e.model
+            if e.fire_ticks == null:
+                e.fire_ticks = 0
+            if e.hurt_ticks == null:
+                e.hurt_ticks = 0
+
+            # Hurt flash dissolve
+            if e.hurt_ticks > 0:
+                e.hurt_ticks = e.hurt_ticks - 1
+                e.dissolve = e.hurt_ticks % 2 == 1 ? 0.35 : 0
+            else:
+                e.dissolve = 0
+
+            # Fire cooldown countdown: keep primed at telegraph start when out of range
+            if dist >= 16 && e.cd <= 20:
+                e.cd = 20
+            else:
+                e.cd = e.cd - 1
+
+            aim = player.x < e.x ? -1 : 1
+
+            # Telegraph charge threshold (20 ticks before firing when player is in range)
+            is_charging = dist < 16 && e.cd <= 20 && e.cd > 0
+            is_firing = e.fire_ticks > 0
+
+            # Enemy patrol movement (halts or slows down to brace during telegraph)
             if e.kind == "drone":
-                e.x = e.x + e.dir * 0.08
+                drone_spd = is_charging ? 0.02 : 0.08
+                e.x = e.x + e.dir * drone_spd
                 if abs(e.x - e.home_x) > 4.5:
                     e.dir = -e.dir
                 e.z = e.home_z + sin(ticks * 0.1 + e.home_x) * 0.4
             if e.kind == "walker":
-                e.x = e.x + e.dir * 0.06
+                walker_spd = is_charging ? 0 : 0.06
+                e.x = e.x + e.dir * walker_spd
                 if abs(e.x - e.home_x) > 3.5:
                     e.dir = -e.dir
-            e.cd = e.cd - 1
+
+            # Facing angle: while charging/firing face player, otherwise face patrol direction (turrets always face player)
+            if is_charging || is_firing || e.kind == "turret":
+                e.angle = aim > 0 ? 0 : 180
+            else:
+                e.angle = e.dir > 0 ? 0 : 180
+
+            # Warning audio telegraph cue at the start of charging
+            if e.cd == 20 && dist < 16:
+                sound.play "nc_enemy_charge"
+
+            # Warning visual particle telegraph during charging
+            if is_charging && e.cd % 4 == 0:
+                effects.push({
+                    "x": e.x + aim * 0.45,
+                    "y": 7.1,
+                    "z": e.z + 0.8,
+                    "dx": -aim * 0.02,
+                    "dz": 0.01,
+                    "ttl": 7,
+                    "life": 7,
+                    "angle": ticks * 45,
+                    "spin": 15,
+                    "scale": 0.55,
+                    "dissolve": 0,
+                    "model": "nc/spark",
+                    "kind": "sparkle",
+                    "visible": true
+                })
+
+            # Fire projectile & trigger firing animation
             if e.cd <= 0 && dist < 16:
                 e.cd = e.kind == "turret" ? 55 : 70
-                aim = player.x < e.x ? -1 : 1
+                e.fire_ticks = 10
+                sound.play "nc_enemy_fire"
                 enemy_shots.push({
-                    "x": e.x + aim * 0.5,
+                    "x": e.x + aim * 0.55,
                     "y": 7,
                     "z": e.z + 0.8,
                     "vx": aim * 0.34,
@@ -397,8 +458,58 @@ action step_enemies:
                     "life": 65,
                     "model": "nc/enemy_shot"
                 })
+                effects.push({
+                    "x": e.x + aim * 0.55,
+                    "y": 7.15,
+                    "z": e.z + 0.8,
+                    "dx": aim * 0.04,
+                    "dz": 0,
+                    "ttl": 6,
+                    "life": 6,
+                    "angle": aim > 0 ? 0 : 180,
+                    "spin": 0,
+                    "scale": 0.5,
+                    "dissolve": 0,
+                    "model": "nc/blast",
+                    "kind": "blast",
+                    "visible": true
+                })
+
+            # Animation model selection & recoil scaling
+            mode = e.fire_ticks > 0 ? "fire" : (is_charging ? "charge" : "idle")
+            match mode:
+                "fire":
+                    e.fire_ticks = e.fire_ticks - 1
+                    e.scale = e.fire_ticks >= 6 ? 1.08 : 1.0
+                    match e.kind:
+                        "drone":
+                            e.model = "nc/enemy_drone_fire"
+                        "turret":
+                            e.model = "nc/enemy_turret_fire"
+                        "walker":
+                            e.model = "nc/enemy_walker_fire"
+                "charge":
+                    e.scale = 1.0 + (e.cd % 4 < 2 ? 0.08 : 0.0)
+                    match e.kind:
+                        "drone":
+                            e.model = "nc/enemy_drone_charge"
+                        "turret":
+                            e.model = "nc/enemy_turret_charge"
+                        "walker":
+                            e.model = "nc/enemy_walker_charge"
+                "idle":
+                    e.scale = 1.0
+                    e.model = e.base_model
+
             if abs(e.x - player.x) < 0.9 && abs(e.z - player.z) < 1.2:
                 call hurt_player 1
+
+action prime_enemy_for_test(idx, dist_x, cd_ticks):
+    if idx < enemies.length:
+        e = enemies[idx]
+        player.x = e.x - dist_x
+        player.z = e.z
+        e.cd = cd_ticks
 
 action animate_boss_satellites(mode, aim, rage):
     stop when boss_satellites.length < 3 || !boss_entity.alive

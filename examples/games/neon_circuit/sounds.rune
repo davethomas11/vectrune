@@ -114,3 +114,17 @@ volume = 0.042
 wave = sawtooth
 sequence = E3:90ms, Bb3:90ms, E3:90ms, Bb3:130ms
 volume = 0.045
+
+@Sound/nc_enemy_charge
+wave = triangle
+frequency = 440
+freq_end = 880
+duration = 140ms
+volume = 0.032
+
+@Sound/nc_enemy_fire
+wave = square
+frequency = 480
+freq_end = 220
+duration = 75ms
+volume = 0.036

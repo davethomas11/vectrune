@@ -226,3 +226,26 @@ run:
     assert state.status == "playing"
     assert state.health == 8
     assert state.respawn_beam.visible == false
+
+@Test/NeonCircuit/EnemyTelegraphWarningAndFiringAnimation
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    assert state.enemies.length > 0
+    assert state.enemies[0].model == "nc/enemy_walker"
+    invoke prime_enemy_for_test [0, 3, 21]
+    invoke tick {}
+    assert state.enemies[0].cd == 20
+    assert state.enemies[0].model == "nc/enemy_walker_charge"
+    assert state.effects.length > 0
+    invoke wait_ticks 20
+    assert state.enemy_shots.length > 0
+    assert state.enemies[0].fire_ticks > 0
+    assert state.enemies[0].model == "nc/enemy_walker_fire"
+    invoke wait_ticks 12
+    assert state.enemies[0].model == "nc/enemy_walker"
+
+

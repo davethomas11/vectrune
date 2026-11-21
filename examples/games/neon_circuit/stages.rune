@@ -271,6 +271,14 @@ action load_stage(stage_idx):
     checkpoints = built.checkpoints
     pickups = built.pickups
     enemies = built.entities
+    for e in enemies:
+        e.base_model = e.model
+        e.charge_ticks = 0
+        e.fire_ticks = 0
+        e.hurt_ticks = 0
+        e.scale = 1.0
+        e.angle = 0
+        e.dissolve = 0
     shots = []
     enemy_shots = []
     effects = []

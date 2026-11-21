@@ -653,6 +653,36 @@ shapes:
     {"type": "ramp", "from": [-5, -2, 10], "size": [10, 4, 3], "color": "p"}
     {"type": "sphere", "center": [0, -3.8, 7.5], "radius": 1.5, "color": "y"}
 
+@Model/nc/enemy_drone_charge
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -4, 5], "size": [12, 8, 5], "color": "s"}
+    {"from": [-4, -5, 6], "size": [8, 10, 3], "color": "p"}
+    {"from": [-2, -6, 7], "size": [4, 12, 2], "color": "y"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 7.5], "radius": 4.2, "color": "d"}
+    {"type": "cylinder", "center": [-7, 0, 10], "radius": 2.8, "height": 2, "color": "o"}
+    {"type": "cylinder", "center": [7, 0, 10], "radius": 2.8, "height": 2, "color": "o"}
+    {"type": "ramp", "from": [-5, -2, 10], "size": [10, 4, 3], "color": "r"}
+    {"type": "sphere", "center": [0, -3.8, 7.5], "radius": 2.2, "color": "r"}
+    {"type": "sphere", "center": [0, -4.5, 7.5], "radius": 1.4, "color": "y"}
+
+@Model/nc/enemy_drone_fire
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -4, 5], "size": [12, 8, 5], "color": "s"}
+    {"from": [-5, -5, 6], "size": [10, 10, 3], "color": "o"}
+    {"from": [-2, -7, 7], "size": [4, 14, 2], "color": "w"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 7.5], "radius": 4.4, "color": "d"}
+    {"type": "cylinder", "center": [-7, 0, 10], "radius": 3.0, "height": 2, "color": "y"}
+    {"type": "cylinder", "center": [7, 0, 10], "radius": 3.0, "height": 2, "color": "y"}
+    {"type": "ramp", "from": [-5, -2, 10], "size": [10, 4, 3], "color": "p"}
+    {"type": "sphere", "center": [0, -5.5, 7.5], "radius": 2.8, "color": "y"}
+    {"type": "sphere", "center": [0, -6.2, 7.5], "radius": 1.6, "color": "w"}
+
 @Model/nc/enemy_turret
 palette = nc
 unit = 0.0625
@@ -664,6 +694,35 @@ shapes:
     {"type": "cylinder", "center": [0, 0, 10], "radius": 4.8, "height": 6, "color": "o"}
     {"type": "sphere", "center": [0, 0, 13.5], "radius": 3.4, "color": "y"}
     {"type": "ramp", "from": [-6, -3, 12], "size": [12, 6, 3], "color": "r"}
+
+@Model/nc/enemy_turret_charge
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -7, 0], "size": [14, 14, 4], "color": "d"}
+    {"from": [-5, -5, 4], "size": [10, 10, 5], "color": "m"}
+    {"from": [-10, -2, 8], "size": [20, 4, 3], "color": "o"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 10], "radius": 4.8, "height": 6, "color": "r"}
+    {"type": "sphere", "center": [0, 0, 13.5], "radius": 3.8, "color": "r"}
+    {"type": "sphere", "center": [0, 0, 14.0], "radius": 2.2, "color": "y"}
+    {"type": "ramp", "from": [-6, -3, 12], "size": [12, 6, 3], "color": "y"}
+    {"type": "cylinder", "center": [-9, 0, 9.5], "radius": 2.0, "height": 3, "color": "y"}
+    {"type": "cylinder", "center": [9, 0, 9.5], "radius": 2.0, "height": 3, "color": "y"}
+
+@Model/nc/enemy_turret_fire
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -7, 0], "size": [14, 14, 4], "color": "d"}
+    {"from": [-5, -5, 4], "size": [10, 10, 5], "color": "m"}
+    {"from": [-11, -2, 8], "size": [22, 4, 4], "color": "y"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 10], "radius": 5.0, "height": 6, "color": "o"}
+    {"type": "sphere", "center": [0, 0, 13.5], "radius": 3.6, "color": "y"}
+    {"type": "ramp", "from": [-6, -3, 12], "size": [12, 6, 3], "color": "w"}
+    {"type": "sphere", "center": [-11, 0, 10], "radius": 2.5, "color": "y"}
+    {"type": "sphere", "center": [11, 0, 10], "radius": 2.5, "color": "y"}
 
 @Model/nc/enemy_walker
 palette = nc
@@ -679,6 +738,40 @@ shapes:
     {"type": "ramp", "from": [-6, -4, 16], "size": [12, 8, 4], "color": "p"}
     {"type": "cylinder", "center": [0, 0, 12], "radius": 3.5, "height": 7, "color": "m"}
     {"type": "sphere", "center": [0, -4.5, 12.5], "radius": 2.0, "color": "y"}
+
+@Model/nc/enemy_walker_charge
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -5, 0], "size": [6, 5, 3], "color": "d"}
+    {"from": [1, -5, 0], "size": [6, 5, 3], "color": "d"}
+    {"from": [-6, -4, 3], "size": [4, 4, 5], "color": "s"}
+    {"from": [2, -4, 3], "size": [4, 4, 5], "color": "s"}
+    {"from": [-6, -5, 8], "size": [12, 10, 7], "color": "v"}
+    {"from": [-4, -6, 10], "size": [8, 12, 3], "color": "o"}
+shapes:
+    {"type": "ramp", "from": [-6, -4, 15], "size": [12, 8, 4], "color": "r"}
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 3.5, "height": 7, "color": "m"}
+    {"type": "sphere", "center": [0, -4.8, 12.0], "radius": 2.4, "color": "r"}
+    {"type": "cylinder", "center": [6, -2, 12], "radius": 2.2, "height": 6, "color": "y"}
+    {"type": "sphere", "center": [6, -5.5, 12], "radius": 1.8, "color": "y"}
+
+@Model/nc/enemy_walker_fire
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -5, 0], "size": [6, 5, 3], "color": "d"}
+    {"from": [1, -5, 0], "size": [6, 5, 3], "color": "d"}
+    {"from": [-6, -4, 3], "size": [4, 4, 5], "color": "s"}
+    {"from": [2, -4, 3], "size": [4, 4, 5], "color": "s"}
+    {"from": [-6, -5, 8], "size": [12, 10, 7], "color": "v"}
+    {"from": [-4, -6, 10], "size": [8, 12, 3], "color": "y"}
+shapes:
+    {"type": "ramp", "from": [-6, -4, 15], "size": [12, 8, 4], "color": "y"}
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 3.5, "height": 7, "color": "m"}
+    {"type": "sphere", "center": [0, -4.8, 12.0], "radius": 2.2, "color": "w"}
+    {"type": "cylinder", "center": [6, -2, 12], "radius": 2.5, "height": 7, "color": "o"}
+    {"type": "sphere", "center": [6, -6.5, 12], "radius": 2.8, "color": "w"}
 
 # --- 12 SIGNATURE MEGA-STYLE BOSS ROBOTS (High-Detail 0.0625 Grid) ---
 @Model/nc/boss_volt
