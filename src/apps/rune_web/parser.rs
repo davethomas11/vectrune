@@ -730,7 +730,7 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> Result<MusicDefini
     let mut tracks = HashMap::new();
     for (k, v) in &section.kv {
         let key_str = k.to_lowercase();
-        if !matches!(key_str.as_str(), "type" | "style" | "tempo" | "bpm" | "loop" | "loop_track" | "volume" | "time_signature" | "meter" | "bars" | "measures" | "lead" | "melody" | "bass" | "drums" | "percussion" | "sections" | "arrangement" | "instruments") {
+        if !matches!(key_str.as_str(), "type" | "style" | "tempo" | "bpm" | "loop" | "loop_track" | "volume" | "time_signature" | "meter" | "bars" | "measures" | "lead" | "melody" | "bass" | "drums" | "percussion" | "sections" | "arrangement" | "instruments" | "effects" | "reverb" | "delay" | "filter" | "crush" | "drive" | "chorus" | "track_effects") {
             if let Some(s) = v.as_str() {
                 let trimmed = s.trim();
                 if !trimmed.is_empty() {
@@ -741,7 +741,7 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> Result<MusicDefini
     }
     for (k, items) in &section.series {
         let key_str = k.to_lowercase();
-        if !matches!(key_str.as_str(), "lead" | "melody" | "bass" | "drums" | "percussion") {
+        if !matches!(key_str.as_str(), "lead" | "melody" | "bass" | "drums" | "percussion" | "effects" | "reverb" | "delay" | "filter" | "crush" | "drive" | "chorus" | "track_effects") {
             let joined = items.iter().filter_map(|v| match v {
                 Value::String(s) => {
                     let trimmed = s.trim();
@@ -787,6 +787,37 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> Result<MusicDefini
             return Err(ParseError(format!("Unknown music instrument: {instrument}")));
         }
     }
+
+    let mut effects_map: serde_json::Map<String, serde_json::Value> = section.kv.get("effects")
+        .map(|v| music_json(v))
+        .and_then(|v| match v {
+            serde_json::Value::Object(map) => Some(map),
+            _ => None,
+        })
+        .unwrap_or_default();
+
+    for key in ["reverb", "delay", "filter", "crush", "drive", "chorus"] {
+        if !effects_map.contains_key(key) {
+            if let Some(v) = section.kv.get(key) {
+                effects_map.insert(key.to_string(), music_json(v));
+            }
+        }
+    }
+
+    for key in effects_map.keys() {
+        if !matches!(key.as_str(), "reverb" | "delay" | "filter" | "crush" | "drive" | "chorus" | "tracks" | "flanger" | "equalizer") {
+            return Err(ParseError(format!("Unknown music effect: {key}")));
+        }
+    }
+
+    let effects = if !effects_map.is_empty() {
+        Some(serde_json::Value::Object(effects_map))
+    } else {
+        None
+    };
+
+    let track_effects = section.kv.get("track_effects")
+        .map(|v| music_json(v));
     if !sections.is_empty() || !arrangement.is_empty() {
         if sections.is_empty() || sections.len() > 32 || arrangement.is_empty() || arrangement.len() > 128 {
             return Err(ParseError("Music needs 1-32 sections and 1-128 arrangement entries".into()));
@@ -833,6 +864,8 @@ fn parse_music_section(section: &crate::rune_ast::Section) -> Result<MusicDefini
         sections,
         arrangement,
         instruments,
+        effects,
+        track_effects,
     })
 }
 

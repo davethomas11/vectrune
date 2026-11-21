@@ -3771,6 +3771,18 @@
           "type": "object",
           "default": "channel defaults",
           "description": "Channel-to-synth-voice map. Supports square, sine, triangle, bass, sawtooth, synth, pluck, drums, brass, strings and bell. Works with legacy tracks and arranged sections in browser/native hosts."
+        },
+        {
+          "name": "effects",
+          "type": "object",
+          "default": "—",
+          "description": "Chip engine effects chain: reverb (decay, wet, pre_delay, reverse, filter), delay (time, feedback, wet, damping), filter (type, cutoff, q), crush/drive (bits, drive, wet), and chorus (rate, depth, delay, wet). Top-level shorthand keys (reverb, delay, etc.) are also supported."
+        },
+        {
+          "name": "track_effects",
+          "type": "object",
+          "default": "—",
+          "description": "Per-channel effect send levels (e.g. {lead: {reverb: 0.4, delay: 0.3}, bass: {reverb: 0, delay: 0}}). By default melodic tracks send 100% and bass/drums avoid muddy echoes."
         }
       ]
     },

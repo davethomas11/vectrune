@@ -7084,6 +7084,7 @@ var __RunePixelRuntime = (() => {
   var activeMusicTrackName = null;
   var musicSchedulerTimer = null;
   var musicMasterGain = null;
+  var musicEffectsBus = null;
   var musicVolume = 0.2;
   var musicTempoBpm = 128;
   var musicLoop = true;
@@ -7225,6 +7226,254 @@ var __RunePixelRuntime = (() => {
     const totalBars = appBars > 0 ? appBars : def?.bars || (maxTrackBeats ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     return { timeSignature, totalBars, totalBeats: Math.max(maxTrackBeats, totalBars * beatsPerBar) };
   }
+  function generateReverbImpulse(ctx2, decay = 1.5, preDelay = 0.01, reverse = false) {
+    const sampleRate = ctx2.sampleRate || 44100;
+    const length = Math.max(128, Math.floor(sampleRate * Math.max(0.05, Math.min(10, decay))));
+    const buffer = ctx2.createBuffer(2, length, sampleRate);
+    const left = buffer.getChannelData(0);
+    const right = buffer.getChannelData(1);
+    const preDelaySamples = Math.floor(sampleRate * Math.max(0, preDelay));
+    for (let i = 0; i < length; i++) {
+      if (i < preDelaySamples) {
+        left[i] = 0;
+        right[i] = 0;
+      } else {
+        const idx = reverse ? length - 1 - i : i - preDelaySamples;
+        const progress = idx / (length - preDelaySamples);
+        const env = Math.exp(-3.5 * progress);
+        left[i] = (Math.random() * 2 - 1) * env;
+        right[i] = (Math.random() * 2 - 1) * env;
+      }
+    }
+    return buffer;
+  }
+  function generateBitcrushCurve(bits = 8, drive = 0) {
+    const n = 4096;
+    const curve = new Float32Array(n);
+    const clampedBits = Math.max(2, Math.min(16, bits));
+    const steps = Math.pow(2, clampedBits);
+    const driveGain = 1 + Math.max(0, Math.min(5, drive * 4));
+    for (let i = 0; i < n; i++) {
+      let x = i * 2 / (n - 1) - 1;
+      if (drive > 0) {
+        x = Math.tanh(x * driveGain);
+      }
+      if (clampedBits < 16) {
+        x = Math.round(x * (steps / 2)) / (steps / 2);
+      }
+      curve[i] = Math.max(-1, Math.min(1, x));
+    }
+    return curve;
+  }
+  function buildMusicEffectsBus(ctx2, def, channels2, destination) {
+    const fx = def.effects || {};
+    const reverbConfig = fx.reverb || def.reverb;
+    const delayConfig = fx.delay || def.delay;
+    const filterConfig = fx.filter || def.filter;
+    const crushConfig = fx.crush || fx.drive || def.crush;
+    const chorusConfig = fx.chorus || def.chorus;
+    const trackFx = def.track_effects || fx.tracks || {};
+    if (!reverbConfig && !delayConfig && !filterConfig && !crushConfig && !chorusConfig && !Object.keys(trackFx).length) {
+      return null;
+    }
+    const nodesToClean = [];
+    const lfoNodes = [];
+    const dryBus = ctx2.createGain();
+    dryBus.gain.setValueAtTime(1, ctx2.currentTime);
+    nodesToClean.push(dryBus);
+    let insertHead = dryBus;
+    if (filterConfig && typeof ctx2.createBiquadFilter === "function") {
+      const fNode = ctx2.createBiquadFilter();
+      fNode.type = filterConfig.type || "lowpass";
+      const cutoff = filterConfig.cutoff || filterConfig.frequency || 4e3;
+      fNode.frequency.setValueAtTime(Math.max(20, Math.min(2e4, cutoff)), ctx2.currentTime);
+      const q = filterConfig.q || filterConfig.resonance || 1;
+      fNode.Q.setValueAtTime(Math.max(0.1, q), ctx2.currentTime);
+      insertHead.connect(fNode);
+      insertHead = fNode;
+      nodesToClean.push(fNode);
+    }
+    if (crushConfig && typeof ctx2.createWaveShaper === "function") {
+      const wsNode = ctx2.createWaveShaper();
+      const bits = crushConfig.bits !== void 0 ? crushConfig.bits : 8;
+      const drive = crushConfig.drive !== void 0 ? crushConfig.drive : 0;
+      wsNode.curve = generateBitcrushCurve(bits, drive);
+      wsNode.oversample = "none";
+      insertHead.connect(wsNode);
+      insertHead = wsNode;
+      nodesToClean.push(wsNode);
+    }
+    insertHead.connect(destination);
+    let delayInput = null;
+    if (delayConfig && typeof ctx2.createDelay === "function") {
+      delayInput = ctx2.createGain();
+      delayInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(delayInput);
+      const dNode = ctx2.createDelay(5);
+      const dTime = Math.max(0.01, Math.min(4, delayConfig.time ?? 0.25));
+      dNode.delayTime.setValueAtTime(dTime, ctx2.currentTime);
+      const dampFilter = ctx2.createBiquadFilter();
+      dampFilter.type = "lowpass";
+      const dampFreq = delayConfig.damping || delayConfig.filter || 2800;
+      dampFilter.frequency.setValueAtTime(dampFreq, ctx2.currentTime);
+      const fbGain = ctx2.createGain();
+      const fbVal = Math.max(0, Math.min(0.92, delayConfig.feedback ?? 0.35));
+      fbGain.gain.setValueAtTime(fbVal, ctx2.currentTime);
+      const delayWet = ctx2.createGain();
+      const dWetVal = Math.max(0, Math.min(1, delayConfig.wet ?? 0.25));
+      delayWet.gain.setValueAtTime(dWetVal, ctx2.currentTime);
+      delayInput.connect(dNode);
+      dNode.connect(dampFilter);
+      dampFilter.connect(fbGain);
+      fbGain.connect(dNode);
+      dampFilter.connect(delayWet);
+      delayWet.connect(destination);
+      nodesToClean.push(dNode, dampFilter, fbGain, delayWet);
+    }
+    let revInput = null;
+    if (reverbConfig && typeof ctx2.createConvolver === "function") {
+      revInput = ctx2.createGain();
+      revInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(revInput);
+      const conv = ctx2.createConvolver();
+      conv.buffer = generateReverbImpulse(
+        ctx2,
+        reverbConfig.decay ?? 1.5,
+        reverbConfig.pre_delay ?? 0.01,
+        reverbConfig.reverse ?? false
+      );
+      revInput.connect(conv);
+      nodesToClean.push(conv);
+      let revOut = conv;
+      if (reverbConfig.filter) {
+        const rf = ctx2.createBiquadFilter();
+        rf.type = "lowpass";
+        rf.frequency.setValueAtTime(reverbConfig.filter, ctx2.currentTime);
+        conv.connect(rf);
+        revOut = rf;
+        nodesToClean.push(rf);
+      }
+      const revWet = ctx2.createGain();
+      const wetVal = Math.max(0, Math.min(1, reverbConfig.wet ?? 0.25));
+      revWet.gain.setValueAtTime(wetVal, ctx2.currentTime);
+      revOut.connect(revWet);
+      revWet.connect(destination);
+      nodesToClean.push(revWet);
+    }
+    let chorusInput = null;
+    if (chorusConfig && typeof ctx2.createDelay === "function" && typeof ctx2.createOscillator === "function") {
+      chorusInput = ctx2.createGain();
+      chorusInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(chorusInput);
+      const cd = ctx2.createDelay(0.1);
+      const baseDelay = chorusConfig.delay ?? 0.018;
+      cd.delayTime.setValueAtTime(baseDelay, ctx2.currentTime);
+      const lfo = ctx2.createOscillator();
+      lfo.type = "sine";
+      const rate = chorusConfig.rate ?? 1.2;
+      lfo.frequency.setValueAtTime(rate, ctx2.currentTime);
+      const lfoGain = ctx2.createGain();
+      const depth = chorusConfig.depth ?? 25e-4;
+      lfoGain.gain.setValueAtTime(depth, ctx2.currentTime);
+      lfo.connect(lfoGain);
+      lfoGain.connect(cd.delayTime);
+      lfo.start(ctx2.currentTime);
+      lfoNodes.push(lfo);
+      const chorusWet = ctx2.createGain();
+      const cWetVal = Math.max(0, Math.min(1, chorusConfig.wet ?? 0.3));
+      chorusWet.gain.setValueAtTime(cWetVal, ctx2.currentTime);
+      chorusInput.connect(cd);
+      cd.connect(chorusWet);
+      chorusWet.connect(destination);
+      nodesToClean.push(cd, lfoGain, chorusWet);
+    }
+    const masterInput = ctx2.createGain();
+    masterInput.gain.setValueAtTime(1, ctx2.currentTime);
+    masterInput.connect(dryBus);
+    nodesToClean.push(masterInput);
+    const channelGains = {};
+    for (const ch of channels2) {
+      const cg = ctx2.createGain();
+      cg.gain.setValueAtTime(1, ctx2.currentTime);
+      cg.connect(dryBus);
+      nodesToClean.push(cg);
+      const chFx = trackFx[ch] || {};
+      if (delayInput) {
+        let dSend = 0;
+        if (chFx.delay !== void 0) {
+          dSend = chFx.delay;
+        } else if (delayConfig?.tracks) {
+          dSend = delayConfig.tracks.includes(ch) ? 1 : 0;
+        } else {
+          dSend = ch === "drums" || ch === "bass" ? 0 : 1;
+        }
+        if (dSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(dSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(delayInput);
+          nodesToClean.push(sg);
+        }
+      }
+      if (revInput) {
+        let rSend = 0;
+        if (chFx.reverb !== void 0) {
+          rSend = chFx.reverb;
+        } else if (reverbConfig?.tracks) {
+          rSend = reverbConfig.tracks.includes(ch) ? 1 : 0;
+        } else {
+          rSend = ch === "bass" ? 0.05 : ch === "drums" ? 0.25 : 1;
+        }
+        if (rSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(rSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(revInput);
+          nodesToClean.push(sg);
+        }
+      }
+      if (chorusInput) {
+        let cSend = 0;
+        if (chFx.chorus !== void 0) {
+          cSend = chFx.chorus;
+        } else {
+          cSend = ch === "drums" || ch === "bass" ? 0 : 0.8;
+        }
+        if (cSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(cSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(chorusInput);
+          nodesToClean.push(sg);
+        }
+      }
+      channelGains[ch] = cg;
+    }
+    const cleanup = () => {
+      for (const lfo of lfoNodes) {
+        try {
+          lfo.stop();
+        } catch {
+        }
+        try {
+          lfo.disconnect();
+        } catch {
+        }
+      }
+      for (const n of nodesToClean) {
+        try {
+          n.disconnect?.();
+        } catch {
+        }
+      }
+    };
+    return {
+      masterInput,
+      channelGains,
+      lfoNodes,
+      cleanup
+    };
+  }
   function startMusicAtBeat(ctx2, trackName, startBeat) {
     const timing = musicTiming(trackName);
     const beat = Math.max(0, Math.min(timing.totalBeats - 1e-6, Number.isFinite(startBeat) ? startBeat : 0));
@@ -7242,6 +7491,8 @@ var __RunePixelRuntime = (() => {
     musicMasterGain = ctx2.createGain();
     musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
     musicMasterGain.connect(audioOutput(ctx2));
+    const def = registeredMusic[trackName];
+    musicEffectsBus = def ? buildMusicEffectsBus(ctx2, def, Object.keys(tracksState), musicMasterGain) : null;
     musicStartTime = ctx2.currentTime + 0.05 - beat * 60 / musicTempoBpm;
     audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
     audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
@@ -7262,6 +7513,10 @@ var __RunePixelRuntime = (() => {
     disconnectMusicGain();
   }
   function disconnectMusicGain() {
+    if (musicEffectsBus) {
+      musicEffectsBus.cleanup();
+      musicEffectsBus = null;
+    }
     if (!musicMasterGain) return;
     musicMasterGain.disconnect();
     musicMasterGain = null;
@@ -7332,7 +7587,8 @@ var __RunePixelRuntime = (() => {
         const remainingBeats = event.beats - (track.elapsedInNote ?? 0);
         const eventDurationSec = remainingBeats * secondsPerBeat;
         if (!event.isRest && eventTime >= ctx2.currentTime - 0.05) {
-          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, musicMasterGain, track.instrument);
+          const targetDest = musicEffectsBus ? musicEffectsBus.channelGains[trackKey] || musicEffectsBus.masterInput : musicMasterGain;
+          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, targetDest, track.instrument);
         }
         track.nextBeat += remainingBeats;
         track.elapsedInNote = 0;

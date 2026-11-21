@@ -106,6 +106,10 @@ pub struct MusicDefinition {
     pub arrangement: Vec<MusicCue>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub instruments: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effects: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub track_effects: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

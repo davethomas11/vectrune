@@ -49,6 +49,16 @@ class Gain extends Node {
 class Filter extends Node {
   type = 'lowpass'; frequency = new Param(350); Q = new Param(1);
 }
+class Delay extends Node {
+  delayTime = new Param(0.25);
+}
+class Convolver extends Node {
+  buffer: unknown = null;
+}
+class WaveShaper extends Node {
+  curve: unknown = null;
+  oversample = 'none';
+}
 class Source extends Node {
   type = 'sine'; frequency = new Param(440);
   buffer: unknown;
@@ -82,12 +92,13 @@ class AudioContext {
   createOscillator(): Source { return new Source(); }
   createBufferSource(): Source { return new Source(true); }
   createBiquadFilter(): Filter { return new Filter(); }
+  createDelay(_max?: number): Delay { return new Delay(); }
+  createConvolver(): Convolver { return new Convolver(); }
+  createWaveShaper(): WaveShaper { return new WaveShaper(); }
   createBuffer(channels: number,length: number) {
-    // Rune generates only white-noise buffers. The native mixer synthesizes those
-    // samples, so large PCM buffers never need JSON serialization across the bridge.
-    if (channels !== 1 || length < 1 || length > this.sampleRate * 60) throw new Error('Invalid native synth noise buffer');
-    const data = new Float32Array(length);
-    return { getChannelData: () => data };
+    if (channels < 1 || channels > 2 || length < 1 || length > this.sampleRate * 60) throw new Error('Invalid native synth buffer');
+    const data = [new Float32Array(length), new Float32Array(length)];
+    return { getChannelData: (c = 0) => data[c] || data[0] };
   }
 }
 
