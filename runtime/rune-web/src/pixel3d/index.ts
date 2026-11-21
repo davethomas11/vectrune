@@ -6,6 +6,7 @@ import { unlockAudio } from '../audio';
 import { mountTouch, STYLE } from './touch';
 import { createFullscreen, isStandaloneApp } from './fullscreen';
 import { createWebGlRenderer } from './webgl';
+import { collectHudHitRegions } from './hud';
 import type { RuneWebConfig } from '../types';
 
 let settings: Pixel3DConfig;
@@ -327,6 +328,30 @@ export function mount(
   for (const button of Array.from(document.querySelectorAll('[data-pixel-fullscreen]'))) {
     listen(button, 'click', () => { void fullscreen.toggle().catch(() => {}); });
   }
+  const activeHud = () => game.paused && game.config.pauseUi && game.app.state.status === 'playing'
+    ? (game.app.state as any)[game.config.pauseUi]
+    : game.config.ui ? (game.app.state as any)[game.config.ui] : undefined;
+  const handleMenuKey = (code: string): boolean => {
+    const p = activeHud()?.panel;
+    if (!p?.choiceActions?.length) return false;
+    if ((code === 'ArrowUp' || code === 'KeyW') && game.hasAction('menu_move')) {
+      game.invoke('menu_move', [-1]);
+      return true;
+    }
+    if ((code === 'ArrowDown' || code === 'KeyS') && game.hasAction('menu_move')) {
+      game.invoke('menu_move', [1]);
+      return true;
+    }
+    if (game.paused && (code === 'Enter' || code === 'Space')) {
+      const ca = p.choiceActions[p.selected ?? 0];
+      if (ca) {
+        clear(true);
+        game.activate(ca.action, ca.args ?? []);
+        return true;
+      }
+    }
+    return false;
+  };
   mapped = game.controls ? mountControls(canvas, game.controls, {
     state: () => game.app.state,
     playing: () => game.app.state.status === 'playing', paused: () => game.paused,
@@ -334,6 +359,7 @@ export function mount(
     advance: () => { clear(); if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance'); else start(); },
     fullscreen: () => { void fullscreen.toggle().catch(() => {}); },
     interact: unlockAudio, lockedMouse: true, advanceInputs: ['fire', 'use'], expanded: fullscreen.expanded,
+    menuKey: handleMenuKey,
     tapToAdvance: game.config.clickToStart,
   }) : undefined;
   const mappedStyle = mapped ? document.createElement('style') : undefined;
@@ -380,14 +406,31 @@ export function mount(
     }
   });
 
-  // Pointer lock for FPS mouse look
-  listen(canvas, 'click', () => {
+  // Pointer lock for FPS mouse look & in-engine HUD clicks
+  listen(canvas, 'click', ((event: MouseEvent) => {
     if (Date.now() - lastTouchAt < 700 || mapped?.recentTouch()) return;
     unlockAudio();
     canvas.focus();
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      const cx = (event.clientX - rect.left) * (width / rect.width);
+      const cy = (event.clientY - rect.top) * (height / rect.height);
+      const hudSource = game.paused && game.config.pauseUi && game.app.state.status === 'playing'
+        ? (game.app.state as any)[game.config.pauseUi]
+        : game.config.ui ? (game.app.state as any)[game.config.ui] : undefined;
+      const regions = collectHudHitRegions(width, height, hudSource, String(game.app.state.status ?? 'playing'), game.paused);
+      const hit = regions.find(r => cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
+      if (hit) {
+        clear(true);
+        game.activate(hit.action, hit.args);
+        return;
+      }
+    }
     if (game.app.state.status !== 'playing') {
       if (game.config.clickToStart === false) return;
-      if (game.app.state.status === 'title' || game.app.state.status === 'story') {
+      if (game.app.state.status === 'title' || game.app.state.status === 'story' || game.app.state.status === 'select' || game.app.state.status === 'stage_clear' || game.app.state.status === 'boss_victory') {
+        const panel = activeHud()?.panel;
+        if (panel?.choiceActions && panel.choiceActions.length > 1) return;
         game.invoke('advance');
         return;
       }
@@ -399,7 +442,7 @@ export function mount(
       // Shooting still works when embedding or browser policy denies mouse lock.
       lock?.catch(() => {});
     }
-  });
+  }) as EventListener);
 
   listen(document, 'mousemove', ((event: MouseEvent) => {
     if (mapped) return;
@@ -418,6 +461,32 @@ export function mount(
         clear();
         game.activate(menu.dataset.pixelMenuClose);
         return;
+      }
+      if (document.pointerLockElement === canvas) {
+        event.preventDefault();
+        document.exitPointerLock?.();
+        clear();
+        return;
+      }
+      if (isPausableStatus(game.app.state.status) && (game.config.pauseUi || document.querySelector('[data-pixel-paused]'))) {
+        event.preventDefault();
+        clear(true);
+        game.paused = !game.paused;
+        return;
+      }
+      if (game.app.state.status !== 'playing') {
+        if (game.hasAction('back')) {
+          event.preventDefault();
+          clear(true);
+          game.activate('back');
+          return;
+        }
+        if (game.app.state.status !== 'title' && game.config.restartAction) {
+          event.preventDefault();
+          clear(true);
+          game.activate(game.config.restartAction);
+          return;
+        }
       }
     }
     unlockAudio();

@@ -34,6 +34,7 @@ import { validateWorld, validatedVoxelChunks } from './voxel';
 import { sampleCamera, type CameraTrack } from './camera';
 import { nearbyForRender, withEntityQueries } from './entities';
 import { validateTether, type Tether3D } from './tether';
+import type { SideMapData } from './sidemap';
 
 export interface TitleScene {
   things?: string[];
@@ -48,7 +49,10 @@ export interface TitleScene {
 
 export interface Pixel3DConfig {
   fov?: number;
+  outline?: boolean;
+  outlineColor?: number;
   renderRadius?: number;
+  sideMaps?: Record<string, SideMapData>;
   cameraTrack?: CameraTrack;
   titleScene?: TitleScene;
   ui?: string;
@@ -180,6 +184,8 @@ export class Pixel3DEngine {
 
     this.raycaster = new Raycaster3D({
       fov: config.fov,
+      outline: config.outline,
+      outlineColor: config.outlineColor,
       width: config.width,
       height: config.height,
       textures: config.textures,
@@ -188,7 +194,10 @@ export class Pixel3DEngine {
       map: config.map,
     });
 
-    Object.assign(globalThis, { __RuneSpatialMaps: config.maps || {} });
+    Object.assign(globalThis, {
+      __RuneSpatialMaps: config.maps || {},
+      __RuneSideMaps: config.sideMaps || {},
+    });
 
     const spatialMap: SpatialMap = {
       width: config.map.width,
@@ -293,8 +302,19 @@ export class Pixel3DEngine {
     if (this.save) this.save.flush(this.app.state[this.save.config.state]);
   }
 
+  hasAction(action: string): boolean {
+    return Boolean(this.context.actionDefinitions[action]);
+  }
+
   invoke(action: string, args: unknown[] = []): void {
     this.invalidateFrame();
+    if (action === 'host.mute') {
+      this.muted = !this.muted;
+      return;
+    }
+    if (action === 'resume_game' || action === 'host.resume' || action === 'restart_current_stage') {
+      this.paused = false;
+    }
     if (action === this.config.restartAction) {
       if (this.app.state.status === 'playing' && !this.paused) return;
       this.paused = false;
@@ -309,7 +329,13 @@ export class Pixel3DEngine {
       this.app.invokeAction(action, args);
       this.app.computeDerived();
     });
-    if (this._paused) pauseMusic();
+    if (this._paused && this.app.state.status !== 'playing') {
+      this._paused = false;
+      setAudioMuted(this._muted);
+      resumeMusic();
+    } else if (this._paused) {
+      pauseMusic();
+    }
     this.syncScene();
     this.persist();
   }

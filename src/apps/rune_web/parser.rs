@@ -2130,6 +2130,17 @@ fn parse_action_steps(items: &[Value]) -> Result<Vec<ActionStep>, ParseError> {
                             condition: condition.to_string(),
                             steps: nested_steps,
                         });
+                    } else if trimmed.starts_with("match ") || trimmed.starts_with("switch ") {
+                        let expr = if let Some(e) = trimmed.strip_prefix("match ") {
+                            e.trim()
+                        } else {
+                            trimmed.strip_prefix("switch ").unwrap_or(trimmed).trim()
+                        };
+                        let cases = parse_action_match_cases(value)?;
+                        steps.push(ActionStep::Match {
+                            expression: expr.to_string(),
+                            cases,
+                        });
                     } else if trimmed.starts_with("for ") {
                         let loop_sig = trimmed.strip_prefix("for ").unwrap_or(trimmed).trim();
                         if let Some(in_pos) = loop_sig.find(" in ") {
@@ -2181,6 +2192,42 @@ fn parse_action_steps(items: &[Value]) -> Result<Vec<ActionStep>, ParseError> {
     }
 
     Ok(steps)
+}
+
+fn parse_action_match_cases(val: &Value) -> Result<Vec<ActionMatchCase>, ParseError> {
+    let mut cases = Vec::new();
+    match val {
+        Value::List(list) => {
+            for item in list {
+                if let Value::Map(m) = item {
+                    for (pat, steps_val) in m {
+                        let steps = match steps_val {
+                            Value::List(l) => parse_action_steps(l)?,
+                            _ => Vec::new(),
+                        };
+                        cases.push(ActionMatchCase {
+                            pattern: pat.trim().to_string(),
+                            steps,
+                        });
+                    }
+                }
+            }
+        }
+        Value::Map(m) => {
+            for (pat, steps_val) in m {
+                let steps = match steps_val {
+                    Value::List(l) => parse_action_steps(l)?,
+                    _ => Vec::new(),
+                };
+                cases.push(ActionMatchCase {
+                    pattern: pat.trim().to_string(),
+                    steps,
+                });
+            }
+        }
+        _ => {}
+    }
+    Ok(cases)
 }
 
 /// Parse a key-value string like "key = value"

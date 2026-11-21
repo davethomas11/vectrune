@@ -1,0 +1,35 @@
+# Neon Circuit — Boss Battle Theme (Frenetic Cyber Metal, E Phrygian)
+@Music/nc_boss
+type = synth
+tempo = 164
+time_signature = 4/4
+loop = true
+volume = 0.072
+instruments = {"lead":"sawtooth","arp":"square","harmony":"brass","bass":"sawtooth","drums":"drums"}
+sections = {
+    "alarm": {
+        "bars": 4,
+        "lead": "E5:8 F5:8 E5:8 F5:8 Bb5:4 E5:4 | F5:8 E5:8 D5:8 E5:8 G5:4 F5:4 | E5:8 F5:8 G5:8 A5:8 Bb5:4 C6:4 | B5:4 Bb5:4 A5:4 G#5:4",
+        "arp": "E4:8 B4:8 E5:8 B4:8 F4:8 C5:8 F5:8 C5:8 | E4:8 B4:8 E5:8 B4:8 D4:8 A4:8 D5:8 A4:8 | E4:8 B4:8 G4:8 B4:8 Bb4:8 F5:8 D5:8 F5:8 | B4:8 E5:8 B4:8 E5:8 B4:8 F5:8 B4:8 F5:8",
+        "harmony": "[E3,B3]:1 | [F3,C4]:2 [D3,A3]:2 | [E3,G3,B3]:2 [Bb3,D4,F4]:2 | [E3,B3]:1",
+        "bass": "E2:8 E2:8 E3:8 E2:8 F2:8 F2:8 F3:8 F2:8 | E2:8 E2:8 E3:8 E2:8 D2:8 D2:8 D3:8 D2:8 | E2:8 E2:8 G2:8 A2:8 Bb2:8 Bb2:8 C3:8 Bb2:8 | B2:8 B2:8 Bb2:8 Bb2:8 A2:8 A2:8 G#2:8 G#2:8",
+        "drums": "crash:4 kick:8 kick:8 snare:4 kick:4 | kick:8 kick:8 snare:4 kick:8 kick:8 snare:4 | kick:8 kick:8 snare:4 tom:8 tom:8 snare:4 | kick:8 snare:8 kick:8 snare:8 tom:8 tom:8 crash:4"
+    },
+    "assault": {
+        "bars": 8,
+        "lead": "E5:8 F5:8 E5:8 D5:8 E5:8 G5:8 F5:8 E5:8 | Bb5:8 A5:8 G5:8 F5:8 E5:4 B4:4 | E5:8 F5:8 G5:8 A5:8 Bb5:8 A5:8 G5:8 F5:8 | G5:4 F5:4 E5:2 | B5:8 C6:8 B5:8 A5:8 G5:8 A5:8 B5:8 G5:8 | A5:8 Bb5:8 A5:8 G5:8 F5:4 E5:4 | D5:8 E5:8 F5:8 G5:8 A5:8 G5:8 F5:8 D5:8 | E5:4 B4:4 E5:2",
+        "arp": "E4:8 G4:8 B4:8 E5:8 F4:8 A4:8 C5:8 F5:8 | Bb4:8 D5:8 F5:8 Bb5:8 E4:8 G4:8 B4:8 E5:8 | E4:8 G4:8 B4:8 E5:8 Bb4:8 D5:8 F5:8 Bb5:8 | G4:8 B4:8 D5:8 F4:8 E4:8 B4:8 E5:8 B4:8 | G4:8 B4:8 E5:8 G5:8 E4:8 G4:8 B4:8 E5:8 | F4:8 A4:8 D5:8 F5:8 D4:8 F4:8 A4:8 D5:8 | D4:8 F4:8 A4:8 D5:8 F4:8 A4:8 C5:8 F5:8 | E4:8 B4:8 E5:8 B4:8 E4:8 B4:8 E5:4",
+        "harmony": "[E4,B4]:2 [F4,C5]:2 | [Bb3,F4]:2 [E4,B4]:2 | [E4,G4]:2 [Bb3,F4]:2 | [E4,B4]:1 | [G4,B4]:2 [E4,G4]:2 | [F4,A4]:2 [D4,F4]:2 | [D4,F4]:2 [F4,A4]:2 | [E4,B4]:1",
+        "bass": "E2:8 E2:8 F2:8 E2:8 E2:8 E2:8 D2:8 E2:8 | Bb1:8 Bb1:8 Bb1:8 A1:8 E2:8 E2:8 B1:8 E2:8 | E2:8 E2:8 G2:8 A2:8 Bb2:8 A2:8 G2:8 F2:8 | G2:4 F2:4 E2:4 B1:4 | E2:8 E2:8 G2:8 E2:8 E2:8 E2:8 G2:8 E2:8 | F2:8 F2:8 A2:8 F2:8 D2:8 D2:8 F2:8 D2:8 | D2:8 D2:8 F2:8 G2:8 A2:8 G2:8 F2:8 D2:8 | E2:8 E2:8 B1:8 B1:8 E2:2",
+        "drums": "crash:4 kick:8 snare:8 kick:8 kick:8 snare:4 | kick:8 hihat:8 snare:4 kick:8 tom:8 snare:4 | kick:8 kick:8 snare:4 kick:8 kick:8 snare:4 | kick:4 tom:8 tom:8 snare:8 snare:8 kick:4 | crash:4 kick:8 snare:8 kick:8 kick:8 snare:4 | kick:8 hihat:8 snare:4 kick:8 tom:8 snare:4 | kick:8 kick:8 snare:4 kick:8 kick:8 snare:4 | kick:8 tom:8 snare:8 tom:8 kick:4 crash:4"
+    },
+    "climax": {
+        "bars": 4,
+        "lead": "E6:8 D6:8 C6:8 B5:8 C6:8 B5:8 A5:8 G5:8 | F5:8 G5:8 A5:8 Bb5:8 C6:4 A5:4 | B5:8 C6:8 D6:8 E6:8 F6:8 E6:8 D6:8 B5:8 | E6:2 E5:2",
+        "arp": "E5:8 B4:8 G4:8 E5:8 C5:8 G4:8 E4:8 C5:8 | F4:8 A4:8 C5:8 F5:8 D4:8 F4:8 A4:8 D5:8 | G4:8 B4:8 D5:8 G5:8 B4:8 D5:8 F5:8 B5:8 | E5:8 B4:8 G4:8 E4:8 E5:4 B4:4",
+        "harmony": "[E4,G4,B4]:2 [C4,E4,G4]:2 | [F3,A3,C4]:2 [D3,F3,A3]:2 | [G3,B3,D4]:2 [B3,D4,F4]:2 | [E4,G4,B4]:1",
+        "bass": "E2:8 E3:8 E2:8 E3:8 C2:8 C3:8 C2:8 C3:8 | F2:8 F3:8 F2:8 F3:8 D2:8 D3:8 D2:8 D3:8 | G2:8 G3:8 G2:8 G3:8 B1:8 B2:8 B1:8 B2:8 | E2:8 E3:8 B1:8 B2:8 E2:2",
+        "drums": "crash:4 kick:8 kick:8 snare:4 kick:8 kick:8 | kick:8 kick:8 snare:4 tom:8 tom:8 snare:4 | kick:8 kick:8 snare:4 kick:8 kick:8 snare:4 | snare:8 snare:8 tom:8 tom:8 kick:4 crash:4"
+    }
+}
+arrangement = ["alarm","assault","climax","assault"]

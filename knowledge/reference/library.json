@@ -871,6 +871,30 @@
       "fields": []
     },
     {
+      "id": "match",
+      "category": "language",
+      "name": "match",
+      "signature": "match expression:\n    pattern:\n        statement\n    else:\n        fallback",
+      "summary": "Evaluate an expression and execute the first matching case branch without evaluating remaining branches.",
+      "sources": [
+        "src/core/mod.rs",
+        "src/apps/rune_web/parser.rs",
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "match status:\n    \"active\":\n        respond 200 \"Active\"\n    else:\n        respond 404 \"Not Found\"",
+      "parameters": [],
+      "aliases": [
+        "switch"
+      ],
+      "notes": [
+        "Supported across native REST / Route run blocks and Rune-Web / Pixel-3D actions.",
+        "Matches literals, identifiers, comma-separated lists, and wildcard fallbacks (else, default, _)."
+      ],
+      "fields": []
+    },
+    {
       "id": "path-lookup",
       "category": "language",
       "name": "path lookup",

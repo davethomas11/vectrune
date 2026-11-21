@@ -1,0 +1,163 @@
+# Clean Arcade Cabinet — All Menus & Weapon Selectors Render Inside the Pixel-3D Engine!
+@Page/neon_cabinet
+title = Neon Circuit — Cyberpunk Pixel-3D Action Platformer
+logic = neon_cabinet
+style = neon_cabinet
+view:
+    main .cabinet:
+        header .masthead:
+            div:
+                p .eyebrow "RUNE // PIXEL-3D // CYBERPUNK SIDESCROLLER"
+                h1 "NEON CIRCUIT"
+            div .meta:
+                span .pill data-pixel-text=progress_label "CLEARED 0/12"
+                span .pill .accent data-pixel-text=weapon_label "PULSE BUSTER"
+        section .game-card:
+            div .toolbar:
+                span .sector data-pixel-text=selected_title "01 VOLT VIPER"
+                div .buttons:
+                    select data-pixel-resolution=true aria-label="Resolution":
+                        option value="432x270" "432x270"
+                        option value="576x360" selected=true "576x360"
+                        option value="768x480" "768x480"
+                    button data-pixel-action="return_to_select" "Stage Select / T"
+                    button data-pixel-pause=true "Pause / P"
+                    button data-pixel-mute=true "Sound / M"
+                    button data-pixel-fullscreen=true "Fullscreen / F"
+            div .game-surface:
+                canvas data-rune-pixel-3d=true data-pixel-fit=viewport data-pixel-app-fullscreen=true tabindex=0 aria-label="Neon Circuit, a Mega Man style cyberpunk pixel-3d platformer."
+            p .status data-pixel-status=true role=status aria-live=polite "NEON CIRCUIT READY."
+        section .guide:
+            div:
+                h2 "01 // 6 INTRO ROBOTS -> 6 GUNS & SKILLS"
+                p "Defeat the 6 Tier-1 Intro Robots in any order to claim their weapons: Volt Surge (Air Dash + Volt Relays), Cryo Lance (Freeze Thermal Vents into ice bridges), Mag Claw (Double Mag-Boost Jump), Nova Breaker (Shatter Blast Walls), Phase Beam (Pierce Holo-Shields), and Hyper Saw (Slice Cable Barriers)."
+            div:
+                h2 "02 // 6 MASTER ROBOTS"
+                p "All 6 Tier-2 Master Sectors can be explored at any time, but reaching their bosses requires combining skills from the first 6 robots. Highlight any robot on the in-game Stage Selector to see the exact skills required."
+            div:
+                h2 "03 // CONTROLS"
+                p "A/D or Arrows: Move | Space/Z: Jump (press again with Mag Claw) | X/J/Click: Fire | W/Up: Aim Up | S/Down: Duck | Q/E/Tab or 1-7: Select Weapons | Shift/K: Surge Air Dash | T: Stage Select | Esc/P: Pause / Back to Title | M: Sound | F: Fullscreen."
+
+@Logic/neon_cabinet
+state:
+    name = "Neon Circuit"
+
+@Style/neon_cabinet
+rules:
+    :root:
+        color-scheme = dark
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #060212
+        color = #f4f7ff
+        font-family = system-ui, -apple-system, sans-serif
+    .cabinet:
+        max-width = 1120px
+        margin = auto
+        padding = clamp(12px, 3vw, 32px)
+    .masthead:
+        display = flex
+        align-items = end
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 16px
+        margin-bottom = 18px
+    .eyebrow:
+        color = #00f5ff
+        font-size = 11px
+        font-weight = 800
+        letter-spacing = 3px
+        margin = 0 0 8px
+    h1:
+        margin = 0
+        font-size = clamp(28px, 4.5vw, 48px)
+        letter-spacing = -1px
+        color = #ff1e9b
+        text-shadow = 0 0 18px #ff1e9b88
+    .meta:
+        display = flex
+        gap = 8px
+        flex-wrap = wrap
+    .pill:
+        padding = 6px 12px
+        border = 1px solid #00f5ff88
+        border-radius = 999px
+        background = #120828
+        color = #00f5ff
+        font-size = 12px
+        font-weight = 800
+        letter-spacing = 1px
+    .pill.accent:
+        border-color = #ff1e9b
+        color = #ffe600
+    .game-card:
+        border = 2px solid #ff1e9b99
+        border-radius = 12px
+        overflow = hidden
+        background = #0c051e
+        box-shadow = 0 0 36px #b026ff44
+    .toolbar:
+        display = flex
+        align-items = center
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 8px
+        padding = 10px 14px
+        background = #120828
+        border-bottom = 1px solid #3b2c68
+    .sector:
+        color = #ffe600
+        font-size = 12px
+        font-weight = 800
+        letter-spacing = 2px
+    .buttons:
+        display = flex
+        gap = 6px
+        flex-wrap = wrap
+    button, select:
+        cursor = pointer
+        min-height = 38px
+        padding = 6px 12px
+        font = inherit
+        font-size = 12px
+        font-weight = 800
+        color = #f4f7ff
+        background = #1d103d
+        border = 1px solid #00f5ff88
+        border-radius = 6px
+    button:hover, select:hover:
+        background = #2e1961
+        border-color = #ff1e9b
+    .game-surface:
+        position = relative
+        background = #05020d
+        touch-action = none
+    canvas:
+        display = block
+        width = 100%
+        height = auto
+        aspect-ratio = 16 / 10
+        image-rendering = pixelated
+        touch-action = none
+        cursor = pointer
+    .status:
+        margin = 0
+        padding = 8px 14px
+        font-size = 12px
+        color = #80f8ff
+        background = #090418
+    .guide:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(260px, 1fr))
+        gap = 16px
+        margin-top = 20px
+        font-size = 13px
+        line-height = 1.55
+        color = #c9c2e8
+    .guide h2:
+        font-size = 13px
+        color = #ff1e9b
+        letter-spacing = 1.5px
+        margin = 0 0 6px

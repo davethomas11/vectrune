@@ -17,10 +17,12 @@ import { slide as spatialSlide, sees as spatialSees, mapSpawn } from './pixel3d/
 import { voxelGenerate, voxelMove, voxelTarget, voxelMine, voxelRead, voxelFill, voxelWorld } from './pixel3d/voxel';
 import type { Scope } from './types';
 import { nearby, entityGroup } from './pixel3d/entities';
+import { sideLevel } from './pixel3d/sidemap';
 
 const MAX_DEPTH = 64;
 const voxelFunctions: Record<string, (...args: unknown[]) => unknown> = {
   voxel_world: (width,height,depth,materials,options)=>voxelWorld(width,height,depth,materials,options),
+  side_level: (fg,bg,options)=>sideLevel(fg,bg,options),
   nearby: (entities,position,radius)=>nearby(entities,position,radius),
   entity_group: (entities)=>entityGroup(entities),
   voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
@@ -32,6 +34,7 @@ const voxelFunctions: Record<string, (...args: unknown[]) => unknown> = {
 };
 const voxelArity: Record<string, [number, number]> = {
   voxel_world:[4,5],
+  side_level:[1,3],
   nearby:[3,3],
   entity_group:[0,1],
   voxel_generate: [1, 2], voxel_move: [4, 6], voxel_target: [2, 2], voxel_mine: [2, 2],

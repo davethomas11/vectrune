@@ -23,7 +23,7 @@ var __RuneWeb = (() => {
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
   var __publicField = (obj, key2, value) => __defNormalProp(obj, typeof key2 !== "symbol" ? key2 + "" : key2, value);
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs
   function utf8Count(str) {
     const strLength = str.length;
     let byteLength = 0;
@@ -150,7 +150,7 @@ var __RuneWeb = (() => {
   }
   var sharedTextEncoder, TEXT_ENCODER_THRESHOLD, CHUNK_SIZE, sharedTextDecoder, TEXT_DECODER_THRESHOLD;
   var init_utf8 = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs"() {
       sharedTextEncoder = new TextEncoder();
       TEXT_ENCODER_THRESHOLD = 50;
       CHUNK_SIZE = 4096;
@@ -159,10 +159,10 @@ var __RuneWeb = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs
   var ExtData;
   var init_ExtData = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs"() {
       ExtData = class {
         constructor(type, data) {
           __publicField(this, "type");
@@ -174,10 +174,10 @@ var __RuneWeb = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs
   var DecodeError;
   var init_DecodeError = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs"() {
       DecodeError = class _DecodeError extends Error {
         constructor(message) {
           super(message);
@@ -193,7 +193,7 @@ var __RuneWeb = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs
   function setUint64(view, offset, value) {
     const high = value / 4294967296;
     const low = value;
@@ -218,12 +218,12 @@ var __RuneWeb = (() => {
   }
   var UINT32_MAX;
   var init_int = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs"() {
       UINT32_MAX = 4294967295;
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
   function encodeTimeSpecToTimestamp({ sec, nsec }) {
     if (sec >= 0 && nsec >= 0 && sec <= TIMESTAMP64_MAX_SEC) {
       if (nsec === 0 && sec <= TIMESTAMP32_MAX_SEC) {
@@ -296,7 +296,7 @@ var __RuneWeb = (() => {
   }
   var EXT_TIMESTAMP, TIMESTAMP32_MAX_SEC, TIMESTAMP64_MAX_SEC, timestampExtension;
   var init_timestamp = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs"() {
       init_DecodeError();
       init_int();
       EXT_TIMESTAMP = -1;
@@ -310,10 +310,10 @@ var __RuneWeb = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
   var _ExtensionCodec, ExtensionCodec;
   var init_ExtensionCodec = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs"() {
       init_ExtData();
       init_timestamp();
       _ExtensionCodec = class _ExtensionCodec {
@@ -380,7 +380,7 @@ var __RuneWeb = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs
   function isArrayBufferLike(buffer) {
     return buffer instanceof ArrayBuffer || typeof SharedArrayBuffer !== "undefined" && buffer instanceof SharedArrayBuffer;
   }
@@ -396,14 +396,14 @@ var __RuneWeb = (() => {
     }
   }
   var init_typedArrays = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs"() {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs
   var DEFAULT_MAX_DEPTH, DEFAULT_INITIAL_BUFFER_SIZE, Encoder;
   var init_Encoder = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs"() {
       init_utf8();
       init_ExtensionCodec();
       init_int();
@@ -812,30 +812,30 @@ var __RuneWeb = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/encode.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/encode.mjs
   function encode(value, options) {
     const encoder = new Encoder(options);
     return encoder.encodeSharedRef(value);
   }
   var init_encode = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/encode.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/encode.mjs"() {
       init_Encoder();
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
   function prettyByte(byte) {
     return `${byte < 0 ? "-" : ""}0x${Math.abs(byte).toString(16).padStart(2, "0")}`;
   }
   var init_prettyByte = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs"() {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs
   var DEFAULT_MAX_KEY_LENGTH, DEFAULT_MAX_LENGTH_PER_KEY, CachedKeyDecoder;
   var init_CachedKeyDecoder = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs"() {
       init_utf8();
       DEFAULT_MAX_KEY_LENGTH = 16;
       DEFAULT_MAX_LENGTH_PER_KEY = 16;
@@ -894,10 +894,10 @@ var __RuneWeb = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
   var STATE_ARRAY, STATE_MAP_KEY, STATE_MAP_VALUE, mapKeyConverter, StackPool, HEAD_BYTE_REQUIRED, EMPTY_VIEW, EMPTY_BYTES, MORE_DATA, sharedCachedKeyDecoder, Decoder;
   var init_Decoder = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs"() {
       init_prettyByte();
       init_ExtensionCodec();
       init_int();
@@ -1536,7 +1536,7 @@ var __RuneWeb = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decode.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/decode.mjs
   function decode(buffer, options) {
     const decoder = new Decoder(options);
     return decoder.decode(buffer);
@@ -1546,12 +1546,12 @@ var __RuneWeb = (() => {
     return decoder.decodeMulti(buffer);
   }
   var init_decode = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decode.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/decode.mjs"() {
       init_Decoder();
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs
   function isAsyncIterable(object) {
     return object[Symbol.asyncIterator] != null;
   }
@@ -1577,11 +1577,11 @@ var __RuneWeb = (() => {
     }
   }
   var init_stream = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs"() {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs
   async function decodeAsync(streamLike, options) {
     const stream = ensureAsyncIterable(streamLike);
     const decoder = new Decoder(options);
@@ -1598,13 +1598,13 @@ var __RuneWeb = (() => {
     return decoder.decodeStream(stream);
   }
   var init_decodeAsync = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs"() {
       init_Decoder();
       init_stream();
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/index.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/index.mjs
   var dist_exports = {};
   __export(dist_exports, {
     DecodeError: () => DecodeError,
@@ -1626,7 +1626,7 @@ var __RuneWeb = (() => {
     encodeTimestampExtension: () => encodeTimestampExtension
   });
   var init_dist = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/index.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/index.mjs"() {
       init_encode();
       init_decode();
       init_decodeAsync();
@@ -3595,10 +3595,252 @@ var __RuneWeb = (() => {
     return count;
   }
 
+  // src/pixel3d/sidemap.ts
+  function getSideMap(name2) {
+    const maps = globalThis.__RuneSideMaps;
+    const map = maps?.[name2];
+    if (!map) throw new Error(`Unknown @SideMap/${name2}`);
+    return map;
+  }
+  function sideLevel(fgNameValue, bgNameValue, optionsValue) {
+    if (typeof fgNameValue !== "string" || !fgNameValue) {
+      throw new Error("side_level requires a foreground @SideMap name");
+    }
+    const fg = getSideMap(fgNameValue);
+    const bg = typeof bgNameValue === "string" && bgNameValue.length > 0 ? getSideMap(bgNameValue) : void 0;
+    const opts = optionsValue && typeof optionsValue === "object" && !Array.isArray(optionsValue) ? optionsValue : {};
+    const width = fg.width;
+    const height = fg.height;
+    const planeY = opts.plane_y ?? fg.planeY ?? 7;
+    const depthY = opts.depth_y ?? fg.depthY ?? 20;
+    const marginZ = opts.margin_z ?? 4;
+    const materials = opts.materials ?? fg.materials;
+    if (!Array.isArray(materials) || materials.length === 0) {
+      throw new Error(`@SideMap/${fgNameValue} needs materials = [...]`);
+    }
+    let spawn = { x: 4.5, y: planeY, z: 3, angle: 0, pitch: 0, vz: 0 };
+    const world = voxelWorld(width, depthY, height + marginZ, materials, {
+      seed: opts.seed ?? 701,
+      biome: opts.biome ?? "meadow",
+      spawn,
+      renderDistance: opts.render_distance ?? 128
+    });
+    const sceneryRaw = [];
+    const entities = [];
+    const barriers = [];
+    const hazards = [];
+    const ladders = [];
+    const bossDoors = [];
+    const checkpoints = [];
+    const pickups = [];
+    let boss = null;
+    for (let row = 0; row < height; row++) {
+      const z = height - 1 - row;
+      const line = fg.rows[row];
+      let runVoxel = 0;
+      let runY0 = 0;
+      let runYSpan = 0;
+      let runStart = 0;
+      const flushRun = (endX) => {
+        if (runVoxel > 0 && endX > runStart) {
+          voxelFill(world, [runStart, runY0, z], [endX - runStart, runYSpan, 1], runVoxel);
+        }
+        runVoxel = 0;
+      };
+      for (let x = 0; x < width; x++) {
+        const ch = line[x];
+        const entry = fg.legend[ch];
+        if (!entry) {
+          flushRun(x);
+          continue;
+        }
+        if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan) {
+          } else {
+            flushRun(x);
+            runVoxel = entry.voxel;
+            runY0 = y0;
+            runYSpan = ySpan;
+            runStart = x;
+          }
+        } else {
+          flushRun(x);
+        }
+        if (entry.spawn) {
+          spawn = { x: x + 0.5, y: planeY, z, angle: 0, pitch: 0, vz: 0 };
+          world.spawn = spawn;
+        }
+        if (entry.barrier) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          barriers.push({
+            x,
+            z,
+            y_start: y0,
+            y_span: ySpan,
+            kind: entry.barrier,
+            voxel: entry.voxel ?? 0,
+            open: false,
+            model: entry.model ?? "",
+            tag: entry.tag ?? entry.barrier
+          });
+        }
+        if (entry.hazard) {
+          hazards.push({
+            x,
+            z,
+            kind: entry.hazard,
+            frozen: false,
+            model: entry.model ?? ""
+          });
+        }
+        if (entry.ladder) {
+          ladders.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z
+          });
+          if (entry.model) {
+            sceneryRaw.push({
+              x: x + 0.5,
+              y: entry.y ?? planeY,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+        if (entry.boss_door) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          bossDoors.push({
+            x,
+            z,
+            y_start: y0,
+            y_span: ySpan,
+            voxel: entry.voxel ?? 4
+          });
+          if (entry.model) {
+            sceneryRaw.push({
+              x: x + 0.5,
+              y: entry.y ?? planeY,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+        if (entry.checkpoint) {
+          checkpoints.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            active: false,
+            model: entry.model ?? ""
+          });
+        }
+        if (entry.pickup) {
+          pickups.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0.35),
+            base: z + (entry.zOffset ?? 0.35),
+            kind: entry.pickup,
+            model: entry.model ?? "",
+            visible: true
+          });
+        }
+        if (entry.entity) {
+          const item = {
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            home_x: x + 0.5,
+            home_z: z + (entry.zOffset ?? 0),
+            kind: entry.entity,
+            model: entry.model ?? "",
+            hp: entry.hp ?? 3,
+            max_hp: entry.hp ?? 3,
+            dir: -1,
+            cd: 20,
+            alive: true,
+            visible: true
+          };
+          if (entry.role === "boss" || entry.entity === "boss") {
+            boss = item;
+          } else {
+            entities.push(item);
+          }
+        } else if (entry.model && !entry.barrier && !entry.hazard && !entry.ladder && !entry.boss_door && !entry.checkpoint && !entry.pickup) {
+          sceneryRaw.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            model: entry.model,
+            scale: entry.scale ?? 1,
+            angle: entry.angle ?? 0
+          });
+        }
+      }
+      flushRun(width);
+    }
+    if (bg) {
+      const xScale = width / Math.max(1, bg.width);
+      for (let row = 0; row < bg.height; row++) {
+        const z = bg.height - 1 - row;
+        const line = bg.rows[row];
+        for (let bx = 0; bx < bg.width; bx++) {
+          const ch = line[bx];
+          const entry = bg.legend[ch];
+          if (!entry) continue;
+          const wx = Math.floor(bx * xScale);
+          if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
+            const y0 = entry.depth ? entry.depth[0] : 0;
+            const ySpan = entry.depth ? entry.depth[1] : 2;
+            if (wx >= 0 && wx < width && z >= 0 && z < height + marginZ) {
+              voxelFill(world, [wx, y0, z], [Math.max(1, Math.min(width - wx, Math.round(xScale))), ySpan, 1], entry.voxel);
+            }
+          }
+          if (entry.model) {
+            sceneryRaw.push({
+              x: (bx + 0.5) * xScale,
+              y: entry.y ?? bg.planeY ?? 2.5,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+      }
+    }
+    return {
+      world,
+      width,
+      height,
+      plane_y: planeY,
+      spawn,
+      scenery: entityGroup(sceneryRaw),
+      entities,
+      barriers,
+      hazards,
+      ladders,
+      boss_doors: bossDoors,
+      checkpoints,
+      pickups,
+      boss
+    };
+  }
+
   // src/expression.ts
   var MAX_DEPTH = 64;
   var voxelFunctions = {
     voxel_world: (width, height, depth, materials, options) => voxelWorld(width, height, depth, materials, options),
+    side_level: (fg, bg, options) => sideLevel(fg, bg, options),
     nearby: (entities, position, radius) => nearby(entities, position, radius),
     entity_group: (entities) => entityGroup(entities),
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
@@ -3610,6 +3852,7 @@ var __RuneWeb = (() => {
   };
   var voxelArity = {
     voxel_world: [4, 5],
+    side_level: [1, 3],
     nearby: [3, 3],
     entity_group: [0, 1],
     voxel_generate: [1, 2],
@@ -6732,6 +6975,39 @@ var __RuneWeb = (() => {
           )
         )) {
           if (!executeSteps(conditional.steps || [], locals, true)) return false;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(step, "Match")) {
+        const matchStep = step.Match;
+        const targetVal = evaluateExpression(
+          matchStep.expression,
+          buildScope(locals, matchStep.expression)
+        );
+        for (const c of matchStep.cases) {
+          const pat = c.pattern.trim();
+          let matched = false;
+          if (pat === "else" || pat === "_" || pat === "default" || pat === "*") {
+            matched = true;
+          } else {
+            const parts = splitTopLevel(pat, ",");
+            for (const p of parts) {
+              const trimmedP = p.trim();
+              let caseVal;
+              try {
+                caseVal = evaluateExpression(trimmedP, buildScope(locals, trimmedP));
+              } catch {
+                caseVal = trimmedP;
+              }
+              if (caseVal === targetVal || String(caseVal) === String(targetVal) || trimmedP === targetVal) {
+                matched = true;
+                break;
+              }
+            }
+          }
+          if (matched) {
+            if (!executeSteps(c.steps || [], locals, true)) return false;
+            break;
+          }
         }
       }
       if (Object.prototype.hasOwnProperty.call(step, "ForLoop")) {

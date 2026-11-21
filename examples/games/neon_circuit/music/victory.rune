@@ -1,0 +1,19 @@
+# Neon Circuit — Stage Clear / Weapon Get Fanfare (Triumphant C Major)
+@Music/nc_victory
+type = synth
+tempo = 148
+time_signature = 4/4
+loop = false
+volume = 0.08
+instruments = {"lead":"brass","arp":"bell","harmony":"strings","bass":"triangle","drums":"drums"}
+sections = {
+    "fanfare": {
+        "bars": 4,
+        "lead": "C5:8 E5:8 G5:8 C6:8 -:8 G5:8 C6:4 | D6:8 C6:8 B5:8 A5:8 G5:2 | A5:8 B5:8 C6:8 D6:8 E6:4 D6:4 | C6:1",
+        "arp": "C5:8 E5:8 G5:8 C6:8 G5:8 E5:8 G5:8 C6:8 | G5:8 B5:8 D6:8 G6:8 D6:8 B5:8 G5:8 D5:8 | F5:8 A5:8 C6:8 G5:8 B5:8 D6:8 G6:4 | C6:8 G5:8 E5:8 C5:8 C6:2",
+        "harmony": "[C4,E4,G4]:1 | [G4,B4,D5]:1 | [F4,A4,C5]:2 [G4,B4,D5]:2 | [C4,E4,G4,C5]:1",
+        "bass": "C2:4 G2:4 C3:4 G2:4 | G2:4 D2:4 G2:2 | F2:4 C2:4 G2:4 D2:4 | C2:4 G2:4 C2:2",
+        "drums": "crash:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 tom:8 tom:8 snare:4 | kick:4 snare:4 kick:8 kick:8 snare:4 | crash:2 snare:4 crash:4"
+    }
+}
+arrangement = ["fanfare"]

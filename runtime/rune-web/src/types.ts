@@ -87,6 +87,11 @@ export interface HelperDefinition {
   body: string[];
 }
 
+export interface ActionMatchCase {
+  pattern: string;
+  steps: ActionStep[];
+}
+
 export interface ActionStep {
   Statement?: string;
   Conditional?: {
@@ -98,6 +103,10 @@ export interface ActionStep {
     index_name: string | null;
     collection: string;
     steps: ActionStep[];
+  };
+  Match?: {
+    expression: string;
+    cases: ActionMatchCase[];
   };
 }
 

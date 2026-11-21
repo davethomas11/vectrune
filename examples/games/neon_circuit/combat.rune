@@ -1,0 +1,764 @@
+# Combat, 7 Weapons, Pixel Explosions, Enemies, and 12-Boss Death/Victory Ceremony
+@Logic/neon_circuit
+
+action burst(bx, bz, count):
+    for i in range(0, count):
+        bearing = i * 137 + ticks * 19
+        speed = 0.08 + (i % 5) * 0.04
+        effects.push({
+            "x": bx,
+            "y": 7.25 + (i % 3) * 0.06,
+            "z": bz,
+            "dx": cos(bearing) * speed,
+            "dz": sin(bearing) * speed + 0.09,
+            "ttl": 14 + (i % 5) * 3,
+            "life": 14 + (i % 5) * 3,
+            "angle": bearing,
+            "spin": i % 2 == 0 ? 19 : -15,
+            "scale": i % 3 == 0 ? 1.0 : 0.65,
+            "dissolve": 0,
+            "model": i % 3 == 0 ? "nc/scrap" : "nc/spark",
+            "kind": "debris",
+            "visible": true
+        })
+    if count >= 8:
+        effects.push({
+            "x": bx,
+            "y": 7.45,
+            "z": bz,
+            "dx": 0,
+            "dz": 0,
+            "ttl": 10,
+            "life": 10,
+            "angle": 0,
+            "spin": 12,
+            "scale": 0.45,
+            "dissolve": 0,
+            "model": "nc/blast",
+            "kind": "blast",
+            "visible": true
+        })
+    effects = effects.slice(max(0, effects.length - 96))
+
+action victory_sparkles(vx, vz):
+    for i in range(0, 10):
+        bearing = i * 36 + victory_ticks * 7
+        effects.push({
+            "x": vx + cos(bearing) * 0.7,
+            "y": 7.3,
+            "z": vz + 1.8 + sin(bearing) * 0.6,
+            "dx": cos(bearing) * 0.04,
+            "dz": sin(bearing) * 0.03 + 0.025,
+            "ttl": 22,
+            "life": 22,
+            "angle": bearing,
+            "spin": 10,
+            "scale": i % 2 == 0 ? 0.85 : 0.55,
+            "dissolve": 0,
+            "model": "nc/spark",
+            "kind": "sparkle",
+            "visible": true
+        })
+    effects = effects.slice(max(0, effects.length - 96))
+
+action update_effects:
+    for fx in effects:
+        fx.ttl = fx.ttl - 1
+        fx.x = fx.x + fx.dx
+        fx.z = fx.z + fx.dz
+        fx.angle = (fx.angle + fx.spin) % 360
+        if fx.kind == "debris":
+            fx.dz = fx.dz - 0.015
+            fx.dx = fx.dx * 0.96
+            fx.dissolve = clamp(1 - fx.ttl / 8, 0, 1)
+        if fx.kind == "blast":
+            fx.scale = fx.scale + 0.22
+            fx.dissolve = clamp(1 - fx.ttl / fx.life, 0, 1)
+        if fx.kind == "sparkle":
+            fx.dissolve = clamp(1 - fx.ttl / 10, 0, 1)
+        if fx.kind == "orb":
+            fx.scale = 0.7 + sin(fx.ttl * 0.8) * 0.25
+            fx.dissolve = clamp(1 - fx.ttl / 8, 0, 1)
+        fx.visible = fx.ttl > 0 && fx.z > 0.3
+    effects = effects.filter(fx => fx.visible)
+
+action sync_weapon_model:
+    gun = "nc/gun_buster"
+    match active_weapon:
+        "volt":
+            gun = "nc/gun_volt"
+        "cryo":
+            gun = "nc/gun_cryo"
+        "mag":
+            gun = "nc/gun_mag"
+        "nova":
+            gun = "nc/gun_nova"
+        "phase":
+            gun = "nc/gun_phase"
+        "saw":
+            gun = "nc/gun_saw"
+    weapon_model = {
+        "x": player.x + facing * 0.45,
+        "y": 7.1,
+        "z": player.z + (ducking ? 0.55 : 0.85),
+        "model": gun,
+        "angle": facing > 0 ? 0 : 180,
+        "visible": status == "playing" && (invulnerable <= 0 || invulnerable % 4 < 2)
+    }
+
+action cycle_weapon(dir):
+    pool = ["buster"]
+    if campaign.weapons.volt == true:
+        pool.push("volt")
+    if campaign.weapons.cryo == true:
+        pool.push("cryo")
+    if campaign.weapons.mag == true:
+        pool.push("mag")
+    if campaign.weapons.nova == true:
+        pool.push("nova")
+    if campaign.weapons.phase == true:
+        pool.push("phase")
+    if campaign.weapons.saw == true:
+        pool.push("saw")
+    idx = 0
+    for i in range(0, pool.length):
+        if pool[i] == active_weapon:
+            idx = i
+    next_idx = (idx + dir + pool.length) % pool.length
+    active_weapon = pool[next_idx]
+    call refresh_ui
+    sound.play "nc_select_move"
+    notice_text = "EQUIPPED: " + weapon_label
+    notice_ticks = 60
+    call sync_weapon_model
+    call refresh_ui
+
+action equip_weapon(w_name):
+    if w_name == "buster" || campaign.weapons[w_name] == true:
+        active_weapon = w_name
+        call refresh_ui
+        sound.play "nc_select_move"
+        notice_text = "EQUIPPED: " + weapon_label
+        notice_ticks = 60
+        call sync_weapon_model
+        call refresh_ui
+
+action equip_1:
+    call equip_weapon "buster"
+action equip_2:
+    call equip_weapon "volt"
+action equip_3:
+    call equip_weapon "cryo"
+action equip_4:
+    call equip_weapon "mag"
+action equip_5:
+    call equip_weapon "nova"
+action equip_6:
+    call equip_weapon "phase"
+action equip_7:
+    call equip_weapon "saw"
+
+action fire_weapon(aim_up):
+    stop when cooldown > 0
+    w = active_weapon
+    dmg = 1
+    spd = 0.72
+    life = 34
+    model = "nc/shot_buster"
+    pierce = false
+    sfx = "nc_buster"
+    cost = 0
+    cd = 6
+    match w:
+        "volt":
+            dmg = 2
+            spd = 0.88
+            life = 32
+            model = "nc/shot_volt"
+            sfx = "nc_volt"
+            cost = 1
+            cd = 8
+        "cryo":
+            dmg = 2
+            spd = 0.68
+            life = 40
+            model = "nc/shot_cryo"
+            sfx = "nc_cryo"
+            cost = 1
+            cd = 10
+        "mag":
+            dmg = 3
+            spd = 0.56
+            life = 34
+            model = "nc/shot_mag"
+            sfx = "nc_mag"
+            cost = 1
+            cd = 12
+            cam_shake = 3
+        "nova":
+            dmg = 4
+            spd = 0.52
+            life = 30
+            model = "nc/shot_nova"
+            sfx = "nc_nova"
+            cost = 2
+            cd = 14
+            cam_shake = 5
+        "phase":
+            dmg = 2
+            spd = 0.85
+            life = 42
+            model = "nc/shot_phase"
+            pierce = true
+            sfx = "nc_phase"
+            cost = 1
+            cd = 9
+        "saw":
+            dmg = 3
+            spd = 0.64
+            life = 44
+            model = "nc/shot_saw"
+            sfx = "nc_saw"
+            cost = 1
+            cd = 10
+
+    if cost > 0 && weapon_energy < cost:
+        w = "buster"
+        dmg = 1
+        spd = 0.72
+        life = 34
+        model = "nc/shot_buster"
+        pierce = false
+        sfx = "nc_buster"
+        cost = 0
+        cd = 6
+    else:
+        weapon_energy = max(0, weapon_energy - cost)
+
+    cooldown = cd
+    vx = aim_up ? 0 : facing * spd
+    vz = aim_up ? spd : 0
+    shots.push({
+        "x": player.x + facing * 0.6,
+        "y": 7,
+        "z": player.z + (ducking ? 0.55 : 0.9),
+        "vx": vx,
+        "vz": vz,
+        "kind": w,
+        "dmg": dmg,
+        "life": life,
+        "pierce": pierce,
+        "model": model,
+        "angle": facing > 0 ? 0 : 180
+    })
+    sound.play sfx
+
+action open_barrier_column(bx, bkind):
+    opened = 0
+    for b in barriers:
+        if !b.open && b.kind == bkind && abs(b.x - bx) <= 2:
+            b.open = true
+            world = voxel_fill(world, [b.x, b.y_start, b.z], [1, b.y_span, 1], 0)
+            opened = opened + 1
+    if opened > 0:
+        sound.play "nc_barrier_open"
+        call burst bx + 0.5, player.z + 1.0, 12
+        if bkind == "volt":
+            notice_text = "VOLT RELAY CHARGED! GATE OPENED"
+        if bkind == "blast":
+            notice_text = "BLAST WALL SHATTERED!"
+        if bkind == "phase":
+            notice_text = "HOLO-SHIELD DEACTIVATED!"
+        if bkind == "saw":
+            notice_text = "CABLE BARRIER SLICED!"
+        notice_ticks = 90
+
+action freeze_thermal_around(hx):
+    frozen_any = 0
+    for h in hazards:
+        if !h.frozen && h.kind == "thermal" && abs(h.x - hx) <= 6:
+            h.frozen = true
+            world = voxel_fill(world, [h.x, 5, h.z], [1, 4, 1], 5)
+            frozen_any = frozen_any + 1
+    if frozen_any > 0:
+        sound.play "nc_freeze"
+        call burst hx + 0.5, 1.5, 8
+        notice_text = "THERMAL VENTS FROZEN INTO CRYO BRIDGE!"
+        notice_ticks = 90
+
+action step_shots:
+    next_shots = []
+    for s in shots:
+        s.x = s.x + s.vx
+        s.z = s.z + s.vz
+        s.life = s.life - 1
+        if s.kind == "saw":
+            s.angle = (s.angle + 36) % 360
+        alive = s.life > 0 && s.x > 0 && s.x < level_width - 1 && s.z > 0 && s.z < level_height + 2
+        if alive:
+            gx = floor(s.x)
+            gz = floor(s.z)
+            if s.kind == "cryo":
+                for h in hazards:
+                    if alive && !h.frozen && h.kind == "thermal" && abs(h.x - gx) <= 1 && abs(h.z - gz) <= 2:
+                        call freeze_thermal_around h.x
+                        alive = false
+            if alive:
+                for b in barriers:
+                    if alive && !b.open && abs(b.x - gx) <= 1 && abs(b.z - gz) <= 1:
+                        matched = (b.kind == "volt" && s.kind == "volt") || (b.kind == "blast" && s.kind == "nova") || (b.kind == "phase" && s.kind == "phase") || (b.kind == "saw" && s.kind == "saw")
+                        if matched:
+                            call open_barrier_column b.x, b.kind
+                            alive = false
+                        else:
+                            if !s.pierce:
+                                alive = false
+                                if notice_ticks <= 0:
+                                    if b.kind == "volt":
+                                        notice_text = "LOCKED: NEEDS VOLT SURGE TO CHARGE RELAY"
+                                    if b.kind == "blast":
+                                        notice_text = "LOCKED: NEEDS NOVA BREAKER TO SHATTER WALL"
+                                    if b.kind == "phase":
+                                        notice_text = "LOCKED: NEEDS PHASE BEAM TO PIERCE SHIELD"
+                                    if b.kind == "saw":
+                                        notice_text = "LOCKED: NEEDS HYPER SAW TO CUT CABLES"
+                                    notice_ticks = 75
+            if alive && !s.pierce:
+                cell = voxel_get(world, gx, 7, gz)
+                if cell != 0:
+                    alive = false
+                    if s.kind == "nova":
+                        cam_shake = 4
+                        call burst s.x, s.z, 10
+                    else:
+                        call burst s.x, s.z, 4
+            if alive:
+                for e in enemies:
+                    if alive && e.alive && abs(e.x - s.x) < 1.1 && abs((e.z + 0.8) - s.z) < 1.1:
+                        e.hp = e.hp - s.dmg
+                        sound.play "nc_hit"
+                        if e.kind != "turret":
+                            e.x = e.x + (s.vx > 0 ? 0.22 : -0.22)
+                        if e.hp <= 0:
+                            e.alive = false
+                            e.visible = false
+                            sound.play "nc_explode"
+                            call burst e.x, e.z + 0.8, 14
+                            pk_kind = (health <= 4 && (ticks % 2 == 0)) ? "health" : "energy"
+                            pk_mod = pk_kind == "health" ? "nc/pickup_health" : "nc/pickup_energy"
+                            pickups.push({"x": e.x, "y": 7, "z": e.z + 0.35, "base": e.z + 0.35, "kind": pk_kind, "model": pk_mod, "visible": true})
+                        else:
+                            call burst e.x, e.z + 0.8, 5
+                        if !s.pierce:
+                            alive = false
+            if alive && boss_entity.alive && boss_entity.visible:
+                if abs(boss_entity.x - s.x) < 1.4 && abs((boss_entity.z + 1.2) - s.z) < 1.6:
+                    st = stages[current_stage]
+                    dmg = s.dmg
+                    if s.kind == st.weakness:
+                        dmg = dmg * 2
+                    boss_entity.hp = max(0, boss_entity.hp - dmg)
+                    boss_hurt_ticks = 7
+                    sound.play "nc_hit"
+                    call burst boss_entity.x, boss_entity.z + 1.2, 6
+                    if !s.pierce:
+                        alive = false
+                    if boss_entity.hp <= 0:
+                        call on_boss_defeated
+        if alive:
+            next_shots.push(s)
+    shots = next_shots
+
+action step_enemies:
+    for e in enemies:
+        if e.alive:
+            dist = abs(e.x - player.x)
+            if dist > 26:
+                continue
+            if e.kind == "drone":
+                e.x = e.x + e.dir * 0.08
+                if abs(e.x - e.home_x) > 4.5:
+                    e.dir = -e.dir
+                e.z = e.home_z + sin(ticks * 0.1 + e.home_x) * 0.4
+            if e.kind == "walker":
+                e.x = e.x + e.dir * 0.06
+                if abs(e.x - e.home_x) > 3.5:
+                    e.dir = -e.dir
+            e.cd = e.cd - 1
+            if e.cd <= 0 && dist < 16:
+                e.cd = e.kind == "turret" ? 55 : 70
+                aim = player.x < e.x ? -1 : 1
+                enemy_shots.push({
+                    "x": e.x + aim * 0.5,
+                    "y": 7,
+                    "z": e.z + 0.8,
+                    "vx": aim * 0.34,
+                    "vz": 0,
+                    "life": 65,
+                    "model": "nc/enemy_shot"
+                })
+            if abs(e.x - player.x) < 0.9 && abs(e.z - player.z) < 1.2:
+                call hurt_player 1
+
+action animate_boss_satellites(mode, aim, rage):
+    stop when boss_satellites.length < 3 || !boss_entity.alive
+    bx = boss_entity.x
+    bz = boss_entity.z
+    pod_l = boss_satellites[0]
+    pod_r = boss_satellites[1]
+    halo = boss_satellites[2]
+    pod_l.visible = true
+    pod_r.visible = true
+    halo.visible = true
+    pod_l.dissolve = boss_entity.dissolve
+    pod_r.dissolve = boss_entity.dissolve
+    halo.dissolve = boss_entity.dissolve
+
+    if mode == "idle":
+        pod_l.x = bx - 1.15
+        pod_l.z = bz + 1.1 + sin(ticks * 0.14) * 0.22
+        pod_l.angle = 215 + sin(ticks * 0.1) * 14
+        pod_l.scale = 0.88
+        pod_r.x = bx + 1.15
+        pod_r.z = bz + 1.1 + cos(ticks * 0.14) * 0.22
+        pod_r.angle = 145 - sin(ticks * 0.1) * 14
+        pod_r.scale = 0.88
+        halo.x = bx
+        halo.z = bz + 1.05 + sin(ticks * 0.12) * 0.14
+        halo.angle = (ticks * 5) % 360
+        halo.scale = 0.82
+        stop when true
+
+    if mode == "telegraph":
+        orbit = boss_clock * 24
+        pod_l.x = bx + cos(orbit) * 0.95
+        pod_l.z = bz + 1.25 + sin(orbit) * 0.55
+        pod_l.angle = (orbit * 2) % 360
+        pod_l.scale = 1.02
+        pod_r.x = bx - cos(orbit) * 0.95
+        pod_r.z = bz + 1.25 - sin(orbit) * 0.55
+        pod_r.angle = (360 - (orbit * 2) % 360)
+        pod_r.scale = 1.02
+        halo.x = bx
+        halo.z = bz + 1.15
+        halo.angle = (boss_clock * 28) % 360
+        halo.scale = 0.88 + sin(boss_clock * 0.9) * 0.22
+        stop when true
+
+    if mode == "special":
+        spin = boss_clock * 22
+        pod_l.x = bx + cos(spin) * 1.45
+        pod_l.z = bz + 1.2 + sin(spin) * 0.7
+        pod_l.angle = spin % 360
+        pod_l.scale = 0.98
+        pod_r.x = bx - cos(spin) * 1.45
+        pod_r.z = bz + 1.2 - sin(spin) * 0.7
+        pod_r.angle = (spin + 180) % 360
+        pod_r.scale = 0.98
+        halo.x = bx
+        halo.z = bz + 1.0
+        halo.angle = (boss_clock * 32) % 360
+        halo.scale = 1.12
+        stop when true
+
+    # Active patrol / attack gait
+    stride = sin(boss_clock * 0.34)
+    pod_l.x = bx + aim * 0.35 - 1.1
+    pod_l.z = bz + 1.15 + stride * 0.32
+    pod_l.angle = (aim > 0 ? 145 : 215) + stride * 20
+    pod_l.scale = 0.92
+    pod_r.x = bx + aim * 0.35 + 1.1
+    pod_r.z = bz + 1.15 - stride * 0.32
+    pod_r.angle = (aim > 0 ? 145 : 215) - stride * 20
+    pod_r.scale = 0.92
+    halo.x = bx
+    halo.z = bz + 1.1 + sin(boss_clock * 0.2) * 0.16
+    halo.angle = (boss_clock * 11 * rage) % 360
+    halo.scale = rage > 1 ? 1.05 : 0.9
+
+action fire_boss_pattern(aim, rage, st, is_special):
+    sound.play "nc_hit"
+    enemy_shots.push({
+        "x": boss_entity.x + aim * 0.9,
+        "y": 7,
+        "z": boss_entity.z + 1.1,
+        "vx": aim * 0.44 * rage,
+        "vz": 0,
+        "life": 80,
+        "model": "nc/enemy_shot"
+    })
+    if st.tier == 2 || rage > 1 || is_special:
+        enemy_shots.push({
+            "x": boss_entity.x + aim * 0.9,
+            "y": 7,
+            "z": boss_entity.z + 1.4,
+            "vx": aim * 0.36 * rage,
+            "vz": 0.14,
+            "life": 80,
+            "model": "nc/enemy_shot"
+        })
+        enemy_shots.push({
+            "x": boss_entity.x + aim * 0.9,
+            "y": 7,
+            "z": boss_entity.z + 0.8,
+            "vx": aim * 0.36 * rage,
+            "vz": -0.1,
+            "life": 80,
+            "model": "nc/enemy_shot"
+        })
+
+action step_boss:
+    stop when !boss_entity.alive || !boss_entity.visible
+    aim = player.x < boss_entity.x ? -1 : 1
+    face_angle = aim > 0 ? 145 : 215
+
+    if boss_hurt_ticks > 0:
+        boss_hurt_ticks = boss_hurt_ticks - 1
+        boss_entity.dissolve = boss_hurt_ticks % 2 == 0 ? 0.42 : 0.14
+    else:
+        boss_entity.dissolve = 0
+
+    engage_x = boss_gate_x >= 0 ? boss_gate_x + 1.55 : boss_entity.home_x - 16
+    if !boss_active && player.x >= engage_x:
+        boss_active = true
+        boss_state = "patrol"
+        boss_state_ticks = 0
+        cam_shake = 10
+        if boss_gate_x >= 0 && !boss_door_locked:
+            call lock_boss_door
+        sound.play "nc_boss_warn"
+        st = stages[current_stage]
+        notice_text = "WARNING: " + st.name + " ENGAGED!"
+        notice_ticks = 95
+        call play_stage_music "nc_boss"
+
+    if !boss_active:
+        boss_entity.angle = 212 + sin(ticks * 0.08) * 18
+        boss_entity.scale = 1.0 + sin(ticks * 0.14) * 0.045
+        call animate_boss_satellites "idle", -1, 1.0
+        stop when true
+
+    boss_clock = boss_clock + 1
+    boss_state_ticks = boss_state_ticks + 1
+    st = stages[current_stage]
+    rage = boss_entity.hp <= boss_entity.max_hp / 2 ? 1.35 : 1.0
+    is_hover = st.code == "02" || st.code == "05" || st.code == "07" || st.code == "09" || st.code == "11"
+    is_dash = st.code == "01" || st.code == "05" || st.code == "06" || st.code == "09" || st.code == "12"
+
+    # State transitions: patrol -> telegraph -> special -> patrol
+    if boss_state == "idle":
+        boss_state = "patrol"
+        boss_state_ticks = 0
+
+    if boss_state == "patrol" && boss_state_ticks >= (rage > 1 ? 42 : 58):
+        boss_state = "telegraph"
+        boss_state_ticks = 0
+        boss_entity.dir = aim
+        sound.play "nc_dash"
+
+    if boss_state == "telegraph" && boss_state_ticks >= 18:
+        boss_state = "special"
+        boss_state_ticks = 0
+        boss_entity.dir = aim
+        if !is_dash:
+            boss_entity.vz = 0.54
+        call fire_boss_pattern aim, rage, st, true
+        call burst boss_entity.x, boss_entity.z + 1.0, 6
+
+    if boss_state == "special" && boss_state_ticks >= 28:
+        boss_state = "patrol"
+        boss_state_ticks = 0
+
+    # Movement, vertical physics, & expressive body animation per state
+    target_scale = 1.0
+    if boss_state == "patrol":
+        boss_entity.x = boss_entity.x + boss_entity.dir * 0.12 * rage
+        boss_entity.angle = face_angle + sin(boss_clock * 0.28) * 16
+        target_scale = 1.0 + abs(sin(boss_clock * 0.34)) * 0.055
+        boss_entity.cd = boss_entity.cd - 1
+        if boss_entity.cd <= 0:
+            boss_entity.cd = rage > 1 ? 28 : 40
+            target_scale = 1.08
+            call fire_boss_pattern aim, rage, st, false
+
+    if boss_state == "telegraph":
+        boss_entity.angle = face_angle + sin(boss_clock * 0.9) * 12
+        target_scale = 0.88 + (boss_state_ticks / 18) * 0.22
+        if boss_state_ticks % 6 == 0:
+            call burst boss_entity.x, boss_entity.z + 1.1, 3
+
+    if boss_state == "special":
+        if is_dash:
+            boss_entity.x = boss_entity.x + boss_entity.dir * 0.28 * rage
+            boss_entity.angle = (boss_clock * 28) % 360
+            target_scale = 1.05
+            if boss_state_ticks % 7 == 0:
+                call burst boss_entity.x - boss_entity.dir * 0.4, boss_entity.z + 0.9, 2
+        else:
+            boss_entity.x = boss_entity.x + boss_entity.dir * 0.18 * rage
+            boss_entity.angle = (face_angle + sin(boss_clock * 0.45) * 26) % 360
+            target_scale = 1.06
+
+    if boss_entity.x < boss_entity.home_x - 13:
+        boss_entity.x = boss_entity.home_x - 13
+        boss_entity.dir = 1
+    if boss_entity.x > boss_entity.home_x + 4:
+        boss_entity.x = boss_entity.home_x + 4
+        boss_entity.dir = -1
+
+    if is_hover:
+        hover_z = boss_entity.home_z + 0.65 + sin(boss_clock * 0.16) * 0.45
+        boss_entity.z = boss_entity.z + (hover_z - boss_entity.z) * 0.2
+        boss_entity.vz = 0
+    else:
+        if boss_state == "patrol" && boss_clock % 85 == 0 && boss_entity.z <= boss_entity.home_z + 0.05:
+            boss_entity.vz = 0.42
+        was_air = boss_entity.z > boss_entity.home_z + 0.08
+        boss_entity.vz = boss_entity.vz - 0.032
+        boss_entity.z = boss_entity.z + boss_entity.vz
+        if boss_entity.z < boss_entity.home_z:
+            boss_entity.z = boss_entity.home_z
+            boss_entity.vz = 0
+            if was_air:
+                boss_land_ticks = 8
+                cam_shake = 6
+                call burst boss_entity.x, boss_entity.z + 0.2, 8
+
+    if boss_land_ticks > 0:
+        boss_land_ticks = boss_land_ticks - 1
+        target_scale = 0.86 + (8 - boss_land_ticks) * 0.017
+    if boss_hurt_ticks > 0:
+        target_scale = 0.91
+    boss_entity.scale = target_scale
+
+    call animate_boss_satellites boss_state, aim, rage
+
+    if abs(boss_entity.x - player.x) < 1.2 && abs(boss_entity.z - player.z) < 1.6:
+        call hurt_player 2
+
+action step_enemy_shots:
+    next_es = []
+    for s in enemy_shots:
+        s.x = s.x + s.vx
+        s.z = s.z + s.vz
+        s.life = s.life - 1
+        alive = s.life > 0 && s.x > 0 && s.x < level_width - 1 && s.z > 0 && s.z < level_height + 2
+        if alive:
+            if abs(s.x - player.x) < 0.75 && abs(s.z - (player.z + 0.8)) < 0.95:
+                call hurt_player 1
+                alive = false
+        if alive:
+            next_es.push(s)
+    enemy_shots = next_es
+
+action on_boss_defeated:
+    boss_entity.alive = false
+    boss_defeated_now = true
+    boss_defeat_ticks = 0
+    victory_ticks = 0
+    cam_shake = 12
+    shots = []
+    enemy_shots = []
+    st = stages[current_stage]
+    campaign.defeated[st.code] = true
+    if st.unlocks != "":
+        campaign.weapons[st.unlocks] = true
+        active_weapon = st.unlocks
+    call count_progress
+    sound.play "nc_explode"
+    call burst boss_entity.x, boss_entity.z + 1.2, 16
+    status = "boss_dying"
+    notice_text = st.name + " CRITICAL OVERLOAD!"
+    notice_ticks = 90
+    call refresh_ui
+
+action tick_boss_dying:
+    boss_defeat_ticks = boss_defeat_ticks + 1
+    boss_entity.dissolve = clamp(boss_defeat_ticks / 72, 0, 0.98)
+    boss_entity.angle = (boss_entity.angle + 18) % 360
+    boss_entity.scale = max(0.75, 1.05 - boss_defeat_ticks * 0.004)
+    boss_entity.x = boss_entity.home_x + (boss_defeat_ticks % 2 == 0 ? 0.16 : -0.16)
+    for sat in boss_satellites:
+        sat.angle = (sat.angle + 28) % 360
+        sat.z = sat.z + 0.025
+        sat.dissolve = clamp(boss_defeat_ticks / 48, 0, 0.98)
+        sat.visible = boss_defeat_ticks < 60
+    cam_tx = max(9.5, min(level_width - 10.5, boss_entity.x))
+    cam_tz = max(4.2, min(level_height - 2.5, boss_entity.z + 2.4))
+    camera = {
+        "x": camera.x + (cam_tx - camera.x) * 0.25,
+        "y": 19,
+        "z": camera.z + (cam_tz - camera.z) * 0.25,
+        "angle": 270,
+        "pitch": 0
+    }
+    if boss_defeat_ticks % 12 == 0:
+        sound.play "nc_explode"
+        ox = ((boss_defeat_ticks * 7) % 5 - 2) * 0.45
+        oz = ((boss_defeat_ticks * 3) % 4) * 0.45 + 0.6
+        call burst boss_entity.x + ox, boss_entity.z + oz, 12
+    call update_effects
+    if boss_defeat_ticks >= 75:
+        call burst boss_entity.x, boss_entity.z + 1.2, 22
+        boss_entity.visible = false
+        boss_entity.dissolve = 0
+        for sat in boss_satellites:
+            sat.visible = false
+        sound.play "nc_explode"
+        sound.play "nc_weapon_get"
+        call play_stage_music "nc_victory"
+        status = "boss_victory"
+        victory_ticks = 0
+        avatar.model = "nc/hero_victory"
+        avatar.angle = 0
+        avatar.visible = true
+        weapon_model.visible = false
+        victory_item = {
+            "x": player.x,
+            "y": 7,
+            "z": player.z + 2.3,
+            "model": "nc/victory_orb",
+            "angle": 0,
+            "scale": 1.0,
+            "visible": true
+        }
+        call victory_sparkles player.x, player.z
+    call refresh_ui
+
+action tick_boss_victory(input):
+    victory_ticks = victory_ticks + 1
+    avatar.x = player.x
+    avatar.y = 7
+    avatar.z = player.z
+    avatar.model = "nc/hero_victory"
+    avatar.angle = 0
+    avatar.visible = true
+    cam_tx = max(9.5, min(level_width - 10.5, player.x))
+    cam_tz = max(4.2, min(level_height - 2.5, player.z + 3.4))
+    camera = {
+        "x": camera.x + (cam_tx - camera.x) * 0.25,
+        "y": 18,
+        "z": camera.z + (cam_tz - camera.z) * 0.25,
+        "angle": 270,
+        "pitch": 0
+    }
+    victory_item.x = player.x
+    victory_item.z = player.z + 2.3 + sin(victory_ticks * 6) * 0.12
+    victory_item.angle = (victory_ticks * 5) % 360
+    if victory_ticks == 20 || victory_ticks == 45:
+        call victory_sparkles player.x, player.z
+    call update_effects
+    pressed = (input.jump == true || input.fire == true) && !victory_input_held
+    victory_input_held = input.jump == true || input.fire == true
+    if victory_ticks >= 145 || (victory_ticks >= 35 && pressed):
+        call finish_boss_victory
+    else:
+        call refresh_ui
+
+action finish_boss_victory:
+    victory_item.visible = false
+    if defeated_count >= 12:
+        status = "won"
+    else:
+        status = "stage_clear"
+    call refresh_ui

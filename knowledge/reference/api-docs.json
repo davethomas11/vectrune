@@ -128,6 +128,13 @@
             "Without an explicit response, the executor can return the last computed result with HTTP 200, falling back to OK when no result is available. A builtin execution error becomes HTTP 500. Use explicit responses and validation for predictable API contracts.",
             "The native REST handler returns a status and a string body. Object serialization does not automatically select application/json; verify the wire response before building clients that depend on response headers."
           ]
+        },
+        {
+          "title": "Branching with match and switch",
+          "paragraphs": [
+            "Use match <expression>: or switch <expression>: to branch on an evaluated variable or string expression across multiple cases without evaluating every branch.",
+            "Cases match literal values, identifiers, comma-separated lists (\"guest\", \"anonymous\":), or default fallbacks (else, default, _, *). Only the first matching branch executes its nested run steps."
+          ]
         }
       ]
     },
@@ -324,7 +331,7 @@
         {
           "title": "Core language and builtins",
           "paragraphs": [
-            "Rune documents combine @Section paths, key/value data, records, and ordered run steps. The CLI also supports .vect and .vectrune script workflows.",
+            "Rune documents combine @Section paths, key/value data, records, and ordered run steps. The CLI also supports .vect and .vectrune script workflows. Flow control includes conditional if/else blocks and structured match or switch statements that evaluate single branches.",
             "The existing builtin catalog is a starter reference, not a complete inventory. Runtime availability differs between the native CLI, browser emulator, WebAssembly, and frontend JavaScript; check the implementation before assuming a builtin is portable."
           ],
           "links": [

@@ -97,6 +97,8 @@ export interface RaycasterConfig {
   width: number;
   height: number;
   fov?: number; // degrees, default 66
+  outline?: boolean;
+  outlineColor?: number;
   textures: Record<string, Texture>;
   sprites: Record<string, Sprite>;
   models?: Record<string, BlockModel>;
@@ -121,6 +123,7 @@ const FONT: Record<string, string> = {
   '4': '101101111001001', '5': '111100110001110', '6': '011100111101111', '7': '111001010010010',
   '8': '111101111101111', '9': '111101111001110', ':': '000010000010000', '-': '000000111000000',
   '!': '010010010000010', '%': '101001010100101', '[': '011010010010011', ']': '110010010010110',
+  '(': '010100100100010', ')': '010001001001010',
   '/': '001010010010100', '.': '000000000000010', ',': '000000000010010', '?': '110001010000010',
   '|': '010010010010010', '+': '000010111010000', '_': '000000000000111', '>': '100010001010100',
   '<': '001010100010001',
@@ -138,6 +141,7 @@ export class Raycaster3D {
   private drawScale = 1;
   private palette?: Uint32Array;
   private silhouettes = false;
+  private outlineColor = 0xff000000;
 
   get outlineRadius(): number {
     return this.silhouettes ? Math.max(1, Math.round(this.hudScale)) : 0;
@@ -147,6 +151,8 @@ export class Raycaster3D {
     this.width = config.width;
     this.height = config.height;
     this.fov = config.fov || 66;
+    this.silhouettes = Boolean(config.outline);
+    if (config.outlineColor !== undefined) this.outlineColor = packed(config.outlineColor);
     this.buffer = new Uint32Array(this.width * this.height);
     this.zBuffer = new Float64Array(this.width);
     this.pixelDepth = new Float64Array(this.width * this.height);
@@ -179,7 +185,7 @@ export class Raycaster3D {
   setPalette(colors?: readonly number[], silhouettes = false): void {
     if (colors === undefined) {
       this.palette = undefined;
-      this.silhouettes = false;
+      this.silhouettes = silhouettes || Boolean(this.config.outline);
       return;
     }
     if (colors.length < 2 || colors.length > 16 ||
@@ -188,7 +194,7 @@ export class Raycaster3D {
     }
     this.palette = Uint32Array.from({ length: 256 }, (_, light) =>
       packed(colors[Math.floor(light * colors.length / 256)]));
-    this.silhouettes = silhouettes;
+    this.silhouettes = silhouettes || Boolean(this.config.outline);
   }
 
   render(
@@ -335,7 +341,7 @@ export class Raycaster3D {
           const left = Math.max(0, x - diagonal), right = Math.min(width - 1, x + diagonal);
           edge = Math.min(edge, depth[upper + left], depth[upper + right], depth[lower + left], depth[lower + right]);
         }
-        if (depth[i] - edge > Math.max(.12, edge * .025)) buffer[i] = 0xff000000;
+        if (depth[i] - edge > Math.max(.12, edge * .025)) buffer[i] = this.outlineColor;
       }
     }
   }
@@ -424,6 +430,12 @@ export class Raycaster3D {
       centered(title.subtitle, top + 5 * scale + 12, 0x9dc6d2);
       this.rect(0, H - 23, W, 23, 0x080f18);
       centered(title.prompt, H - 15, 0xa5e8ec);
+      if (stats.ui?.panel) {
+        const canvas = this.drawScale === 1 ? this : {
+          width: W, height: H, rect: this.rect.bind(this), text: this.text.bind(this),
+        };
+        renderHud(canvas, { ...stats.ui, style: 'floating', heading: '', detail: '', objective: '', prompt: '' }, stats.status || 'title', false, this.config.sprites);
+      }
       return;
     }
     if (stats.ui) {

@@ -16,6 +16,39 @@ export interface HudPanel {
   choices: string[];
   selected: number;
   footer: string;
+  choiceActions?: Array<{ action: string; args?: unknown[] }>;
+}
+export interface HudGridItem {
+  label: string;
+  sub?: string;
+  badge?: string;
+  color?: number;
+  selected?: boolean;
+  disabled?: boolean;
+  action?: string;
+  args?: unknown[];
+}
+export interface HudGrid {
+  title?: string;
+  columns: number;
+  items: HudGridItem[];
+  footer?: string;
+}
+export interface HudSlot {
+  label: string;
+  color: number;
+  selected?: boolean;
+  locked?: boolean;
+  action?: string;
+  args?: unknown[];
+}
+export interface HudHitRegion {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  action: string;
+  args: unknown[];
 }
 export interface CinemaHud {
   lines: string[];
@@ -29,6 +62,8 @@ export interface CinemaHud {
 export interface GameHud {
   cinema?: CinemaHud;
   map?: HudMap;
+  grid?: HudGrid;
+  slots?: HudSlot[];
   damageDirection?: -1 | 0 | 1;
   style?: 'floating';
   noticeIcon?: string;
@@ -93,9 +128,23 @@ export function validateHud(value: unknown, sprites: Record<string, Sprite> = {}
   if (hud.panel !== null) {
     const p = hud.panel;
     if (!p || !['title', 'body', 'footer'].every(k => typeof Reflect.get(p, k) === 'string') ||
-        !Array.isArray(p.choices) || p.choices.length > 3 || !p.choices.every(c => typeof c === 'string') ||
+        !Array.isArray(p.choices) || p.choices.length > 5 || !p.choices.every(c => typeof c === 'string') ||
         !Number.isInteger(p.selected) || p.selected < 0 || p.selected >= Math.max(1, p.choices.length)) {
-      throw new Error('Pixel-3d ui panel needs title/body/footer, up to three choices, and a valid selected index');
+      throw new Error('Pixel-3d ui panel needs title/body/footer, up to five choices, and a valid selected index');
+    }
+  }
+  if (hud.grid !== undefined) {
+    const g = hud.grid;
+    if (!g || !Number.isInteger(g.columns) || g.columns < 1 || g.columns > 8 ||
+        !Array.isArray(g.items) || g.items.length > 24 ||
+        !g.items.every(it => it && typeof it.label === 'string')) {
+      throw new Error('Pixel-3d ui grid needs columns (1-8) and up to 24 labeled items');
+    }
+  }
+  if (hud.slots !== undefined) {
+    if (!Array.isArray(hud.slots) || hud.slots.length > 12 ||
+        !hud.slots.every(s => s && typeof s.label === 'string' && Number.isInteger(s.color) && s.color >= 0 && s.color <= 0xffffff)) {
+      throw new Error('Pixel-3d ui slots needs up to 12 slots with label and color');
     }
   }
   return hud;
@@ -125,6 +174,22 @@ export function wrapText(text: string, columns: number): string[] {
     if (line) lines.push(line);
   }
   return lines;
+}
+
+function floatingPanelLayout(width: number, height: number, ui: GameHud, status: string, top: number) {
+  const p = ui.panel!;
+  const maxWidth = status === 'title' ? 320 : status === 'playing' ? 360 : width - 48;
+  const bw = Math.min(width - 32, Math.max(180, maxWidth));
+  const panelColumns = Math.max(1, Math.floor((bw - 20) / 4));
+  const body = wrapText(p.body, panelColumns).slice(0, 4);
+  const bh = 38 + body.length * 9 + p.choices.length * 13;
+  const bx = Math.floor((width - bw) / 2);
+  const y = status === 'title'
+    ? Math.max(top + 28, height - bh - 28)
+    : p.choices.length <= 1
+      ? Math.max(top + 8, Math.floor(height * 0.16))
+      : Math.max(top + 28, Math.floor((height - bh - 12) / 2));
+  return { panelColumns, body, bh, bw, bx, y };
 }
 
 /** Pixel icons and outlined lettering float directly over the world, in every host. */
@@ -190,13 +255,23 @@ function renderFloatingHud(canvas: CanvasHud, ui: GameHud, status: string, pause
     text(heading, Math.floor((W - heading.length * 8) / 2), top + 26, gold, 2);
   }
   if (ui.panel) {
-    const p = ui.panel, panelColumns = Math.max(1, Math.floor((W - 48) / 4));
-    const body = wrapText(p.body, panelColumns).slice(0, 4);
-    const y = Math.max(top + 45, Math.floor((H - (48 + body.length * 9 + p.choices.length * 12)) / 2));
-    text(p.title.slice(0, panelColumns), 24, y, gold);
-    body.forEach((line, i) => text(line, 24, y + 14 + i * 9, 0xe3eee9));
-    p.choices.forEach((choice, i) => text(`${i === p.selected ? '>' : ' '} ${i + 1} ${choice}`.slice(0, panelColumns), 24, y + 19 + body.length * 9 + i * 12, i === p.selected ? gold : 0xe3eee9));
-    text(p.footer.slice(0, panelColumns), 24, y + 25 + body.length * 9 + p.choices.length * 12, 0x8af1cf);
+    const p = ui.panel;
+    const { panelColumns, body, bh, bw, bx, y } = floatingPanelLayout(W, H, ui, status, top);
+    canvas.rect(bx, y, bw, bh, 0x090418);
+    canvas.rect(bx, y, bw, 2, 0xff1e9b);
+    canvas.rect(bx, y + bh - 2, bw, 2, 0x00f5ff);
+    canvas.rect(bx, y, 2, bh, 0x00f5ff);
+    canvas.rect(bx + bw - 2, y, 2, bh, 0xff1e9b);
+    text(p.title.slice(0, panelColumns), bx + 10, y + 7, gold);
+    body.forEach((line, i) => text(line, bx + 10, y + 18 + i * 9, 0xe3eee9));
+    p.choices.forEach((choice, i) => {
+      const cy = y + 22 + body.length * 9 + i * 13;
+      if (i === p.selected) canvas.rect(bx + 8, cy - 2, bw - 16, 10, 0x2a1454);
+      text(`${i === p.selected ? '>' : ' '} ${choice}`.slice(0, panelColumns), bx + 10, cy, i === p.selected ? 0x00f5ff : 0xe3eee9);
+    });
+    if (p.footer) text(p.footer.slice(0, panelColumns), bx + 10, y + bh - 11, 0x8af1cf);
+  } else if (ui.grid) {
+    renderHudGrid(canvas, ui.grid, W, H, top, text);
   } else if (ui.notice) {
     const lines = wrapText(ui.notice, columns - 5).slice(0, 2);
     const y = top + 25;
@@ -204,7 +279,150 @@ function renderFloatingHud(canvas: CanvasHud, ui: GameHud, status: string, pause
     const left = ui.noticeIcon ? 8 + asset(ui.noticeIcon).width + 6 : 8;
     lines.forEach((line, i) => text(line, left, y + i * 9, gold));
   }
+  if (ui.slots && ui.slots.length > 0 && !ui.panel && !ui.grid) {
+    renderHudSlots(canvas, ui.slots, W, H, text);
+  }
   if (ui.prompt) text(ui.prompt.slice(0, columns), 8, H - 12, 0xe3eee9);
+}
+
+function gridLayout(grid: HudGrid, W: number, H: number) {
+  const cols = Math.max(1, grid.columns);
+  const rows = Math.max(1, Math.ceil(grid.items.length / cols));
+  const padX = 12, gap = 4;
+  const cellW = Math.floor((W - padX * 2 - gap * (cols - 1)) / cols);
+  const cellH = rows <= 2 ? 22 : 18;
+  const headerH = grid.title ? 12 : 4;
+  const footerH = grid.footer ? 11 : 4;
+  const totalH = headerH + rows * cellH + (rows - 1) * gap + footerH + 6;
+  const y0 = Math.max(44, H - totalH - 16);
+  return { cols, rows, padX, gap, cellW, cellH, headerH, footerH, totalH, y0 };
+}
+
+function renderHudGrid(
+  canvas: CanvasHud,
+  grid: HudGrid,
+  W: number,
+  H: number,
+  _top: number,
+  text: (value: string, x: number, y: number, color?: number, scale?: number) => void
+): void {
+  const { cols, padX, gap, cellW, cellH, headerH, totalH, y0 } = gridLayout(grid, W, H);
+  canvas.rect(padX - 4, y0, W - (padX - 4) * 2, totalH, 0x090418);
+  canvas.rect(padX - 4, y0, W - (padX - 4) * 2, 1, 0x00f5ff);
+  canvas.rect(padX - 4, y0 + totalH - 1, W - (padX - 4) * 2, 1, 0xff1e9b);
+  if (grid.title) {
+    text(grid.title.slice(0, Math.floor((W - padX * 2) / 4)), padX, y0 + 4, 0x00f5ff);
+  }
+  const maxChars = Math.max(1, Math.floor((cellW - 6) / 4));
+  grid.items.forEach((item, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = padX + col * (cellW + gap);
+    const y = y0 + headerH + row * (cellH + gap);
+    const accent = item.color ?? 0x00f5ff;
+    const bg = item.selected ? 0x26124d : item.disabled ? 0x0e081c : 0x130a29;
+    const border = item.selected ? 0xffe600 : item.disabled ? 0x3b2c68 : accent;
+    canvas.rect(x, y, cellW, cellH, bg);
+    canvas.rect(x, y, cellW, 1, border);
+    canvas.rect(x, y + cellH - 1, cellW, 1, border);
+    canvas.rect(x, y, 1, cellH, border);
+    canvas.rect(x + cellW - 1, y, 1, cellH, border);
+    if (item.selected) canvas.rect(x + 1, y + 1, cellW - 2, 1, accent);
+    const textColor = item.selected ? 0xffe600 : item.disabled ? 0x665299 : 0xf4f7ff;
+    text(item.label.slice(0, maxChars), x + 3, y + 4, textColor);
+    if (item.sub) {
+      text(item.sub.slice(0, maxChars), x + 3, y + 12, item.selected ? 0x00f5ff : accent);
+    } else if (item.badge) {
+      text(item.badge.slice(0, maxChars), x + 3, y + 12, item.selected ? 0x00f5ff : accent);
+    }
+  });
+  if (grid.footer) {
+    text(grid.footer.slice(0, Math.floor((W - padX * 2) / 4)), padX, y0 + totalH - 9, 0xffe600);
+  }
+}
+
+function slotsLayout(slots: HudSlot[], W: number, H: number) {
+  const gap = 3, margin = 8;
+  const totalW = W - margin * 2;
+  const slotW = Math.floor((totalW - gap * (slots.length - 1)) / slots.length);
+  const slotH = 12;
+  const y = H - 27;
+  return { gap, margin, slotW, slotH, y };
+}
+
+function renderHudSlots(
+  canvas: CanvasHud,
+  slots: HudSlot[],
+  W: number,
+  H: number,
+  text: (value: string, x: number, y: number, color?: number, scale?: number) => void
+): void {
+  const { gap, margin, slotW, slotH, y } = slotsLayout(slots, W, H);
+  const maxChars = Math.max(1, Math.floor((slotW - 4) / 4));
+  slots.forEach((slot, i) => {
+    const x = margin + i * (slotW + gap);
+    const bg = slot.selected ? 0x26124d : slot.locked ? 0x090418 : 0x130a29;
+    const border = slot.selected ? 0xffe600 : slot.locked ? 0x2c204d : slot.color;
+    canvas.rect(x, y, slotW, slotH, bg);
+    canvas.rect(x, y, slotW, 1, border);
+    canvas.rect(x, y + slotH - 1, slotW, 1, border);
+    canvas.rect(x, y, 1, slotH, border);
+    canvas.rect(x + slotW - 1, y, 1, slotH, border);
+    const labelColor = slot.selected ? 0xffe600 : slot.locked ? 0x52427a : slot.color;
+    const label = slot.label.slice(0, maxChars);
+    const tx = x + Math.max(2, Math.floor((slotW - label.length * 4) / 2));
+    text(label, tx, y + 4, labelColor);
+  });
+}
+
+export function collectHudHitRegions(
+  width: number,
+  height: number,
+  ui: GameHud | undefined,
+  status: string,
+  paused: boolean
+): HudHitRegion[] {
+  if (!ui) return [];
+  const regions: HudHitRegion[] = [];
+  if (ui.panel && ui.panel.choiceActions?.length) {
+    const p = ui.panel;
+    const top = ui.meters.length ? 44 : 8;
+    const { body, bw, bx, y } = floatingPanelLayout(width, height, ui, status, top);
+    p.choices.forEach((_, i) => {
+      const ca = p.choiceActions?.[i];
+      if (!ca) return;
+      const cy = y + 22 + body.length * 9 + i * 13;
+      regions.push({ x: bx + 8, y: cy - 3, w: bw - 16, h: 12, action: ca.action, args: ca.args ?? [] });
+    });
+  } else if (ui.grid) {
+    const { cols, padX, gap, cellW, cellH, headerH, y0 } = gridLayout(ui.grid, width, height);
+    ui.grid.items.forEach((item, i) => {
+      if (!item.action) return;
+      const col = i % cols, row = Math.floor(i / cols);
+      regions.push({
+        x: padX + col * (cellW + gap),
+        y: y0 + headerH + row * (cellH + gap),
+        w: cellW,
+        h: cellH,
+        action: item.action,
+        args: item.args ?? [],
+      });
+    });
+  }
+  if (ui.slots && ui.slots.length > 0 && status === 'playing' && !paused) {
+    const { gap, margin, slotW, slotH, y } = slotsLayout(ui.slots, width, height);
+    ui.slots.forEach((slot, i) => {
+      if (!slot.action || slot.locked) return;
+      regions.push({
+        x: margin + i * (slotW + gap),
+        y,
+        w: slotW,
+        h: slotH,
+        action: slot.action,
+        args: slot.args ?? [],
+      });
+    });
+  }
+  return regions;
 }
 
 export function renderHud(canvas: CanvasHud, ui: GameHud, status: string, paused: boolean, sprites: Record<string, Sprite> = {}): void {

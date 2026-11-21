@@ -415,6 +415,12 @@ pub struct HelperDefinition {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionMatchCase {
+    pub pattern: String,
+    pub steps: Vec<ActionStep>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ActionStep {
     Statement(String),
     Conditional {
@@ -426,6 +432,10 @@ pub enum ActionStep {
         index_name: Option<String>,
         collection: String,
         steps: Vec<ActionStep>,
+    },
+    Match {
+        expression: String,
+        cases: Vec<ActionMatchCase>,
     },
 }
 

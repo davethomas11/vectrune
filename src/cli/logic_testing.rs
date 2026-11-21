@@ -82,13 +82,18 @@ fn source(doc: &RuneDocument, test: &Section) -> Result<String> {
     });
 
     let mut maps = serde_json::Map::new();
+    let mut side_maps = serde_json::Map::new();
     for section in &doc.sections {
         if section.path.first().map(String::as_str) == Some("Map") {
             let name = section.path[1..].join("/");
             maps.insert(name, crate::apps::pixel3d::parse_map_simple(section)?);
+        } else if section.path.first().map(String::as_str) == Some("SideMap") && section.path.len() >= 2 {
+            let name = section.path[1..].join("/");
+            side_maps.insert(name, crate::apps::pixel3d::parse_side_map(section)?);
         }
     }
     script.push_str(&format!("\nglobalThis.__RuneSpatialMaps = {};\n", Value::Object(maps)));
+    script.push_str(&format!("globalThis.__RuneSideMaps = {};\n", Value::Object(side_maps)));
 
     if let Some(map_name) = target_map {
         if let Some(map_section) = doc.sections.iter().find(|s| s.path == ["Map", map_name]) {

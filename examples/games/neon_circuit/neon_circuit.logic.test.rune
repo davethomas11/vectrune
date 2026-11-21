@@ -1,0 +1,228 @@
+#!RUNE
+import "neon_circuit.rune"
+
+@Test/NeonCircuit/TitleAndStageSelectorHints
+type = logic
+page = neon_circuit
+run:
+    invoke initialize
+    assert state.status == "title"
+    assert state.stages.length == 12
+    invoke advance
+    assert state.status == "select"
+    assert state.ui.grid.items.length == 12
+    assert state.selected_title == "01 VOLT VIPER"
+    assert state.selected_hint == "INTRO UNIT - UNLOCKS: VOLT SURGE (AIR DASH + RELAY CHARGE)"
+    invoke pick_stage 6
+    assert state.selected_title == "07 STORM VALKYRIE"
+    assert state.selected_hint == "NEEDS: VOLT SURGE + MAG CLAW (RELAY + AIR DASH + DOUBLE JUMP)"
+    invoke pick_stage 11
+    assert state.selected_title == "12 OMEGA OVERLORD"
+    assert state.selected_hint == "NEEDS: ALL 6 INTRO SKILLS (VOLT, CRYO, MAG, NOVA, PHASE, SAW)"
+
+@Test/NeonCircuit/AllTwelveSideMapLevelsLoad
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+run:
+    invoke load_stage 0
+    assert state.status == "playing"
+    assert state.world.storage == "chunked"
+    assert state.level_width == 120
+    assert state.boss_entity.alive == true
+    assert state.ui.slots.length == 7
+    invoke load_stage 1
+    assert state.level_map == "sky_02"
+    invoke load_stage 2
+    assert state.level_map == "sky_03"
+    invoke load_stage 3
+    assert state.level_map == "sky_04"
+    invoke load_stage 4
+    assert state.level_map == "sky_05"
+    invoke load_stage 5
+    assert state.level_map == "sky_06"
+    invoke load_stage 6
+    assert state.barriers.length > 0
+    invoke load_stage 7
+    assert state.hazards.length > 0
+    invoke load_stage 8
+    assert state.barriers.length > 0
+    invoke load_stage 9
+    assert state.barriers.length > 0
+    invoke load_stage 10
+    assert state.barriers.length > 0
+    assert state.hazards.length > 0
+    invoke load_stage 11
+    assert state.barriers.length > 0
+    assert state.hazards.length > 0
+
+@Test/NeonCircuit/BossDeathAnimationAndVictoryCeremony
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    assert state.campaign.weapons.volt == false
+    invoke on_boss_defeated
+    assert state.status == "boss_dying"
+    assert state.campaign.defeated["01"] == true
+    assert state.campaign.weapons.volt == true
+    assert state.active_weapon == "volt"
+    assert state.effects.length > 0
+    invoke tick {}
+    assert state.boss_entity.dissolve > 0
+    invoke wait_ticks 75
+    assert state.status == "boss_victory"
+    assert state.victory_item.visible == true
+    assert state.avatar.model == "nc/hero_victory"
+    assert state.ui.panel.title == "VICTORY // VOLT VIPER DEFEATED!"
+    invoke finish_boss_victory
+    assert state.status == "stage_clear"
+    invoke load_stage 2
+    invoke on_boss_defeated
+    assert state.campaign.weapons.mag == true
+    assert state.defeated_count == 2
+
+@Test/NeonCircuit/MagDoubleJumpAndVoltDash
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    invoke tick {"jump": true}
+    assert state.jumps == 1
+    invoke tick {}
+    invoke tick {"jump": true}
+    assert state.jumps == 1
+    invoke load_stage 2
+    invoke on_boss_defeated
+    invoke load_stage 0
+    invoke on_boss_defeated
+    invoke load_stage 6
+    invoke tick {"jump": true}
+    assert state.jumps == 1
+    invoke tick {}
+    invoke tick {"jump": true}
+    assert state.jumps == 2
+    invoke tick {"dash": true}
+    assert state.dash_ticks > 0
+
+@Test/NeonCircuit/AbilityBarriersAndCryoBridge
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+run:
+    invoke load_stage 0
+    invoke on_boss_defeated
+    invoke load_stage 1
+    invoke on_boss_defeated
+    invoke load_stage 3
+    invoke on_boss_defeated
+    invoke load_stage 4
+    invoke on_boss_defeated
+    invoke load_stage 5
+    invoke on_boss_defeated
+    invoke load_stage 6
+    invoke open_barrier_column [40, "volt"]
+    assert state.barriers[0].open == true
+    invoke load_stage 7
+    invoke freeze_thermal_around 28
+    assert state.hazards[0].frozen == true
+    invoke open_barrier_column [70, "blast"]
+    assert state.barriers[0].open == true
+    invoke load_stage 8
+    invoke open_barrier_column [37, "phase"]
+    assert state.barriers[0].open == true
+    invoke load_stage 9
+    invoke open_barrier_column [37, "saw"]
+    assert state.barriers[0].open == true
+
+@Test/NeonCircuit/TitleContinueNewGameConfirmAndEscapeBack
+type = logic
+page = neon_circuit
+run:
+    invoke initialize
+    assert state.status == "title"
+    assert state.has_progress == false
+    assert state.ui.panel.choices.length == 1
+    assert state.ui.panel.choices[0] == "NEW GAME"
+    invoke load_stage 0
+    invoke on_boss_defeated
+    invoke finish_boss_victory
+    assert state.status == "stage_clear"
+    invoke back
+    assert state.status == "title"
+    assert state.has_progress == true
+    assert state.ui.panel.choices.length == 2
+    assert state.ui.panel.choices[1] == "NEW GAME"
+    invoke open_select
+    assert state.status == "select"
+    invoke back
+    assert state.status == "title"
+    invoke menu_move 1
+    assert state.title_selected == 1
+    invoke advance
+    assert state.title_confirm == true
+    assert state.ui.panel.title == "WARNING // ERASE PROGRESS?"
+    invoke back
+    assert state.title_confirm == false
+    assert state.campaign.defeated["01"] == true
+    assert state.campaign.weapons.volt == true
+    invoke request_new_game
+    invoke menu_move 1
+    invoke advance
+    assert state.status == "select"
+    assert state.has_progress == false
+    assert state.defeated_count == 0
+    assert state.campaign.defeated["01"] == false
+    assert state.campaign.weapons.volt == false
+
+@Test/NeonCircuit/BossAnimationAndChoreography
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    assert state.boss_satellites.length == 3
+    assert state.boss_entity.alive == true
+    assert state.boss_entity.angle == 212
+    invoke wait_ticks 6
+    assert state.boss_entity.angle != 212
+    assert state.boss_entity.scale != 1.0
+    assert state.boss_satellites[2].angle > 0
+    invoke wait_ticks 80
+    assert state.boss_satellites[0].angle != 0
+
+@Test/NeonCircuit/LaddersBossRoomAndDeathRespawn
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    assert state.ladders.length > 0
+    assert state.ladder_caps.length > 0
+    assert state.boss_doors.length == 4
+    assert state.boss_door_locked == false
+    invoke lock_boss_door
+    assert state.boss_door_locked == true
+    invoke hurt_player 8
+    assert state.status == "player_dying"
+    assert state.death_ticks == 0
+    assert state.effects.length >= 10
+    invoke wait_ticks 35
+    assert state.status == "player_panning"
+    assert state.lives == 2
+    assert state.boss_door_locked == false
+    invoke wait_ticks 16
+    assert state.status == "player_respawn"
+    assert state.respawn_beam.visible == true
+    invoke wait_ticks 22
+    assert state.status == "playing"
+    assert state.health == 8
+    assert state.respawn_beam.visible == false
