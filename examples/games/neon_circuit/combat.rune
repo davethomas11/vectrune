@@ -98,7 +98,7 @@ action sync_weapon_model:
         "saw":
             gun = "nc/gun_saw"
     weapon_model = {
-        "x": player.x + facing * 0.45,
+        "x": player.x + facing * 0.20,
         "y": 7.1,
         "z": player.z + (ducking ? 0.55 : 0.85),
         "model": gun,
@@ -239,7 +239,7 @@ action fire_weapon(aim_up):
     vx = aim_up ? 0 : facing * spd
     vz = aim_up ? spd : 0
     shots.push({
-        "x": player.x + facing * 0.6,
+        "x": player.x + facing * 0.50,
         "y": 7,
         "z": player.z + (ducking ? 0.55 : 0.9),
         "vx": vx,

@@ -323,7 +323,7 @@ action load_stage(stage_idx):
     select_pedestal = {"visible": false}
     select_boss = {"visible": false}
     avatar = {"x": player.x, "y": 7, "z": player.z, "model": "nc/hero_idle", "angle": 0, "visible": true}
-    weapon_model = {"x": player.x + 0.5, "y": 7, "z": player.z + 0.7, "model": "nc/gun_buster", "angle": 0, "visible": true}
+    weapon_model = {"x": player.x + 0.20, "y": 7, "z": player.z + 0.7, "model": "nc/gun_buster", "angle": 0, "visible": true}
     level_map = st.sky
     status = "playing"
     notice_text = st.code + " " + st.name + " // " + st.sector
