@@ -7024,6 +7024,15 @@ var __RunePixel3DRuntime = (() => {
     audioMuted = muted;
     if (masterGain && audioCtx) masterGain.gain.setValueAtTime(muted ? 0 : 1, audioCtx.currentTime);
   }
+  var sfxMasterGain = null;
+  function sfxOutput(ctx2) {
+    if (!sfxMasterGain) {
+      sfxMasterGain = ctx2.createGain();
+      sfxMasterGain.gain.setValueAtTime(0.65, ctx2.currentTime);
+      sfxMasterGain.connect(audioOutput(ctx2));
+    }
+    return sfxMasterGain;
+  }
   function audioOutput(ctx2) {
     if (!masterGain) {
       masterGain = ctx2.createGain();
@@ -7109,7 +7118,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.25, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.13);
         break;
@@ -7124,7 +7133,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.1);
         break;
@@ -7146,7 +7155,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.09);
         break;
@@ -7161,7 +7170,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.29);
         break;
@@ -7177,7 +7186,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.3, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.62);
         break;
@@ -7194,7 +7203,7 @@ var __RunePixel3DRuntime = (() => {
           gain.gain.setValueAtTime(0.25, start);
           gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
           osc.connect(gain);
-          gain.connect(audioOutput(ctx2));
+          gain.connect(sfxOutput(ctx2));
           osc.start(start);
           osc.stop(start + 0.16);
         });
@@ -7209,7 +7218,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.16);
         break;
@@ -7236,7 +7245,7 @@ var __RunePixel3DRuntime = (() => {
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     noise3.connect(filter);
     filter.connect(gain);
-    gain.connect(audioOutput(ctx2));
+    gain.connect(sfxOutput(ctx2));
     noise3.start(now);
     noise3.stop(now + duration + 0.01);
   }
@@ -7262,7 +7271,7 @@ var __RunePixel3DRuntime = (() => {
         gain2.gain.setValueAtTime(volume, start);
         gain2.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
         osc2.connect(gain2);
-        gain2.connect(audioOutput(ctx2));
+        gain2.connect(sfxOutput(ctx2));
         osc2.start(start);
         osc2.stop(start + noteDur + 0.01);
         offset += noteDur;

@@ -6,6 +6,16 @@ time_signature = 4/4
 loop = true
 volume = 0.068
 instruments = {"lead":"brass","arp":"square","harmony":"sawtooth","bass":"sawtooth","drums":"drums"}
+effects = {
+    "filter": {"type": "lowpass", "cutoff": 5800, "q": 1.1},
+    "crush": {"bits": 10, "drive": 0.18},
+    "delay": {"time": 0.208, "feedback": 0.36, "wet": 0.18, "damping": 2700}
+}
+track_effects = {
+    "lead": {"delay": 0.3},
+    "arp": {"delay": 0.38},
+    "bass": {"delay": 0}
+}
 sections = {
     "intro": {
         "bars": 4,

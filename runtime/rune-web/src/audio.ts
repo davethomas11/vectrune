@@ -38,6 +38,16 @@ export function setAudioMuted(muted: boolean): void {
   if (masterGain && audioCtx) masterGain.gain.setValueAtTime(muted ? 0 : 1, audioCtx.currentTime);
 }
 
+let sfxMasterGain: GainNode | null = null;
+function sfxOutput(ctx: AudioContext): GainNode {
+  if (!sfxMasterGain) {
+    sfxMasterGain = ctx.createGain();
+    sfxMasterGain.gain.setValueAtTime(0.65, ctx.currentTime);
+    sfxMasterGain.connect(audioOutput(ctx));
+  }
+  return sfxMasterGain;
+}
+
 function audioOutput(ctx: AudioContext): GainNode {
   if (!masterGain) {
     masterGain = ctx.createGain();
@@ -147,7 +157,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.13);
       break;
@@ -165,7 +175,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.1);
       break;
@@ -192,7 +202,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.09);
       break;
@@ -210,7 +220,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.29);
       break;
@@ -229,7 +239,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.62);
       break;
@@ -249,7 +259,7 @@ export function playSound(type: string, arg?: unknown): void {
         gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
 
         osc.connect(gain);
-        gain.connect(audioOutput(ctx));
+        gain.connect(sfxOutput(ctx));
         osc.start(start);
         osc.stop(start + 0.16);
       });
@@ -267,7 +277,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.16);
       break;
@@ -308,7 +318,7 @@ function playNoiseBurst(
 
   noise.connect(filter);
   filter.connect(gain);
-  gain.connect(audioOutput(ctx));
+  gain.connect(sfxOutput(ctx));
   noise.start(now);
   noise.stop(now + duration + 0.01);
 }
@@ -346,7 +356,7 @@ function playCustomSound(
       gain.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(start);
       osc.stop(start + noteDur + 0.01);
       offset += noteDur;

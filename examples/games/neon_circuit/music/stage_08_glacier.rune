@@ -6,6 +6,15 @@ time_signature = 4/4
 loop = true
 volume = 0.068
 instruments = {"lead":"bell","arp":"sawtooth","harmony":"strings","bass":"triangle","drums":"drums"}
+effects = {
+    "reverb": {"decay": 3.0, "wet": 0.30, "pre_delay": 0.02, "filter": 3200},
+    "chorus": {"rate": 0.9, "depth": 0.002, "wet": 0.25}
+}
+track_effects = {
+    "lead": {"reverb": 0.38, "chorus": 0.25},
+    "arp": {"reverb": 0.45, "chorus": 0.3},
+    "bass": {"reverb": 0.08}
+}
 sections = {
     "intro": {
         "bars": 4,
