@@ -391,7 +391,7 @@ function playCustomSound(
   gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
   osc.connect(gain);
-  gain.connect(audioOutput(ctx));
+  gain.connect(sfxOutput(ctx));
   osc.start(now);
   osc.stop(now + duration + 0.01);
 }
@@ -1136,7 +1136,7 @@ function playTrackNote(
       // work through the native audio bridge. No samples or browser-only nodes.
       const isBell = inst === 'bell';
       const isStrings = inst === 'strings';
-      const length = Math.max(.06, durationSec * (isBell ? 1.25 : .95));
+      const length = Math.max(.06, durationSec * (isBell ? 1.25 : 1.0));
       const attack = Math.min(length * .25, isStrings ? .06 : .018);
       osc.type = inst === 'brass' ? 'sawtooth' : isStrings ? 'triangle' : 'sine';
       osc.frequency.setValueAtTime(freq, time);
@@ -1147,31 +1147,32 @@ function playTrackNote(
         gain.gain.exponentialRampToValueAtTime(.001, time + length);
       } else {
         const sustainLevel = peak * 0.82;
-        const sustainEnd = time + Math.max(attack, durationSec * 0.85);
+        const releaseTime = Math.min(0.04, durationSec * 0.08);
+        const sustainEnd = time + Math.max(attack, durationSec - releaseTime);
         gain.gain.linearRampToValueAtTime(sustainLevel, time + attack + 0.04);
         gain.gain.setValueAtTime(sustainLevel, sustainEnd);
-        gain.gain.exponentialRampToValueAtTime(.001, time + length);
+        gain.gain.exponentialRampToValueAtTime(.001, time + durationSec);
       }
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(Math.min(9000, freq * (inst === 'brass' ? 5 : 3)), time);
       osc.connect(filter); filter.connect(gain); gain.connect(destination);
-      osc.start(time); osc.stop(time + length + .015);
+      osc.start(time); osc.stop(time + (isBell ? length : durationSec) + .015);
     } else if (inst === 'sawtooth' || inst === 'synth') {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = durationSec * 0.88;
+      const releaseTime = Math.min(0.035, durationSec * 0.08);
+      const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
       const peak = 0.18 * chordGainMultiplier;
       gain.gain.setValueAtTime(peak, time);
-      const sustainEnd = time + durationSec * 0.78;
       if (sustainEnd > time + 0.04) {
         gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
       }
-      gain.gain.exponentialRampToValueAtTime(0.003, time + noteSoundLen);
+      gain.gain.exponentialRampToValueAtTime(0.002, time + durationSec);
       osc.connect(gain);
       gain.connect(destination);
       osc.start(time);
-      osc.stop(time + noteSoundLen + 0.01);
+      osc.stop(time + durationSec + 0.01);
     } else if (inst === 'triangle' || inst === 'bass') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, time);
@@ -1190,22 +1191,22 @@ function playTrackNote(
     } else if (inst === 'sine') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = durationSec * 0.9;
+      const releaseTime = Math.min(0.03, durationSec * 0.08);
+      const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
       const peak = 0.25 * chordGainMultiplier;
       gain.gain.setValueAtTime(peak, time);
-      const sustainEnd = time + durationSec * 0.82;
       if (sustainEnd > time + 0.04) {
         gain.gain.setValueAtTime(peak * 0.9, sustainEnd);
       }
-      gain.gain.exponentialRampToValueAtTime(0.002, time + noteSoundLen);
+      gain.gain.exponentialRampToValueAtTime(0.002, time + durationSec);
       osc.connect(gain);
       gain.connect(destination);
       osc.start(time);
-      osc.stop(time + noteSoundLen + 0.01);
+      osc.stop(time + durationSec + 0.01);
     } else if (inst === 'pluck') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = Math.min(durationSec * 0.75, 0.45);
+      const noteSoundLen = Math.min(durationSec * 0.85, 0.45);
       gain.gain.setValueAtTime(0.3 * chordGainMultiplier, time);
       gain.gain.exponentialRampToValueAtTime(0.001, time + noteSoundLen);
       osc.connect(gain);
@@ -1216,18 +1217,18 @@ function playTrackNote(
       // Default: 8-bit pulse / square lead
       osc.type = 'square';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = durationSec * 0.85;
+      const releaseTime = Math.min(0.03, durationSec * 0.08);
+      const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
       const peak = 0.2 * chordGainMultiplier;
       gain.gain.setValueAtTime(peak, time);
-      const sustainEnd = time + durationSec * 0.75;
       if (sustainEnd > time + 0.04) {
         gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
       }
-      gain.gain.exponentialRampToValueAtTime(0.003, time + noteSoundLen);
+      gain.gain.exponentialRampToValueAtTime(0.002, time + durationSec);
       osc.connect(gain);
       gain.connect(destination);
       osc.start(time);
-      osc.stop(time + noteSoundLen + 0.01);
+      osc.stop(time + durationSec + 0.01);
     }
   }
 }

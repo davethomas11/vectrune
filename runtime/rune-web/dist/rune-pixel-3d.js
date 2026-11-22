@@ -7300,7 +7300,7 @@ var __RunePixel3DRuntime = (() => {
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     osc.connect(gain);
-    gain.connect(audioOutput(ctx2));
+    gain.connect(sfxOutput(ctx2));
     osc.start(now);
     osc.stop(now + duration + 0.01);
   }
@@ -7892,7 +7892,7 @@ var __RunePixel3DRuntime = (() => {
       if (inst === "brass" || inst === "strings" || inst === "bell") {
         const isBell = inst === "bell";
         const isStrings = inst === "strings";
-        const length = Math.max(0.06, durationSec * (isBell ? 1.25 : 0.95));
+        const length = Math.max(0.06, durationSec * (isBell ? 1.25 : 1));
         const attack = Math.min(length * 0.25, isStrings ? 0.06 : 0.018);
         osc.type = inst === "brass" ? "sawtooth" : isStrings ? "triangle" : "sine";
         osc.frequency.setValueAtTime(freq, time);
@@ -7903,10 +7903,11 @@ var __RunePixel3DRuntime = (() => {
           gain.gain.exponentialRampToValueAtTime(1e-3, time + length);
         } else {
           const sustainLevel = peak * 0.82;
-          const sustainEnd = time + Math.max(attack, durationSec * 0.85);
+          const releaseTime = Math.min(0.04, durationSec * 0.08);
+          const sustainEnd = time + Math.max(attack, durationSec - releaseTime);
           gain.gain.linearRampToValueAtTime(sustainLevel, time + attack + 0.04);
           gain.gain.setValueAtTime(sustainLevel, sustainEnd);
-          gain.gain.exponentialRampToValueAtTime(1e-3, time + length);
+          gain.gain.exponentialRampToValueAtTime(1e-3, time + durationSec);
         }
         const filter = ctx2.createBiquadFilter();
         filter.type = "lowpass";
@@ -7915,22 +7916,22 @@ var __RunePixel3DRuntime = (() => {
         filter.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + length + 0.015);
+        osc.stop(time + (isBell ? length : durationSec) + 0.015);
       } else if (inst === "sawtooth" || inst === "synth") {
         osc.type = "sawtooth";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = durationSec * 0.88;
+        const releaseTime = Math.min(0.035, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
         const peak = 0.18 * chordGainMultiplier;
         gain.gain.setValueAtTime(peak, time);
-        const sustainEnd = time + durationSec * 0.78;
         if (sustainEnd > time + 0.04) {
           gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
         }
-        gain.gain.exponentialRampToValueAtTime(3e-3, time + noteSoundLen);
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       } else if (inst === "triangle" || inst === "bass") {
         osc.type = "triangle";
         osc.frequency.setValueAtTime(freq, time);
@@ -7949,22 +7950,22 @@ var __RunePixel3DRuntime = (() => {
       } else if (inst === "sine") {
         osc.type = "sine";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = durationSec * 0.9;
+        const releaseTime = Math.min(0.03, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
         const peak = 0.25 * chordGainMultiplier;
         gain.gain.setValueAtTime(peak, time);
-        const sustainEnd = time + durationSec * 0.82;
         if (sustainEnd > time + 0.04) {
           gain.gain.setValueAtTime(peak * 0.9, sustainEnd);
         }
-        gain.gain.exponentialRampToValueAtTime(2e-3, time + noteSoundLen);
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       } else if (inst === "pluck") {
         osc.type = "triangle";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.75, 0.45);
+        const noteSoundLen = Math.min(durationSec * 0.85, 0.45);
         gain.gain.setValueAtTime(0.3 * chordGainMultiplier, time);
         gain.gain.exponentialRampToValueAtTime(1e-3, time + noteSoundLen);
         osc.connect(gain);
@@ -7974,18 +7975,18 @@ var __RunePixel3DRuntime = (() => {
       } else {
         osc.type = "square";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = durationSec * 0.85;
+        const releaseTime = Math.min(0.03, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
         const peak = 0.2 * chordGainMultiplier;
         gain.gain.setValueAtTime(peak, time);
-        const sustainEnd = time + durationSec * 0.75;
         if (sustainEnd > time + 0.04) {
           gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
         }
-        gain.gain.exponentialRampToValueAtTime(3e-3, time + noteSoundLen);
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       }
     }
   }

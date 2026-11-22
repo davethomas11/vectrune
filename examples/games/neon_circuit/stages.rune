@@ -298,6 +298,9 @@ action load_stage(stage_idx):
     prev_w_held = false
     next_w_held = false
     wheel_held = false
+    wheel_open = false
+    wheel_cooldown = 0
+    wheel_last_dir = 0
     wheel_ticks = 0
     cooldown = 0
     invulnerable = 0

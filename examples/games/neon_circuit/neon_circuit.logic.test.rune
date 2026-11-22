@@ -257,27 +257,39 @@ setup:
     invoke load_stage 0
 run:
     assert state.wheel_ticks == 0
+    assert state.wheel_open == false
     assert state.ui.wheel.active == false
     assert state.ui.slots.length == 0
     invoke tick {"weapon_wheel": true}
-    assert state.wheel_ticks > 0
+    assert state.wheel_open == true
     assert state.ui.wheel.active == true
     assert state.active_weapon == "buster"
+    assert state.player.x == 3.5
+    invoke tick {"weapon_wheel": true, "right": true}
+    assert state.player.x == 3.5
     invoke equip_1
     assert state.active_weapon == "buster"
-    invoke tick {"fire": true}
-    assert state.wheel_ticks == 0
+    invoke tick {"weapon_wheel": false}
+    assert state.wheel_open == false
     invoke on_boss_defeated
     invoke finish_boss_victory
     invoke load_stage 0
     assert state.campaign.weapons.volt == true
+    assert state.active_weapon == "volt"
+    invoke equip_1
+    assert state.active_weapon == "buster"
+    invoke tick {"weapon_wheel": true}
+    assert state.wheel_open == true
+    assert state.active_weapon == "buster"
+    invoke tick {"weapon_wheel": true, "right": true}
+    assert state.active_weapon == "volt"
+    invoke tick {"weapon_wheel": true, "left": true}
+    assert state.active_weapon == "buster"
     invoke equip_2
     assert state.active_weapon == "volt"
-    assert state.wheel_ticks > 0
-    invoke tick {"prev_weapon": true}
-    assert state.active_weapon == "buster"
-    invoke tick {"fire": true}
-    assert state.wheel_ticks == 0
+    invoke tick {"weapon_wheel": false}
+    assert state.wheel_open == false
+    assert state.active_weapon == "volt"
 
 
 

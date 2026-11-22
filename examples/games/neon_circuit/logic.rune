@@ -96,6 +96,9 @@ state:
     prev_w_held = false
     next_w_held = false
     wheel_held = false
+    wheel_open = false
+    wheel_cooldown = 0
+    wheel_last_dir = 0
     wheel_ticks = 0
     cooldown = 0
     invulnerable = 0
@@ -350,7 +353,7 @@ action refresh_ui:
             w_wheel = {
                 "title": "WEAPON WHEEL",
                 "items": w_items,
-                "active": wheel_ticks > 0
+                "active": wheel_open == true || wheel_ticks > 0
             }
             sys_notice = notice_ticks > 0 ? notice_text : ""
             if status == "player_dying":
@@ -359,6 +362,7 @@ action refresh_ui:
                 sys_notice = "RETURNING TO CHECKPOINT..."
             if status == "player_respawn":
                 sys_notice = "BEAMING AXEL-09 TO SPAWN..."
+            ui_prompt = wheel_open ? "HOLD TAB: WEAPON WHEEL | A/D/ARROWS: SELECT | 1-7: QUICK GUN | RELEASE: RESUME" : "A/D MOVE | SPACE JUMP | X FIRE | TAB WEAPON WHEEL | 1-7 GUN"
             ui = {
                 "style": "floating",
                 "heading": "",
@@ -368,7 +372,7 @@ action refresh_ui:
                 "notice": sys_notice,
                 "slots": [],
                 "wheel": w_wheel,
-                "prompt": "A/D MOVE | SPACE JUMP | X FIRE | TAB/Q/E WEAPON WHEEL | 1-7 GUN",
+                "prompt": ui_prompt,
                 "panel": null
             }
 
@@ -814,9 +818,64 @@ action tick(input):
     if hurt_ticks > 0:
         hurt_ticks = hurt_ticks - 1
 
-    if input.weapon_wheel && !wheel_held:
-        call toggle_weapon_wheel
-    wheel_held = input.weapon_wheel == true
+    # Weapon wheel hold & release handling
+    if input.weapon_wheel == true:
+        if !wheel_open:
+            wheel_open = true
+            wheel_ticks = 60
+            wheel_cooldown = 0
+            sound.play "nc_select_move"
+            call refresh_ui
+        if wheel_open:
+            wheel_ticks = 60
+
+    if !input.weapon_wheel:
+        if wheel_open:
+            wheel_open = false
+            wheel_ticks = 0
+            call refresh_ui
+
+    # While weapon wheel is open, gameplay is paused; movement keys cycle the wheel
+    if wheel_open:
+        if wheel_cooldown > 0:
+            wheel_cooldown = wheel_cooldown - 1
+
+        move_w = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+        if move_w == 0 && input.move_x != null:
+            if input.move_x > 0.3:
+                move_w = 1
+            if input.move_x < -0.3:
+                move_w = -1
+        move_vert = (input.duck ? 1 : 0) - (input.aim_up ? 1 : 0)
+        if move_vert == 0 && input.duck_axis != null:
+            if input.duck_axis > 0.4:
+                move_vert = 1
+            if input.duck_axis < -0.4:
+                move_vert = -1
+
+        if input.next_weapon && !next_w_held:
+            move_w = 1
+        if input.prev_weapon && !prev_w_held:
+            move_w = -1
+        prev_w_held = input.prev_weapon == true
+        next_w_held = input.next_weapon == true
+
+        dir = move_w != 0 ? move_w : move_vert
+        if dir != wheel_last_dir:
+            wheel_cooldown = 0
+        wheel_last_dir = dir
+        if dir != 0 && wheel_cooldown <= 0:
+            call cycle_weapon dir
+            wheel_cooldown = 10
+        if dir == 0:
+            wheel_cooldown = 0
+
+        if input.fire:
+            wheel_open = false
+            wheel_ticks = 0
+            call refresh_ui
+
+        stop when true
 
     if input.prev_weapon && !prev_w_held:
         call cycle_weapon -1

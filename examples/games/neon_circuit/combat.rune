@@ -107,10 +107,12 @@ action sync_weapon_model:
     }
 
 action toggle_weapon_wheel:
-    if wheel_ticks > 0:
+    if wheel_open || wheel_ticks > 0:
         call cycle_weapon 1
     else:
-        wheel_ticks = 85
+        wheel_open = true
+        wheel_ticks = 60
+        wheel_cooldown = 0
         sound.play "nc_select_move"
         call refresh_ui
 
@@ -134,7 +136,7 @@ action cycle_weapon(dir):
             idx = i
     next_idx = (idx + dir + pool.length) % pool.length
     active_weapon = pool[next_idx]
-    wheel_ticks = 85
+    wheel_ticks = wheel_open ? 60 : 45
     sound.play "nc_select_move"
     call sync_weapon_model
     call refresh_ui
@@ -145,7 +147,7 @@ action cycle_weapon(dir):
 action equip_weapon(w_name):
     if w_name == "buster" || campaign.weapons[w_name] == true:
         active_weapon = w_name
-        wheel_ticks = 60
+        wheel_ticks = wheel_open ? 60 : 45
         sound.play "nc_select_move"
         call sync_weapon_model
         call refresh_ui
