@@ -2158,7 +2158,11 @@ var __RunePixel3DRuntime = (() => {
       if (controls.profile.mouse.Right) e.preventDefault();
     });
     listen(document, "mousemove", (e) => {
-      if (!options.playing() || (options.lockedMouse ? document.pointerLockElement !== canvas : document.activeElement !== canvas)) return;
+      if (!options.playing() || options.paused()) return;
+      const lock = document.pointerLockElement;
+      const focused = document.activeElement === canvas;
+      const canvasLook = options.unlockedCanvasLook?.() && !lock && focused && e.target === canvas;
+      if (options.lockedMouse ? lock !== canvas && !canvasLook : !focused) return;
       send({ device: "mouse", code: "MoveX", value: e.movementX });
       send({ device: "mouse", code: "MoveY", value: e.movementY });
     });
@@ -11648,6 +11652,7 @@ void main() {
         });
       });
     }
+    let pointerLockUnavailable = false;
     mapped = game.controls ? mountControls(canvas, game.controls, {
       state: () => game.app.state,
       playing: () => game.app.state.status === "playing",
@@ -11667,6 +11672,7 @@ void main() {
       },
       interact: unlockAudio,
       lockedMouse: true,
+      unlockedCanvasLook: () => pointerLockUnavailable,
       advanceInputs: ["fire", "use"],
       expanded: fullscreen.expanded,
       tapToAdvance: game.config.clickToStart
@@ -11732,7 +11738,11 @@ void main() {
     listen(document, "mouseup", ((event) => {
       if (event.button === 0) mouseFire = false;
     }));
+    listen(document, "pointerlockerror", () => {
+      if (document.activeElement === canvas && game.config.mouseLook !== false) pointerLockUnavailable = true;
+    });
     listen(document, "pointerlockchange", () => {
+      if (document.pointerLockElement === canvas) pointerLockUnavailable = false;
       if (!game.paused && document.pointerLockElement !== canvas) {
         mouseFire = false;
         pendingFire = false;
@@ -11754,9 +11764,17 @@ void main() {
         return;
       }
       if (game.config.mouseLook !== false && document.pointerLockElement !== canvas) {
-        const lock = canvas.requestPointerLock?.();
-        lock?.catch(() => {
-        });
+        if (!canvas.requestPointerLock) {
+          pointerLockUnavailable = true;
+          return;
+        }
+        try {
+          canvas.requestPointerLock()?.catch(() => {
+            pointerLockUnavailable = true;
+          });
+        } catch {
+          pointerLockUnavailable = true;
+        }
       }
     });
     listen(document, "mousemove", ((event) => {

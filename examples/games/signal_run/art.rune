@@ -1,0 +1,377 @@
+# Original pixel textures and sprites for Signal Run.
+@Palette/signal
+colors = {".":"transparent","k":"#101625","n":"#26354b","s":"#405971","S":"#7890a7","w":"#d5f4f1","c":"#46d7cc","C":"#187780","a":"#ee9f52","A":"#ffd38a","r":"#a84354","R":"#ff7061","p":"#332943","P":"#68476c","i":"#345b77","I":"#5694b4","d":"#613e46","D":"#8f5b54","g":"#68ef91","G":"#267965"}
+
+@Texture/signal/dust
+palette = signal
+size = [16,16]
+pixels:
+    "ddddddddddddddpp"
+    "DDdddddddddddpdd"
+    "dddddddddddddddd"
+    "dddddddddddddDDd"
+    "dddddddDdddddddd"
+    "dddppdddddddddpp"
+    "ddpdddddddDDddpp"
+    "ddppddddddddpddd"
+    "dddddddppddddddd"
+    "dddpdDDpdpddddDD"
+    "dddddddddddddddd"
+    "ddppDdddddpddddd"
+    "DDddddddddDddddd"
+    "dddddddddddddddd"
+    "dddddddddddddddd"
+    "dddDDddddddddddd"
+
+@Texture/signal/storm_floor
+palette = signal
+size = [16,16]
+pixels:
+    "Pppppppkpkkppppp"
+    "Ppppppppkkppppkk"
+    "pppppppppppppppp"
+    "ppppppPppPPPpppp"
+    "pppppppppppppppp"
+    "ppppppppppPppppp"
+    "ppppppkkpkkppppp"
+    "pppppppppppppppp"
+    "ppppppppppPPPppp"
+    "pPPppppPPppppPPp"
+    "pppppppppppppppp"
+    "pppppppppppppppp"
+    "ppppppppppkPPppp"
+    "pppppppppppppppp"
+    "pppppppPPppppppp"
+    "ppPppppPpppppppp"
+
+@Texture/signal/ice
+palette = signal
+size = [16,16]
+pixels:
+    "iiiiIIiiiiiiiiii"
+    "iIiiiiiiiiiiiiii"
+    "iiiiiiiiiisissii"
+    "iiiiIiiiIiiiisii"
+    "iiissiiiiiiiiiii"
+    "iiiiiiiiiiiiiiii"
+    "iiiiiiiiiiiiiiii"
+    "iiiiIiiiissiiiii"
+    "iiiIsiiiiiiiiIii"
+    "sIiiiiiiiiiiiiii"
+    "iiiiiissiiiiiIIi"
+    "iiiiiiiiiiiiiiii"
+    "iiIIiiIIiIIiiiii"
+    "iiiiiiiiiiiiiiii"
+    "iiiiiiiiiiiIiiii"
+    "iiiiiiiissiiiIii"
+
+@Texture/signal/basalt
+palette = signal
+size = [16,16]
+pixels:
+    "dddpdddddddddddd"
+    "pppppppppppppppp"
+    "AAAAAAAAAAAAAApp"
+    "ddddddddddddddpp"
+    "dddpdddDddddddpp"
+    "dddddddddddddddd"
+    "dddDDddddddddddd"
+    "dDDdddddddddddDd"
+    "ddddddpppppppppp"
+    "AAAAAAAAAAdddddd"
+    "dDDDdddddDDddddd"
+    "dddddddddddddddd"
+    "ddddDDDddddddddd"
+    "dppppppppppppppp"
+    "AAAAAAAAAAAAAAAd"
+    "ddDDpddddddddddd"
+
+@Texture/signal/ice_wall
+palette = signal
+size = [16,16]
+pixels:
+    "iiiniiiiiiiiiiii"
+    "nnnnnnnnnnnnnnnn"
+    "ccccccccccccccnn"
+    "iiiiiiiiiiiiiinn"
+    "iiiniiiIiiiiiinn"
+    "iiiiiiiiiiiiiiii"
+    "iiiIIiiiiiiiiiii"
+    "iIIiiiiiiiiiiiIi"
+    "iiiiiinnnnnnnnnn"
+    "cccccccccciiiiii"
+    "iIIIiiiiiIIiiiii"
+    "iiiiiiiiiiiiiiii"
+    "iiiiIIIiiiiiiiii"
+    "innnnnnnnnnnnnnn"
+    "ccccccccccccccci"
+    "iiIIniiiiiiiiiii"
+
+@Texture/signal/storm_wall
+palette = signal
+size = [16,16]
+pixels:
+    "pppkpppppppppppp"
+    "kkkkkkkkkkkkkkkk"
+    "IIIIIIIIIIIIIIkk"
+    "ppppppppppppppkk"
+    "pppkpppPppppppkk"
+    "pppppppppppppppp"
+    "pppPPppppppppppp"
+    "pPPpppppppppppPp"
+    "ppppppkkkkkkkkkk"
+    "IIIIIIIIIIpppppp"
+    "pPPPpppppPPppppp"
+    "pppppppppppppppp"
+    "ppppPPPppppppppp"
+    "pkkkkkkkkkkkkkkk"
+    "IIIIIIIIIIIIIIIp"
+    "ppPPkppppppppppp"
+
+@Texture/signal/panel
+palette = signal
+size = [16,16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "knnnnnnnnnnnnnnk"
+    "knssssssssssssnk"
+    "knssssssssssssnk"
+    "knnnnnnnnnnnnnnk"
+    "knnkkkkkkkkkknnk"
+    "knnkCCCCCCCCknnk"
+    "knnkkcccccckknnk"
+    "knnkkkkkkkkkknnk"
+    "knnkkkkkkkkkknnk"
+    "knnkkkaaaakkknnk"
+    "knnnnnnnnnnnnnnk"
+    "knnnnnnnnnnnnnnk"
+    "knssssssssssssnk"
+    "knnnnnnnnnnnnnnk"
+    "kkkkkkkkkkkkkkkk"
+
+@Sprite/signal/blaster
+palette = signal
+size = [48,37]
+origin = [24,37]
+pixels:
+    "................................................"
+    "................................................"
+    "................................................"
+    "................................................"
+    "................................................"
+    "................................................"
+    "................................................"
+    "................................................"
+    "................................................"
+    "................................................"
+    "................................................"
+    ".............SSSSSSSSSSSSSSSSSSS................"
+    "..........kkkkkkkkkSSSSSSSSSSSSSnnn............."
+    "..........kkcccccckSSSSSSSSSSSSSnnn............."
+    "..........kkcccccckSSSSSSSSSSSSSnnnkkkk........."
+    "..........kkccccccknnnnnnnnnnnnnnnnkkkk........."
+    "..........kkkkkkkkknnnnnnnnnnnnnnnnkkkk........."
+    "..........kkkkkkssssssssssssssssssskkkk........."
+    "...........nnnnnssssssssssssssssssskkkk........."
+    "...........nnnnnssssssssssssssssssskkkk........."
+    "...........nnnnnssssssssssssssssssskkkk........."
+    ".............kkkkkkkkkkkkkkkkkkkkkkkkkk........."
+    ".............kkkkCCCcccccccccCCCkkkkkkk........."
+    ".............kkkkCCCCCCCCCCCCCCCkkkkkkk........."
+    ".............kkkkCCCCCCCCCCCCCCCkkkkkkk........."
+    ".............kkkkkkkkkkkkkkkkkkkkkkkkkk........."
+    ".............kkkkkkkkkkkkkkkkkkkkkkkkkk........."
+    "........................kkkkssssspppppppppppp..."
+    "........................kkkkssssspDDDDDDDDDDp..."
+    "........................kkkkssssspDDDDDDDDDDp..."
+    "........................kkkkssssspDDDDDDDDDDp..."
+    "........................kkkkssssspppppppppppp..."
+    "........................kkkkssssspppdddddddddd.."
+    "........................kkkkssssspppdddddddddd.."
+    "........................kkkkssssspppdddddddddd.."
+    "........................kkkkssssspppdddddddddd.."
+    "........................kkkkssssspppdddddddddd.."
+
+@Sprite/signal/blaster_fire
+palette = signal
+size = [48,37]
+origin = [24,37]
+pixels:
+    "................................................"
+    "................................................"
+    "................................................"
+    ".........AAAA..................................."
+    ".........AAAA..................................."
+    ".........AAAA..................................."
+    ".......CCAwwwwwwCCCC............................"
+    "....cccccAwwwwwwcccC............................"
+    "....cccccAwwwwwwcccC............................"
+    "....cccccAAAAccccccC............................"
+    ".......CCAAAACCCCCCC............................"
+    ".........AAAASSSSSSSSSSSSSSSSSSS................"
+    ".........AAAAkkkkkkSSSSSSSSSSSSSnnn............."
+    "..........kkcccccckSSSSSSSSSSSSSnnn............."
+    "..........kkcccccckSSSSSSSSSSSSSnnnkkkk........."
+    "..........kkccccccknnnnnnnnnnnnnnnnkkkk........."
+    "..........kkkkkkkkknnnnnnnnnnnnnnnnkkkk........."
+    "..........kkkkkkssssssssssssssssssskkkk........."
+    "...........nnnnnssssssssssssssssssskkkk........."
+    "...........nnnnnssssssssssssssssssskkkk........."
+    "...........nnnnnssssssssssssssssssskkkk........."
+    ".............kkkkkkkkkkkkkkkkkkkkkkkkkk........."
+    ".............kkkkCCCcccccccccCCCkkkkkkk........."
+    ".............kkkkCCCCCCCCCCCCCCCkkkkkkk........."
+    ".............kkkkCCCCCCCCCCCCCCCkkkkkkk........."
+    ".............kkkkkkkkkkkkkkkkkkkkkkkkkk........."
+    ".............kkkkkkkkkkkkkkkkkkkkkkkkkk........."
+    "........................kkkkssssspppppppppppp..."
+    "........................kkkkssssspDDDDDDDDDDp..."
+    "........................kkkkssssspDDDDDDDDDDp..."
+    "........................kkkkssssspDDDDDDDDDDp..."
+    "........................kkkkssssspppppppppppp..."
+    "........................kkkkssssspppdddddddddd.."
+    "........................kkkkssssspppdddddddddd.."
+    "........................kkkkssssspppdddddddddd.."
+    "........................kkkkssssspppdddddddddd.."
+    "........................kkkkssssspppdddddddddd.."
+
+@Texture/signal/deck
+palette = signal
+size = [16,16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "nSSSSSSSSSSSSSSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnCCccccCCnnnSn"
+    "nsnccccccccnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nsnnnnnnnnnnnnSn"
+    "nSSSSSSSSSSSSSSn"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/signal/stripe
+palette = signal
+size = [16,16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "nSSSSSSSSSSSSSSn"
+    "nAaaaaAaaaaAaaan"
+    "naAaaaaAaaaaAaan"
+    "naaAaaaaAaaaaAan"
+    "naaaAaaaaAaaaaAn"
+    "naaaaAaaaaAaaaan"
+    "nAaaaaAaaaaAaaan"
+    "naAaaaaAaaaaAaan"
+    "naaAaaaaAaaaaAan"
+    "naaaAaaaaAaaaaAn"
+    "naaaaAaaaaAaaaan"
+    "nAaaaaAaaaaAaaan"
+    "naAaaaaAaaaaAaan"
+    "nSSSSSSSSSSSSSSn"
+    "kkkkkkkkkkkkkkkk"
+
+@Sprite/signal/cockpit
+palette = signal
+size = [152,33]
+origin = [76,33]
+pixels:
+    "........................................................................................................................................................"
+    "........................................................................................................................................................"
+    "kkkkkkkkkkkk................................................................................................................................kkkkkkkkkkkk"
+    "kkkkkkkkkkkkkk............................................................................................................................kkkkkkkkkkkkkk"
+    "kkkkkkkkkkkkkkkk........................................................................................................................kkkkkkkkkkkkkkkk"
+    "sssssssssssssskkkk....................................................................................................................kkkkssssssssssssss"
+    "sssssssssssssssskkkk................................................................................................................kkkkssssssssssssssss"
+    "sssssssssssssssssskkkk............................................................................................................kkkkssssssssssssssssss"
+    "nnnnnnnnnnnnnnnnnnnnkkkk........................................................................................................kkkknnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnkkkk....................................................................................................kkkknnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnkkkk................................................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnkkkk............................................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk........................................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "sssssssssssssssssssssssssssssskkkk....................................................................................kkkkssssssssssssssssssssssssssssss"
+    "sssssssssssssssssssssssssssssssskkkk................................................................................kkkkssssssssssssssssssssssssssssssss"
+    "sssssssssssssssssssssssssssssssssskkkk............................................................................kkkkssssssssssssssssssssssssssssssssss"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk........................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk....................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnCCCCCCCCCCCCCnnnnnnnnkkkk............................................................kkkknnnnnnnnCCCCCCCCCCCCCnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnCCcccccccccCCnnnnnnnnnnkkkk........................................................kkkknnnnnnnnnnCCcccccccccCCnnnnnnnnnnnnnnnnnnnnn"
+    "sssssssssssssssssssssCCCCCCCCCCCCCsssssssssssskkkk....................................................kkkkssssssssssssCCCCCCCCCCCCCsssssssssssssssssssss"
+    "sssssssssssssssssssssCCCCCCCCCCCCCsssssssssssssskkkk................................................kkkkssssssssssssssCCCCCCCCCCCCCsssssssssssssssssssss"
+    "sssssssssssssssssssssssssssssssssssssssssssssssssskkkk............................................kkkkssssssssssssssssssssssssssssssssssssssssssssssssss"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk........................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnccccccccccccccccccccccccccccccnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnccccccccccccccccccccccccccccccnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnccccccccccccccccccccccccccccccnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+
+@Sprite/signal/cockpit_fire
+palette = signal
+size = [152,33]
+origin = [76,33]
+pixels:
+    "........................................................................................................................................................"
+    "........................................................................................................................................................"
+    "kkkkkkkkkkkk................................................................................................................................kkkkkkkkkkkk"
+    "kkkkkkkkkkkkkk............................................................................................................................kkkkkkkkkkkkkk"
+    "kkkkkkkkkkkkkkkk........................................................................................................................kkkkkkkkkkkkkkkk"
+    "sssssssssssssskkkk....................................................................................................................kkkkssssssssssssss"
+    "sssssssssssssssskkkk................................................................................................................kkkkssssssssssssssss"
+    "sssssssssssssssssskkkk............................................................................................................kkkkssssssssssssssssss"
+    "nnnnnnnnnnnnnnnnnnnnkkkk........................................................................................................kkkknnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnkkkk....................................................................................................kkkknnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnkkkk................................................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnkkkk............................................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk........................................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "sssssssssssssssssssssssssssssskkkk....................................................................................kkkkssssssssssssssssssssssssssssss"
+    "sssssssssssssssssssssssssssssssskkkk................................................................................kkkkssssssssssssssssssssssssssssssss"
+    "sssssssssssssssssssssssssssssssssskkkk............................................................................kkkkssssssssssssssssssssssssssssssssss"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk........................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk....................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk................................................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnAAAAAAAAAAAAAnnnnnnnnkkkk............................................................kkkknnnnnnnnAAAAAAAAAAAAAnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnAAwwwwwwwwwAAnnnnnnnnnnkkkk........................................................kkkknnnnnnnnnnAAwwwwwwwwwAAnnnnnnnnnnnnnnnnnnnnn"
+    "sssssssssssssssssssssAAAAAAAAAAAAAsssssssssssskkkk....................................................kkkkssssssssssssAAAAAAAAAAAAAsssssssssssssssssssss"
+    "sssssssssssssssssssssAAAAAAAAAAAAAsssssssssssssskkkk................................................kkkkssssssssssssssAAAAAAAAAAAAAsssssssssssssssssssss"
+    "sssssssssssssssssssssssssssssssssssssssssssssssssskkkk............................................kkkkssssssssssssssssssssssssssssssssssssssssssssssssss"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnkkkk........................................kkkknnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnccccccccccccccccccccccccccccccnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnccccccccccccccccccccccccccccccnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnccccccccccccccccccccccccccccccnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+
+@Texture/signal/asteroid
+palette = signal
+size = [16,16]
+pixels:
+    "snnssPPknssPnsnk"
+    "pknspnpnPnnPkpPn"
+    "kssnnnSpsnsnnsss"
+    "nSkspnspsspnssns"
+    "PskknpnkssnpnssP"
+    "kspsnPPsPsnSnnks"
+    "sPPsnssnnnsnnkPn"
+    "pspsssPspsknknns"
+    "SssnspPnPPpnnPps"
+    "Psnsnksssnnnnssn"
+    "nnnpnpnknPPpnPsn"
+    "nPppsnnspsnsnPnn"
+    "nknnnnPsssnnnpns"
+    "ssnnssPssssnpPnP"
+    "pssssksssnsssnnk"
+    "knnppnnsnsnnPsnn"

@@ -3553,14 +3553,18 @@
       "signature": "@Controls/<name>",
       "summary": "Declare portable keyboard, pointer, touch, and gamepad controls.",
       "sources": [
-        "src/apps/game_controls.rs"
+        "src/apps/game_controls.rs",
+        "runtime/rune-web/src/input/browser.ts",
+        "runtime/rune-web/src/pixel3d/index.ts"
       ],
       "returns": "",
       "errors": "",
       "example": "@Controls/game\nkeys:\n    Space -> fire\ncommands:\n    KeyP -> host.pause",
       "parameters": [],
       "aliases": [],
-      "notes": [],
+      "notes": [
+        "In mapped browser Pixel 3D games with mouse look enabled, click the canvas to capture the pointer. If browser capture is unavailable or denied, movement over the focused canvas still feeds the mapped MoveX and MoveY inputs."
+      ],
       "fields": [
         {
           "name": "extends",

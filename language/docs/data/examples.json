@@ -768,6 +768,49 @@
       ],
       "status": "recommended",
       "notes": null
+    },
+    {
+      "id": "example.games.signal-run",
+      "title": "Signal Run",
+      "summary": "Launch from a cruiser, pilot a shuttle through asteroid fields, and land across three multilevel voxel missions with cinematic flyovers.",
+      "source_path": "examples/games/signal_run/signal_run.rune",
+      "companion_files": [
+        "examples/games/signal_run/art.rune",
+        "examples/games/signal_run/boarding.rune",
+        "examples/games/signal_run/campaign.rune",
+        "examples/games/signal_run/cinematics.rune",
+        "examples/games/signal_run/combat.rune",
+        "examples/games/signal_run/flight_deck.rune",
+        "examples/games/signal_run/flight.rune",
+        "examples/games/signal_run/models.rune",
+        "examples/games/signal_run/planets.rune",
+        "examples/games/signal_run/sound.rune",
+        "examples/games/signal_run/signal_run.test.rune"
+      ],
+      "app_type": "pixel-3d",
+      "concepts": [
+        "switching between first-person flight and ground missions",
+        "external cameras for launch, entry, touchdown and liftoff",
+        "animated hatches, deployable ramps and pilot boarding",
+        "collision with voxel obstacles and gravity for falling wrecks",
+        "mouse yaw and pitch, jumping and stacked walkable floors",
+        "line-of-sight combat and rechargeable weapons",
+        "mission objectives and narrative HUD panels"
+      ],
+      "builtins": [],
+      "runtime_context": [],
+      "cli_workflows": [
+        "vectrune examples/games/signal_run/signal_run.rune -o html",
+        "vectrune test examples/games/signal_run --type logic"
+      ],
+      "test_refs": [
+        "examples/games/signal_run/signal_run.test.rune"
+      ],
+      "related_knowledge": [
+        "runtime.pixel3d"
+      ],
+      "status": "recommended",
+      "notes": null
     }
   ]
 }

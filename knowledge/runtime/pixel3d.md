@@ -8,6 +8,73 @@ seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](vo
 for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.
 The grid-map semantics below remain unchanged.
 
+## Signal Run
+
+[Signal Run](../../examples/games/signal_run/signal_run.rune) is a first-person
+voxel shooter and spaceflight campaign. A courier and the shuttle AI Lumen follow
+a falsified evacuation report from Cinder's mine to the archive on Glass and
+the orbital relay on Tempest. Each chapter starts with a two-angle launch
+from the cruiser. Pilot the shuttle through the lit gates in the asteroid
+field, then use the final gate to begin landing. The camera follows the shuttle
+from orbit into the atmosphere, cuts to a side view on approach, and shows
+touchdown from beside the landing pad. The rear hatch opens and the ramp
+extends. The pilot walks down before first-person control resumes at the foot
+of the ramp. After the objective, press E near the rear of the shuttle. The
+pilot walks up the ramp, the hatch closes, and the shuttle lifts off toward orbit.
+
+Orbital drones patrol the routes. The shuttle takes hull damage on contact
+with the cruiser or debris. If a flight fails, retry from the hangar. A failed
+ground mission restarts on its current planet. P pauses during cutscenes too.
+Press Enter or **Skip cutscene** to move to the same point as the end of the
+sequence.
+
+```sh
+cargo build --bin vectrune
+target/debug/vectrune examples/games/signal_run/signal_run.rune -o html > signal-run.html
+target/debug/vectrune test examples/games/signal_run --type logic
+```
+
+Open `signal-run.html` and choose **Begin campaign**. WASD moves on foot or
+controls thrust and strafe in flight. Mouse or arrows look in both axes,
+click or X fires, and E interacts or lands the shuttle. Space jumps on foot or
+climbs in flight, Ctrl descends in flight, and Shift sprints or boosts. P
+pauses, M mutes, and F toggles fullscreen. Click the canvas to capture the
+pointer. Esc releases capture. If capture is unavailable, mouse look works
+over the focused canvas. On touch, use the movement stick, drag the game view
+to look, and use **Fire**, **Use**, **Jump**, and in flight **Down**. On a
+controller, the left stick moves, the right stick looks, the right trigger
+fires, and the south, east, and west buttons jump or climb, descend, and
+interact, respectively. View/Back advances and Start pauses.
+
+The ground maps have a 38 × 25 tile footprint. Cross Cinder's trench bridge
+and enter the smelting yard. On Glass, the upper archive gallery spans a
+lower service passage with stairs to the gallery at either end. Climb the
+Tempest causeway, cross the upper relay deck, and defeat the Warden to
+broadcast the signal. The HUD points to the next objective and indicates when
+it is above or below you. Return to the shuttle after each planet's objective.
+
+Drones patrol, pursue the pilot and flash amber before shooting. Their bodies
+check the volume around them for voxel collisions. When destroyed, they spin
+and dissolve, with wrecks falling until they hit solid terrain on a planet.
+Cyan pulses show the blaster's path, red bolts travel through the world and
+the Warden fires a three-bolt spread. Solid cover stops shots. The pulse
+blaster recharges when you stop firing and green packs restore suit charge.
+
+The [planet layouts](../../examples/games/signal_run/planets.rune) and
+[flight routes](../../examples/games/signal_run/flight.rune) swap voxel
+volumes with `voxel_world` and `voxel_fill`. The map supplies the sky.
+[Ground controls](../../examples/games/signal_run/campaign.rune) use
+`voxel_move` for gravity, jumping and stairs, while the flight controls apply
+thrust without gravity and share voxel clearance checks with the
+[enemy movement and combat](../../examples/games/signal_run/combat.rune).
+The [cutscene logic](../../examples/games/signal_run/cinematics.rune) positions
+a separate camera, shuttle, and exhaust effect in the same voxel worlds.
+The scene switches from the orbital map to the ground map during reentry.
+The [boarding animation](../../examples/games/signal_run/boarding.rune) slides
+the hatch panels, scales the ramp around its cabin-floor anchor, and alternates
+pilot stride models while following the ramp's height. The HUD uses `ui.cinema`
+to label shots and fade between the two maps.
+
 ## Starfall Protocol: side-scrolling space adventure (v0.3.6)
 
 [Play Starfall Protocol](https://vectrune.com/starfall/) or explore its

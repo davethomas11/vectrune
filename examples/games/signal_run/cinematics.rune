@@ -1,0 +1,225 @@
+@Logic/signal_run
+state:
+    cinema_kind = ""
+    cinema_tick = 0
+    cinema_on_ground = false
+    cinema_ship = {}
+    cinema_glow = {}
+    cinema_port_hatch = {}
+    cinema_starboard_hatch = {}
+    cinema_ramp = {}
+    cinema_pilot = {}
+    cinema_board_start = {}
+    cinema_objects = []
+    cinema_caption = ""
+    cinema_fade = 0
+
+action begin_cinema(kind):
+    cinema_kind = kind
+    cinema_tick = 0
+    cinema_on_ground = false
+    cinema_ship = {"x":5,"y":26,"z":11,"angle":0,"model":"signal/shuttle","scale":1.25}
+    cinema_glow = {"x":5,"y":26,"z":11,"angle":0,"model":"signal/exhaust","scale":1.25}
+    cinema_port_hatch = {"model":"signal/hatch_port","visible":false}
+    cinema_starboard_hatch = {"model":"signal/hatch_starboard","visible":false}
+    cinema_ramp = {"model":"signal/boarding_ramp","visible":false}
+    cinema_pilot = {"model":"signal/pilot_idle","visible":false}
+    cinema_objects = [cinema_ship, cinema_glow, cinema_port_hatch, cinema_starboard_hatch, cinema_ramp, cinema_pilot]
+    view_camera = {"x":5,"y":26,"z":11,"angle":0,"pitch":0}
+    view_weapon = {}
+    flash = 0
+    bolts = []
+    tracers = []
+    status = "intro"
+    if kind == "landing":
+        status = "landing"
+        sound.play "signal_confirm"
+    if kind == "departure":
+        status = "departing"
+        shuttle.visible = false
+        cinema_board_start = {"x":player.x,"y":player.y,"z":player.z}
+    if kind == "launch":
+        sound.play "signal_thruster"
+    call pose_cinema
+
+action tick_cinema:
+    cinema_tick += 1
+    if cinema_kind == "launch" && cinema_tick >= 81:
+        call finish_cinema
+        stop
+    if cinema_kind == "landing" && cinema_tick >= 242:
+        call finish_cinema
+        stop
+    if cinema_kind == "departure" && cinema_tick >= 192:
+        call finish_cinema
+        stop
+    call pose_cinema
+
+action finish_cinema:
+    kind = cinema_kind
+    cinema_kind = ""
+    cinema_objects = []
+    if kind == "launch":
+        player = {"x":19,"y":26,"z":12.75,"angle":0,"pitch":0,"vz":0}
+        gates[0].model = "signal/ring_dim"
+        gate_index = 1
+        gates[gate_index].model = "signal/ring"
+        status = "playing"
+        notice = "CLEAR OF THE CRUISER / FOLLOW THE LIT GATES"
+        notice_ticks = 120
+    if kind == "landing":
+        if !cinema_on_ground:
+            call load_mission
+        shuttle.visible = true
+        status = "playing"
+        notice = "LANDED / FOLLOW THE SIGNAL"
+        notice_ticks = 95
+        sound.play "signal_confirm"
+    if kind == "departure":
+        music.stop
+        shuttle.visible = true
+        if mission == 3:
+            status = "won"
+            stop
+        mission += 1
+        status = "story"
+        call load_mission
+        call load_flight
+
+action pose_cinema:
+    cinema_glow.model = "signal/exhaust"
+    cinema_fade = 0
+    if cinema_kind == "launch":
+        call launch_shot
+    if cinema_kind == "landing":
+        call landing_shot
+    if cinema_kind == "departure":
+        call departure_shot
+    cinema_glow.x = cinema_ship.x
+    cinema_glow.y = cinema_ship.y
+    cinema_glow.z = cinema_ship.z
+    cinema_glow.angle = cinema_ship.angle
+    cinema_glow.scale = cinema_ship.scale * (1 + sin(cinema_tick * 37) * 0.08)
+    if cinema_kind == "landing" && cinema_tick >= 132 && cinema_tick < 142:
+        cinema_glow.scale *= (142 - cinema_tick) / 10
+
+# Shots use eye coordinates. The voxel camera adds 1.25 tiles to its stored z.
+action frame_ship(x, y, eye):
+    call frame_target x, y, eye, cinema_ship.x, cinema_ship.y, cinema_ship.z + 0.75
+
+action frame_target(x, y, eye, target_x, target_y, target_z):
+    view_camera.x = clamp(x, 0.25, world.width - 0.25)
+    view_camera.y = clamp(y, 0.25, world.height - 0.25)
+    eye_height = clamp(eye, 0.25, world.depth - 0.25)
+    view_camera.z = eye_height - 1.25
+    dx = target_x - view_camera.x
+    dy = target_y - view_camera.y
+    aim = atan2(target_z - eye_height, sqrt(dx * dx + dy * dy))
+    pitch = clamp((aim + 180) % 360 - 180, -65, 65)
+    view_camera.angle = atan2(dy,dx)
+    view_camera.pitch = pitch
+
+action launch_shot:
+    if cinema_tick < 37:
+        t = cinema_tick / 36
+        ease = t * t * (3 - 2 * t)
+        cinema_ship.x = 5 + 4 * ease
+        cinema_ship.z = 11 + 2.45 * ease
+        cinema_caption = "CRUISER / LIFTING OFF"
+        call frame_ship 2.7 + t, 21, 13.2 + 1.2 * t
+        stop
+    t = (cinema_tick - 37) / 43
+    cinema_ship.x = 9 + 10 * t
+    cinema_ship.z = 13.45 - 0.70 * t
+    cinema_caption = "HANGAR CLEARED / SHUTTLE DEPARTING"
+    call frame_ship 19.5 + 4 * t, 18.8, 15.9 + t
+
+action landing_shot:
+    if cinema_tick < 36:
+        gate = gates[gates.length - 1]
+        t = cinema_tick / 35
+        cinema_ship.x = 69 + 8.6 * t
+        cinema_ship.y = gate.y + 4 * t
+        cinema_ship.z = gate.z - 1.05 - 4 * t
+        cinema_ship.angle = 25
+        cinema_caption = "ORBIT / PLANETARY APPROACH"
+        cinema_fade = max(0, (cinema_tick - 29) * 0.09)
+        call frame_ship 64 + 8 * t, gate.y - 7 + 2 * t, gate.z + 1 - 2 * t
+        stop
+    if !cinema_on_ground:
+        call load_mission
+        shuttle.visible = false
+        cinema_on_ground = true
+        sound.play "signal_reentry"
+    cinema_ship.angle = 198
+    if cinema_tick < 74:
+        t = (cinema_tick - 36) / 37
+        cinema_ship.x = 29 - 15.5 * t
+        cinema_ship.y = 16 - 5.5 * t
+        cinema_ship.z = 11.7 - 4.6 * t
+        cinema_glow.model = "signal/heat_wake"
+        cinema_caption = "ATMOSPHERIC ENTRY"
+        cinema_fade = max(0, (42 - cinema_tick) * 0.075)
+        call frame_ship cinema_ship.x - 3.8, cinema_ship.y + 4.6, min(14.2, cinema_ship.z + 2.5)
+        stop
+    if cinema_tick < 112:
+        t = (cinema_tick - 74) / 37
+        cinema_ship.x = 13.5 - 9.85 * t
+        cinema_ship.y = 10.5 - 2 * t
+        cinema_ship.z = 7.1 - 4.35 * t
+        cinema_ship.angle = 198 - 18 * t
+        cinema_caption = "FINAL APPROACH / LANDING PAD IN SIGHT"
+        call frame_ship 6.5 - 1.75 * t, 14 - 1.2 * t, 5.9 - 2.1 * t
+        stop
+    if cinema_tick >= 142:
+        call disembark_shot cinema_tick - 142
+        stop
+    if cinema_tick == 133:
+        sound.play "signal_touchdown"
+    t = clamp((cinema_tick - 112) / 21, 0, 1)
+    ease = t * t * (3 - 2 * t)
+    cinema_ship.x = 3.65 - 1.15 * ease
+    cinema_ship.y = 8.5
+    cinema_ship.z = 2.75 - 0.75 * ease
+    cinema_ship.scale = 1.25 - 0.25 * ease
+    cinema_ship.angle = 180 + 90 * ease
+    cinema_caption = "TOUCHDOWN"
+    call frame_ship 1.35, 11.75 - 0.55 * t, 3.45
+
+action departure_shot:
+    if cinema_tick < 100:
+        call board_shot cinema_tick
+        stop
+    if cinema_tick == 100:
+        call seal_cinema_hatch
+        sound.play "signal_thruster"
+    flight_tick = cinema_tick - 100
+    if flight_tick < 36:
+        t = flight_tick / 35
+        ease = t * t * (3 - 2 * t)
+        cinema_ship.x = shuttle.x + 1.1 * ease
+        cinema_ship.y = shuttle.y
+        cinema_ship.z = shuttle.z + 3.35 * ease
+        cinema_ship.scale = 1 + 0.25 * ease
+        cinema_ship.angle = 270 + 125 * ease
+        cinema_caption = "LANDING PAD / LIFTOFF"
+        call frame_ship 5.5 + t, 12.5, 3.5 + t
+        stop
+    t = (flight_tick - 36) / 55
+    cinema_ship.x = shuttle.x + 1.1 + 18 * t
+    cinema_ship.y = shuttle.y + 12 * t
+    cinema_ship.z = shuttle.z + 3.35 + 6.7 * t
+    cinema_ship.angle = 35
+    cinema_caption = "ASCENDING TO ORBIT"
+    cinema_fade = max(0, (t - 0.77) * 3.8)
+    call frame_ship cinema_ship.x - 1.1 - 3.6 * t, cinema_ship.y + 5.1 - 1.75 * t, cinema_ship.z + 1.5
+
+action cinema_hud:
+    continue_hidden = false
+    continue_label = "Skip cutscene"
+    ui.heading = planet
+    if cinema_kind == "launch":
+        ui.heading = "LUMEN COURIER SERVICE"
+    ui.objective = cinema_caption
+    ui.prompt = "ENTER / SKIP CUTSCENE"
+    ui.cinema = {"lines":[cinema_caption],"offset":9,"scale":1,"spacing":16,"top":0.82,"bottom":0.93,"fade":cinema_fade}

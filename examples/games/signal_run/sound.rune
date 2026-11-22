@@ -1,0 +1,60 @@
+@Sound/signal_pulse
+wave = triangle
+sequence = G5:35ms, C4:95ms
+volume = 0.19
+
+@Sound/signal_charge
+wave = square
+sequence = E4:55ms, A4:110ms
+volume = 0.07
+
+@Sound/signal_hit
+wave = noise
+filter = lowpass 1700 -> 120
+duration = 125ms
+volume = 0.13
+
+@Sound/signal_confirm
+wave = sine
+sequence = D5:80ms, F5:80ms, A5:120ms, D6:210ms
+volume = 0.22
+
+@Music/signal_orbit
+type = 8bit
+tempo = 104
+time_signature = 4/4
+bars = 4
+loop = true
+volume = 0.09
+lead:
+    D4:8 -:8 A4:8 -:8 C5:4 F4:4 |
+    E4:8 -:8 G4:8 -:8 C5:4 A4:4 |
+    D4:8 -:8 F4:8 G4:8 A4:4 D5:4 |
+    C5:4 A4:4 F4:4 E4:4
+bass:
+    D2:4 -:4 D2:4 A2:4 |
+    C2:4 -:4 C2:4 G2:4 |
+    Bb1:4 -:4 F2:4 Bb2:4 |
+    A1:4 -:4 A2:4 G2:4
+
+@Sound/signal_thruster
+wave = noise
+filter = lowpass 125 -> 670
+duration = 850ms
+volume = 0.14
+
+@Sound/signal_reentry
+wave = noise
+filter = lowpass 2100 -> 330
+duration = 1000ms
+volume = 0.12
+
+@Sound/signal_touchdown
+wave = triangle
+sequence = C3:100ms, G2:150ms
+volume = 0.14
+
+@Sound/signal_hatch
+wave = triangle
+sequence = C3:75ms, G3:100ms, D3:185ms
+volume = 0.14

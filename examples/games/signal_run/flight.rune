@@ -1,0 +1,146 @@
+@Map/signal_space
+sky = {"seed":271,"zenith":"#050915","horizon":"#11172c","cloud":"#17243c","speed":0.04}
+legend = {".":{}}
+grid:
+    "."
+
+@Logic/signal_run
+action load_flight:
+    flying = true
+    level_map = "signal_space"
+    world = voxel_world(92, 54, 42, ["signal/deck", "signal/panel", "signal/stripe", "signal/asteroid"], {"renderDistance":78})
+    # The open hangar is the forward bay of a playable cruiser hull.
+    world = voxel_fill(world, [0,17,9], [15,18,2], 1)
+    world = voxel_fill(world, [0,16,10], [14,1,10], 2)
+    world = voxel_fill(world, [0,35,10], [14,1,10], 2)
+    world = voxel_fill(world, [0,16,20], [14,20,2], 1)
+    world = voxel_fill(world, [0,17,11], [1,18,9], 2)
+    world = voxel_fill(world, [1,25,10], [14,2,1], 3)
+    world = voxel_fill(world, [8,14,13], [3,2,5], 2)
+    world = voxel_fill(world, [8,36,13], [3,2,5], 2)
+    for y in [6,36]:
+        world = voxel_fill(world, [0,y,11], [10,11,7], 1)
+        world = voxel_fill(world, [0,y + 3,17], [7,5,3], 2)
+    world = voxel_fill(world, [0,20,6], [11,12,3], 2)
+    player = {"x":5,"y":26,"z":12.5,"angle":0,"pitch":0,"vz":0}
+    gates = [{"x":17,"y":26,"z":14},{"x":34,"y":19,"z":20},{"x":52,"y":29,"z":26},{"x":74,"y":23,"z":27}]
+    orbit = "signal/planet_cinder"
+    if mission == 2:
+        gates = [{"x":17,"y":26,"z":14},{"x":32,"y":34,"z":21},{"x":54,"y":26,"z":27},{"x":74,"y":31,"z":23}]
+        orbit = "signal/planet_glass"
+    if mission == 3:
+        gates = [{"x":17,"y":26,"z":14},{"x":31,"y":18,"z":23},{"x":53,"y":31,"z":29},{"x":74,"y":22,"z":27}]
+        orbit = "signal/planet_tempest"
+    for gate in gates:
+        gate.model = "signal/ring_dim"
+    gates[0].model = "signal/ring"
+    landmarks = gates.map(gate => gate)
+    landmarks.push({"x":85,"y":gates[3].y + 4,"z":gates[3].z - 5,"model":orbit})
+    # Asteroid shapes use actual collision voxels. The gates weave between them.
+    call asteroid 26, 26, 9, 3
+    call asteroid 41, 26, 17, 4
+    call asteroid 48, 18, 24, 3
+    call asteroid 60, 40, 28, 3
+    call asteroid 66, 26, 20, 3
+    call asteroid 69, 39, 30, 4
+    for index in range(0, 38):
+        xx = 18 + (index * 29) % 72
+        yy = 2 + (index * 19) % 49
+        zz = 3 + (index * 13) % 36
+        landmarks.push({"x":xx,"y":yy,"z":zz,"model":"signal/star","scale":0.4 + (index % 3) * 0.2})
+    drones = [{"x":38,"y":gates[1].y - 6,"z":gates[1].z + 2,"hp":2,"phase":56},{"x":63,"y":gates[2].y + 5,"z":gates[2].z + 2,"hp":2,"phase":64}]
+    call prepare_drones
+    repairs = []
+    bolts = []
+    tracers = []
+    gate_index = 0
+    ship_speed = 0
+    ship_blocked = false
+    clock = 0
+    use_held = false
+    shield = 100
+    energy = 8
+    recharge = 0
+    fire_delay = 0
+    hit_grace = 0
+    flash = 0
+    notice = ""
+    notice_ticks = 0
+    weapon = {"sprite":"signal/cockpit","bob":0,"x":0,"y":0}
+
+action asteroid(x, y, z, radius):
+    for dx in range(-radius, radius + 1):
+        for dz in range(-radius, radius + 1):
+            remainder = radius * radius - dx * dx - dz * dz
+            if remainder >= 0:
+                half = floor(sqrt(remainder))
+                world = voxel_fill(world, [x + dx,y - half,z + dz], [1,2 * half + 1,1], 4)
+
+action fly_ship(input, use_pressed):
+    call aim_view input
+    throttle = (input.forward ? 1 : 0) - (input.back ? 1 : 0) + (input.move_y ? input.move_y : 0)
+    strafe = (input.right ? 1 : 0) - (input.left ? 1 : 0) + (input.move_x ? input.move_x : 0)
+    lift = (input.jump ? 1 : 0) - (input.descend ? 1 : 0)
+    limit = input.sprint == true ? 0.72 : 0.46
+    ship_speed += (clamp(throttle, -1, 1) * limit - ship_speed) * 0.19
+    side = clamp(strafe, -1, 1) * 0.24
+    ahead = ship_speed * cos(player.pitch)
+    dx = ahead * cos(player.angle) - side * sin(player.angle)
+    dy = ahead * sin(player.angle) + side * cos(player.angle)
+    dz = ship_speed * sin(player.pitch) + lift * 0.26
+    blocked = false
+    if abs(dx) > 0.001:
+        call check_space player.x + dx, player.y, player.z + 0.45, 0.4, 1.1
+        if space_clear:
+            player.x += dx
+        if !space_clear:
+            blocked = true
+    if abs(dy) > 0.001:
+        call check_space player.x, player.y + dy, player.z + 0.45, 0.4, 1.1
+        if space_clear:
+            player.y += dy
+        if !space_clear:
+            blocked = true
+    if abs(dz) > 0.001:
+        call check_space player.x, player.y, player.z + dz + 0.45, 0.4, 1.1
+        if space_clear:
+            player.z += dz
+        if !space_clear:
+            blocked = true
+    if blocked && !ship_blocked:
+        ship_speed = 0
+        notice = "COLLISION / BACK AWAY OR CHANGE ALTITUDE"
+        notice_ticks = 85
+        call damage_pilot 10
+    ship_blocked = blocked
+    stop when status != "playing"
+    gate = gates[gate_index]
+    in_gate = distance(player, gate) < 2.45 && abs(player.z + 1.25 - gate.z) < 2.35
+    if in_gate && gate_index < gates.length - 1:
+        gate.model = "signal/ring_dim"
+        gate_index += 1
+        gates[gate_index].model = "signal/ring"
+        sound.play "signal_confirm"
+        stop
+    if in_gate && gate_index == gates.length - 1 && use_pressed:
+        call begin_cinema "landing"
+
+action flight_hud:
+    gate = gates[gate_index]
+    ui.detail = "SHUTTLE / " + planet
+    ui.objective = "Fly through the lit gate / " + (gate_index + 1) + " of " + gates.length
+    if gate_index == 0:
+        ui.objective = "Launch from the cruiser"
+    if gate_index == gates.length - 1:
+        ui.objective = "Reach the landing gate"
+    bearing = (angle_to(player, gate) - player.angle + 540) % 360 - 180
+    gap = distance(player, gate)
+    vertical = gate.z - player.z - 1.25
+    ui.prompt = bearing > 12 ? "TURN RIGHT" : (bearing < -12 ? "TURN LEFT" : "AHEAD")
+    ui.prompt += " / " + ceil(gap) + " TILES"
+    if vertical > 1.5:
+        ui.prompt += " / CLIMB"
+    if vertical < -1.5:
+        ui.prompt += " / DESCEND"
+    if gate_index == gates.length - 1 && gap < 2.45 && abs(vertical) < 2.35:
+        ui.prompt = "E / USE: BEGIN LANDING"

@@ -2011,7 +2011,11 @@ var __RunePixelRuntime = (() => {
       if (controls.profile.mouse.Right) e.preventDefault();
     });
     listen(document, "mousemove", (e) => {
-      if (!options.playing() || (options.lockedMouse ? document.pointerLockElement !== canvas : document.activeElement !== canvas)) return;
+      if (!options.playing() || options.paused()) return;
+      const lock = document.pointerLockElement;
+      const focused = document.activeElement === canvas;
+      const canvasLook = options.unlockedCanvasLook?.() && !lock && focused && e.target === canvas;
+      if (options.lockedMouse ? lock !== canvas && !canvasLook : !focused) return;
       send({ device: "mouse", code: "MoveX", value: e.movementX });
       send({ device: "mouse", code: "MoveY", value: e.movementY });
     });

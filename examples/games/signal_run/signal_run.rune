@@ -1,0 +1,78 @@
+#!RUNE
+import "art.rune"
+import "models.rune"
+import "planets.rune"
+import "sound.rune"
+import "campaign.rune"
+import "combat.rune"
+import "flight_deck.rune"
+import "flight.rune"
+import "cinematics.rune"
+import "boarding.rune"
+
+@App
+name = Signal Run
+type = pixel-3d
+runtime = hybrid
+scene = signal_run
+resolution = [384, 216]
+tick_rate = 30
+shell = signal_flight_deck
+
+@Scene/signal_run
+logic = signal_run
+map = cinder
+world = world
+camera = view_camera
+fov = 74
+things = ["landmarks", "drones", "bolts", "tracers", "repairs", "cinema_objects"]
+weapon = view_weapon
+ui = ui
+pause_ui = pause_ui
+controls = signal_run
+mouse_look = true
+click_to_start = false
+
+@Page/signal_run
+logic = signal_run
+view:
+    canvas data-rune-pixel-3d=true
+
+@Controls/signal_run
+keys:
+    KeyW -> forward
+    KeyS -> back
+    KeyA -> left
+    KeyD -> right
+    ArrowUp -> look_up
+    ArrowDown -> look_down
+    ArrowLeft -> turn_left
+    ArrowRight -> turn_right
+    Space -> jump
+    ControlLeft -> descend
+    ControlRight -> descend
+    KeyX -> fire
+    KeyE -> use
+    ShiftLeft -> sprint
+    ShiftRight -> sprint
+mouse:
+    Left -> fire
+    MoveX -> look_x
+    MoveY -> look_y
+commands:
+    Enter -> advance
+    KeyP -> host.pause
+    KeyM -> host.mute
+    KeyF -> host.fullscreen
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.18}
+    Axis1 -> {"input":"move_y","invert":true,"deadzone":0.18}
+    Axis2 -> {"input":"look_x","mode":"rate","scale":900,"deadzone":0.18}
+    Axis3 -> {"input":"look_y","mode":"rate","scale":750,"deadzone":0.18}
+    Button7 -> fire
+    Button0 -> jump
+    Button1 -> descend
+    Button2 -> use
+    Button9 -> {"command":"host.pause"}
+    Button8 -> {"command":"advance"}
+touch = {"joystick":{"x":"move_x","y":"move_y","size":90},"look":{"x":"look_x","y":"look_y","sensitivity":1},"buttons":[{"id":"fire","input":"fire","label":"FIRE","aria_label":"Fire pulse blaster","size":56,"offset":[12,12],"drag_x":"look_x"},{"id":"use","input":"use","label":"USE","aria_label":"Use beacon or board shuttle","size":46,"offset":[78,16]},{"id":"jump","input":"jump","label":"JUMP","aria_label":"Jump or climb","size":44,"offset":[16,78]},{"id":"descend","input":"descend","label":"DOWN","aria_label":"Descend","size":44,"offset":[72,78],"visible":"flying"}]}
