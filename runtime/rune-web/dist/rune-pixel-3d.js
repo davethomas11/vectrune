@@ -9708,6 +9708,12 @@ var __RunePixel3DRuntime = (() => {
         throw new Error("Pixel-3d ui slots needs up to 12 slots with label and color");
       }
     }
+    if (hud.wheel !== void 0 && hud.wheel !== null) {
+      const w = hud.wheel;
+      if (!w || !Array.isArray(w.items) || w.items.length > 12 || !w.items.every((it) => it && typeof it.label === "string" && Number.isInteger(it.color) && it.color >= 0 && it.color <= 16777215)) {
+        throw new Error("Pixel-3d ui wheel needs up to 12 items with label and color");
+      }
+    }
     return hud;
   }
   function wrapText(text, columns) {
@@ -9832,7 +9838,9 @@ var __RunePixel3DRuntime = (() => {
       const left = ui.noticeIcon ? 8 + asset(ui.noticeIcon).width + 6 : 8;
       lines.forEach((line, i) => text(line, left, y + i * 9, gold));
     }
-    if (ui.slots && ui.slots.length > 0 && !ui.panel && !ui.grid) {
+    if (ui.wheel && ui.wheel.active !== false && ui.wheel.items && ui.wheel.items.length > 0 && !ui.panel && !ui.grid) {
+      renderHudWheel(canvas, ui.wheel, W, H, text);
+    } else if (ui.slots && ui.slots.length > 0 && !ui.panel && !ui.grid) {
       renderHudSlots(canvas, ui.slots, W, H, text);
     }
     if (ui.prompt) text(ui.prompt.slice(0, columns), 8, H - 12, 14937833);
@@ -9909,6 +9917,87 @@ var __RunePixel3DRuntime = (() => {
       text(label, tx, y + 4, labelColor);
     });
   }
+  function wheelLayout(wheel, W, H) {
+    const items = wheel.items || [];
+    const cx = Math.floor(W / 2);
+    const cy = Math.floor(H / 2) - 6;
+    const radius = Math.min(88, Math.floor(H * 0.28));
+    const itemW = 56;
+    const itemH = 18;
+    const hubW = 108;
+    const hubH = 34;
+    return { items, cx, cy, radius, itemW, itemH, hubW, hubH };
+  }
+  function renderHudWheel(canvas, wheel, W, H, text) {
+    const { items, cx, cy, radius, itemW, itemH, hubW, hubH } = wheelLayout(wheel, W, H);
+    if (!items.length) return;
+    const bgPad = radius + 38;
+    canvas.rect(cx - bgPad, cy - radius - 20, bgPad * 2, (radius + 20) * 2, 394002);
+    canvas.rect(cx - bgPad, cy - radius - 20, bgPad * 2, 1, 1773883);
+    canvas.rect(cx - bgPad, cy + radius + 20 - 1, bgPad * 2, 1, 1773883);
+    canvas.rect(cx - bgPad, cy - radius - 20, 1, (radius + 20) * 2, 1773883);
+    canvas.rect(cx + bgPad - 1, cy - radius - 20, 1, (radius + 20) * 2, 1773883);
+    const selectedItem = items.find((it) => it.selected) || items[0];
+    items.forEach((item, i) => {
+      const angle = -Math.PI / 2 + i * 2 * Math.PI / items.length;
+      const nx = Math.round(cx + Math.cos(angle) * radius);
+      const ny = Math.round(cy + Math.sin(angle) * radius);
+      const spokeColor = item.selected ? 62975 : item.locked ? 1642291 : 3617891;
+      const steps = 8;
+      for (let s = 2; s < steps; s++) {
+        const t = s / steps;
+        const sx = Math.round(cx + (nx - cx) * t);
+        const sy = Math.round(cy + (ny - cy) * t);
+        canvas.rect(sx, sy, 1, 1, spokeColor);
+      }
+    });
+    const hubBorder = selectedItem ? selectedItem.selected ? 16770560 : selectedItem.color : 62975;
+    canvas.rect(cx - hubW / 2, cy - hubH / 2, hubW, hubH, 1313579);
+    canvas.rect(cx - hubW / 2, cy - hubH / 2, hubW, 1, hubBorder);
+    canvas.rect(cx - hubW / 2, cy + hubH / 2 - 1, hubW, 1, hubBorder);
+    canvas.rect(cx - hubW / 2, cy - hubH / 2, 1, hubH, hubBorder);
+    canvas.rect(cx + hubW / 2 - 1, cy - hubH / 2, 1, hubH, hubBorder);
+    if (selectedItem?.selected) {
+      canvas.rect(cx - hubW / 2 + 1, cy - hubH / 2 + 1, hubW - 2, 1, 62975);
+    }
+    const titleText = (wheel.title || "WEAPON WHEEL").slice(0, 20);
+    const titleX = cx - Math.floor(titleText.length * 4 / 2);
+    text(titleText, titleX, cy - hubH / 2 + 3, 62975);
+    const selName = (selectedItem ? selectedItem.label : "").slice(0, 20);
+    const selX = cx - Math.floor(selName.length * 4 / 2);
+    text(selName, selX, cy - 2, 16770560);
+    const subPrompt = "[TAB/Q/E] SELECT".slice(0, 20);
+    const subX = cx - Math.floor(subPrompt.length * 4 / 2);
+    text(subPrompt, subX, cy + hubH / 2 - 9, 9105871);
+    const maxChars = Math.max(1, Math.floor((itemW - 4) / 4));
+    items.forEach((item, i) => {
+      const angle = -Math.PI / 2 + i * 2 * Math.PI / items.length;
+      const nx = Math.round(cx + Math.cos(angle) * radius);
+      const ny = Math.round(cy + Math.sin(angle) * radius);
+      const x = nx - Math.floor(itemW / 2);
+      const y = ny - Math.floor(itemH / 2);
+      const bg = item.selected ? 3020889 : item.locked ? 656663 : 1313579;
+      const border = item.selected ? 16770560 : item.locked ? 2891853 : item.color;
+      canvas.rect(x, y, itemW, itemH, bg);
+      canvas.rect(x, y, itemW, 1, border);
+      canvas.rect(x, y + itemH - 1, itemW, 1, border);
+      canvas.rect(x, y, 1, itemH, border);
+      canvas.rect(x + itemW - 1, y, 1, itemH, border);
+      if (item.selected) {
+        canvas.rect(x + 1, y + 1, itemW - 2, 1, 62975);
+        canvas.rect(x - 2, y - 2, itemW + 4, 1, 16770560);
+        canvas.rect(x - 2, y + itemH + 1, itemW + 4, 1, 16770560);
+      }
+      const labelColor = item.selected ? 16770560 : item.locked ? 5588087 : item.color;
+      const label = item.label.slice(0, maxChars);
+      const tx = x + Math.max(2, Math.floor((itemW - label.length * 4) / 2));
+      text(label, tx, y + 3, labelColor);
+      const sub = item.locked ? "LOCKED" : item.sub || (item.selected ? "EQUIPPED" : "READY");
+      const subColor = item.selected ? 62975 : item.locked ? 4010073 : 9105871;
+      const sx = x + Math.max(2, Math.floor((itemW - sub.slice(0, maxChars).length * 4) / 2));
+      text(sub.slice(0, maxChars), sx, y + 10, subColor);
+    });
+  }
   function collectHudHitRegions(width, height, ui, status, paused) {
     if (!ui) return [];
     const regions = [];
@@ -9937,7 +10026,23 @@ var __RunePixel3DRuntime = (() => {
         });
       });
     }
-    if (ui.slots && ui.slots.length > 0 && status === "playing" && !paused) {
+    if (ui.wheel && ui.wheel.active !== false && ui.wheel.items && ui.wheel.items.length > 0 && status === "playing" && !paused) {
+      const { items, cx, cy, radius, itemW, itemH } = wheelLayout(ui.wheel, width, height);
+      items.forEach((item, i) => {
+        if (!item.action || item.locked) return;
+        const angle = -Math.PI / 2 + i * 2 * Math.PI / items.length;
+        const nx = Math.round(cx + Math.cos(angle) * radius);
+        const ny = Math.round(cy + Math.sin(angle) * radius);
+        regions.push({
+          x: nx - Math.floor(itemW / 2),
+          y: ny - Math.floor(itemH / 2),
+          w: itemW,
+          h: itemH,
+          action: item.action,
+          args: item.args ?? []
+        });
+      });
+    } else if (ui.slots && ui.slots.length > 0 && status === "playing" && !paused) {
       const { gap, margin, slotW, slotH, y } = slotsLayout(ui.slots, width, height);
       ui.slots.forEach((slot, i) => {
         if (!slot.action || slot.locked) return;

@@ -95,6 +95,8 @@ state:
     dash_held = false
     prev_w_held = false
     next_w_held = false
+    wheel_held = false
+    wheel_ticks = 0
     cooldown = 0
     invulnerable = 0
     hurt_ticks = 0
@@ -336,15 +338,20 @@ action refresh_ui:
             ]
             if boss_active && boss_entity.alive:
                 meters.push({"label": st.name, "value": boss_entity.hp, "max": boss_entity.max_hp, "color": 16719515, "display": "bar"})
-            w_slots = [
-                {"label": "1:BUST", "color": 62975, "selected": active_weapon == "buster", "locked": false, "action": "equip_weapon", "args": ["buster"]},
-                {"label": "2:VOLT", "color": 16770560, "selected": active_weapon == "volt", "locked": campaign.weapons.volt != true, "action": "equip_weapon", "args": ["volt"]},
-                {"label": "3:CRYO", "color": 9370367, "selected": active_weapon == "cryo", "locked": campaign.weapons.cryo != true, "action": "equip_weapon", "args": ["cryo"]},
-                {"label": "4:MAG", "color": 11544319, "selected": active_weapon == "mag", "locked": campaign.weapons.mag != true, "action": "equip_weapon", "args": ["mag"]},
-                {"label": "5:NOVA", "color": 16739072, "selected": active_weapon == "nova", "locked": campaign.weapons.nova != true, "action": "equip_weapon", "args": ["nova"]},
-                {"label": "6:PHSE", "color": 16719515, "selected": active_weapon == "phase", "locked": campaign.weapons.phase != true, "action": "equip_weapon", "args": ["phase"]},
-                {"label": "7:SAW", "color": 3800852, "selected": active_weapon == "saw", "locked": campaign.weapons.saw != true, "action": "equip_weapon", "args": ["saw"]}
+            w_items = [
+                {"label": "1:BUSTER", "sub": "PLASMA", "color": 62975, "selected": active_weapon == "buster", "locked": false, "action": "equip_weapon", "args": ["buster"]},
+                {"label": "2:VOLT", "sub": "SURGE", "color": 16770560, "selected": active_weapon == "volt", "locked": campaign.weapons.volt != true, "action": "equip_weapon", "args": ["volt"]},
+                {"label": "3:CRYO", "sub": "SPEAR", "color": 9370367, "selected": active_weapon == "cryo", "locked": campaign.weapons.cryo != true, "action": "equip_weapon", "args": ["cryo"]},
+                {"label": "4:MAG", "sub": "CLAW", "color": 11544319, "selected": active_weapon == "mag", "locked": campaign.weapons.mag != true, "action": "equip_weapon", "args": ["mag"]},
+                {"label": "5:NOVA", "sub": "BREAKER", "color": 16739072, "selected": active_weapon == "nova", "locked": campaign.weapons.nova != true, "action": "equip_weapon", "args": ["nova"]},
+                {"label": "6:PHASE", "sub": "BEAM", "color": 16719515, "selected": active_weapon == "phase", "locked": campaign.weapons.phase != true, "action": "equip_weapon", "args": ["phase"]},
+                {"label": "7:SAW", "sub": "CUTTER", "color": 3800852, "selected": active_weapon == "saw", "locked": campaign.weapons.saw != true, "action": "equip_weapon", "args": ["saw"]}
             ]
+            w_wheel = {
+                "title": "WEAPON WHEEL",
+                "items": w_items,
+                "active": wheel_ticks > 0
+            }
             sys_notice = notice_ticks > 0 ? notice_text : ""
             if status == "player_dying":
                 sys_notice = "CRITICAL DAMAGE // SYSTEM OVERLOAD"
@@ -359,8 +366,9 @@ action refresh_ui:
                 "objective": "",
                 "detail": st.code + " " + st.name + " // LIVES " + lives,
                 "notice": sys_notice,
-                "slots": w_slots,
-                "prompt": "A/D MOVE | W/S LADDER | SPACE JUMP | X/CLICK FIRE | 1-7 GUN | SHIFT DASH",
+                "slots": [],
+                "wheel": w_wheel,
+                "prompt": "A/D MOVE | SPACE JUMP | X FIRE | TAB/Q/E WEAPON WHEEL | 1-7 GUN",
                 "panel": null
             }
 
@@ -806,12 +814,21 @@ action tick(input):
     if hurt_ticks > 0:
         hurt_ticks = hurt_ticks - 1
 
+    if input.weapon_wheel && !wheel_held:
+        call toggle_weapon_wheel
+    wheel_held = input.weapon_wheel == true
+
     if input.prev_weapon && !prev_w_held:
         call cycle_weapon -1
     if input.next_weapon && !next_w_held:
         call cycle_weapon 1
     prev_w_held = input.prev_weapon == true
     next_w_held = input.next_weapon == true
+
+    if wheel_ticks > 0:
+        wheel_ticks = wheel_ticks - 1
+        if wheel_ticks == 0:
+            call refresh_ui
 
     move = (input.right ? 1 : 0) - (input.left ? 1 : 0)
     if move == 0 && input.move_x != null:
@@ -957,6 +974,9 @@ action tick(input):
         stop when true
 
     if input.fire:
+        if wheel_ticks > 0:
+            wheel_ticks = 0
+            call refresh_ui
         call fire_weapon (input.aim_up == true)
 
     hero_m = "nc/hero_idle"

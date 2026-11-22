@@ -297,6 +297,8 @@ action load_stage(stage_idx):
     dash_held = false
     prev_w_held = false
     next_w_held = false
+    wheel_held = false
+    wheel_ticks = 0
     cooldown = 0
     invulnerable = 0
     hurt_ticks = 0

@@ -106,6 +106,14 @@ action sync_weapon_model:
         "visible": status == "playing" && (invulnerable <= 0 || invulnerable % 4 < 2)
     }
 
+action toggle_weapon_wheel:
+    if wheel_ticks > 0:
+        call cycle_weapon 1
+    else:
+        wheel_ticks = 85
+        sound.play "nc_select_move"
+        call refresh_ui
+
 action cycle_weapon(dir):
     pool = ["buster"]
     if campaign.weapons.volt == true:
@@ -126,22 +134,24 @@ action cycle_weapon(dir):
             idx = i
     next_idx = (idx + dir + pool.length) % pool.length
     active_weapon = pool[next_idx]
-    call refresh_ui
+    wheel_ticks = 85
     sound.play "nc_select_move"
-    notice_text = "EQUIPPED: " + weapon_label
-    notice_ticks = 60
     call sync_weapon_model
     call refresh_ui
+    notice_text = "EQUIPPED: " + weapon_label
+    notice_ticks = 60
+    ui.notice = notice_text
 
 action equip_weapon(w_name):
     if w_name == "buster" || campaign.weapons[w_name] == true:
         active_weapon = w_name
-        call refresh_ui
+        wheel_ticks = 60
         sound.play "nc_select_move"
-        notice_text = "EQUIPPED: " + weapon_label
-        notice_ticks = 60
         call sync_weapon_model
         call refresh_ui
+        notice_text = "EQUIPPED: " + weapon_label
+        notice_ticks = 60
+        ui.notice = notice_text
 
 action equip_1:
     call equip_weapon "buster"

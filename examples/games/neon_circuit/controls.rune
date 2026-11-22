@@ -17,7 +17,7 @@ keys:
     KeyK -> dash
     KeyQ -> prev_weapon
     KeyE -> next_weapon
-    Tab -> next_weapon
+    Tab -> weapon_wheel
 commands:
     Enter -> advance
     KeyP -> host.pause

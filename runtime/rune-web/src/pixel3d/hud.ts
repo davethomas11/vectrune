@@ -50,6 +50,21 @@ export interface HudHitRegion {
   action: string;
   args: unknown[];
 }
+export interface HudWheelItem {
+  label: string;
+  sub?: string;
+  color: number;
+  selected?: boolean;
+  locked?: boolean;
+  action?: string;
+  args?: unknown[];
+}
+export interface HudWheel {
+  title?: string;
+  items: HudWheelItem[];
+  selected?: number;
+  active?: boolean;
+}
 export interface CinemaHud {
   lines: string[];
   offset: number;
@@ -64,6 +79,7 @@ export interface GameHud {
   map?: HudMap;
   grid?: HudGrid;
   slots?: HudSlot[];
+  wheel?: HudWheel;
   damageDirection?: -1 | 0 | 1;
   style?: 'floating';
   noticeIcon?: string;
@@ -145,6 +161,13 @@ export function validateHud(value: unknown, sprites: Record<string, Sprite> = {}
     if (!Array.isArray(hud.slots) || hud.slots.length > 12 ||
         !hud.slots.every(s => s && typeof s.label === 'string' && Number.isInteger(s.color) && s.color >= 0 && s.color <= 0xffffff)) {
       throw new Error('Pixel-3d ui slots needs up to 12 slots with label and color');
+    }
+  }
+  if (hud.wheel !== undefined && hud.wheel !== null) {
+    const w = hud.wheel;
+    if (!w || !Array.isArray(w.items) || w.items.length > 12 ||
+        !w.items.every(it => it && typeof it.label === 'string' && Number.isInteger(it.color) && it.color >= 0 && it.color <= 0xffffff)) {
+      throw new Error('Pixel-3d ui wheel needs up to 12 items with label and color');
     }
   }
   return hud;
@@ -279,7 +302,9 @@ function renderFloatingHud(canvas: CanvasHud, ui: GameHud, status: string, pause
     const left = ui.noticeIcon ? 8 + asset(ui.noticeIcon).width + 6 : 8;
     lines.forEach((line, i) => text(line, left, y + i * 9, gold));
   }
-  if (ui.slots && ui.slots.length > 0 && !ui.panel && !ui.grid) {
+  if (ui.wheel && ui.wheel.active !== false && ui.wheel.items && ui.wheel.items.length > 0 && !ui.panel && !ui.grid) {
+    renderHudWheel(canvas, ui.wheel, W, H, text);
+  } else if (ui.slots && ui.slots.length > 0 && !ui.panel && !ui.grid) {
     renderHudSlots(canvas, ui.slots, W, H, text);
   }
   if (ui.prompt) text(ui.prompt.slice(0, columns), 8, H - 12, 0xe3eee9);
@@ -374,6 +399,108 @@ function renderHudSlots(
   });
 }
 
+function wheelLayout(wheel: HudWheel, W: number, H: number) {
+  const items = wheel.items || [];
+  const cx = Math.floor(W / 2);
+  const cy = Math.floor(H / 2) - 6;
+  const radius = Math.min(88, Math.floor(H * 0.28));
+  const itemW = 56;
+  const itemH = 18;
+  const hubW = 108;
+  const hubH = 34;
+  return { items, cx, cy, radius, itemW, itemH, hubW, hubH };
+}
+
+function renderHudWheel(
+  canvas: CanvasHud,
+  wheel: HudWheel,
+  W: number,
+  H: number,
+  text: (value: string, x: number, y: number, color?: number, scale?: number) => void
+): void {
+  const { items, cx, cy, radius, itemW, itemH, hubW, hubH } = wheelLayout(wheel, W, H);
+  if (!items.length) return;
+
+  const bgPad = radius + 38;
+  canvas.rect(cx - bgPad, cy - radius - 20, bgPad * 2, (radius + 20) * 2, 0x060312);
+  canvas.rect(cx - bgPad, cy - radius - 20, bgPad * 2, 1, 0x1b113b);
+  canvas.rect(cx - bgPad, cy + radius + 20 - 1, bgPad * 2, 1, 0x1b113b);
+  canvas.rect(cx - bgPad, cy - radius - 20, 1, (radius + 20) * 2, 0x1b113b);
+  canvas.rect(cx + bgPad - 1, cy - radius - 20, 1, (radius + 20) * 2, 0x1b113b);
+
+  const selectedItem = items.find(it => it.selected) || items[0];
+
+  // Draw radial connecting spokes
+  items.forEach((item, i) => {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / items.length;
+    const nx = Math.round(cx + Math.cos(angle) * radius);
+    const ny = Math.round(cy + Math.sin(angle) * radius);
+    const spokeColor = item.selected ? 0x00f5ff : (item.locked ? 0x190f33 : 0x373463);
+    const steps = 8;
+    for (let s = 2; s < steps; s++) {
+      const t = s / steps;
+      const sx = Math.round(cx + (nx - cx) * t);
+      const sy = Math.round(cy + (ny - cy) * t);
+      canvas.rect(sx, sy, 1, 1, spokeColor);
+    }
+  });
+
+  // Center Hub
+  const hubBorder = selectedItem ? (selectedItem.selected ? 0xffe600 : selectedItem.color) : 0x00f5ff;
+  canvas.rect(cx - hubW / 2, cy - hubH / 2, hubW, hubH, 0x140b2b);
+  canvas.rect(cx - hubW / 2, cy - hubH / 2, hubW, 1, hubBorder);
+  canvas.rect(cx - hubW / 2, cy + hubH / 2 - 1, hubW, 1, hubBorder);
+  canvas.rect(cx - hubW / 2, cy - hubH / 2, 1, hubH, hubBorder);
+  canvas.rect(cx + hubW / 2 - 1, cy - hubH / 2, 1, hubH, hubBorder);
+  if (selectedItem?.selected) {
+    canvas.rect(cx - hubW / 2 + 1, cy - hubH / 2 + 1, hubW - 2, 1, 0x00f5ff);
+  }
+
+  const titleText = (wheel.title || 'WEAPON WHEEL').slice(0, 20);
+  const titleX = cx - Math.floor((titleText.length * 4) / 2);
+  text(titleText, titleX, cy - hubH / 2 + 3, 0x00f5ff);
+
+  const selName = (selectedItem ? selectedItem.label : '').slice(0, 20);
+  const selX = cx - Math.floor((selName.length * 4) / 2);
+  text(selName, selX, cy - 2, 0xffe600);
+
+  const subPrompt = '[TAB/Q/E] SELECT'.slice(0, 20);
+  const subX = cx - Math.floor((subPrompt.length * 4) / 2);
+  text(subPrompt, subX, cy + hubH / 2 - 9, 0x8af1cf);
+
+  // Radial Item Badges
+  const maxChars = Math.max(1, Math.floor((itemW - 4) / 4));
+  items.forEach((item, i) => {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / items.length;
+    const nx = Math.round(cx + Math.cos(angle) * radius);
+    const ny = Math.round(cy + Math.sin(angle) * radius);
+    const x = nx - Math.floor(itemW / 2);
+    const y = ny - Math.floor(itemH / 2);
+
+    const bg = item.selected ? 0x2e1859 : item.locked ? 0x0a0517 : 0x140b2b;
+    const border = item.selected ? 0xffe600 : item.locked ? 0x2c204d : item.color;
+    canvas.rect(x, y, itemW, itemH, bg);
+    canvas.rect(x, y, itemW, 1, border);
+    canvas.rect(x, y + itemH - 1, itemW, 1, border);
+    canvas.rect(x, y, 1, itemH, border);
+    canvas.rect(x + itemW - 1, y, 1, itemH, border);
+    if (item.selected) {
+      canvas.rect(x + 1, y + 1, itemW - 2, 1, 0x00f5ff);
+      canvas.rect(x - 2, y - 2, itemW + 4, 1, 0xffe600);
+      canvas.rect(x - 2, y + itemH + 1, itemW + 4, 1, 0xffe600);
+    }
+    const labelColor = item.selected ? 0xffe600 : item.locked ? 0x554477 : item.color;
+    const label = item.label.slice(0, maxChars);
+    const tx = x + Math.max(2, Math.floor((itemW - label.length * 4) / 2));
+    text(label, tx, y + 3, labelColor);
+
+    const sub = item.locked ? 'LOCKED' : (item.sub || (item.selected ? 'EQUIPPED' : 'READY'));
+    const subColor = item.selected ? 0x00f5ff : item.locked ? 0x3d3059 : 0x8af1cf;
+    const sx = x + Math.max(2, Math.floor((itemW - sub.slice(0, maxChars).length * 4) / 2));
+    text(sub.slice(0, maxChars), sx, y + 10, subColor);
+  });
+}
+
 export function collectHudHitRegions(
   width: number,
   height: number,
@@ -408,7 +535,23 @@ export function collectHudHitRegions(
       });
     });
   }
-  if (ui.slots && ui.slots.length > 0 && status === 'playing' && !paused) {
+  if (ui.wheel && ui.wheel.active !== false && ui.wheel.items && ui.wheel.items.length > 0 && status === 'playing' && !paused) {
+    const { items, cx, cy, radius, itemW, itemH } = wheelLayout(ui.wheel, width, height);
+    items.forEach((item, i) => {
+      if (!item.action || item.locked) return;
+      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / items.length;
+      const nx = Math.round(cx + Math.cos(angle) * radius);
+      const ny = Math.round(cy + Math.sin(angle) * radius);
+      regions.push({
+        x: nx - Math.floor(itemW / 2),
+        y: ny - Math.floor(itemH / 2),
+        w: itemW,
+        h: itemH,
+        action: item.action,
+        args: item.args ?? [],
+      });
+    });
+  } else if (ui.slots && ui.slots.length > 0 && status === 'playing' && !paused) {
     const { gap, margin, slotW, slotH, y } = slotsLayout(ui.slots, width, height);
     ui.slots.forEach((slot, i) => {
       if (!slot.action || slot.locked) return;

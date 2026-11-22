@@ -31,7 +31,8 @@ run:
     assert state.world.storage == "chunked"
     assert state.level_width == 120
     assert state.boss_entity.alive == true
-    assert state.ui.slots.length == 7
+    assert state.ui.wheel.items.length == 7
+    assert state.ui.slots.length == 0
     invoke load_stage 1
     assert state.level_map == "sky_02"
     invoke load_stage 2
@@ -247,5 +248,36 @@ run:
     assert state.enemies[0].model == "nc/enemy_walker_fire"
     invoke wait_ticks 12
     assert state.enemies[0].model == "nc/enemy_walker"
+
+@Test/NeonCircuit/WeaponWheelHotKeyAndNumberSelect
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    assert state.wheel_ticks == 0
+    assert state.ui.wheel.active == false
+    assert state.ui.slots.length == 0
+    invoke tick {"weapon_wheel": true}
+    assert state.wheel_ticks > 0
+    assert state.ui.wheel.active == true
+    assert state.active_weapon == "buster"
+    invoke equip_1
+    assert state.active_weapon == "buster"
+    invoke tick {"fire": true}
+    assert state.wheel_ticks == 0
+    invoke on_boss_defeated
+    invoke finish_boss_victory
+    invoke load_stage 0
+    assert state.campaign.weapons.volt == true
+    invoke equip_2
+    assert state.active_weapon == "volt"
+    assert state.wheel_ticks > 0
+    invoke tick {"prev_weapon": true}
+    assert state.active_weapon == "buster"
+    invoke tick {"fire": true}
+    assert state.wheel_ticks == 0
+
 
 

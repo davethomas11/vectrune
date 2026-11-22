@@ -65,9 +65,16 @@ with tempfile.TemporaryDirectory(prefix="neon-circuit-") as folder, sync_playwri
     page.mouse.click(box["x"] + box["width"] * (55 / w), box["y"] + box["height"] * ((h - 66) / h))
     page.wait_for_function('__RunePixel3D.app.state.status === "playing"')
 
-    # 3. Verify movement, jump, firing, and visible 7-weapon bar
-    assert page.evaluate("__RunePixel3D.app.state.ui.slots.length") == 7
+    # 3. Verify movement, jump, firing, weapon wheel, and hotkey / number select
+    assert page.evaluate("__RunePixel3D.app.state.ui.wheel.items.length") == 7
+    assert page.evaluate("__RunePixel3D.app.state.ui.slots.length") == 0
     assert page.evaluate("__RunePixel3D.audioState.track") == "nc_stage_01"
+    # Weapon wheel hotkey toggle and number select
+    page.keyboard.press("Tab")
+    page.wait_for_function("__RunePixel3D.app.state.wheel_ticks > 0")
+    assert page.evaluate("__RunePixel3D.app.state.ui.wheel.active === true")
+    page.keyboard.press("Digit1")
+    assert page.evaluate("__RunePixel3D.app.state.active_weapon === 'buster'")
     start_x = page.evaluate("__RunePixel3D.app.state.player.x")
     page.keyboard.down("d")
     page.wait_for_function(f"__RunePixel3D.app.state.player.x > {start_x + 1.0}")
