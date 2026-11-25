@@ -1,0 +1,98 @@
+# Volt Viper's return is the pilot route for the deck encounters.
+@Logic/neon_circuit
+
+action setup_volt_return:
+    volt_return_props = []
+    volt_lane_warning = []
+    if current_stage != 0:
+        stop when true
+    for e in enemies:
+        if e.kind == "drone" && floor(e.home_x) == 68:
+            e.volt_flank = 1
+            e.x = 82.5
+            e.y = 7.2
+        if e.kind == "turret" && floor(e.home_x) == 58:
+            e.volt_lane = true
+            e.volt_lane_charge = 0
+            e.cd = 0
+    for i in range(0, 7):
+        local stripe = {"x": 59.5 + i * 2, "y": 2.5, "z": escape_deck_z + 0.02,
+            "model": "nc/volt_warning_stripe", "visible": false}
+        volt_lane_warning.push(stripe)
+        volt_return_props.push(stripe)
+    volt_launch_pad = {"x": 42.4, "y": 3.61, "z": escape_deck_z + 0.01, "model": "nc/volt_dash_pad"}
+    volt_return_props.push(volt_launch_pad)
+    volt_return_props.push({"x": 36.8, "y": 3.62, "z": escape_deck_z + 0.02, "model": "nc/volt_dash_coil"})
+    for i in range(0, 10):
+        volt_return_props.push({"x": 40.4 - i * 2, "y": 3.62, "z": escape_deck_z + 0.02,
+            "model": "nc/volt_dash_chevron"})
+
+action step_volt_flank(e):
+    # The drone comes around the right edge of the old platform while the
+    # walker holds the main lane. After the approach it uses normal combat.
+    if e.volt_flank == 1 && player.x > 74 && player.x <= 93:
+        e.volt_flank = 2
+    if e.volt_flank == 2:
+        e.angle = 0
+        call move_on_deck e, 0, 0.16, 0.34
+        if e.x >= 86.2:
+            e.volt_flank = 3
+        stop when true
+    if e.volt_flank == 3:
+        e.angle = 270
+        call move_on_deck e, 270, 0.16, 0.34
+        if e.y <= 3.15:
+            e.volt_flank = 4
+            e.cd = 36
+
+action set_volt_lane_warning(visible):
+    for i in range(0, volt_lane_warning.length):
+        volt_lane_warning[i].visible = visible
+        volt_lane_warning[i].dissolve = (i + floor(escape_ticks / 4)) % 3 == 0 ? 0.28 : 0
+
+action step_volt_lane_turret(e):
+    e.angle = 0
+    if e.volt_lane_charge > 0:
+        e.volt_lane_charge = e.volt_lane_charge - 1
+        if e.volt_lane_charge > 0:
+            e.model = e.base_model + "_charge"
+            call set_volt_lane_warning true
+            stop when true
+        call set_volt_lane_warning false
+        e.cd = 56
+        e.fire_ticks = 8
+        enemy_shots.push({"x": e.x + 0.55, "y": 2.5, "z": escape_deck_z + 0.32,
+            "vx": 0.77, "vy": 0, "life": 19, "model": "nc/volt_lane_pulse", "angle": 0})
+        sound.play "nc_volt_lane_fire"
+        stop when true
+    e.fire_ticks = max(0, e.fire_ticks - 1)
+    e.model = e.fire_ticks > 0 ? e.base_model + "_fire" : e.base_model
+    e.cd = max(0, e.cd - 1)
+    if e.cd == 0 && player.x >= e.x + 2 && player.x < e.x + 13.5 && abs(player.y - 2.5) < 1.85:
+        e.volt_lane_charge = 27
+        e.model = e.base_model + "_charge"
+        call set_volt_lane_warning true
+        notice_text = "CHARGING SHOT // JUMP OR STEP OUT OF THE LANE"
+        notice_ticks = 47
+        sound.play "nc_enemy_charge"
+
+action prime_volt_dash(held, dx):
+    volt_dash_ready = !volt_dash_used && player.x > 40.9 && player.x < 44.0 && player.y >= 3.28 && player.y <= 3.70
+    if volt_dash_ready:
+        if held && dx < -0.25 && player.z < escape_deck_z + 0.25:
+            volt_dash_used = true
+            volt_dash_ready = false
+            volt_dash_ticks = 22
+            volt_launch_pad.dissolve = 0.5
+            notice_text = "BOOST RAIL ENGAGED"
+            notice_ticks = 45
+            sound.play "nc_dash"
+            stop when true
+        notice_text = "BOOST RAIL // MOVE LEFT + DASH (SHIFT/K)"
+        notice_ticks = 45
+
+action check_volt_coil:
+    if player.x > 36.15 && player.x < 37.55 && player.y > 3.24 && player.y < 3.95 && player.z < escape_deck_z + 0.52 && invulnerable == 0:
+        call hurt_player 1
+        notice_text = "LIVE COIL // DASH, JUMP OR USE THE MAIN LANE"
+        notice_ticks = 60

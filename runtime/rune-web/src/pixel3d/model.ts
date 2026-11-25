@@ -1,12 +1,17 @@
+import { blendColor, type EmissionBuffer } from './enhanced_lighting';
+
 export interface Block {
   from: [number, number, number];
   size: [number, number, number];
   color: number;
   shape?: 'box' | 'sphere' | 'cylinder' | 'ramp';
+  emissive?: boolean;
 }
 
 export interface BlockModel {
   blocks: Block[];
+  glass?: [number, number];
+  contactShadow?: number;
 }
 
 export interface ModelInstance {
@@ -14,6 +19,7 @@ export interface ModelInstance {
   y: number;
   z?: number;
   angle?: number;
+  pitch?: number;
   scale?: number;
   dissolve?: number;
   // Internal pose for a tether cylinder. Stretch along local Z before tipping its axis.
@@ -37,13 +43,14 @@ function fragmentNoise(x: number, y: number): number {
 export function renderModel(
   model: BlockModel, instance: ModelInstance,
   camera: { x: number; y: number; height?: number; pitch?: number }, dirX: number, dirY: number, fovScale: number,
-  width: number, height: number, buffer: Uint32Array, depth: Float64Array
+  width: number, height: number, buffer: Uint32Array, depth: Float64Array,
+  emission?: EmissionBuffer, haze = 0, hazeColor = 0
 ): void {
   const scale = instance.scale ?? 1;
   const dissolve = instance.dissolve ?? 0;
   if (!Number.isFinite(dissolve) || dissolve < 0 || dissolve > 1) throw new Error('Model dissolve must be between 0 and 1');
   if (!Number.isFinite(scale) || scale <= 0) throw new Error('Model scale must be finite and positive');
-  if (![instance.x, instance.y, instance.z ?? 0, instance.angle ?? 0].every(Number.isFinite)) {
+  if (![instance.x, instance.y, instance.z ?? 0, instance.angle ?? 0, instance.pitch ?? 0].every(Number.isFinite)) {
     throw new Error('Model position and angle must be finite');
   }
   if (dissolve === 1) return;
@@ -51,7 +58,7 @@ export function renderModel(
   const eye = camera.height ?? .5, pitch = (camera.pitch ?? 0) * Math.PI / 180;
   const cp = Math.cos(pitch), sp = Math.sin(pitch);
   const c = Math.cos(angle), s = Math.sin(angle);
-  const tilt = instance.axisTilt ?? 0, axialScale = instance.axialScale ?? 1;
+  const tilt = instance.axisTilt ?? (instance.pitch ?? 0) * Math.PI / 180, axialScale = instance.axialScale ?? 1;
   const oriented = tilt !== 0 || axialScale !== 1;
   const tc = oriented ? Math.cos(tilt) : 1, ts = oriented ? Math.sin(tilt) : 0;
   const ox = camera.x - instance.x, oy = camera.y - instance.y;
@@ -99,7 +106,10 @@ export function renderModel(
     // A box wholly behind the near plane cannot contribute a visible hit.
     // Only boxes crossing that plane need the conservative full-screen bounds.
     if (frontCorners === 0 || outsideLeft === 8 || outsideRight === 8 || outsideTop === 8 || outsideBottom === 8) continue;
-    const colorX = shade(block.color, .8), colorY = shade(block.color, .65), colorZ = shade(block.color, 1);
+    const color = haze > 0 ? blendColor(block.color, hazeColor, haze) : block.color;
+    const colorX = shade(color, .8), colorY = shade(color, .65), colorZ = shade(color, 1);
+    const emitter = emission && block.emissive ? emission : undefined;
+    const emissiveColor = block.color & 0xffffff;
     const x0 = clipped ? 0 : Math.max(0, Math.floor(left));
     const x1 = clipped ? width : Math.min(width, Math.ceil(right));
     const y0 = clipped ? 0 : Math.max(0, Math.floor(top));
@@ -170,8 +180,16 @@ export function renderModel(
         if (near <= 0.001) face = exitFace;
         if (valid && far >= near && hit > 0.001 && hit < depth[index]) {
           depth[index] = hit;
-          buffer[index] = curvedShade !== undefined ? shade(block.color, curvedShade)
-            : face === 3 ? shade(block.color, .9) : face === 2 ? colorZ : face === 0 ? colorX : colorY;
+          buffer[index] = curvedShade !== undefined ? shade(color, curvedShade)
+            : face === 3 ? shade(color, .9) : face === 2 ? colorZ : face === 0 ? colorX : colorY;
+          if (emitter) {
+            const tile = (y >> 2) * emitter.width + (x >> 2);
+            if (!emitter.colors[tile] || hit < emitter.depths[tile]) {
+              emitter.depths[tile] = hit;
+              emitter.pixels[tile] = index;
+              emitter.colors[tile] = emissiveColor;
+            }
+          }
         }
       }
     }

@@ -63,6 +63,9 @@ pub struct SoundDefinition {
     pub freq_end: Option<f64>,
     /// Duration in seconds (e.g. 0.12)
     pub duration: f64,
+    /// Time in seconds for a tone or noise sweep to reach full volume.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attack: Option<f64>,
     /// Volume gain (0.0 to 1.0)
     pub volume: f64,
     /// Pitch sweep curve: "exponential" or "linear"

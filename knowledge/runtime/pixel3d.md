@@ -8,6 +8,207 @@ seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](vo
 for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.
 The grid-map semantics below remain unchanged.
 
+## Neon Circuit
+
+[Neon Circuit](../../examples/games/neon_circuit/neon_circuit.rune) starts as
+a side-scrolling action platformer. Each sector has its own entrance and
+route colors. Cyan marks checkpoints and warm red marks boss gates.
+Four-tile-wide platforms have a two-tile center lane. Circuit markings,
+frost, caution stripes, and other lane patterns help distinguish sector
+families and exposed walls. The patterns stay on the original blocks as the
+platforms rotate during the escape transition. The title scene uses blue
+and pink light around Axel, with green and yellow on the skyline and floor.
+The robot-select preview changes its accent light to match the selected sector.
+
+The cabinet's **Enhanced lighting** option keeps the chosen resolution.
+Marked neon, cores, and bolts cast colored bloom. Glass gains a faint
+tint that brightens at shallow viewing angles, and nearby actors and
+capsules cast contact shadows. Haze separates the skyline and distant
+corridor walls from the action. Enhanced lighting is the default. The
+cabinet remembers your choice between Enhanced and Standard.
+
+As the boss dissolves, upright panes rise behind it and frame the skyline.
+The panes tilt into the glass deck while the old platforms turn into walls,
+the camera moves overhead, and Axel somersaults onto the deck. Through the
+glass, the original scenery keeps its side-on projection. Pits cost a life
+in side view. During the escape, reinforced glass spans those gaps along
+the return lane. A descending whoosh follows Axel's fall and a short impact
+marks his landing. A short victory fanfare plays during the boss breakup.
+The glass hum rises in pitch and volume as the panes lift. Axel's landing
+begins a 450 ms crossfade from the fanfare's final chord to the escape
+score. Red alarm
+lights pulse during the escape, and the entrance capsule has a cyan light
+to mark the destination. A clear bay at each entrance keeps the capsule
+above the glass and away from the rotated walls. The escape score starts
+at 132 BPM and climbs in one-BPM steps. Tempo changes take effect on a
+whole beat beyond the Web Audio lookahead, so scheduled notes retain
+their timing and the playhead stays continuous. The quiet alarm becomes
+higher and more frequent in the last ten seconds. Retrying restarts both
+the score and the alarm cycle.
+
+The six Master Robots share a distinct boss theme in 3/4. It starts when
+the fight engages and gives way to the victory fanfare on defeat.
+In the side-view fights, bosses collide with platforms, land on raised
+surfaces, and hit overhead cover. Losing a life plays a death cue, and the
+sector music restarts when Axel finishes respawning. The stage’s enemies
+reboot on the deck. Walkers and drones approach across both axes, turrets
+shoot across the deck, and solid walls stop hostile projectiles in both
+perspectives.
+
+After an Intro Robot, the return stays overhead. Use WASD or arrows to move,
+including diagonally, or use the stick to move at any angle. X or click fires
+along the last movement direction. After a Master Robot, the same overhead
+landing leads into a zoom and fade to Axel's first-person view. W and S move
+forward and back, A and D strafe, and Left and Right turn. On gamepads the
+left stick moves and the right stick turns. Touch adds two turn buttons.
+Shots follow the view direction. Space jumps in both views. Hold Tab for
+the weapon wheel to select an unlocked gun while the escape clock pauses.
+The countdown starts after the fade and
+retries return to the same perspective. Destroyed
+enemies burst into pixel debris across the deck. Follow the deck back to the
+entrance capsule to collect the core, unlock the boss weapon where applicable,
+and save the sector clear. The return starts with 75 seconds and stops
+counting while paused. The centered clock grows in the last
+20 seconds and pulses red in the last ten. A combat death on the deck costs
+a life and returns Axel to the boss room with the clock still running.
+A timeout also costs a life. If lives remain, **Try Again** starts at the
+boss room with a fresh clock, full health, and the deck enemies reset.
+At zero lives, **Game Over** offers a fresh sector run or stage select.
+Collected cores and weapons stay saved.
+
+Volt Viper's return has three deck encounters. A drone rounds the
+old platform to flank Axel while a walker holds the main lane.
+Amber markings and a charge cue warn of a low turret shot that Axel
+can jump or sidestep. A green launch pad feeds a charged boost rail.
+Move left and dash from the pad to clear the live coil and save time.
+The pad supplies a charge on the first clear before Volt Surge is
+unlocked. The main lane stays open and the 75-second clock is unchanged.
+
+Cryo Shade's overhead return has two alternating rows of frost vents.
+Blue lights warn before each row erupts and slows Axel on the ground.
+Jump over the frost or switch lanes. A coolant cache off the main path
+restores two health and eight weapon energy once per attempt.
+
+Storm Valkyrie's first-person return has fans that push Axel sideways.
+An amber beacon and rising sound warn of the gust. Counter it by strafing
+or shoot the glowing relay down the lane to shut the fans off for the
+attempt.
+
+Every sector has its own return encounter. The first six remain overhead.
+All six Master Robot returns switch to first person after the deck flip.
+
+| Sector | Return encounter |
+| --- | --- |
+| Mag Titan | Follow the direction arrows on the magnetic rail. Ride a westbound pulse or jump clear of an eastbound one. |
+| Pyro Nova | Keep ahead of the thermal purge or jump over the advancing fire front. |
+| Phase Phantom | Shoot past the flickering echoes and hit the steady cyan cache for up to four extra seconds. |
+| Pulse Saw | Watch the crossing blades. Jump over them or run behind them as they move away. |
+| Glacier Reactor | Keep moving past the glowing floor markers before the falling ice lands. |
+| Ghost Protocol | Cross the listening zone without shooting to avoid triggering its tracking volley. |
+| Iron Hydra | Time your run between the strokes of two assembly presses. |
+| Prism Archon | Jump the low laser gates or run under the high beams. Each gate previews its next beam. |
+| Omega Overlord | Collect three Aegis rings, including two in midair, to absorb the next hit. |
+
+Each optional reward can be earned once per attempt. Timed retries reset
+the encounters along with the regular deck enemies.
+
+Press **G** or select **Master Gate** on the cabinet to inspect the
+Citadel entrance at any point. The six Master cores recovered from sectors
+07–12 light the gate's key slots. Existing campaign clears count as keys.
+Finishing the last Master's victory sequence takes Axel to the open gate.
+The cabinet's **Super Code** field accepts `SUPERCODE` to unlock all six
+weapons, grant all six Master keys, and open the gate immediately. These
+unlocks stay in the current save. Individual boss clears and the finale
+clear still come from playing them.
+
+The Master Level is a five-room finale. Platform across the Switchyard,
+shift to a miniature route on the Backplane, navigate the overhead Prism
+Grid, cross the Glass Tunnel in first person, and fight the Conductor,
+a mechanical dragon with a six-joint neck. Its head comes into range as
+it swoops and opens its jaws before firing.
+Shoot each relay and cross the lit exit to advance. The weapon wheel works
+in every room, and Axel can jump across the two glass routes. The
+150 BPM techno score continues across the camera shifts. Local light
+pulses follow its rate while each room uses its own colors. A lost life
+restarts the current room. Defeating the Conductor and crossing the last
+exit saves the campaign clear and starts a dawn credits roll with its own
+theme and the credit “Game by Dave Thomas.” The finale stays available
+for replays.
+
+The shared CPU voxel renderer uses a flat render buffer for chunked worlds
+up to 131,072 cells. For scenes with up to 1,024 occupied chunks, it can
+project their solid bounds into screen tiles and skip rays in open space.
+It falls back to full ray traversal when a visible chunk crosses the near
+plane. Tilted terrain uses the same culling in its rotated pose. The
+backdrop, depth ordering, and point lights keep their original projection.
+
+To measure Neon Circuit at 576×360, export the same game with each engine
+build and compare the CPU render times and sampled color and depth hashes.
+The benchmark covers the entrance and mid-flip and checks frames throughout
+the transition.
+
+```sh
+python3 tests/browser/neon_circuit_performance.py --html before.html --output before.json
+python3 tests/browser/neon_circuit_performance.py --html after.html --output after.json --compare before.json
+```
+
+```sh
+cargo build --bin vectrune
+target/debug/vectrune examples/games/neon_circuit/neon_circuit.rune -o html > neon-circuit.html
+target/debug/vectrune test examples/games/neon_circuit --type logic
+```
+
+### Side-map center materials
+
+Set `center_voxel` on a solid foreground `@SideMap` legend entry to
+paint its two center tiles across Y with a different material. Both material
+IDs are 1-based indices into `materials`. A platform spanning `"depth": [5, 4]`
+uses the regular material at Y 5 and 8 and the center material at Y 6 and 7.
+
+```rune
+materials = ["nc/deck", "nc/lane_grid"]
+legend = {"#": {"voxel": 1, "depth": [5, 4], "center_voxel": 2}}
+```
+
+Omit the center field for uniform depth, and keep door, barrier, and hazard
+materials on their own legend entries. The center tiles remain solid.
+
+### Floating HUD countdown
+
+Set `countdown` to remaining seconds in a floating HUD object. It accepts
+fractional values from 0 to 3599. The browser and shared desktop renderer
+round the visible MM:SS clock up and use the fractional value for the
+final-ten-second pulse. Advance the number in game logic so the display
+follows the same clock as gameplay.
+
+### Point lights
+
+Bind a scene’s `lights` to a list initialized in its logic state. The shared
+JavaScript pixel-3D renderer supports point lights in browser and desktop
+voxel scenes and cinematic title scenes. The title scene can bind its own
+state list with `lights = title_lights`. Lit scenes use the CPU renderer.
+
+```rune
+@Scene/neon_circuit
+world = world
+lights = lights
+```
+
+```rune
+state:
+    lights = [
+        {"x": 4, "y": 9.5, "z": 3, "color": "#20e9ff", "radius": 5, "intensity": 0.8}
+    ]
+```
+
+Use up to eight lights. Positions are finite world coordinates. Colors are
+`#RRGGBB` strings or RGB integers. Radius is in world units, greater than
+zero and at most 64. Intensity is between 0 and 1. Move or dim a light by
+updating its record in an action. Set the list to `[]` to remove all lights.
+The additive falloff uses the distance to each visible voxel or model surface
+and is unshadowed. Sky, the side-on backdrop, and the HUD keep their own colors.
+See [Neon Circuit’s lighting actions](../../examples/games/neon_circuit/lighting.rune).
+
 ## Signal Run
 
 [Signal Run](../../examples/games/signal_run/signal_run.rune) is a first-person
@@ -1062,6 +1263,8 @@ storage; native desktop saves use `.vectrune/saves`. Unsupported storage falls
 back to session memory. `saveStatus` exposes `saved`, `session`, or `recovered`;
 the browser status line reports it. Malformed saves restore declared defaults.
 A shell button with `data-pixel-action=train` invokes the game's `train` action.
+A shell form with `data-pixel-action` passes one record of named text values
+to the action on submit. Neon Circuit uses it for the Super Code field.
 
 ## Rune Crypt: tactical dungeon roguelite
 
@@ -1266,6 +1469,19 @@ floor (allowed 0.05–256); optional `pitch` defaults to zero, from -85 through
 85 degrees. Negative pitch looks down. This height is independent of voxel
 camera feet elevation `z`.
 
+In shared-JavaScript voxel scenes, a live camera record can also set
+`terrainPose = {"world": terrain, "pivot": [5, 0], "position": [9, 0], "angle": 0}`.
+The renderer rotates this visible terrain about X by `angle` degrees around
+its local Y/Z `pivot` and places that pivot at the scene Y/Z `position`. The
+scene's normal world still provides collision. Set
+`backdrop = {"y": 19, "z": 6, "things": background}` on the same camera for a
+side-on projection behind terrain and actors. Its optional `x` pins the view
+horizontally. Otherwise it follows camera X while keeping its own Y,
+elevation and sightline. Give a model instance a
+`pitch` in degrees to tilt it around local Y before its horizontal `angle`.
+Neon Circuit uses these fields in its
+[glass-deck transition](../../examples/games/neon_circuit/escape.rune).
+
 Tracks use smooth cubic interpolation and shortest-path angles. `loop` defaults
 to true and joins the final point back to the first with continuous motion;
 false holds the final point after the duration. Cubic paths can overshoot their
@@ -1382,6 +1598,17 @@ selected color ramp. [Marble Run](../../examples/games/marble_run/shell.rune)
 uses both controls.
 Add `data-pixel-outline=true` to a palette option to draw depth-based
 silhouettes in its darkest color. Marble Run uses it for the Pocket palette.
+
+A browser shell can provide `select data-pixel-lighting=true` with
+`standard` and `enhanced` options. The shell's selected option is the
+default. Player choices persist per game when browser storage is available.
+Enhanced lighting uses the CPU renderer.
+It blurs visible emissive samples at one quarter width and height, then
+composites the glow, glass tint, and distance haze before outlines and HUD.
+Models opt in with `emissive = "cw"` for opaque palette symbols,
+`glass = [16,32]` for a plane centered on the local XY origin in model
+units, and `contact_shadow = 0.7` for a ground shadow radius in world
+tiles. The effects preserve scene depth and collision.
 
 Marble Run also opts into an experimental WebGL 2 backend with
 `input data-pixel-gpu=true`. It draws model geometry and the procedural sky

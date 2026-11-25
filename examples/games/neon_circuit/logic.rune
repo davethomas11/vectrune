@@ -3,6 +3,8 @@
 state:
     status = "title"
     campaign = {
+        "master_clear": false,
+        "super_code": false,
         "defeated": {
             "01": false, "02": false, "03": false, "04": false, "05": false, "06": false,
             "07": false, "08": false, "09": false, "10": false, "11": false, "12": false
@@ -30,7 +32,17 @@ state:
     has_progress = false
     pause_selected = 0
     defeated_count = 0
+    master_keys = 0
+    super_code_notice = ""
+    master_active = false
+    master_first = false
+    master_gate_selection = 0
+    master_just_unlocked = false
+    master_props = []
     world = null
+    lights = []
+    title_lights = []
+    lamps = []
     level_width = 120
     level_height = 18
     level_map = "sky_title"
@@ -42,8 +54,28 @@ state:
     victory_item = {"x": 12.5, "y": 7, "z": 4.0, "model": "nc/victory_orb", "angle": 0, "scale": 1, "visible": false}
     power_capsule = {"x": 4.5, "y": 7, "z": 2.0, "model": "nc/power_capsule", "angle": 0, "scale": 1.15, "visible": false}
     escape_floor = []
+    volt_return_props = []
+    sector_return_props = []
+    return_challenge = null
+    volt_dash_ticks = 0
+    volt_dash_used = false
+    volt_dash_ready = false
+    # Clear the tallest existing parallax tower without moving any scenery.
+    escape_deck_z = 15
     escape_flip_ticks = 0
     escape_ticks = 0
+    escape_time_limit = 2250
+    escape_music_tempo = 132
+    escape_next_alarm = 24
+    escape_failure = ""
+    failure_selected = 0
+    escape_active = false
+    escape_first_person = false
+    escape_zoom_ticks = 0
+    escape_zoom_fade = 0
+    view_weapon = null
+    escape_angle = 180
+    escape_entry_x = 0
     select_pedestal = {"x": 21.5, "y": 7, "z": 2.0, "model": "nc/pedestal", "scale": 1.15, "visible": true}
     select_boss = {"x": 21.5, "y": 7, "z": 2.9, "model": "nc/boss_volt", "angle": 0, "scale": 1.2, "visible": true}
     title_monument = {"x": 18.0, "y": 13.5, "z": 0.0, "model": "nc/title_monument", "angle": 0, "scale": 1.15, "visible": false}
@@ -82,6 +114,7 @@ state:
     boss_state_ticks = 0
     boss_hurt_ticks = 0
     boss_land_ticks = 0
+    boss_grounded = true
     shots = []
     enemy_shots = []
     effects = []
@@ -138,12 +171,30 @@ state:
     }
     touch_ready = false
     touch_dash_ready = false
+    touch_turn_ready = false
     progress_label = "CLEARED 0/12"
     weapon_label = "PULSE BUSTER"
 
+action build_weapon_wheel:
+    w_items = [
+        {"label": "1:BUSTER", "sub": "PLASMA", "color": 62975, "selected": active_weapon == "buster", "locked": false, "action": "equip_weapon", "args": ["buster"]},
+        {"label": "2:VOLT", "sub": "SURGE", "color": 16770560, "selected": active_weapon == "volt", "locked": campaign.weapons.volt != true, "action": "equip_weapon", "args": ["volt"]},
+        {"label": "3:CRYO", "sub": "SPEAR", "color": 9370367, "selected": active_weapon == "cryo", "locked": campaign.weapons.cryo != true, "action": "equip_weapon", "args": ["cryo"]},
+        {"label": "4:MAG", "sub": "CLAW", "color": 11544319, "selected": active_weapon == "mag", "locked": campaign.weapons.mag != true, "action": "equip_weapon", "args": ["mag"]},
+        {"label": "5:NOVA", "sub": "BREAKER", "color": 16739072, "selected": active_weapon == "nova", "locked": campaign.weapons.nova != true, "action": "equip_weapon", "args": ["nova"]},
+        {"label": "6:PHASE", "sub": "BEAM", "color": 16719515, "selected": active_weapon == "phase", "locked": campaign.weapons.phase != true, "action": "equip_weapon", "args": ["phase"]},
+        {"label": "7:SAW", "sub": "CUTTER", "color": 3800852, "selected": active_weapon == "saw", "locked": campaign.weapons.saw != true, "action": "equip_weapon", "args": ["saw"]}
+    ]
+    w_wheel = {
+        "title": "WEAPON WHEEL",
+        "items": w_items,
+        "active": wheel_open == true || wheel_ticks > 0
+    }
+
 action refresh_ui:
     touch_ready = status == "playing"
-    touch_dash_ready = status == "playing" && campaign.weapons.volt == true
+    touch_dash_ready = status == "playing" && (campaign.weapons.volt == true || (escape_active && current_stage == 0 && volt_dash_ready))
+    touch_turn_ready = status == "playing" && (escape_first_person || (master_active && master_first))
     progress_label = "CLEARED " + defeated_count + "/12"
     weapon_label = active_weapon == "volt" ? "VOLT SURGE" : (active_weapon == "cryo" ? "CRYO LANCE" : (active_weapon == "mag" ? "MAG CLAW" : (active_weapon == "nova" ? "NOVA BREAKER" : (active_weapon == "phase" ? "PHASE BEAM" : (active_weapon == "saw" ? "HYPER SAW" : "PULSE BUSTER")))))
     pause_ui = {
@@ -175,6 +226,54 @@ action refresh_ui:
             "footer": "UP/DOWN + ENTER OR CLICK OPTION"
         }
     }
+    if status == "playing":
+        call build_weapon_wheel
+    if status == "playing" && master_active:
+        call refresh_master_ui
+        stop when true
+    if status == "master_gate":
+        call refresh_master_gate_ui
+        stop when true
+    if status == "playing" && escape_active:
+        local dist = floor(distance(player, power_capsule))
+        local progress = floor(100 * (1 - dist / max(1, escape_entry_x - power_capsule.x)))
+        local remaining = max(0, escape_time_limit - escape_ticks)
+        meters = [
+            {"label": "AXEL", "value": health, "max": max_health, "color": 62975, "display": "pips", "icon": "nc/hp_full", "emptyIcon": "nc/hp_empty"},
+            {"label": "CAPSULE", "value": clamp(progress, 0, 100), "max": 100, "color": 16770560, "display": "bar"}
+        ]
+        ui = {
+            "style": "floating",
+            "heading": "",
+            "meters": meters,
+            "countdown": remaining / 30,
+            "reticle": escape_first_person && !wheel_open,
+            "wheel": w_wheel,
+            "objective": "CAPSULE " + dist + "M  //  LIVES " + lives,
+            "detail": "GLASS DECK // " + weapon_label,
+            "notice": notice_ticks > 0 ? notice_text : "",
+            "prompt": escape_first_person ? "WASD MOVE | LEFT/RIGHT TURN | SPACE JUMP | X FIRE | TAB WHEEL" : "WASD / ARROWS MOVE | SPACE JUMP | X FIRE | TAB WHEEL",
+            "panel": null
+        }
+        stop when true
+    if status == "escape_retry":
+        ui = {
+            "style": "floating",
+            "meters": [],
+            "objective": "",
+            "detail": "",
+            "notice": "",
+            "prompt": "",
+            "panel": {
+                "title": "EXTRACTION FAILED // " + escape_failure,
+                "body": "LIVES LEFT: " + lives + "|TRY AGAIN FROM THE BOSS ROOM WITH A FRESH TIMER.",
+                "choices": ["TRY AGAIN", "STAGE SELECT"],
+                "choiceActions": [{"action": "retry_escape"}, {"action": "open_select"}],
+                "selected": failure_selected,
+                "footer": "UP/DOWN SELECT | ENTER OR CLICK CONFIRM"
+            }
+        }
+        stop when true
     match status:
         "title":
             title_panel = {
@@ -246,7 +345,7 @@ action refresh_ui:
                     "items": grid_items,
                     "footer": "CLICK CARD TO PREVIEW | CLICK AGAIN OR PRESS ENTER TO DEPLOY"
                 },
-                "prompt": "ARROWS / CLICK SELECT | ENTER / CLICK AGAIN LAUNCH | ESC TITLE",
+                "prompt": "ARROWS / CLICK SELECT | ENTER LAUNCH | G MASTER GATE | ESC TITLE",
                 "panel": null
             }
         "boss_dying":
@@ -268,29 +367,14 @@ action refresh_ui:
                 "heading": "",
                 "meters": [],
                 "objective": "DIMENSIONAL FLIP // " + st.name,
-                "detail": "BACKGROUND WALL SLIDING DOWN TO BECOME FLOOR...",
-                "notice": "PERSPECTIVE SHIFTING TO TOP-DOWN ISOMETRIC",
-                "prompt": "PREPARE FOR EXTRACTION ESCAPE",
+                "detail": "THE DECK IS ROTATING",
+                "notice": "",
+                "prompt": "",
                 "panel": null
             }
-        "escape":
-            st = stages[current_stage]
-            dist = floor(abs(player.x - power_capsule.x))
-            meters = [
-                {"label": "AXEL", "value": health, "max": max_health, "color": 62975, "display": "pips", "icon": "nc/hp_full", "emptyIcon": "nc/hp_empty"},
-                {"label": "CAPSULE", "value": max(0, min(100, 100 - dist)), "max": 100, "color": 16770560, "display": "bar"}
-            ]
-            ui = {
-                "style": "floating",
-                "heading": "",
-                "meters": meters,
-                "objective": "ESCAPE TO START CAPSULE: " + dist + "M",
-                "detail": "TOP-DOWN ISOMETRIC ESCAPE // RETRIEVE POWER CORE",
-                "notice": notice_ticks > 0 ? notice_text : ("EXTRACTION CAPSULE: " + dist + "M"),
-                "slots": [],
-                "prompt": "A/D MOVE | W/S DEPTH | SPACE JUMP | ESCAPE TO CAPSULE",
-                "panel": null
-            }
+        "escape_zoom":
+            ui = {"style": "floating", "meters": [], "objective": "", "detail": "", "notice": "", "prompt": "", "panel": null,
+                "cinema": {"lines": [], "offset": 0, "fade": escape_zoom_fade}}
         "boss_victory":
             st = stages[current_stage]
             v_body = st.unlocks != "" ? ("NEW WEAPON ACQUIRED: " + st.unlock_label + "|" + st.skill_desc + "|ALL PROGRESS SAVED!") : ("MASTER CORE SECURED: " + st.unlock_label + "|PROGRESS: " + defeated_count + "/12 ROGUE ROBOTS DISMANTLED")
@@ -330,18 +414,24 @@ action refresh_ui:
                     "footer": "PRESS ENTER OR CLICK TO CONTINUE"
                 }
             }
+        "master_credits":
+            ui = {"style": "floating", "heading": "NEON CIRCUIT", "meters": [], "objective": "",
+                "detail": "", "notice": "", "prompt": "ENTER TO CONTINUE", "panel": null,
+                "cinema": {"lines": ["THE CITADEL IS FREE.", "", "Game by Dave Thomas", "", "THANKS FOR PLAYING"],
+                    "offset": min(207, 12 + master_credits_ticks * 0.72), "top": 0.20, "bottom": 0.82,
+                    "scale": 2, "spacing": 24, "fade": 0.22}}
         "won":
             ui = {
                 "style": "floating",
                 "heading": "CITADEL LIBERATED!",
                 "meters": [],
-                "objective": "ALL 12 ROGUE ROBOTS DISMANTLED",
+                "objective": "THE CONDUCTOR IS OFFLINE",
                 "detail": "NEON CIRCUIT COMPLETE",
                 "notice": "",
                 "prompt": "PRESS ENTER OR CLICK FOR STAGE SELECT",
                 "panel": {
-                    "title": "CAMPAIGN COMPLETE // 12/12 ROBOTS CLEARED!",
-                    "body": "AXEL-09 HAS LIBERATED THE NEON CITADEL!|ALL 6 INTRO WEAPONS & ALL 6 MASTER CORES RECOVERED.",
+                    "title": "CAMPAIGN COMPLETE // MASTER LEVEL CLEARED",
+                    "body": "AXEL-09 HAS LIBERATED THE NEON CITADEL!|THE MASTER GATE REMAINS OPEN FOR REPLAYS.|Game by Dave Thomas",
                     "choices": ["RETURN TO STAGE SELECT"],
                     "choiceActions": [{"action": "open_select"}],
                     "selected": 0,
@@ -349,21 +439,22 @@ action refresh_ui:
                 }
             }
         "gameover":
+            local reason = escape_active ? escape_failure : "CIRCUIT FLATLINED"
             ui = {
                 "style": "floating",
-                "heading": "CIRCUIT FLATLINED",
+                "heading": "GAME OVER",
                 "meters": [],
-                "objective": "UNLOCKED WEAPONS & CLEARED SECTORS SAVED",
-                "detail": "RETURN TO STAGE SELECT TO RETRY OR PICK ANOTHER ROBOT",
+                "objective": "",
+                "detail": "",
                 "notice": "",
-                "prompt": "PRESS ENTER OR CLICK FOR STAGE SELECT",
+                "prompt": "",
                 "panel": {
-                    "title": "SYSTEM REBOOT // CIRCUIT FLATLINED",
-                    "body": "ALL UNLOCKED WEAPONS AND CLEARED ROBOTS ARE SAVED.",
-                    "choices": ["RETURN TO STAGE SELECT"],
-                    "choiceActions": [{"action": "open_select"}],
-                    "selected": 0,
-                    "footer": "PRESS ENTER OR CLICK TO CONTINUE"
+                    "title": "LIVES 0 // " + reason,
+                    "body": "RETRY THE SECTOR OR CHOOSE ANOTHER ROBOT.|SAVED CORES AND WEAPONS ARE KEPT.",
+                    "choices": ["RETRY SECTOR", "STAGE SELECT"],
+                    "choiceActions": [{"action": "restart_current_stage"}, {"action": "open_select"}],
+                    "selected": failure_selected,
+                    "footer": "UP/DOWN SELECT | ENTER OR CLICK CONFIRM"
                 }
             }
         "playing", "player_dying", "player_panning", "player_respawn":
@@ -375,20 +466,6 @@ action refresh_ui:
             ]
             if boss_active && boss_entity.alive:
                 meters.push({"label": st.name, "value": boss_entity.hp, "max": boss_entity.max_hp, "color": 16719515, "display": "bar"})
-            w_items = [
-                {"label": "1:BUSTER", "sub": "PLASMA", "color": 62975, "selected": active_weapon == "buster", "locked": false, "action": "equip_weapon", "args": ["buster"]},
-                {"label": "2:VOLT", "sub": "SURGE", "color": 16770560, "selected": active_weapon == "volt", "locked": campaign.weapons.volt != true, "action": "equip_weapon", "args": ["volt"]},
-                {"label": "3:CRYO", "sub": "SPEAR", "color": 9370367, "selected": active_weapon == "cryo", "locked": campaign.weapons.cryo != true, "action": "equip_weapon", "args": ["cryo"]},
-                {"label": "4:MAG", "sub": "CLAW", "color": 11544319, "selected": active_weapon == "mag", "locked": campaign.weapons.mag != true, "action": "equip_weapon", "args": ["mag"]},
-                {"label": "5:NOVA", "sub": "BREAKER", "color": 16739072, "selected": active_weapon == "nova", "locked": campaign.weapons.nova != true, "action": "equip_weapon", "args": ["nova"]},
-                {"label": "6:PHASE", "sub": "BEAM", "color": 16719515, "selected": active_weapon == "phase", "locked": campaign.weapons.phase != true, "action": "equip_weapon", "args": ["phase"]},
-                {"label": "7:SAW", "sub": "CUTTER", "color": 3800852, "selected": active_weapon == "saw", "locked": campaign.weapons.saw != true, "action": "equip_weapon", "args": ["saw"]}
-            ]
-            w_wheel = {
-                "title": "WEAPON WHEEL",
-                "items": w_items,
-                "active": wheel_open == true || wheel_ticks > 0
-            }
             sys_notice = notice_ticks > 0 ? notice_text : ""
             if status == "player_dying":
                 sys_notice = "CRITICAL DAMAGE // SYSTEM OVERLOAD"
@@ -421,6 +498,11 @@ action play_stage_music(track):
     if music_track != track:
         music_track = track
         music.play track
+
+action stop_stage_music:
+    if music_track != "":
+        music.stop
+        music_track = ""
 
 action wait_ticks(count):
     for i in range(0, count):
@@ -461,6 +543,8 @@ action cancel_new_game:
 
 action confirm_new_game:
     campaign = {
+        "master_clear": false,
+        "super_code": false,
         "defeated": {
             "01": false, "02": false, "03": false, "04": false, "05": false, "06": false,
             "07": false, "08": false, "09": false, "10": false, "11": false, "12": false
@@ -474,6 +558,7 @@ action confirm_new_game:
             "saw": false
         }
     }
+    super_code_notice = ""
     selected_stage = 0
     active_weapon = "buster"
     title_confirm = false
@@ -489,9 +574,22 @@ action restart_current_stage:
     lives = 3
     pause_selected = 0
     sound.play "nc_select_go"
+    if master_active:
+        call retry_master_run
+        stop when true
     call load_stage current_stage
 
 action menu_move(delta):
+    if status == "master_gate" && master_keys == 6:
+        master_gate_selection = (master_gate_selection + delta + 2) % 2
+        sound.play "nc_select_move"
+        call refresh_ui
+        stop when true
+    if status == "escape_retry" || status == "gameover":
+        failure_selected = (failure_selected + delta + 2) % 2
+        sound.play "nc_select_move"
+        call refresh_ui
+        stop when true
     if status == "title":
         cnt = title_confirm && has_progress ? 2 : (has_progress ? 2 : 1)
         title_selected = (title_selected + delta + cnt) % cnt
@@ -504,11 +602,20 @@ action menu_move(delta):
         call refresh_ui
 
 action back:
+    if status == "master_credits":
+        call close_master_credits
+        stop when true
+    if status == "master_gate":
+        call open_select
+        stop when true
+    if status == "escape_retry" || status == "gameover":
+        call open_select
+        stop when true
     match status:
         "title":
             if title_confirm:
                 call cancel_new_game
-        "select", "stage_clear", "gameover", "won":
+        "select", "stage_clear", "won":
             sound.play "nc_select_move"
             call return_to_title
         "boss_victory":
@@ -546,7 +653,27 @@ action return_to_select:
     call open_select
 
 action advance:
+    if status == "master_credits":
+        call close_master_credits
+        stop when true
+    if status == "master_gate" && master_keys == 6 && master_gate_selection == 0:
+        call start_master_run
+        stop when true
+    if status == "master_gate":
+        call open_select
+        stop when true
+    if status == "escape_retry":
+        if failure_selected == 1:
+            call open_select
+            stop when true
+        call retry_escape
+        stop when true
     match status:
+        "gameover":
+            if failure_selected == 1:
+                call open_select
+                stop when true
+            call restart_current_stage
         "title":
             if !has_progress:
                 call start_new_game
@@ -566,7 +693,7 @@ action advance:
             call load_stage selected_stage
         "boss_victory":
             call finish_boss_victory
-        "stage_clear", "won", "gameover":
+        "stage_clear", "won":
             call open_select
 
 action pick_stage(idx):
@@ -652,7 +779,8 @@ action begin_player_death:
     velocity = 0
     dash_ticks = 0
     weapon_model.visible = false
-    sound.play "nc_explode"
+    call stop_stage_music
+    sound.play "nc_player_death"
     dz = max(1.2, player.z + 0.8)
     call spawn_death_ring player.x, dz, 10, 0.24
     call burst player.x, dz, 10
@@ -674,6 +802,7 @@ action tick_player_dying:
         lives = lives - 1
         if lives <= 0:
             status = "gameover"
+            failure_selected = 0
             call refresh_ui
             stop when true
         if boss_door_locked:
@@ -683,11 +812,12 @@ action tick_player_dying:
             boss_entity.hp = boss_entity.max_hp
             boss_entity.x = boss_entity.home_x
             boss_entity.z = boss_entity.home_z
+            boss_entity.vz = 0
+            boss_grounded = true
             boss_state = "idle"
             boss_state_ticks = 0
-            enemy_shots = []
-            st = stages[current_stage]
-            call play_stage_music st.music
+        shots = []
+        enemy_shots = []
         status = "player_panning"
         pan_ticks = 0
         call refresh_ui
@@ -737,6 +867,8 @@ action tick_player_respawn:
         respawn_beam.visible = false
         invulnerable = 45
         status = "playing"
+        local st = stages[current_stage]
+        call play_stage_music st.music
         avatar = {"x": checkpoint.x, "y": 7, "z": checkpoint.z, "model": "nc/hero_idle", "angle": 0, "dissolve": 0, "visible": true}
         call sync_weapon_model
         notice_text = "REBOOTED AT CHECKPOINT"
@@ -745,11 +877,20 @@ action tick_player_respawn:
 
 action hurt_player(amt):
     stop when invulnerable > 0 || status != "playing"
+    if escape_active && current_stage == 11 && return_challenge.shield:
+        return_challenge.shield = false
+        invulnerable = 20
+        notice_text = "AEGIS SPENT // HIT ABSORBED"
+        notice_ticks = 65
+        sound.play "nc_barrier_open"
+        stop when true
     health = max(0, health - amt)
     invulnerable = 35
     hurt_ticks = 12
     cam_shake = 6
-    sound.play "nc_hurt"
+    if health > 0:
+        sound.play "nc_hurt"
+    stop when escape_active
     call burst player.x, player.z + 0.8, 6
     if health <= 0:
         call begin_player_death
@@ -810,7 +951,7 @@ action tick(input):
             select_boss.scale = 1.2 + sin(ticks * 0.14) * 0.045
             if select_cooldown > 0:
                 select_cooldown = select_cooldown - 1
-            move_x = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+            move_x = (input.right || input.turn_right ? 1 : 0) - (input.left || input.turn_left ? 1 : 0)
             if move_x == 0 && input.move_x != null:
                 if input.move_x > 0.4:
                     move_x = 1
@@ -829,11 +970,18 @@ action tick(input):
         "boss_dying":
             call tick_boss_dying
             stop when true
+        "master_gate":
+            for i in range(0, 2):
+                lights[i].intensity = 0.48 + 0.20 * cos(ticks * 9 - i * 90)
+            stop when true
+        "master_credits":
+            call tick_master_credits
+            stop when true
         "escape_flip":
             call tick_escape_flip
             stop when true
-        "escape":
-            call tick_escape input
+        "escape_zoom":
+            call tick_escape_zoom
             stop when true
         "boss_victory":
             call tick_boss_victory input
@@ -860,6 +1008,10 @@ action tick(input):
     if hurt_ticks > 0:
         hurt_ticks = hurt_ticks - 1
 
+    if master_active && master_transition > 0:
+        call tick_master_run input
+        stop when true
+
     # Weapon wheel hold & release handling
     if input.weapon_wheel == true:
         if !wheel_open:
@@ -877,12 +1029,12 @@ action tick(input):
             wheel_ticks = 0
             call refresh_ui
 
-    # While weapon wheel is open, gameplay is paused; movement keys cycle the wheel
+    # While the wheel is open, movement selects a weapon instead of moving Axel.
     if wheel_open:
         if wheel_cooldown > 0:
             wheel_cooldown = wheel_cooldown - 1
 
-        move_w = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+        move_w = (input.right || input.turn_right ? 1 : 0) - (input.left || input.turn_left ? 1 : 0)
         if move_w == 0 && input.move_x != null:
             if input.move_x > 0.3:
                 move_w = 1
@@ -917,6 +1069,7 @@ action tick(input):
             wheel_ticks = 0
             call refresh_ui
 
+        jump_held = input.jump == true
         stop when true
 
     if input.prev_weapon && !prev_w_held:
@@ -931,7 +1084,14 @@ action tick(input):
         if wheel_ticks == 0:
             call refresh_ui
 
-    move = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+    if master_active:
+        call tick_master_run input
+        stop when true
+    if escape_active:
+        call tick_escape input
+        stop when true
+
+    move = (input.right || input.turn_right ? 1 : 0) - (input.left || input.turn_left ? 1 : 0)
     if move == 0 && input.move_x != null:
         if input.move_x > 0.25:
             move = 1
@@ -1068,7 +1228,9 @@ action tick(input):
             jumps = 0
             dash_ready = true
 
-    if player.z < 0.6:
+    # Resolve the fall below the floor lip before voxel_move's lower bound
+    # can act as a landing surface or let Axel step back out of the pit.
+    if player.z < 1.5 && !grounded && voxel_get(world, floor(player.x - 0.24), 7, 0) == 0 && voxel_get(world, floor(player.x + 0.24), 7, 0) == 0:
         invulnerable = 0
         health = 0
         call begin_player_death

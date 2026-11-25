@@ -27,3 +27,42 @@ sections = {
     }
 }
 arrangement = ["fanfare"]
+
+# The last chord sustains into Axel's landing and the escape score.
+@Music/nc_boss_victory
+type = synth
+tempo = 148
+time_signature = 4/4
+loop = false
+volume = 0.065
+instruments = {"lead":"brass","arp":"bell","bass":"triangle","drums":"drums"}
+sections = {
+    "landing_fanfare": {
+        "bars": 3,
+        "lead": "C5:8 E5:8 G5:8 C6:8 R:8 G5:8 C6:4 | D6:8 C6:8 B5:8 G5:8 C6:2 | R:1",
+        "arp": "C5:8 E5:8 G5:8 C6:8 G5:8 E5:8 G5:8 C6:8 | G5:8 B5:8 D6:8 G6:8 [C5,E5,G5]:2 | [C5,E5,G5]:1",
+        "bass": "C2:4 G2:4 C3:4 G2:4 | G2:4 D2:4 C2:2 | E2:1",
+        "drums": "crash:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 crash:2 | R:1"
+    }
+}
+arrangement = ["landing_fanfare"]
+
+# Dawn over the Citadel, an eight-bar credits reprise.
+@Music/nc_credits
+type = synth
+tempo = 104
+time_signature = 4/4
+loop = false
+volume = 0.064
+instruments = {"lead":"bell","harmony":"strings","bass":"triangle"}
+effects = {"reverb":{"decay":1.7,"wet":0.20,"filter":3600}}
+track_effects = {"lead":{"reverb":0.32},"harmony":{"reverb":0.20},"bass":{"reverb":0.04}}
+sections = {
+    "dawn": {
+        "bars": 8,
+        "lead": "E5:4 D5:8 B4:8 G4:2 | A4:4 C5:4 E5:2 | F#5:4 D5:4 B4:2 | A4:4 F#4:4 E4:2 | E5:4 G5:8 A5:8 B5:2 | D6:4 B5:4 G5:2 | F#5:4 A5:4 B5:4 A5:4 | G5:2 E5:2",
+        "harmony": "[E3,G3,B3]:1 | [C3,E3,G3]:1 | [G3,B3,D4]:1 | [D3,F#3,A3]:2 [B2,F#3,A3]:2 | [E3,G3,B3]:1 | [C3,E3,G3]:2 [G3,B3,D4]:2 | [D3,F#3,A3]:1 | [E3,G3,B3,E4]:1",
+        "bass": "E2:2 B2:2 | C2:2 G2:2 | G2:2 D3:2 | D2:2 B1:2 | E2:2 B2:2 | C2:2 G2:2 | D2:2 A2:2 | E2:1"
+    }
+}
+arrangement = ["dawn"]

@@ -1,0 +1,250 @@
+@Logic/neon_circuit
+
+action setup_return_challenge:
+    return_challenge = null
+    local deck = escape_deck_z
+    local pieces = []
+    local trigger = 0
+    local hint = ""
+    match current_stage:
+        2:
+            trigger = 79
+            hint = "MAG RAIL // RIDE THE WESTWARD PULSE OR JUMP CLEAR"
+            for i in range(0, 5):
+                pieces.push({"x": 67.5 + i * 1.8, "y": 2.5, "z": deck, "model": "nc/return_mag_idle"})
+        3:
+            trigger = 75
+            hint = "THERMAL PURGE // KEEP MOVING OR JUMP THE FIRE FRONT"
+            for i in range(0, 3):
+                pieces.push({"x": 76, "y": 2.5 + i, "z": deck, "model": "nc/return_purge_warn"})
+        4:
+            trigger = 77
+            hint = "PHASE CACHE // SHOOT THE STEADY CYAN CORE FOR BONUS TIME"
+            pieces = [
+                {"x": 61.5, "y": 2.5, "z": deck, "model": "nc/return_phase_core", "real": true},
+                {"x": 65.5, "y": 2.5, "z": deck, "model": "nc/return_phase_echo"},
+                {"x": 69.5, "y": 2.5, "z": deck, "model": "nc/return_phase_echo"}
+            ]
+        5:
+            trigger = 86
+            hint = "SAW SHUTTLES // JUMP OR CROSS BEHIND THE BLADES"
+            for i in range(0, 2):
+                local x = 75.5 + i * 4.75
+                pieces.push({"x": x, "y": 2.5, "z": deck + 0.43, "model": "nc/return_saw"})
+                sector_return_props.push({"x": x, "y": 3.55, "z": deck, "model": "nc/return_saw_track"})
+        7:
+            trigger = 87
+            hint = "ICE FALL // KEEP MOVING PAST THE TARGET MARKERS"
+            pieces = [
+                {"x": 82, "y": 2.5, "z": deck, "model": "nc/return_ice_target", "visible": false},
+                {"x": 82, "y": 2.5, "z": deck, "model": "nc/return_ice_shard", "visible": false}
+            ]
+        8:
+            trigger = 85
+            hint = "LISTENING POST // STOP SHOOTING TO STAY UNDETECTED"
+            pieces.push({"x": 74.5, "y": 3.45, "z": deck, "model": "nc/return_listener"})
+        9:
+            trigger = 92
+            hint = "ASSEMBLY PRESSES // CROSS AS THE JAWS RISE"
+            for i in range(0, 2):
+                local x = 79.5 + i * 5
+                local base = {"x": x, "y": 2.6, "z": deck, "model": "nc/return_press_base"}
+                sector_return_props.push(base)
+                pieces.push({"x": x, "y": 2.6, "z": deck + 3.1, "model": "nc/return_press", "base": base})
+        10:
+            trigger = 80
+            hint = "PRISM GRID // JUMP THE LOW BEAMS AND WALK UNDER HIGH ONES"
+            for i in range(0, 2):
+                local x = 65.5 + i * 6
+                pieces.push({"x": x, "y": 2.75, "z": deck + 0.32, "model": "nc/return_prism_beam", "visible": false})
+                sector_return_props.push({"x": x, "y": 3.55, "z": deck, "model": "nc/return_prism_post"})
+        11:
+            trigger = 88
+            hint = "AEGIS CIRCUIT // JUMP THROUGH HIGH RINGS AND COLLECT ALL THREE"
+            for i in range(0, 3):
+                local height = i == 1 ? 0.72 : 1.92
+                pieces.push({"x": 81.5 - i * 4.75, "y": 2.5, "z": deck + height,
+                    "model": "nc/return_aegis", "visible": true})
+    if trigger > 0:
+        return_challenge = {"pieces": pieces, "trigger": trigger, "hint": hint, "age": 0,
+            "charge": 0, "spent": false, "rings": 0, "shield": false}
+        for piece in pieces:
+            sector_return_props.push(piece)
+
+action step_return_challenge:
+    local challenge = return_challenge
+    if challenge.age == 0:
+        stop when player.x > challenge.trigger
+        notice_text = challenge.hint
+        notice_ticks = 115
+    challenge.age = challenge.age + 1
+    match current_stage:
+        2:
+            call step_mag_rail challenge
+        3:
+            call step_pyro_purge challenge
+        4:
+            for echo in challenge.pieces:
+                if !echo.real:
+                    echo.dissolve = 0.2 + 0.38 * abs(sin(challenge.age * 15 + echo.x * 13))
+        5:
+            call step_saw_shuttles challenge
+        7:
+            call step_glacier_fall challenge
+        8:
+            call step_ghost_listener challenge
+        9:
+            call step_hydra_presses challenge
+        10:
+            call step_prism_grid challenge
+        11:
+            call step_omega_aegis challenge
+
+action step_mag_rail(challenge):
+    stop when player.x < 62 || player.x > 82
+    local cycle = (challenge.age - 1) % 72
+    local west = cycle < 40
+    for i in range(0, challenge.pieces.length):
+        local tile = challenge.pieces[i]
+        tile.model = west ? "nc/return_mag_west" : "nc/return_mag_east"
+        tile.dissolve = (i * (west ? -1 : 1) + floor(cycle / 4) + 6) % 5 == 0 ? 0 : 0.23
+    if player.x > 66.55 && player.x < 75.65 && abs(player.y - 2.5) < 0.52 && player.z < escape_deck_z + 0.26:
+        call move_on_deck player, (west ? 180 : 0), (west ? 0.15 : 0.09), 0.28
+
+action step_pyro_purge(challenge):
+    stop when challenge.spent
+    local age = challenge.age
+    if age == 1:
+        sound.play "nc_enemy_charge"
+    if age == 22:
+        sound.play "nc_return_purge"
+    if age >= 22:
+        local x = 76 - (age - 22) * 0.45
+        if x < 57.5:
+            challenge.spent = true
+        for jet in challenge.pieces:
+            jet.x = x
+            jet.model = "nc/return_purge_fire"
+            jet.visible = !challenge.spent && voxel_get(world, floor(x), floor(jet.y), escape_deck_z) == 0
+            if jet.visible && abs(player.x - x) < 0.53 && abs(player.y - jet.y) < 0.65 && player.z < escape_deck_z + 0.86:
+                call hurt_player 1
+
+action hit_phase_cache(shot):
+    for core in return_challenge.pieces:
+        if core.visible != false && shot.life > 0 && distance(shot, core) < 0.62 && abs(shot.z - core.z - 0.82) < 0.68:
+            core.visible = false
+            if !shot.pierce:
+                shot.life = 0
+            if core.real:
+                escape_ticks = max(0, escape_ticks - 120)
+                notice_text = "PHASE CACHE // UP TO FOUR SECONDS ADDED"
+                notice_ticks = 90
+                call burst_on_deck core.x, core.y
+                sound.play "nc_pickup"
+            if !core.real:
+                sound.play "nc_hit"
+
+action step_saw_shuttles(challenge):
+    stop when player.x < 70 || player.x > 90
+    for i in range(0, challenge.pieces.length):
+        local saw = challenge.pieces[i]
+        saw.y = 3.53 + 1.05 * cos(challenge.age * 10 + i * 180)
+        saw.angle = (challenge.age * 34) % 360
+        if distance(player, saw) < 0.58 && player.z < escape_deck_z + 0.81:
+            call hurt_player 1
+
+action step_glacier_fall(challenge):
+    local mark = challenge.pieces[0]
+    local shard = challenge.pieces[1]
+    local cycle = (challenge.age - 1) % 48
+    if cycle == 0:
+        mark.visible = player.x > 75 && player.x < 88
+        if mark.visible:
+            mark.x = player.x - 3.5
+            mark.y = player.y
+            shard.x = mark.x
+            shard.y = mark.y
+            sound.play "nc_freeze"
+    mark.dissolve = cycle < 16 ? 0.28 : 0
+    shard.visible = mark.visible && cycle >= 18 && cycle < 25
+    if shard.visible:
+        shard.z = escape_deck_z + (24 - cycle) * 0.55
+    if mark.visible && cycle == 24:
+        if distance(player, mark) < 0.85:
+            call hurt_player 1
+        call burst_on_deck mark.x, mark.y
+        sound.play "nc_return_press"
+    if cycle == 25:
+        mark.visible = false
+
+action alert_ghost_listener:
+    local challenge = return_challenge
+    stop when challenge.spent || challenge.charge > 0 || player.x <= 72 || player.x >= 84
+    challenge.charge = 24
+    challenge.pieces[0].model = "nc/return_listener_alert"
+    notice_text = "SIGNAL TRACED // MOVE OUT OF THE CROSSHAIRS"
+    notice_ticks = 70
+    sound.play "nc_enemy_charge"
+
+action step_ghost_listener(challenge):
+    local listener = challenge.pieces[0]
+    if challenge.charge > 0:
+        challenge.charge = challenge.charge - 1
+        listener.angle = atan2(player.y - listener.y, player.x - listener.x)
+        if challenge.charge == 0:
+            for offset in [-9, 0, 9]:
+                local angle = listener.angle + offset
+                enemy_shots.push({"x": listener.x, "y": listener.y, "z": escape_deck_z + 0.75,
+                    "vx": cos(angle) * 0.52, "vy": sin(angle) * 0.52, "life": 23,
+                    "model": "nc/enemy_shot", "angle": angle})
+            sound.play "nc_enemy_fire"
+            listener.model = "nc/return_listener"
+            challenge.spent = true
+
+action step_hydra_presses(challenge):
+    stop when player.x < 75 || player.x > 95
+    for i in range(0, challenge.pieces.length):
+        local jaw = challenge.pieces[i]
+        local cycle = (challenge.age + i * 27) % 80
+        jaw.z = escape_deck_z + 3.1
+        local dropping = cycle >= 34 && cycle < 63
+        jaw.base.model = dropping ? "nc/return_press_base_warn" : "nc/return_press_base"
+        jaw.model = dropping ? "nc/return_press_warn" : "nc/return_press"
+        if cycle >= 48 && cycle < 63:
+            jaw.z = escape_deck_z + 3.1 * (1 - min(1, (cycle - 48) / 5))
+        if cycle >= 63 && cycle < 72:
+            jaw.z = escape_deck_z + 3.1 * (cycle - 63) / 9
+        if cycle == 53 && abs(player.x - jaw.x) < 9:
+            sound.play "nc_return_press"
+        if jaw.z < escape_deck_z + 1.5 && abs(player.x - jaw.x) < 0.78 && abs(player.y - jaw.y) < 0.78:
+            call hurt_player 1
+
+action step_prism_grid(challenge):
+    stop when player.x < 61 || player.x > 85
+    for i in range(0, challenge.pieces.length):
+        local beam = challenge.pieces[i]
+        local cycle = (challenge.age + i * 21) % 84
+        local high = cycle >= 42
+        local sweep = cycle % 42
+        beam.z = escape_deck_z + (high ? 1.82 : 0.28)
+        beam.model = sweep < 12 ? "nc/return_prism_warn" : "nc/return_prism_beam"
+        beam.visible = sweep < 32
+        if sweep >= 12 && sweep < 32 && abs(player.x - beam.x) < 0.42 && abs(player.y - beam.y) < 0.76:
+            if player.z <= beam.z + 0.18 && player.z + 1.12 >= beam.z:
+                call hurt_player 1
+
+action step_omega_aegis(challenge):
+    stop when challenge.spent
+    for ring in challenge.pieces:
+        if ring.visible && distance(player, ring) < 0.7 && abs(player.z + 0.72 - ring.z) < 0.54:
+            ring.visible = false
+            challenge.rings = challenge.rings + 1
+            notice_text = "AEGIS RINGS // " + challenge.rings + "/3"
+            notice_ticks = 65
+            sound.play "nc_pickup"
+    if challenge.rings == 3:
+        challenge.shield = true
+        challenge.spent = true
+        notice_text = "AEGIS READY // ABSORBS THE NEXT HIT"
+        notice_ticks = 100
+        sound.play "nc_barrier_open"

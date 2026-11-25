@@ -40,13 +40,32 @@ action burst(bx, bz, count):
         })
     effects = effects.slice(max(0, effects.length - 96))
 
-action victory_sparkles(vx, vz):
+action burst_on_deck(x, y):
+    for i in range(0, 16):
+        local bearing = i * 137 + ticks * 19
+        local speed = 0.06 + (i % 5) * 0.05
+        local life = 12 + (i % 5) * 3
+        effects.push({
+            "x": x, "y": y, "z": escape_deck_z + 0.75,
+            "dx": cos(bearing) * speed, "dy": sin(bearing) * speed, "dz": 0.11 + (i % 4) * 0.03,
+            "ttl": life, "life": life, "angle": bearing, "spin": 18,
+            "scale": i % 3 == 0 ? 0.9 : 0.6, "dissolve": 0,
+            "model": i % 3 == 0 ? "nc/scrap" : "nc/spark", "kind": "debris", "visible": true
+        })
+    effects.push({
+        "x": x, "y": y, "z": escape_deck_z + 0.75,
+        "dx": 0, "dz": 0, "ttl": 8, "life": 8, "angle": 0, "spin": 12,
+        "scale": 0.5, "dissolve": 0, "model": "nc/blast", "kind": "blast", "visible": true
+    })
+    effects = effects.slice(max(0, effects.length - 96))
+
+action victory_sparkles:
     for i in range(0, 10):
         bearing = i * 36 + victory_ticks * 7
         effects.push({
-            "x": vx + cos(bearing) * 0.7,
-            "y": 7.3,
-            "z": vz + 1.8 + sin(bearing) * 0.6,
+            "x": player.x + cos(bearing) * 0.85,
+            "y": player.y + sin(bearing) * 0.85,
+            "z": player.z + 1.8,
             "dx": cos(bearing) * 0.04,
             "dz": sin(bearing) * 0.03 + 0.025,
             "ttl": 22,
@@ -65,6 +84,8 @@ action update_effects:
     for fx in effects:
         fx.ttl = fx.ttl - 1
         fx.x = fx.x + fx.dx
+        if fx.dy:
+            fx.y = fx.y + fx.dy
         fx.z = fx.z + fx.dz
         fx.angle = (fx.angle + fx.spin) % 360
         if fx.kind == "debris":
@@ -103,7 +124,7 @@ action sync_weapon_model:
         "z": player.z + (ducking ? 0.55 : 0.85),
         "model": gun,
         "angle": facing > 0 ? 0 : 180,
-        "visible": status == "playing" && (invulnerable <= 0 || invulnerable % 4 < 2)
+        "visible": status == "playing" && !escape_active && !master_active && (invulnerable <= 0 || invulnerable % 4 < 2)
     }
 
 action toggle_weapon_wheel:
@@ -248,6 +269,27 @@ action fire_weapon(aim_up):
         weapon_energy = max(0, weapon_energy - cost)
 
     cooldown = cd
+    if escape_active || master_active:
+        local heading = master_active ? master_angle : escape_angle
+        dx = cos(heading)
+        dy = sin(heading)
+        shots.push({
+            "x": player.x + dx * 0.55,
+            "y": player.y + dy * 0.55,
+            "z": player.z + (master_active && master_mini ? 0.57 : 0.8),
+            "vx": dx * spd,
+            "vy": dy * spd,
+            "kind": w,
+            "dmg": dmg,
+            "life": life,
+            "pierce": pierce,
+            "model": model,
+            "angle": heading
+        })
+        sound.play sfx
+        if escape_active && current_stage == 8:
+            call alert_ghost_listener
+        stop when true
     vx = aim_up ? 0 : facing * spd
     vz = aim_up ? spd : 0
     shots.push({
@@ -630,6 +672,43 @@ action fire_boss_pattern(aim, rage, st, is_special):
             "model": "nc/enemy_shot"
         })
 
+# Bosses occupy the same side plane as Axel. Their core has a 1.44 by 1.8
+# tile footprint, with wings and satellites clear of the collision body.
+action move_boss_x(dx):
+    stop when dx == 0
+    local radius = 0.72
+    local left_limit = max(radius, boss_entity.home_x - 13)
+    local right_limit = min(level_width - radius, boss_entity.home_x + 4)
+    local move = {"target": clamp(boss_entity.x + dx, left_limit, right_limit)}
+    local edge_offset = dx > 0 ? radius - 0.001 : 0.001 - radius
+    local col = floor(move.target + edge_offset)
+    if col != floor(boss_entity.x + edge_offset):
+        local bottom = floor(boss_entity.z + 0.001)
+        local top = floor(boss_entity.z + 1.799)
+        for row in range(bottom, top + 1):
+            if voxel_get(world, col, 7, row) != 0:
+                move.target = dx > 0 ? col - radius : col + 1 + radius
+                stop when true
+    if move.target != boss_entity.x + dx:
+        boss_entity.dir = dx > 0 ? -1 : 1
+    boss_entity.x = move.target
+
+action move_boss_z(dz):
+    stop when dz == 0
+    local height = 1.8
+    local target = clamp(boss_entity.z + dz, 1, world.depth - height)
+    local row = dz < 0 ? floor(target - 0.001) : floor(target + height - 0.001)
+    local left = floor(boss_entity.x - 0.719)
+    local right = floor(boss_entity.x + 0.719)
+    boss_grounded = false
+    boss_entity.z = target
+    for col in range(left, right + 1):
+        if voxel_get(world, col, 7, row) != 0:
+            boss_entity.z = dz < 0 ? row + 1 : row - height
+            boss_entity.vz = 0
+            boss_grounded = dz < 0
+            stop when true
+
 action step_boss:
     stop when !boss_entity.alive || !boss_entity.visible
     aim = player.x < boss_entity.x ? -1 : 1
@@ -653,7 +732,7 @@ action step_boss:
         st = stages[current_stage]
         notice_text = "WARNING: " + st.name + " ENGAGED!"
         notice_ticks = 95
-        call play_stage_music "nc_boss"
+        call play_stage_music (st.tier == 2 ? "nc_master_boss" : "nc_boss")
 
     if !boss_active:
         boss_entity.angle = 212 + sin(ticks * 0.08) * 18
@@ -693,9 +772,10 @@ action step_boss:
         boss_state_ticks = 0
 
     # Movement, vertical physics, & expressive body animation per state
+    local dx = 0
     target_scale = 1.0
     if boss_state == "patrol":
-        boss_entity.x = boss_entity.x + boss_entity.dir * 0.12 * rage
+        dx = boss_entity.dir * 0.12 * rage
         boss_entity.angle = face_angle + sin(boss_clock * 0.28) * 16
         target_scale = 1.0 + abs(sin(boss_clock * 0.34)) * 0.055
         boss_entity.cd = boss_entity.cd - 1
@@ -712,40 +792,31 @@ action step_boss:
 
     if boss_state == "special":
         if is_dash:
-            boss_entity.x = boss_entity.x + boss_entity.dir * 0.28 * rage
+            dx = boss_entity.dir * 0.28 * rage
             boss_entity.angle = (boss_clock * 28) % 360
             target_scale = 1.05
             if boss_state_ticks % 7 == 0:
                 call burst boss_entity.x - boss_entity.dir * 0.4, boss_entity.z + 0.9, 2
         else:
-            boss_entity.x = boss_entity.x + boss_entity.dir * 0.18 * rage
+            dx = boss_entity.dir * 0.18 * rage
             boss_entity.angle = (face_angle + sin(boss_clock * 0.45) * 26) % 360
             target_scale = 1.06
 
-    if boss_entity.x < boss_entity.home_x - 13:
-        boss_entity.x = boss_entity.home_x - 13
-        boss_entity.dir = 1
-    if boss_entity.x > boss_entity.home_x + 4:
-        boss_entity.x = boss_entity.home_x + 4
-        boss_entity.dir = -1
-
+    call move_boss_x dx
+    local was_air = !boss_grounded
     if is_hover:
-        hover_z = boss_entity.home_z + 0.65 + sin(boss_clock * 0.16) * 0.45
-        boss_entity.z = boss_entity.z + (hover_z - boss_entity.z) * 0.2
+        local hover_z = boss_entity.home_z + 0.65 + sin(boss_clock * 0.16) * 0.45
         boss_entity.vz = 0
+        call move_boss_z (hover_z - boss_entity.z) * 0.2
     else:
-        if boss_state == "patrol" && boss_clock % 85 == 0 && boss_entity.z <= boss_entity.home_z + 0.05:
+        if boss_state == "patrol" && boss_clock % 85 == 0 && boss_grounded:
             boss_entity.vz = 0.42
-        was_air = boss_entity.z > boss_entity.home_z + 0.08
-        boss_entity.vz = boss_entity.vz - 0.032
-        boss_entity.z = boss_entity.z + boss_entity.vz
-        if boss_entity.z < boss_entity.home_z:
-            boss_entity.z = boss_entity.home_z
-            boss_entity.vz = 0
-            if was_air:
-                boss_land_ticks = 8
-                cam_shake = 6
-                call burst boss_entity.x, boss_entity.z + 0.2, 8
+        boss_entity.vz = max(-0.44, boss_entity.vz - 0.032)
+        call move_boss_z boss_entity.vz
+    if was_air && boss_grounded:
+        boss_land_ticks = 8
+        cam_shake = 6
+        call burst boss_entity.x, boss_entity.z + 0.2, 8
 
     if boss_land_ticks > 0:
         boss_land_ticks = boss_land_ticks - 1
@@ -762,10 +833,15 @@ action step_boss:
 action step_enemy_shots:
     next_es = []
     for s in enemy_shots:
+        local old_x = s.x
+        local old_z = s.z
         s.x = s.x + s.vx
         s.z = s.z + s.vz
         s.life = s.life - 1
         alive = s.life > 0 && s.x > 0 && s.x < level_width - 1 && s.z > 0 && s.z < level_height + 2
+        if alive:
+            call stop_shot_at_cover s, old_x, old_z, s.z, false
+            alive = s.life > 0
         if alive:
             if abs(s.x - player.x) < 0.75 && abs(s.z - (player.z + 0.8)) < 0.95:
                 call hurt_player 1
@@ -773,6 +849,32 @@ action step_enemy_shots:
         if alive:
             next_es.push(s)
     enemy_shots = next_es
+
+action stop_shot_at_cover(shot, from_x, from_row, to_row, overhead):
+    local start_x = floor(from_x)
+    local start_row = floor(from_row)
+    local end_x = floor(shot.x)
+    local end_row = floor(to_row)
+    local start_y = overhead ? start_row : 7
+    local start_z = overhead ? floor(shot.z) : start_row
+    local end_y = overhead ? end_row : 7
+    local end_z = overhead ? start_z : end_row
+    if voxel_get(world, start_x, start_y, start_z) != 0 || voxel_get(world, end_x, end_y, end_z) != 0:
+        shot.life = 0
+        stop when true
+    # A shot travels less than one tile per axis per tick. When it crosses
+    # both grid lines, check the tile between the first and second crossing.
+    if start_x != end_x && start_row != end_row:
+        local x_line = max(start_x, end_x)
+        local row_line = max(start_row, end_row)
+        local x_time = (x_line - from_x) / (shot.x - from_x)
+        local row_time = (row_line - from_row) / (to_row - from_row)
+        local middle_x = x_time < row_time ? end_x : start_x
+        local middle_row = x_time < row_time ? start_row : end_row
+        local middle_y = overhead ? middle_row : 7
+        local middle_z = overhead ? start_z : middle_row
+        if x_time != row_time && voxel_get(world, middle_x, middle_y, middle_z) != 0:
+            shot.life = 0
 
 action on_boss_defeated:
     boss_entity.alive = false
@@ -788,13 +890,14 @@ action on_boss_defeated:
     avatar.visible = true
     avatar.dissolve = 0
     st = stages[current_stage]
-    campaign.defeated[st.code] = true
-    if st.unlocks != "":
-        campaign.weapons[st.unlocks] = true
-        active_weapon = st.unlocks
-    call count_progress
+    call play_stage_music "nc_boss_victory"
     sound.play "nc_explode"
     call burst boss_entity.x, boss_entity.z + 1.2, 16
+    call unlock_boss_door
+    boss_shutter_fx.visible = false
+    call start_glass_lift
+    sound.play "nc_glass_raise"
+    call start_overload_light
     status = "boss_dying"
     notice_text = st.name + " CRITICAL OVERLOAD!"
     notice_ticks = 90
@@ -802,10 +905,12 @@ action on_boss_defeated:
 
 action tick_boss_dying:
     boss_defeat_ticks = boss_defeat_ticks + 1
+    call update_overload_light
     boss_entity.dissolve = clamp(boss_defeat_ticks / 72, 0, 0.98)
     boss_entity.angle = (boss_entity.angle + 18) % 360
     boss_entity.scale = max(0.75, 1.05 - boss_defeat_ticks * 0.004)
-    boss_entity.x = boss_entity.home_x + (boss_defeat_ticks % 2 == 0 ? 0.16 : -0.16)
+    call raise_glass_screen boss_defeat_ticks / 75
+    call capture_escape_terrain floor(level_width * min(1, boss_defeat_ticks / 60))
     for sat in boss_satellites:
         sat.angle = (sat.angle + 28) % 360
         sat.z = sat.z + 0.025
@@ -837,259 +942,51 @@ action tick_boss_dying:
         stop when true
     call refresh_ui
 
-action start_escape_flip:
-    status = "escape_flip"
-    escape_flip_ticks = 0
-    escape_ticks = 0
-    shots = []
-    enemy_shots = []
-    call unlock_boss_door
-    boss_shutter_fx.visible = false
-
-    facing = -1
-    player.vz = 0
-    avatar.x = player.x
-    avatar.y = player.y
-    avatar.z = player.z
-    avatar.model = "nc/hero_idle"
-    avatar.angle = 180
-    avatar.dissolve = 0
-    avatar.visible = true
-    weapon_model.visible = false
-
-    power_capsule.x = 4.5
-    power_capsule.y = 7.0
-    power_capsule.z = 1.95
-    power_capsule.model = "nc/power_capsule"
-    power_capsule.angle = 0
-    power_capsule.scale = 1.15
-    power_capsule.visible = true
-
-    victory_item.x = 4.5
-    victory_item.y = 7.0
-    victory_item.z = 3.05
-    victory_item.model = "nc/victory_orb"
-    victory_item.scale = 0.95
-    victory_item.visible = true
-
-    panels = []
-    for i in range(0, 17):
-        panels.push({
-            "x": 3.5 + i * 7.5,
-            "y": 3.8,
-            "z": 13.5,
-            "model": "nc/sliding_wall_panel",
-            "angle": 0,
-            "scale": 1.0,
-            "visible": true
-        })
-    escape_floor = panels
-    sound.play "nc_dash"
-    call refresh_ui
-
-action tick_escape_flip:
-    escape_flip_ticks = escape_flip_ticks + 1
-    t = clamp(escape_flip_ticks / 45.0, 0, 1.0)
-    player.z = player.z + (2.0 - player.z) * 0.22
-    avatar.x = player.x
-    avatar.y = player.y
-    avatar.z = player.z
-    avatar.model = "nc/hero_idle"
-    avatar.angle = 180
-    avatar.visible = true
-
-    if escape_flip_ticks <= 22:
-        s1 = clamp(escape_flip_ticks / 22.0, 0, 1.0)
-        wall_z = 13.5 - s1 * 11.5
-        for p in escape_floor:
-            p.model = "nc/sliding_wall_panel"
-            p.y = 3.8
-            p.z = wall_z
-            p.angle = 0
-
-    if escape_flip_ticks == 23:
-        sound.play "nc_barrier_open"
-        cam_shake = 6
-        world = voxel_fill(world, [1, 4, 1], [level_width - 2, 8, level_height - 1], 0)
-        for sc in scenery:
-            if sc.y > 4.2:
-                sc.visible = false
-        for e in enemies:
-            e.visible = false
-        for pk in pickups:
-            pk.visible = false
-        for cp in checkpoints:
-            cp.visible = false
-        for bf in barriers_fx:
-            bf.visible = false
-        for hf in hazards_fx:
-            hf.visible = false
-
-    if escape_flip_ticks > 22:
-        s2 = clamp((escape_flip_ticks - 22) / 23.0, 0, 1.0)
-        floor_y = 4.6 + s2 * 2.4
-        floor_z = 1.75 - s2 * 0.50
-        for p in escape_floor:
-            p.model = "nc/sliding_floor_wall"
-            p.y = floor_y
-            p.z = floor_z
-            p.angle = 0
-
-    camera.angle = 270.0 - t * 32.0
-    camera.pitch = -t * 42.0
-    camera.x = clamp(player.x + t * 3.5, 4.0, level_width - 1.5)
-    camera.y = clamp(19.0 - t * 5.5, 4.0, 19.2)
-    camera.z = clamp(player.z + 2.5 + t * 3.7, 2.5, 14.5)
-    if escape_flip_ticks % 15 == 0:
-        sound.play "nc_dash"
-        call burst player.x, player.z + 0.5, 4
-    if escape_flip_ticks >= 45:
-        player.z = 2.0
-        sound.play "nc_checkpoint"
-        status = "escape"
-        escape_ticks = 0
-        st = stages[current_stage]
-        call play_stage_music st.music
-        notice_text = "PERSPECTIVE SHIFT COMPLETE // ESCAPE TO START"
-        notice_ticks = 90
-    call refresh_ui
-
-action tick_escape(input):
-    escape_ticks = escape_ticks + 1
-    spd_mult = input.dash == true ? 1.4 : 1.0
-    move_x = 0
-    if input.left == true || (input.move_x != null && input.move_x < -0.25):
-        move_x = -0.34 * spd_mult
-        facing = -1
-    if input.right == true || (input.move_x != null && input.move_x > 0.25):
-        move_x = 0.34 * spd_mult
-        facing = 1
-    move_y = 0
-    if input.aim_up == true || input.up == true || (input.duck_axis != null && input.duck_axis < -0.25):
-        move_y = -0.22 * spd_mult
-    if input.duck == true || input.down == true || (input.duck_axis != null && input.duck_axis > 0.25):
-        move_y = 0.22 * spd_mult
-    player.x = clamp(player.x + move_x, 3.0, level_width - 3.0)
-    player.y = clamp(player.y + move_y, 5.0, 9.0)
-    if input.jump == true && player.z <= 2.05:
-        player.vz = 0.40
-        sound.play "nc_jump"
-    player.vz = player.vz - 0.028
-    player.z = player.z + player.vz
-    if player.z < 2.0:
-        player.z = 2.0
-        player.vz = 0
-
-    iso_angle = facing < 0 ? 180 : 0
-    if move_x < -0.01 && move_y < -0.01:
-        iso_angle = 215
-    if move_x < -0.01 && move_y > 0.01:
-        iso_angle = 145
-    if move_x > 0.01 && move_y < -0.01:
-        iso_angle = 325
-    if move_x > 0.01 && move_y > 0.01:
-        iso_angle = 35
-    if abs(move_x) <= 0.01 && move_y < -0.01:
-        iso_angle = 270
-    if abs(move_x) <= 0.01 && move_y > 0.01:
-        iso_angle = 90
-
-    is_moving = abs(move_x) > 0.01 || abs(move_y) > 0.01
-    hero_m = "nc/hero_idle"
-    if is_moving:
-        run_f = floor(escape_ticks / 3) % 4
-        if run_f == 0:
-            hero_m = "nc/hero_run0"
-        if run_f == 1:
-            hero_m = "nc/hero_run1"
-        if run_f == 2:
-            hero_m = "nc/hero_run2"
-        if run_f == 3:
-            hero_m = "nc/hero_run3"
-    if is_moving && input.dash == true:
-        hero_m = "nc/hero_dash"
-    if player.z > 2.08:
-        hero_m = "nc/hero_jump"
-
-    avatar.x = player.x
-    avatar.y = player.y
-    avatar.z = player.z
-    avatar.angle = iso_angle
-    avatar.model = hero_m
-    avatar.dissolve = 0
-    avatar.visible = true
-    weapon_model.visible = false
-    cam_tx = clamp(player.x + 3.5, 4.0, level_width - 1.5)
-    cam_ty = clamp(player.y + 6.5, 4.0, 18.5)
-    cam_tz = clamp(player.z + 6.2, 2.5, 14.5)
-    camera.x = camera.x + (cam_tx - camera.x) * 0.25
-    camera.y = camera.y + (cam_ty - camera.y) * 0.25
-    camera.z = camera.z + (cam_tz - camera.z) * 0.25
-    camera.angle = 238
-    camera.pitch = -42
-    power_capsule.angle = (escape_ticks * 2) % 360
-    victory_item.x = power_capsule.x
-    victory_item.y = power_capsule.y
-    victory_item.z = power_capsule.z + 1.1 + sin(escape_ticks * 0.12) * 0.12
-    victory_item.angle = (escape_ticks * 5) % 360
-    dist_x = abs(player.x - power_capsule.x)
-    dist_y = abs(player.y - power_capsule.y)
-    if dist_x < 2.0 && dist_y < 2.2:
-        call collect_power_container
-        stop when true
-    call update_effects
-    call refresh_ui
-
 action collect_power_container:
+    st = stages[current_stage]
+    local new_master = st.tier == 2 && campaign.defeated[st.code] != true
+    if escape_first_person:
+        escape_first_person = false
+        view_weapon = null
+        camera.y = 5.7
+        camera.z = escape_deck_z + 15
+        camera.angle = 270
+        camera.pitch = -85
+    campaign.defeated[st.code] = true
+    if st.unlocks != "":
+        campaign.weapons[st.unlocks] = true
+        active_weapon = st.unlocks
+    call count_progress
+    call count_master_keys
+    master_just_unlocked = new_master && master_keys == 6 && campaign.super_code != true
     power_capsule.model = "nc/power_capsule_open"
     power_capsule.angle = 0
     sound.play "nc_weapon_get"
     call play_stage_music "nc_victory"
     status = "boss_victory"
     victory_ticks = 0
-    player.x = power_capsule.x + 2.2
-    player.y = 7.0
-    player.z = 2.05
+    victory_input_held = false
+    shots = []
+    enemy_shots = []
     avatar.x = player.x
-    avatar.y = 7.0
+    avatar.y = player.y
     avatar.z = player.z
     avatar.model = "nc/hero_victory"
     avatar.angle = 0
     avatar.visible = true
-    weapon_model.visible = false
     victory_item.x = player.x
     victory_item.y = player.y
     victory_item.z = player.z + 2.3
     victory_item.visible = true
-    call victory_sparkles player.x, player.z
-    camera.x = 9.5
-    camera.angle = 270
-    camera.pitch = 0
-    camera.y = 18
+    call victory_sparkles
     call refresh_ui
 
 action tick_boss_victory(input):
     victory_ticks = victory_ticks + 1
-    avatar.x = player.x
-    avatar.y = 7
-    avatar.z = player.z
-    avatar.model = "nc/hero_victory"
-    avatar.angle = 0
-    avatar.visible = true
-    cam_tx = max(9.5, min(level_width - 10.5, player.x))
-    cam_tz = max(4.2, min(level_height - 2.5, player.z + 3.4))
-    camera = {
-        "x": camera.x + (cam_tx - camera.x) * 0.25,
-        "y": 18,
-        "z": camera.z + (cam_tz - camera.z) * 0.25,
-        "angle": 270,
-        "pitch": 0
-    }
-    victory_item.x = player.x
     victory_item.z = player.z + 2.3 + sin(victory_ticks * 6) * 0.12
     victory_item.angle = (victory_ticks * 5) % 360
     if victory_ticks == 20 || victory_ticks == 45:
-        call victory_sparkles player.x, player.z
+        call victory_sparkles
     call update_effects
     pressed = (input.jump == true || input.fire == true) && !victory_input_held
     victory_input_held = input.jump == true || input.fire == true
@@ -1101,9 +998,9 @@ action tick_boss_victory(input):
 action finish_boss_victory:
     victory_item.visible = false
     power_capsule.visible = false
-    escape_floor = []
-    if defeated_count >= 12:
-        status = "won"
-    if defeated_count < 12:
-        status = "stage_clear"
+    if master_just_unlocked:
+        master_just_unlocked = false
+        call visit_master_gate
+        stop when true
+    status = "stage_clear"
     call refresh_ui

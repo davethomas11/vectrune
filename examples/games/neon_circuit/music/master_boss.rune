@@ -1,0 +1,36 @@
+# Master Robot battle theme in D harmonic minor, with a heavy three-beat pulse.
+@Music/nc_master_boss
+type = synth
+tempo = 144
+time_signature = 3/4
+loop = true
+volume = 0.072
+instruments = {"lead":"brass","arp":"bell","harmony":"strings","bass":"triangle","drums":"drums"}
+effects = {
+    "delay": {"time": 0.2083, "feedback": 0.24, "wet": 0.16, "damping": 3100},
+    "reverb": {"decay": 1.1, "wet": 0.12, "filter": 3400}
+}
+track_effects = {
+    "arp": {"delay": 0.28, "reverb": 0.16},
+    "harmony": {"reverb": 0.18},
+    "bass": {"delay": 0, "reverb": 0}
+}
+sections = {
+    "lockdown": {
+        "bars": 4,
+        "lead": "D5:4 F5:8 E5:8 A4:4 | Bb4:4 D5:8 C#5:8 A4:4 | G4:8 Bb4:8 D5:4 F5:8 E5:8 | C#5:4 A4:4 R:4",
+        "arp": "R:8 A4:8 D5:8 F5:8 A5:4 | R:8 F4:8 Bb4:8 D5:8 F5:4 | R:8 D4:8 G4:8 Bb4:8 D5:4 | E4:8 A4:8 C#5:8 E5:8 A5:4",
+        "harmony": "[D3,A3,F4]:2 [D3,F4]:4 | [Bb2,F3,D4]:2 [Bb2,D4]:4 | [G2,D3,Bb3]:2 [G3,Bb3]:4 | [A2,E3,C#4]:2 [A3,C#4]:4",
+        "bass": "D2:4 R:8 D3:8 A1:4 | Bb1:4 R:8 Bb2:8 F2:4 | G1:4 D2:8 G2:8 Bb1:4 | A1:4 E2:8 A2:8 C#2:4",
+        "drums": "kick:8 hihat:8 snare:8 kick:8 tom:8 hihat:8 | kick:8 hihat:8 tom:8 snare:8 kick:8 hihat:8 | kick:8 kick:8 snare:8 hihat:8 tom:8 hihat:8 | kick:8 hihat:8 snare:8 tom:8 tom:8 crash:8"
+    },
+    "overdrive": {
+        "bars": 4,
+        "lead": "A5:4 F5:8 E5:8 D5:4 | G5:8 F5:8 D5:4 Bb4:4 | C#5:8 E5:8 G5:8 Bb5:8 A5:4 | E5:4 C#5:4 D5:4",
+        "arp": "D5:8 A4:8 F5:8 A4:8 D6:8 A4:8 | Bb4:8 F4:8 D5:8 F4:8 Bb5:8 F4:8 | C#5:8 G4:8 E5:8 G4:8 Bb5:8 G4:8 | E5:8 A4:8 C#5:8 A4:8 D5:8 R:8",
+        "harmony": "[D3,F3,A3]:2 [F3,A3]:4 | [Bb2,D3,F3]:2 [D3,F3]:4 | [C#3,E3,G3,Bb3]:2 [A2,E3]:4 | [A2,E3,C#4]:2 [D3,F3,A3]:4",
+        "bass": "D2:8 D2:8 A1:8 D2:8 F2:8 A2:8 | Bb1:8 Bb1:8 F2:8 Bb1:8 D2:8 F2:8 | C#2:8 C#2:8 E2:8 G2:8 A1:8 E2:8 | A1:8 E2:8 A2:8 C#2:8 D2:4",
+        "drums": "crash:8 kick:8 snare:8 kick:8 hihat:8 kick:8 | kick:8 hihat:8 snare:8 kick:8 tom:8 hihat:8 | kick:8 kick:8 snare:8 tom:8 snare:8 hihat:8 | kick:8 tom:8 snare:8 tom:8 kick:8 crash:8"
+    }
+}
+arrangement = ["lockdown","overdrive","lockdown"]

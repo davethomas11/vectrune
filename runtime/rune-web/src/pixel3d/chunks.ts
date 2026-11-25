@@ -4,6 +4,7 @@ import {ownValue,rawValue} from '../ownership';
 export const MAX_WORLD_AXIS = 4096;
 export const MAX_WORLD_DEPTH = 256;
 export const MAX_RESIDENT_CHUNKS = 16384;
+const MAX_RENDER_MIRROR_CELLS = 131072;
 export interface ChunkWorld {
   width:number; height:number; depth:number; materials:string[]; cells:number[];
   storage?:string; chunks?:Record<string,number[]>; renderDistance?:number;
@@ -20,7 +21,7 @@ export class ChunkStore {
   /** Bounded render accelerator; large worlds retain sparse lookup. */
   prepareRenderCells():void {
     const volume=this.world.width*this.world.height*this.world.depth;
-    if(this.renderCells||volume>65536)return;
+    if(this.renderCells||volume>MAX_RENDER_MIRROR_CELLS)return;
     this.renderCells=new Uint16Array(volume);
     for(const [id,values] of this.raw)this.mirror(id,values);
   }

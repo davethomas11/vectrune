@@ -2751,19 +2751,20 @@
       "id": "music-play",
       "category": "host",
       "name": "music.play",
-      "signature": "music.play([name[, start_beat]])",
+      "signature": "music.play([name[, start_beat[, fade_seconds]]])",
       "summary": "Start a declared or composed music track.",
       "sources": [
         "runtime/rune-web/src/statement.ts"
       ],
       "returns": "Audio playback side effect.",
       "errors": "",
-      "example": "music.play(\"theme\", 4)",
+      "example": "music.play(\"theme\", 4, 0.45)",
       "parameters": [],
       "aliases": [
         "play_music"
       ],
       "notes": [
+        "The optional fade duration is in seconds, up to five seconds. The next track fades in while already scheduled notes and effects from the current track fade out.",
         "Rune-Web host/runtime API. Browser permission, user-gesture, storage, or audio capabilities may constrain the operation."
       ],
       "fields": []
@@ -2828,7 +2829,7 @@
       "sources": [
         "runtime/rune-web/src/statement.ts"
       ],
-      "returns": "Updates the audio engine tempo.",
+      "returns": "Queues a tempo change on a whole beat beyond the Web Audio scheduling window.",
       "errors": "",
       "example": "music.tempo = 140",
       "parameters": [],
@@ -3185,10 +3186,16 @@
           "description": "Voxel world state field; must exist."
         },
         {
+          "name": "lights",
+          "type": "string",
+          "default": "—",
+          "description": "State field containing up to eight point-light records. Available in voxel gameplay scenes and separately on a cinematic title scene, through the shared JavaScript CPU renderer."
+        },
+        {
           "name": "ui",
           "type": "string",
           "default": "—",
-          "description": "Structured HUD state field; must exist."
+          "description": "Structured HUD state field. Floating HUDs can include a countdown in fractional seconds from 0 to 3599. Set reticle to true to draw a centered aiming mark during play."
         },
         {
           "name": "pause_ui",
@@ -3449,6 +3456,24 @@
           "description": "Model coordinate unit scale."
         },
         {
+          "name": "emissive",
+          "type": "string",
+          "default": "—",
+          "description": "Opaque palette symbols whose model surfaces contribute to bloom in Enhanced lighting."
+        },
+        {
+          "name": "glass",
+          "type": "[number, number]",
+          "default": "—",
+          "description": "Full pane dimensions on local X and Y at Z=0, in model units. Enhanced lighting draws a transparent tint and a rim on the plane."
+        },
+        {
+          "name": "contact_shadow",
+          "type": "number",
+          "default": "—",
+          "description": "Contact shadow radius in world tiles, up to four. Enhanced lighting projects it onto supporting voxel terrain or glass."
+        },
+        {
           "name": "blocks",
           "type": "series",
           "default": "optional when shapes are present",
@@ -3495,6 +3520,12 @@
           "type": "number",
           "default": "0",
           "description": "Model rotation."
+        },
+        {
+          "name": "pitch",
+          "type": "number",
+          "default": "0",
+          "description": "Tilt around the model’s local Y axis in degrees, before horizontal angle. Supported by the shared JavaScript Pixel 3D renderer."
         },
         {
           "name": "scale",
@@ -3567,6 +3598,109 @@
           "type": "array",
           "default": "required",
           "description": "2–128 points, each with finite x, y, angle; optional height (default 0.5), pitch (default 0, range -85..85)."
+        }
+      ]
+    },
+    {
+      "id": "side-map",
+      "category": "games",
+      "name": "@SideMap",
+      "signature": "@SideMap/<name>",
+      "summary": "Build side-view voxel terrain and scenery from a row-based map with side_level.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/sidemap.ts",
+        "examples/games/neon_circuit/levels/01_volt.rune"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "legend = {\"#\": {\"voxel\": 1, \"depth\": [5, 4], \"center_voxel\": 2}}",
+      "parameters": [],
+      "aliases": [],
+      "notes": [],
+      "fields": [
+        {
+          "name": "legend.center_voxel",
+          "type": "integer",
+          "default": "optional",
+          "description": "1-based material ID for the two central Y tiles of an ordinary solid foreground entry. Requires a span of at least two tiles. A four-tile span retains its base material on each outside edge."
+        }
+      ]
+    },
+    {
+      "id": "voxel-point-light",
+      "category": "games",
+      "name": "voxel point light",
+      "signature": "lights = <state field>",
+      "summary": "Apply colored light to nearby visible scene and model surfaces.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/lighting.ts",
+        "examples/games/neon_circuit/lighting.rune"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "lights = [{\"x\": 4, \"y\": 9.5, \"z\": 3, \"color\": \"#20e9ff\", \"radius\": 5, \"intensity\": 0.8}]",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Supports up to eight lights with unshadowed distance falloff. Sky, side-on backdrops, and HUD are composited independently."
+      ],
+      "fields": [
+        {
+          "name": "x / y / z",
+          "type": "numbers",
+          "default": "required",
+          "description": "Finite world-space position."
+        },
+        {
+          "name": "color",
+          "type": "string or number",
+          "default": "required",
+          "description": "RGB color as #RRGGBB or an integer from 0 to 16777215."
+        },
+        {
+          "name": "radius",
+          "type": "number",
+          "default": "required",
+          "description": "Reach in world units, greater than zero and at most 64."
+        },
+        {
+          "name": "intensity",
+          "type": "number",
+          "default": "required",
+          "description": "Light strength from 0 to 1. Zero switches the light off."
+        }
+      ]
+    },
+    {
+      "id": "voxel-camera-state",
+      "category": "games",
+      "name": "voxel camera state",
+      "signature": "camera = <state path>",
+      "summary": "Animate voxel terrain and a side-on backdrop through a live camera record.",
+      "sources": [
+        "runtime/rune-web/src/pixel3d/voxel.ts",
+        "runtime/rune-web/src/pixel3d/raycaster.ts"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Available in browser and shared-JavaScript desktop voxel scenes. These fields belong to live camera state."
+      ],
+      "fields": [
+        {
+          "name": "terrainPose",
+          "type": "object",
+          "default": "optional",
+          "description": "Render this voxel world around an X-axis hinge. Set world, a local Y/Z pivot, a scene Y/Z position, and angle in degrees. Scene collision continues to use the scene world."
+        },
+        {
+          "name": "backdrop",
+          "type": "object",
+          "default": "optional",
+          "description": "Render a background from a side-on camera looking toward negative Y. Set y, z, and things. The optional x pins the view horizontally. By default it follows the main camera’s X position."
         }
       ]
     },
@@ -3667,6 +3801,12 @@
           "type": "number",
           "default": "parser default",
           "description": "Seconds."
+        },
+        {
+          "name": "attack",
+          "type": "number or duration",
+          "default": "0",
+          "description": "Time for a tone or noise sweep to rise from silence to full volume, expressed in seconds or with a unit such as 250ms."
         },
         {
           "name": "volume",

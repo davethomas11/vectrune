@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { sampleCamera, type CameraTrack } from '../src/pixel3d/camera';
 import { Raycaster3D, type MapData, type Texture } from '../src/pixel3d/raycaster';
+import { voxelWorld } from '../src/pixel3d/voxel';
 
 const sky = { seed: 1, zenith: 0xff080808, horizon: 0xff080808, cloud: 0xff080808, speed: 0 };
 const wall: Texture = { width: 8, height: 8, pixels: new Uint32Array(64).fill(0xff0000ff) };
@@ -97,4 +98,18 @@ it('depth-tests models against the same pitched wall and floor rays', () => {
   expect(Array.from(rc.buffer).some(c => c === 0xffcccccc || c === 0xffffffff || c === 0xffa5a5a5)).toBe(false);
   rc.render({ x: 1.5, y: 3.5, angle: 0, height: 4, pitch: -45 }, things);
   expect(Array.from(rc.buffer).some(c => c === 0xffffffff)).toBe(true);
+});
+
+it('keeps the side view of a voxel backdrop when the foreground camera tilts overhead', () => {
+  const rc = create();
+  rc.config.world = voxelWorld(8, 8, 8, ['wall']);
+  rc.config.models = { tower: { blocks: [{ from: [-.35, -.35, 0], size: [.7, .7, 3], color: 0xffeeeeee }] } };
+  const things = [{ x: 4, y: 2, z: 2, model: 'tower' }];
+  const side = { x: 4, y: 7, z: 2, angle: 270 };
+  const original = rc.render(side, things).slice();
+  const overhead = { x: 5, y: 5, z: 6, angle: 270, pitch: -85 };
+  expect(rc.render(overhead, things)).not.toEqual(original);
+  const backdrop = { x: side.x, y: side.y, z: side.z, things };
+  expect(rc.render({ ...overhead, backdrop }, things)).toEqual(original);
+  expect(rc.pixelDepth.every(distance => distance === Infinity)).toBe(true);
 });

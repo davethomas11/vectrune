@@ -2970,6 +2970,7 @@ var __RuneWeb = (() => {
   var MAX_WORLD_AXIS = 4096;
   var MAX_WORLD_DEPTH = 256;
   var MAX_RESIDENT_CHUNKS = 16384;
+  var MAX_RENDER_MIRROR_CELLS = 131072;
   var ChunkStore = class {
     constructor(world, imported = {}) {
       this.world = world;
@@ -3025,7 +3026,7 @@ var __RuneWeb = (() => {
     /** Bounded render accelerator; large worlds retain sparse lookup. */
     prepareRenderCells() {
       const volume = this.world.width * this.world.height * this.world.depth;
-      if (this.renderCells || volume > 65536) return;
+      if (this.renderCells || volume > MAX_RENDER_MIRROR_CELLS) return;
       this.renderCells = new Uint16Array(volume);
       for (const [id, values] of this.raw) this.mirror(id, values);
     }
@@ -3403,9 +3404,14 @@ var __RuneWeb = (() => {
     }
   }
   function voxelRay(world, origin, ray, maxDistance, output, chunks) {
+    const store = chunkStore(world);
     return traceVoxelRay(
       world,
-      origin,
+      store?.renderCells ?? world.cells,
+      store?.renderCells ? void 0 : store,
+      origin.x,
+      origin.y,
+      origin.z,
       ray[0],
       ray[1],
       ray[2],
@@ -3417,19 +3423,17 @@ var __RuneWeb = (() => {
       chunks
     );
   }
-  function traceVoxelRay(world, origin, rx, ry, rz, dx, dy, dz, maxDistance, output, chunks, crossings, column = 0, row = 0) {
-    let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+  function traceVoxelRay(world, cells, store, ox, oy, oz, rx, ry, rz, dx, dy, dz, maxDistance, output, chunks, crossings, column = 0, row = 0, entryFace = 2) {
+    let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
     const width = world.width, height = world.height, depth = world.depth;
-    const sourceStore = chunkStore(world), cells = sourceStore?.renderCells ?? world.cells;
-    const store = sourceStore?.renderCells ? void 0 : sourceStore;
     let lastChunk = -1, blocks;
     if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
     const sx = rx < 0 ? -1 : 1, sy = ry < 0 ? -1 : 1, sz = rz < 0 ? -1 : 1;
     const stepY = sy * width, stepZ = sz * width * height;
     let cellIndex = (z * height + y) * width + x;
-    let tx = rx === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
-    let ty = ry === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
-    let tz = rz === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    let tx = rx === 0 ? Infinity : (sx < 0 ? ox - x : x + 1 - ox) * dx;
+    let ty = ry === 0 ? Infinity : (sy < 0 ? oy - y : y + 1 - oy) * dy;
+    let tz = rz === 0 ? Infinity : (sz < 0 ? oz - z : z + 1 - oz) * dz;
     if (chunks && (rx !== 0 || ry !== 0 || rz !== 0)) {
       const entry = chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance);
       if (!Number.isFinite(entry)) return null;
@@ -3471,8 +3475,8 @@ var __RuneWeb = (() => {
     }
     if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
     const exitX = sx > 0 ? width : -1, exitY = sy > 0 ? height : -1, exitZ = sz > 0 ? depth : -1;
-    let distance = 0, face = 2;
-    for (let iteration = 0; iteration < width + height + depth + 3 && distance <= maxDistance; iteration++) {
+    let distance = 0, face = entryFace;
+    while (distance <= maxDistance) {
       let block;
       if (store) {
         const chunk = ((z >> 2) * store.ch + (y >> 2)) * store.cw + (x >> 2);
@@ -3517,6 +3521,8 @@ var __RuneWeb = (() => {
     }
     return null;
   }
+  var sideShade = Uint8Array.from({ length: 256 }, (_, channel) => Math.floor(channel * 0.8));
+  var frontShade = Uint8Array.from({ length: 256 }, (_, channel) => Math.floor(channel * 0.65));
   function voxelTarget(worldValue, playerValue) {
     const world = validateWorld(worldValue), player = validatePlayer(playerValue, world);
     const a = player.angle * Math.PI / 180, p = player.pitch * Math.PI / 180;
@@ -3618,6 +3624,13 @@ var __RuneWeb = (() => {
     if (!Array.isArray(materials) || materials.length === 0) {
       throw new Error(`@SideMap/${fgNameValue} needs materials = [...]`);
     }
+    for (const [symbol, entry] of Object.entries(fg.legend)) {
+      const center = entry?.center_voxel;
+      if (center === void 0) continue;
+      if (!Number.isInteger(center) || center < 1 || center > materials.length || !(entry.voxel && entry.voxel > 0) || (entry.depth?.[1] ?? 4) < 2 || entry.boss_door || entry.barrier || entry.hazard) {
+        throw new Error(`@SideMap/${fgNameValue} legend ${symbol}: center_voxel needs a valid material and a solid span of at least two tiles`);
+      }
+    }
     let spawn = { x: 4.5, y: planeY, z: 3, angle: 0, pitch: 0, vz: 0 };
     const world = voxelWorld(width, depthY, height + marginZ, materials, {
       seed: opts.seed ?? 701,
@@ -3638,12 +3651,17 @@ var __RuneWeb = (() => {
       const z = height - 1 - row;
       const line = fg.rows[row];
       let runVoxel = 0;
+      let runCenter = 0;
       let runY0 = 0;
       let runYSpan = 0;
       let runStart = 0;
       const flushRun = (endX) => {
         if (runVoxel > 0 && endX > runStart) {
           voxelFill(world, [runStart, runY0, z], [endX - runStart, runYSpan, 1], runVoxel);
+          if (runCenter) {
+            const centerY = runY0 + Math.floor((runYSpan - 2) / 2);
+            voxelFill(world, [runStart, centerY, z], [endX - runStart, 2, 1], runCenter);
+          }
         }
         runVoxel = 0;
       };
@@ -3657,10 +3675,12 @@ var __RuneWeb = (() => {
         if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
           const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
           const ySpan = entry.depth ? entry.depth[1] : 4;
-          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan) {
+          const center = entry.center_voxel ?? 0;
+          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan && runCenter === center) {
           } else {
             flushRun(x);
             runVoxel = entry.voxel;
+            runCenter = center;
             runY0 = y0;
             runYSpan = ySpan;
             runStart = x;
@@ -6362,11 +6382,13 @@ var __RuneWeb = (() => {
       if (trimmed === "music.play" || trimmed === "music.play()" || trimmed.startsWith("music.play(") || trimmed.startsWith("music.play ") || trimmed.startsWith("play_music(") || trimmed.startsWith("music ") && !trimmed.startsWith("music.tempo") && !trimmed.startsWith("music.volume")) {
         let trackName = "";
         let startBeat;
+        let fadeSeconds;
         if ((trimmed.startsWith("music.play(") || trimmed.startsWith("play_music(")) && trimmed.endsWith(")")) {
-          const [name2, beat] = splitTopLevel(trimmed.slice(trimmed.indexOf("(") + 1, -1), ",");
+          const [name2, beat, fade] = splitTopLevel(trimmed.slice(trimmed.indexOf("(") + 1, -1), ",");
           const scope = buildScope(locals, trimmed);
           trackName = String(evaluateExpression(name2, scope) || "");
           if (beat !== void 0) startBeat = Number(evaluateExpression(beat, scope));
+          if (fade !== void 0) fadeSeconds = Number(evaluateExpression(fade, scope));
         } else if (trimmed.startsWith("music.play ")) {
           trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || "");
         } else if (trimmed.startsWith("music ")) {
@@ -6374,7 +6396,8 @@ var __RuneWeb = (() => {
         }
         trackName = normalizeLiteral(trackName);
         if (trackName) {
-          if (startBeat === void 0) playMusic(trackName);
+          if (fadeSeconds !== void 0) playMusic(trackName, startBeat, fadeSeconds);
+          else if (startBeat === void 0) playMusic(trackName);
           else playMusic(trackName, startBeat);
         }
         return true;

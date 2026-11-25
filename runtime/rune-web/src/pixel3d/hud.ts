@@ -76,6 +76,8 @@ export interface CinemaHud {
 }
 export interface GameHud {
   cinema?: CinemaHud;
+  countdown?: number;
+  reticle?: boolean;
   map?: HudMap;
   grid?: HudGrid;
   slots?: HudSlot[];
@@ -122,6 +124,11 @@ export function validateHud(value: unknown, sprites: Record<string, Sprite> = {}
         !map.links.every(l=>l && (l.shortcut===undefined || typeof l.shortcut==='boolean') && map.nodes.some(n=>n.id===l.from) && map.nodes.some(n=>n.id===l.to))) throw new Error('HUD map needs unique positioned nodes, valid links and a current room');
   }
   if (hud.style !== undefined && hud.style !== 'floating') throw new Error('Pixel-3d ui style must be floating');
+  if (hud.reticle !== undefined && typeof hud.reticle !== 'boolean') throw new Error('HUD reticle must be a boolean');
+  if (hud.countdown !== undefined &&
+      (hud.style !== 'floating' || !Number.isFinite(hud.countdown) || hud.countdown < 0 || hud.countdown > 3599)) {
+    throw new Error('Pixel-3d countdown needs floating HUD style and seconds from 0 to 3599');
+  }
   if (hud.heading !== undefined && typeof hud.heading !== 'string') throw new Error('Pixel-3d ui heading must be a string');
   if (hud.textScale !== undefined && hud.textScale !== 1 && hud.textScale !== 2) {
     throw new Error('Pixel-3d ui textScale must be 1 or 2');
@@ -233,12 +240,31 @@ function renderFloatingHud(canvas: CanvasHud, ui: GameHud, status: string, pause
       if (color !== null && color !== undefined) canvas.rect(x + sx * scale, y + sy * scale, scale, scale, color);
     }
   };
-  const slot = Math.floor((W - 16) / Math.max(1, ui.meters.length));
   let metersBottom = 32;
+  let meterOffset = 0, splitMeters = false;
+  if (ui.countdown !== undefined) {
+    const remaining = ui.countdown;
+    const seconds = Math.ceil(remaining);
+    const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    const pulse = remaining <= 10 ? .5 + .5 * Math.cos(remaining * 2 * Math.PI) : 0;
+    const desiredScale = remaining > 20 ? 3 : pulse > .58 ? 5 : 4;
+    const scale = Math.min(desiredScale, Math.max(1, Math.floor((W - 16) / (4 * clock.length - 1))));
+    const width = (4 * clock.length - 1) * scale;
+    const x = Math.floor((W - width) / 2), bottom = 13 + 5 * scale;
+    const color = remaining > 10 ? 0xffe3a6 : 0xff0000 | Math.floor(78 + 79 * pulse) << 8 | Math.floor(94 + 67 * pulse);
+    canvas.rect(x - 7, 4, width + 14, bottom - 4, 0x090418);
+    canvas.rect(x - 7, bottom, width + 14, 2, color);
+    text(clock, x, 8, color, scale);
+    splitMeters = ui.meters.length <= 2 && Math.floor((W - 16) / 3) >= width + 18;
+    if (!splitMeters) meterOffset = bottom + 3;
+    metersBottom = Math.max(bottom + 2, 32 + meterOffset);
+  }
+  const slot = Math.floor((W - 16) / (splitMeters ? 3 : Math.max(1, ui.meters.length)));
   ui.meters.forEach((meter, i) => {
-    const x = 8 + i * slot, columns = Math.max(1, Math.floor((slot - 4) / 4));
-    const iconTop = meter.label ? 14 : 8;
-    if (meter.label) text(meter.label.slice(0, columns), x, 6, gold);
+    const x = splitMeters && i === 1 ? W - 8 - slot : 8 + i * slot;
+    const columns = Math.max(1, Math.floor((slot - 4) / 4));
+    const iconTop = meterOffset + (meter.label ? 14 : 8);
+    if (meter.label) text(meter.label.slice(0, columns), x, meterOffset + 6, gold);
     if (meter.display === 'pips') {
       const full = asset(meter.icon!), empty = asset(meter.emptyIcon!);
       const count = Math.ceil(meter.max), pipWidth = Math.max(full.width, empty.width);
@@ -584,6 +610,17 @@ export function renderHud(canvas: CanvasHud, ui: GameHud, status: string, paused
     return;
   }
 
+  if (ui.reticle && status === 'playing' && !paused) {
+    const x = Math.floor(canvas.width / 2), y = Math.floor(canvas.height / 2);
+    canvas.rect(x - 7, y - 1, 5, 3, 0x09101c);
+    canvas.rect(x + 3, y - 1, 5, 3, 0x09101c);
+    canvas.rect(x - 1, y - 7, 3, 5, 0x09101c);
+    canvas.rect(x - 1, y + 3, 3, 5, 0x09101c);
+    canvas.rect(x - 6, y, 3, 1, 0xb9f5ff);
+    canvas.rect(x + 4, y, 3, 1, 0xb9f5ff);
+    canvas.rect(x, y - 6, 1, 3, 0xb9f5ff);
+    canvas.rect(x, y + 4, 1, 3, 0xb9f5ff);
+  }
   if (ui.damageDirection && status === 'playing' && !paused) {
     const x=ui.damageDirection<0?4:canvas.width-8, y=Math.floor(canvas.height*.55);
     canvas.rect(x,y-13,4,26,0xf06b82);

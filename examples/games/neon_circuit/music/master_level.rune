@@ -1,0 +1,27 @@
+# Citadel Overclock. Four-on-the-floor industrial techno at 150 BPM.
+@Music/nc_master_level
+type = synth
+tempo = 150
+time_signature = 4/4
+loop = true
+volume = 0.088
+instruments = {"lead":"square","bass":"sawtooth","arp":"bell","drums":"drums"}
+effects = {"delay":{"time":0.15,"feedback":0.23,"wet":0.13,"damping":3300},"crush":{"bits":9,"drive":0.12}}
+track_effects = {"lead":{"delay":0.21},"arp":{"delay":0.28},"bass":{"delay":0}}
+sections = {
+    "switchyard": {
+        "bars": 4,
+        "lead": "R:8 C5:8 R:8 Eb5:8 R:8 G4:8 Bb4:8 G4:8 | R:8 C5:8 Eb5:8 C5:8 R:8 F#4:8 G4:8 R:8 | R:8 C5:8 R:8 Eb5:8 R:8 Bb4:8 C5:8 Eb5:8 | F#5:8 Eb5:8 C5:8 Eb5:8 G4:8 Bb4:8 C5:4",
+        "arp": "G5:4 R:8 C6:8 R:4 Eb6:4 | G5:4 R:8 C6:8 R:4 F#6:4 | Bb5:4 R:8 C6:8 R:4 Eb6:4 | F#6:8 Eb6:8 R:4 Bb5:8 G5:8 C6:4",
+        "bass": "R:8 C2:8 R:8 C2:8 R:8 C3:8 R:8 C2:8 | R:8 C2:8 R:8 Eb2:8 R:8 C2:8 R:8 G1:8 | R:8 C2:8 R:8 C2:8 R:8 Bb1:8 R:8 C2:8 | R:8 F#1:8 R:8 G1:8 R:8 C2:8 C2:16 C3:16 C2:8",
+        "drums": "kick:8 hihat:8 [kick,snare]:8 hihat:8 kick:8 hihat:8 [kick,snare]:8 hihat:8 | kick:8 hihat:8 [kick,snare]:8 hihat:8 kick:8 hihat:8 [kick,snare]:8 hihat:8 | kick:8 hihat:8 [kick,snare]:8 hihat:8 kick:8 hihat:8 [kick,snare]:8 hihat:8 | kick:8 hihat:8 [kick,snare]:8 hihat:8 kick:8 hihat:8 [kick,tom]:8 snare:16 snare:16"
+    },
+    "overclock": {
+        "bars": 4,
+        "lead": "C6:8 G5:8 Eb5:8 C5:8 G5:8 Eb5:8 Bb4:8 C5:8 | F6:8 C6:8 Ab5:8 F5:8 C6:8 Ab5:8 G5:8 F5:8 | F#6:8 C6:8 A5:8 F#5:8 C6:8 A5:8 G5:8 F#5:8 | G5:8 Bb5:8 C6:8 Eb6:8 G6:8 Eb6:8 C6:4",
+        "arp": "C5:8 Eb5:8 G5:8 Bb5:8 C6:8 Bb5:8 G5:8 Eb5:8 | F5:8 Ab5:8 C6:8 Eb6:8 F6:8 Eb6:8 C6:8 Ab5:8 | F#5:8 A5:8 C6:8 Eb6:8 F#6:8 Eb6:8 C6:8 A5:8 | G5:8 Bb5:8 C6:8 Eb6:8 G6:8 Eb6:8 C6:8 R:8",
+        "bass": "R:16 C2:16 C2:8 R:8 C2:8 R:16 C2:16 C3:8 R:8 C2:8 | R:16 F2:16 F2:8 R:8 F2:8 R:16 F2:16 F3:8 R:8 F2:8 | R:16 F#2:16 F#2:8 R:8 F#2:8 R:16 F#2:16 F#3:8 R:8 F#2:8 | R:8 G2:8 R:8 Bb2:8 R:8 C3:8 R:8 C2:8",
+        "drums": "[kick,crash]:8 hihat:16 hihat:16 [kick,snare]:8 hihat:8 kick:8 hihat:16 hihat:16 [kick,snare]:8 hihat:8 | kick:8 hihat:16 hihat:16 [kick,snare]:8 hihat:8 kick:8 hihat:16 hihat:16 [kick,snare]:8 hihat:8 | kick:8 hihat:16 hihat:16 [kick,snare]:8 hihat:8 kick:8 hihat:16 hihat:16 [kick,snare]:8 hihat:8 | [kick,crash]:8 hihat:8 [kick,snare]:8 hihat:8 kick:8 tom:8 [kick,snare]:8 tom:16 snare:16"
+    }
+}
+arrangement = ["switchyard","overclock","switchyard","overclock"]

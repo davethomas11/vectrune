@@ -1,10 +1,67 @@
 import { describe, expect, it } from 'vitest';
 import { compileExpression } from '../src/expression';
-import { voxelGenerate, voxelGet, voxelMove, voxelRay, voxelMine, validateWorld, voxelRead, voxelFill, prepareVoxelChunks, renderVoxels } from '../src/pixel3d/voxel';
+import { voxelGenerate, voxelGet, voxelMove, voxelRay, voxelMine, validateWorld, voxelRead, voxelWorld, voxelFill, prepareVoxelChunks, renderVoxels } from '../src/pixel3d/voxel';
 import { Raycaster3D, type Texture } from '../src/pixel3d/raycaster';
 import { renderModel } from '../src/pixel3d/model';
 
 describe('voxel worlds', () => {
+  it('casts against hinged terrain even when the camera is outside the posed volume', () => {
+    const world = voxelWorld(8, 8, 8, ['wall']);
+    const terrain = voxelWorld(8, 2, 4, ['wall']);
+    voxelFill(terrain, [3, 0, 0], [2, 2, 1], 1);
+    const wall: Texture = { width: 1, height: 1, pixels: new Uint32Array([0xff4040ff]) };
+    const buffer = new Uint32Array(41 * 41), depth = new Float64Array(buffer.length);
+    const camera = { x: 4, y: 7, z: 2, angle: 270, terrainPose: {
+      world: terrain, pivot: [2, 0] as [number, number], position: [2, 2] as [number, number], angle: 0,
+    } };
+    const center = 20 * 41 + 20;
+    renderVoxels(world, camera, { wall }, null, 66, 41, 41, buffer, depth, 0);
+    expect(depth[center]).toBe(Infinity);
+    camera.terrainPose.angle = -45;
+    renderVoxels(world, camera, { wall }, null, 66, 41, 41, buffer, depth, 0);
+    expect(depth[center]).toBeGreaterThan(4);
+    expect(depth[center]).toBeLessThan(7);
+    camera.terrainPose.angle = -90;
+    renderVoxels(world, camera, { wall }, null, 66, 41, 41, buffer, depth, 0);
+    expect(depth[center]).toBeCloseTo(4);
+    expect(voxelGet(world, 4, 2, 3)).toBe(0);
+  });
+
+  it('keeps chunk visibility conservative through edits and terrain rotation', () => {
+    const terrain = voxelWorld(24, 5, 14, ['wall']);
+    const plainTerrain = {
+      ...voxelGenerate(1), width: 24, height: 5, depth: 14, materials: terrain.materials,
+      cells: Array(24 * 5 * 14).fill(0),
+    };
+    const view = voxelWorld(24, 24, 30, ['wall']);
+    const textures = { wall: { width: 2, height: 2, pixels: new Uint32Array([
+      0xff4040ff, 0xffa08080, 0xffaabbcc, 0xff25abcd,
+    ]) } };
+    const pixels = new Uint32Array(81 * 45), depth = new Float64Array(pixels.length);
+    const reference = pixels.slice(), referenceDepth = depth.slice();
+    for (const [from, size, block] of [
+      [[3, 1, 2], [17, 3, 1], 1],
+      [[13, 0, 6], [2, 3, 3], 1],
+      [[3, 1, 2], [17, 3, 1], 0],
+    ] as const) {
+      voxelFill(terrain, [...from], [...size], block);
+      voxelFill(plainTerrain, [...from], [...size], block);
+      for (const [x, y, z, pitch, angle] of [
+        [12, 15, 9, 0, 0], [12, 12, 12, -35, -45],
+        [14.5, 5, 12, -85, -90], [14.5, 3, 5.75, 0, 0],
+      ]) {
+        const pose = { pivot: [4, 0] as [number, number], position: [4, 0] as [number, number], angle };
+        const camera = { x, y, z, angle: 270, pitch };
+        renderVoxels(view, { ...camera, terrainPose: { ...pose, world: terrain } },
+          textures, null, 70, 81, 45, pixels, depth, 0);
+        renderVoxels(view, { ...camera, terrainPose: { ...pose, world: plainTerrain } },
+          textures, null, 70, 81, 45, reference, referenceDepth, 0);
+        expect(pixels).toEqual(reference);
+        expect(depth).toEqual(referenceDepth);
+      }
+    }
+  });
+
   it('detects aliased raw writes and material-range changes after snapshot validation', () => {
     const world=voxelGenerate(1), alias=world.cells;
     validateWorld(world);

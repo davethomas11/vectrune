@@ -128,3 +128,70 @@ frequency = 480
 freq_end = 220
 duration = 75ms
 volume = 0.036
+
+@Sound/nc_escape_alarm
+wave = triangle
+sequence = A4:100ms, E4:90ms
+volume = 0.017
+
+@Sound/nc_escape_alarm_urgent
+wave = triangle
+sequence = E5:65ms, B5:80ms
+volume = 0.034
+
+@Sound/nc_escape_fall
+wave = noise
+filter = bandpass 2200 -> 260
+duration = 310ms
+volume = 0.037
+
+@Sound/nc_glass_raise
+wave = triangle
+frequency = 82
+freq_end = 179
+duration = 2500ms
+attack = 2150ms
+volume = 0.044
+
+@Sound/nc_escape_land
+wave = triangle
+frequency = 155
+freq_end = 65
+duration = 80ms
+volume = 0.029
+
+@Sound/nc_player_death
+wave = triangle
+sequence = B4:65ms, F#4:85ms, D4:90ms, B2:225ms
+volume = 0.05
+
+@Sound/nc_volt_lane_fire
+wave = triangle
+frequency = 610
+freq_end = 115
+duration = 170ms
+volume = 0.061
+
+@Sound/nc_storm_spool
+wave = noise
+filter = bandpass 120 -> 680
+duration = 380ms
+volume = 0.027
+
+@Sound/nc_storm_gust
+wave = noise
+filter = lowpass 720 -> 180
+duration = 660ms
+volume = 0.036
+
+@Sound/nc_return_purge
+wave = noise
+filter = bandpass 480 -> 1530
+duration = 500ms
+volume = 0.035
+
+@Sound/nc_return_press
+wave = noise
+filter = lowpass 1560 -> 95
+duration = 210ms
+volume = 0.035

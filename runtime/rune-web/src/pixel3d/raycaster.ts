@@ -5,7 +5,9 @@ import { skyPixel, type Sky } from './sky';
 import { renderModel, type BlockModel } from './model';
 import { renderHud, type GameHud } from './hud';
 import { tetherModel, tetherPieces, type Tether3D } from './tether';
-import { renderVoxels, type VoxelWorld, type VoxelChunks } from './voxel';
+import { renderVoxels, type VoxelWorld, type VoxelChunks, type VoxelTerrainPose } from './voxel';
+import { lightFrame, type PointLight3D } from './lighting';
+import { EnhancedLighting, type EmissionBuffer } from './enhanced_lighting';
 
 export interface Texture {
   width: number;
@@ -32,6 +34,13 @@ export interface Camera3D {
   height?: number; // default 0.5
   z?: number; // voxel feet elevation
   pitch?: number;
+  terrainPose?: VoxelTerrainPose;
+  backdrop?: {
+    x?: number;
+    y: number;
+    z: number;
+    things: Thing3D[];
+  };
 }
 
 export interface Thing3D {
@@ -45,6 +54,7 @@ export interface Thing3D {
   titleColor?: number;
   z?: number;
   angle?: number;
+  pitch?: number;
   scale?: number;
   visible?: boolean;
 }
@@ -142,6 +152,14 @@ export class Raycaster3D {
   private palette?: Uint32Array;
   private silhouettes = false;
   private outlineColor = 0xff000000;
+  private enhanced?: EnhancedLighting;
+
+  get enhancedLighting(): boolean { return this.enhanced !== undefined; }
+
+  setEnhancedLighting(enabled: boolean): void {
+    if (enabled) this.enhanced ??= new EnhancedLighting();
+    else this.enhanced = undefined;
+  }
 
   get outlineRadius(): number {
     return this.silhouettes ? Math.max(1, Math.round(this.hudScale)) : 0;
@@ -206,18 +224,20 @@ export class Raycaster3D {
     wallOverrides: WallOverride[] = [],
     time: number = 0,
     preparedChunks?: VoxelChunks,
-    tethers: Tether3D[] = []
+    tethers: Tether3D[] = [],
+    lights: readonly PointLight3D[] = []
   ): Uint32Array {
     const W = this.width;
     const H = this.height;
     const halfH = H >> 1;
     const map = this.config.map;
+    const emission = this.enhanced?.begin(W, H);
     const px = camera.x;
     const py = camera.y;
     const ang = camera.angle;
 
     const pitched = !this.config.world && ((camera.height ?? .5) !== .5 || (camera.pitch ?? 0) !== 0 ||
-      map.sky?.below !== undefined);
+      map.sky?.below !== undefined || lights.length > 0);
     // Pitched terrain and models use the same unquantized camera basis.
     const freeCamera = pitched || !!this.config.world;
     const dirX = freeCamera ? Math.cos(ang * Math.PI / 180) : fastCos(ang);
@@ -237,9 +257,11 @@ export class Raycaster3D {
     }
 
     // 1. Floor & Ceiling casting
+    const backdrop = this.config.world ? camera.backdrop : undefined;
     if (this.config.world) {
+      if (backdrop) this.renderSideBackdrop(backdrop.x ?? camera.x, backdrop, fovScale, time, emission);
       renderVoxels(this.config.world, camera, this.config.textures, map.sky, this.fov,
-        W, H, this.buffer, this.pixelDepth, time, preparedChunks);
+        W, H, this.buffer, this.pixelDepth, time, preparedChunks, Boolean(backdrop));
       this.zBuffer.fill(Infinity);
     } else if (pitched) {
       renderGrid(map, camera, Object.values(this.config.textures), wallOverrides, things, this.config.sprites,
@@ -250,11 +272,16 @@ export class Raycaster3D {
       this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
     }
     const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
+    const backdropThings = backdrop && new Set(backdrop.things);
     for (const thing of things) {
-      if (thing.visible === false || !thing.model) continue;
+      if (thing.visible === false || !thing.model || backdropThings?.has(thing)) continue;
       const model = this.config.models?.[thing.model];
       if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
-      renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+      this.enhanced?.rememberGlass(thing, model);
+      const haze = emission && (!this.config.world || (!backdrop && thing.y < 4)) ? Math.min(.20, Math.max(0,
+        ((thing.x - px) * dirX + (thing.y - py) * dirY - 11) * .025)) : 0;
+      renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth,
+        emission, haze, map.sky?.horizon);
     }
     for (const tether of tethers) {
       if (tether.visible === false) continue;
@@ -269,6 +296,12 @@ export class Raycaster3D {
       this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
     }
 
+    if (lights.length) {
+      lightFrame(lights, this.buffer, this.pixelDepth, W, H, modelCamera, dirX, dirY, fovScale,
+        this.config.world ? H / 2 : halfH);
+    }
+    this.enhanced?.finish(this.buffer, this.pixelDepth, modelCamera, dirX, dirY, fovScale,
+      this.config.world ? H / 2 : halfH, this.config.world, things, this.config.models ?? {}, map.sky?.horizon);
     if (this.silhouettes) this.drawSilhouettes();
     this.renderWorldTitles(camera, things, dirX, dirY, fovScale);
 
@@ -294,6 +327,38 @@ export class Raycaster3D {
     if (stats) this.drawHud(stats);
     this.applyPalette();
     return this.buffer;
+  }
+
+  private renderSideBackdrop(x: number, backdrop: NonNullable<Camera3D['backdrop']>, fovScale: number, time: number,
+    emission?: EmissionBuffer): void {
+    if (![x, backdrop.y, backdrop.z].every(Number.isFinite) || !Array.isArray(backdrop.things)) {
+      throw new Error('Voxel backdrop needs a finite side camera position and a model list');
+    }
+    const { width, height, buffer, pixelDepth } = this;
+    const sky = this.config.map.sky;
+    buffer.fill(sky ? (0xff000000 | sky.horizon) >>> 0 : 0xff342820);
+    if (sky) {
+      const longitudes = Float64Array.from({ length: width }, (_, col) =>
+        Math.atan2(-1, (2 * col / width - 1) * fovScale));
+      const rows = sky.below === undefined ? height >> 1 : height;
+      for (let row = 0; row < rows; row++) {
+        const altitude = (height / 2 - row - .5) / height;
+        for (let col = 0; col < width; col++) {
+          buffer[row * width + col] = skyPixel(sky, longitudes[col], altitude, time);
+        }
+      }
+    }
+    const camera = { x, y: backdrop.y, height: backdrop.z + 1.25 };
+    for (const thing of backdrop.things) {
+      if (thing.visible === false || !thing.model) continue;
+      const model = this.config.models?.[thing.model];
+      if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
+      const haze = emission ? Math.min(.22, Math.max(0, (backdrop.y - thing.y - 10) * .027)) : 0;
+      renderModel(model, thing, camera, 0, -1, fovScale, width, height, buffer, pixelDepth, emission, haze, sky?.horizon);
+    }
+    this.enhanced?.backdrop(buffer, pixelDepth);
+    if (this.silhouettes) this.drawSilhouettes();
+    pixelDepth.fill(Infinity);
   }
 
   /** Transparent HUD for the browser's model renderer. Uses the same layout and palette. */

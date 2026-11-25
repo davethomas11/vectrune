@@ -4,6 +4,9 @@ import "sounds.rune"
 import "music/title.rune"
 import "music/select.rune"
 import "music/boss.rune"
+import "music/master_boss.rune"
+import "music/master_level.rune"
+import "music/escape.rune"
 import "music/victory.rune"
 import "music/stage_01_volt.rune"
 import "music/stage_02_cryo.rune"
@@ -31,6 +34,13 @@ import "levels/11_prism.rune"
 import "levels/12_omega.rune"
 import "stages.rune"
 import "combat.rune"
+import "escape.rune"
+import "volt_return.rune"
+import "sector_returns.rune"
+import "return_challenges.rune"
+import "return_challenge_models.rune"
+import "master.rune"
+import "lighting.rune"
 import "logic.rune"
 import "controls.rune"
 import "shell.rune"
@@ -52,12 +62,14 @@ fov = 70
 logic = neon_circuit
 map = sky_title
 world = world
+lights = lights
 camera = camera
+weapon = view_weapon
 perspective = neon_cam
 outline = true
 outline_color = "#05020d"
 title_scene = neon_title
-things = ["scenery","title_scenery","title_monument","barriers_fx","hazards_fx","boss_shutter_fx","checkpoints","pickups","enemies","boss_entity","boss_satellites","shots","enemy_shots","avatar","weapon_model","respawn_beam","victory_item","effects","select_pedestal","select_boss","power_capsule","escape_floor"]
+things = ["scenery","title_scenery","title_monument","lamps","barriers_fx","hazards_fx","boss_shutter_fx","checkpoints","pickups","enemies","boss_entity","boss_satellites","shots","enemy_shots","avatar","weapon_model","respawn_beam","victory_item","effects","select_pedestal","select_boss","power_capsule","escape_floor","master_props","volt_return_props","sector_return_props"]
 persistence = {"key":"neon-circuit-save-v1","state":"campaign"}
 controls = neon_circuit
 click_to_start = false
@@ -83,6 +95,7 @@ presentation = {
 
 @Scene/neon_title
 map = sky_title
+lights = title_lights
 things = ["title_scenery","title_monument","avatar","victory_item"]
 camera = title_camera
 perspective = neon_cam

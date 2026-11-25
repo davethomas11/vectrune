@@ -1,0 +1,521 @@
+# The six recovered Master cores are the keys. Older campaigns already store them as clears.
+@Logic/neon_circuit
+
+action count_master_keys:
+    master_keys = 0
+    if campaign.super_code == true:
+        master_keys = 6
+        stop when true
+    for st in stages:
+        if st.tier == 2 && campaign.defeated[st.code] == true:
+            master_keys = master_keys + 1
+
+action visit_master_gate:
+    call count_master_keys
+    call build_select_arena
+    status = "master_gate"
+    master_gate_selection = 0
+    select_boss.visible = false
+    select_pedestal.visible = false
+    avatar.x = 13.8
+    avatar.angle = 0
+    camera.x = 18
+    camera.z = 4.5
+    master_props = [{"x": 18, "y": 7, "z": 2, "model": master_keys == 6 ? "nc/master_gate_open" : "nc/master_gate", "angle": 0}]
+    for i in range(0, 6):
+        local st = stages[6 + i]
+        local lit = campaign.super_code == true || campaign.defeated[st.code] == true
+        master_props.push({"x": 15.5 + i, "y": 8.4, "z": 6.7,
+            "model": lit ? "nc/master_key_lit" : "nc/master_key_empty", "angle": 0})
+    lights = [
+        {"x": 15.3, "y": 9, "z": 3.3, "color": "#f637a9", "radius": 6, "intensity": 0.65},
+        {"x": 21.3, "y": 9, "z": 3.3, "color": "#27e7fa", "radius": 6, "intensity": 0.65}
+    ]
+    call play_stage_music "nc_select"
+    call refresh_ui
+
+action redeem_super_code(fields):
+    if fields.code == null || fields.code.split(" ").join("").toUpperCase() != "SUPERCODE":
+        super_code_notice = "Code not recognized."
+        stop when true
+    campaign.super_code = true
+    for st in stages:
+        if st.unlocks != "":
+            campaign.weapons[st.unlocks] = true
+    super_code_notice = "All weapons unlocked. The Master Gate is open."
+    call count_progress
+    call visit_master_gate
+
+action start_master_run:
+    call count_master_keys
+    stop when status != "master_gate" || master_keys < 6
+    master_active = true
+    lives = 3
+    master_room = 0
+    master_transition = 0
+    master_music_ticks = 0
+    call build_master_room
+    call play_stage_music "nc_master_level"
+    call refresh_ui
+
+action retry_master_run:
+    stop when !master_active
+    lives = 3
+    master_transition = 0
+    if music_track != "nc_master_level":
+        master_music_ticks = 0
+    call build_master_room
+    call play_stage_music "nc_master_level"
+    call refresh_ui
+
+action build_master_room:
+    local room = master_room
+    master_deck = room == 2 || room == 3
+    master_mini = room == 1
+    master_first = room == 3
+    master_room_ticks = 0
+    master_fade = 0
+    local decks = ["nc/deck","nc/deck_pink","nc/wall_signal","nc/lane_grid","nc/lane_runway"]
+    world = voxel_world(44, 20, 40, decks)
+    level_width = 44
+    level_height = 18
+    level_map = "sky_title"
+    local lane_y = master_mini ? 3.5 : (master_deck ? 8.5 : 7)
+    local feet = master_deck ? escape_deck_z : 2
+    local accent = ["#ff398e", "#b653ff", "#26e4ff", "#ff942b", "#ff3058"][room]
+    local accent2 = ["#37ccff", "#74ffad", "#f351aa", "#686bff", "#29e7fe"][room]
+    local floor_y = master_mini ? 2 : 5
+    scenery = []
+    title_scenery = []
+    master_props = []
+    escape_floor = []
+    for i in range(0, 6):
+        scenery.push({"x": 4 + i * 7.3, "y": 0.8, "z": 1.5,
+            "model": i % 2 == 0 ? "nc/bg_pylon" : "nc/bg_tower", "angle": 0})
+        if master_deck:
+            for strip in range(0, 3):
+                escape_floor.push({"x": 4 + i * 8, "y": 5.5 + strip * 4, "z": feet - 0.25,
+                    "model": "nc/glass_panel", "angle": 90, "pitch": 0})
+    if master_deck:
+        world = voxel_fill(world, [0, 3, feet], [44, 1, 4], 3)
+        world = voxel_fill(world, [0, 14, feet], [44, 1, 4], 3)
+        world = voxel_fill(world, [0, 4, feet], [1, 10, 4], 3)
+        world = voxel_fill(world, [43, 4, feet], [1, 10, 4], 3)
+        local lower = master_first ? 4 : 7
+        local upper = master_first ? 10 : 9
+        world = voxel_fill(world, [12, 4, feet], [2, lower, 3], 2)
+        world = voxel_fill(world, [21, upper, feet], [2, 14 - upper, 3], 3)
+        world = voxel_fill(world, [28, 4, feet], [2, lower, 2], 2)
+    if !master_deck:
+        world = voxel_fill(world, [0, floor_y, 0], [44, 4, 2], master_mini ? 2 : 1)
+        world = voxel_fill(world, [0, floor_y + 1, 1], [44, 2, 1], master_mini ? 5 : 4)
+        if room < 2:
+            local gap = master_mini ? 2 : 3
+            for x in [11, 22]:
+                world = voxel_fill(world, [x, floor_y, 0], [gap, 4, 2], 0)
+                world = voxel_fill(world, [x + gap, floor_y, 2], [3, 4, 1], 2)
+        if master_mini:
+            for x in [5, 16, 27, 38]:
+                world = voxel_fill(world, [x, 9, 0], [2, 2, 2], 3)
+    player = {"x": 3.5, "y": lane_y, "z": feet, "angle": 0, "pitch": 0, "vz": 0}
+    camera = {"x": 9, "y": 17.5, "z": 4.4, "angle": 270, "pitch": 0}
+    master_angle = 0
+    facing = 1
+    grounded = true
+    jump_held = false
+    jumps = 0
+    wheel_open = false
+    wheel_ticks = 0
+    weapon_energy = 28
+    invulnerable = 24
+    cooldown = 0
+    health = max_health
+    avatar = {"x": player.x, "y": lane_y, "z": feet, "angle": 0, "model": "nc/hero_idle",
+        "scale": master_mini ? 0.56 : 1, "visible": !master_first}
+    view_weapon = master_first ? {"sprite": "nc/return_buster", "x": 58, "y": 0, "bob": 0} : null
+    weapon_model = {"visible": false}
+    title_monument = {"visible": false}
+    select_boss = {"visible": false}
+    select_pedestal = {"visible": false}
+    respawn_beam = {"visible": false}
+    victory_item = {"visible": false}
+    power_capsule = {"visible": false}
+    boss_shutter_fx = {"visible": false}
+    boss_entity = {"visible": false, "alive": false}
+    boss_satellites = []
+    boss_active = false
+    checkpoints = []
+    pickups = []
+    enemies = []
+    hazards_fx = []
+    barriers_fx = []
+    shots = []
+    enemy_shots = []
+    effects = []
+    escape_active = false
+    escape_first_person = false
+    master_target_hp = room == 4 ? 14 : (master_deck ? 4 : 3)
+    master_target_max_hp = master_target_hp
+    master_dragon_neck = []
+    master_dragon_break = 0
+    master_target = {"x": 35.5, "y": lane_y, "z": feet + (room == 4 ? 0 : 0.67),
+        "angle": 180, "scale": master_mini ? 0.62 : 1, "visible": true,
+        "model": "nc/master_relay"}
+    if room == 4:
+        call build_master_dragon
+    if room < 4:
+        master_props.push(master_target)
+    master_exit = {"x": 41, "y": lane_y, "z": feet, "angle": master_deck ? 90 : 0,
+        "scale": master_mini ? 0.62 : 0.76, "model": "nc/master_gate"}
+    master_props.push(master_exit)
+    lights = []
+    for i in range(0, 5):
+        lights.push({"x": 4 + i * 8.4, "y": lane_y + 1.4, "z": feet + 2.2,
+            "color": i % 2 == 0 ? accent : accent2, "radius": 7.2, "intensity": 0.65})
+    if room == 4:
+        lights.push({"x": master_target.x, "y": 8.4, "z": master_target.z,
+            "color": "#ff6940", "radius": 5.5, "intensity": 0.8})
+    status = "playing"
+    call update_master_camera false
+
+action build_master_dragon:
+    master_dragon_body = {"x": 35.8, "y": 6, "z": 2, "model": "nc/master_dragon_body", "visible": true}
+    master_props.push(master_dragon_body)
+    for i in range(0, 6):
+        local joint = {"x": 35.6, "y": 7, "z": 5.3, "pitch": 0,
+            "model": "nc/master_dragon_neck", "visible": true}
+        master_dragon_neck.push(joint)
+        master_props.push(joint)
+    master_target.model = "nc/master_dragon_head"
+    master_target.angle = 0
+    master_target.x = 30
+    master_target.z = 6.6
+    master_target.pitch = 0
+    master_props.push(master_target)
+    master_dragon_jaw = {"x": 30, "y": 7, "z": 6.2, "model": "nc/master_dragon_jaw", "visible": true}
+    master_dragon_roaring = false
+    master_props.push(master_dragon_jaw)
+    call pose_master_dragon_neck
+
+action pose_master_dragon_neck:
+    local root_x = master_dragon_body.x - 1.35
+    local root_z = master_dragon_body.z + 3.3
+    local end_x = master_target.x + 0.55
+    local end_z = master_target.z
+    master_dragon_jaw.x = master_target.x - 0.45
+    master_dragon_jaw.z = master_target.z - (master_dragon_roaring ? 0.58 : 0.33)
+    master_dragon_jaw.pitch = master_target.pitch - (master_dragon_roaring ? 20 : 0)
+    for i in range(0, 6):
+        local a = i / 6
+        local b = (i + 1) / 6
+        local center = (a + b) * 0.5
+        local arch = 1.2
+        local az = root_z + (end_z - root_z) * a + sin(a * 180) * arch
+        local bz = root_z + (end_z - root_z) * b + sin(b * 180) * arch
+        local dx = (root_x - end_x) / 6
+        local dz = bz - az
+        local joint = master_dragon_neck[i]
+        joint.x = root_x + (end_x - root_x) * center
+        joint.y = master_dragon_body.y + (master_target.y - master_dragon_body.y) * center
+        joint.z = (az + bz) * 0.5
+        joint.pitch = atan2(dz, dx)
+        joint.scale = max(0.57, sqrt(dx * dx + dz * dz) / 1.25)
+
+action tick_master_dragon:
+    if master_target_hp <= 0:
+        master_dragon_break = min(30, master_dragon_break + 1)
+        local fade = master_dragon_break / 30
+        master_target.z = max(1.7, master_target.z - 0.09)
+        master_dragon_body.z = max(0.8, master_dragon_body.z - 0.04)
+        call pose_master_dragon_neck
+        for joint in master_dragon_neck:
+            joint.dissolve = fade
+        master_target.dissolve = fade
+        master_dragon_body.dissolve = fade
+        master_dragon_jaw.dissolve = fade
+        lights[5].radius = 5.5 * (1 - fade) + 0.1
+        call update_effects
+        stop when true
+
+    local rage = master_target_hp <= 7
+    local cycle = master_room_ticks % (rage ? 86 : 102)
+    local dive = clamp((cycle - 16) / 12, 0, 1) * clamp((77 - cycle) / 14, 0, 1)
+    local sway = sin(master_room_ticks * 6)
+    master_target.x = 30.2 - 2.35 * dive + 0.34 * sway
+    master_target.z = 6.6 - 3.65 * dive + 0.21 * sway
+    master_target.pitch = -12 * dive + 7 * sway
+    master_dragon_roaring = cycle >= 32 && cycle <= 57
+    call pose_master_dragon_neck
+    lights[5].x = master_target.x - 0.8
+    lights[5].z = master_target.z
+    lights[5].color = master_dragon_roaring ? "#ff5027" : "#ff9762"
+    if (cycle == 42 || (rage && cycle == 56)) && abs(player.x - master_target.x) < 20:
+        call fire_master_bolt master_target.x - 1, master_target.y, master_target.z - 0.16, 180
+
+action update_master_camera(walking):
+    if master_first:
+        camera.x = player.x
+        camera.y = player.y
+        camera.z = player.z + 0.3 + (walking ? sin(master_room_ticks * 28) * 0.04 : 0)
+        camera.angle = master_angle
+        camera.pitch = -7
+        view_weapon.bob = walking && player.z == escape_deck_z ? master_room_ticks * 0.49 : 0
+        view_weapon.y = cooldown > 4 ? 3 : 0
+        stop when true
+    camera.x = clamp(player.x + (master_deck ? 0 : 4), 8, 37)
+    camera.y = master_deck ? clamp(player.y + 1, 4, 17.5) : (master_mini ? 19.5 : 16.8)
+    camera.z = master_deck ? 29 : (master_mini ? 4 : max(4.2, player.z + 2.2))
+    camera.pitch = master_deck ? -85 : 0
+    camera.angle = 270
+    if master_room == 4:
+        local arena = clamp((player.x - 15) / 9, 0, 1)
+        camera.x = clamp(player.x + 4 + arena * 3.3, 8, 37)
+        camera.y = 16.8 + arena * 2.9
+        camera.z = max(4.2 + arena, player.z + 2.2)
+
+action tick_master_run(input):
+    master_music_ticks = master_music_ticks + 1
+    if master_transition > 0:
+        master_transition = master_transition - 1
+        master_fade = 1 - abs(master_transition - 10) / 10
+        if master_transition > 10:
+            if master_room == 0:
+                camera.y = min(19.7, camera.y + 0.23)
+                avatar.y = max(3.5, avatar.y - 0.35)
+                avatar.scale = max(0.56, avatar.scale - 0.045)
+            if master_room == 1:
+                camera.z = camera.z + 0.55
+                camera.pitch = camera.pitch - 5
+            if master_room == 2:
+                camera.x = camera.x + (player.x - camera.x) * 0.25
+                camera.y = camera.y + (player.y - camera.y) * 0.25
+                camera.z = camera.z - 0.9
+                camera.pitch = camera.pitch + 5
+                camera.angle = (camera.angle + 10) % 360
+            if master_room == 3:
+                camera.z = camera.z + 0.6
+                camera.angle = (camera.angle + 350) % 360
+        if master_transition == 10:
+            master_room = master_room + 1
+            call build_master_room
+            master_fade = 1
+        call refresh_ui
+        stop when true
+
+    master_room_ticks = master_room_ticks + 1
+    local dx = ((input.right || (!master_first && input.turn_right)) ? 1 : 0) - ((input.left || (!master_first && input.turn_left)) ? 1 : 0)
+    local dy = (input.duck ? 1 : 0) - (input.aim_up ? 1 : 0)
+    if dx == 0 && input.move_x:
+        dx = input.move_x
+    if dy == 0 && input.duck_axis:
+        dy = input.duck_axis
+    if input.move_up:
+        dy = -input.move_up
+    local old_x = player.x
+    local old_y = player.y
+    if master_deck:
+        if master_first:
+            local turn = (input.turn_right ? 1 : 0) - (input.turn_left ? 1 : 0)
+            if input.turn_axis:
+                turn = clamp(turn + input.turn_axis, -1, 1)
+            master_angle = (master_angle + 5 * turn + 360) % 360
+            local forward = -dy
+            local strafe = dx
+            dx = cos(master_angle) * forward - sin(master_angle) * strafe
+            dy = sin(master_angle) * forward + cos(master_angle) * strafe
+        local speed = min(1, sqrt(dx * dx + dy * dy))
+        if speed > 0:
+            local heading = atan2(dy, dx)
+            if !master_first:
+                master_angle = heading
+            call move_on_deck player, heading, 0.28 * speed, 0.28
+        call jump_on_deck input.jump
+    if !master_deck:
+        if dx != 0:
+            facing = dx > 0 ? 1 : -1
+        master_angle = facing > 0 ? 0 : 180
+        local jump = input.jump == true && !jump_held
+        jump_held = input.jump == true
+        player = voxel_move(world, player, clamp(dx, -1, 1) * (master_mini ? 0.23 : 0.29), 0, jump, {"gravity": 0.042, "jumpSpeed": master_mini ? 0.40 : 0.54})
+        if player.z < 1.5:
+            call lose_master_life
+            stop when true
+
+    if master_target_hp > 0:
+        player.x = min(player.x, master_room == 4 ? 32.5 : 40.25)
+    local walking = player.x != old_x || player.y != old_y
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z
+    avatar.angle = master_angle
+    avatar.model = walking ? "nc/hero_run" + (floor(master_room_ticks / 3) % 4) : "nc/hero_idle"
+    if player.vz != 0:
+        avatar.model = "nc/hero_jump"
+    avatar.dissolve = invulnerable > 0 && master_room_ticks % 6 < 2 ? 0.32 : 0
+    call update_master_camera walking
+    if input.fire:
+        call fire_weapon false
+    if master_room == 4:
+        call tick_master_dragon
+    if master_room < 4 && master_target_hp > 0:
+        master_target.angle = (master_room_ticks * 5) % 360
+        if master_room_ticks % 36 == 0 && abs(player.x - master_target.x) < 19:
+            local bearing = master_deck ? atan2(player.y - master_target.y, player.x - master_target.x) : (player.x < master_target.x ? 180 : 0)
+            call fire_master_bolt master_target.x, master_target.y, master_target.z, bearing
+
+    call step_master_bolts
+    if health <= 0:
+        call lose_master_life
+        stop when true
+    for i in range(0, lights.length):
+        lights[i].intensity = 0.35 + 0.48 * (1 + cos((master_music_ticks - i * 3) * 30)) / 2
+        if master_room == 4 && i >= 3:
+            lights[i].intensity = lights[i].intensity * 0.65
+    if master_target_hp <= 0 && player.x > 39.6 && abs(player.y - master_exit.y) < 1.8:
+        if master_room == 4:
+            call finish_master_run
+            stop when true
+        master_transition = 20
+        sound.play "nc_barrier_open"
+    call refresh_ui
+
+action fire_master_bolt(x, y, z, angle):
+    local dx = cos(angle)
+    local dy = sin(angle)
+    enemy_shots.push({"x": x + dx * 0.48, "y": y + dy * 0.48, "z": z, "vx": dx * 0.32, "vy": dy * 0.32,
+        "life": 52, "angle": angle, "model": "nc/shot_nova"})
+    sound.play "nc_enemy_fire"
+
+action step_master_bolts:
+    for hostile in [false, true]:
+        local incoming = hostile ? enemy_shots : shots
+        local remaining = []
+        for bolt in incoming:
+            bolt.life = bolt.life - 1
+            for step in range(0, 3):
+                if bolt.life > 0:
+                    bolt.x = bolt.x + bolt.vx / 3
+                    bolt.y = bolt.y + bolt.vy / 3
+                    if bolt.x <= 0 || bolt.x >= level_width || bolt.y <= 0 || bolt.y >= level_height || ((hostile || !bolt.pierce) && voxel_get(world, floor(bolt.x), floor(bolt.y), floor(bolt.z)) != 0):
+                        bolt.life = 0
+                    if bolt.life > 0 && hostile && abs(player.x - bolt.x) < 0.62 && abs(player.y - bolt.y) < 0.56 && abs(player.z + 0.55 - bolt.z) < 0.72:
+                        bolt.life = 0
+                        if invulnerable == 0:
+                            health = max(0, health - 1)
+                            invulnerable = 25
+                            sound.play "nc_hurt"
+                    local target_width = master_room == 4 ? 1.35 : 0.85
+                    if bolt.life > 0 && !hostile && master_target_hp > 0 && abs(master_target.x - bolt.x) < target_width && abs(master_target.y - bolt.y) < 0.85 && abs(master_target.z - bolt.z) < 0.95:
+                        master_target_hp = max(0, master_target_hp - bolt.dmg)
+                        bolt.life = 0
+                        sound.play "nc_hit"
+                        if master_target_hp == 0:
+                            master_target.visible = master_room == 4
+                            if master_room == 4:
+                                call burst master_target.x, master_target.z, 18
+                                enemy_shots = []
+                            master_exit.model = "nc/master_gate_open"
+                            sound.play "nc_explode"
+            if bolt.life > 0:
+                remaining.push(bolt)
+        if hostile:
+            enemy_shots = remaining
+        if !hostile:
+            shots = remaining
+
+action lose_master_life:
+    lives = lives - 1
+    sound.play "nc_player_death"
+    if lives <= 0:
+        status = "gameover"
+        failure_selected = 0
+        call stop_stage_music
+        call refresh_ui
+        stop when true
+    master_transition = 0
+    call build_master_room
+    call refresh_ui
+
+action finish_master_run:
+    campaign.master_clear = true
+    status = "master_credits"
+    master_credits_ticks = 0
+    escape_active = false
+    view_weapon = null
+    master_props = []
+    shots = []
+    enemy_shots = []
+    effects = []
+    level_map = "sky_master_dawn"
+    avatar.model = "nc/hero_victory"
+    avatar.x = 32
+    avatar.y = 7
+    avatar.z = 2
+    avatar.angle = 70
+    camera = {"x": 32, "y": 13.7, "z": 2.1, "angle": 270, "pitch": 2}
+    lights = [
+        {"x": 30.8, "y": 9.4, "z": 3.3, "color": "#ffac62", "radius": 7, "intensity": 0.65},
+        {"x": 34.2, "y": 7.5, "z": 3.6, "color": "#65d9ec", "radius": 6, "intensity": 0.43}
+    ]
+    call play_stage_music "nc_credits"
+    call refresh_ui
+
+action refresh_master_ui:
+    if master_transition > 0:
+        ui = {"style": "floating", "meters": [], "objective": "", "detail": "", "notice": "", "prompt": "", "panel": null,
+            "cinema": {"lines": [], "offset": 0, "fade": master_fade}}
+        stop when true
+    local room_names = ["01 // SWITCHYARD", "02 // BACKPLANE", "03 // PRISM GRID", "04 // GLASS TUNNEL", "05 // THE CONDUCTOR"]
+    ui = {"style": "floating", "heading": "", "detail": room_names[master_room] + "  //  LIVES " + lives,
+        "objective": master_target_hp > 0 ? (master_room == 4 ? "AIM FOR THE HEAD WHEN THE DRAGON SWOOPS" : "SHOOT THE RELAY TO OPEN THE EXIT") : "EXIT OPEN // CROSS THE ARCH",
+        "notice": "",
+        "panel": null,
+        "reticle": master_first && !wheel_open,
+        "wheel": w_wheel,
+        "meters": [{"label":"AXEL","value":health,"max":max_health,"color":62975,"display":"pips","icon":"nc/hp_full","emptyIcon":"nc/hp_empty"},
+            {"label":weapon_label,"value":weapon_energy,"max":28,"color":62975,"display":"bar"},
+            {"label":master_room == 4 ? "CONDUCTOR" : "RELAY","value":master_target_hp,"max":master_target_max_hp,"color":16719515,"display":"bar"}],
+        "prompt": master_first ? "WASD MOVE | LEFT/RIGHT TURN | SPACE JUMP | X FIRE | TAB WHEEL" : "WASD / ARROWS MOVE | SPACE JUMP | X FIRE | TAB WHEEL"}
+
+action refresh_master_gate_ui:
+    local key_slots = []
+    for i in range(0, 6):
+        local st = stages[6 + i]
+        local mark = campaign.super_code == true || campaign.defeated[st.code] == true ? "KEY" : "LOCKED"
+        key_slots.push(st.short + " " + mark)
+    local ready = master_keys == 6
+    local choices = ready ? ["ENTER MASTER LEVEL", "STAGE SELECT"] : ["STAGE SELECT"]
+    local actions = ready ? [{"action": "start_master_run"}, {"action": "open_select"}] : [{"action": "open_select"}]
+    ui = {"style":"floating","heading":"MASTER GATE",
+        "meters": [], "notice": "", "prompt": "",
+        "objective":master_keys + "/6 MASTER KEYS",
+        "detail":campaign.master_clear == true ? "THE CONDUCTOR IS OFFLINE" : "NEON CITADEL // REACTOR ACCESS",
+        "panel":{"title": ready ? "GATE UNSEALED" : "SIX MASTER CORES REQUIRED",
+            "body": key_slots.slice(0, 3).join("  /  ") + "|" + key_slots.slice(3).join("  /  "),
+            "choices": choices, "choiceActions": actions,
+            "selected": master_gate_selection, "footer": "UP/DOWN SELECT | ENTER CONFIRM | ESC BACK"}}
+
+action tick_master_credits:
+    master_credits_ticks = master_credits_ticks + 1
+    local t = min(1, master_credits_ticks / 270)
+    camera.x = 32 + t * 1.4
+    camera.y = 13.7 + t * 5.2
+    camera.z = 2.1 + t * 1.1
+    camera.pitch = 2 + t * 2
+    if master_credits_ticks >= 420:
+        call close_master_credits
+        stop when true
+    call refresh_ui
+
+action close_master_credits:
+    status = "won"
+    call refresh_ui
+
+@Map/sky_master_dawn
+floor = "#281d45"
+sky = {"seed":87,"zenith":"#342453","horizon":"#f28f65","cloud":"#885477","speed":0.035}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."

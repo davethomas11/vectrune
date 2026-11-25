@@ -3,6 +3,7 @@ import { entityGroup } from './entities';
 
 export interface SideMapLegendEntry {
   voxel?: number;
+  center_voxel?: number;
   depth?: [number, number]; // [yStart, ySpan]
   model?: string;
   y?: number;
@@ -76,6 +77,15 @@ export function sideLevel(
   if (!Array.isArray(materials) || materials.length === 0) {
     throw new Error(`@SideMap/${fgNameValue} needs materials = [...]`);
   }
+  for (const [symbol, entry] of Object.entries(fg.legend)) {
+    const center = entry?.center_voxel;
+    if (center === undefined) continue;
+    if (!Number.isInteger(center) || center < 1 || center > materials.length ||
+        !(entry.voxel && entry.voxel > 0) || (entry.depth?.[1] ?? 4) < 2 ||
+        entry.boss_door || entry.barrier || entry.hazard) {
+      throw new Error(`@SideMap/${fgNameValue} legend ${symbol}: center_voxel needs a valid material and a solid span of at least two tiles`);
+    }
+  }
 
   let spawn = { x: 4.5, y: planeY, z: 3, angle: 0, pitch: 0, vz: 0 };
   const world: VoxelWorld = voxelWorld(width, depthY, height + marginZ, materials, {
@@ -100,6 +110,7 @@ export function sideLevel(
     const z = height - 1 - row;
     const line = fg.rows[row];
     let runVoxel = 0;
+    let runCenter = 0;
     let runY0 = 0;
     let runYSpan = 0;
     let runStart = 0;
@@ -107,6 +118,10 @@ export function sideLevel(
     const flushRun = (endX: number) => {
       if (runVoxel > 0 && endX > runStart) {
         voxelFill(world, [runStart, runY0, z], [endX - runStart, runYSpan, 1], runVoxel);
+        if (runCenter) {
+          const centerY = runY0 + Math.floor((runYSpan - 2) / 2);
+          voxelFill(world, [runStart, centerY, z], [endX - runStart, 2, 1], runCenter);
+        }
       }
       runVoxel = 0;
     };
@@ -122,11 +137,13 @@ export function sideLevel(
       if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
         const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
         const ySpan = entry.depth ? entry.depth[1] : 4;
-        if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan) {
+        const center = entry.center_voxel ?? 0;
+        if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan && runCenter === center) {
           // continue run
         } else {
           flushRun(x);
           runVoxel = entry.voxel;
+          runCenter = center;
           runY0 = y0;
           runYSpan = ySpan;
           runStart = x;

@@ -23,6 +23,13 @@ export interface VoxelHit {
   x: number; y: number; z: number; block: number; distance: number; face: number;
 }
 
+export interface VoxelTerrainPose {
+  world: VoxelWorld;
+  pivot: [number, number];
+  position: [number, number];
+  angle: number;
+}
+
 /** Occupancy is updated only for changed cells; snapshots detect even raw array writes. */
 export interface VoxelChunks {
   width: number;
@@ -243,27 +250,28 @@ function chunkEntry(chunks: VoxelChunks, x: number, y: number, z: number,
 
 export function voxelRay(world: VoxelWorld, origin: { x: number; y: number; z: number },
   ray: [number, number, number], maxDistance: number, output?: VoxelHit, chunks?: VoxelChunks): VoxelHit | null {
-  return traceVoxelRay(world, origin, ray[0], ray[1], ray[2],
+  const store = chunkStore(world);
+  return traceVoxelRay(world, store?.renderCells ?? world.cells, store?.renderCells ? undefined : store,
+    origin.x, origin.y, origin.z, ray[0], ray[1], ray[2],
     Math.abs(1 / ray[0]), Math.abs(1 / ray[1]), Math.abs(1 / ray[2]), maxDistance, output, chunks);
 }
 
 /** Rendering supplies cached ray components; gameplay keeps the tuple-based API. */
-function traceVoxelRay(world: VoxelWorld, origin: { x: number; y: number; z: number },
+function traceVoxelRay(world: VoxelWorld, cells: ArrayLike<number>, store: ChunkStore | undefined,
+  ox: number, oy: number, oz: number,
   rx: number, ry: number, rz: number, dx: number, dy: number, dz: number,
   maxDistance: number, output?: VoxelHit, chunks?: VoxelChunks,
-  crossings?: RayCrossings, column = 0, row = 0): VoxelHit | null {
-  let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+  crossings?: RayCrossings, column = 0, row = 0, entryFace = 2): VoxelHit | null {
+  let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
   const width = world.width, height = world.height, depth = world.depth;
-  const sourceStore=chunkStore(world),cells=sourceStore?.renderCells??world.cells;
-  const store=sourceStore?.renderCells?undefined:sourceStore;
   let lastChunk=-1, blocks:number[]|undefined;
   if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
   const sx = rx < 0 ? -1 : 1, sy = ry < 0 ? -1 : 1, sz = rz < 0 ? -1 : 1;
   const stepY = sy * width, stepZ = sz * width * height;
   let cellIndex = (z * height + y) * width + x;
-  let tx = rx === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
-  let ty = ry === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
-  let tz = rz === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+  let tx = rx === 0 ? Infinity : (sx < 0 ? ox - x : x + 1 - ox) * dx;
+  let ty = ry === 0 ? Infinity : (sy < 0 ? oy - y : y + 1 - oy) * dy;
+  let tz = rz === 0 ? Infinity : (sz < 0 ? oz - z : z + 1 - oz) * dz;
   if (chunks && (rx !== 0 || ry !== 0 || rz !== 0)) {
     const entry = chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance);
     if (!Number.isFinite(entry)) return null;
@@ -295,8 +303,8 @@ function traceVoxelRay(world: VoxelWorld, origin: { x: number; y: number; z: num
   }
   if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
   const exitX = sx > 0 ? width : -1, exitY = sy > 0 ? height : -1, exitZ = sz > 0 ? depth : -1;
-  let distance = 0, face = 2;
-  for (let iteration = 0; iteration < width+height+depth+3 && distance <= maxDistance; iteration++) {
+  let distance = 0, face = entryFace;
+  while (distance <= maxDistance) {
     let block:number;
     if(store){
       const chunk=((z>>2)*store.ch+(y>>2))*store.cw+(x>>2);
@@ -323,6 +331,46 @@ function traceVoxelRay(world: VoxelWorld, origin: { x: number; y: number; z: num
     }
   }
   return null;
+}
+
+const sideShade = Uint8Array.from({length: 256}, (_, channel) => Math.floor(channel * .8));
+const frontShade = Uint8Array.from({length: 256}, (_, channel) => Math.floor(channel * .65));
+
+function wrappedTexel(point: number, size: number): number {
+  const wrapped = point - Math.trunc(point) + 1;
+  return Math.floor((wrapped >= 1 ? wrapped - 1 : wrapped) * size);
+}
+
+function traceTerrainPose(world: VoxelWorld, cells: ArrayLike<number>, store: ChunkStore | undefined,
+  origin: { x: number; y: number; z: number },
+  rx: number, ry: number, rz: number, limit: number, output: VoxelHit, chunks?: VoxelChunks): VoxelHit | null {
+  const { x, y, z } = origin;
+  const enterX = terrainEntry(x, rx, world.width);
+  const enterY = terrainEntry(y, ry, world.height);
+  const enterZ = terrainEntry(z, rz, world.depth);
+  const entry = Math.max(enterX, enterY, enterZ);
+  if (entry > limit) return null;
+  if (entry < 0) {
+    return traceVoxelRay(world, cells, store, x, y, z, rx, ry, rz,
+      Math.abs(1 / rx), Math.abs(1 / ry), Math.abs(1 / rz), limit, output, chunks);
+  }
+  const exit = Math.min(rx === 0 ? Infinity : ((rx > 0 ? world.width : 0) - x) / rx,
+    ry === 0 ? Infinity : ((ry > 0 ? world.height : 0) - y) / ry,
+    rz === 0 ? Infinity : ((rz > 0 ? world.depth : 0) - z) / rz);
+  if (entry >= exit) return null;
+  // Step just inside before DDA. Subtract the epsilon for a hit on the entry face.
+  const start = entry + Math.min(1e-7, (exit - entry) / 2);
+  const face = entry === enterX ? 0 : entry === enterY ? 1 : 2;
+  const hit = traceVoxelRay(world, cells, store, x + rx * start, y + ry * start, z + rz * start,
+    rx, ry, rz, Math.abs(1 / rx), Math.abs(1 / ry), Math.abs(1 / rz), limit - start, output, chunks, undefined, 0, 0, face);
+  if (hit) hit.distance += hit.distance === 0 ? entry : start;
+  return hit;
+}
+
+function terrainEntry(origin: number, direction: number, end: number): number {
+  if (origin <= 0 && direction > 0) return -origin / direction;
+  if (origin >= end && direction < 0) return (end - origin) / direction;
+  return origin < 0 || origin >= end ? Infinity : -Infinity;
 }
 
 export function voxelTarget(worldValue: unknown, playerValue: unknown): VoxelHit | null {
@@ -401,6 +449,7 @@ export function voxelMove(worldValue: unknown, playerValue: unknown, dxValue: un
 interface CameraRays {
   width: number; height: number; angle: number; fov: number;
   columns: Float64Array; rows: Float64Array;
+  longitudes: Float64Array;
 }
 
 interface RayCrossings {
@@ -466,51 +515,151 @@ function cameraRays(camera: Camera3D, fov: number, width: number, height: number
   const scale = Math.tan(fov * Math.PI / 360);
   const columns = cached?.columns.length === width * 4 ? cached.columns : new Float64Array(width * 4);
   const rows = cached?.rows.length === height * 2 ? cached.rows : new Float64Array(height * 2);
+  const longitudes = cached?.longitudes.length === width ? cached.longitudes : new Float64Array(width);
   for (let x = 0; x < width; x++) {
     const u = (2 * x / width - 1) * scale, i = x * 4;
     const rx = ca - sa * u, ry = sa + ca * u;
     columns[i] = rx; columns[i + 1] = ry;
     columns[i + 2] = Math.abs(1 / rx); columns[i + 3] = Math.abs(1 / ry);
+    longitudes[x] = Math.atan2(ry, rx);
   }
   for (let y = 0; y < height; y++) {
     const rz = (height / 2 - y - .5) / height;
     rows[y * 2] = rz; rows[y * 2 + 1] = Math.abs(1 / rz);
   }
-  cached = { width, height, angle, fov, columns, rows };
+  cached = { width, height, angle, fov, columns, rows, longitudes };
   cameraRayScratch.set(depth, cached);
   return cached;
 }
 
+const chunkBoundsCache = new WeakMap<ChunkStore, { revision: number; bounds: number[] }>();
+function solidChunkBounds(store: ChunkStore): number[] {
+  const cached = chunkBoundsCache.get(store);
+  if (cached?.revision === store.revision) return cached.bounds;
+  const bounds: number[] = [];
+  for (const [id, blocks] of store.raw) {
+    let x0 = 4, y0 = 4, z0 = 4, x1 = 0, y1 = 0, z1 = 0;
+    for (let i = 0; i < 64; i++) {
+      if (!blocks[i]) continue;
+      const x = i & 3, y = (i >> 2) & 3, z = i >> 4;
+      x0 = Math.min(x0, x); y0 = Math.min(y0, y); z0 = Math.min(z0, z);
+      x1 = Math.max(x1, x + 1); y1 = Math.max(y1, y + 1); z1 = Math.max(z1, z + 1);
+    }
+    const x = (id % store.cw) * 4;
+    const y = (Math.floor(id / store.cw) % store.ch) * 4;
+    const z = Math.floor(id / (store.cw * store.ch)) * 4;
+    bounds.push(x + x0, y + y0, z + z0, x + x1, y + y1, z + z1);
+  }
+  chunkBoundsCache.set(store, { revision: store.revision, bounds });
+  return bounds;
+}
+
+const visibilityScratch = new WeakMap<Float64Array, Uint8Array>();
+function visibleVoxelTiles(store: ChunkStore, origin: { x: number; y: number; z: number },
+  ca: number, sa: number, cp: number, sp: number, c: number, s: number, fovScale: number,
+  width: number, height: number, depth: Float64Array): Uint8Array | undefined {
+  const tileWidth = Math.ceil(width / 8), tileHeight = Math.ceil(height / 8);
+  let tiles = visibilityScratch.get(depth);
+  if (tiles?.length !== tileWidth * tileHeight) {
+    tiles = new Uint8Array(tileWidth * tileHeight);
+    visibilityScratch.set(depth, tiles);
+  } else tiles.fill(0);
+  const bounds = solidChunkBounds(store);
+  for (let i = 0; i < bounds.length; i += 6) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let near = Infinity, far = -Infinity;
+    let outside = 15;
+    for (let corner = 0; corner < 8; corner++) {
+      const x = bounds[i + (corner & 1 ? 3 : 0)] - origin.x;
+      const localY = bounds[i + (corner & 2 ? 4 : 1)] - origin.y;
+      const localZ = bounds[i + (corner & 4 ? 5 : 2)] - origin.z;
+      const y = c * localY - s * localZ, z = s * localY + c * localZ;
+      const heading = x * ca + y * sa;
+      const forward = cp * heading + sp * z;
+      near = Math.min(near, forward); far = Math.max(far, forward);
+      const side = -sa * x + ca * y, up = cp * z - sp * heading;
+      outside &= (side < -fovScale * forward - 1e-7 ? 1 : 0) |
+        (side > fovScale * forward + 1e-7 ? 2 : 0) |
+        (up < -.5 * forward - 1e-7 ? 4 : 0) |
+        (up > .5 * forward + 1e-7 ? 8 : 0);
+      if (forward <= 1e-7) continue;
+      const px = (1 + side / (forward * fovScale)) * width / 2;
+      const py = height / 2 - .5 - up / forward * height;
+      minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+      minY = Math.min(minY, py); maxY = Math.max(maxY, py);
+    }
+    // Near-plane intersections can cover the whole screen. Keep scalar rays
+    // in that case and pad projected boxes for grazing rays and rounding.
+    if (outside || far < -1e-7) continue;
+    if (near <= 1e-7) return undefined;
+    const left = Math.max(0, Math.floor((minX - 1) / 8));
+    const right = Math.min(tileWidth - 1, Math.floor((maxX + 1) / 8));
+    const top = Math.max(0, Math.floor((minY - 1) / 8));
+    const bottom = Math.min(tileHeight - 1, Math.floor((maxY + 1) / 8));
+    if (left > right) continue;
+    for (let row = top; row <= bottom; row++) {
+      tiles.fill(1, row * tileWidth + left, row * tileWidth + right + 1);
+    }
+  }
+  return tiles;
+}
+
 export function renderVoxels(world: VoxelWorld, camera: Camera3D, textures: Record<string, Texture>,
   sky: Sky | null | undefined, fov: number, width: number, height: number,
-  buffer: Uint32Array, depth: Float64Array, time: number, preparedChunks?: VoxelChunks): void {
+  buffer: Uint32Array, depth: Float64Array, time: number, preparedChunks?: VoxelChunks, preserveBackdrop = false): void {
+  const pose = camera.terrainPose;
   const eye = (camera.z ?? 0) + 1.25, a = camera.angle * Math.PI / 180, p = (camera.pitch ?? 0) * Math.PI / 180;
   const ca = Math.cos(a), sa = Math.sin(a), cp = Math.cos(p), sp = Math.sin(p);
   const scale = Math.tan(fov * Math.PI / 360);
-  const materialTextures = world.materials.map(name => {
-    const texture = textures[name];
-    if (!texture) throw new Error(`Unknown voxel material texture: ${name}`);
-    return texture;
-  });
   if (![camera.x, camera.y, eye, camera.angle, camera.pitch ?? 0].every(Number.isFinite) ||
       camera.x < 0 || camera.y < 0 || camera.x >= world.width || camera.y >= world.height ||
       eye < 0 || eye >= world.depth || Math.abs(camera.pitch ?? 0) > 85) {
     throw new Error('Voxel camera must be finite, inside the world, with pitch between -85 and 85 degrees');
   }
-  chunkStore(world)?.prepareRenderCells();
+  if (pose) {
+    if (!Array.isArray(pose.pivot) || pose.pivot.length !== 2 || !Array.isArray(pose.position) ||
+        pose.position.length !== 2 || ![...pose.pivot, ...pose.position, pose.angle].every(Number.isFinite)) {
+      throw new Error('Voxel terrain pose needs finite Y/Z pivot and position pairs and an angle');
+    }
+    world = validateWorld(pose.world);
+    preparedChunks = undefined;
+  }
+  const materialTextures = world.materials.map(name => {
+    const texture = textures[name];
+    if (!texture) throw new Error(`Unknown voxel material texture: ${name}`);
+    return texture;
+  });
+  const sourceStore = chunkStore(world);
+  sourceStore?.prepareRenderCells();
+  const cells = sourceStore?.renderCells ?? world.cells;
+  const sparseStore = sourceStore?.renderCells ? undefined : sourceStore;
   const origin = { x: camera.x, y: camera.y, z: eye };
+  const theta = (pose?.angle ?? 0) * Math.PI / 180, c = Math.cos(theta), s = Math.sin(theta);
+  if (pose) {
+    const y = origin.y - pose.position[0], z = origin.z - pose.position[1];
+    origin.y = pose.pivot[0] + c * y + s * z;
+    origin.z = pose.pivot[1] - s * y + c * z;
+  }
   const rays = cameraRays(camera, fov, width, height, depth);
+  const needsTerrainEntry = pose && (origin.x <= 0 || origin.x >= world.width ||
+    origin.y <= 0 || origin.y >= world.height || origin.z <= 0 || origin.z >= world.depth);
   // The renderer consumes each hit immediately; gameplay queries still receive
   // independent objects. Avoid allocating an object for every terrain pixel.
   const hitOutput: VoxelHit = { x: 0, y: 0, z: 0, block: 0, distance: 0, face: 0 };
   const maxDistance = Math.min(Math.hypot(world.width, world.height, world.depth),world.renderDistance??Infinity);
   const occupancy = preparedChunks ?? prepareVoxelChunks(world);
-  // Dense volumes retain ordinary DDA; sparse floating islands benefit most.
-  const chunks = occupancy.count < occupancy.width*occupancy.height*occupancy.depth*.6 ? occupancy : undefined;
-  const crossings = rays && chunks && world.width<=256 && world.height<=256 ? rayCrossings(world, origin, rays, depth) : undefined;
+  // Dense volumes and thin posed terrain use fine DDA directly. Chunk
+  // traversal pays off when a ray can skip many empty cells.
+  const chunks = (!pose || Math.min(world.width, world.height, world.depth) > 8) &&
+    occupancy.count < occupancy.width*occupancy.height*occupancy.depth*.6 ? occupancy : undefined;
+  const crossings = !pose && rays && chunks && world.width<=256 && world.height<=256 ? rayCrossings(world, origin, rays, depth) : undefined;
+  const visibleTiles = sourceStore && sourceStore.raw.size <= 1024
+    ? visibleVoxelTiles(sourceStore, origin, ca, sa, cp, sp, c, s, scale, width, height, depth) : undefined;
+  const tileWidth = Math.ceil(width / 8);
   const horizon = sky ? (0xff000000 | sky.horizon) >>> 0 : 0xff342820;
   // Adjacent pixels write adjacent color/depth entries rather than striding rows.
   for (let y = 0; y < height; y++) {
+    const tileRow = (y >> 3) * tileWidth;
     const v = (height / 2 - y - .5) / height;
     const rz = rays ? rays.rows[y * 2] : sp + cp * v;
     const dz = rays ? rays.rows[y * 2 + 1] : Math.abs(1 / rz);
@@ -521,22 +670,30 @@ export function renderVoxels(world: VoxelWorld, camera: Camera3D, textures: Reco
       const ry = rays ? rays.columns[r + 1] : sa * cp + ca * u - sa * sp * v;
       const dx = rays ? rays.columns[r + 2] : Math.abs(1 / rx);
       const dy = rays ? rays.columns[r + 3] : Math.abs(1 / ry);
-      const hit = occupancy.count === 0 ? null : traceVoxelRay(world, origin, rx, ry, rz,
-        dx, dy, dz, maxDistance, hitOutput, chunks, crossings, x, y);
+      const localY = pose ? c * ry + s * rz : ry;
+      const localZ = pose ? -s * ry + c * rz : rz;
+      const hit = occupancy.count === 0 || (visibleTiles && !visibleTiles[tileRow + (x >> 3)]) ? null : needsTerrainEntry
+        ? traceTerrainPose(world, cells, sparseStore, origin, rx, localY, localZ, maxDistance, hitOutput, chunks)
+        : traceVoxelRay(world, cells, sparseStore, origin.x, origin.y, origin.z,
+          rx, localY, localZ, dx, pose ? Math.abs(1 / localY) : dy, pose ? Math.abs(1 / localZ) : dz,
+          maxDistance, hitOutput, chunks, crossings, x, y);
       if (!hit) {
         depth[i] = Infinity;
-        buffer[i] = sky && (rz > 0 || sky.below !== undefined)
-          ? skyPixel(sky, Math.atan2(ry, rx), Math.max(-1, Math.min(1, rz)), time) : horizon;
+        if (!preserveBackdrop) {
+          buffer[i] = sky && (rz > 0 || sky.below !== undefined)
+            ? skyPixel(sky, rays ? rays.longitudes[x] : Math.atan2(ry, rx), Math.max(-1, Math.min(1, rz)), time) : horizon;
+        }
       } else {
         depth[i] = hit.distance;
         const texture = materialTextures[hit.block - 1];
-        const pointU = hit.face === 0 ? camera.y + ry * hit.distance : camera.x + rx * hit.distance;
-        const pointV = hit.face === 2 ? camera.y + ry * hit.distance : eye + rz * hit.distance;
-        const tx = Math.floor((pointU % 1 + 1) % 1 * texture.width);
-        const ty = Math.floor((pointV % 1 + 1) % 1 * texture.height);
-        const color = texture.pixels[ty * texture.width + tx], factor = hit.face === 2 ? 1 : hit.face === 0 ? .8 : .65;
-        buffer[i] = (0xff000000 | Math.floor((color & 255) * factor) |
-          Math.floor(((color >>> 8) & 255) * factor) << 8 | Math.floor(((color >>> 16) & 255) * factor) << 16) >>> 0;
+        const pointU = hit.face === 0 ? origin.y + localY * hit.distance : origin.x + rx * hit.distance;
+        const pointV = hit.face === 2 ? origin.y + localY * hit.distance : origin.z + localZ * hit.distance;
+        const tx = wrappedTexel(pointU, texture.width);
+        const ty = wrappedTexel(pointV, texture.height);
+        const color = texture.pixels[ty * texture.width + tx];
+        const shade = hit.face === 0 ? sideShade : frontShade;
+        buffer[i] = hit.face === 2 ? (0xff000000 | color) >>> 0 :
+          (0xff000000 | shade[color & 255] | shade[(color >>> 8) & 255] << 8 | shade[(color >>> 16) & 255] << 16) >>> 0;
       }
     }
   }

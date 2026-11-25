@@ -28,6 +28,7 @@ import {
   type Stats3D,
 } from './raycaster';
 import { setActiveMap, type SpatialMap } from './spatial';
+import { validatePointLights, type PointLight3D } from './lighting';
 import type { BlockModel } from './model';
 import { validateHud, type GameHud } from './hud';
 import { validateWorld, validatedVoxelChunks } from './voxel';
@@ -37,6 +38,7 @@ import { validateTether, type Tether3D } from './tether';
 import type { SideMapData } from './sidemap';
 
 export interface TitleScene {
+  lights?: string;
   things?: string[];
   tethers?: string[];
   map: MapData;
@@ -57,6 +59,7 @@ export interface Pixel3DConfig {
   titleScene?: TitleScene;
   ui?: string;
   world?: string;
+  lights?: string; // state field containing the voxel scene's point lights
   pauseUi?: string;
   restartAction?: string;
   clickToStart?: boolean;
@@ -151,7 +154,8 @@ export class Pixel3DEngine {
   /** The desktop host shares this renderer for features beyond its fixed-eye rasterizer. */
   get usesSharedRenderer(): boolean {
     if (this.config.tethers?.length) return true;
-    if (this.config.ui && (this.app.state[this.config.ui] as any)?.map) return true;
+    const hud = this.config.ui ? this.app.state[this.config.ui] as GameHud | undefined : undefined;
+    if (hud?.map || hud?.countdown !== undefined) return true;
     if (this.config.pauseUi && (this.app.state[this.config.pauseUi] as any)?.map) return true;
     const map = this.config.maps?.[this.currentMapName] ?? this.config.map;
     if (map.sky?.below !== undefined) return true;
@@ -353,6 +357,7 @@ export class Pixel3DEngine {
     camera: Camera3D;
     things: Thing3D[];
     tethers: Tether3D[];
+    lights: PointLight3D[];
     weapon?: ViewmodelWeapon;
     flash: number;
     status: string;
@@ -420,7 +425,7 @@ export class Pixel3DEngine {
       if (!Number.isFinite(thing.dissolve ?? 0) || (thing.dissolve ?? 0) < 0 || (thing.dissolve ?? 0) > 1) {
         throw new Error('Pixel-3d model dissolve must be between 0 and 1');
       }
-      if (![thing.x, thing.y, thing.z ?? 0, thing.angle ?? 0, thing.scale ?? 1].every(Number.isFinite) ||
+      if (![thing.x, thing.y, thing.z ?? 0, thing.angle ?? 0, thing.pitch ?? 0, thing.scale ?? 1].every(Number.isFinite) ||
           (thing.scale ?? 1) <= 0) throw new Error('Pixel-3d model position/angle must be finite and scale must be positive');
     }
     const tethers: Tether3D[] = [];
@@ -459,12 +464,14 @@ export class Pixel3DEngine {
     const message = state.message ? String(state.message) : undefined;
     const switch_activated = Boolean(state.switch_activated);
 
+    const lights = titleScene ? titleScene.lights : this.config.lights;
     return {
       title_scene: titleScene,
       presentation_time: presentationTime,
       camera,
       things,
       tethers,
+      lights: lights ? validatePointLights(state[lights]) : [],
       weapon: titleScene ? undefined : weapon,
       flash: titleScene ? 0 : flash,
       status,
@@ -522,9 +529,10 @@ export class Pixel3DEngine {
   frame(): Uint32Array {
     this.invalidateFrame();
     const stats = this.renderState();
+    const world = this.raycaster.config.world;
     this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, this.frameHud(stats),
       stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time,
-      this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : undefined, stats.tethers);
+      world && !stats.camera.terrainPose ? validatedVoxelChunks(world) : undefined, stats.tethers, stats.lights);
     return this.raycaster.buffer;
   }
 }

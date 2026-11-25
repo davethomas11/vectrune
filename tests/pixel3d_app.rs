@@ -241,6 +241,32 @@ fn pause_and_restart_bindings_reject_invalid_scene_configuration() {
 }
 
 #[test]
+fn point_lights_bind_only_to_declared_voxel_scene_state() {
+    use rune_runtime::rune_ast::Value;
+    let doc = load_rune_document_from_path(Path::new("examples/games/neon_circuit/neon_circuit.rune")).unwrap();
+    let config = pixel3d::compile(&doc).unwrap().config;
+    assert_eq!(config["lights"], "lights");
+    assert_eq!(config["titleScene"]["lights"], "title_lights");
+    for (world, lights, error) in [
+        (true, Value::Number(3.0), "must name a state field"),
+        (true, Value::String("missing".into()), "references unknown state"),
+        (false, Value::String("lights".into()), "requires a voxel world"),
+    ] {
+        let mut invalid = doc.clone();
+        let scene = invalid.sections.iter_mut().find(|section| section.path == ["Scene", "neon_circuit"]).unwrap();
+        if !world {
+            scene.kv.remove("world");
+        }
+        scene.kv.insert("lights".into(), lights);
+        assert!(pixel3d::compile(&invalid).err().unwrap().to_string().contains(error));
+    }
+    let mut invalid = doc;
+    let title = invalid.sections.iter_mut().find(|section| section.path == ["Scene", "neon_title"]).unwrap();
+    title.kv.insert("lights".into(), Value::String("missing".into()));
+    assert!(pixel3d::compile(&invalid).err().unwrap().to_string().contains("Title Scene lights references unknown state"));
+}
+
+#[test]
 fn map_surfaces_reject_unknown_textures_and_invalid_sky() {
     let source = format!("{ASSETS_3D}\n@Map/test\nfloor = wall\nceiling = wall\nlegend = {{\"#\":{{\"wall\":\"wall\"}},\".\":{{}}}}\ngrid:\n    \"###\"\n    \"#.#\"\n    \"###\"\n");
     let parse = |source: &str| {

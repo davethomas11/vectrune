@@ -7,14 +7,17 @@ page = neon_circuit
 run:
     invoke initialize
     assert state.status == "title"
+    assert state.title_lights.length == 4
     assert state.stages.length == 12
     invoke advance
     assert state.status == "select"
+    assert state.lights[2].color == "#20e9ff"
     assert state.ui.grid.items.length == 12
     assert state.selected_title == "01 VOLT VIPER"
     assert state.selected_hint == "INTRO UNIT - UNLOCKS: VOLT SURGE (AIR DASH + RELAY CHARGE)"
     invoke pick_stage 6
     assert state.selected_title == "07 STORM VALKYRIE"
+    assert state.lights[2].color == "#ffdb64"
     assert state.selected_hint == "NEEDS: VOLT SURGE + MAG CLAW (RELAY + AIR DASH + DOUBLE JUMP)"
     invoke pick_stage 11
     assert state.selected_title == "12 OMEGA OVERLORD"
@@ -29,6 +32,9 @@ run:
     invoke load_stage 0
     assert state.status == "playing"
     assert state.world.storage == "chunked"
+    assert state.lights.length == 8
+    invoke sample_walkway_for_test
+    assert state.walkway_materials == [1,11,11,1]
     assert state.level_width == 120
     assert state.boss_entity.alive == true
     assert state.ui.wheel.items.length == 7
@@ -66,30 +72,54 @@ setup:
     invoke load_stage 0
 run:
     assert state.campaign.weapons.volt == false
+    invoke place_boss_for_death_test
     invoke on_boss_defeated
     assert state.status == "boss_dying"
-    assert state.campaign.defeated["01"] == true
-    assert state.campaign.weapons.volt == true
-    assert state.active_weapon == "volt"
+    assert state.music_track == "nc_boss_victory"
+    assert state.campaign.defeated["01"] == false
+    assert state.campaign.weapons.volt == false
     assert state.effects.length > 0
     invoke tick {}
     assert state.boss_entity.dissolve > 0
-    invoke wait_ticks 75
+    invoke wait_ticks 35
+    assert state.status == "boss_dying"
+    assert state.boss_entity.x == state.boss_death_spot_for_test
+    assert state.escape_floor[4].z > 0
+    assert state.escape_floor[4].pitch == -90
+    invoke wait_ticks 39
     assert state.status == "escape_flip"
+    assert state.camera.terrainPose.angle == 0
+    invoke wait_ticks 22
+    assert state.status == "escape_flip"
+    assert state.camera.terrainPose.angle < -40
+    assert state.camera.terrainPose.angle > -45
+    assert state.avatar.pitch > 160
+    assert state.escape_floor[0].pitch > -90
+    assert state.escape_floor[0].pitch < 0
+    assert state.avatar.model == "nc/hero_jump"
+    invoke wait_ticks 23
+    assert state.status == "playing"
+    assert state.escape_active == true
+    assert state.camera.pitch == -85
+    assert state.camera.angle == 270
+    assert state.camera.terrainPose.angle == -90
+    assert state.avatar.pitch == 0
+    assert state.avatar.z == state.escape_deck_z
+    assert state.escape_floor[0].pitch == 0
     assert state.escape_floor.length > 0
     assert state.power_capsule.visible == true
-    invoke wait_ticks 45
-    assert state.status == "escape"
-    assert state.camera.pitch == -42
-    assert state.camera.angle == 238
-    invoke tick {"left": true, "aim_up": true}
-    assert state.player.y < 7.0
-    assert state.avatar.model == "nc/hero_run0"
-    invoke tick {"left": true, "duck": true}
+    assert state.power_capsule.x == 3.5
+    assert state.enemies[0].alive == true
+    assert state.enemies[0].z == state.escape_deck_z
+    assert state.campaign.weapons.volt == false
     invoke tick {"left": true}
-    assert state.avatar.model == "nc/hero_run1"
-    invoke collect_power_container
+    assert state.player.x < state.escape_entry_x
+    assert state.avatar.model == "nc/hero_run0"
+    invoke return_to_core_for_test
     assert state.status == "boss_victory"
+    assert state.campaign.defeated["01"] == true
+    assert state.campaign.weapons.volt == true
+    assert state.active_weapon == "volt"
     assert state.power_capsule.model == "nc/power_capsule_open"
     assert state.victory_item.visible == true
     assert state.avatar.model == "nc/hero_victory"
@@ -97,11 +127,105 @@ run:
     invoke finish_boss_victory
     assert state.status == "stage_clear"
     assert state.power_capsule.visible == false
-    assert state.escape_floor.length == 0
     invoke load_stage 2
+    assert state.escape_active == false
+    assert state.escape_floor.length == 0
+    assert state.defeated_count == 1
+
+@Test/NeonCircuit/GlassDeckMovementAndWallCover
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    invoke test_side_wall_cover
+    assert state.enemy_shots.length == 0
+    assert state.health == 8
     invoke on_boss_defeated
-    assert state.campaign.weapons.mag == true
-    assert state.defeated_count == 2
+    invoke wait_ticks 120
+    invoke test_deck_wall_cover
+    assert state.original_floor_material == state.deck_wall_material
+    assert state.deck_wall_material > 0
+    assert state.deck_wall_center == 11
+    assert state.enemy_shots.length == 0
+    assert state.health == 8
+    assert state.player.y == 2.35
+    invoke test_deck_corner_cover
+    assert state.enemy_shots.length == 0
+    assert state.health == 8
+    invoke test_deck_clear_shot
+    assert state.health == 7
+    invoke test_deck_enemy_motion
+    assert state.enemies[0].y > 6.5
+    assert state.enemies[0].x == 9.5
+    invoke tick {"duck": true, "fire": true}
+    assert state.player.y > 9.5
+    assert state.shots[0].vy > 0
+    invoke tick {"aim_up": true}
+    assert state.player.y == 9.5
+    invoke tick {"right": true, "duck": true}
+    assert state.escape_angle == 45
+    assert state.player.x > 9.5
+    assert state.player.y > 9.5
+    assert state.player.x < 9.75
+    assert state.player.y < 9.75
+    invoke tick {"move_x": 0.6, "duck_axis": -0.3}
+    assert state.escape_angle > 333
+    assert state.escape_angle < 334
+    invoke tick {"move_x": 0.6, "move_up": 0.3}
+    assert state.escape_angle > 333
+    assert state.escape_angle < 334
+    invoke test_deck_explosion
+    assert state.enemies[0].alive == false
+    assert state.effects.length == 17
+    assert state.effects[1].y != state.enemies[0].y
+
+@Test/NeonCircuit/EscapeTimeoutRetriesFromTheDeck
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    invoke on_boss_defeated
+    invoke wait_ticks 120
+    assert state.escape_time_limit == 2250
+    assert state.escape_ticks == 0
+    assert state.lights[2].color == "#ff2845"
+    invoke wait_ticks 20
+    assert state.lights[2].intensity < 0.25
+    invoke expire_deck_timer_for_test
+    assert state.status == "escape_retry"
+    assert state.escape_failure == "TIME UP"
+    assert state.lives == 2
+    assert state.ui.panel.choices[0] == "TRY AGAIN"
+    assert state.escape_ticks == 2250
+    invoke tick {}
+    assert state.escape_ticks == 2250
+    invoke advance
+    assert state.status == "playing"
+    assert state.escape_active == true
+    assert state.escape_ticks == 0
+    assert state.lives == 2
+    assert state.player.x == state.escape_entry_x
+    assert state.camera.pitch == -85
+    assert state.boss_entity.alive == false
+    assert state.enemies[0].alive == true
+    assert state.campaign.weapons.volt == false
+    invoke expire_deck_timer_for_test
+    assert state.lives == 1
+    invoke retry_escape
+    invoke expire_deck_timer_for_test
+    assert state.lives == 0
+    assert state.status == "gameover"
+    assert state.ui.heading == "GAME OVER"
+    assert state.ui.panel.choices[0] == "RETRY SECTOR"
+    invoke advance
+    assert state.status == "playing"
+    assert state.lives == 3
+    assert state.escape_active == false
+    assert state.boss_entity.alive == true
 
 @Test/NeonCircuit/MagDoubleJumpAndVoltDash
 type = logic
@@ -117,8 +241,12 @@ run:
     assert state.jumps == 1
     invoke load_stage 2
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke load_stage 0
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke load_stage 6
     invoke tick {"jump": true}
     assert state.jumps == 1
@@ -128,6 +256,133 @@ run:
     invoke tick {"dash": true}
     assert state.dash_ticks > 0
 
+@Test/NeonCircuit/EscapeAudioBuildsWithCountdown
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    invoke on_boss_defeated
+    assert mock.audio contains {"operation":"music.play","args":["nc_boss_victory"]}
+    assert mock.audio contains {"operation":"sound.play","args":["nc_glass_raise",null]}
+    invoke wait_ticks 110
+    assert state.escape_flip_ticks == 35
+    invoke tick {}
+    assert mock.audio contains {"operation":"sound.play","args":["nc_escape_fall",null]}
+    invoke wait_ticks 9
+    assert state.music_track == "nc_escape"
+    assert state.escape_music_tempo == 132
+    assert mock.audio contains {"operation":"sound.play","args":["nc_escape_land",null]}
+    assert mock.audio contains {"operation":"music.play","args":["nc_escape",0,0.45]}
+    invoke wait_ticks 24
+    assert state.escape_next_alarm == 114
+    assert mock.audio contains {"operation":"sound.play","args":["nc_escape_alarm",null]}
+    invoke wait_ticks 126
+    assert state.escape_music_tempo == 135
+    assert mock.audio contains {"operation":"music.tempo","args":[135]}
+    invoke advance_escape_audio_to_for_test 300
+    assert state.escape_ticks == 1950
+    assert state.escape_music_tempo == 174
+    assert state.escape_next_alarm == 1975
+    assert mock.audio contains {"operation":"sound.play","args":["nc_escape_alarm_urgent",null]}
+    assert mock.audio contains {"operation":"music.tempo","args":[174]}
+    invoke advance_escape_audio_to_for_test 75
+    assert state.escape_music_tempo == 189
+    assert state.escape_next_alarm == 2190
+    invoke expire_deck_timer_for_test
+    assert state.music_track == ""
+    assert mock.audio contains {"operation":"music.stop","args":[]}
+    invoke retry_escape
+    assert state.escape_music_tempo == 132
+    assert state.escape_next_alarm == 24
+    assert state.music_track == "nc_escape"
+
+@Test/NeonCircuit/MasterEscapeZoomsIntoAxel
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 6
+run:
+    invoke on_boss_defeated
+    invoke wait_ticks 120
+    assert state.status == "escape_zoom"
+    assert state.camera.pitch == -85
+    assert state.avatar.visible == true
+    assert state.music_track == "nc_escape"
+    invoke wait_ticks 16
+    assert state.camera.z < 23
+    assert state.ui.cinema.fade > 0
+    assert state.escape_first_person == false
+    invoke wait_ticks 4
+    assert state.ui.cinema.fade == 1
+    assert state.escape_first_person == true
+    assert state.avatar.visible == false
+    assert state.camera.x == state.player.x
+    assert state.camera.y == state.player.y
+    assert state.camera.angle == 180
+    invoke wait_ticks 9
+    assert state.status == "playing"
+    assert state.escape_ticks == 0
+    assert state.ui.reticle == true
+    assert state.view_weapon.sprite == "nc/return_buster"
+    invoke tick {"aim_up": true, "fire": true}
+    assert state.camera.x < state.escape_entry_x
+    assert state.camera.x == state.player.x
+    assert state.camera.angle == 180
+    assert state.shots[0].vx < 0
+    invoke tick {"left": true}
+    assert state.player.y > 2.5
+    invoke tick {"turn_right": true}
+    assert state.camera.angle == 185
+    invoke expire_deck_timer_for_test
+    assert state.status == "escape_retry"
+    invoke retry_escape
+    assert state.camera.angle == 180
+    assert state.escape_first_person == true
+    assert state.avatar.visible == false
+    invoke return_to_core_for_test
+    assert state.status == "boss_victory"
+    assert state.avatar.visible == true
+    assert state.camera.pitch == -85
+    assert state.view_weapon == null
+
+@Test/NeonCircuit/EscapeWheelAndJumpInBothViews
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    invoke unlock_volt_for_test
+    invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke tick {"weapon_wheel":true,"turn_right":true}
+    assert state.active_weapon == "volt"
+    assert state.ui.wheel.active == true
+    assert state.escape_ticks == 0
+    assert state.player.x == state.escape_entry_x
+    invoke tick {"jump":true,"fire":true}
+    assert state.avatar.model == "nc/hero_jump"
+    assert state.player.z > state.escape_deck_z
+    assert state.shots[0].kind == "volt"
+    assert state.shots[0].z > 16
+    invoke wait_ticks 20
+    assert state.player.z == state.escape_deck_z
+    invoke load_stage 6
+    invoke on_boss_defeated
+    invoke wait_ticks 149
+    invoke tick {"weapon_wheel":true,"turn_right":true}
+    assert state.ui.wheel.active == true
+    assert state.camera.angle == 180
+    assert state.escape_ticks == 0
+    invoke tick {"jump":true}
+    assert state.player.z > state.escape_deck_z
+    assert state.camera.z > 15.6
+    invoke wait_ticks 20
+    assert state.player.z == state.escape_deck_z
+
 @Test/NeonCircuit/AbilityBarriersAndCryoBridge
 type = logic
 page = neon_circuit
@@ -136,14 +391,24 @@ setup:
 run:
     invoke load_stage 0
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke load_stage 1
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke load_stage 3
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke load_stage 4
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke load_stage 5
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke load_stage 6
     invoke open_barrier_column [40, "volt"]
     assert state.barriers[0].open == true
@@ -170,6 +435,8 @@ run:
     assert state.ui.panel.choices[0] == "NEW GAME"
     invoke load_stage 0
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke finish_boss_victory
     assert state.status == "stage_clear"
     invoke back
@@ -231,6 +498,8 @@ run:
     assert state.boss_door_locked == true
     invoke hurt_player 8
     assert state.status == "player_dying"
+    assert state.music_track == ""
+    assert mock.audio contains {"operation":"sound.play","args":["nc_player_death",null]}
     assert state.death_ticks == 0
     assert state.effects.length >= 10
     invoke wait_ticks 35
@@ -244,6 +513,59 @@ run:
     assert state.status == "playing"
     assert state.health == 8
     assert state.respawn_beam.visible == false
+    assert state.music_track == "nc_stage_01"
+
+@Test/NeonCircuit/PitDeathUsesTheLastLife
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    invoke enter_pit_for_test
+    assert state.status == "player_dying"
+    assert state.player.z > 1.05
+    invoke wait_ticks 32
+    assert state.status == "gameover"
+    assert state.lives == 0
+    assert state.ui.heading == "GAME OVER"
+    assert state.music_track == ""
+
+@Test/NeonCircuit/EscapeDeckCoversTheSamePit
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke cross_covered_pit_for_test
+    assert state.pit_cover_tiles == [27.5,28.5,29.5,30.5]
+    assert state.player.x > 31
+    assert state.avatar.z == state.escape_deck_z
+    assert state.status == "playing"
+    assert state.lives == 3
+
+@Test/NeonCircuit/BossCoreCollidesWithPlatforms
+type = logic
+page = neon_circuit
+setup:
+    invoke initialize
+    invoke load_stage 0
+run:
+    invoke walk_boss_into_platform_for_test
+    assert state.boss_entity.x > 108.25
+    assert state.boss_entity.x < 108.3
+    assert state.boss_entity.dir == -1
+    invoke drop_boss_onto_platform_for_test
+    assert state.boss_entity.z == 5
+    assert state.boss_entity.vz == 0
+    assert state.boss_grounded == true
+    assert state.boss_land_ticks > 0
+    invoke bump_boss_into_ceiling_for_test
+    assert state.boss_entity.z < 3.21
+    assert state.boss_entity.vz == 0
 
 @Test/NeonCircuit/EnemyTelegraphWarningAndFiringAnimation
 type = logic
@@ -289,6 +611,8 @@ run:
     invoke tick {"weapon_wheel": false}
     assert state.wheel_open == false
     invoke on_boss_defeated
+    invoke wait_ticks 120
+    invoke return_to_core_for_test
     invoke finish_boss_victory
     invoke load_stage 0
     assert state.campaign.weapons.volt == true
@@ -308,5 +632,118 @@ run:
     assert state.wheel_open == false
     assert state.active_weapon == "volt"
 
+@Logic/neon_circuit
+action unlock_volt_for_test:
+    campaign.weapons.volt = true
 
+action place_boss_for_death_test:
+    boss_entity.x = boss_entity.home_x - 2
+    boss_death_spot_for_test = boss_entity.x
 
+action expire_deck_timer_for_test:
+    escape_ticks = escape_time_limit - 1
+    enemies[0].alive = false
+    enemies[0].visible = false
+    call tick {}
+
+action enter_pit_for_test:
+    lives = 1
+    player.x = 26.5
+    player.z = 2
+    for i in range(0, 18):
+        if status == "playing":
+            call tick {"right": true}
+
+action cross_covered_pit_for_test:
+    pit_cover_tiles = []
+    for panel in escape_floor:
+        if panel.model == "nc/glass_pit_cover" && panel.x >= 27 && panel.x < 31 && panel.y == 3 && panel.pitch == 0:
+            pit_cover_tiles.push(panel.x)
+    player.x = 26.5
+    player.y = 2.5
+    for i in range(0, 20):
+        call tick {"right": true}
+
+action walk_boss_into_platform_for_test:
+    world = voxel_fill(world, [109, 5, 2], [1, 4, 3], 1)
+    boss_active = true
+    boss_state = "patrol"
+    boss_entity.dir = 1
+    boss_entity.x = 108.2
+    boss_entity.z = 2
+    call step_boss
+
+action drop_boss_onto_platform_for_test:
+    boss_grounded = false
+    boss_entity.x = 109.5
+    boss_entity.z = 5.15
+    boss_entity.vz = -0.3
+    call step_boss
+
+action bump_boss_into_ceiling_for_test:
+    world = voxel_fill(world, [106, 5, 5], [3, 4, 1], 1)
+    boss_entity.x = 107.5
+    boss_entity.z = 3.03
+    call move_boss_z 0.35
+
+action advance_escape_audio_to_for_test(remaining):
+    escape_ticks = escape_time_limit - remaining - 1
+    call tick {}
+
+action return_to_core_for_test:
+    player.x = power_capsule.x + 1.6
+    player.y = power_capsule.y
+    if escape_first_person:
+        call tick {"aim_up": true}
+    else:
+        call tick {"left": true}
+
+action sample_walkway_for_test:
+    walkway_materials = []
+    for y in range(5, 9):
+        walkway_materials.push(voxel_get(world, 10, y, 1))
+
+action test_side_wall_cover:
+    original_floor_material = voxel_get(world, 10, 8, 1)
+    player.x = 11.3
+    player.z = 2.7
+    enemy_shots = [{"x": 10.8, "y": 7, "z": 3.5, "vx": 0.5, "vz": 0, "life": 5}]
+    call step_enemy_shots
+
+action test_deck_wall_cover:
+    deck_wall_material = voxel_get(world, 10, 1, escape_deck_z)
+    deck_wall_center = voxel_get(world, 10, 1, escape_deck_z + 1)
+    player.x = 10.5
+    player.y = 2.5
+    call tick {"aim_up": true}
+    call tick {"aim_up": true}
+    invulnerable = 0
+    enemy_shots = [{"x": 10.5, "y": 1.65, "z": escape_deck_z + 0.8, "vx": 0, "vy": 0.35, "life": 5}]
+    call step_escape_shots
+
+action test_deck_corner_cover:
+    player.x = 11.5
+    player.y = 2.5
+    # Both endpoints are clear. The shot crosses the corner of a raised
+    # platform before leaving its row and reaching the player's hit radius.
+    enemy_shots = [{"x": 10.92, "y": 3.01, "z": escape_deck_z + 0.8, "vx": 0.25, "vy": -0.025, "life": 5}]
+    call step_escape_shots
+
+action test_deck_clear_shot:
+    enemy_shots = [{"x": 10.75, "y": 2.5, "z": escape_deck_z + 0.8, "vx": 0.25, "vy": 0, "life": 5}]
+    call step_escape_shots
+
+action test_deck_enemy_motion:
+    player.x = 9.5
+    player.y = 9.5
+    enemies[0].x = 9.5
+    enemies[0].y = 6.5
+    enemies[0].cd = 30
+    call step_escape_enemies
+
+action test_deck_explosion:
+    enemies[0].x = player.x + 1.65
+    enemies[0].y = player.y
+    enemies[0].hp = 1
+    cooldown = 0
+    call tick {"right": true, "fire": true}

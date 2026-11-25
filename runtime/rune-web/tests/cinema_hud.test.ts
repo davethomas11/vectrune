@@ -26,3 +26,19 @@ describe('cinematic crawl HUD',()=>{
    expect(()=>validateHud({...ui,cinema:{...ui.cinema!,...change}})).toThrow('cinema');
  });
 });
+
+it('centers a larger countdown as the deadline approaches and pulses it in the last ten seconds', () => {
+  const floating: GameHud = { meters: [], objective: '', detail: '', prompt: '', notice: '', panel: null, style: 'floating' };
+  const clock = (countdown: number) => {
+    const calls: { label: string; scale: number }[] = [];
+    renderHud({ width: 576, height: 360, rect() {}, text(label, _x, _y, _color, scale = 1) {
+      calls.push({ label, scale });
+    } }, validateHud({ ...floating, countdown }), 'playing', false);
+    return calls.at(-1);
+  };
+  expect(clock(75)).toEqual({ label: '1:15', scale: 3 });
+  expect(clock(18)).toEqual({ label: '0:18', scale: 4 });
+  expect(clock(9)).toEqual({ label: '0:09', scale: 5 });
+  expect(clock(8.5)).toEqual({ label: '0:09', scale: 4 });
+  expect(() => validateHud({ ...floating, countdown: Infinity })).toThrow('countdown');
+});

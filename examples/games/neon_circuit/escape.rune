@@ -1,0 +1,549 @@
+# The return route turns the stage's X/Z playfield into an X/Y deck.
+@Logic/neon_circuit
+
+action start_glass_lift:
+    escape_floor = []
+    for col in range(0, floor((level_width + 7) / 8)):
+        for row in range(0, floor((level_height + 3) / 4)):
+            local x = 4 + col * 8
+            local offset = 2 + row * 4
+            escape_floor.push({
+                "x": x, "y": 4.2, "z": offset - 19, "offset": offset,
+                "model": "nc/glass_panel", "angle": 90, "pitch": -90
+            })
+    # Reinforce the entrance lane over the original pits as the deck turns.
+    for col in range(0, level_width):
+        if voxel_get(world, col, 7, 0) == 0 && voxel_get(world, col, 7, 1) == 0:
+            escape_floor.push({
+                "x": col + 0.5, "y": 4.2, "z": -16, "offset": 3,
+                "model": "nc/glass_pit_cover", "angle": 90, "pitch": -90
+            })
+    escape_terrain = voxel_world(level_width, 5, level_height, world.materials)
+    escape_prepared_columns = 0
+
+action raise_glass_screen(progress):
+    # Viewed from the side, the panes rise in front of the skyline and behind
+    # the boss. They stay vertical until the camera starts its quarter turn.
+    local t = clamp(progress, 0, 1)
+    local height = -19 * (1 - t * t * (3 - 2 * t))
+    for panel in escape_floor:
+        panel.z = height + panel.offset
+
+action turn_glass_deck(progress):
+    local t = clamp(progress / 0.88, 0, 1)
+    local eased = t * t * (3 - 2 * t)
+    local tilt = -90 * (1 - eased)
+    local pivot_y = 4.2 * (1 - eased)
+    local pivot_z = (escape_deck_z - 0.25) * eased
+    for panel in escape_floor:
+        panel.pitch = tilt
+        panel.y = pivot_y + panel.offset * cos(tilt)
+        panel.z = pivot_z - panel.offset * sin(tilt)
+
+action capture_escape_terrain(to_x):
+    # SideMap solids span world Y 5..8. Wall material also occupies Y 4.
+    # Copy the textured terrain while the boss is still on screen.
+    for col in range(escape_prepared_columns, to_x):
+        for row in range(0, level_height):
+            local material = voxel_get(world, col, 7, row)
+            local capsule_bay = row >= 3 && row <= 4 && abs(col + 0.5 - power_capsule.x) <= 2
+            if row != 2 && !capsule_bay && material > 0:
+                local edge = voxel_get(world, col, 8, row)
+                local back = edge == 3 ? 0 : 1
+                escape_terrain = voxel_fill(escape_terrain, [col, back, row], [1, 5 - back, 1], edge)
+                if material != edge:
+                    escape_terrain = voxel_fill(escape_terrain, [col, 2, row], [1, 2, 1], material)
+    escape_prepared_columns = to_x
+
+action start_escape_flip:
+    status = "escape_flip"
+    escape_flip_ticks = 0
+    shots = []
+    enemy_shots = []
+    lamps = []
+    world = voxel_fill(world, [0, 4, 0], [level_width, 5, level_height], 0)
+    camera.terrainPose = {
+        "world": escape_terrain, "pivot": [5, 0], "position": [9, 0], "angle": 0
+    }
+    local backdrop = []
+    for sc in scenery:
+        if sc.y < 4:
+            backdrop.push(sc)
+        if sc.y >= 4:
+            sc.visible = false
+    camera.backdrop = {"x": camera.x, "y": camera.y, "z": camera.z, "things": backdrop}
+    for group in [checkpoints, pickups, barriers_fx, hazards_fx]:
+        for item in group:
+            item.visible = false
+    weapon_model.visible = false
+    avatar.model = "nc/hero_jump"
+    avatar.angle = 180
+    avatar.pitch = 0
+    escape_prepared_columns = 0
+    escape_entry_x = clamp(player.x, 2.5, level_width - 2.5)
+    escape_flip_camera = {"x": camera.x, "y": camera.y, "z": camera.z, "pitch": camera.pitch}
+    escape_flip_player = {"x": player.x, "y": player.y, "z": player.z}
+    escape_flip_enemies = []
+    for e in enemies:
+        escape_flip_enemies.push({"x": e.x, "y": e.y, "z": e.z, "was_alive": e.alive})
+        e.visible = true
+        e.dissolve = e.alive ? 0 : 1
+        e.model = e.base_model
+        e.fire_ticks = 0
+        e.scale = 1
+    sound.play "nc_dash"
+    call refresh_ui
+
+action tick_escape_flip:
+    escape_flip_ticks = escape_flip_ticks + 1
+    local elapsed = min(1, escape_flip_ticks / 45)
+    local eased = elapsed * elapsed * (3 - 2 * elapsed)
+    call shift_overload_light eased
+    call turn_glass_deck elapsed
+    camera.terrainPose.angle = -90 * eased
+    camera.terrainPose.position = [9 * (1 - eased), escape_deck_z * eased]
+    call bake_escape_collision floor(level_width * elapsed)
+
+    camera.x = escape_flip_camera.x + (escape_entry_x - escape_flip_camera.x) * eased
+    camera.y = escape_flip_camera.y + (5.7 - escape_flip_camera.y) * eased
+    camera.z = escape_flip_camera.z + (escape_deck_z + 15 - escape_flip_camera.z) * eased
+    camera.pitch = escape_flip_camera.pitch + (-85 - escape_flip_camera.pitch) * eased
+    player.x = escape_flip_player.x + (escape_entry_x - escape_flip_player.x) * eased - sin(elapsed * 180)
+    player.y = escape_flip_player.y + (2.5 - escape_flip_player.y) * eased
+    player.z = escape_flip_player.z + (escape_deck_z - escape_flip_player.z) * eased + sin(elapsed * 180) * 4.5
+    avatar.pitch = 360 * eased
+    # Animate about the torso so Axel tucks rather than spins around his feet.
+    avatar.x = player.x + sin(avatar.pitch) * 0.8
+    avatar.y = player.y
+    avatar.z = player.z + (1 - cos(avatar.pitch)) * 0.8
+    for i in range(0, enemies.length):
+        local e = enemies[i]
+        local pose = escape_flip_enemies[i]
+        local deck_y = clamp(e.home_z + 0.5, 2.5, level_height - 2.5)
+        e.x = pose.x + (e.home_x - pose.x) * eased
+        e.y = pose.y + (deck_y - pose.y) * eased
+        e.z = pose.z + (escape_deck_z - pose.z) * eased
+        e.dissolve = pose.was_alive ? 0 : 1 - eased
+
+    call update_effects
+    if escape_flip_ticks == 22:
+        sound.play "nc_barrier_open"
+    if escape_flip_ticks == 36:
+        sound.play "nc_escape_fall"
+    if escape_flip_ticks >= 45:
+        sound.play "nc_escape_land"
+        call finish_escape_flip
+    call refresh_ui
+
+action bake_escape_collision(to_x):
+    # The final quarter turn sends local (Y,Z) to world (Z, deck + 5 - Y).
+    # Only collision uses these cells. The visible terrain keeps its pose.
+    for col in range(escape_prepared_columns, to_x):
+        for row in range(0, level_height):
+            local edge = voxel_get(escape_terrain, col, 4, row)
+            if edge > 0:
+                local height = edge == 3 ? 5 : 4
+                world = voxel_fill(world, [col, row, escape_deck_z], [1, 1, height], edge)
+                local center = voxel_get(escape_terrain, col, 3, row)
+                if center != edge:
+                    world = voxel_fill(world, [col, row, escape_deck_z + 1], [1, 1, 2], center)
+    escape_prepared_columns = to_x
+
+action reset_escape_enemies:
+    for e in enemies:
+        e.x = e.home_x
+        e.y = clamp(e.home_z + 0.5, 2.5, level_height - 2.5)
+        e.z = escape_deck_z
+        e.hp = e.max_hp
+        e.alive = true
+        e.visible = true
+        e.model = e.base_model
+        e.scale = 1
+        e.dissolve = 0
+        e.fire_ticks = 0
+        e.cd = 24 + floor(e.x) % 23
+    call setup_volt_return
+    call setup_sector_return
+
+action finish_escape_flip:
+    call reset_escape_enemies
+    escape_flip_enemies = []
+    escape_active = true
+    status = "playing"
+    escape_ticks = 0
+    escape_failure = ""
+    escape_angle = 180
+    power_capsule.y = 3.35
+    power_capsule.z = escape_deck_z
+    power_capsule.visible = true
+    victory_item.visible = false
+    call reset_escape_player
+    call set_deck_lights
+    call update_deck_lights
+    call start_escape_audio 0.45
+    if stages[current_stage].tier == 2:
+        status = "escape_zoom"
+        escape_zoom_ticks = 0
+        escape_zoom_fade = 0
+    notice_text = "RETURN TO THE ENTRANCE AND SECURE THE CORE"
+    notice_ticks = 90
+
+action tick_escape_zoom:
+    escape_zoom_ticks = escape_zoom_ticks + 1
+    local t = min(1, escape_zoom_ticks / 20)
+    local eased = t * t * (3 - 2 * t)
+    if escape_zoom_ticks < 20:
+        camera.x = player.x + 2.2 * eased
+        camera.y = 5.7 + (player.y - 5.7) * eased
+        camera.z = escape_deck_z + 15 - 14 * eased
+        camera.angle = 270 - 90 * eased
+        camera.pitch = -85 + 60 * eased
+        escape_zoom_fade = clamp((escape_zoom_ticks - 12) / 8, 0, 1)
+    if escape_zoom_ticks == 20:
+        escape_first_person = true
+        avatar.visible = false
+        view_weapon = {"sprite": "nc/return_buster", "x": 58, "y": 0, "bob": 0}
+        camera.x = player.x
+        call set_escape_eye 0
+    if escape_zoom_ticks >= 20:
+        escape_zoom_fade = max(0, 1 - (escape_zoom_ticks - 20) / 9)
+    if escape_zoom_ticks >= 29:
+        status = "playing"
+    call refresh_ui
+
+action set_escape_eye(bob):
+    camera.x = player.x
+    camera.y = player.y
+    camera.z = player.z + 0.30 + bob
+    camera.angle = escape_angle
+    camera.pitch = -6
+
+action start_escape_audio(fade):
+    escape_music_tempo = 132
+    escape_next_alarm = 24
+    if fade > 0:
+        music_track = "nc_escape"
+        music.play("nc_escape", 0, fade)
+    else:
+        call play_stage_music "nc_escape"
+
+action update_escape_audio:
+    local remaining = escape_time_limit - escape_ticks
+    local urgent = remaining <= 300
+    local tempo = 132 + floor(escape_ticks * 42 / (escape_time_limit - 300))
+    if urgent:
+        # Start the warning immediately as the final ten seconds begin.
+        if escape_music_tempo < 174:
+            escape_next_alarm = escape_ticks
+        tempo = 174 + floor((300 - remaining) / 15)
+    if tempo != escape_music_tempo:
+        escape_music_tempo = tempo
+        music.tempo = tempo
+
+    if escape_ticks >= escape_next_alarm:
+        local pulse = urgent ? "nc_escape_alarm_urgent" : "nc_escape_alarm"
+        local interval = urgent ? (remaining <= 90 ? 15 : 25) : 90
+        sound.play pulse
+        escape_next_alarm = escape_ticks + interval
+
+action reset_escape_player:
+    player.x = escape_entry_x
+    player.y = 2.5
+    player.z = escape_deck_z
+    player.vz = 0
+    jumps = 0
+    jump_held = false
+    volt_dash_ticks = 0
+    volt_dash_used = false
+    volt_dash_ready = false
+    if current_stage == 0 && volt_launch_pad:
+        volt_launch_pad.dissolve = 0
+    wheel_open = false
+    wheel_ticks = 0
+    health = max_health
+    weapon_energy = 28
+    invulnerable = 45
+    hurt_ticks = 0
+    cooldown = 0
+    shots = []
+    enemy_shots = []
+    effects = []
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z
+    avatar.angle = 180
+    avatar.pitch = 0
+    avatar.model = "nc/hero_idle"
+    avatar.dissolve = 0
+    avatar.visible = !escape_first_person
+
+action return_to_deck_entry:
+    call reset_escape_player
+    call update_deck_lights
+    camera.backdrop.x = camera.backdrop.x + player.x - camera.x
+    camera.x = player.x
+    camera.y = 5.7
+    escape_angle = 180
+    if escape_first_person:
+        call set_escape_eye 0
+        view_weapon.bob = 0
+        view_weapon.y = 0
+
+action fail_escape(reason):
+    lives = max(0, lives - 1)
+    status = lives > 0 ? "escape_retry" : "gameover"
+    escape_failure = reason
+    failure_selected = 0
+    shots = []
+    enemy_shots = []
+    call stop_stage_music
+    local cue = reason == "TIME UP" ? "nc_hurt" : "nc_player_death"
+    sound.play cue
+    call refresh_ui
+
+action retry_escape:
+    stop when status != "escape_retry"
+    status = "playing"
+    escape_ticks = 0
+    escape_failure = ""
+    pause_selected = 0
+    call reset_escape_enemies
+    call return_to_deck_entry
+    call start_escape_audio 0
+    notice_text = "RETURN TO THE ENTRANCE AND SECURE THE CORE"
+    notice_ticks = 90
+    sound.play "nc_checkpoint"
+    call refresh_ui
+
+action restart_escape:
+    if lives <= 1:
+        call fail_escape "CIRCUIT FLATLINED"
+        stop when true
+    lives = lives - 1
+    sound.play "nc_player_death"
+    call return_to_deck_entry
+    notice_text = "REBOOTED AT BOSS ROOM"
+    notice_ticks = 60
+
+action tick_escape(input):
+    escape_ticks = escape_ticks + 1
+    if escape_ticks >= escape_time_limit:
+        call fail_escape "TIME UP"
+        stop when true
+    local dx = 0
+    local dy = 0
+    local move_left = input.left || (!escape_first_person && input.turn_left)
+    local move_right = input.right || (!escape_first_person && input.turn_right)
+    dx = (move_right ? 1 : 0) - (move_left ? 1 : 0)
+    if input.aim_up || input.up:
+        dy = -1
+    if input.duck || input.down:
+        dy = 1
+    if dx == 0 && input.move_x:
+        dx = input.move_x
+    if dy == 0 && input.duck_axis:
+        dy = input.duck_axis
+    if input.move_up:
+        dy = -input.move_up
+    if escape_first_person:
+        local turn = (input.turn_right ? 1 : 0) - (input.turn_left ? 1 : 0)
+        if input.turn_axis:
+            turn = clamp(turn + input.turn_axis, -1, 1)
+        escape_angle = (escape_angle + 5 * turn + 360) % 360
+        local forward = -dy
+        local strafe = dx
+        dx = cos(escape_angle) * forward - sin(escape_angle) * strafe
+        dy = sin(escape_angle) * forward + cos(escape_angle) * strafe
+    call jump_on_deck input.jump
+    local stride = 0.25
+    if input.dash && campaign.weapons.volt:
+        stride = 0.38
+    if current_stage == 1:
+        call step_cryo_vents
+        if cryo_slipping:
+            stride = stride * 0.45
+    local input_strength = min(1, sqrt(dx * dx + dy * dy))
+    local old_x = player.x
+    local old_y = player.y
+    if current_stage == 0:
+        call prime_volt_dash input.dash, dx
+    local boost = current_stage == 0 && volt_dash_ticks > 0
+    if boost:
+        escape_angle = 180
+        call move_on_deck player, 180, 0.96, 0.28
+        volt_dash_ticks = volt_dash_ticks - 1
+    if !boost && input_strength > 0:
+        local move_angle = atan2(dy, dx)
+        if !escape_first_person:
+            escape_angle = move_angle
+        call move_on_deck player, move_angle, stride * input_strength, 0.28
+    if current_stage == 1:
+        call check_cryo_cache
+    if current_stage == 6:
+        call step_storm_crosswind
+    if return_challenge != null:
+        call step_return_challenge
+    call update_deck_lights
+
+    if current_stage == 0 && !boost:
+        call check_volt_coil
+    if input.fire:
+        call fire_weapon false
+
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z
+    avatar.angle = escape_angle
+    avatar.model = "nc/hero_idle"
+    if player.x != old_x || player.y != old_y:
+        avatar.model = "nc/hero_run" + (floor(escape_ticks / 3) % 4)
+    if player.z > escape_deck_z:
+        avatar.model = "nc/hero_jump"
+    avatar.dissolve = invulnerable > 0 && hurt_ticks > 0 && ticks % 4 < 2 ? 0.35 : 0
+    if escape_first_person:
+        local walking = player.x != old_x || player.y != old_y
+        local step = escape_ticks * 28
+        call set_escape_eye (walking && player.z == escape_deck_z ? sin(step) * 0.04 : 0)
+        camera.backdrop.x = camera.backdrop.x + player.x - old_x
+        view_weapon.bob = walking && player.z == escape_deck_z ? step * 0.0174533 : 0
+        view_weapon.y = cooldown > 3 ? 3 : 0
+    else:
+        local camera_dx = (player.x - camera.x) * 0.3
+        camera.x = camera.x + camera_dx
+        camera.backdrop.x = camera.backdrop.x + camera_dx
+        camera.y = camera.y + (clamp(player.y + 2, 5.7, level_height - 5.7) - camera.y) * 0.18
+
+    call step_escape_shots
+    call step_escape_enemies
+    call update_effects
+    if health <= 0:
+        call restart_escape
+        call refresh_ui
+        stop when true
+    power_capsule.angle = (escape_ticks * 2) % 360
+    if distance(player, power_capsule) < 1.55 && player.z - escape_deck_z < 0.85:
+        call collect_power_container
+        stop when true
+    call update_escape_audio
+    call refresh_ui
+
+action jump_on_deck(pressed):
+    local grounded_deck = player.z <= escape_deck_z
+    if grounded_deck:
+        jumps = 0
+    if pressed == true && !jump_held && (grounded_deck || (campaign.weapons.mag == true && jumps == 1)):
+        player.vz = grounded_deck ? 0.40 : 0.36
+        jumps = jumps + 1
+        sound.play (grounded_deck ? "nc_jump" : "nc_double_jump")
+    jump_held = pressed == true
+    player.vz = player.vz - 0.045
+    player.z = max(escape_deck_z, player.z + player.vz)
+    if player.z == escape_deck_z:
+        player.vz = 0
+
+action move_on_deck(actor, angle, speed, radius):
+    local x = clamp(actor.x + cos(angle) * speed, 1.4, level_width - 1.4)
+    local y = clamp(actor.y + sin(angle) * speed, 2.35, level_height - 1.4)
+    if x != actor.x:
+        call try_deck_step actor, x, actor.y, radius
+    if y != actor.y:
+        call try_deck_step actor, actor.x, y, radius
+
+action try_deck_step(actor, x, y, radius):
+    local left = floor(x - radius)
+    local right = floor(x + radius)
+    local top = floor(y - radius)
+    local bottom = floor(y + radius)
+    if voxel_get(world, left, top, escape_deck_z) == 0 && voxel_get(world, right, top, escape_deck_z) == 0 && voxel_get(world, left, bottom, escape_deck_z) == 0 && voxel_get(world, right, bottom, escape_deck_z) == 0:
+        actor.x = x
+        actor.y = y
+
+action step_escape_enemies:
+    for e in enemies:
+        if e.alive && e.volt_lane == true:
+            call step_volt_lane_turret e
+        if e.alive && e.volt_flank && e.volt_flank < 4:
+            call step_volt_flank e
+        if e.alive && e.volt_lane != true && (!e.volt_flank || e.volt_flank == 4) && abs(player.x - e.x) <= 15:
+            local dx = player.x - e.x
+            local dy = player.y - e.y
+            local dist = distance(e, player)
+            local aim = atan2(dy, dx)
+            if dist < 13:
+                e.cd = e.cd - 1
+                e.angle = aim
+                local charging = e.cd <= 12
+                e.fire_ticks = max(0, e.fire_ticks - 1)
+                e.model = charging ? e.base_model + "_charge" : e.base_model
+                if e.fire_ticks > 0:
+                    e.model = e.base_model + "_fire"
+                e.scale = charging && ticks % 6 < 3 ? 1.13 : 1
+                if e.kind != "turret" && dist > 1 && !charging:
+                    local along_x = dx < 0 ? 180 : 0
+                    local along_y = dy < 0 ? 270 : 90
+                    local x_gap = abs(dx)
+                    local y_gap = abs(dy)
+                    local direction = x_gap >= y_gap ? along_x : along_y
+                    local other = x_gap >= y_gap ? along_y : along_x
+                    local speed = e.kind == "drone" ? 0.13 : 0.09
+                    local old_x = e.x
+                    local old_y = e.y
+                    call move_on_deck e, direction, speed, 0.34
+                    if e.x == old_x && e.y == old_y && x_gap > 0.2 && y_gap > 0.2:
+                        call move_on_deck e, other, speed, 0.34
+                if e.cd == 12:
+                    sound.play "nc_enemy_charge"
+                if e.cd <= 0 && dist > 0.9:
+                    e.cd = e.kind == "turret" ? 64 : 83
+                    e.fire_ticks = 8
+                    enemy_shots.push({
+                        "x": e.x, "y": e.y, "z": escape_deck_z + 0.8,
+                        "vx": cos(aim) * 0.28, "vy": sin(aim) * 0.28,
+                        "life": 55, "model": "nc/enemy_shot", "angle": aim
+                    })
+                    sound.play "nc_enemy_fire"
+            if dist < 0.9 && player.z < e.z + 0.95:
+                call hurt_player 1
+
+action step_escape_shots:
+    for friendly in [true, false]:
+        local incoming = friendly ? shots : enemy_shots
+        local remaining = []
+        for s in incoming:
+            local old_x = s.x
+            local old_y = s.y
+            s.x = s.x + s.vx
+            s.y = s.y + s.vy
+            s.life = s.life - 1
+            if s.life > 0 && s.x >= 1 && s.x < level_width - 1 && s.y >= 1 && s.y < level_height - 1:
+                if !friendly || !s.pierce:
+                    call stop_shot_at_cover s, old_x, old_y, s.y, true
+                if s.life > 0:
+                    if friendly:
+                        if current_stage == 6 && !storm_relay_off:
+                            call hit_storm_relay s
+                        if current_stage == 4:
+                            call hit_phase_cache s
+                        for e in enemies:
+                            if s.life > 0 && e.alive && distance(e, s) < 0.8 && abs(s.z - e.z - 0.8) < 0.85:
+                                e.hp = e.hp - s.dmg
+                                sound.play "nc_hit"
+                                if e.hp <= 0:
+                                    e.alive = false
+                                    e.visible = false
+                                    if e.volt_lane == true:
+                                        call set_volt_lane_warning false
+                                    sound.play "nc_explode"
+                                    call burst_on_deck e.x, e.y
+                                if !s.pierce:
+                                    s.life = 0
+                    if !friendly:
+                        if distance(player, s) < 0.65 && player.z <= s.z + 0.08:
+                            call hurt_player 1
+                            s.life = 0
+                    if s.life > 0:
+                        remaining.push(s)
+        if friendly:
+            shots = remaining
+        if !friendly:
+            enemy_shots = remaining

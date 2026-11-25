@@ -11,11 +11,11 @@ grid:
 @SideMap/lvl_06_fg
 plane_y = 7
 depth_y = 20
-materials = ["nc/deck","nc/deck_pink","nc/wall","nc/volt_gate","nc/cryo_ice","nc/blast_wall","nc/phase_gate","nc/saw_gate","nc/thermal_vent","nc/mag_block"]
+materials = ["nc/deck","nc/deck_pink","nc/wall_conduit","nc/volt_gate","nc/cryo_ice","nc/blast_wall","nc/phase_gate","nc/saw_gate","nc/thermal_vent","nc/mag_block","nc/lane_conduit"]
 legend = {
     ".": {},
-    "#": {"voxel": 1, "depth": [5, 4]},
-    "=": {"voxel": 2, "depth": [5, 4]},
+    "#": {"voxel": 1, "depth": [5, 4], "center_voxel": 11},
+    "=": {"voxel": 2, "depth": [5, 4], "center_voxel": 11},
     "W": {"voxel": 3, "depth": [4, 5]},
     "M": {"voxel": 10, "depth": [5, 4]},
     "|": {"ladder": true, "model": "nc/ladder"},

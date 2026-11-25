@@ -6,6 +6,7 @@ action build_stage_catalog:
         {
             "id": 0, "code": "01", "short": "01 VOLT", "name": "VOLT VIPER",
             "sector": "NEON POWER GRID", "tier": 1, "color": 62975,
+            "light_colors": ["#20e9ff", "#ff2ba6"],
             "fg": "lvl_01_fg", "bg": "lvl_01_bg", "sky": "sky_01", "music": "nc_stage_01",
             "model": "nc/boss_volt", "unlocks": "volt", "unlock_label": "VOLT SURGE",
             "skill_desc": "AIR DASH (SHIFT/K) + CHARGE VOLT RELAYS",
@@ -16,6 +17,7 @@ action build_stage_catalog:
         {
             "id": 1, "code": "02", "short": "02 CRYO", "name": "CRYO SHADE",
             "sector": "CRYO SERVER VAULT", "tier": 1, "color": 9370367,
+            "light_colors": ["#a5f0ff", "#616be5"],
             "fg": "lvl_02_fg", "bg": "lvl_02_bg", "sky": "sky_02", "music": "nc_stage_02",
             "model": "nc/boss_cryo", "unlocks": "cryo", "unlock_label": "CRYO LANCE",
             "skill_desc": "FREEZES SCORCHING THERMAL VENTS INTO ICE BRIDGES",
@@ -26,6 +28,7 @@ action build_stage_catalog:
         {
             "id": 2, "code": "03", "short": "03 MAG", "name": "MAG TITAN",
             "sector": "MAG-LEV SCRAPYARD", "tier": 1, "color": 11544319,
+            "light_colors": ["#bd82ff", "#ffa553"],
             "fg": "lvl_03_fg", "bg": "lvl_03_bg", "sky": "sky_03", "music": "nc_stage_03",
             "model": "nc/boss_mag", "unlocks": "mag", "unlock_label": "MAG CLAW",
             "skill_desc": "DOUBLE MAG-BOOST JUMP IN MIDAIR",
@@ -36,6 +39,7 @@ action build_stage_catalog:
         {
             "id": 3, "code": "04", "short": "04 PYRO", "name": "PYRO NOVA",
             "sector": "PLASMA FOUNDRY", "tier": 1, "color": 16739072,
+            "light_colors": ["#ff793a", "#786edc"],
             "fg": "lvl_04_fg", "bg": "lvl_04_bg", "sky": "sky_04", "music": "nc_stage_04",
             "model": "nc/boss_pyro", "unlocks": "nova", "unlock_label": "NOVA BREAKER",
             "skill_desc": "SHATTERS REINFORCED BLAST WALLS",
@@ -46,6 +50,7 @@ action build_stage_catalog:
         {
             "id": 4, "code": "05", "short": "05 PHASE", "name": "PHASE PHANTOM",
             "sector": "HOLO-NET SPIRE", "tier": 1, "color": 16719515,
+            "light_colors": ["#ef60d8", "#7771ff"],
             "fg": "lvl_05_fg", "bg": "lvl_05_bg", "sky": "sky_05", "music": "nc_stage_05",
             "model": "nc/boss_phase", "unlocks": "phase", "unlock_label": "PHASE BEAM",
             "skill_desc": "PIERCES WALLS & DEACTIVATES HOLO-SHIELDS",
@@ -56,6 +61,7 @@ action build_stage_catalog:
         {
             "id": 5, "code": "06", "short": "06 SAW", "name": "PULSE SAW",
             "sector": "BIO-SYNTH CONDUIT", "tier": 1, "color": 3800852,
+            "light_colors": ["#67ed9a", "#ddcb56"],
             "fg": "lvl_06_fg", "bg": "lvl_06_bg", "sky": "sky_06", "music": "nc_stage_06",
             "model": "nc/boss_saw", "unlocks": "saw", "unlock_label": "HYPER SAW",
             "skill_desc": "SLICES ARMORED CABLE BARRIERS",
@@ -66,6 +72,7 @@ action build_stage_catalog:
         {
             "id": 6, "code": "07", "short": "07 STORM", "name": "STORM VALKYRIE",
             "sector": "SKYLINE WIND TURBINE", "tier": 2, "color": 16770560,
+            "light_colors": ["#ffdb64", "#77aeff"],
             "fg": "lvl_07_fg", "bg": "lvl_07_bg", "sky": "sky_07", "music": "nc_stage_07",
             "model": "nc/boss_storm", "unlocks": "", "unlock_label": "SKY CORE",
             "skill_desc": "MASTER SKY CORE RECOVERED",
@@ -76,6 +83,7 @@ action build_stage_catalog:
         {
             "id": 7, "code": "08", "short": "08 GLACR", "name": "GLACIER REACTOR",
             "sector": "THERMAL-CRYO CORE", "tier": 2, "color": 9370367,
+            "light_colors": ["#54bfff", "#ff7969"],
             "fg": "lvl_08_fg", "bg": "lvl_08_bg", "sky": "sky_08", "music": "nc_stage_08",
             "model": "nc/boss_glacier", "unlocks": "", "unlock_label": "CRYO CORE",
             "skill_desc": "MASTER CRYO CORE RECOVERED",
@@ -86,6 +94,7 @@ action build_stage_catalog:
         {
             "id": 8, "code": "09", "short": "09 GHOST", "name": "GHOST PROTOCOL",
             "sector": "BLACK-ICE MAINFRAME", "tier": 2, "color": 16719515,
+            "light_colors": ["#cd78ff", "#86d949"],
             "fg": "lvl_09_fg", "bg": "lvl_09_bg", "sky": "sky_09", "music": "nc_stage_09",
             "model": "nc/boss_ghost", "unlocks": "", "unlock_label": "MAINFRAME CORE",
             "skill_desc": "MASTER MAINFRAME CORE RECOVERED",
@@ -96,6 +105,7 @@ action build_stage_catalog:
         {
             "id": 9, "code": "10", "short": "10 HYDRA", "name": "IRON HYDRA",
             "sector": "MECHA ASSEMBLY TRENCH", "tier": 2, "color": 3800852,
+            "light_colors": ["#45e096", "#fb9460"],
             "fg": "lvl_10_fg", "bg": "lvl_10_bg", "sky": "sky_10", "music": "nc_stage_10",
             "model": "nc/boss_hydra", "unlocks": "", "unlock_label": "HYDRA CORE",
             "skill_desc": "MASTER HYDRA CORE RECOVERED",
@@ -106,6 +116,7 @@ action build_stage_catalog:
         {
             "id": 10, "code": "11", "short": "11 PRISM", "name": "PRISM ARCHON",
             "sector": "ORBITAL LASER ARRAY", "tier": 2, "color": 62975,
+            "light_colors": ["#86f5ef", "#c980ff"],
             "fg": "lvl_11_fg", "bg": "lvl_11_bg", "sky": "sky_11", "music": "nc_stage_11",
             "model": "nc/boss_prism", "unlocks": "", "unlock_label": "PRISM CORE",
             "skill_desc": "MASTER PRISM CORE RECOVERED",
@@ -116,6 +127,7 @@ action build_stage_catalog:
         {
             "id": 11, "code": "12", "short": "12 OMEGA", "name": "OMEGA OVERLORD",
             "sector": "NEON CITADEL NEXUS", "tier": 2, "color": 16717636,
+            "light_colors": ["#ff506e", "#8867f0"],
             "fg": "lvl_12_fg", "bg": "lvl_12_bg", "sky": "sky_12", "music": "nc_stage_12",
             "model": "nc/boss_omega", "unlocks": "", "unlock_label": "CITADEL KEY",
             "skill_desc": "CITADEL MASTER KEY RECOVERED",
@@ -126,6 +138,18 @@ action build_stage_catalog:
     ]
 
 action build_title_scene:
+    volt_return_props = []
+    sector_return_props = []
+    return_challenge = null
+    master_active = false
+    master_props = []
+    call set_title_lights
+    lights = []
+    lamps = []
+    escape_active = false
+    escape_first_person = false
+    view_weapon = null
+    escape_floor = []
     world = null
     scenery = []
     title_scenery = [
@@ -174,11 +198,26 @@ action build_title_scene:
     camera = {"x": 18.0, "y": 19.6, "z": 2.0, "angle": 270, "pitch": 2}
 
 action build_select_arena:
+    volt_return_props = []
+    sector_return_props = []
+    return_challenge = null
+    master_active = false
+    master_props = []
+    lights = []
+    lamps = []
+    escape_active = false
+    escape_first_person = false
+    view_weapon = null
+    escape_floor = []
     built = side_level("lvl_01_fg", "lvl_01_bg")
     world = built.world
     world = voxel_fill(world, [2, 4, 2], [36, 6, 15], 0)
     world = voxel_fill(world, [2, 5, 1], [36, 4, 1], 1)
-    scenery = built.scenery
+    world = voxel_fill(world, [2, 6, 1], [36, 2, 1], 11)
+    scenery = []
+    for sc in built.scenery:
+        if sc.y < 4:
+            scenery.push(sc)
     title_scenery = []
     title_monument = {"visible": false}
     level_map = "sky_title"
@@ -220,6 +259,7 @@ action refresh_select_preview:
         "scale": 1.2,
         "visible": true
     }
+    call set_select_lights st.light_colors
     selected_title = st.code + " " + st.name
     selected_sector = st.sector
     selected_hint = st.hint
@@ -228,10 +268,15 @@ action refresh_select_preview:
     call refresh_ui
 
 action load_stage(stage_idx):
+    volt_return_props = []
+    sector_return_props = []
+    return_challenge = null
+    master_active = false
+    master_props = []
     current_stage = stage_idx
     selected_stage = stage_idx
     st = stages[stage_idx]
-    built = side_level(st.fg, st.bg)
+    built = side_level(st.fg, st.bg, {"margin_z": 24})
     world = built.world
     level_width = built.width
     level_height = built.height
@@ -272,6 +317,9 @@ action load_stage(stage_idx):
     escape_floor = []
     escape_flip_ticks = 0
     escape_ticks = 0
+    escape_active = false
+    escape_first_person = false
+    view_weapon = null
     checkpoints = built.checkpoints
     pickups = built.pickups
     enemies = built.entities
@@ -321,6 +369,7 @@ action load_stage(stage_idx):
     boss_state_ticks = 0
     boss_hurt_ticks = 0
     boss_land_ticks = 0
+    boss_grounded = true
     boss_entity = {"visible": false, "alive": false, "hp": 0, "max_hp": 1, "dissolve": 0}
     boss_satellites = []
     if built.boss != null:
@@ -334,6 +383,7 @@ action load_stage(stage_idx):
             {"x": boss_entity.x + 1.1, "y": 6.9, "z": boss_entity.z + 1.1, "model": "nc/boss_pod", "angle": 180, "scale": 0.9, "dissolve": 0, "visible": true},
             {"x": boss_entity.x, "y": 7.25, "z": boss_entity.z + 0.95, "model": "nc/boss_ring", "angle": 0, "scale": 0.85, "dissolve": 0, "visible": true}
         ]
+    call set_stage_lights built.spawn, st.light_colors
     victory_item = {"visible": false, "x": player.x, "y": 7, "z": player.z + 2, "model": "nc/victory_orb", "angle": 0, "scale": 1}
     title_scenery = []
     title_monument = {"visible": false}

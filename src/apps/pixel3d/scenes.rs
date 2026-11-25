@@ -71,6 +71,10 @@ pub(super) fn compile(doc: &RuneDocument, scene: &crate::rune_ast::Section, conf
     if let Some(paths) = tether_paths(title)? {
         config["titleScene"]["tethers"] = paths;
     }
+    if let Some(value) = title.kv.get("lights") {
+        let field = value.as_str().context("Title Scene lights must name a state field")?;
+        config["titleScene"]["lights"] = json!(field);
+    }
     Ok(())
 }
 

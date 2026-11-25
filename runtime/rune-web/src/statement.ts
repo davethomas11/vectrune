@@ -370,11 +370,13 @@ export function executeStatement(
     ) {
       let trackName = '';
       let startBeat: number | undefined;
+      let fadeSeconds: number | undefined;
       if ((trimmed.startsWith('music.play(') || trimmed.startsWith('play_music(')) && trimmed.endsWith(')')) {
-        const [name, beat] = splitTopLevel(trimmed.slice(trimmed.indexOf('(') + 1, -1), ',');
+        const [name, beat, fade] = splitTopLevel(trimmed.slice(trimmed.indexOf('(') + 1, -1), ',');
         const scope = buildScope(locals, trimmed);
         trackName = String(evaluateExpression(name, scope) || '');
         if (beat !== undefined) startBeat = Number(evaluateExpression(beat, scope));
+        if (fade !== undefined) fadeSeconds = Number(evaluateExpression(fade, scope));
       } else if (trimmed.startsWith('music.play ')) {
         trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || '');
       } else if (trimmed.startsWith('music ')) {
@@ -382,7 +384,8 @@ export function executeStatement(
       }
       trackName = normalizeLiteral(trackName);
       if (trackName) {
-        if (startBeat === undefined) playMusic(trackName);
+        if (fadeSeconds !== undefined) playMusic(trackName, startBeat, fadeSeconds);
+        else if (startBeat === undefined) playMusic(trackName);
         else playMusic(trackName, startBeat);
       }
       return true;

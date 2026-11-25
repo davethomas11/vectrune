@@ -7,7 +7,7 @@ import { tetherModel, tetherPieces, type Point3D, type Tether3D } from './tether
 
 type Frame = ReturnType<Pixel3DEngine['renderState']>;
 type Vec = [number, number, number];
-type Pose = Pick<Thing3D, 'x' | 'y' | 'z' | 'angle' | 'scale' | 'model'>;
+type Pose = Pick<Thing3D, 'x' | 'y' | 'z' | 'angle' | 'pitch' | 'scale' | 'model'>;
 type CapturedFrame = {
   frame: Frame;
   camera: Frame['camera'];
@@ -343,7 +343,7 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
         batch.transforms = resized;
       }
       const data = batch.transforms, rotation = radians(instance.angle ?? 0);
-      const tilt = instance.axisTilt ?? 0;
+      const tilt = instance.axisTilt ?? radians(instance.pitch ?? 0);
       data[offset] = instance.x;
       data[offset + 1] = instance.y;
       data[offset + 2] = instance.z ?? 0;
@@ -372,8 +372,8 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
       const poses = interpolate ? new Map<Thing3D, Pose>() : undefined;
       if (poses) for (const thing of frame.things) {
         if (thing.visible !== false && thing.model) {
-          const { x, y, z, angle, scale, model } = thing;
-          poses.set(thing, { x, y, z, angle, scale, model });
+          const { x, y, z, angle, pitch, scale, model } = thing;
+          poses.set(thing, { x, y, z, angle, pitch, scale, model });
         }
       }
       const tethers = interpolate && frame.tethers.length ? new Map<Tether3D, Tether3D>() : undefined;
@@ -441,16 +441,17 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
       for (const batch of batches.values()) batch.count = 0;
       for (const thing of things) {
         if (!thing.model || thing.visible === false || thing.dissolve === 1) continue;
-        let { x, y, z = 0, angle = 0, scale = 1 } = thing;
+        let { x, y, z = 0, angle = 0, pitch = 0, scale = 1 } = thing;
         const old = t < 1 ? previous?.poses?.get(thing) : undefined;
         if (old && old.model === thing.model && Math.hypot(x - old.x, y - old.y, z - (old.z ?? 0)) < 4) {
           x = blend(old.x, x, t);
           y = blend(old.y, y, t);
           z = blend(old.z ?? 0, z, t);
           angle = blendAngle(old.angle ?? 0, angle, t);
+          pitch = blendAngle(old.pitch ?? 0, pitch, t);
           scale = blend(old.scale ?? 1, scale, t);
         }
-        queue(batchFor(thing.model), { x, y, z, angle, scale, dissolve: thing.dissolve });
+        queue(batchFor(thing.model), { x, y, z, angle, pitch, scale, dissolve: thing.dissolve });
       }
       for (const tether of frame.tethers) {
         if (tether.visible === false) continue;

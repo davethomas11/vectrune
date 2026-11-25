@@ -20,13 +20,24 @@ view:
                         option value="432x270" "432x270"
                         option value="576x360" selected=true "576x360"
                         option value="768x480" "768x480"
+                    select data-pixel-lighting=true aria-label="Lighting quality":
+                        option value="standard" "Standard lighting"
+                        option value="enhanced" selected=true "Enhanced lighting"
                     button data-pixel-action="return_to_select" "Stage Select / T"
+                    button data-pixel-action="visit_master_gate" "Master Gate / G"
                     button data-pixel-pause=true "Pause / P"
                     button data-pixel-mute=true "Sound / M"
                     button data-pixel-fullscreen=true "Fullscreen / F"
             div .game-surface:
                 canvas data-rune-pixel-3d=true data-pixel-fit=viewport data-pixel-app-fullscreen=true tabindex=0 aria-label="Neon Circuit, a Mega Man style cyberpunk pixel-3d platformer."
             p .status data-pixel-status=true role=status aria-live=polite "NEON CIRCUIT READY."
+            details .super-code:
+                summary "Super Code"
+                form data-pixel-action="redeem_super_code":
+                    label for="neon-super-code" "Enter unlock code"
+                    input #neon-super-code type=text name=code autocomplete=off spellcheck=false maxlength=24 required=true
+                    button type=submit "Unlock"
+                p data-pixel-text=super_code_notice role=status aria-live=polite ""
         section .guide:
             div:
                 h2 "01 // 6 INTRO ROBOTS -> 6 GUNS & SKILLS"
@@ -116,7 +127,7 @@ rules:
         display = flex
         gap = 6px
         flex-wrap = wrap
-    button, select:
+    button, select, .super-code input:
         cursor = pointer
         min-height = 38px
         padding = 6px 12px
@@ -148,6 +159,26 @@ rules:
         font-size = 12px
         color = #80f8ff
         background = #090418
+    .super-code:
+        padding = 10px 14px
+        border-top = 1px solid #3b2c68
+        color = #80f8ff
+        font-size = 12px
+    .super-code summary:
+        cursor = pointer
+        font-weight = 800
+        width = fit-content
+    .super-code form:
+        display = flex
+        align-items = center
+        flex-wrap = wrap
+        gap = 8px
+        padding-top = 10px
+    .super-code input:
+        cursor = text
+        width = 11em
+    .super-code p:
+        margin = 6px 0 0
     .guide:
         display = grid
         grid-template-columns = repeat(auto-fit, minmax(260px, 1fr))

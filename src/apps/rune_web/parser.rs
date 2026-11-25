@@ -567,6 +567,15 @@ fn parse_sound_section(section: &crate::rune_ast::Section) -> SoundDefinition {
         .and_then(|v| v.as_str())
         .map(parse_duration_sec)
         .unwrap_or(0.12);
+    let attack = section
+        .kv
+        .get("attack")
+        .and_then(|v| match v {
+            Value::Number(n) => Some(*n),
+            Value::String(s) => Some(parse_duration_sec(s)),
+            _ => None,
+        })
+        .filter(|seconds| seconds.is_finite() && *seconds > 0.0);
 
     let volume = section.kv.get("volume")
         .or_else(|| section.kv.get("gain"))
@@ -632,6 +641,7 @@ fn parse_sound_section(section: &crate::rune_ast::Section) -> SoundDefinition {
         freq_start,
         freq_end,
         duration,
+        attack,
         volume,
         curve,
         filter,
@@ -2713,6 +2723,7 @@ view:
 wave = sawtooth
 freq = 880 -> 110
 duration = 120ms
+attack = 60ms
 volume = 0.25
 
 @Sound/explosion
@@ -2740,6 +2751,7 @@ drums = kick:4 snare:4
         assert_eq!(laser.freq_start, Some(880.0));
         assert_eq!(laser.freq_end, Some(110.0));
         assert_eq!(laser.duration, 0.12);
+        assert_eq!(laser.attack, Some(0.06));
         assert_eq!(laser.volume, 0.25);
 
         let explosion = frontend.sounds.get("explosion").expect("explosion sound exists");

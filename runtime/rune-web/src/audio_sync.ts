@@ -1,3 +1,4 @@
+import { MusicClock } from './music_clock';
 import { STUDIO_STEP_IDS_PER_VOICE } from './studio_sequencer';
 
 // ============================================================================
@@ -52,7 +53,7 @@ class AudioSyncEngine {
   private timeSignature = '4/4';
   private totalBars = 4;
   private totalBeats = 16;
-  private musicStartTime = 0;
+  private clock = new MusicClock(0, 128);
   private parkedBeat = 0;
   private syncPage = true;
   private getAudioCtx: (() => AudioContext | null) | null = null;
@@ -101,6 +102,7 @@ class AudioSyncEngine {
     totalBeats: number;
     startTime: number;
     startBeat?: number;
+    clock?: MusicClock;
   }): void {
     this.isPlaying = true;
     this.isPaused = false;
@@ -109,7 +111,7 @@ class AudioSyncEngine {
     this.timeSignature = params.timeSignature;
     this.totalBars = params.totalBars;
     this.totalBeats = params.totalBeats;
-    this.musicStartTime = params.startTime;
+    this.clock = params.clock ?? new MusicClock(params.startTime, params.tempo);
     this.parkedBeat = params.startBeat ?? 0;
     this.scheduledNotes = [];
     this.lastActiveStepId = -1;
@@ -124,6 +126,7 @@ class AudioSyncEngine {
    * Notify sync engine that playback has paused.
    */
   public onPause(beat = this.getSnapshot().currentBeat): void {
+    this.tempoBpm = this.getSnapshot().tempo;
     this.parkedBeat = beat;
     this.isPaused = true;
     this.stopLoop();
@@ -158,9 +161,8 @@ class AudioSyncEngine {
     const ctx = this.getAudioCtx ? this.getAudioCtx() : null;
     const outputLatency = ctx ? (ctx.outputLatency || 0) + (ctx.baseLatency || 0) : 0;
     const visualTime = ctx ? Math.max(0, ctx.currentTime - outputLatency) : 0;
-    const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
     const beat = this.isPlaying && !this.isPaused && this.totalBeats > 0
-      ? Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat) % this.totalBeats
+      ? Math.max(this.parkedBeat, this.clock.beatAt(visualTime)) % this.totalBeats
       : this.parkedBeat;
 
     const beatsPerBar = this.timeSignature.startsWith('3/') ? 3 : 4;
@@ -172,7 +174,7 @@ class AudioSyncEngine {
       isPlaying: this.isPlaying,
       isPaused: this.isPaused,
       track: this.activeTrackName,
-      tempo: this.tempoBpm,
+      tempo: this.isPlaying && !this.isPaused ? this.clock.tempoAt(visualTime) : this.tempoBpm,
       timeSignature: this.timeSignature,
       currentBeat,
       currentBar,
@@ -241,8 +243,7 @@ class AudioSyncEngine {
       currentStepIds.some((id, index) => id !== this.lastActiveStepIds[index]);
 
     // Calculate current beat and bar based on exact hardware audio clock
-    const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-    const elapsedBeat = Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat);
+    const elapsedBeat = Math.max(this.parkedBeat, this.clock.beatAt(visualTime));
     const beatsPerBar = this.timeSignature.startsWith('3/') ? 3 : 4;
     const currentBeat = this.totalBeats > 0 ? elapsedBeat % this.totalBeats : elapsedBeat;
     const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);

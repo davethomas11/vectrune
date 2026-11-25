@@ -1,9 +1,9 @@
 @Controls/neon_circuit
 keys:
     KeyA -> left
-    ArrowLeft -> left
+    ArrowLeft -> turn_left
     KeyD -> right
-    ArrowRight -> right
+    ArrowRight -> turn_right
     Space -> jump
     KeyZ -> jump
     KeyX -> fire
@@ -24,6 +24,7 @@ commands:
     KeyF -> host.fullscreen
     KeyM -> host.mute
     KeyT -> return_to_select
+    KeyG -> visit_master_gate
     Digit1 -> equip_1
     Digit2 -> equip_2
     Digit3 -> equip_3
@@ -36,8 +37,10 @@ mouse:
 gamepad:
     Axis0 -> {"input":"move_x","deadzone":0.18}
     Axis1 -> {"input":"duck_axis","deadzone":0.35}
+    Axis2 -> {"input":"turn_axis","deadzone":0.2}
     Button0 -> jump
     Button2 -> fire
+    Button3 -> weapon_wheel
     Button1 -> dash
     Button4 -> prev_weapon
     Button5 -> next_weapon
@@ -71,11 +74,29 @@ touch = {
         },
         {
             "id": "next_weapon",
-            "input": "next_weapon",
-            "label": "GUN",
+            "input": "weapon_wheel",
+            "label": "WHEEL",
             "offset": [82, 82],
             "size": 48,
             "visible": "touch_ready"
+        },
+        {
+            "id": "turn_left",
+            "input": "turn_left",
+            "label": "TURN L",
+            "anchor": "bottom-left",
+            "offset": [12, 94],
+            "size": 46,
+            "visible": "touch_turn_ready"
+        },
+        {
+            "id": "turn_right",
+            "input": "turn_right",
+            "label": "TURN R",
+            "anchor": "bottom-left",
+            "offset": [66, 94],
+            "size": 46,
+            "visible": "touch_turn_ready"
         },
         {
             "anchor": "top-right",
@@ -87,6 +108,6 @@ touch = {
             "size": 44
         }
     ],
-    "joystick": {"down":"duck","size":76,"up":"aim_up","visible":"touch_ready","x":"move_x"},
+    "joystick": {"down":"duck","size":76,"up":"aim_up","visible":"touch_ready","x":"move_x","y":"move_up"},
     "visible": "touch_ready"
 }

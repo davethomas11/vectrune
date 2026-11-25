@@ -273,6 +273,13 @@ pub fn compile_assets(doc: &RuneDocument) -> Result<Json> {
         let unit = section.kv.get("unit").map(json_value).unwrap_or(json!(0.125));
         let unit = unit.as_f64().context(format!("{label}: unit must be numeric"))?;
         ensure!(unit.is_finite() && unit > 0.0 && unit <= 1.0, "{label}: unit must be greater than 0 and at most 1 world tile");
+        let emissive = section.kv.get("emissive").map(json_value);
+        let emissive = emissive.as_ref().map(|value| {
+            let symbols = value.as_str().context(format!("{label}: emissive needs palette symbols"))?;
+            ensure!(symbols.bytes().all(|c| palette.get(&c).is_some_and(Option::is_some)),
+                "{label}: emissive symbols must be opaque palette colors");
+            Ok::<_, anyhow::Error>(symbols)
+        }).transpose()?.unwrap_or("");
         let empty = Vec::new();
         let blocks = section.series.get("blocks").unwrap_or(&empty);
         let shapes = section.series.get("shapes").unwrap_or(&empty);
@@ -298,7 +305,11 @@ pub fn compile_assets(doc: &RuneDocument) -> Result<Json> {
             ensure!(symbol.len() == 1 && symbol.is_ascii(), "{label}: block color needs one ASCII palette symbol");
             let rgb = palette.get(&symbol.as_bytes()[0]).context(format!("{label}: unknown palette symbol {symbol}"))?
                 .context(format!("{label}: blocks cannot be transparent"))?;
-            compiled.push(json!({"from":from,"size":size,"color":pack_color(rgb)}));
+            let mut surface = json!({"from":from,"size":size,"color":pack_color(rgb)});
+            if emissive.contains(symbol) {
+                surface["emissive"] = json!(true);
+            }
+            compiled.push(surface);
         }
         for shape in shapes {
             let shape = json_value(shape);
@@ -334,9 +345,28 @@ pub fn compile_assets(doc: &RuneDocument) -> Result<Json> {
             ensure!(symbol.len() == 1 && symbol.is_ascii(), "{label}: shape color needs one ASCII palette symbol");
             let rgb = palette.get(&symbol.as_bytes()[0]).context(format!("{label}: unknown palette symbol {symbol}"))?
                 .context(format!("{label}: shapes cannot be transparent"))?;
-            compiled.push(json!({"from":from, "size":size, "color":pack_color(rgb), "shape":kind}));
+            let mut surface = json!({"from":from, "size":size, "color":pack_color(rgb), "shape":kind});
+            if emissive.contains(symbol) {
+                surface["emissive"] = json!(true);
+            }
+            compiled.push(surface);
         }
-        models.insert(section.path[1..].join("/"), json!({"blocks":compiled}));
+        let mut model = json!({"blocks":compiled});
+        if let Some(value) = section.kv.get("glass").map(json_value) {
+            let axes = value.as_array().context(format!("{label}: glass needs two dimensions"))?;
+            ensure!(axes.len() == 2, "{label}: glass needs two dimensions");
+            let size: Vec<f64> = axes.iter().map(|axis| {
+                axis.as_f64().filter(|n| *n > 0.0 && *n <= 64.0).map(|n| n * unit)
+                    .context(format!("{label}: glass dimensions must be in (0, 64]"))
+            }).collect::<Result<_>>()?;
+            model["glass"] = json!(size);
+        }
+        if let Some(value) = section.kv.get("contact_shadow").map(json_value) {
+            let radius = value.as_f64().filter(|n| *n > 0.0 && *n <= 4.0)
+                .context(format!("{label}: contact_shadow radius must be in (0, 4] world tiles"))?;
+            model["contactShadow"] = json!(radius);
+        }
+        models.insert(section.path[1..].join("/"), model);
     }
 
     Ok(json!({
@@ -694,6 +724,12 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         );
         config["world"] = json!(field);
     }
+    if let Some(value) = scene.kv.get("lights") {
+        let field = value.as_str().context("Scene lights must name a state field")?;
+        ensure!(config.get("world").is_some(), "Scene lights requires a voxel world");
+        ensure!(logic.state.contains_key(field), "Scene lights references unknown state {field}");
+        config["lights"] = json!(field);
+    }
     if let Some(value) = scene.kv.get("render_radius") {
         let value = json_value(value);
         let radius = value.as_f64().context("Scene render_radius must be a number")?;
@@ -754,6 +790,9 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         config["controls"] = profile;
     }
     scenes::compile(doc, scene, &mut config)?;
+    if let Some(field) = config["titleScene"]["lights"].as_str() {
+        ensure!(logic.state.contains_key(field), "Title Scene lights references unknown state {field}");
+    }
 
     let runtime = format!(
         "{}\n__RunePixel3DRuntime.configure({});",

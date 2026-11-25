@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 class Param {
   value = 0;
-  setValueAtTime(value: number) { this.value = value; }
-  exponentialRampToValueAtTime(_value: number) {}
-  linearRampToValueAtTime(_value: number) {}
+  setValueAtTime = vi.fn((value: number, _time: number) => { this.value = value; });
+  exponentialRampToValueAtTime = vi.fn();
+  linearRampToValueAtTime = vi.fn();
+  cancelScheduledValues = vi.fn();
 }
 class Node {
   gain = new Param(); frequency = new Param(); Q = new Param(); delayTime = new Param();
@@ -45,6 +46,42 @@ beforeEach(async () => {
 afterEach(() => { audio.stopMusic(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('shared audio lifecycle', () => {
+  it('keeps the outgoing tail connected while the incoming track fades in', () => {
+    audio.configureAudioHost({syncPage:false});
+    audio.playMusic('march');
+    const context = Context.instances[0], outgoing = context.gains[0];
+    audio.registerMusic({return_run:{tempo:132,volume:0.06,lead:'E4:1',loop_track:true}});
+    context.currentTime = 0.25;
+    const before = context.gains.length;
+    audio.playMusic('return_run', 0, 0.45);
+    const incoming = context.gains[before];
+    expect(outgoing.disconnect).not.toHaveBeenCalled();
+    expect(outgoing.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, 0.75);
+    expect(incoming.gain.setValueAtTime).toHaveBeenCalledWith(0, 0.3);
+    expect(incoming.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.06, 0.75);
+    expect(sync.audioSync.getSnapshot().track).toBe('return_run');
+    context.currentTime = 0.76;
+    vi.advanceTimersByTime(500);
+    expect(outgoing.disconnect).toHaveBeenCalledOnce();
+    expect(incoming.disconnect).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(1);
+    context.currentTime = 0.8;
+    audio.playMusic('march', 0, 0.45);
+    audio.pauseMusic();
+    expect(incoming.disconnect).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('ramps a rising sound from silence to full gain before its release', () => {
+    audio.registerSounds({lift:{wave:'triangle',freq_start:82,freq_end:179,
+      duration:2.5,attack:2.15,volume:0.044}});
+    audio.playSound('lift');
+    const gain = Context.instances[0].gains[0].gain;
+    expect(gain.setValueAtTime).toHaveBeenCalledWith(0, 0);
+    expect(gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.044, 2.15);
+    expect(gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.001, 2.5);
+  });
+
   it('lets the final arranged note ring out before stopping a one-shot song', () => {
     audio.configureAudioHost({syncPage:false});
     audio.registerMusic({fanfare:{tempo:120,loop_track:false,
@@ -150,6 +187,38 @@ describe('shared audio lifecycle', () => {
     const resumedNote = context.oscillators[context.oscillators.length - 1];
     expect(resumedNote.start.mock.calls[0][0]).toBeCloseTo(12.05);
     expect(resumedNote.stop.mock.calls[0][0]).toBeCloseTo(12.05 + 0.35 * 0.9 + 0.01);
+  });
+
+  it('changes tempo on a shared beat without recutting voices or resetting the playhead', () => {
+    audio.configureAudioHost({ syncPage: false });
+    audio.registerMusic({ pulse: {
+      tempo: 120, lead: 'C4:4 D4:4 E4:4 F4:4', bass: 'C2:2 E2:2', loop_track: true,
+    } });
+    audio.playMusic('pulse');
+    const context = Context.instances[0];
+    const [lead, bass] = context.oscillators;
+    context.currentTime = 0.12;
+    audio.setMusicTempo(140);
+    context.currentTime = 0.16;
+    audio.setMusicTempo(150);
+    expect(context.oscillators).toEqual([lead, bass]);
+    expect(context.gains[0].disconnect).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(1);
+    expect(sync.audioSync.getSnapshot()).toMatchObject({ tempo: 120, currentBar: 1 });
+
+    context.currentTime = 0.35;
+    vi.advanceTimersByTime(25);
+    expect(context.oscillators[2].start.mock.calls[0][0]).toBeCloseTo(0.55);
+    context.currentTime = 0.75;
+    vi.advanceTimersByTime(25);
+    expect(context.oscillators.slice(3).map(voice => voice.start.mock.calls[0][0]))
+      .toEqual([expect.closeTo(0.95), expect.closeTo(0.95)]);
+    expect(sync.audioSync.getSnapshot().tempo).toBe(150);
+    expect(sync.audioSync.getSnapshot().currentBeat).toBeCloseTo(1.5);
+    context.currentTime = 1.8;
+    vi.advanceTimersByTime(25);
+    expect(sync.audioSync.getSnapshot().currentBeat).toBeCloseTo(0.125);
+    expect(context.gains[0].disconnect).not.toHaveBeenCalled();
   });
 
   it('keeps canvas-host music out of Rune-Web state and DOM updates', () => {

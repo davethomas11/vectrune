@@ -3344,6 +3344,7 @@ var __RunePixelRuntime = (() => {
   var MAX_WORLD_AXIS = 4096;
   var MAX_WORLD_DEPTH = 256;
   var MAX_RESIDENT_CHUNKS = 16384;
+  var MAX_RENDER_MIRROR_CELLS = 131072;
   var ChunkStore = class {
     constructor(world, imported = {}) {
       this.world = world;
@@ -3399,7 +3400,7 @@ var __RunePixelRuntime = (() => {
     /** Bounded render accelerator; large worlds retain sparse lookup. */
     prepareRenderCells() {
       const volume = this.world.width * this.world.height * this.world.depth;
-      if (this.renderCells || volume > 65536) return;
+      if (this.renderCells || volume > MAX_RENDER_MIRROR_CELLS) return;
       this.renderCells = new Uint16Array(volume);
       for (const [id, values] of this.raw) this.mirror(id, values);
     }
@@ -3777,9 +3778,14 @@ var __RunePixelRuntime = (() => {
     }
   }
   function voxelRay(world, origin, ray, maxDistance, output, chunks) {
+    const store = chunkStore(world);
     return traceVoxelRay(
       world,
-      origin,
+      store?.renderCells ?? world.cells,
+      store?.renderCells ? void 0 : store,
+      origin.x,
+      origin.y,
+      origin.z,
       ray[0],
       ray[1],
       ray[2],
@@ -3791,19 +3797,17 @@ var __RunePixelRuntime = (() => {
       chunks
     );
   }
-  function traceVoxelRay(world, origin, rx, ry, rz, dx, dy, dz, maxDistance, output, chunks, crossings, column = 0, row = 0) {
-    let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+  function traceVoxelRay(world, cells, store, ox, oy, oz, rx, ry, rz, dx, dy, dz, maxDistance, output, chunks, crossings, column = 0, row = 0, entryFace = 2) {
+    let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
     const width = world.width, height = world.height, depth = world.depth;
-    const sourceStore = chunkStore(world), cells = sourceStore?.renderCells ?? world.cells;
-    const store = sourceStore?.renderCells ? void 0 : sourceStore;
     let lastChunk = -1, blocks;
     if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
     const sx = rx < 0 ? -1 : 1, sy = ry < 0 ? -1 : 1, sz = rz < 0 ? -1 : 1;
     const stepY = sy * width, stepZ = sz * width * height;
     let cellIndex = (z * height + y) * width + x;
-    let tx = rx === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
-    let ty = ry === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
-    let tz = rz === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    let tx = rx === 0 ? Infinity : (sx < 0 ? ox - x : x + 1 - ox) * dx;
+    let ty = ry === 0 ? Infinity : (sy < 0 ? oy - y : y + 1 - oy) * dy;
+    let tz = rz === 0 ? Infinity : (sz < 0 ? oz - z : z + 1 - oz) * dz;
     if (chunks && (rx !== 0 || ry !== 0 || rz !== 0)) {
       const entry = chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance);
       if (!Number.isFinite(entry)) return null;
@@ -3845,8 +3849,8 @@ var __RunePixelRuntime = (() => {
     }
     if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
     const exitX = sx > 0 ? width : -1, exitY = sy > 0 ? height : -1, exitZ = sz > 0 ? depth : -1;
-    let distance = 0, face = 2;
-    for (let iteration = 0; iteration < width + height + depth + 3 && distance <= maxDistance; iteration++) {
+    let distance = 0, face = entryFace;
+    while (distance <= maxDistance) {
       let block;
       if (store) {
         const chunk = ((z >> 2) * store.ch + (y >> 2)) * store.cw + (x >> 2);
@@ -3891,6 +3895,8 @@ var __RunePixelRuntime = (() => {
     }
     return null;
   }
+  var sideShade = Uint8Array.from({ length: 256 }, (_, channel) => Math.floor(channel * 0.8));
+  var frontShade = Uint8Array.from({ length: 256 }, (_, channel) => Math.floor(channel * 0.65));
   function voxelTarget(worldValue, playerValue) {
     const world = validateWorld(worldValue), player = validatePlayer(playerValue, world);
     const a = player.angle * Math.PI / 180, p = player.pitch * Math.PI / 180;
@@ -3992,6 +3998,13 @@ var __RunePixelRuntime = (() => {
     if (!Array.isArray(materials) || materials.length === 0) {
       throw new Error(`@SideMap/${fgNameValue} needs materials = [...]`);
     }
+    for (const [symbol, entry] of Object.entries(fg.legend)) {
+      const center = entry?.center_voxel;
+      if (center === void 0) continue;
+      if (!Number.isInteger(center) || center < 1 || center > materials.length || !(entry.voxel && entry.voxel > 0) || (entry.depth?.[1] ?? 4) < 2 || entry.boss_door || entry.barrier || entry.hazard) {
+        throw new Error(`@SideMap/${fgNameValue} legend ${symbol}: center_voxel needs a valid material and a solid span of at least two tiles`);
+      }
+    }
     let spawn = { x: 4.5, y: planeY, z: 3, angle: 0, pitch: 0, vz: 0 };
     const world = voxelWorld(width, depthY, height + marginZ, materials, {
       seed: opts.seed ?? 701,
@@ -4012,12 +4025,17 @@ var __RunePixelRuntime = (() => {
       const z = height - 1 - row;
       const line = fg.rows[row];
       let runVoxel = 0;
+      let runCenter = 0;
       let runY0 = 0;
       let runYSpan = 0;
       let runStart = 0;
       const flushRun = (endX) => {
         if (runVoxel > 0 && endX > runStart) {
           voxelFill(world, [runStart, runY0, z], [endX - runStart, runYSpan, 1], runVoxel);
+          if (runCenter) {
+            const centerY = runY0 + Math.floor((runYSpan - 2) / 2);
+            voxelFill(world, [runStart, centerY, z], [endX - runStart, 2, 1], runCenter);
+          }
         }
         runVoxel = 0;
       };
@@ -4031,10 +4049,12 @@ var __RunePixelRuntime = (() => {
         if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
           const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
           const ySpan = entry.depth ? entry.depth[1] : 4;
-          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan) {
+          const center = entry.center_voxel ?? 0;
+          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan && runCenter === center) {
           } else {
             flushRun(x);
             runVoxel = entry.voxel;
+            runCenter = center;
             runY0 = y0;
             runYSpan = ySpan;
             runStart = x;
@@ -6248,6 +6268,37 @@ var __RunePixelRuntime = (() => {
     return void 0;
   }
 
+  // src/music_clock.ts
+  var MusicClock = class {
+    constructor(time, bpm, beat = 0) {
+      this.marks = [{ time, bpm, beat }];
+    }
+    at(position, key2) {
+      let i = this.marks.length - 1;
+      while (i > 0 && this.marks[i][key2] > position) i--;
+      return this.marks[i];
+    }
+    beatAt(time) {
+      const mark = this.at(time, "time");
+      return mark.beat + (time - mark.time) / (60 / mark.bpm);
+    }
+    timeAt(beat) {
+      const mark = this.at(beat, "beat");
+      return mark.time + (beat - mark.beat) * (60 / mark.bpm);
+    }
+    tempoAt(time) {
+      return this.at(time, "time").bpm;
+    }
+    changeAfter(bpm, scheduledUntil) {
+      while (this.marks.length > 1 && this.marks[this.marks.length - 1].time > scheduledUntil) {
+        this.marks.pop();
+      }
+      if (this.tempoAt(scheduledUntil) === bpm) return;
+      const beat = Math.max(Math.floor(this.beatAt(scheduledUntil)) + 1, this.marks[0].beat);
+      this.marks.push({ beat, time: this.timeAt(beat), bpm });
+    }
+  };
+
   // src/studio_sequencer.ts
   var TICKS_PER_WHOLE = 16;
   var STUDIO_TICK_WIDTH = 30;
@@ -6423,7 +6474,7 @@ var __RunePixelRuntime = (() => {
       this.timeSignature = "4/4";
       this.totalBars = 4;
       this.totalBeats = 16;
-      this.musicStartTime = 0;
+      this.clock = new MusicClock(0, 128);
       this.parkedBeat = 0;
       this.syncPage = true;
       this.getAudioCtx = null;
@@ -6465,7 +6516,7 @@ var __RunePixelRuntime = (() => {
       this.timeSignature = params.timeSignature;
       this.totalBars = params.totalBars;
       this.totalBeats = params.totalBeats;
-      this.musicStartTime = params.startTime;
+      this.clock = params.clock ?? new MusicClock(params.startTime, params.tempo);
       this.parkedBeat = params.startBeat ?? 0;
       this.scheduledNotes = [];
       this.lastActiveStepId = -1;
@@ -6478,6 +6529,7 @@ var __RunePixelRuntime = (() => {
      * Notify sync engine that playback has paused.
      */
     onPause(beat = this.getSnapshot().currentBeat) {
+      this.tempoBpm = this.getSnapshot().tempo;
       this.parkedBeat = beat;
       this.isPaused = true;
       this.stopLoop();
@@ -6509,8 +6561,7 @@ var __RunePixelRuntime = (() => {
       const ctx2 = this.getAudioCtx ? this.getAudioCtx() : null;
       const outputLatency = ctx2 ? (ctx2.outputLatency || 0) + (ctx2.baseLatency || 0) : 0;
       const visualTime = ctx2 ? Math.max(0, ctx2.currentTime - outputLatency) : 0;
-      const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-      const beat = this.isPlaying && !this.isPaused && this.totalBeats > 0 ? Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat) % this.totalBeats : this.parkedBeat;
+      const beat = this.isPlaying && !this.isPaused && this.totalBeats > 0 ? Math.max(this.parkedBeat, this.clock.beatAt(visualTime)) % this.totalBeats : this.parkedBeat;
       const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
       const currentBeat = beat;
       const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
@@ -6519,7 +6570,7 @@ var __RunePixelRuntime = (() => {
         isPlaying: this.isPlaying,
         isPaused: this.isPaused,
         track: this.activeTrackName,
-        tempo: this.tempoBpm,
+        tempo: this.isPlaying && !this.isPaused ? this.clock.tempoAt(visualTime) : this.tempoBpm,
         timeSignature: this.timeSignature,
         currentBeat,
         currentBar,
@@ -6573,8 +6624,7 @@ var __RunePixelRuntime = (() => {
       }
       const currentStepId = currentStepIds[0] ?? -1;
       const changedSteps = currentStepIds.length !== this.lastActiveStepIds.length || currentStepIds.some((id, index2) => id !== this.lastActiveStepIds[index2]);
-      const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-      const elapsedBeat = Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat);
+      const elapsedBeat = Math.max(this.parkedBeat, this.clock.beatAt(visualTime));
       const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
       const currentBeat = this.totalBeats > 0 ? elapsedBeat % this.totalBeats : elapsedBeat;
       const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
@@ -7017,7 +7067,7 @@ var __RunePixelRuntime = (() => {
         break;
     }
   }
-  function playNoiseBurst(ctx2, now, duration, filterStart, filterEnd, volume, filterType = "lowpass") {
+  function playNoiseBurst(ctx2, now, duration, filterStart, filterEnd, volume, filterType = "lowpass", attack = 0) {
     const bufferSize = Math.max(1, Math.floor(ctx2.sampleRate * duration));
     const buffer = ctx2.createBuffer(1, bufferSize, ctx2.sampleRate);
     const data = buffer.getChannelData(0);
@@ -7031,13 +7081,21 @@ var __RunePixelRuntime = (() => {
     filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
     filter.frequency.exponentialRampToValueAtTime(Math.max(20, filterEnd), now + duration);
     const gain = ctx2.createGain();
-    gain.gain.setValueAtTime(volume, now);
-    gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
+    sweepEnvelope(gain.gain, now, duration, volume, attack);
     noise2.connect(filter);
     filter.connect(gain);
     gain.connect(sfxOutput(ctx2));
     noise2.start(now);
     noise2.stop(now + duration + 0.01);
+  }
+  function sweepEnvelope(gain, now, duration, volume, attack) {
+    if (attack > 0 && duration > 0 && volume > 0) {
+      gain.setValueAtTime(0, now);
+      gain.linearRampToValueAtTime(volume, now + Math.min(attack, duration * 0.98));
+    } else {
+      gain.setValueAtTime(volume, now);
+    }
+    gain.exponentialRampToValueAtTime(1e-3, now + duration);
   }
   function playCustomSound(ctx2, def, now, arg) {
     const duration = def.duration || 0.12;
@@ -7047,7 +7105,7 @@ var __RunePixelRuntime = (() => {
       const fStart = def.filter?.start_freq || 800;
       const fEnd = def.filter?.end_freq || 60;
       const fType = def.filter?.filter_type || "lowpass";
-      playNoiseBurst(ctx2, now, duration, fStart, fEnd, volume, fType);
+      playNoiseBurst(ctx2, now, duration, fStart, fEnd, volume, fType, def.attack);
       return;
     }
     if (def.sequence && def.sequence.length > 0) {
@@ -7087,8 +7145,7 @@ var __RunePixelRuntime = (() => {
         osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), now + duration);
       }
     }
-    gain.gain.setValueAtTime(volume, now);
-    gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
+    sweepEnvelope(gain.gain, now, duration, volume, def.attack ?? 0);
     osc.connect(gain);
     gain.connect(sfxOutput(ctx2));
     osc.start(now);
@@ -7098,11 +7155,13 @@ var __RunePixelRuntime = (() => {
   var musicSchedulerTimer = null;
   var musicMasterGain = null;
   var musicEffectsBus = null;
+  var clearFadingMusic;
   var musicVolume = 0.2;
   var musicTempoBpm = 128;
   var musicLoop = true;
   var isMusicPaused = false;
-  var musicStartTime = 0;
+  var MUSIC_LOOKAHEAD = 0.25;
+  var musicClock = null;
   var musicPausedBeat = 0;
   var tracksState = {};
   function parseTrackPattern(patternStr) {
@@ -7160,7 +7219,7 @@ var __RunePixelRuntime = (() => {
     }
     return events;
   }
-  function playMusic(trackName, startBeat = 0) {
+  function playMusic(trackName, startBeat = 0, fadeSeconds = 0) {
     if (!playbackUnlocked) {
       pendingMusic = { track: trackName, beat: startBeat };
       return;
@@ -7171,6 +7230,12 @@ var __RunePixelRuntime = (() => {
     const def = registeredMusic[key2];
     if (!def) {
       return;
+    }
+    const fade = Number.isFinite(fadeSeconds) ? Math.min(5, Math.max(0, fadeSeconds)) : 0;
+    const outgoing = fade > 0 && musicMasterGain ? { gain: musicMasterGain, effects: musicEffectsBus } : null;
+    if (outgoing) {
+      musicMasterGain = null;
+      musicEffectsBus = null;
     }
     stopMusic();
     activeMusicTrackName = key2;
@@ -7226,7 +7291,9 @@ var __RunePixelRuntime = (() => {
     for (const [channel, instrument] of Object.entries(def.instruments ?? {})) {
       if (Object.prototype.hasOwnProperty.call(tracksState, channel)) tracksState[channel].instrument = instrument;
     }
-    startMusicAtBeat(ctx2, key2, startBeat);
+    const startTime = ctx2.currentTime + 0.05;
+    startMusicAtBeat(ctx2, key2, startBeat, startTime, outgoing ? fade : 0);
+    if (outgoing) fadeOutMusic(ctx2, outgoing, startTime, fade);
   }
   function musicTiming(track) {
     const def = registeredMusic[track];
@@ -7487,7 +7554,7 @@ var __RunePixelRuntime = (() => {
       cleanup
     };
   }
-  function startMusicAtBeat(ctx2, trackName, startBeat) {
+  function startMusicAtBeat(ctx2, trackName, startBeat, startTime = ctx2.currentTime + 0.05, fade = 0) {
     const timing = musicTiming(trackName);
     const beat = Math.max(0, Math.min(timing.totalBeats - 1e-6, Number.isFinite(startBeat) ? startBeat : 0));
     for (const track of Object.values(tracksState)) {
@@ -7502,13 +7569,18 @@ var __RunePixelRuntime = (() => {
       track.elapsedInNote = track.index === track.events.length ? 0 : beat - onset;
     }
     musicMasterGain = ctx2.createGain();
-    musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
+    if (fade > 0) {
+      musicMasterGain.gain.setValueAtTime(0, startTime);
+      musicMasterGain.gain.linearRampToValueAtTime(musicVolume, startTime + fade);
+    } else {
+      musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
+    }
     musicMasterGain.connect(audioOutput(ctx2));
     const def = registeredMusic[trackName];
     musicEffectsBus = def ? buildMusicEffectsBus(ctx2, def, Object.keys(tracksState), musicMasterGain) : null;
-    musicStartTime = ctx2.currentTime + 0.05 - beat * 60 / musicTempoBpm;
+    musicClock = new MusicClock(startTime, musicTempoBpm, beat);
     audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
-    audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
+    audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime, startBeat: beat, clock: musicClock });
     scheduleMusicTicks();
     musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
   }
@@ -7523,7 +7595,30 @@ var __RunePixelRuntime = (() => {
     musicPausedBeat = 0;
     isMusicPaused = false;
     tracksState = {};
+    musicClock = null;
+    clearFadingMusic?.();
     disconnectMusicGain();
+  }
+  function fadeOutMusic(ctx2, outgoing, startTime, fade) {
+    const gain = outgoing.gain.gain;
+    const volume = gain.value;
+    gain.cancelScheduledValues(ctx2.currentTime);
+    gain.setValueAtTime(volume, startTime);
+    const endTime = startTime + fade;
+    gain.linearRampToValueAtTime(0, endTime);
+    let timer;
+    function dispose() {
+      clearTimeout(timer);
+      outgoing.effects?.cleanup();
+      outgoing.gain.disconnect();
+      clearFadingMusic = void 0;
+    }
+    function checkTail() {
+      if (ctx2.currentTime >= endTime) dispose();
+      else timer = setTimeout(checkTail, Math.max(25, (endTime - ctx2.currentTime) * 1e3));
+    }
+    timer = setTimeout(checkTail, (endTime - ctx2.currentTime) * 1e3);
+    clearFadingMusic = dispose;
   }
   function disconnectMusicGain() {
     if (musicEffectsBus) {
@@ -7542,6 +7637,7 @@ var __RunePixelRuntime = (() => {
       clearInterval(musicSchedulerTimer);
       musicSchedulerTimer = null;
     }
+    clearFadingMusic?.();
     disconnectMusicGain();
     audioSync.onPause(musicPausedBeat);
   }
@@ -7553,17 +7649,15 @@ var __RunePixelRuntime = (() => {
   }
   function setMusicTempo(bpm) {
     if (!(bpm > 20 && bpm < 400) || bpm === musicTempoBpm) return;
-    const beat = audioSync.getSnapshot().currentBeat;
     musicTempoBpm = bpm;
     if (audioCtx && activeMusicTrackName && !isMusicPaused) {
-      if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
-      disconnectMusicGain();
-      startMusicAtBeat(audioCtx, activeMusicTrackName, beat);
+      musicClock?.changeAfter(bpm, audioCtx.currentTime + MUSIC_LOOKAHEAD);
     }
   }
   function setMusicVolume(vol) {
     musicVolume = Math.max(0, Math.min(1, vol));
     if (musicMasterGain && audioCtx) {
+      musicMasterGain.gain.cancelScheduledValues(audioCtx.currentTime);
       musicMasterGain.gain.setValueAtTime(musicVolume, audioCtx.currentTime);
     }
   }
@@ -7576,14 +7670,14 @@ var __RunePixelRuntime = (() => {
   }
   function scheduleMusicTicks() {
     const ctx2 = getAudioContext();
-    if (!ctx2 || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
-    const secondsPerBeat = 60 / musicTempoBpm;
-    const lookaheadWindow = ctx2.currentTime + 0.25;
+    const clock = musicClock;
+    if (!ctx2 || !clock || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
+    const lookaheadWindow = ctx2.currentTime + MUSIC_LOOKAHEAD;
     const { totalBeats: songTotalBeats } = musicTiming(activeMusicTrackName);
     let allFinished = true;
     for (const [trackKey, track] of Object.entries(tracksState)) {
       if (!track || !track.events.length || track.muted) continue;
-      while (musicStartTime + track.nextBeat * secondsPerBeat < lookaheadWindow) {
+      while (true) {
         if (track.index >= track.events.length) {
           if (musicLoop) {
             if (songTotalBeats > 0) {
@@ -7595,10 +7689,11 @@ var __RunePixelRuntime = (() => {
             break;
           }
         }
+        const eventTime = clock.timeAt(track.nextBeat);
+        if (eventTime >= lookaheadWindow) break;
         const event = track.events[track.index];
-        const eventTime = musicStartTime + track.nextBeat * secondsPerBeat;
         const remainingBeats = event.beats - (track.elapsedInNote ?? 0);
-        const eventDurationSec = remainingBeats * secondsPerBeat;
+        const eventDurationSec = clock.timeAt(track.nextBeat + remainingBeats) - eventTime;
         if (!event.isRest && eventTime >= ctx2.currentTime - 0.05) {
           const targetDest = musicEffectsBus ? musicEffectsBus.channelGains[trackKey] || musicEffectsBus.masterInput : musicMasterGain;
           scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, targetDest, track.instrument);
@@ -7611,7 +7706,7 @@ var __RunePixelRuntime = (() => {
         allFinished = false;
       }
     }
-    if (allFinished && !musicLoop && ctx2.currentTime >= musicStartTime + songTotalBeats * secondsPerBeat) {
+    if (allFinished && !musicLoop && ctx2.currentTime >= clock.timeAt(songTotalBeats)) {
       stopMusic();
     }
   }
@@ -8074,11 +8169,13 @@ var __RunePixelRuntime = (() => {
       if (trimmed === "music.play" || trimmed === "music.play()" || trimmed.startsWith("music.play(") || trimmed.startsWith("music.play ") || trimmed.startsWith("play_music(") || trimmed.startsWith("music ") && !trimmed.startsWith("music.tempo") && !trimmed.startsWith("music.volume")) {
         let trackName = "";
         let startBeat;
+        let fadeSeconds;
         if ((trimmed.startsWith("music.play(") || trimmed.startsWith("play_music(")) && trimmed.endsWith(")")) {
-          const [name2, beat] = splitTopLevel(trimmed.slice(trimmed.indexOf("(") + 1, -1), ",");
+          const [name2, beat, fade] = splitTopLevel(trimmed.slice(trimmed.indexOf("(") + 1, -1), ",");
           const scope = buildScope(locals, trimmed);
           trackName = String(evaluateExpression(name2, scope) || "");
           if (beat !== void 0) startBeat = Number(evaluateExpression(beat, scope));
+          if (fade !== void 0) fadeSeconds = Number(evaluateExpression(fade, scope));
         } else if (trimmed.startsWith("music.play ")) {
           trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || "");
         } else if (trimmed.startsWith("music ")) {
@@ -8086,7 +8183,8 @@ var __RunePixelRuntime = (() => {
         }
         trackName = normalizeLiteral(trackName);
         if (trackName) {
-          if (startBeat === void 0) playMusic(trackName);
+          if (fadeSeconds !== void 0) playMusic(trackName, startBeat, fadeSeconds);
+          else if (startBeat === void 0) playMusic(trackName);
           else playMusic(trackName, startBeat);
         }
         return true;

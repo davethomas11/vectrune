@@ -1,0 +1,99 @@
+@Logic/neon_circuit
+
+action setup_sector_return:
+    sector_return_props = []
+    call setup_return_challenge
+    if current_stage == 1:
+        cryo_vent_tick = 0
+        cryo_vents = []
+        for lane in range(0, 2):
+            local y = 2.5 + lane * 1.75
+            for col in range(0, 4):
+                local x = 68.5 + col * 1.75
+                local vent = {"x": x, "y": y, "z": escape_deck_z, "lane": lane,
+                    "model": "nc/cryo_vent_idle"}
+                cryo_vents.push(vent)
+                sector_return_props.push(vent)
+        cryo_cache = {"x": 63.5, "y": 4.25, "z": escape_deck_z, "model": "nc/cryo_cache", "visible": true}
+        sector_return_props.push(cryo_cache)
+    if current_stage == 6:
+        storm_fan_tick = 0
+        storm_relay_off = false
+        storm_wind = []
+        storm_relay = {"x": 58.5, "y": 2.5, "z": escape_deck_z, "model": "nc/storm_relay", "visible": true}
+        sector_return_props.push(storm_relay)
+        for col in range(0, 4):
+            local x = 55.5 + col * 2.75
+            sector_return_props.push({"x": x, "y": 2.42, "z": escape_deck_z, "model": "nc/storm_fan"})
+            local streak = {"x": x, "y": 2.65, "z": escape_deck_z, "model": "nc/storm_gust", "visible": false}
+            storm_wind.push(streak)
+            sector_return_props.push(streak)
+        storm_beacon = {"x": 66.4, "y": 3.7, "z": escape_deck_z, "model": "nc/storm_beacon"}
+        sector_return_props.push(storm_beacon)
+
+action step_cryo_vents:
+    cryo_slipping = false
+    if cryo_vent_tick == 0:
+        stop when player.x > 80
+        notice_text = "FROST VENTS // JUMP OR CHANGE LANES WHEN THE LIGHTS COME ON"
+        notice_ticks = 105
+    cryo_vent_tick = cryo_vent_tick + 1
+    local cycle = (cryo_vent_tick - 1) % 68
+    local lane = floor((cryo_vent_tick - 1) / 68) % 2
+    local live = cycle >= 22 && cycle < 53
+    local selected_model = cycle < 22 ? "nc/cryo_vent_warn" : "nc/cryo_vent_idle"
+    if live:
+        selected_model = "nc/cryo_vent_live"
+        local center = 2.5 + lane * 1.75
+        cryo_slipping = player.x >= 67.7 && player.x <= 74.45 && abs(player.y - center) < 0.67 && player.z < escape_deck_z + 0.3
+        if cycle == 22 && player.x > 63 && player.x < 82:
+            sound.play "nc_freeze"
+    for vent in cryo_vents:
+        vent.model = vent.lane == lane ? selected_model : "nc/cryo_vent_idle"
+
+action check_cryo_cache:
+    stop when !cryo_cache.visible || (health >= max_health && weapon_energy >= 28)
+    if distance(player, cryo_cache) < 0.8 && player.z < escape_deck_z + 0.65:
+        cryo_cache.visible = false
+        health = min(max_health, health + 2)
+        weapon_energy = min(28, weapon_energy + 8)
+        notice_text = "COOLANT CACHE // HEALTH AND WEAPON ENERGY RESTORED"
+        notice_ticks = 90
+        sound.play "nc_pickup"
+
+action step_storm_crosswind:
+    stop when storm_relay_off
+    if storm_fan_tick == 0:
+        stop when player.x > 71
+        notice_text = "CROSSWIND // STRAFE AGAINST THE GUST OR SHOOT THE RELAY"
+        notice_ticks = 110
+    storm_fan_tick = storm_fan_tick + 1
+    local cycle = (storm_fan_tick - 1) % 92
+    local gust = cycle >= 24 && cycle < 49
+    local beacon_model = cycle < 24 ? "nc/storm_beacon_warn" : "nc/storm_beacon"
+    if gust:
+        beacon_model = "nc/storm_beacon_live"
+        if player.x > 54.5 && player.x < 65.5 && player.y < 4.5:
+            call move_on_deck player, 90, 0.10, 0.28
+        if cycle == 24 && player.x > 50 && player.x < 74:
+            sound.play "nc_storm_gust"
+    if cycle == 0 && player.x > 50 && player.x < 74:
+        sound.play "nc_storm_spool"
+    storm_beacon.model = beacon_model
+    for i in range(0, storm_wind.length):
+        local streak = storm_wind[i]
+        streak.visible = gust
+        streak.y = 2.65 + ((cycle - 24 + i * 3) % 12) * 0.18
+
+action hit_storm_relay(shot):
+    if distance(shot, storm_relay) < 0.62 && abs(shot.z - storm_relay.z - 0.75) < 0.66:
+        storm_relay_off = true
+        storm_relay.model = "nc/storm_relay_off"
+        storm_beacon.model = "nc/storm_beacon"
+        for streak in storm_wind:
+            streak.visible = false
+        if !shot.pierce:
+            shot.life = 0
+        notice_text = "FAN RELAY OFFLINE // CROSSWIND CLEAR"
+        notice_ticks = 90
+        sound.play "nc_barrier_open"

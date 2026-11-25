@@ -8,6 +8,7 @@ import { createFullscreen, isStandaloneApp } from './fullscreen';
 import { createWebGlRenderer } from './webgl';
 import { collectHudHitRegions } from './hud';
 import type { RuneWebConfig } from '../types';
+import { getStorageItem, setStorageItem } from '../storage';
 
 let settings: Pixel3DConfig;
 export function configure(config: Pixel3DConfig): void {
@@ -139,7 +140,22 @@ export function mount(
       start();
     });
   }
-  for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-action]'))) {
+  for (const form of Array.from(document.querySelectorAll<HTMLFormElement>('form[data-pixel-action]'))) {
+    listen(form, 'submit', event => {
+      event.preventDefault();
+      unlockAudio();
+      clear();
+      const action = form.dataset.pixelAction;
+      const previous = game.app.state.status;
+      const fields: Record<string, string> = Object.create(null);
+      new FormData(form).forEach((value, name) => {
+        if (typeof value === 'string') fields[name] = value;
+      });
+      if (action) game.activate(action, [fields]);
+      if (game.app.state.status !== previous) canvas.focus({ preventScroll: true });
+    });
+  }
+  for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-action]:not(form)'))) {
     const args: unknown = JSON.parse(button.dataset.pixelArgs || '[]');
     if (!Array.isArray(args)) throw new Error('data-pixel-args must be a JSON array');
     listen(button, 'click', () => {
@@ -175,6 +191,7 @@ export function mount(
   const surface = canvas.parentElement || canvas;
   const resolution = document.querySelector<HTMLSelectElement>('select[data-pixel-resolution]');
   const palette = document.querySelector<HTMLSelectElement>('select[data-pixel-palette]');
+  const lighting = document.querySelector<HTMLSelectElement>('select[data-pixel-lighting]');
   const fullscreen = createFullscreen(surface, () => { fitViewport(); clear(true); touch?.update(); mapped?.update(); });
   function fitViewport() {
     let renderWidth = width, renderHeight = height;
@@ -229,6 +246,23 @@ export function mount(
   if (palette) {
     listen(palette, 'change', applyPalette);
     applyPalette();
+  }
+  function applyLighting() {
+    game.raycaster.setEnhancedLighting(lighting?.value === 'enhanced');
+    gpu?.resetInterpolation();
+    overlayKey = undefined;
+    resetFps();
+    game.invalidateFrame();
+  }
+  if (lighting) {
+    const key = 'rune-pixel-lighting-' + (game.config.persistence?.key ?? window.location.pathname);
+    const saved = getStorageItem(key);
+    if (saved === 'standard' || saved === 'enhanced') lighting.value = saved;
+    listen(lighting, 'change', () => {
+      applyLighting();
+      setStorageItem(key, lighting.value);
+    });
+    applyLighting();
   }
   function resetFps() {
     drawnFrames = 0;
@@ -289,12 +323,12 @@ export function mount(
   }
 
   function drawFrame(extraFrames: boolean): boolean {
-    if (gpu && gpuCanvas && gpuToggle?.checked) {
+    if (gpu && gpuCanvas && gpuToggle?.checked && !game.raycaster.enhancedLighting) {
       try {
         const changed = game.presentIfChanged(() => {
           const stats = game.renderState();
           const { map, world } = game.raycaster.config;
-          if (!map.sky || map.sky.below === undefined || world || map.grid.some(Boolean) ||
+          if (!map.sky || map.sky.below === undefined || world || stats.lights.length || map.grid.some(Boolean) ||
               stats.weapon || stats.things.some(thing => thing.sprite || thing.title)) {
             throw new Error('This scene needs the CPU renderer');
           }
@@ -316,6 +350,7 @@ export function mount(
         cpuFallback('This scene could not use WebGL. Using the CPU renderer.');
       }
     }
+    if (gpuCanvas) gpuCanvas.hidden = true;
     if (!game.frameIfChanged()) {
       if (!extraFrames) return false;
       game.frame();
@@ -357,7 +392,7 @@ export function mount(
     state: () => game.app.state,
     playing: () => game.app.state.status === 'playing', paused: () => game.paused,
     resume: () => { clear(true); game.paused = false; },
-    advance: () => { clear(); if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance'); else start(); },
+    advance: () => { clear(); if (['title', 'story', 'escape_retry', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance'); else start(); },
     fullscreen: () => { void fullscreen.toggle().catch(() => {}); },
     interact: unlockAudio, lockedMouse: true, unlockedCanvasLook: () => pointerLockUnavailable,
     advanceInputs: ['fire', 'use'], expanded: fullscreen.expanded,
@@ -373,7 +408,7 @@ export function mount(
     advance: () => {
       if (game.config.clickToStart === false && game.app.state.status !== 'playing') return;
       clear();
-      if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance');
+      if (['title', 'story', 'escape_retry', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance');
       else start();
     },
     resume: () => { clear(true); game.paused = false; },

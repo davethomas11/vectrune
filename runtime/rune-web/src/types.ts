@@ -176,6 +176,7 @@ export interface SoundDefinition {
   freq_start?: number | null;
   freq_end?: number | null;
   duration?: number;
+  attack?: number;
   volume?: number;
   curve?: 'exponential' | 'linear' | string;
   filter?: SoundFilterConfig | null;

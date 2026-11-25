@@ -3401,6 +3401,7 @@ var __RunePixel3DRuntime = (() => {
   var MAX_WORLD_AXIS = 4096;
   var MAX_WORLD_DEPTH = 256;
   var MAX_RESIDENT_CHUNKS = 16384;
+  var MAX_RENDER_MIRROR_CELLS = 131072;
   var ChunkStore = class {
     constructor(world, imported = {}) {
       this.world = world;
@@ -3456,7 +3457,7 @@ var __RunePixel3DRuntime = (() => {
     /** Bounded render accelerator; large worlds retain sparse lookup. */
     prepareRenderCells() {
       const volume = this.world.width * this.world.height * this.world.depth;
-      if (this.renderCells || volume > 65536) return;
+      if (this.renderCells || volume > MAX_RENDER_MIRROR_CELLS) return;
       this.renderCells = new Uint16Array(volume);
       for (const [id, values] of this.raw) this.mirror(id, values);
     }
@@ -3854,9 +3855,14 @@ var __RunePixel3DRuntime = (() => {
     }
   }
   function voxelRay(world, origin, ray, maxDistance, output, chunks) {
+    const store = chunkStore(world);
     return traceVoxelRay(
       world,
-      origin,
+      store?.renderCells ?? world.cells,
+      store?.renderCells ? void 0 : store,
+      origin.x,
+      origin.y,
+      origin.z,
       ray[0],
       ray[1],
       ray[2],
@@ -3868,19 +3874,17 @@ var __RunePixel3DRuntime = (() => {
       chunks
     );
   }
-  function traceVoxelRay(world, origin, rx, ry, rz, dx, dy, dz, maxDistance, output, chunks, crossings, column = 0, row = 0) {
-    let x = Math.floor(origin.x), y = Math.floor(origin.y), z = Math.floor(origin.z);
+  function traceVoxelRay(world, cells, store, ox, oy, oz, rx, ry, rz, dx, dy, dz, maxDistance, output, chunks, crossings, column = 0, row = 0, entryFace = 2) {
+    let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
     const width = world.width, height = world.height, depth = world.depth;
-    const sourceStore = chunkStore(world), cells = sourceStore?.renderCells ?? world.cells;
-    const store = sourceStore?.renderCells ? void 0 : sourceStore;
     let lastChunk = -1, blocks;
     if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
     const sx = rx < 0 ? -1 : 1, sy = ry < 0 ? -1 : 1, sz = rz < 0 ? -1 : 1;
     const stepY = sy * width, stepZ = sz * width * height;
     let cellIndex = (z * height + y) * width + x;
-    let tx = rx === 0 ? Infinity : (sx < 0 ? origin.x - x : x + 1 - origin.x) * dx;
-    let ty = ry === 0 ? Infinity : (sy < 0 ? origin.y - y : y + 1 - origin.y) * dy;
-    let tz = rz === 0 ? Infinity : (sz < 0 ? origin.z - z : z + 1 - origin.z) * dz;
+    let tx = rx === 0 ? Infinity : (sx < 0 ? ox - x : x + 1 - ox) * dx;
+    let ty = ry === 0 ? Infinity : (sy < 0 ? oy - y : y + 1 - oy) * dy;
+    let tz = rz === 0 ? Infinity : (sz < 0 ? oz - z : z + 1 - oz) * dz;
     if (chunks && (rx !== 0 || ry !== 0 || rz !== 0)) {
       const entry = chunkEntry(chunks, x, y, z, tx, ty, tz, dx, dy, dz, sx, sy, sz, maxDistance);
       if (!Number.isFinite(entry)) return null;
@@ -3922,8 +3926,8 @@ var __RunePixel3DRuntime = (() => {
     }
     if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) return null;
     const exitX = sx > 0 ? width : -1, exitY = sy > 0 ? height : -1, exitZ = sz > 0 ? depth : -1;
-    let distance = 0, face = 2;
-    for (let iteration = 0; iteration < width + height + depth + 3 && distance <= maxDistance; iteration++) {
+    let distance = 0, face = entryFace;
+    while (distance <= maxDistance) {
       let block;
       if (store) {
         const chunk = ((z >> 2) * store.ch + (y >> 2)) * store.cw + (x >> 2);
@@ -3967,6 +3971,75 @@ var __RunePixel3DRuntime = (() => {
       }
     }
     return null;
+  }
+  var sideShade = Uint8Array.from({ length: 256 }, (_, channel) => Math.floor(channel * 0.8));
+  var frontShade = Uint8Array.from({ length: 256 }, (_, channel) => Math.floor(channel * 0.65));
+  function wrappedTexel(point, size) {
+    const wrapped = point - Math.trunc(point) + 1;
+    return Math.floor((wrapped >= 1 ? wrapped - 1 : wrapped) * size);
+  }
+  function traceTerrainPose(world, cells, store, origin, rx, ry, rz, limit, output, chunks) {
+    const { x, y, z } = origin;
+    const enterX = terrainEntry(x, rx, world.width);
+    const enterY = terrainEntry(y, ry, world.height);
+    const enterZ = terrainEntry(z, rz, world.depth);
+    const entry = Math.max(enterX, enterY, enterZ);
+    if (entry > limit) return null;
+    if (entry < 0) {
+      return traceVoxelRay(
+        world,
+        cells,
+        store,
+        x,
+        y,
+        z,
+        rx,
+        ry,
+        rz,
+        Math.abs(1 / rx),
+        Math.abs(1 / ry),
+        Math.abs(1 / rz),
+        limit,
+        output,
+        chunks
+      );
+    }
+    const exit = Math.min(
+      rx === 0 ? Infinity : ((rx > 0 ? world.width : 0) - x) / rx,
+      ry === 0 ? Infinity : ((ry > 0 ? world.height : 0) - y) / ry,
+      rz === 0 ? Infinity : ((rz > 0 ? world.depth : 0) - z) / rz
+    );
+    if (entry >= exit) return null;
+    const start = entry + Math.min(1e-7, (exit - entry) / 2);
+    const face = entry === enterX ? 0 : entry === enterY ? 1 : 2;
+    const hit = traceVoxelRay(
+      world,
+      cells,
+      store,
+      x + rx * start,
+      y + ry * start,
+      z + rz * start,
+      rx,
+      ry,
+      rz,
+      Math.abs(1 / rx),
+      Math.abs(1 / ry),
+      Math.abs(1 / rz),
+      limit - start,
+      output,
+      chunks,
+      void 0,
+      0,
+      0,
+      face
+    );
+    if (hit) hit.distance += hit.distance === 0 ? entry : start;
+    return hit;
+  }
+  function terrainEntry(origin, direction, end) {
+    if (origin <= 0 && direction > 0) return -origin / direction;
+    if (origin >= end && direction < 0) return (end - origin) / direction;
+    return origin < 0 || origin >= end ? Infinity : -Infinity;
   }
   function voxelTarget(worldValue, playerValue) {
     const world = validateWorld(worldValue), player = validatePlayer(playerValue, world);
@@ -4101,6 +4174,7 @@ var __RunePixel3DRuntime = (() => {
     const scale = Math.tan(fov * Math.PI / 360);
     const columns = cached?.columns.length === width * 4 ? cached.columns : new Float64Array(width * 4);
     const rows = cached?.rows.length === height * 2 ? cached.rows : new Float64Array(height * 2);
+    const longitudes = cached?.longitudes.length === width ? cached.longitudes : new Float64Array(width);
     for (let x = 0; x < width; x++) {
       const u = (2 * x / width - 1) * scale, i = x * 4;
       const rx = ca - sa * u, ry = sa + ca * u;
@@ -4108,38 +4182,130 @@ var __RunePixel3DRuntime = (() => {
       columns[i + 1] = ry;
       columns[i + 2] = Math.abs(1 / rx);
       columns[i + 3] = Math.abs(1 / ry);
+      longitudes[x] = Math.atan2(ry, rx);
     }
     for (let y = 0; y < height; y++) {
       const rz = (height / 2 - y - 0.5) / height;
       rows[y * 2] = rz;
       rows[y * 2 + 1] = Math.abs(1 / rz);
     }
-    cached = { width, height, angle, fov, columns, rows };
+    cached = { width, height, angle, fov, columns, rows, longitudes };
     cameraRayScratch.set(depth, cached);
     return cached;
   }
-  function renderVoxels(world, camera, textures, sky, fov, width, height, buffer, depth, time, preparedChunks) {
+  var chunkBoundsCache = /* @__PURE__ */ new WeakMap();
+  function solidChunkBounds(store) {
+    const cached = chunkBoundsCache.get(store);
+    if (cached?.revision === store.revision) return cached.bounds;
+    const bounds = [];
+    for (const [id, blocks] of store.raw) {
+      let x0 = 4, y0 = 4, z0 = 4, x1 = 0, y1 = 0, z1 = 0;
+      for (let i = 0; i < 64; i++) {
+        if (!blocks[i]) continue;
+        const x2 = i & 3, y2 = i >> 2 & 3, z2 = i >> 4;
+        x0 = Math.min(x0, x2);
+        y0 = Math.min(y0, y2);
+        z0 = Math.min(z0, z2);
+        x1 = Math.max(x1, x2 + 1);
+        y1 = Math.max(y1, y2 + 1);
+        z1 = Math.max(z1, z2 + 1);
+      }
+      const x = id % store.cw * 4;
+      const y = Math.floor(id / store.cw) % store.ch * 4;
+      const z = Math.floor(id / (store.cw * store.ch)) * 4;
+      bounds.push(x + x0, y + y0, z + z0, x + x1, y + y1, z + z1);
+    }
+    chunkBoundsCache.set(store, { revision: store.revision, bounds });
+    return bounds;
+  }
+  var visibilityScratch = /* @__PURE__ */ new WeakMap();
+  function visibleVoxelTiles(store, origin, ca, sa, cp, sp, c, s, fovScale, width, height, depth) {
+    const tileWidth = Math.ceil(width / 8), tileHeight = Math.ceil(height / 8);
+    let tiles = visibilityScratch.get(depth);
+    if (tiles?.length !== tileWidth * tileHeight) {
+      tiles = new Uint8Array(tileWidth * tileHeight);
+      visibilityScratch.set(depth, tiles);
+    } else tiles.fill(0);
+    const bounds = solidChunkBounds(store);
+    for (let i = 0; i < bounds.length; i += 6) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      let near = Infinity, far = -Infinity;
+      let outside = 15;
+      for (let corner = 0; corner < 8; corner++) {
+        const x = bounds[i + (corner & 1 ? 3 : 0)] - origin.x;
+        const localY = bounds[i + (corner & 2 ? 4 : 1)] - origin.y;
+        const localZ = bounds[i + (corner & 4 ? 5 : 2)] - origin.z;
+        const y = c * localY - s * localZ, z = s * localY + c * localZ;
+        const heading = x * ca + y * sa;
+        const forward = cp * heading + sp * z;
+        near = Math.min(near, forward);
+        far = Math.max(far, forward);
+        const side = -sa * x + ca * y, up = cp * z - sp * heading;
+        outside &= (side < -fovScale * forward - 1e-7 ? 1 : 0) | (side > fovScale * forward + 1e-7 ? 2 : 0) | (up < -0.5 * forward - 1e-7 ? 4 : 0) | (up > 0.5 * forward + 1e-7 ? 8 : 0);
+        if (forward <= 1e-7) continue;
+        const px = (1 + side / (forward * fovScale)) * width / 2;
+        const py = height / 2 - 0.5 - up / forward * height;
+        minX = Math.min(minX, px);
+        maxX = Math.max(maxX, px);
+        minY = Math.min(minY, py);
+        maxY = Math.max(maxY, py);
+      }
+      if (outside || far < -1e-7) continue;
+      if (near <= 1e-7) return void 0;
+      const left = Math.max(0, Math.floor((minX - 1) / 8));
+      const right = Math.min(tileWidth - 1, Math.floor((maxX + 1) / 8));
+      const top = Math.max(0, Math.floor((minY - 1) / 8));
+      const bottom = Math.min(tileHeight - 1, Math.floor((maxY + 1) / 8));
+      if (left > right) continue;
+      for (let row = top; row <= bottom; row++) {
+        tiles.fill(1, row * tileWidth + left, row * tileWidth + right + 1);
+      }
+    }
+    return tiles;
+  }
+  function renderVoxels(world, camera, textures, sky, fov, width, height, buffer, depth, time, preparedChunks, preserveBackdrop = false) {
+    const pose = camera.terrainPose;
     const eye = (camera.z ?? 0) + 1.25, a = camera.angle * Math.PI / 180, p = (camera.pitch ?? 0) * Math.PI / 180;
     const ca = Math.cos(a), sa = Math.sin(a), cp = Math.cos(p), sp = Math.sin(p);
     const scale = Math.tan(fov * Math.PI / 360);
+    if (![camera.x, camera.y, eye, camera.angle, camera.pitch ?? 0].every(Number.isFinite) || camera.x < 0 || camera.y < 0 || camera.x >= world.width || camera.y >= world.height || eye < 0 || eye >= world.depth || Math.abs(camera.pitch ?? 0) > 85) {
+      throw new Error("Voxel camera must be finite, inside the world, with pitch between -85 and 85 degrees");
+    }
+    if (pose) {
+      if (!Array.isArray(pose.pivot) || pose.pivot.length !== 2 || !Array.isArray(pose.position) || pose.position.length !== 2 || ![...pose.pivot, ...pose.position, pose.angle].every(Number.isFinite)) {
+        throw new Error("Voxel terrain pose needs finite Y/Z pivot and position pairs and an angle");
+      }
+      world = validateWorld(pose.world);
+      preparedChunks = void 0;
+    }
     const materialTextures = world.materials.map((name2) => {
       const texture = textures[name2];
       if (!texture) throw new Error(`Unknown voxel material texture: ${name2}`);
       return texture;
     });
-    if (![camera.x, camera.y, eye, camera.angle, camera.pitch ?? 0].every(Number.isFinite) || camera.x < 0 || camera.y < 0 || camera.x >= world.width || camera.y >= world.height || eye < 0 || eye >= world.depth || Math.abs(camera.pitch ?? 0) > 85) {
-      throw new Error("Voxel camera must be finite, inside the world, with pitch between -85 and 85 degrees");
-    }
-    chunkStore(world)?.prepareRenderCells();
+    const sourceStore = chunkStore(world);
+    sourceStore?.prepareRenderCells();
+    const cells = sourceStore?.renderCells ?? world.cells;
+    const sparseStore = sourceStore?.renderCells ? void 0 : sourceStore;
     const origin = { x: camera.x, y: camera.y, z: eye };
+    const theta = (pose?.angle ?? 0) * Math.PI / 180, c = Math.cos(theta), s = Math.sin(theta);
+    if (pose) {
+      const y = origin.y - pose.position[0], z = origin.z - pose.position[1];
+      origin.y = pose.pivot[0] + c * y + s * z;
+      origin.z = pose.pivot[1] - s * y + c * z;
+    }
     const rays = cameraRays(camera, fov, width, height, depth);
+    const needsTerrainEntry = pose && (origin.x <= 0 || origin.x >= world.width || origin.y <= 0 || origin.y >= world.height || origin.z <= 0 || origin.z >= world.depth);
     const hitOutput = { x: 0, y: 0, z: 0, block: 0, distance: 0, face: 0 };
     const maxDistance = Math.min(Math.hypot(world.width, world.height, world.depth), world.renderDistance ?? Infinity);
     const occupancy = preparedChunks ?? prepareVoxelChunks(world);
-    const chunks = occupancy.count < occupancy.width * occupancy.height * occupancy.depth * 0.6 ? occupancy : void 0;
-    const crossings = rays && chunks && world.width <= 256 && world.height <= 256 ? rayCrossings(world, origin, rays, depth) : void 0;
+    const chunks = (!pose || Math.min(world.width, world.height, world.depth) > 8) && occupancy.count < occupancy.width * occupancy.height * occupancy.depth * 0.6 ? occupancy : void 0;
+    const crossings = !pose && rays && chunks && world.width <= 256 && world.height <= 256 ? rayCrossings(world, origin, rays, depth) : void 0;
+    const visibleTiles = sourceStore && sourceStore.raw.size <= 1024 ? visibleVoxelTiles(sourceStore, origin, ca, sa, cp, sp, c, s, scale, width, height, depth) : void 0;
+    const tileWidth = Math.ceil(width / 8);
     const horizon = sky ? (4278190080 | sky.horizon) >>> 0 : 4281608224;
     for (let y = 0; y < height; y++) {
+      const tileRow = (y >> 3) * tileWidth;
       const v = (height / 2 - y - 0.5) / height;
       const rz = rays ? rays.rows[y * 2] : sp + cp * v;
       const dz = rays ? rays.rows[y * 2 + 1] : Math.abs(1 / rz);
@@ -4150,15 +4316,21 @@ var __RunePixel3DRuntime = (() => {
         const ry = rays ? rays.columns[r + 1] : sa * cp + ca * u - sa * sp * v;
         const dx = rays ? rays.columns[r + 2] : Math.abs(1 / rx);
         const dy = rays ? rays.columns[r + 3] : Math.abs(1 / ry);
-        const hit = occupancy.count === 0 ? null : traceVoxelRay(
+        const localY = pose ? c * ry + s * rz : ry;
+        const localZ = pose ? -s * ry + c * rz : rz;
+        const hit = occupancy.count === 0 || visibleTiles && !visibleTiles[tileRow + (x >> 3)] ? null : needsTerrainEntry ? traceTerrainPose(world, cells, sparseStore, origin, rx, localY, localZ, maxDistance, hitOutput, chunks) : traceVoxelRay(
           world,
-          origin,
+          cells,
+          sparseStore,
+          origin.x,
+          origin.y,
+          origin.z,
           rx,
-          ry,
-          rz,
+          localY,
+          localZ,
           dx,
-          dy,
-          dz,
+          pose ? Math.abs(1 / localY) : dy,
+          pose ? Math.abs(1 / localZ) : dz,
           maxDistance,
           hitOutput,
           chunks,
@@ -4168,16 +4340,19 @@ var __RunePixel3DRuntime = (() => {
         );
         if (!hit) {
           depth[i] = Infinity;
-          buffer[i] = sky && (rz > 0 || sky.below !== void 0) ? skyPixel(sky, Math.atan2(ry, rx), Math.max(-1, Math.min(1, rz)), time) : horizon;
+          if (!preserveBackdrop) {
+            buffer[i] = sky && (rz > 0 || sky.below !== void 0) ? skyPixel(sky, rays ? rays.longitudes[x] : Math.atan2(ry, rx), Math.max(-1, Math.min(1, rz)), time) : horizon;
+          }
         } else {
           depth[i] = hit.distance;
           const texture = materialTextures[hit.block - 1];
-          const pointU = hit.face === 0 ? camera.y + ry * hit.distance : camera.x + rx * hit.distance;
-          const pointV = hit.face === 2 ? camera.y + ry * hit.distance : eye + rz * hit.distance;
-          const tx = Math.floor((pointU % 1 + 1) % 1 * texture.width);
-          const ty = Math.floor((pointV % 1 + 1) % 1 * texture.height);
-          const color = texture.pixels[ty * texture.width + tx], factor = hit.face === 2 ? 1 : hit.face === 0 ? 0.8 : 0.65;
-          buffer[i] = (4278190080 | Math.floor((color & 255) * factor) | Math.floor((color >>> 8 & 255) * factor) << 8 | Math.floor((color >>> 16 & 255) * factor) << 16) >>> 0;
+          const pointU = hit.face === 0 ? origin.y + localY * hit.distance : origin.x + rx * hit.distance;
+          const pointV = hit.face === 2 ? origin.y + localY * hit.distance : origin.z + localZ * hit.distance;
+          const tx = wrappedTexel(pointU, texture.width);
+          const ty = wrappedTexel(pointV, texture.height);
+          const color = texture.pixels[ty * texture.width + tx];
+          const shade3 = hit.face === 0 ? sideShade : frontShade;
+          buffer[i] = hit.face === 2 ? (4278190080 | color) >>> 0 : (4278190080 | shade3[color & 255] | shade3[color >>> 8 & 255] << 8 | shade3[color >>> 16 & 255] << 16) >>> 0;
         }
       }
     }
@@ -4206,6 +4381,13 @@ var __RunePixel3DRuntime = (() => {
     if (!Array.isArray(materials) || materials.length === 0) {
       throw new Error(`@SideMap/${fgNameValue} needs materials = [...]`);
     }
+    for (const [symbol, entry] of Object.entries(fg.legend)) {
+      const center = entry?.center_voxel;
+      if (center === void 0) continue;
+      if (!Number.isInteger(center) || center < 1 || center > materials.length || !(entry.voxel && entry.voxel > 0) || (entry.depth?.[1] ?? 4) < 2 || entry.boss_door || entry.barrier || entry.hazard) {
+        throw new Error(`@SideMap/${fgNameValue} legend ${symbol}: center_voxel needs a valid material and a solid span of at least two tiles`);
+      }
+    }
     let spawn = { x: 4.5, y: planeY, z: 3, angle: 0, pitch: 0, vz: 0 };
     const world = voxelWorld(width, depthY, height + marginZ, materials, {
       seed: opts.seed ?? 701,
@@ -4226,12 +4408,17 @@ var __RunePixel3DRuntime = (() => {
       const z = height - 1 - row;
       const line = fg.rows[row];
       let runVoxel = 0;
+      let runCenter = 0;
       let runY0 = 0;
       let runYSpan = 0;
       let runStart = 0;
       const flushRun = (endX) => {
         if (runVoxel > 0 && endX > runStart) {
           voxelFill(world, [runStart, runY0, z], [endX - runStart, runYSpan, 1], runVoxel);
+          if (runCenter) {
+            const centerY = runY0 + Math.floor((runYSpan - 2) / 2);
+            voxelFill(world, [runStart, centerY, z], [endX - runStart, 2, 1], runCenter);
+          }
         }
         runVoxel = 0;
       };
@@ -4245,10 +4432,12 @@ var __RunePixel3DRuntime = (() => {
         if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
           const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
           const ySpan = entry.depth ? entry.depth[1] : 4;
-          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan) {
+          const center = entry.center_voxel ?? 0;
+          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan && runCenter === center) {
           } else {
             flushRun(x);
             runVoxel = entry.voxel;
+            runCenter = center;
             runY0 = y0;
             runYSpan = ySpan;
             runStart = x;
@@ -6462,6 +6651,37 @@ var __RunePixel3DRuntime = (() => {
     return void 0;
   }
 
+  // src/music_clock.ts
+  var MusicClock = class {
+    constructor(time, bpm, beat = 0) {
+      this.marks = [{ time, bpm, beat }];
+    }
+    at(position, key2) {
+      let i = this.marks.length - 1;
+      while (i > 0 && this.marks[i][key2] > position) i--;
+      return this.marks[i];
+    }
+    beatAt(time) {
+      const mark = this.at(time, "time");
+      return mark.beat + (time - mark.time) / (60 / mark.bpm);
+    }
+    timeAt(beat) {
+      const mark = this.at(beat, "beat");
+      return mark.time + (beat - mark.beat) * (60 / mark.bpm);
+    }
+    tempoAt(time) {
+      return this.at(time, "time").bpm;
+    }
+    changeAfter(bpm, scheduledUntil) {
+      while (this.marks.length > 1 && this.marks[this.marks.length - 1].time > scheduledUntil) {
+        this.marks.pop();
+      }
+      if (this.tempoAt(scheduledUntil) === bpm) return;
+      const beat = Math.max(Math.floor(this.beatAt(scheduledUntil)) + 1, this.marks[0].beat);
+      this.marks.push({ beat, time: this.timeAt(beat), bpm });
+    }
+  };
+
   // src/studio_sequencer.ts
   var TICKS_PER_WHOLE = 16;
   var STUDIO_TICK_WIDTH = 30;
@@ -6637,7 +6857,7 @@ var __RunePixel3DRuntime = (() => {
       this.timeSignature = "4/4";
       this.totalBars = 4;
       this.totalBeats = 16;
-      this.musicStartTime = 0;
+      this.clock = new MusicClock(0, 128);
       this.parkedBeat = 0;
       this.syncPage = true;
       this.getAudioCtx = null;
@@ -6679,7 +6899,7 @@ var __RunePixel3DRuntime = (() => {
       this.timeSignature = params.timeSignature;
       this.totalBars = params.totalBars;
       this.totalBeats = params.totalBeats;
-      this.musicStartTime = params.startTime;
+      this.clock = params.clock ?? new MusicClock(params.startTime, params.tempo);
       this.parkedBeat = params.startBeat ?? 0;
       this.scheduledNotes = [];
       this.lastActiveStepId = -1;
@@ -6692,6 +6912,7 @@ var __RunePixel3DRuntime = (() => {
      * Notify sync engine that playback has paused.
      */
     onPause(beat = this.getSnapshot().currentBeat) {
+      this.tempoBpm = this.getSnapshot().tempo;
       this.parkedBeat = beat;
       this.isPaused = true;
       this.stopLoop();
@@ -6723,8 +6944,7 @@ var __RunePixel3DRuntime = (() => {
       const ctx2 = this.getAudioCtx ? this.getAudioCtx() : null;
       const outputLatency = ctx2 ? (ctx2.outputLatency || 0) + (ctx2.baseLatency || 0) : 0;
       const visualTime = ctx2 ? Math.max(0, ctx2.currentTime - outputLatency) : 0;
-      const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-      const beat = this.isPlaying && !this.isPaused && this.totalBeats > 0 ? Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat) % this.totalBeats : this.parkedBeat;
+      const beat = this.isPlaying && !this.isPaused && this.totalBeats > 0 ? Math.max(this.parkedBeat, this.clock.beatAt(visualTime)) % this.totalBeats : this.parkedBeat;
       const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
       const currentBeat = beat;
       const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
@@ -6733,7 +6953,7 @@ var __RunePixel3DRuntime = (() => {
         isPlaying: this.isPlaying,
         isPaused: this.isPaused,
         track: this.activeTrackName,
-        tempo: this.tempoBpm,
+        tempo: this.isPlaying && !this.isPaused ? this.clock.tempoAt(visualTime) : this.tempoBpm,
         timeSignature: this.timeSignature,
         currentBeat,
         currentBar,
@@ -6787,8 +7007,7 @@ var __RunePixel3DRuntime = (() => {
       }
       const currentStepId = currentStepIds[0] ?? -1;
       const changedSteps = currentStepIds.length !== this.lastActiveStepIds.length || currentStepIds.some((id, index2) => id !== this.lastActiveStepIds[index2]);
-      const secondsPerBeat = 60 / Math.max(20, this.tempoBpm);
-      const elapsedBeat = Math.max(this.parkedBeat, (visualTime - this.musicStartTime) / secondsPerBeat);
+      const elapsedBeat = Math.max(this.parkedBeat, this.clock.beatAt(visualTime));
       const beatsPerBar = this.timeSignature.startsWith("3/") ? 3 : 4;
       const currentBeat = this.totalBeats > 0 ? elapsedBeat % this.totalBeats : elapsedBeat;
       const currentBar = Math.min(this.totalBars, Math.floor(currentBeat / beatsPerBar) + 1);
@@ -7231,7 +7450,7 @@ var __RunePixel3DRuntime = (() => {
         break;
     }
   }
-  function playNoiseBurst(ctx2, now, duration, filterStart, filterEnd, volume, filterType = "lowpass") {
+  function playNoiseBurst(ctx2, now, duration, filterStart, filterEnd, volume, filterType = "lowpass", attack = 0) {
     const bufferSize = Math.max(1, Math.floor(ctx2.sampleRate * duration));
     const buffer = ctx2.createBuffer(1, bufferSize, ctx2.sampleRate);
     const data = buffer.getChannelData(0);
@@ -7245,13 +7464,21 @@ var __RunePixel3DRuntime = (() => {
     filter.frequency.setValueAtTime(Math.max(20, filterStart), now);
     filter.frequency.exponentialRampToValueAtTime(Math.max(20, filterEnd), now + duration);
     const gain = ctx2.createGain();
-    gain.gain.setValueAtTime(volume, now);
-    gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
+    sweepEnvelope(gain.gain, now, duration, volume, attack);
     noise3.connect(filter);
     filter.connect(gain);
     gain.connect(sfxOutput(ctx2));
     noise3.start(now);
     noise3.stop(now + duration + 0.01);
+  }
+  function sweepEnvelope(gain, now, duration, volume, attack) {
+    if (attack > 0 && duration > 0 && volume > 0) {
+      gain.setValueAtTime(0, now);
+      gain.linearRampToValueAtTime(volume, now + Math.min(attack, duration * 0.98));
+    } else {
+      gain.setValueAtTime(volume, now);
+    }
+    gain.exponentialRampToValueAtTime(1e-3, now + duration);
   }
   function playCustomSound(ctx2, def, now, arg) {
     const duration = def.duration || 0.12;
@@ -7261,7 +7488,7 @@ var __RunePixel3DRuntime = (() => {
       const fStart = def.filter?.start_freq || 800;
       const fEnd = def.filter?.end_freq || 60;
       const fType = def.filter?.filter_type || "lowpass";
-      playNoiseBurst(ctx2, now, duration, fStart, fEnd, volume, fType);
+      playNoiseBurst(ctx2, now, duration, fStart, fEnd, volume, fType, def.attack);
       return;
     }
     if (def.sequence && def.sequence.length > 0) {
@@ -7301,8 +7528,7 @@ var __RunePixel3DRuntime = (() => {
         osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), now + duration);
       }
     }
-    gain.gain.setValueAtTime(volume, now);
-    gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
+    sweepEnvelope(gain.gain, now, duration, volume, def.attack ?? 0);
     osc.connect(gain);
     gain.connect(sfxOutput(ctx2));
     osc.start(now);
@@ -7312,11 +7538,13 @@ var __RunePixel3DRuntime = (() => {
   var musicSchedulerTimer = null;
   var musicMasterGain = null;
   var musicEffectsBus = null;
+  var clearFadingMusic;
   var musicVolume = 0.2;
   var musicTempoBpm = 128;
   var musicLoop = true;
   var isMusicPaused = false;
-  var musicStartTime = 0;
+  var MUSIC_LOOKAHEAD = 0.25;
+  var musicClock = null;
   var musicPausedBeat = 0;
   var tracksState = {};
   function parseTrackPattern(patternStr) {
@@ -7374,7 +7602,7 @@ var __RunePixel3DRuntime = (() => {
     }
     return events;
   }
-  function playMusic(trackName, startBeat = 0) {
+  function playMusic(trackName, startBeat = 0, fadeSeconds = 0) {
     if (!playbackUnlocked) {
       pendingMusic = { track: trackName, beat: startBeat };
       return;
@@ -7385,6 +7613,12 @@ var __RunePixel3DRuntime = (() => {
     const def = registeredMusic[key2];
     if (!def) {
       return;
+    }
+    const fade = Number.isFinite(fadeSeconds) ? Math.min(5, Math.max(0, fadeSeconds)) : 0;
+    const outgoing = fade > 0 && musicMasterGain ? { gain: musicMasterGain, effects: musicEffectsBus } : null;
+    if (outgoing) {
+      musicMasterGain = null;
+      musicEffectsBus = null;
     }
     stopMusic();
     activeMusicTrackName = key2;
@@ -7440,7 +7674,9 @@ var __RunePixel3DRuntime = (() => {
     for (const [channel, instrument] of Object.entries(def.instruments ?? {})) {
       if (Object.prototype.hasOwnProperty.call(tracksState, channel)) tracksState[channel].instrument = instrument;
     }
-    startMusicAtBeat(ctx2, key2, startBeat);
+    const startTime = ctx2.currentTime + 0.05;
+    startMusicAtBeat(ctx2, key2, startBeat, startTime, outgoing ? fade : 0);
+    if (outgoing) fadeOutMusic(ctx2, outgoing, startTime, fade);
   }
   function musicTiming(track) {
     const def = registeredMusic[track];
@@ -7701,7 +7937,7 @@ var __RunePixel3DRuntime = (() => {
       cleanup
     };
   }
-  function startMusicAtBeat(ctx2, trackName, startBeat) {
+  function startMusicAtBeat(ctx2, trackName, startBeat, startTime = ctx2.currentTime + 0.05, fade = 0) {
     const timing = musicTiming(trackName);
     const beat = Math.max(0, Math.min(timing.totalBeats - 1e-6, Number.isFinite(startBeat) ? startBeat : 0));
     for (const track of Object.values(tracksState)) {
@@ -7716,13 +7952,18 @@ var __RunePixel3DRuntime = (() => {
       track.elapsedInNote = track.index === track.events.length ? 0 : beat - onset;
     }
     musicMasterGain = ctx2.createGain();
-    musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
+    if (fade > 0) {
+      musicMasterGain.gain.setValueAtTime(0, startTime);
+      musicMasterGain.gain.linearRampToValueAtTime(musicVolume, startTime + fade);
+    } else {
+      musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
+    }
     musicMasterGain.connect(audioOutput(ctx2));
     const def = registeredMusic[trackName];
     musicEffectsBus = def ? buildMusicEffectsBus(ctx2, def, Object.keys(tracksState), musicMasterGain) : null;
-    musicStartTime = ctx2.currentTime + 0.05 - beat * 60 / musicTempoBpm;
+    musicClock = new MusicClock(startTime, musicTempoBpm, beat);
     audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
-    audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
+    audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime, startBeat: beat, clock: musicClock });
     scheduleMusicTicks();
     musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
   }
@@ -7737,7 +7978,30 @@ var __RunePixel3DRuntime = (() => {
     musicPausedBeat = 0;
     isMusicPaused = false;
     tracksState = {};
+    musicClock = null;
+    clearFadingMusic?.();
     disconnectMusicGain();
+  }
+  function fadeOutMusic(ctx2, outgoing, startTime, fade) {
+    const gain = outgoing.gain.gain;
+    const volume = gain.value;
+    gain.cancelScheduledValues(ctx2.currentTime);
+    gain.setValueAtTime(volume, startTime);
+    const endTime = startTime + fade;
+    gain.linearRampToValueAtTime(0, endTime);
+    let timer;
+    function dispose() {
+      clearTimeout(timer);
+      outgoing.effects?.cleanup();
+      outgoing.gain.disconnect();
+      clearFadingMusic = void 0;
+    }
+    function checkTail() {
+      if (ctx2.currentTime >= endTime) dispose();
+      else timer = setTimeout(checkTail, Math.max(25, (endTime - ctx2.currentTime) * 1e3));
+    }
+    timer = setTimeout(checkTail, (endTime - ctx2.currentTime) * 1e3);
+    clearFadingMusic = dispose;
   }
   function disconnectMusicGain() {
     if (musicEffectsBus) {
@@ -7756,6 +8020,7 @@ var __RunePixel3DRuntime = (() => {
       clearInterval(musicSchedulerTimer);
       musicSchedulerTimer = null;
     }
+    clearFadingMusic?.();
     disconnectMusicGain();
     audioSync.onPause(musicPausedBeat);
   }
@@ -7767,17 +8032,15 @@ var __RunePixel3DRuntime = (() => {
   }
   function setMusicTempo(bpm) {
     if (!(bpm > 20 && bpm < 400) || bpm === musicTempoBpm) return;
-    const beat = audioSync.getSnapshot().currentBeat;
     musicTempoBpm = bpm;
     if (audioCtx && activeMusicTrackName && !isMusicPaused) {
-      if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
-      disconnectMusicGain();
-      startMusicAtBeat(audioCtx, activeMusicTrackName, beat);
+      musicClock?.changeAfter(bpm, audioCtx.currentTime + MUSIC_LOOKAHEAD);
     }
   }
   function setMusicVolume(vol) {
     musicVolume = Math.max(0, Math.min(1, vol));
     if (musicMasterGain && audioCtx) {
+      musicMasterGain.gain.cancelScheduledValues(audioCtx.currentTime);
       musicMasterGain.gain.setValueAtTime(musicVolume, audioCtx.currentTime);
     }
   }
@@ -7790,14 +8053,14 @@ var __RunePixel3DRuntime = (() => {
   }
   function scheduleMusicTicks() {
     const ctx2 = getAudioContext();
-    if (!ctx2 || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
-    const secondsPerBeat = 60 / musicTempoBpm;
-    const lookaheadWindow = ctx2.currentTime + 0.25;
+    const clock = musicClock;
+    if (!ctx2 || !clock || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
+    const lookaheadWindow = ctx2.currentTime + MUSIC_LOOKAHEAD;
     const { totalBeats: songTotalBeats } = musicTiming(activeMusicTrackName);
     let allFinished = true;
     for (const [trackKey, track] of Object.entries(tracksState)) {
       if (!track || !track.events.length || track.muted) continue;
-      while (musicStartTime + track.nextBeat * secondsPerBeat < lookaheadWindow) {
+      while (true) {
         if (track.index >= track.events.length) {
           if (musicLoop) {
             if (songTotalBeats > 0) {
@@ -7809,10 +8072,11 @@ var __RunePixel3DRuntime = (() => {
             break;
           }
         }
+        const eventTime = clock.timeAt(track.nextBeat);
+        if (eventTime >= lookaheadWindow) break;
         const event = track.events[track.index];
-        const eventTime = musicStartTime + track.nextBeat * secondsPerBeat;
         const remainingBeats = event.beats - (track.elapsedInNote ?? 0);
-        const eventDurationSec = remainingBeats * secondsPerBeat;
+        const eventDurationSec = clock.timeAt(track.nextBeat + remainingBeats) - eventTime;
         if (!event.isRest && eventTime >= ctx2.currentTime - 0.05) {
           const targetDest = musicEffectsBus ? musicEffectsBus.channelGains[trackKey] || musicEffectsBus.masterInput : musicMasterGain;
           scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, targetDest, track.instrument);
@@ -7825,7 +8089,7 @@ var __RunePixel3DRuntime = (() => {
         allFinished = false;
       }
     }
-    if (allFinished && !musicLoop && ctx2.currentTime >= musicStartTime + songTotalBeats * secondsPerBeat) {
+    if (allFinished && !musicLoop && ctx2.currentTime >= clock.timeAt(songTotalBeats)) {
       stopMusic();
     }
   }
@@ -8288,11 +8552,13 @@ var __RunePixel3DRuntime = (() => {
       if (trimmed === "music.play" || trimmed === "music.play()" || trimmed.startsWith("music.play(") || trimmed.startsWith("music.play ") || trimmed.startsWith("play_music(") || trimmed.startsWith("music ") && !trimmed.startsWith("music.tempo") && !trimmed.startsWith("music.volume")) {
         let trackName = "";
         let startBeat;
+        let fadeSeconds;
         if ((trimmed.startsWith("music.play(") || trimmed.startsWith("play_music(")) && trimmed.endsWith(")")) {
-          const [name2, beat] = splitTopLevel(trimmed.slice(trimmed.indexOf("(") + 1, -1), ",");
+          const [name2, beat, fade] = splitTopLevel(trimmed.slice(trimmed.indexOf("(") + 1, -1), ",");
           const scope = buildScope(locals, trimmed);
           trackName = String(evaluateExpression(name2, scope) || "");
           if (beat !== void 0) startBeat = Number(evaluateExpression(beat, scope));
+          if (fade !== void 0) fadeSeconds = Number(evaluateExpression(fade, scope));
         } else if (trimmed.startsWith("music.play ")) {
           trackName = String(evaluateExpression(trimmed.slice(11), buildScope(locals, trimmed)) || "");
         } else if (trimmed.startsWith("music ")) {
@@ -8300,7 +8566,8 @@ var __RunePixel3DRuntime = (() => {
         }
         trackName = normalizeLiteral(trackName);
         if (trackName) {
-          if (startBeat === void 0) playMusic(trackName);
+          if (fadeSeconds !== void 0) playMusic(trackName, startBeat, fadeSeconds);
+          else if (startBeat === void 0) playMusic(trackName);
           else playMusic(trackName, startBeat);
         }
         return true;
@@ -9511,6 +9778,301 @@ var __RunePixel3DRuntime = (() => {
     }
   }
 
+  // src/pixel3d/enhanced_lighting.ts
+  var TILE = 4;
+  var GLASS_TINT = 15780225;
+  var FALLBACK_HAZE = 4798522;
+  function viewOf(camera, dirX, dirY, fov, rowOrigin) {
+    const pitch = (camera.pitch ?? 0) * Math.PI / 180;
+    return {
+      x: camera.x,
+      y: camera.y,
+      z: camera.height ?? 0.5,
+      dirX,
+      dirY,
+      cp: Math.cos(pitch),
+      sp: Math.sin(pitch),
+      fov,
+      rowOrigin
+    };
+  }
+  function blendColor(color, tint, alpha) {
+    const red = color & 255, green = color >>> 8 & 255, blue = color >>> 16 & 255;
+    return (4278190080 | red + ((tint & 255) - red) * alpha | green + ((tint >>> 8 & 255) - green) * alpha << 8 | blue + ((tint >>> 16 & 255) - blue) * alpha << 16) >>> 0;
+  }
+  function addColor(color, glow) {
+    return (4278190080 | Math.min(255, (color & 255) + (glow & 255)) | Math.min(255, (color >>> 8 & 255) + (glow >>> 8 & 255)) << 8 | Math.min(255, (color >>> 16 & 255) + (glow >>> 16)) << 16) >>> 0;
+  }
+  function mixGlow(a, b, weight) {
+    const other = 4 - weight;
+    return (a & 16711935) * other + (b & 16711935) * weight >>> 2 & 16711935 | (a & 65280) * other + (b & 65280) * weight >>> 2 & 65280;
+  }
+  function blur(source, target, width, height, horizontal) {
+    const stride = horizontal ? 1 : width;
+    const length = horizontal ? width : height;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = y * width + x, position = horizontal ? x : y;
+        const a = position > 1 ? source[i - 2 * stride] : 0;
+        const b = position > 0 ? source[i - stride] : 0;
+        const c = source[i];
+        const d = position + 1 < length ? source[i + stride] : 0;
+        const e = position + 2 < length ? source[i + 2 * stride] : 0;
+        const rb = (a & 16711935) + 2 * (b & 16711935) + 4 * (c & 16711935) + 2 * (d & 16711935) + (e & 16711935) >>> 0;
+        const green = ((a >>> 8 & 255) + 2 * (b >>> 8 & 255) + 4 * (c >>> 8 & 255) + 2 * (d >>> 8 & 255) + (e >>> 8 & 255)) / 10;
+        target[i] = (rb & 65535) / 10 | (green | 0) << 8 | ((rb >>> 16) / 10 | 0) << 16;
+      }
+    }
+  }
+  function makeGlass(thing, size) {
+    const angle = (thing.angle ?? 0) * Math.PI / 180;
+    const pitch = (thing.pitch ?? 0) * Math.PI / 180;
+    const c = Math.cos(angle), s = Math.sin(angle), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const scale = thing.scale ?? 1;
+    return {
+      x: thing.x,
+      y: thing.y,
+      z: thing.z ?? 0,
+      ax: c * cp,
+      ay: s * cp,
+      az: -sp,
+      bx: -s,
+      by: c,
+      halfA: size[0] * scale / 2,
+      halfB: size[1] * scale / 2,
+      scale
+    };
+  }
+  var EnhancedLighting = class {
+    constructor() {
+      this.tileWidth = 0;
+      this.tileHeight = 0;
+      this.width = 0;
+      this.height = 0;
+      this.scratch = new Uint32Array(0);
+      this.glow = new Uint32Array(0);
+      this.paneDepth = new Float64Array(0);
+      this.paneAlpha = new Uint8Array(0);
+      this.panes = [];
+      this.emission = { width: 0, pixels: new Int32Array(0), depths: new Float64Array(0), colors: new Uint32Array(0) };
+    }
+    begin(width, height) {
+      if (this.width !== width || this.height !== height) {
+        this.width = width;
+        this.height = height;
+        this.tileWidth = Math.ceil(width / TILE);
+        this.tileHeight = Math.ceil(height / TILE);
+        const count = this.tileWidth * this.tileHeight;
+        this.emission = {
+          width: this.tileWidth,
+          pixels: new Int32Array(count),
+          depths: new Float64Array(count),
+          colors: new Uint32Array(count)
+        };
+        this.scratch = new Uint32Array(count);
+        this.glow = new Uint32Array(count);
+        this.paneDepth = new Float64Array(count);
+        this.paneAlpha = new Uint8Array(count);
+      }
+      this.panes.length = 0;
+      this.paneDepth.fill(Infinity);
+      this.paneAlpha.fill(0);
+      this.emission.colors.fill(0);
+      return this.emission;
+    }
+    rememberGlass(thing, model) {
+      if (model.glass && (thing.dissolve ?? 0) < 1) this.panes.push(makeGlass(thing, model.glass));
+    }
+    /** The backdrop is composed while its own depth is still available. */
+    backdrop(buffer, depth) {
+      if (this.buildGlow(depth)) this.combine(buffer, depth, true, 0);
+      this.emission.colors.fill(0);
+    }
+    buildGlow(depth) {
+      const { colors, pixels, depths } = this.emission;
+      let any = false;
+      for (let i = 0; i < colors.length; i++) {
+        if (!colors[i]) continue;
+        if (depth[pixels[i]] !== depths[i]) colors[i] = 0;
+        else any = true;
+      }
+      if (!any) return false;
+      blur(colors, this.scratch, this.tileWidth, this.tileHeight, true);
+      blur(this.scratch, this.glow, this.tileWidth, this.tileHeight, false);
+      return true;
+    }
+    finish(buffer, depth, camera, dirX, dirY, fov, rowOrigin, world, things, models, horizon) {
+      const view = viewOf(camera, dirX, dirY, fov, rowOrigin);
+      if (world) this.shadows(buffer, depth, view, world, things, models);
+      for (const pane of this.panes) this.tintPane(view, pane);
+      const haze = world ? Math.max(0, Math.min(1, (Math.abs(dirX) - 0.35) / 0.4)) * Math.max(0, Math.min(1, (0.8 - Math.abs(view.sp)) / 0.25)) : 0;
+      this.combine(buffer, depth, this.buildGlow(depth), haze, horizon);
+    }
+    combine(buffer, depth, bloom, haze, horizon) {
+      const width = this.width, height = this.height;
+      const hazeTint = horizon ?? FALLBACK_HAZE;
+      const glass = this.panes.length > 0;
+      if (!glass && !bloom && !haze) return;
+      const tileWidth = this.tileWidth;
+      for (let y = 0; y < height; y++) {
+        const row = y * width, blockY = y >> 2, tileRow = blockY * tileWidth;
+        const nextRow = Math.min(this.tileHeight - 1, blockY + 1) * tileWidth;
+        const yWeight = y & 3;
+        let nearGlow = bloom ? mixGlow(this.glow[tileRow], this.glow[nextRow], yWeight) : 0;
+        for (let left = 0; left < width; left += TILE) {
+          const blockX = left >> 2, tile = tileRow + blockX;
+          const nextX = Math.min(tileWidth - 1, blockX + 1);
+          const startGlow = nearGlow;
+          const farGlow = bloom ? mixGlow(this.glow[tileRow + nextX], this.glow[nextRow + nextX], yWeight) : 0;
+          nearGlow = farGlow;
+          const tint = glass ? this.paneAlpha[tile] : 0;
+          if (!startGlow && !farGlow && !tint && !haze) continue;
+          const paneDepth = tint ? this.paneDepth[tile] : Infinity;
+          const end = row + Math.min(width, left + TILE);
+          for (let i = row + left; i < end; i++) {
+            let pixel = buffer[i];
+            const distance = depth[i];
+            if (haze && distance > 22 && distance < Infinity) {
+              pixel = blendColor(pixel, hazeTint, haze * Math.min(0.3, (distance - 22) * 8e-3));
+            }
+            if (distance > paneDepth) pixel = blendColor(pixel, GLASS_TINT, tint / 255);
+            const glow = startGlow || farGlow ? mixGlow(startGlow, farGlow, i - row - left) : 0;
+            buffer[i] = glow ? addColor(pixel, glow) : pixel;
+          }
+        }
+      }
+    }
+    bounds(view, plane, cell) {
+      const corners = [];
+      for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const dx = plane.x - view.x + a * plane.ax * plane.halfA + b * plane.bx * plane.halfB;
+        const dy = plane.y - view.y + a * plane.ay * plane.halfA + b * plane.by * plane.halfB;
+        const dz = plane.z - view.z + a * plane.az * plane.halfA;
+        const heading = dx * view.dirX + dy * view.dirY;
+        corners.push([-dx * view.dirY + dy * view.dirX, dz * view.cp - heading * view.sp, heading * view.cp + dz * view.sp]);
+      }
+      let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+      const near = 0.1;
+      for (let i = 0; i < 4; i++) {
+        let [side, up, forward] = corners[i];
+        if (forward < near) continue;
+        for (let neighbor = -1; neighbor <= 1; neighbor += 2) {
+          left = Math.min(left, this.width / 2 * (1 + side / (forward * view.fov)));
+          right = Math.max(right, this.width / 2 * (1 + side / (forward * view.fov)));
+          top = Math.min(top, view.rowOrigin - up / forward * this.height - 0.5);
+          bottom = Math.max(bottom, view.rowOrigin - up / forward * this.height - 0.5);
+          const [nextSide, nextUp, nextForward] = corners[(i + neighbor + 4) % 4];
+          if (nextForward >= near) continue;
+          const t = (near - forward) / (nextForward - forward);
+          side += (nextSide - side) * t;
+          up += (nextUp - up) * t;
+          forward = near;
+          left = Math.min(left, this.width / 2 * (1 + side / (forward * view.fov)));
+          right = Math.max(right, this.width / 2 * (1 + side / (forward * view.fov)));
+          top = Math.min(top, view.rowOrigin - up / forward * this.height - 0.5);
+          bottom = Math.max(bottom, view.rowOrigin - up / forward * this.height - 0.5);
+          [side, up, forward] = corners[i];
+        }
+      }
+      const x0 = Math.max(0, Math.floor(left / cell));
+      const y0 = Math.max(0, Math.floor(top / cell));
+      const x1 = Math.min(Math.ceil(this.width / cell), Math.ceil(right / cell) + 1);
+      const y1 = Math.min(Math.ceil(this.height / cell), Math.ceil(bottom / cell) + 1);
+      if (x0 < x1 && y0 < y1) return [x0, y0, x1, y1];
+    }
+    tintPane(view, plane) {
+      const bounds = this.bounds(view, plane, TILE);
+      if (!bounds) return;
+      const [left, top, right, bottom] = bounds;
+      const nx = -plane.az * plane.by, ny = plane.az * plane.bx;
+      const nz = plane.ax * plane.by - plane.ay * plane.bx;
+      const ox = view.x - plane.x, oy = view.y - plane.y, oz = view.z - plane.z;
+      const offset = -(ox * nx + oy * ny + oz * nz);
+      const startA = ox * plane.ax + oy * plane.ay + oz * plane.az;
+      const startB = ox * plane.bx + oy * plane.by;
+      const edgeWidth = 0.26 * plane.scale;
+      for (let y = top; y < bottom; y++) {
+        const up = (view.rowOrigin - (y * TILE + TILE / 2) - 0.5) / this.height;
+        const heading = view.cp - view.sp * up, rz = view.sp + view.cp * up;
+        for (let x = left; x < right; x++) {
+          const side = (2 * (x * TILE + TILE / 2) / this.width - 1) * view.fov;
+          const rx = view.dirX * heading - view.dirY * side, ry = view.dirY * heading + view.dirX * side;
+          const rate = rx * nx + ry * ny + rz * nz;
+          const distance = offset / rate;
+          const i = y * this.tileWidth + x;
+          if (!(distance > 0.1 && distance < this.paneDepth[i])) continue;
+          const a = startA + distance * (rx * plane.ax + ry * plane.ay + rz * plane.az);
+          const b = startB + distance * (rx * plane.bx + ry * plane.by);
+          const edge = Math.min(plane.halfA - Math.abs(a), plane.halfB - Math.abs(b));
+          if (edge < 0) continue;
+          const grazing = Math.max(0, 1 - Math.abs(rate));
+          const rim = Math.max(0, 1 - edge / edgeWidth);
+          this.paneDepth[i] = distance;
+          this.paneAlpha[i] = 10 + 23 * grazing * grazing + (22 + 28 * grazing) * rim;
+        }
+      }
+    }
+    shadows(buffer, depth, view, world, things, models) {
+      for (const thing of things) {
+        const radius = thing.model && models[thing.model]?.contactShadow;
+        if (!radius || thing.visible === false || (thing.dissolve ?? 0) >= 1 || thing.z === void 0) continue;
+        let floor, onGlass = false;
+        for (const pane of this.panes) {
+          if (Math.abs(pane.az) > 0.01 || thing.z < pane.z - 0.05 || thing.z > pane.z + 1.65) continue;
+          const dx = thing.x - pane.x, dy = thing.y - pane.y;
+          if (Math.abs(dx * pane.ax + dy * pane.ay) <= pane.halfA && Math.abs(dx * pane.bx + dy * pane.by) <= pane.halfB) {
+            floor = pane.z + 0.02;
+            onGlass = true;
+            break;
+          }
+        }
+        if (floor === void 0 && !this.panes.length) {
+          const below = Math.floor(thing.z - 0.05);
+          for (let z = below; z >= Math.max(0, below - 2); z--) {
+            if (voxelGet(world, Math.floor(thing.x), Math.floor(thing.y), z)) {
+              floor = z + 1;
+              break;
+            }
+          }
+        }
+        if (floor === void 0) continue;
+        const scale = thing.scale ?? 1, halfA = radius * scale, halfB = halfA * 0.77;
+        const bounds = this.bounds(view, {
+          x: thing.x,
+          y: thing.y,
+          z: floor,
+          ax: 1,
+          ay: 0,
+          az: 0,
+          bx: 0,
+          by: 1,
+          halfA,
+          halfB,
+          scale
+        }, 1);
+        if (!bounds) continue;
+        const [left, top, right, bottom] = bounds;
+        const strength = 0.33 * Math.max(0, 1 - (thing.z - floor) * 0.6) * (1 - (thing.dissolve ?? 0));
+        for (let y = top; y < bottom; y++) {
+          const up = (view.rowOrigin - y - 0.5) / this.height;
+          const rz = view.sp + view.cp * up;
+          const distance = (floor - view.z) / rz;
+          if (!(distance > 0.1)) continue;
+          const heading = view.cp - view.sp * up;
+          for (let x = left; x < right; x++) {
+            const i = y * this.width + x;
+            if (onGlass ? depth[i] < distance - 0.02 : Math.abs(depth[i] - distance) > 0.055) continue;
+            const side = (2 * x / this.width - 1) * view.fov;
+            const dx = (view.x - thing.x + distance * (view.dirX * heading - view.dirY * side)) / halfA;
+            const dy = (view.y - thing.y + distance * (view.dirY * heading + view.dirX * side)) / halfB;
+            const fade = 1 - dx * dx - dy * dy;
+            if (fade > 0) buffer[i] = blendColor(buffer[i], 1050891, fade * strength);
+          }
+        }
+      }
+    }
+  };
+
   // src/pixel3d/model.ts
   function shade2(color, factor) {
     return (4278190080 | Math.floor((color & 255) * factor) | Math.floor((color >>> 8 & 255) * factor) << 8 | Math.floor((color >>> 16 & 255) * factor) << 16) >>> 0;
@@ -9519,12 +10081,12 @@ var __RunePixel3DRuntime = (() => {
     const hash = Math.imul(Math.floor(x / 2), 73856093) ^ Math.imul(Math.floor(y / 2), 19349663);
     return (Math.imul(hash ^ hash >>> 13, 1274126177) >>> 0) / 4294967296;
   }
-  function renderModel(model, instance, camera, dirX, dirY, fovScale, width, height, buffer, depth) {
+  function renderModel(model, instance, camera, dirX, dirY, fovScale, width, height, buffer, depth, emission, haze = 0, hazeColor = 0) {
     const scale = instance.scale ?? 1;
     const dissolve = instance.dissolve ?? 0;
     if (!Number.isFinite(dissolve) || dissolve < 0 || dissolve > 1) throw new Error("Model dissolve must be between 0 and 1");
     if (!Number.isFinite(scale) || scale <= 0) throw new Error("Model scale must be finite and positive");
-    if (![instance.x, instance.y, instance.z ?? 0, instance.angle ?? 0].every(Number.isFinite)) {
+    if (![instance.x, instance.y, instance.z ?? 0, instance.angle ?? 0, instance.pitch ?? 0].every(Number.isFinite)) {
       throw new Error("Model position and angle must be finite");
     }
     if (dissolve === 1) return;
@@ -9532,7 +10094,7 @@ var __RunePixel3DRuntime = (() => {
     const eye = camera.height ?? 0.5, pitch = (camera.pitch ?? 0) * Math.PI / 180;
     const cp = Math.cos(pitch), sp = Math.sin(pitch);
     const c = Math.cos(angle), s = Math.sin(angle);
-    const tilt = instance.axisTilt ?? 0, axialScale = instance.axialScale ?? 1;
+    const tilt = instance.axisTilt ?? (instance.pitch ?? 0) * Math.PI / 180, axialScale = instance.axialScale ?? 1;
     const oriented = tilt !== 0 || axialScale !== 1;
     const tc = oriented ? Math.cos(tilt) : 1, ts = oriented ? Math.sin(tilt) : 0;
     const ox = camera.x - instance.x, oy = camera.y - instance.y;
@@ -9580,7 +10142,10 @@ var __RunePixel3DRuntime = (() => {
         bottom = Math.max(bottom, sy);
       }
       if (frontCorners === 0 || outsideLeft === 8 || outsideRight === 8 || outsideTop === 8 || outsideBottom === 8) continue;
-      const colorX = shade2(block.color, 0.8), colorY = shade2(block.color, 0.65), colorZ = shade2(block.color, 1);
+      const color = haze > 0 ? blendColor(block.color, hazeColor, haze) : block.color;
+      const colorX = shade2(color, 0.8), colorY = shade2(color, 0.65), colorZ = shade2(color, 1);
+      const emitter = emission && block.emissive ? emission : void 0;
+      const emissiveColor = block.color & 16777215;
       const x0 = clipped ? 0 : Math.max(0, Math.floor(left));
       const x1 = clipped ? width : Math.min(width, Math.ceil(right));
       const y0 = clipped ? 0 : Math.max(0, Math.floor(top));
@@ -9662,7 +10227,15 @@ var __RunePixel3DRuntime = (() => {
           if (near <= 1e-3) face = exitFace;
           if (valid && far >= near && hit > 1e-3 && hit < depth[index2]) {
             depth[index2] = hit;
-            buffer[index2] = curvedShade !== void 0 ? shade2(block.color, curvedShade) : face === 3 ? shade2(block.color, 0.9) : face === 2 ? colorZ : face === 0 ? colorX : colorY;
+            buffer[index2] = curvedShade !== void 0 ? shade2(color, curvedShade) : face === 3 ? shade2(color, 0.9) : face === 2 ? colorZ : face === 0 ? colorX : colorY;
+            if (emitter) {
+              const tile = (y >> 2) * emitter.width + (x >> 2);
+              if (!emitter.colors[tile] || hit < emitter.depths[tile]) {
+                emitter.depths[tile] = hit;
+                emitter.pixels[tile] = index2;
+                emitter.colors[tile] = emissiveColor;
+              }
+            }
           }
         }
       }
@@ -9683,6 +10256,10 @@ var __RunePixel3DRuntime = (() => {
       if (!map || typeof map.current !== "string" || typeof map.expanded !== "boolean" || !Array.isArray(map.nodes) || map.nodes.length > 24 || !Array.isArray(map.links) || map.links.length > 48 || !map.nodes.every((n) => n && typeof n.id === "string" && typeof n.label === "string" && Number.isFinite(n.x) && n.x >= 0 && n.x <= 100 && Number.isFinite(n.y) && n.y >= 0 && n.y <= 100 && typeof n.visited === "boolean" && typeof n.locked === "boolean") || new Set(map.nodes.map((n) => n.id)).size !== map.nodes.length || !map.nodes.some((n) => n.id === map.current) || !map.links.every((l) => l && (l.shortcut === void 0 || typeof l.shortcut === "boolean") && map.nodes.some((n) => n.id === l.from) && map.nodes.some((n) => n.id === l.to))) throw new Error("HUD map needs unique positioned nodes, valid links and a current room");
     }
     if (hud.style !== void 0 && hud.style !== "floating") throw new Error("Pixel-3d ui style must be floating");
+    if (hud.reticle !== void 0 && typeof hud.reticle !== "boolean") throw new Error("HUD reticle must be a boolean");
+    if (hud.countdown !== void 0 && (hud.style !== "floating" || !Number.isFinite(hud.countdown) || hud.countdown < 0 || hud.countdown > 3599)) {
+      throw new Error("Pixel-3d countdown needs floating HUD style and seconds from 0 to 3599");
+    }
     if (hud.heading !== void 0 && typeof hud.heading !== "string") throw new Error("Pixel-3d ui heading must be a string");
     if (hud.textScale !== void 0 && hud.textScale !== 1 && hud.textScale !== 2) {
       throw new Error("Pixel-3d ui textScale must be 1 or 2");
@@ -9774,12 +10351,31 @@ var __RunePixel3DRuntime = (() => {
         if (color !== null && color !== void 0) canvas.rect(x + sx * scale, y + sy * scale, scale, scale, color);
       }
     };
-    const slot = Math.floor((W - 16) / Math.max(1, ui.meters.length));
     let metersBottom = 32;
+    let meterOffset = 0, splitMeters = false;
+    if (ui.countdown !== void 0) {
+      const remaining = ui.countdown;
+      const seconds = Math.ceil(remaining);
+      const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+      const pulse = remaining <= 10 ? 0.5 + 0.5 * Math.cos(remaining * 2 * Math.PI) : 0;
+      const desiredScale = remaining > 20 ? 3 : pulse > 0.58 ? 5 : 4;
+      const scale = Math.min(desiredScale, Math.max(1, Math.floor((W - 16) / (4 * clock.length - 1))));
+      const width = (4 * clock.length - 1) * scale;
+      const x = Math.floor((W - width) / 2), bottom = 13 + 5 * scale;
+      const color = remaining > 10 ? 16769958 : 16711680 | Math.floor(78 + 79 * pulse) << 8 | Math.floor(94 + 67 * pulse);
+      canvas.rect(x - 7, 4, width + 14, bottom - 4, 590872);
+      canvas.rect(x - 7, bottom, width + 14, 2, color);
+      text(clock, x, 8, color, scale);
+      splitMeters = ui.meters.length <= 2 && Math.floor((W - 16) / 3) >= width + 18;
+      if (!splitMeters) meterOffset = bottom + 3;
+      metersBottom = Math.max(bottom + 2, 32 + meterOffset);
+    }
+    const slot = Math.floor((W - 16) / (splitMeters ? 3 : Math.max(1, ui.meters.length)));
     ui.meters.forEach((meter, i) => {
-      const x = 8 + i * slot, columns2 = Math.max(1, Math.floor((slot - 4) / 4));
-      const iconTop = meter.label ? 14 : 8;
-      if (meter.label) text(meter.label.slice(0, columns2), x, 6, gold);
+      const x = splitMeters && i === 1 ? W - 8 - slot : 8 + i * slot;
+      const columns2 = Math.max(1, Math.floor((slot - 4) / 4));
+      const iconTop = meterOffset + (meter.label ? 14 : 8);
+      if (meter.label) text(meter.label.slice(0, columns2), x, meterOffset + 6, gold);
       if (meter.display === "pips") {
         const full = asset(meter.icon), empty = asset(meter.emptyIcon);
         const count = Math.ceil(meter.max), pipWidth = Math.max(full.width, empty.width);
@@ -10078,6 +10674,17 @@ var __RunePixel3DRuntime = (() => {
       if (ui.prompt) centered(ui.prompt, H2 - 8, 9284536);
       return;
     }
+    if (ui.reticle && status === "playing" && !paused) {
+      const x = Math.floor(canvas.width / 2), y = Math.floor(canvas.height / 2);
+      canvas.rect(x - 7, y - 1, 5, 3, 593948);
+      canvas.rect(x + 3, y - 1, 5, 3, 593948);
+      canvas.rect(x - 1, y - 7, 3, 5, 593948);
+      canvas.rect(x - 1, y + 3, 3, 5, 593948);
+      canvas.rect(x - 6, y, 3, 1, 12187135);
+      canvas.rect(x + 4, y, 3, 1, 12187135);
+      canvas.rect(x, y - 6, 1, 3, 12187135);
+      canvas.rect(x, y + 4, 1, 3, 12187135);
+    }
     if (ui.damageDirection && status === "playing" && !paused) {
       const x = ui.damageDirection < 0 ? 4 : canvas.width - 8, y = Math.floor(canvas.height * 0.55);
       canvas.rect(x, y - 13, 4, 26, 15756162);
@@ -10291,6 +10898,69 @@ var __RunePixel3DRuntime = (() => {
     }
   }
 
+  // src/pixel3d/lighting.ts
+  function validatePointLights(value) {
+    if (!Array.isArray(value) || value.length > 8) throw new Error("Pixel-3d lights needs an array of up to 8 point lights");
+    return value.map((light) => {
+      if (!light || typeof light !== "object") throw new Error("Pixel-3d point light must be an object");
+      const { x, y, z, radius, intensity, color } = light;
+      const rgb2 = typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color) ? parseInt(color.slice(1), 16) : color;
+      if (![x, y, z, radius, intensity].every(Number.isFinite) || radius <= 0 || radius > 64 || intensity < 0 || intensity > 1 || !Number.isInteger(rgb2) || rgb2 < 0 || rgb2 > 16777215) {
+        throw new Error("Pixel-3d point light needs finite x/y/z, radius in (0, 64], intensity in [0, 1], and an RGB color");
+      }
+      return { x, y, z, radius, intensity, color: rgb2 };
+    });
+  }
+  function lightFrame(lights, buffer, depth, width, height, camera, dirX, dirY, fovScale, rowOrigin = height / 2) {
+    const eye = camera.height ?? 0.5;
+    const pitch = (camera.pitch ?? 0) * Math.PI / 180;
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const columnStep = 2 * fovScale / width;
+    for (const light of lights) {
+      if (light.intensity <= 0) continue;
+      const dx = light.x - camera.x, dy = light.y - camera.y, dz = light.z - eye;
+      const heading = dx * dirX + dy * dirY;
+      const forward = heading * cp + dz * sp;
+      const up = dz * cp - heading * sp;
+      const side = -dx * dirY + dy * dirX;
+      const radius = light.radius, near = forward - radius, far = forward + radius;
+      if (far <= 0) continue;
+      let left = 0, right = width, top = 0, bottom = height;
+      if (near > 0) {
+        const xMin = (side - radius) / (side - radius < 0 ? near : far);
+        const xMax = (side + radius) / (side + radius > 0 ? near : far);
+        const yMin = (up - radius) / (up - radius < 0 ? near : far);
+        const yMax = (up + radius) / (up + radius > 0 ? near : far);
+        left = Math.max(0, Math.floor((xMin / fovScale + 1) * width / 2));
+        right = Math.min(width, Math.ceil((xMax / fovScale + 1) * width / 2) + 1);
+        top = Math.max(0, Math.floor(rowOrigin - yMax * height - 0.5));
+        bottom = Math.min(height, Math.ceil(rowOrigin - yMin * height - 0.5) + 1);
+      }
+      const radiusSquared = radius * radius;
+      const red = (light.color >>> 16) * light.intensity;
+      const green = (light.color >>> 8 & 255) * light.intensity;
+      const blue = (light.color & 255) * light.intensity;
+      for (let y = top; y < bottom; y++) {
+        const rayUp = (rowOrigin - y - 0.5) / height;
+        for (let x = left; x < right; x++) {
+          const i = y * width + x, distance = depth[i];
+          if (!Number.isFinite(distance) || distance < near || distance > far) continue;
+          const atSide = distance * (x * columnStep - fovScale) - side;
+          const atUp = distance * rayUp - up;
+          const atForward = distance - forward;
+          const distanceSquared = atSide * atSide + atUp * atUp + atForward * atForward;
+          if (distanceSquared >= radiusSquared) continue;
+          const edge = 1 - distanceSquared / radiusSquared, amount = edge * edge;
+          const color = buffer[i];
+          const r = Math.min(255, (color & 255) + red * amount) | 0;
+          const g = Math.min(255, (color >>> 8 & 255) + green * amount) | 0;
+          const b = Math.min(255, (color >>> 16 & 255) + blue * amount) | 0;
+          buffer[i] = (4278190080 | b << 16 | g << 8 | r) >>> 0;
+        }
+      }
+    }
+  }
+
   // src/pixel3d/raycaster.ts
   var packed = (rgb2) => (4278190080 | (rgb2 & 255) << 16 | rgb2 & 65280 | rgb2 >>> 16 & 255) >>> 0;
   var FONT = {
@@ -10366,6 +11036,13 @@ var __RunePixel3DRuntime = (() => {
       this.pixelDepth = new Float64Array(this.width * this.height);
       this.setMap(config.map);
     }
+    get enhancedLighting() {
+      return this.enhanced !== void 0;
+    }
+    setEnhancedLighting(enabled) {
+      if (enabled) this.enhanced ?? (this.enhanced = new EnhancedLighting());
+      else this.enhanced = void 0;
+    }
     get outlineRadius() {
       return this.silhouettes ? Math.max(1, Math.round(this.hudScale)) : 0;
     }
@@ -10401,15 +11078,16 @@ var __RunePixel3DRuntime = (() => {
       this.palette = Uint32Array.from({ length: 256 }, (_, light) => packed(colors[Math.floor(light * colors.length / 256)]));
       this.silhouettes = silhouettes || Boolean(this.config.outline);
     }
-    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks, tethers = []) {
+    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks, tethers = [], lights = []) {
       const W = this.width;
       const H = this.height;
       const halfH = H >> 1;
       const map = this.config.map;
+      const emission = this.enhanced?.begin(W, H);
       const px = camera.x;
       const py = camera.y;
       const ang = camera.angle;
-      const pitched = !this.config.world && ((camera.height ?? 0.5) !== 0.5 || (camera.pitch ?? 0) !== 0 || map.sky?.below !== void 0);
+      const pitched = !this.config.world && ((camera.height ?? 0.5) !== 0.5 || (camera.pitch ?? 0) !== 0 || map.sky?.below !== void 0 || lights.length > 0);
       const freeCamera = pitched || !!this.config.world;
       const dirX = freeCamera ? Math.cos(ang * Math.PI / 180) : fastCos(ang);
       const dirY = freeCamera ? Math.sin(ang * Math.PI / 180) : fastSin(ang);
@@ -10425,7 +11103,9 @@ var __RunePixel3DRuntime = (() => {
           this.pixelDepth.fill(distance, y * W, (y + 1) * W);
         }
       }
+      const backdrop = this.config.world ? camera.backdrop : void 0;
       if (this.config.world) {
+        if (backdrop) this.renderSideBackdrop(backdrop.x ?? camera.x, backdrop, fovScale, time, emission);
         renderVoxels(
           this.config.world,
           camera,
@@ -10437,7 +11117,8 @@ var __RunePixel3DRuntime = (() => {
           this.buffer,
           this.pixelDepth,
           time,
-          preparedChunks
+          preparedChunks,
+          Boolean(backdrop)
         );
         this.zBuffer.fill(Infinity);
       } else if (pitched) {
@@ -10461,11 +11142,31 @@ var __RunePixel3DRuntime = (() => {
         this.renderWalls(px, py, dirX, dirY, planeX, planeY, wallOverrides);
       }
       const modelCamera = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
+      const backdropThings = backdrop && new Set(backdrop.things);
       for (const thing of things) {
-        if (thing.visible === false || !thing.model) continue;
+        if (thing.visible === false || !thing.model || backdropThings?.has(thing)) continue;
         const model = this.config.models?.[thing.model];
         if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
-        renderModel(model, thing, modelCamera, dirX, dirY, fovScale, W, H, this.buffer, this.pixelDepth);
+        this.enhanced?.rememberGlass(thing, model);
+        const haze = emission && (!this.config.world || !backdrop && thing.y < 4) ? Math.min(0.2, Math.max(
+          0,
+          ((thing.x - px) * dirX + (thing.y - py) * dirY - 11) * 0.025
+        )) : 0;
+        renderModel(
+          model,
+          thing,
+          modelCamera,
+          dirX,
+          dirY,
+          fovScale,
+          W,
+          H,
+          this.buffer,
+          this.pixelDepth,
+          emission,
+          haze,
+          map.sky?.horizon
+        );
       }
       for (const tether of tethers) {
         if (tether.visible === false) continue;
@@ -10477,6 +11178,33 @@ var __RunePixel3DRuntime = (() => {
       if (!this.config.world && !pitched && things && things.length > 0) {
         this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
       }
+      if (lights.length) {
+        lightFrame(
+          lights,
+          this.buffer,
+          this.pixelDepth,
+          W,
+          H,
+          modelCamera,
+          dirX,
+          dirY,
+          fovScale,
+          this.config.world ? H / 2 : halfH
+        );
+      }
+      this.enhanced?.finish(
+        this.buffer,
+        this.pixelDepth,
+        modelCamera,
+        dirX,
+        dirY,
+        fovScale,
+        this.config.world ? H / 2 : halfH,
+        this.config.world,
+        things,
+        this.config.models ?? {},
+        map.sky?.horizon
+      );
       if (this.silhouettes) this.drawSilhouettes();
       this.renderWorldTitles(camera, things, dirX, dirY, fovScale);
       if (weapon && weapon.sprite) {
@@ -10496,6 +11224,35 @@ var __RunePixel3DRuntime = (() => {
       if (stats) this.drawHud(stats);
       this.applyPalette();
       return this.buffer;
+    }
+    renderSideBackdrop(x, backdrop, fovScale, time, emission) {
+      if (![x, backdrop.y, backdrop.z].every(Number.isFinite) || !Array.isArray(backdrop.things)) {
+        throw new Error("Voxel backdrop needs a finite side camera position and a model list");
+      }
+      const { width, height, buffer, pixelDepth } = this;
+      const sky = this.config.map.sky;
+      buffer.fill(sky ? (4278190080 | sky.horizon) >>> 0 : 4281608224);
+      if (sky) {
+        const longitudes = Float64Array.from({ length: width }, (_, col) => Math.atan2(-1, (2 * col / width - 1) * fovScale));
+        const rows = sky.below === void 0 ? height >> 1 : height;
+        for (let row = 0; row < rows; row++) {
+          const altitude = (height / 2 - row - 0.5) / height;
+          for (let col = 0; col < width; col++) {
+            buffer[row * width + col] = skyPixel(sky, longitudes[col], altitude, time);
+          }
+        }
+      }
+      const camera = { x, y: backdrop.y, height: backdrop.z + 1.25 };
+      for (const thing of backdrop.things) {
+        if (thing.visible === false || !thing.model) continue;
+        const model = this.config.models?.[thing.model];
+        if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
+        const haze = emission ? Math.min(0.22, Math.max(0, (backdrop.y - thing.y - 10) * 0.027)) : 0;
+        renderModel(model, thing, camera, 0, -1, fovScale, width, height, buffer, pixelDepth, emission, haze, sky?.horizon);
+      }
+      this.enhanced?.backdrop(buffer, pixelDepth);
+      if (this.silhouettes) this.drawSilhouettes();
+      pixelDepth.fill(Infinity);
     }
     /** Transparent HUD for the browser's model renderer. Uses the same layout and palette. */
     renderOverlay(stats) {
@@ -11167,7 +11924,8 @@ var __RunePixel3DRuntime = (() => {
     /** The desktop host shares this renderer for features beyond its fixed-eye rasterizer. */
     get usesSharedRenderer() {
       if (this.config.tethers?.length) return true;
-      if (this.config.ui && this.app.state[this.config.ui]?.map) return true;
+      const hud = this.config.ui ? this.app.state[this.config.ui] : void 0;
+      if (hud?.map || hud?.countdown !== void 0) return true;
       if (this.config.pauseUi && this.app.state[this.config.pauseUi]?.map) return true;
       const map = this.config.maps?.[this.currentMapName] ?? this.config.map;
       if (map.sky?.below !== void 0) return true;
@@ -11306,7 +12064,7 @@ var __RunePixel3DRuntime = (() => {
         if (!Number.isFinite(thing.dissolve ?? 0) || (thing.dissolve ?? 0) < 0 || (thing.dissolve ?? 0) > 1) {
           throw new Error("Pixel-3d model dissolve must be between 0 and 1");
         }
-        if (![thing.x, thing.y, thing.z ?? 0, thing.angle ?? 0, thing.scale ?? 1].every(Number.isFinite) || (thing.scale ?? 1) <= 0) throw new Error("Pixel-3d model position/angle must be finite and scale must be positive");
+        if (![thing.x, thing.y, thing.z ?? 0, thing.angle ?? 0, thing.pitch ?? 0, thing.scale ?? 1].every(Number.isFinite) || (thing.scale ?? 1) <= 0) throw new Error("Pixel-3d model position/angle must be finite and scale must be positive");
       }
       const tethers = [];
       const tetherPaths = titleScene ? titleScene.tethers : this.config.tethers;
@@ -11335,12 +12093,14 @@ var __RunePixel3DRuntime = (() => {
       const story_body = state.story_body ? String(state.story_body) : void 0;
       const message = state.message ? String(state.message) : void 0;
       const switch_activated = Boolean(state.switch_activated);
+      const lights = titleScene ? titleScene.lights : this.config.lights;
       return {
         title_scene: titleScene,
         presentation_time: presentationTime,
         camera,
         things,
         tethers,
+        lights: lights ? validatePointLights(state[lights]) : [],
         weapon: titleScene ? void 0 : weapon,
         flash: titleScene ? 0 : flash,
         status,
@@ -11391,6 +12151,7 @@ var __RunePixel3DRuntime = (() => {
     frame() {
       this.invalidateFrame();
       const stats = this.renderState();
+      const world = this.raycaster.config.world;
       this.raycaster.render(
         stats.camera,
         stats.things,
@@ -11399,8 +12160,9 @@ var __RunePixel3DRuntime = (() => {
         this.frameHud(stats),
         stats.wall_overrides,
         stats.title_scene ? stats.presentation_time : stats.time,
-        this.raycaster.config.world ? validatedVoxelChunks(this.raycaster.config.world) : void 0,
-        stats.tethers
+        world && !stats.camera.terrainPose ? validatedVoxelChunks(world) : void 0,
+        stats.tethers,
+        stats.lights
       );
       return this.raycaster.buffer;
     }
@@ -12045,7 +12807,7 @@ void main() {
           batch.transforms = resized;
         }
         const data = batch.transforms, rotation = radians(instance.angle ?? 0);
-        const tilt = instance.axisTilt ?? 0;
+        const tilt = instance.axisTilt ?? radians(instance.pitch ?? 0);
         data[offset] = instance.x;
         data[offset + 1] = instance.y;
         data[offset + 2] = instance.z ?? 0;
@@ -12078,8 +12840,8 @@ void main() {
         const poses = interpolate2 ? /* @__PURE__ */ new Map() : void 0;
         if (poses) for (const thing of frame.things) {
           if (thing.visible !== false && thing.model) {
-            const { x, y, z, angle, scale, model } = thing;
-            poses.set(thing, { x, y, z, angle, scale, model });
+            const { x, y, z, angle, pitch, scale, model } = thing;
+            poses.set(thing, { x, y, z, angle, pitch, scale, model });
           }
         }
         const tethers = interpolate2 && frame.tethers.length ? /* @__PURE__ */ new Map() : void 0;
@@ -12146,16 +12908,17 @@ void main() {
         for (const batch of batches.values()) batch.count = 0;
         for (const thing of things) {
           if (!thing.model || thing.visible === false || thing.dissolve === 1) continue;
-          let { x, y, z = 0, angle = 0, scale = 1 } = thing;
+          let { x, y, z = 0, angle = 0, pitch: pitch2 = 0, scale = 1 } = thing;
           const old = t < 1 ? previous?.poses?.get(thing) : void 0;
           if (old && old.model === thing.model && Math.hypot(x - old.x, y - old.y, z - (old.z ?? 0)) < 4) {
             x = blend(old.x, x, t);
             y = blend(old.y, y, t);
             z = blend(old.z ?? 0, z, t);
             angle = blendAngle(old.angle ?? 0, angle, t);
+            pitch2 = blendAngle(old.pitch ?? 0, pitch2, t);
             scale = blend(old.scale ?? 1, scale, t);
           }
-          queue2(batchFor2(thing.model), { x, y, z, angle, scale, dissolve: thing.dissolve });
+          queue2(batchFor2(thing.model), { x, y, z, angle, pitch: pitch2, scale, dissolve: thing.dissolve });
         }
         for (const tether of frame.tethers) {
           if (tether.visible === false) continue;
@@ -12323,7 +13086,22 @@ void main() {
         start();
       });
     }
-    for (const button of Array.from(document.querySelectorAll("[data-pixel-action]"))) {
+    for (const form of Array.from(document.querySelectorAll("form[data-pixel-action]"))) {
+      listen(form, "submit", (event) => {
+        event.preventDefault();
+        unlockAudio();
+        clear();
+        const action = form.dataset.pixelAction;
+        const previous2 = game.app.state.status;
+        const fields = /* @__PURE__ */ Object.create(null);
+        new FormData(form).forEach((value, name2) => {
+          if (typeof value === "string") fields[name2] = value;
+        });
+        if (action) game.activate(action, [fields]);
+        if (game.app.state.status !== previous2) canvas.focus({ preventScroll: true });
+      });
+    }
+    for (const button of Array.from(document.querySelectorAll("[data-pixel-action]:not(form)"))) {
       const args = JSON.parse(button.dataset.pixelArgs || "[]");
       if (!Array.isArray(args)) throw new Error("data-pixel-args must be a JSON array");
       listen(button, "click", () => {
@@ -12359,6 +13137,7 @@ void main() {
     const surface = canvas.parentElement || canvas;
     const resolution = document.querySelector("select[data-pixel-resolution]");
     const palette = document.querySelector("select[data-pixel-palette]");
+    const lighting = document.querySelector("select[data-pixel-lighting]");
     const fullscreen = createFullscreen(surface, () => {
       fitViewport();
       clear(true);
@@ -12418,6 +13197,23 @@ void main() {
       listen(palette, "change", applyPalette);
       applyPalette();
     }
+    function applyLighting() {
+      game.raycaster.setEnhancedLighting(lighting?.value === "enhanced");
+      gpu?.resetInterpolation();
+      overlayKey = void 0;
+      resetFps();
+      game.invalidateFrame();
+    }
+    if (lighting) {
+      const key2 = "rune-pixel-lighting-" + (game.config.persistence?.key ?? window.location.pathname);
+      const saved = getStorageItem(key2);
+      if (saved === "standard" || saved === "enhanced") lighting.value = saved;
+      listen(lighting, "change", () => {
+        applyLighting();
+        setStorageItem(key2, lighting.value);
+      });
+      applyLighting();
+    }
     function resetFps() {
       drawnFrames = 0;
       fpsStart = 0;
@@ -12476,12 +13272,12 @@ void main() {
       toggleGpu();
     }
     function drawFrame(extraFrames) {
-      if (gpu && gpuCanvas && gpuToggle?.checked) {
+      if (gpu && gpuCanvas && gpuToggle?.checked && !game.raycaster.enhancedLighting) {
         try {
           const changed = game.presentIfChanged(() => {
             const stats = game.renderState();
             const { map, world } = game.raycaster.config;
-            if (!map.sky || map.sky.below === void 0 || world || map.grid.some(Boolean) || stats.weapon || stats.things.some((thing) => thing.sprite || thing.title)) {
+            if (!map.sky || map.sky.below === void 0 || world || stats.lights.length || map.grid.some(Boolean) || stats.weapon || stats.things.some((thing) => thing.sprite || thing.title)) {
               throw new Error("This scene needs the CPU renderer");
             }
             gpu.capture(stats, map.sky, game.raycaster.fov, extraFrames);
@@ -12502,6 +13298,7 @@ void main() {
           cpuFallback("This scene could not use WebGL. Using the CPU renderer.");
         }
       }
+      if (gpuCanvas) gpuCanvas.hidden = true;
       if (!game.frameIfChanged()) {
         if (!extraFrames) return false;
         game.frame();
@@ -12550,7 +13347,7 @@ void main() {
       },
       advance: () => {
         clear();
-        if (["title", "story", "gameover", "won"].includes(String(game.app.state.status))) game.invoke("advance");
+        if (["title", "story", "escape_retry", "gameover", "won"].includes(String(game.app.state.status))) game.invoke("advance");
         else start();
       },
       fullscreen: () => {
@@ -12581,7 +13378,7 @@ void main() {
       advance: () => {
         if (game.config.clickToStart === false && game.app.state.status !== "playing") return;
         clear();
-        if (["title", "story", "gameover", "won"].includes(String(game.app.state.status))) game.invoke("advance");
+        if (["title", "story", "escape_retry", "gameover", "won"].includes(String(game.app.state.status))) game.invoke("advance");
         else start();
       },
       resume: () => {

@@ -5,6 +5,7 @@
 
 import type { SoundDefinition, MusicDefinition } from './types';
 import { audioSync } from './audio_sync';
+import { MusicClock } from './music_clock';
 import { compileMusicArrangement, type MusicArrangement } from './music_arrangement';
 
 let audioCtx: AudioContext | null = null;
@@ -296,6 +297,7 @@ function playNoiseBurst(
   filterEnd: number,
   volume: number,
   filterType: BiquadFilterType = 'lowpass',
+  attack = 0,
 ): void {
   const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration));
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -313,14 +315,23 @@ function playNoiseBurst(
   filter.frequency.exponentialRampToValueAtTime(Math.max(20, filterEnd), now + duration);
 
   const gain = ctx.createGain();
-  gain.gain.setValueAtTime(volume, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  sweepEnvelope(gain.gain, now, duration, volume, attack);
 
   noise.connect(filter);
   filter.connect(gain);
   gain.connect(sfxOutput(ctx));
   noise.start(now);
   noise.stop(now + duration + 0.01);
+}
+
+function sweepEnvelope(gain: AudioParam, now: number, duration: number, volume: number, attack: number): void {
+  if (attack > 0 && duration > 0 && volume > 0) {
+    gain.setValueAtTime(0, now);
+    gain.linearRampToValueAtTime(volume, now + Math.min(attack, duration * 0.98));
+  } else {
+    gain.setValueAtTime(volume, now);
+  }
+  gain.exponentialRampToValueAtTime(0.001, now + duration);
 }
 
 function playCustomSound(
@@ -338,7 +349,7 @@ function playCustomSound(
     const fStart = def.filter?.start_freq || 800;
     const fEnd = def.filter?.end_freq || 60;
     const fType = (def.filter?.filter_type as BiquadFilterType) || 'lowpass';
-    playNoiseBurst(ctx, now, duration, fStart, fEnd, volume, fType);
+    playNoiseBurst(ctx, now, duration, fStart, fEnd, volume, fType, def.attack);
     return;
   }
 
@@ -387,8 +398,7 @@ function playCustomSound(
     }
   }
 
-  gain.gain.setValueAtTime(volume, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  sweepEnvelope(gain.gain, now, duration, volume, def.attack ?? 0);
 
   osc.connect(gain);
   gain.connect(sfxOutput(ctx));
@@ -431,11 +441,13 @@ let activeMusicTrackName: string | null = null;
 let musicSchedulerTimer: any = null;
 let musicMasterGain: GainNode | null = null;
 let musicEffectsBus: MusicEffectsBus | null = null;
+let clearFadingMusic: (() => void) | undefined;
 let musicVolume = 0.2;
 let musicTempoBpm = 128;
 let musicLoop = true;
 let isMusicPaused = false;
-let musicStartTime = 0;
+const MUSIC_LOOKAHEAD = 0.25;
+let musicClock: MusicClock | null = null;
 let musicPausedBeat = 0;
 let tracksState: Record<string, TrackPlaybackState> = {};
 
@@ -508,7 +520,7 @@ export function parseTrackPattern(patternStr: string): ParsedNoteEvent[] {
   return events;
 }
 
-export function playMusic(trackName: string, startBeat = 0): void {
+export function playMusic(trackName: string, startBeat = 0, fadeSeconds = 0): void {
   if (!playbackUnlocked) { pendingMusic = { track: trackName, beat: startBeat }; return; }
   const ctx = getAudioContext();
   if (!ctx) return;
@@ -519,6 +531,14 @@ export function playMusic(trackName: string, startBeat = 0): void {
     return;
   }
 
+  const fade = Number.isFinite(fadeSeconds) ? Math.min(5, Math.max(0, fadeSeconds)) : 0;
+  const outgoing = fade > 0 && musicMasterGain ? { gain: musicMasterGain, effects: musicEffectsBus } : null;
+  if (outgoing) {
+    // The scheduler will stop with the old track. Keep its submitted voices
+    // and effects connected long enough to carry the tail across the handoff.
+    musicMasterGain = null;
+    musicEffectsBus = null;
+  }
   stopMusic();
 
   activeMusicTrackName = key;
@@ -575,7 +595,9 @@ export function playMusic(trackName: string, startBeat = 0): void {
     if (Object.prototype.hasOwnProperty.call(tracksState, channel)) tracksState[channel].instrument = instrument;
   }
 
-  startMusicAtBeat(ctx, key, startBeat);
+  const startTime = ctx.currentTime + 0.05;
+  startMusicAtBeat(ctx, key, startBeat, startTime, outgoing ? fade : 0);
+  if (outgoing) fadeOutMusic(ctx, outgoing, startTime, fade);
 }
 
 function musicTiming(track: string) {
@@ -871,7 +893,8 @@ function buildMusicEffectsBus(
   };
 }
 
-function startMusicAtBeat(ctx: AudioContext, trackName: string, startBeat: number): void {
+function startMusicAtBeat(ctx: AudioContext, trackName: string, startBeat: number,
+  startTime = ctx.currentTime + 0.05, fade = 0): void {
   const timing = musicTiming(trackName);
   const beat = Math.max(0, Math.min(timing.totalBeats - 0.000001, Number.isFinite(startBeat) ? startBeat : 0));
   for (const track of Object.values(tracksState)) {
@@ -887,13 +910,18 @@ function startMusicAtBeat(ctx: AudioContext, trackName: string, startBeat: numbe
   }
 
   musicMasterGain = ctx.createGain();
-  musicMasterGain.gain.setValueAtTime(musicVolume, ctx.currentTime);
+  if (fade > 0) {
+    musicMasterGain.gain.setValueAtTime(0, startTime);
+    musicMasterGain.gain.linearRampToValueAtTime(musicVolume, startTime + fade);
+  } else {
+    musicMasterGain.gain.setValueAtTime(musicVolume, ctx.currentTime);
+  }
   musicMasterGain.connect(audioOutput(ctx));
   const def = registeredMusic[trackName];
   musicEffectsBus = def ? buildMusicEffectsBus(ctx, def, Object.keys(tracksState), musicMasterGain) : null;
-  musicStartTime = ctx.currentTime + 0.05 - beat * 60 / musicTempoBpm;
+  musicClock = new MusicClock(startTime, musicTempoBpm, beat);
   audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
-  audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
+  audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime, startBeat: beat, clock: musicClock });
   scheduleMusicTicks();
   musicSchedulerTimer = setInterval(scheduleMusicTicks, 25);
 }
@@ -917,7 +945,33 @@ export function stopMusic(): void {
   musicPausedBeat = 0;
   isMusicPaused = false;
   tracksState = {};
+  musicClock = null;
+  clearFadingMusic?.();
   disconnectMusicGain();
+}
+
+function fadeOutMusic(ctx: AudioContext, outgoing: {gain: GainNode; effects: MusicEffectsBus | null},
+  startTime: number, fade: number): void {
+  const gain = outgoing.gain.gain;
+  const volume = gain.value;
+  gain.cancelScheduledValues(ctx.currentTime);
+  gain.setValueAtTime(volume, startTime);
+  const endTime = startTime + fade;
+  gain.linearRampToValueAtTime(0, endTime);
+
+  let timer: ReturnType<typeof setTimeout>;
+  function dispose(): void {
+    clearTimeout(timer);
+    outgoing.effects?.cleanup();
+    outgoing.gain.disconnect();
+    clearFadingMusic = undefined;
+  }
+  function checkTail(): void {
+    if (ctx.currentTime >= endTime) dispose();
+    else timer = setTimeout(checkTail, Math.max(25, (endTime - ctx.currentTime) * 1000));
+  }
+  timer = setTimeout(checkTail, (endTime - ctx.currentTime) * 1000);
+  clearFadingMusic = dispose;
 }
 
 function disconnectMusicGain(): void {
@@ -938,6 +992,7 @@ export function pauseMusic(): void {
     clearInterval(musicSchedulerTimer);
     musicSchedulerTimer = null;
   }
+  clearFadingMusic?.();
   disconnectMusicGain();
   audioSync.onPause(musicPausedBeat);
 }
@@ -951,18 +1006,16 @@ export function resumeMusic(): void {
 
 export function setMusicTempo(bpm: number): void {
   if (!(bpm > 20 && bpm < 400) || bpm === musicTempoBpm) return;
-  const beat = audioSync.getSnapshot().currentBeat;
   musicTempoBpm = bpm;
   if (audioCtx && activeMusicTrackName && !isMusicPaused) {
-    if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
-    disconnectMusicGain();
-    startMusicAtBeat(audioCtx, activeMusicTrackName, beat);
+    musicClock?.changeAfter(bpm, audioCtx.currentTime + MUSIC_LOOKAHEAD);
   }
 }
 
 export function setMusicVolume(vol: number): void {
   musicVolume = Math.max(0, Math.min(1, vol));
   if (musicMasterGain && audioCtx) {
+    musicMasterGain.gain.cancelScheduledValues(audioCtx.currentTime);
     musicMasterGain.gain.setValueAtTime(musicVolume, audioCtx.currentTime);
   }
 }
@@ -983,10 +1036,10 @@ export function setTrackMute(channel: string, muted: boolean): void {
 
 function scheduleMusicTicks(): void {
   const ctx = getAudioContext();
-  if (!ctx || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
+  const clock = musicClock;
+  if (!ctx || !clock || !musicMasterGain || isMusicPaused || !activeMusicTrackName) return;
 
-  const secondsPerBeat = 60 / musicTempoBpm;
-  const lookaheadWindow = ctx.currentTime + 0.25;
+  const lookaheadWindow = ctx.currentTime + MUSIC_LOOKAHEAD;
 
   const { totalBeats: songTotalBeats } = musicTiming(activeMusicTrackName);
 
@@ -995,7 +1048,7 @@ function scheduleMusicTicks(): void {
   for (const [trackKey, track] of Object.entries(tracksState)) {
     if (!track || !track.events.length || track.muted) continue;
 
-    while (musicStartTime + track.nextBeat * secondsPerBeat < lookaheadWindow) {
+    while (true) {
       if (track.index >= track.events.length) {
         if (musicLoop) {
           if (songTotalBeats > 0) {
@@ -1008,10 +1061,11 @@ function scheduleMusicTicks(): void {
         }
       }
 
+      const eventTime = clock.timeAt(track.nextBeat);
+      if (eventTime >= lookaheadWindow) break;
       const event = track.events[track.index];
-      const eventTime = musicStartTime + track.nextBeat * secondsPerBeat;
       const remainingBeats = event.beats - (track.elapsedInNote ?? 0);
-      const eventDurationSec = remainingBeats * secondsPerBeat;
+      const eventDurationSec = clock.timeAt(track.nextBeat + remainingBeats) - eventTime;
 
       if (!event.isRest && eventTime >= ctx.currentTime - 0.05) {
         const targetDest = musicEffectsBus ? (musicEffectsBus.channelGains[trackKey] || musicEffectsBus.masterInput) : musicMasterGain;
@@ -1029,7 +1083,7 @@ function scheduleMusicTicks(): void {
   }
 
   // Scheduling the final note is not the end of its audible duration.
-  if (allFinished && !musicLoop && ctx.currentTime >= musicStartTime + songTotalBeats * secondsPerBeat) {
+  if (allFinished && !musicLoop && ctx.currentTime >= clock.timeAt(songTotalBeats)) {
     stopMusic();
   }
 }
