@@ -23,7 +23,7 @@ var __RunePixel3DRuntime = (() => {
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
   var __publicField = (obj, key2, value) => __defNormalProp(obj, typeof key2 !== "symbol" ? key2 + "" : key2, value);
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs
   function utf8Count(str) {
     const strLength = str.length;
     let byteLength = 0;
@@ -150,7 +150,7 @@ var __RunePixel3DRuntime = (() => {
   }
   var sharedTextEncoder, TEXT_ENCODER_THRESHOLD, CHUNK_SIZE, sharedTextDecoder, TEXT_DECODER_THRESHOLD;
   var init_utf8 = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs"() {
       sharedTextEncoder = new TextEncoder();
       TEXT_ENCODER_THRESHOLD = 50;
       CHUNK_SIZE = 4096;
@@ -159,10 +159,10 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs
   var ExtData;
   var init_ExtData = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs"() {
       ExtData = class {
         constructor(type, data) {
           __publicField(this, "type");
@@ -174,10 +174,10 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs
   var DecodeError;
   var init_DecodeError = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs"() {
       DecodeError = class _DecodeError extends Error {
         constructor(message) {
           super(message);
@@ -193,7 +193,7 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs
   function setUint64(view, offset, value) {
     const high = value / 4294967296;
     const low = value;
@@ -218,12 +218,12 @@ var __RunePixel3DRuntime = (() => {
   }
   var UINT32_MAX;
   var init_int = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs"() {
       UINT32_MAX = 4294967295;
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
   function encodeTimeSpecToTimestamp({ sec, nsec }) {
     if (sec >= 0 && nsec >= 0 && sec <= TIMESTAMP64_MAX_SEC) {
       if (nsec === 0 && sec <= TIMESTAMP32_MAX_SEC) {
@@ -296,7 +296,7 @@ var __RunePixel3DRuntime = (() => {
   }
   var EXT_TIMESTAMP, TIMESTAMP32_MAX_SEC, TIMESTAMP64_MAX_SEC, timestampExtension;
   var init_timestamp = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs"() {
       init_DecodeError();
       init_int();
       EXT_TIMESTAMP = -1;
@@ -310,10 +310,10 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
   var _ExtensionCodec, ExtensionCodec;
   var init_ExtensionCodec = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs"() {
       init_ExtData();
       init_timestamp();
       _ExtensionCodec = class _ExtensionCodec {
@@ -380,7 +380,7 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs
   function isArrayBufferLike(buffer) {
     return buffer instanceof ArrayBuffer || typeof SharedArrayBuffer !== "undefined" && buffer instanceof SharedArrayBuffer;
   }
@@ -396,14 +396,14 @@ var __RunePixel3DRuntime = (() => {
     }
   }
   var init_typedArrays = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs"() {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs
   var DEFAULT_MAX_DEPTH, DEFAULT_INITIAL_BUFFER_SIZE, Encoder;
   var init_Encoder = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/Encoder.mjs"() {
       init_utf8();
       init_ExtensionCodec();
       init_int();
@@ -812,30 +812,30 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/encode.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/encode.mjs
   function encode(value, options) {
     const encoder = new Encoder(options);
     return encoder.encodeSharedRef(value);
   }
   var init_encode = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/encode.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/encode.mjs"() {
       init_Encoder();
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
   function prettyByte(byte) {
     return `${byte < 0 ? "-" : ""}0x${Math.abs(byte).toString(16).padStart(2, "0")}`;
   }
   var init_prettyByte = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs"() {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs
   var DEFAULT_MAX_KEY_LENGTH, DEFAULT_MAX_LENGTH_PER_KEY, CachedKeyDecoder;
   var init_CachedKeyDecoder = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs"() {
       init_utf8();
       DEFAULT_MAX_KEY_LENGTH = 16;
       DEFAULT_MAX_LENGTH_PER_KEY = 16;
@@ -894,10 +894,10 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
   var STATE_ARRAY, STATE_MAP_KEY, STATE_MAP_VALUE, mapKeyConverter, StackPool, HEAD_BYTE_REQUIRED, EMPTY_VIEW, EMPTY_BYTES, MORE_DATA, sharedCachedKeyDecoder, Decoder;
   var init_Decoder = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs"() {
       init_prettyByte();
       init_ExtensionCodec();
       init_int();
@@ -1536,7 +1536,7 @@ var __RunePixel3DRuntime = (() => {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decode.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/decode.mjs
   function decode(buffer, options) {
     const decoder = new Decoder(options);
     return decoder.decode(buffer);
@@ -1546,12 +1546,12 @@ var __RunePixel3DRuntime = (() => {
     return decoder.decodeMulti(buffer);
   }
   var init_decode = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decode.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/decode.mjs"() {
       init_Decoder();
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs
   function isAsyncIterable(object) {
     return object[Symbol.asyncIterator] != null;
   }
@@ -1577,11 +1577,11 @@ var __RunePixel3DRuntime = (() => {
     }
   }
   var init_stream = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/utils/stream.mjs"() {
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs
   async function decodeAsync(streamLike, options) {
     const stream = ensureAsyncIterable(streamLike);
     const decoder = new Decoder(options);
@@ -1598,13 +1598,13 @@ var __RunePixel3DRuntime = (() => {
     return decoder.decodeStream(stream);
   }
   var init_decodeAsync = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/decodeAsync.mjs"() {
       init_Decoder();
       init_stream();
     }
   });
 
-  // ../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/index.mjs
+  // node_modules/@msgpack/msgpack/dist.esm/index.mjs
   var dist_exports = {};
   __export(dist_exports, {
     DecodeError: () => DecodeError,
@@ -1626,7 +1626,7 @@ var __RunePixel3DRuntime = (() => {
     encodeTimestampExtension: () => encodeTimestampExtension
   });
   var init_dist = __esm({
-    "../../../../../../Users/davidthomas/dev/rune/runtime/rune-web/node_modules/@msgpack/msgpack/dist.esm/index.mjs"() {
+    "node_modules/@msgpack/msgpack/dist.esm/index.mjs"() {
       init_encode();
       init_decode();
       init_decodeAsync();
