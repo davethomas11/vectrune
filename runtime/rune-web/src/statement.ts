@@ -1078,6 +1078,44 @@ export function executeSteps(
       }
     }
 
+    if (Object.prototype.hasOwnProperty.call(step, 'Match')) {
+      const matchStep = step.Match!;
+      const targetVal = evaluateExpression(
+        matchStep.expression,
+        buildScope(locals, matchStep.expression),
+      );
+      for (const c of matchStep.cases) {
+        const pat = c.pattern.trim();
+        let matched = false;
+        if (pat === 'else' || pat === '_' || pat === 'default' || pat === '*') {
+          matched = true;
+        } else {
+          const parts = splitTopLevel(pat, ',');
+          for (const p of parts) {
+            const trimmedP = p.trim();
+            let caseVal: unknown;
+            try {
+              caseVal = evaluateExpression(trimmedP, buildScope(locals, trimmedP));
+            } catch {
+              caseVal = trimmedP;
+            }
+            if (
+              caseVal === targetVal ||
+              String(caseVal) === String(targetVal) ||
+              trimmedP === targetVal
+            ) {
+              matched = true;
+              break;
+            }
+          }
+        }
+        if (matched) {
+          if (!executeSteps(c.steps || [], locals, true)) return false;
+          break;
+        }
+      }
+    }
+
     if (Object.prototype.hasOwnProperty.call(step, 'ForLoop')) {
       const loop = step.ForLoop!;
       const collection = evaluateExpression(

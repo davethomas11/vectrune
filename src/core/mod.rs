@@ -241,47 +241,48 @@ pub fn resolve_path(
     current
 }
 
-pub fn eval_condition(ctx: &Context, expr: &str, it: Option<&serde_json::Value>) -> bool {
-    // support ==, !=, >, <, >=, <= with loose numeric equality
-    fn loose_cmp(a: &serde_json::Value, b: &serde_json::Value) -> Option<std::cmp::Ordering> {
-        use serde_json::Value::*;
-        match (a, b) {
-            (Number(na), Number(nb)) => match (na.as_f64(), nb.as_f64()) {
-                (Some(na), Some(nb)) => na.partial_cmp(&nb),
-                _ => None,
-            },
-            (String(sa), String(sb)) => {
-                if let (Ok(na), Ok(nb)) = (sa.parse::<f64>(), sb.parse::<f64>()) {
-                    na.partial_cmp(&nb)
-                } else {
-                    sa.partial_cmp(sb)
-                }
+// support ==, !=, >, <, >=, <= with loose numeric equality
+pub(crate) fn loose_cmp(a: &serde_json::Value, b: &serde_json::Value) -> Option<std::cmp::Ordering> {
+    use serde_json::Value::*;
+    match (a, b) {
+        (Number(na), Number(nb)) => match (na.as_f64(), nb.as_f64()) {
+            (Some(na), Some(nb)) => na.partial_cmp(&nb),
+            _ => None,
+        },
+        (String(sa), String(sb)) => {
+            if let (Ok(na), Ok(nb)) = (sa.parse::<f64>(), sb.parse::<f64>()) {
+                na.partial_cmp(&nb)
+            } else {
+                sa.partial_cmp(sb)
             }
-            (Number(na), String(sb)) => {
-                if let Ok(nb) = sb.parse::<f64>() {
-                    na.as_f64().and_then(|na| na.partial_cmp(&nb))
-                } else {
-                    None
-                }
+        }
+        (Number(na), String(sb)) => {
+            if let Ok(nb) = sb.parse::<f64>() {
+                na.as_f64().and_then(|na| na.partial_cmp(&nb))
+            } else {
+                None
             }
-            (String(sa), Number(nb)) => {
-                if let Ok(na) = sa.parse::<f64>() {
-                    nb.as_f64().and_then(|nb| na.partial_cmp(&nb))
-                } else {
-                    None
-                }
+        }
+        (String(sa), Number(nb)) => {
+            if let Ok(na) = sa.parse::<f64>() {
+                nb.as_f64().and_then(|nb| na.partial_cmp(&nb))
+            } else {
+                None
             }
-            (Bool(ba), Bool(bb)) => ba.partial_cmp(bb),
-            (Null, Null) => Some(std::cmp::Ordering::Equal),
-            _ => {
-                if a == b {
-                    Some(std::cmp::Ordering::Equal)
-                } else {
-                    None
-                }
+        }
+        (Bool(ba), Bool(bb)) => ba.partial_cmp(bb),
+        (Null, Null) => Some(std::cmp::Ordering::Equal),
+        _ => {
+            if a == b {
+                Some(std::cmp::Ordering::Equal)
+            } else {
+                None
             }
         }
     }
+}
+
+pub fn eval_condition(ctx: &Context, expr: &str, it: Option<&serde_json::Value>) -> bool {
 
     if let Some(pos) = expr.find("==") {
         let (l, r) = expr.split_at(pos);
@@ -719,7 +720,8 @@ async fn handle_conditional_block(
 ) -> Option<(u16, String)> {
     if map.len() == 1 {
         let (k, v) = map.iter().next()?;
-        if let Some(cond) = k.strip_prefix("if ") {
+        let trimmed_k = k.trim();
+        if let Some(cond) = trimmed_k.strip_prefix("if ") {
             if let Value::List(nested) = v {
                 if eval_condition(ctx, cond, None) {
                     // Execute nested steps; only propagate if it was an explicit respond/error,
@@ -727,6 +729,64 @@ async fn handle_conditional_block(
                     if let Some(resp) = execute_steps_inner_no_fallthrough(state.clone(), nested, ctx).await {
                         return Some(resp);
                     }
+                }
+            }
+        } else if trimmed_k.starts_with("match ") || trimmed_k.starts_with("switch ") {
+            let expr = if let Some(e) = trimmed_k.strip_prefix("match ") {
+                e.trim()
+            } else {
+                trimmed_k.strip_prefix("switch ").unwrap_or(trimmed_k).trim()
+            };
+            let target_val = resolve_path(ctx, expr, None).unwrap_or(serde_json::Value::Null);
+
+            let mut cases: Vec<(String, &[Value])> = Vec::new();
+            match v {
+                Value::List(list) => {
+                    for item in list {
+                        if let Value::Map(m) = item {
+                            for (pat, steps_val) in m {
+                                if let Value::List(steps) = steps_val {
+                                    cases.push((pat.trim().to_string(), steps.as_slice()));
+                                }
+                            }
+                        }
+                    }
+                }
+                Value::Map(m) => {
+                    for (pat, steps_val) in m {
+                        if let Value::List(steps) = steps_val {
+                            cases.push((pat.trim().to_string(), steps.as_slice()));
+                        }
+                    }
+                }
+                _ => {}
+            }
+
+            for (pattern, steps) in cases {
+                let pat = pattern.trim();
+                let matched = if pat == "else" || pat == "_" || pat == "default" || pat == "*" {
+                    true
+                } else {
+                    let parts: Vec<&str> = pat.split(',').map(str::trim).collect();
+                    parts.iter().any(|p| {
+                        let case_val = resolve_path(ctx, p, None).unwrap_or_else(|| {
+                            if (p.starts_with('"') && p.ends_with('"')) || (p.starts_with('\'') && p.ends_with('\'')) {
+                                serde_json::Value::String(p[1..p.len() - 1].to_string())
+                            } else {
+                                serde_json::Value::String(p.to_string())
+                            }
+                        });
+                        loose_cmp(&target_val, &case_val) == Some(std::cmp::Ordering::Equal)
+                            || target_val.to_string() == case_val.to_string()
+                            || (target_val.is_string() && target_val.as_str() == Some(p))
+                    })
+                };
+
+                if matched {
+                    if let Some(resp) = execute_steps_inner_no_fallthrough(state.clone(), steps, ctx).await {
+                        return Some(resp);
+                    }
+                    break;
                 }
             }
         }

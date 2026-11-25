@@ -1,0 +1,92 @@
+@Controls/neon_circuit
+keys:
+    KeyA -> left
+    ArrowLeft -> left
+    KeyD -> right
+    ArrowRight -> right
+    Space -> jump
+    KeyZ -> jump
+    KeyX -> fire
+    KeyJ -> fire
+    KeyW -> aim_up
+    ArrowUp -> aim_up
+    KeyS -> duck
+    ArrowDown -> duck
+    ShiftLeft -> dash
+    ShiftRight -> dash
+    KeyK -> dash
+    KeyQ -> prev_weapon
+    KeyE -> next_weapon
+    Tab -> weapon_wheel
+commands:
+    Enter -> advance
+    KeyP -> host.pause
+    KeyF -> host.fullscreen
+    KeyM -> host.mute
+    KeyT -> return_to_select
+    Digit1 -> equip_1
+    Digit2 -> equip_2
+    Digit3 -> equip_3
+    Digit4 -> equip_4
+    Digit5 -> equip_5
+    Digit6 -> equip_6
+    Digit7 -> equip_7
+mouse:
+    Left -> fire
+gamepad:
+    Axis0 -> {"input":"move_x","deadzone":0.18}
+    Axis1 -> {"input":"duck_axis","deadzone":0.35}
+    Button0 -> jump
+    Button2 -> fire
+    Button1 -> dash
+    Button4 -> prev_weapon
+    Button5 -> next_weapon
+    Button8 -> {"command":"host.advance"}
+    Button9 -> {"command":"host.pause"}
+touch = {
+    "buttons": [
+        {
+            "id": "jump",
+            "input": "jump",
+            "label": "JUMP",
+            "offset": [82, 14],
+            "size": 56,
+            "visible": "touch_ready"
+        },
+        {
+            "id": "fire",
+            "input": "fire",
+            "label": "FIRE",
+            "offset": [12, 14],
+            "size": 56,
+            "visible": "touch_ready"
+        },
+        {
+            "id": "dash",
+            "input": "dash",
+            "label": "DASH",
+            "offset": [12, 82],
+            "size": 48,
+            "visible": "touch_dash_ready"
+        },
+        {
+            "id": "next_weapon",
+            "input": "next_weapon",
+            "label": "GUN",
+            "offset": [82, 82],
+            "size": 48,
+            "visible": "touch_ready"
+        },
+        {
+            "anchor": "top-right",
+            "aria_label": "Pause game",
+            "command": "host.pause",
+            "id": "pause",
+            "label": "II",
+            "offset": [12, 12],
+            "size": 44
+        }
+    ],
+    "joystick": {"down":"duck","size":76,"up":"aim_up","visible":"touch_ready","x":"move_x"},
+    "visible": "touch_ready"
+}

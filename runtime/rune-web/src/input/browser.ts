@@ -20,11 +20,12 @@ export function mountControls(canvas: HTMLCanvasElement, controls: GameControls,
   listen(canvas, 'keydown', (e: KeyboardEvent) => {
     options.interact();
     if (Object.prototype.hasOwnProperty.call(controls.profile.keys, e.code) || Object.prototype.hasOwnProperty.call(controls.profile.commands, e.code)) e.preventDefault();
+    if (options.paused() && !e.repeat && options.menuKey?.(e.code)) return;
     if (!options.playing() && !controls.profile.commands[e.code]) {
+      if (!e.repeat && options.menuKey?.(e.code)) return;
       const binding = controls.profile.keys[e.code];
       const input = typeof binding === 'string' ? binding : binding?.input;
       if (input && options.advanceInputs?.includes(input)) { if (!e.repeat) options.advance(); return; }
-      if (!e.repeat && options.menuKey?.(e.code)) return;
     }
     send({ device: 'keyboard', code: e.code, value: true });
   });

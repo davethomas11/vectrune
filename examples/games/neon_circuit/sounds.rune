@@ -1,0 +1,130 @@
+@Sound/nc_buster
+wave = square
+frequency = 980
+freq_end = 240
+duration = 55ms
+volume = 0.035
+
+@Sound/nc_volt
+wave = sawtooth
+sequence = E5:30ms, B5:30ms, G6:45ms
+volume = 0.038
+
+@Sound/nc_cryo
+wave = sine
+sequence = C6:40ms, G5:40ms, E6:60ms
+volume = 0.038
+
+@Sound/nc_mag
+wave = triangle
+frequency = 320
+freq_end = 110
+duration = 120ms
+volume = 0.042
+
+@Sound/nc_nova
+wave = noise
+filter = lowpass 1600 -> 90
+duration = 180ms
+volume = 0.045
+
+@Sound/nc_phase
+wave = sine
+frequency = 1320
+freq_end = 440
+duration = 95ms
+volume = 0.038
+
+@Sound/nc_saw
+wave = sawtooth
+sequence = A4:30ms, C5:30ms, A4:30ms, D5:40ms
+volume = 0.04
+
+@Sound/nc_jump
+wave = triangle
+sequence = D4:30ms, A4:40ms, E5:40ms
+volume = 0.032
+
+@Sound/nc_double_jump
+wave = square
+sequence = A4:30ms, E5:35ms, A5:55ms
+volume = 0.032
+
+@Sound/nc_dash
+wave = sawtooth
+frequency = 560
+freq_end = 180
+duration = 90ms
+volume = 0.036
+
+@Sound/nc_hit
+wave = square
+sequence = G4:22ms, C3:38ms
+volume = 0.038
+
+@Sound/nc_hurt
+wave = sawtooth
+sequence = D3:65ms, B2:65ms, G2:95ms
+volume = 0.042
+
+@Sound/nc_explode
+wave = noise
+filter = lowpass 2000 -> 70
+duration = 260ms
+volume = 0.048
+
+@Sound/nc_barrier_open
+wave = triangle
+sequence = E4:45ms, G4:45ms, B4:45ms, E5:90ms
+volume = 0.042
+
+@Sound/nc_freeze
+wave = sine
+sequence = B5:40ms, E6:55ms, B6:70ms
+volume = 0.038
+
+@Sound/nc_checkpoint
+wave = sine
+sequence = C5:55ms, G5:55ms, C6:110ms
+volume = 0.042
+
+@Sound/nc_pickup
+wave = triangle
+sequence = E5:45ms, A5:45ms, C6:80ms
+volume = 0.04
+
+@Sound/nc_weapon_get
+wave = square
+sequence = C5:75ms, E5:75ms, G5:75ms, B5:75ms, C6:220ms
+volume = 0.048
+
+@Sound/nc_select_move
+wave = square
+frequency = 660
+freq_end = 880
+duration = 35ms
+volume = 0.028
+
+@Sound/nc_select_go
+wave = triangle
+sequence = E5:50ms, B5:60ms, E6:110ms
+volume = 0.042
+
+@Sound/nc_boss_warn
+wave = sawtooth
+sequence = E3:90ms, Bb3:90ms, E3:90ms, Bb3:130ms
+volume = 0.045
+
+@Sound/nc_enemy_charge
+wave = triangle
+frequency = 440
+freq_end = 880
+duration = 140ms
+volume = 0.032
+
+@Sound/nc_enemy_fire
+wave = square
+frequency = 480
+freq_end = 220
+duration = 75ms
+volume = 0.036

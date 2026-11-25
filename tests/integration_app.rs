@@ -53,6 +53,67 @@ run:
 }
 
 #[tokio::test]
+async fn rest_route_executes_match_and_switch_statements() {
+    let app_rune = r#"#!RUNE
+
+@App
+name = Match Test API
+type = REST
+
+@Route/GET/match-test
+run:
+    status = "active"
+    match status:
+        "inactive":
+            respond 400 "Inactive"
+        "active":
+            respond 200 "Active OK"
+        else:
+            respond 404 "Not Found"
+
+@Route/GET/switch-fallback
+run:
+    code = "unknown"
+    switch code:
+        "alpha", "beta":
+            respond 200 "Greek"
+        default:
+            respond 202 "Default Fallback"
+"#;
+
+    let app = build_router_from_str(app_rune).await;
+
+    let response1 = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/match-test")
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response1.status(), StatusCode::OK);
+    let body1 = axum::body::to_bytes(response1.into_body(), usize::MAX).await.unwrap();
+    assert_eq!(String::from_utf8_lossy(&body1), "Active OK");
+
+    let response2 = app
+        .oneshot(
+            Request::builder()
+                .uri("/switch-fallback")
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response2.status(), StatusCode::ACCEPTED);
+    let body2 = axum::body::to_bytes(response2.into_body(), usize::MAX).await.unwrap();
+    assert_eq!(String::from_utf8_lossy(&body2), "Default Fallback");
+}
+
+#[tokio::test]
 async fn rune_web_frontend_mounts_under_rest_app_type() {
     let app_rune = r#"#!RUNE
 

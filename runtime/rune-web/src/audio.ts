@@ -38,6 +38,16 @@ export function setAudioMuted(muted: boolean): void {
   if (masterGain && audioCtx) masterGain.gain.setValueAtTime(muted ? 0 : 1, audioCtx.currentTime);
 }
 
+let sfxMasterGain: GainNode | null = null;
+function sfxOutput(ctx: AudioContext): GainNode {
+  if (!sfxMasterGain) {
+    sfxMasterGain = ctx.createGain();
+    sfxMasterGain.gain.setValueAtTime(0.65, ctx.currentTime);
+    sfxMasterGain.connect(audioOutput(ctx));
+  }
+  return sfxMasterGain;
+}
+
 function audioOutput(ctx: AudioContext): GainNode {
   if (!masterGain) {
     masterGain = ctx.createGain();
@@ -147,7 +157,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.13);
       break;
@@ -165,7 +175,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.1);
       break;
@@ -192,7 +202,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.09);
       break;
@@ -210,7 +220,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.29);
       break;
@@ -229,7 +239,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.62);
       break;
@@ -249,7 +259,7 @@ export function playSound(type: string, arg?: unknown): void {
         gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
 
         osc.connect(gain);
-        gain.connect(audioOutput(ctx));
+        gain.connect(sfxOutput(ctx));
         osc.start(start);
         osc.stop(start + 0.16);
       });
@@ -267,7 +277,7 @@ export function playSound(type: string, arg?: unknown): void {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(now);
       osc.stop(now + 0.16);
       break;
@@ -308,7 +318,7 @@ function playNoiseBurst(
 
   noise.connect(filter);
   filter.connect(gain);
-  gain.connect(audioOutput(ctx));
+  gain.connect(sfxOutput(ctx));
   noise.start(now);
   noise.stop(now + duration + 0.01);
 }
@@ -346,7 +356,7 @@ function playCustomSound(
       gain.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
 
       osc.connect(gain);
-      gain.connect(audioOutput(ctx));
+      gain.connect(sfxOutput(ctx));
       osc.start(start);
       osc.stop(start + noteDur + 0.01);
       offset += noteDur;
@@ -381,7 +391,7 @@ function playCustomSound(
   gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
   osc.connect(gain);
-  gain.connect(audioOutput(ctx));
+  gain.connect(sfxOutput(ctx));
   osc.start(now);
   osc.stop(now + duration + 0.01);
 }
@@ -410,9 +420,17 @@ export interface TrackPlaybackState {
   muted?: boolean;
 }
 
+interface MusicEffectsBus {
+  masterInput: GainNode;
+  channelGains: Record<string, GainNode>;
+  lfoNodes: OscillatorNode[];
+  cleanup: () => void;
+}
+
 let activeMusicTrackName: string | null = null;
 let musicSchedulerTimer: any = null;
 let musicMasterGain: GainNode | null = null;
+let musicEffectsBus: MusicEffectsBus | null = null;
 let musicVolume = 0.2;
 let musicTempoBpm = 128;
 let musicLoop = true;
@@ -572,6 +590,287 @@ function musicTiming(track: string) {
   return { timeSignature, totalBars, totalBeats: Math.max(maxTrackBeats, totalBars * beatsPerBar) };
 }
 
+function generateReverbImpulse(ctx: AudioContext, decay = 1.5, preDelay = 0.01, reverse = false): AudioBuffer {
+  const sampleRate = ctx.sampleRate || 44100;
+  const length = Math.max(128, Math.floor(sampleRate * Math.max(0.05, Math.min(10, decay))));
+  const buffer = ctx.createBuffer(2, length, sampleRate);
+  const left = buffer.getChannelData(0);
+  const right = buffer.getChannelData(1);
+  const preDelaySamples = Math.floor(sampleRate * Math.max(0, preDelay));
+
+  for (let i = 0; i < length; i++) {
+    if (i < preDelaySamples) {
+      left[i] = 0;
+      right[i] = 0;
+    } else {
+      const idx = reverse ? length - 1 - i : i - preDelaySamples;
+      const progress = idx / (length - preDelaySamples);
+      const env = Math.exp(-3.5 * progress);
+      left[i] = (Math.random() * 2 - 1) * env;
+      right[i] = (Math.random() * 2 - 1) * env;
+    }
+  }
+  return buffer;
+}
+
+function generateBitcrushCurve(bits = 8, drive = 0): Float32Array {
+  const n = 4096;
+  const curve = new Float32Array(n);
+  const clampedBits = Math.max(2, Math.min(16, bits));
+  const steps = Math.pow(2, clampedBits);
+  const driveGain = 1 + Math.max(0, Math.min(5, drive * 4));
+
+  for (let i = 0; i < n; i++) {
+    let x = (i * 2) / (n - 1) - 1;
+    if (drive > 0) {
+      x = Math.tanh(x * driveGain);
+    }
+    if (clampedBits < 16) {
+      x = Math.round(x * (steps / 2)) / (steps / 2);
+    }
+    curve[i] = Math.max(-1, Math.min(1, x));
+  }
+  return curve;
+}
+
+function buildMusicEffectsBus(
+  ctx: AudioContext,
+  def: MusicDefinition,
+  channels: string[],
+  destination: GainNode,
+): MusicEffectsBus | null {
+  const fx = def.effects || {};
+  const reverbConfig = fx.reverb || def.reverb;
+  const delayConfig = fx.delay || def.delay;
+  const filterConfig = fx.filter || def.filter;
+  const crushConfig = fx.crush || fx.drive || def.crush;
+  const chorusConfig = fx.chorus || def.chorus;
+  const trackFx = def.track_effects || fx.tracks || {};
+
+  if (!reverbConfig && !delayConfig && !filterConfig && !crushConfig && !chorusConfig && !Object.keys(trackFx).length) {
+    return null;
+  }
+
+  const nodesToClean: (AudioNode | { disconnect: () => void })[] = [];
+  const lfoNodes: OscillatorNode[] = [];
+
+  const dryBus = ctx.createGain();
+  dryBus.gain.setValueAtTime(1.0, ctx.currentTime);
+  nodesToClean.push(dryBus);
+
+  let insertHead: AudioNode = dryBus;
+  if (filterConfig && typeof ctx.createBiquadFilter === 'function') {
+    const fNode = ctx.createBiquadFilter();
+    fNode.type = (filterConfig.type as BiquadFilterType) || 'lowpass';
+    const cutoff = filterConfig.cutoff || filterConfig.frequency || 4000;
+    fNode.frequency.setValueAtTime(Math.max(20, Math.min(20000, cutoff)), ctx.currentTime);
+    const q = filterConfig.q || filterConfig.resonance || 1.0;
+    fNode.Q.setValueAtTime(Math.max(0.1, q), ctx.currentTime);
+    insertHead.connect(fNode);
+    insertHead = fNode;
+    nodesToClean.push(fNode);
+  }
+
+  if (crushConfig && typeof (ctx as any).createWaveShaper === 'function') {
+    const wsNode = (ctx as any).createWaveShaper();
+    const bits = crushConfig.bits !== undefined ? crushConfig.bits : 8;
+    const drive = crushConfig.drive !== undefined ? crushConfig.drive : 0;
+    wsNode.curve = generateBitcrushCurve(bits, drive);
+    wsNode.oversample = 'none';
+    insertHead.connect(wsNode);
+    insertHead = wsNode;
+    nodesToClean.push(wsNode);
+  }
+  insertHead.connect(destination);
+
+  let delayInput: GainNode | null = null;
+  if (delayConfig && typeof (ctx as any).createDelay === 'function') {
+    delayInput = ctx.createGain();
+    delayInput.gain.setValueAtTime(1.0, ctx.currentTime);
+    nodesToClean.push(delayInput);
+
+    const dNode = (ctx as any).createDelay(5.0);
+    const dTime = Math.max(0.01, Math.min(4.0, delayConfig.time ?? 0.25));
+    dNode.delayTime.setValueAtTime(dTime, ctx.currentTime);
+
+    const dampFilter = ctx.createBiquadFilter();
+    dampFilter.type = 'lowpass';
+    const dampFreq = delayConfig.damping || delayConfig.filter || 2800;
+    dampFilter.frequency.setValueAtTime(dampFreq, ctx.currentTime);
+
+    const fbGain = ctx.createGain();
+    const fbVal = Math.max(0, Math.min(0.92, delayConfig.feedback ?? 0.35));
+    fbGain.gain.setValueAtTime(fbVal, ctx.currentTime);
+
+    const delayWet = ctx.createGain();
+    const dWetVal = Math.max(0, Math.min(1.0, delayConfig.wet ?? 0.25));
+    delayWet.gain.setValueAtTime(dWetVal, ctx.currentTime);
+
+    delayInput.connect(dNode);
+    dNode.connect(dampFilter);
+    dampFilter.connect(fbGain);
+    fbGain.connect(dNode);
+    dampFilter.connect(delayWet);
+    delayWet.connect(destination);
+
+    nodesToClean.push(dNode, dampFilter, fbGain, delayWet);
+  }
+
+  let revInput: GainNode | null = null;
+  if (reverbConfig && typeof (ctx as any).createConvolver === 'function') {
+    revInput = ctx.createGain();
+    revInput.gain.setValueAtTime(1.0, ctx.currentTime);
+    nodesToClean.push(revInput);
+
+    const conv = (ctx as any).createConvolver();
+    conv.buffer = generateReverbImpulse(
+      ctx,
+      reverbConfig.decay ?? 1.5,
+      reverbConfig.pre_delay ?? 0.01,
+      reverbConfig.reverse ?? false,
+    );
+    revInput.connect(conv);
+    nodesToClean.push(conv);
+
+    let revOut: AudioNode = conv;
+    if (reverbConfig.filter) {
+      const rf = ctx.createBiquadFilter();
+      rf.type = 'lowpass';
+      rf.frequency.setValueAtTime(reverbConfig.filter, ctx.currentTime);
+      conv.connect(rf);
+      revOut = rf;
+      nodesToClean.push(rf);
+    }
+
+    const revWet = ctx.createGain();
+    const wetVal = Math.max(0, Math.min(1.0, reverbConfig.wet ?? 0.25));
+    revWet.gain.setValueAtTime(wetVal, ctx.currentTime);
+    revOut.connect(revWet);
+    revWet.connect(destination);
+    nodesToClean.push(revWet);
+  }
+
+  let chorusInput: GainNode | null = null;
+  if (chorusConfig && typeof (ctx as any).createDelay === 'function' && typeof ctx.createOscillator === 'function') {
+    chorusInput = ctx.createGain();
+    chorusInput.gain.setValueAtTime(1.0, ctx.currentTime);
+    nodesToClean.push(chorusInput);
+
+    const cd = (ctx as any).createDelay(0.1);
+    const baseDelay = chorusConfig.delay ?? 0.018;
+    cd.delayTime.setValueAtTime(baseDelay, ctx.currentTime);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    const rate = chorusConfig.rate ?? 1.2;
+    lfo.frequency.setValueAtTime(rate, ctx.currentTime);
+
+    const lfoGain = ctx.createGain();
+    const depth = chorusConfig.depth ?? 0.0025;
+    lfoGain.gain.setValueAtTime(depth, ctx.currentTime);
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(cd.delayTime);
+    lfo.start(ctx.currentTime);
+    lfoNodes.push(lfo);
+
+    const chorusWet = ctx.createGain();
+    const cWetVal = Math.max(0, Math.min(1.0, chorusConfig.wet ?? 0.3));
+    chorusWet.gain.setValueAtTime(cWetVal, ctx.currentTime);
+
+    chorusInput.connect(cd);
+    cd.connect(chorusWet);
+    chorusWet.connect(destination);
+    nodesToClean.push(cd, lfoGain, chorusWet);
+  }
+
+  const masterInput = ctx.createGain();
+  masterInput.gain.setValueAtTime(1.0, ctx.currentTime);
+  masterInput.connect(dryBus);
+  nodesToClean.push(masterInput);
+
+  const channelGains: Record<string, GainNode> = {};
+  for (const ch of channels) {
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(1.0, ctx.currentTime);
+    cg.connect(dryBus);
+    nodesToClean.push(cg);
+
+    const chFx = trackFx[ch] || {};
+
+    if (delayInput) {
+      let dSend = 0;
+      if (chFx.delay !== undefined) {
+        dSend = chFx.delay;
+      } else if (delayConfig?.tracks) {
+        dSend = delayConfig.tracks.includes(ch) ? 1.0 : 0;
+      } else {
+        dSend = (ch === 'drums' || ch === 'bass') ? 0 : 1.0;
+      }
+      if (dSend > 0) {
+        const sg = ctx.createGain();
+        sg.gain.setValueAtTime(dSend, ctx.currentTime);
+        cg.connect(sg);
+        sg.connect(delayInput);
+        nodesToClean.push(sg);
+      }
+    }
+
+    if (revInput) {
+      let rSend = 0;
+      if (chFx.reverb !== undefined) {
+        rSend = chFx.reverb;
+      } else if (reverbConfig?.tracks) {
+        rSend = reverbConfig.tracks.includes(ch) ? 1.0 : 0;
+      } else {
+        rSend = ch === 'bass' ? 0.05 : ch === 'drums' ? 0.25 : 1.0;
+      }
+      if (rSend > 0) {
+        const sg = ctx.createGain();
+        sg.gain.setValueAtTime(rSend, ctx.currentTime);
+        cg.connect(sg);
+        sg.connect(revInput);
+        nodesToClean.push(sg);
+      }
+    }
+
+    if (chorusInput) {
+      let cSend = 0;
+      if (chFx.chorus !== undefined) {
+        cSend = chFx.chorus;
+      } else {
+        cSend = (ch === 'drums' || ch === 'bass') ? 0 : 0.8;
+      }
+      if (cSend > 0) {
+        const sg = ctx.createGain();
+        sg.gain.setValueAtTime(cSend, ctx.currentTime);
+        cg.connect(sg);
+        sg.connect(chorusInput);
+        nodesToClean.push(sg);
+      }
+    }
+
+    channelGains[ch] = cg;
+  }
+
+  const cleanup = () => {
+    for (const lfo of lfoNodes) {
+      try { lfo.stop(); } catch {}
+      try { lfo.disconnect(); } catch {}
+    }
+    for (const n of nodesToClean) {
+      try { (n as any).disconnect?.(); } catch {}
+    }
+  };
+
+  return {
+    masterInput,
+    channelGains,
+    lfoNodes,
+    cleanup,
+  };
+}
+
 function startMusicAtBeat(ctx: AudioContext, trackName: string, startBeat: number): void {
   const timing = musicTiming(trackName);
   const beat = Math.max(0, Math.min(timing.totalBeats - 0.000001, Number.isFinite(startBeat) ? startBeat : 0));
@@ -590,6 +889,8 @@ function startMusicAtBeat(ctx: AudioContext, trackName: string, startBeat: numbe
   musicMasterGain = ctx.createGain();
   musicMasterGain.gain.setValueAtTime(musicVolume, ctx.currentTime);
   musicMasterGain.connect(audioOutput(ctx));
+  const def = registeredMusic[trackName];
+  musicEffectsBus = def ? buildMusicEffectsBus(ctx, def, Object.keys(tracksState), musicMasterGain) : null;
   musicStartTime = ctx.currentTime + 0.05 - beat * 60 / musicTempoBpm;
   audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
   audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
@@ -620,6 +921,10 @@ export function stopMusic(): void {
 }
 
 function disconnectMusicGain(): void {
+  if (musicEffectsBus) {
+    musicEffectsBus.cleanup();
+    musicEffectsBus = null;
+  }
   if (!musicMasterGain) return;
   musicMasterGain.disconnect();
   musicMasterGain = null;
@@ -709,7 +1014,8 @@ function scheduleMusicTicks(): void {
       const eventDurationSec = remainingBeats * secondsPerBeat;
 
       if (!event.isRest && eventTime >= ctx.currentTime - 0.05) {
-        scheduleTrackNote(ctx, trackKey, event, eventTime, eventDurationSec, musicMasterGain, track.instrument);
+        const targetDest = musicEffectsBus ? (musicEffectsBus.channelGains[trackKey] || musicEffectsBus.masterInput) : musicMasterGain;
+        scheduleTrackNote(ctx, trackKey, event, eventTime, eventDurationSec, targetDest, track.instrument);
       }
 
       track.nextBeat += remainingBeats;
@@ -828,34 +1134,56 @@ function playTrackNote(
     if (inst === 'brass' || inst === 'strings' || inst === 'bell') {
       // Portable voices: ordinary oscillators, filters and gain envelopes also
       // work through the native audio bridge. No samples or browser-only nodes.
-      const length = Math.max(.06, durationSec * (inst === 'bell' ? 1.25 : .94));
-      const attack = Math.min(length * .25, inst === 'strings' ? .09 : .018);
-      osc.type = inst === 'brass' ? 'sawtooth' : inst === 'strings' ? 'triangle' : 'sine';
+      const isBell = inst === 'bell';
+      const isStrings = inst === 'strings';
+      const length = Math.max(.06, durationSec * (isBell ? 1.25 : 1.0));
+      const attack = Math.min(length * .25, isStrings ? .06 : .018);
+      osc.type = inst === 'brass' ? 'sawtooth' : isStrings ? 'triangle' : 'sine';
       osc.frequency.setValueAtTime(freq, time);
+      const peak = (isStrings ? .13 : .23) * chordGainMultiplier;
       gain.gain.setValueAtTime(.001, time);
-      gain.gain.linearRampToValueAtTime((inst === 'strings' ? .11 : .23) * chordGainMultiplier, time + attack);
-      gain.gain.exponentialRampToValueAtTime(.001, time + length);
+      gain.gain.linearRampToValueAtTime(peak, time + attack);
+      if (isBell) {
+        gain.gain.exponentialRampToValueAtTime(.001, time + length);
+      } else {
+        const sustainLevel = peak * 0.82;
+        const releaseTime = Math.min(0.04, durationSec * 0.08);
+        const sustainEnd = time + Math.max(attack, durationSec - releaseTime);
+        gain.gain.linearRampToValueAtTime(sustainLevel, time + attack + 0.04);
+        gain.gain.setValueAtTime(sustainLevel, sustainEnd);
+        gain.gain.exponentialRampToValueAtTime(.001, time + durationSec);
+      }
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(Math.min(9000, freq * (inst === 'brass' ? 5 : 3)), time);
       osc.connect(filter); filter.connect(gain); gain.connect(destination);
-      osc.start(time); osc.stop(time + length + .015);
+      osc.start(time); osc.stop(time + (isBell ? length : durationSec) + .015);
     } else if (inst === 'sawtooth' || inst === 'synth') {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = Math.min(durationSec * 0.88, 0.4);
-      gain.gain.setValueAtTime(0.18 * chordGainMultiplier, time);
-      gain.gain.exponentialRampToValueAtTime(0.005, time + noteSoundLen);
+      const releaseTime = Math.min(0.035, durationSec * 0.08);
+      const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+      const peak = 0.18 * chordGainMultiplier;
+      gain.gain.setValueAtTime(peak, time);
+      if (sustainEnd > time + 0.04) {
+        gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
+      }
+      gain.gain.exponentialRampToValueAtTime(0.002, time + durationSec);
       osc.connect(gain);
       gain.connect(destination);
       osc.start(time);
-      osc.stop(time + noteSoundLen + 0.01);
+      osc.stop(time + durationSec + 0.01);
     } else if (inst === 'triangle' || inst === 'bass') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = Math.min(durationSec * 0.9, 0.45);
-      gain.gain.setValueAtTime(0.28 * chordGainMultiplier, time);
-      gain.gain.exponentialRampToValueAtTime(0.005, time + noteSoundLen);
+      const noteSoundLen = durationSec * 0.9;
+      const peak = 0.28 * chordGainMultiplier;
+      gain.gain.setValueAtTime(peak, time);
+      const sustainEnd = time + durationSec * 0.82;
+      if (sustainEnd > time + 0.04) {
+        gain.gain.setValueAtTime(peak * 0.9, sustainEnd);
+      }
+      gain.gain.exponentialRampToValueAtTime(0.003, time + noteSoundLen);
       osc.connect(gain);
       gain.connect(destination);
       osc.start(time);
@@ -863,17 +1191,22 @@ function playTrackNote(
     } else if (inst === 'sine') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = Math.min(durationSec * 0.9, 0.5);
-      gain.gain.setValueAtTime(0.25 * chordGainMultiplier, time);
-      gain.gain.exponentialRampToValueAtTime(0.002, time + noteSoundLen);
+      const releaseTime = Math.min(0.03, durationSec * 0.08);
+      const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+      const peak = 0.25 * chordGainMultiplier;
+      gain.gain.setValueAtTime(peak, time);
+      if (sustainEnd > time + 0.04) {
+        gain.gain.setValueAtTime(peak * 0.9, sustainEnd);
+      }
+      gain.gain.exponentialRampToValueAtTime(0.002, time + durationSec);
       osc.connect(gain);
       gain.connect(destination);
       osc.start(time);
-      osc.stop(time + noteSoundLen + 0.01);
+      osc.stop(time + durationSec + 0.01);
     } else if (inst === 'pluck') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = Math.min(durationSec * 0.6, 0.15);
+      const noteSoundLen = Math.min(durationSec * 0.85, 0.45);
       gain.gain.setValueAtTime(0.3 * chordGainMultiplier, time);
       gain.gain.exponentialRampToValueAtTime(0.001, time + noteSoundLen);
       osc.connect(gain);
@@ -884,13 +1217,18 @@ function playTrackNote(
       // Default: 8-bit pulse / square lead
       osc.type = 'square';
       osc.frequency.setValueAtTime(freq, time);
-      const noteSoundLen = Math.min(durationSec * 0.85, 0.35);
-      gain.gain.setValueAtTime(0.2 * chordGainMultiplier, time);
-      gain.gain.exponentialRampToValueAtTime(0.005, time + noteSoundLen);
+      const releaseTime = Math.min(0.03, durationSec * 0.08);
+      const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+      const peak = 0.2 * chordGainMultiplier;
+      gain.gain.setValueAtTime(peak, time);
+      if (sustainEnd > time + 0.04) {
+        gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
+      }
+      gain.gain.exponentialRampToValueAtTime(0.002, time + durationSec);
       osc.connect(gain);
       gain.connect(destination);
       osc.start(time);
-      osc.stop(time + noteSoundLen + 0.01);
+      osc.stop(time + durationSec + 0.01);
     }
   }
 }

@@ -1,0 +1,1297 @@
+# Hot Neon Cyberpunk Palette, Textures, Sprites, and High-Detail 3D Models
+# Every character, boss, and background structure combines box, sphere, cylinder, and ramp shapes.
+@Palette/nc
+colors = {
+    ".": "transparent",
+    "k": "#090814",
+    "d": "#141328",
+    "s": "#22203f",
+    "m": "#373463",
+    "g": "#5c578f",
+    "h": "#8f8bbd",
+    "w": "#edf3ff",
+    "c": "#3ce2eb",
+    "C": "#1b9db5",
+    "b": "#124c6b",
+    "p": "#e34a8d",
+    "P": "#9e245c",
+    "q": "#521436",
+    "l": "#4cd986",
+    "L": "#1f7d47",
+    "y": "#ebc14b",
+    "Y": "#a87e22",
+    "o": "#e87846",
+    "O": "#913b1b",
+    "v": "#9f6ae8",
+    "V": "#5b2ea6",
+    "r": "#e84a64",
+    "R": "#8f1d35",
+    "i": "#9ae8f0",
+    "t": "#35c7a7"
+}
+
+# --- VOXEL TEXTURES (16x16 sleek dark cyberpunk plating, subtle neon trim) ---
+@Texture/nc/deck
+palette = nc
+size = [16,16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kddddddddddddddk"
+    "kdssssssssssssdk"
+    "kdsddsdssddsdssk"
+    "kdssssssssssssdk"
+    "kdssddssssddssdk"
+    "kdssddssssddssdk"
+    "kdkkkkkkkkkkkkdk"
+    "kdssssssssssssdk"
+    "kdssbbCCCCbbssdk"
+    "kdssssssssssssdk"
+    "kdssddddddddssdk"
+    "kdssddddddddssdk"
+    "kdssssssssssssdk"
+    "kddddddddddddddk"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/nc/deck_pink
+palette = nc
+size = [16,16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kddddddddddddddk"
+    "kdssssssssssssdk"
+    "kdsddsdssddsdssk"
+    "kdssssssssssssdk"
+    "kdssddssssddssdk"
+    "kdssddssssddssdk"
+    "kdkkkkkkkkkkkkdk"
+    "kdssssssssssssdk"
+    "kdssqqPPPPqqssdk"
+    "kdssssssssssssdk"
+    "kdssddddddddssdk"
+    "kdssddddddddssdk"
+    "kdssssssssssssdk"
+    "kddddddddddddddk"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/nc/title_grid
+palette = nc
+size = [16,16]
+pixels:
+    "CCCCCCCCCCCCCCCC"
+    "CkkkkkkkkkkkkkkC"
+    "CkddddddddddddkC"
+    "CkdssssssssssdkC"
+    "CkdsddddddddsdkC"
+    "CkdsddddddddsdkC"
+    "CkdsddqqqqddsdkC"
+    "CkdsddqPPqddsdkC"
+    "CkdsddqPPqddsdkC"
+    "CkdsddqqqqddsdkC"
+    "CkdsddddddddsdkC"
+    "CkdsddddddddsdkC"
+    "CkdssssssssssdkC"
+    "CkddddddddddddkC"
+    "CkkkkkkkkkkkkkkC"
+    "CCCCCCCCCCCCCCCC"
+
+@Texture/nc/wall
+palette = nc
+size = [16,16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kddddddddddddddk"
+    "kddddmmmmmmddddk"
+    "kdddmddddddmdddk"
+    "kdddmddkkddmdddk"
+    "kdddmddkkddmdddk"
+    "kdddmddddddmdddk"
+    "kddddmmmmmmddddk"
+    "kddddddddddddddk"
+    "kddssssssssssddk"
+    "kddsddddddddsddk"
+    "kddsddddddddsddk"
+    "kddsddbbbbddsddk"
+    "kddssssssssssddk"
+    "kddddddddddddddk"
+    "kkkkkkkkkkkkkkkk"
+
+@Texture/nc/volt_gate
+palette = nc
+size = [8,8]
+pixels:
+    "kkkkkkkk"
+    "kssssssk"
+    "ksbbbbsk"
+    "ksbyybsk"
+    "ksbyybsk"
+    "ksbbbbsk"
+    "kssssssk"
+    "kkkkkkkk"
+
+@Texture/nc/cryo_ice
+palette = nc
+size = [16,16]
+pixels:
+    "bbbbbbbbbbbbbbbb"
+    "bCCCCCCCCCCCCCCb"
+    "bCCssCCCCCCssCCb"
+    "bCCssCCiiCCssCCb"
+    "bCCCCCCiiCCCCCCb"
+    "bCCCCCCCCCCCCCCb"
+    "bCCbbCCCCCCbbCCb"
+    "bCCbbCCCCCCbbCCb"
+    "bCCCCCCCCCCCCCCb"
+    "bCCssCCCCCCssCCb"
+    "bCCssCCCCCCssCCb"
+    "bCCCCCCiiCCCCCCb"
+    "bCCbbCCiiCCbbCCb"
+    "bCCbbCCCCCCbbCCb"
+    "bCCCCCCCCCCCCCCb"
+    "bbbbbbbbbbbbbbbb"
+
+@Texture/nc/blast_wall
+palette = nc
+size = [8,8]
+pixels:
+    "kkkkkkkk"
+    "kOOOOOOk"
+    "kOddddOk"
+    "kOdoooOk"
+    "kOdoooOk"
+    "kOddddOk"
+    "kOOOOOOk"
+    "kkkkkkkk"
+
+@Texture/nc/phase_gate
+palette = nc
+size = [8,8]
+pixels:
+    "kkkkkkkk"
+    "kVVVVVVk"
+    "kVssssVk"
+    "kVsvvsVk"
+    "kVsvvsVk"
+    "kVssssVk"
+    "kVVVVVVk"
+    "kkkkkkkk"
+
+@Texture/nc/saw_gate
+palette = nc
+size = [8,8]
+pixels:
+    "kkkkkkkk"
+    "kLLLLLLk"
+    "kLddddLk"
+    "kLdlldLk"
+    "kLdlldLk"
+    "kLddddLk"
+    "kLLLLLLk"
+    "kkkkkkkk"
+
+@Texture/nc/thermal_vent
+palette = nc
+size = [8,8]
+pixels:
+    "rrooyorr"
+    "rooyyoor"
+    "ooywwyoo"
+    "rooyyoor"
+    "rrooyorr"
+    "RRroorRR"
+    "rrooyorr"
+    "RRroorRR"
+
+@Texture/nc/mag_block
+palette = nc
+size = [16,16]
+pixels:
+    "kkkkkkkkkkkkkkkk"
+    "kVddddddddddddVk"
+    "kVPssssssssssPVk"
+    "kddssssssssssddk"
+    "kddsddddddddsddk"
+    "kddsddmmmmddsddk"
+    "kddsddmPPmddsddk"
+    "kddsddmPPmddsddk"
+    "kddsddmmmmddsddk"
+    "kddsddddddddsddk"
+    "kddssssssssssddk"
+    "kddssssssssssddk"
+    "kVPssssssssssPVk"
+    "kVddddddddddddVk"
+    "kddddddddddddddk"
+    "kkkkkkkkkkkkkkkk"
+
+# --- HUD SPRITES ---
+@Sprite/nc/hp_full
+palette = nc
+size = [5,6]
+pixels:
+    ".ccc."
+    "cwwwc"
+    "ccccc"
+    "ccCcc"
+    "cCCCc"
+    ".CCC."
+
+@Sprite/nc/hp_empty
+palette = nc
+size = [5,6]
+pixels:
+    ".sss."
+    "sddds"
+    "sddds"
+    "sddds"
+    "sddds"
+    ".sss."
+
+@Sprite/nc/boss_full
+palette = nc
+size = [5,6]
+pixels:
+    ".ppp."
+    "pwwwp"
+    "ppppp"
+    "ppPpp"
+    "pPPPp"
+    ".PPP."
+
+@Sprite/nc/boss_empty
+palette = nc
+size = [5,6]
+pixels:
+    ".sss."
+    "skkks"
+    "skkks"
+    "skkks"
+    "skkks"
+    ".sss."
+
+# --- HERO MODELS: AXEL-09 (Cyber Reploid, fine 0.0625 grid, 4-frame run + dash + jump + duck) ---
+@Model/nc/hero_idle
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-4, -4, 0], "size": [5, 3, 2], "color": "C"}
+    {"from": [-4, 1, 0], "size": [5, 3, 2], "color": "C"}
+    {"from": [-3, -4, 2], "size": [3, 3, 5], "color": "b"}
+    {"from": [-3, 1, 2], "size": [3, 3, 5], "color": "b"}
+    {"from": [0, -4, 4], "size": [1, 3, 2], "color": "c"}
+    {"from": [0, 1, 4], "size": [1, 3, 2], "color": "c"}
+    {"from": [-3, -4, 7], "size": [6, 8, 2], "color": "d"}
+    {"from": [-2, -4, 8], "size": [5, 8, 1], "color": "p"}
+    {"from": [-4, -4, 9], "size": [8, 8, 6], "color": "s"}
+    {"from": [3, -3, 10], "size": [2, 6, 4], "color": "C"}
+    {"from": [4, -2, 11], "size": [1, 4, 2], "color": "c"}
+    {"from": [-3, -6, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-3, 4, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-6, -3, 9], "size": [2, 6, 5], "color": "m"}
+    {"from": [-7, -2, 10], "size": [1, 4, 3], "color": "y"}
+    {"from": [1, -3, 17], "size": [4, 6, 3], "color": "w"}
+    {"from": [3, -3, 18], "size": [3, 6, 2], "color": "c"}
+    {"from": [-2, -5, 17], "size": [3, 1, 3], "color": "p"}
+    {"from": [-2, 4, 17], "size": [3, 1, 3], "color": "p"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 19], "radius": 4.2, "color": "C"}
+    {"type": "cylinder", "center": [0, 0, 19.2], "radius": 4.4, "height": 1.6, "color": "b"}
+    {"type": "ramp", "from": [-2, -1, 21], "size": [6, 2, 3], "color": "p"}
+    {"type": "ramp", "from": [-9, -3, 12], "size": [5, 6, 3], "color": "p"}
+    {"type": "cylinder", "center": [-2, -5, 11], "radius": 1.4, "height": 4.5, "color": "s"}
+
+@Model/nc/hero_run0
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [1, -4, 1], "size": [5, 3, 2], "color": "c"}
+    {"from": [0, -4, 3], "size": [4, 3, 4], "color": "b"}
+    {"from": [-6, 1, 0], "size": [5, 3, 2], "color": "C"}
+    {"from": [-5, 1, 2], "size": [3, 3, 5], "color": "b"}
+    {"from": [-3, -4, 7], "size": [6, 8, 2], "color": "d"}
+    {"from": [-2, -4, 8], "size": [5, 8, 1], "color": "p"}
+    {"from": [-3, -4, 9], "size": [8, 8, 6], "color": "s"}
+    {"from": [4, -2, 11], "size": [2, 4, 2], "color": "c"}
+    {"from": [-2, -6, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-2, 4, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-5, -3, 9], "size": [2, 6, 5], "color": "m"}
+    {"from": [-6, -2, 10], "size": [1, 4, 3], "color": "y"}
+    {"from": [2, -3, 17], "size": [4, 6, 3], "color": "w"}
+    {"from": [4, -3, 18], "size": [3, 6, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [1, 0, 19], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-1, -1, 21], "size": [6, 2, 3], "color": "p"}
+    {"type": "ramp", "from": [-10, -3, 12], "size": [6, 6, 3], "color": "p"}
+    {"type": "cylinder", "center": [-1, -5, 11], "radius": 1.4, "height": 4.5, "color": "s"}
+
+@Model/nc/hero_run1
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-2, -4, 0], "size": [5, 3, 2], "color": "C"}
+    {"from": [-2, -4, 2], "size": [3, 3, 5], "color": "b"}
+    {"from": [-1, 1, 2], "size": [5, 3, 2], "color": "c"}
+    {"from": [-2, 1, 4], "size": [3, 3, 4], "color": "b"}
+    {"from": [-3, -4, 7], "size": [6, 8, 2], "color": "d"}
+    {"from": [-2, -4, 8], "size": [5, 8, 1], "color": "p"}
+    {"from": [-3, -4, 9], "size": [8, 8, 6], "color": "s"}
+    {"from": [4, -2, 11], "size": [2, 4, 2], "color": "c"}
+    {"from": [-2, -6, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-2, 4, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-5, -3, 9], "size": [2, 6, 5], "color": "m"}
+    {"from": [-6, -2, 10], "size": [1, 4, 3], "color": "y"}
+    {"from": [2, -3, 18], "size": [4, 6, 3], "color": "w"}
+    {"from": [4, -3, 19], "size": [3, 6, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [1, 0, 20], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-1, -1, 22], "size": [6, 2, 3], "color": "p"}
+    {"type": "ramp", "from": [-10, -3, 13], "size": [6, 6, 3], "color": "p"}
+    {"type": "cylinder", "center": [-1, -5, 11], "radius": 1.4, "height": 4.5, "color": "s"}
+
+@Model/nc/hero_run2
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -4, 0], "size": [5, 3, 2], "color": "C"}
+    {"from": [-5, -4, 2], "size": [3, 3, 5], "color": "b"}
+    {"from": [1, 1, 1], "size": [5, 3, 2], "color": "c"}
+    {"from": [0, 1, 3], "size": [4, 3, 4], "color": "b"}
+    {"from": [-3, -4, 7], "size": [6, 8, 2], "color": "d"}
+    {"from": [-2, -4, 8], "size": [5, 8, 1], "color": "p"}
+    {"from": [-3, -4, 9], "size": [8, 8, 6], "color": "s"}
+    {"from": [4, -2, 11], "size": [2, 4, 2], "color": "c"}
+    {"from": [-2, -6, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-2, 4, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-5, -3, 9], "size": [2, 6, 5], "color": "m"}
+    {"from": [-6, -2, 10], "size": [1, 4, 3], "color": "y"}
+    {"from": [2, -3, 17], "size": [4, 6, 3], "color": "w"}
+    {"from": [4, -3, 18], "size": [3, 6, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [1, 0, 19], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-1, -1, 21], "size": [6, 2, 3], "color": "p"}
+    {"type": "ramp", "from": [-10, -3, 12], "size": [6, 6, 3], "color": "p"}
+    {"type": "cylinder", "center": [-1, -5, 11], "radius": 1.4, "height": 4.5, "color": "s"}
+
+@Model/nc/hero_run3
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-1, -4, 2], "size": [5, 3, 2], "color": "c"}
+    {"from": [-2, -4, 4], "size": [3, 3, 4], "color": "b"}
+    {"from": [-2, 1, 0], "size": [5, 3, 2], "color": "C"}
+    {"from": [-2, 1, 2], "size": [3, 3, 5], "color": "b"}
+    {"from": [-3, -4, 7], "size": [6, 8, 2], "color": "d"}
+    {"from": [-2, -4, 8], "size": [5, 8, 1], "color": "p"}
+    {"from": [-3, -4, 9], "size": [8, 8, 6], "color": "s"}
+    {"from": [4, -2, 11], "size": [2, 4, 2], "color": "c"}
+    {"from": [-2, -6, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-2, 4, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-5, -3, 9], "size": [2, 6, 5], "color": "m"}
+    {"from": [-6, -2, 10], "size": [1, 4, 3], "color": "y"}
+    {"from": [2, -3, 18], "size": [4, 6, 3], "color": "w"}
+    {"from": [4, -3, 19], "size": [3, 6, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [1, 0, 20], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-1, -1, 22], "size": [6, 2, 3], "color": "p"}
+    {"type": "ramp", "from": [-10, -3, 13], "size": [6, 6, 3], "color": "p"}
+    {"type": "cylinder", "center": [-1, -5, 11], "radius": 1.4, "height": 4.5, "color": "s"}
+
+@Model/nc/hero_jump
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [1, -4, 3], "size": [5, 3, 3], "color": "c"}
+    {"from": [-4, 1, 1], "size": [5, 3, 3], "color": "C"}
+    {"from": [-3, -4, 7], "size": [6, 8, 2], "color": "d"}
+    {"from": [-3, -4, 9], "size": [8, 8, 6], "color": "s"}
+    {"from": [4, -2, 11], "size": [2, 4, 2], "color": "c"}
+    {"from": [-3, -6, 13], "size": [6, 2, 3], "color": "c"}
+    {"from": [-3, 4, 13], "size": [6, 2, 3], "color": "c"}
+    {"from": [-6, -3, 9], "size": [2, 6, 5], "color": "m"}
+    {"from": [1, -3, 18], "size": [4, 6, 3], "color": "w"}
+    {"from": [3, -3, 19], "size": [3, 6, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 20], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-2, -1, 22], "size": [6, 2, 3], "color": "p"}
+    {"type": "ramp", "from": [-9, -3, 13], "size": [5, 6, 4], "color": "p"}
+    {"type": "cylinder", "center": [-2, -2, 0], "radius": 1.6, "height": 3, "color": "y"}
+    {"type": "cylinder", "center": [-2, 2, 0], "radius": 1.6, "height": 3, "color": "o"}
+
+@Model/nc/hero_dash
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-8, -3, 2], "size": [7, 6, 3], "color": "C"}
+    {"from": [-4, -4, 6], "size": [9, 8, 6], "color": "s"}
+    {"from": [4, -2, 8], "size": [3, 4, 2], "color": "y"}
+    {"from": [3, -3, 13], "size": [4, 6, 3], "color": "w"}
+    {"from": [5, -3, 14], "size": [3, 6, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [2, 0, 15], "radius": 4.0, "color": "c"}
+    {"type": "ramp", "from": [-14, -3, 7], "size": [10, 6, 4], "color": "y"}
+    {"type": "cylinder", "center": [-7, 0, 8], "radius": 2.4, "height": 6, "color": "c"}
+
+@Model/nc/hero_duck
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-5, -4, 0], "size": [10, 8, 4], "color": "b"}
+    {"from": [-4, -4, 4], "size": [8, 8, 5], "color": "s"}
+    {"from": [3, -2, 6], "size": [2, 4, 2], "color": "c"}
+    {"from": [2, -3, 11], "size": [4, 6, 3], "color": "w"}
+    {"from": [4, -3, 12], "size": [3, 6, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [1, 0, 13], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-8, -3, 8], "size": [6, 6, 3], "color": "p"}
+    {"type": "ramp", "from": [-1, -1, 15], "size": [6, 2, 3], "color": "p"}
+
+@Model/nc/hero_victory
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-4, -4, 0], "size": [5, 3, 2], "color": "C"}
+    {"from": [-4, 1, 0], "size": [5, 3, 2], "color": "C"}
+    {"from": [-3, -4, 2], "size": [3, 3, 5], "color": "b"}
+    {"from": [-3, 1, 2], "size": [3, 3, 5], "color": "b"}
+    {"from": [-3, -4, 7], "size": [6, 8, 2], "color": "d"}
+    {"from": [-2, -4, 8], "size": [5, 8, 1], "color": "p"}
+    {"from": [-4, -4, 9], "size": [8, 8, 6], "color": "s"}
+    {"from": [4, -2, 11], "size": [1, 4, 2], "color": "c"}
+    {"from": [-3, -6, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-3, 4, 12], "size": [6, 2, 3], "color": "c"}
+    {"from": [-1, 4, 15], "size": [3, 3, 8], "color": "c"}
+    {"from": [1, -3, 17], "size": [4, 6, 3], "color": "w"}
+    {"from": [3, -3, 18], "size": [3, 6, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 19], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-2, -1, 21], "size": [6, 2, 3], "color": "p"}
+    {"type": "cylinder", "center": [0.5, 5.5, 24], "radius": 2.0, "height": 3, "color": "y"}
+
+@Model/nc/hero_climb0
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-4, -2, 2], "size": [3, 4, 6], "color": "b"}
+    {"from": [1, -2, 0], "size": [3, 4, 7], "color": "C"}
+    {"from": [-4, -3, 7], "size": [8, 6, 8], "color": "s"}
+    {"from": [-3, -2, 9], "size": [6, 4, 4], "color": "p"}
+    {"from": [-6, -2, 14], "size": [3, 4, 7], "color": "c"}
+    {"from": [3, -2, 10], "size": [3, 4, 5], "color": "C"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 19], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-2, -1, 21], "size": [4, 2, 3], "color": "p"}
+
+@Model/nc/hero_climb1
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-4, -2, 0], "size": [3, 4, 7], "color": "C"}
+    {"from": [1, -2, 2], "size": [3, 4, 6], "color": "b"}
+    {"from": [-4, -3, 7], "size": [8, 6, 8], "color": "s"}
+    {"from": [-3, -2, 9], "size": [6, 4, 4], "color": "p"}
+    {"from": [-6, -2, 10], "size": [3, 4, 5], "color": "C"}
+    {"from": [3, -2, 14], "size": [3, 4, 7], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 19], "radius": 4.2, "color": "C"}
+    {"type": "ramp", "from": [-2, -1, 21], "size": [4, 2, 3], "color": "p"}
+
+@Model/nc/hero_dead
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -4, 4], "size": [12, 8, 9], "color": "w"}
+    {"from": [-8, -2, 7], "size": [16, 4, 4], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 12], "radius": 5.5, "color": "p"}
+    {"type": "sphere", "center": [0, 0, 12], "radius": 3.5, "color": "w"}
+
+# --- 7 DETAILED ARM CANNON MODELS ---
+@Model/nc/gun_buster
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [0, -2, -2], "size": [4, 4, 4], "color": "C"}
+    {"from": [1, -2, -1], "size": [2, 4, 2], "color": "s"}
+shapes:
+    {"type": "cylinder", "center": [4.0, 0, 0], "radius": 1.9, "height": 1.6, "color": "c"}
+    {"type": "sphere", "center": [4.6, 0, 0], "radius": 1.1, "color": "w"}
+
+@Model/nc/gun_volt
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [0, -2, -2], "size": [4, 4, 4], "color": "b"}
+    {"from": [1, -2, 1], "size": [2, 4, 2], "color": "y"}
+shapes:
+    {"type": "cylinder", "center": [4.2, 0, 0], "radius": 2.0, "height": 1.6, "color": "c"}
+    {"type": "sphere", "center": [4.8, 0, 0], "radius": 1.2, "color": "y"}
+
+@Model/nc/gun_cryo
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [0, -2, -2], "size": [4, 4, 4], "color": "i"}
+shapes:
+    {"type": "ramp", "from": [2.5, -1.8, 0], "size": [2.0, 3.6, 2], "color": "c"}
+    {"type": "cylinder", "center": [4.0, 0, 0], "radius": 1.8, "height": 1.6, "color": "w"}
+
+@Model/nc/gun_mag
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [0, -2, -2], "size": [3, 4, 4], "color": "V"}
+    {"from": [3, -2, 1], "size": [2, 4, 1], "color": "p"}
+    {"from": [3, -2, -2], "size": [2, 4, 1], "color": "p"}
+shapes:
+    {"type": "sphere", "center": [3.8, 0, 0], "radius": 1.2, "color": "c"}
+
+@Model/nc/gun_nova
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [0, -2, -2], "size": [4, 4, 4], "color": "O"}
+    {"from": [1, -2, 1], "size": [2, 4, 1], "color": "y"}
+shapes:
+    {"type": "cylinder", "center": [4.2, 0, 0], "radius": 2.1, "height": 1.8, "color": "o"}
+    {"type": "sphere", "center": [4.8, 0, 0], "radius": 1.2, "color": "y"}
+
+@Model/nc/gun_phase
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [0, -2, -2], "size": [4, 4, 4], "color": "d"}
+    {"from": [1, -2, -1], "size": [2, 4, 2], "color": "v"}
+shapes:
+    {"type": "sphere", "center": [4.6, 0, 0], "radius": 1.3, "color": "p"}
+    {"type": "ramp", "from": [2.6, -1.5, 0.8], "size": [1.8, 3, 1.8], "color": "v"}
+
+@Model/nc/gun_saw
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [0, -2, -2], "size": [4, 4, 4], "color": "L"}
+    {"from": [1, -2, -1], "size": [2, 4, 2], "color": "s"}
+shapes:
+    {"type": "cylinder", "center": [4.2, 0, 0], "radius": 2.2, "height": 1.0, "color": "l"}
+    {"type": "sphere", "center": [4.2, 0, 0], "radius": 1.0, "color": "w"}
+
+# --- PROJECTILE MODELS ---
+@Model/nc/shot_buster
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.0, "color": "c"}
+    {"type": "sphere", "center": [0.8, 0, 0], "radius": 1.3, "color": "w"}
+
+@Model/nc/shot_volt
+palette = nc
+unit = 0.08
+blocks:
+    {"from": [-5, -1, -1], "size": [10, 2, 2], "color": "y"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.3, "color": "c"}
+    {"type": "ramp", "from": [-3, -1, 1], "size": [6, 2, 2], "color": "y"}
+
+@Model/nc/shot_cryo
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "ramp", "from": [-5, -1.5, -1.5], "size": [10, 3, 3], "color": "i"}
+    {"type": "sphere", "center": [3, 0, 0], "radius": 1.6, "color": "w"}
+
+@Model/nc/shot_mag
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 3.0, "height": 2.2, "color": "p"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 1.6, "color": "v"}
+
+@Model/nc/shot_nova
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "sphere", "center": [0, 0, 0], "radius": 3.4, "color": "o"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.0, "color": "y"}
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 3.8, "height": 1.2, "color": "r"}
+
+@Model/nc/shot_phase
+palette = nc
+unit = 0.08
+blocks:
+    {"from": [-6, -1, -1], "size": [12, 2, 2], "color": "v"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 1.9, "height": 3.8, "color": "p"}
+    {"type": "sphere", "center": [3, 0, 0], "radius": 1.4, "color": "w"}
+
+@Model/nc/shot_saw
+palette = nc
+unit = 0.08
+blocks:
+    {"from": [-4, -1, -1], "size": [8, 2, 2], "color": "w"}
+    {"from": [-1, -4, -1], "size": [2, 8, 2], "color": "w"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 3.6, "height": 1.6, "color": "l"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 1.5, "color": "y"}
+
+@Model/nc/enemy_shot
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.2, "color": "r"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 1.2, "color": "y"}
+
+# --- DETAILED ENEMY MODELS ---
+@Model/nc/enemy_drone
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -4, 5], "size": [12, 8, 5], "color": "s"}
+    {"from": [-4, -5, 6], "size": [8, 10, 3], "color": "p"}
+    {"from": [-2, -6, 7], "size": [4, 12, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 7.5], "radius": 4.2, "color": "d"}
+    {"type": "cylinder", "center": [-7, 0, 10], "radius": 2.6, "height": 1.4, "color": "c"}
+    {"type": "cylinder", "center": [7, 0, 10], "radius": 2.6, "height": 1.4, "color": "c"}
+    {"type": "ramp", "from": [-5, -2, 10], "size": [10, 4, 3], "color": "p"}
+    {"type": "sphere", "center": [0, -3.8, 7.5], "radius": 1.5, "color": "y"}
+
+@Model/nc/enemy_drone_charge
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -4, 5], "size": [12, 8, 5], "color": "s"}
+    {"from": [-4, -5, 6], "size": [8, 10, 3], "color": "p"}
+    {"from": [-2, -6, 7], "size": [4, 12, 2], "color": "y"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 7.5], "radius": 4.2, "color": "d"}
+    {"type": "cylinder", "center": [-7, 0, 10], "radius": 2.8, "height": 2, "color": "o"}
+    {"type": "cylinder", "center": [7, 0, 10], "radius": 2.8, "height": 2, "color": "o"}
+    {"type": "ramp", "from": [-5, -2, 10], "size": [10, 4, 3], "color": "r"}
+    {"type": "sphere", "center": [0, -3.8, 7.5], "radius": 2.2, "color": "r"}
+    {"type": "sphere", "center": [0, -4.5, 7.5], "radius": 1.4, "color": "y"}
+
+@Model/nc/enemy_drone_fire
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -4, 5], "size": [12, 8, 5], "color": "s"}
+    {"from": [-5, -5, 6], "size": [10, 10, 3], "color": "o"}
+    {"from": [-2, -7, 7], "size": [4, 14, 2], "color": "w"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 7.5], "radius": 4.4, "color": "d"}
+    {"type": "cylinder", "center": [-7, 0, 10], "radius": 3.0, "height": 2, "color": "y"}
+    {"type": "cylinder", "center": [7, 0, 10], "radius": 3.0, "height": 2, "color": "y"}
+    {"type": "ramp", "from": [-5, -2, 10], "size": [10, 4, 3], "color": "p"}
+    {"type": "sphere", "center": [0, -5.5, 7.5], "radius": 2.8, "color": "y"}
+    {"type": "sphere", "center": [0, -6.2, 7.5], "radius": 1.6, "color": "w"}
+
+@Model/nc/enemy_turret
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -7, 0], "size": [14, 14, 4], "color": "d"}
+    {"from": [-5, -5, 4], "size": [10, 10, 5], "color": "m"}
+    {"from": [-9, -2, 8], "size": [18, 4, 3], "color": "s"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 10], "radius": 4.8, "height": 6, "color": "o"}
+    {"type": "sphere", "center": [0, 0, 13.5], "radius": 3.4, "color": "y"}
+    {"type": "ramp", "from": [-6, -3, 12], "size": [12, 6, 3], "color": "r"}
+
+@Model/nc/enemy_turret_charge
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -7, 0], "size": [14, 14, 4], "color": "d"}
+    {"from": [-5, -5, 4], "size": [10, 10, 5], "color": "m"}
+    {"from": [-10, -2, 8], "size": [20, 4, 3], "color": "o"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 10], "radius": 4.8, "height": 6, "color": "r"}
+    {"type": "sphere", "center": [0, 0, 13.5], "radius": 3.8, "color": "r"}
+    {"type": "sphere", "center": [0, 0, 14.0], "radius": 2.2, "color": "y"}
+    {"type": "ramp", "from": [-6, -3, 12], "size": [12, 6, 3], "color": "y"}
+    {"type": "cylinder", "center": [-9, 0, 9.5], "radius": 2.0, "height": 3, "color": "y"}
+    {"type": "cylinder", "center": [9, 0, 9.5], "radius": 2.0, "height": 3, "color": "y"}
+
+@Model/nc/enemy_turret_fire
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -7, 0], "size": [14, 14, 4], "color": "d"}
+    {"from": [-5, -5, 4], "size": [10, 10, 5], "color": "m"}
+    {"from": [-11, -2, 8], "size": [22, 4, 4], "color": "y"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 10], "radius": 5.0, "height": 6, "color": "o"}
+    {"type": "sphere", "center": [0, 0, 13.5], "radius": 3.6, "color": "y"}
+    {"type": "ramp", "from": [-6, -3, 12], "size": [12, 6, 3], "color": "w"}
+    {"type": "sphere", "center": [-11, 0, 10], "radius": 2.5, "color": "y"}
+    {"type": "sphere", "center": [11, 0, 10], "radius": 2.5, "color": "y"}
+
+@Model/nc/enemy_walker
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -5, 0], "size": [5, 4, 3], "color": "d"}
+    {"from": [1, -5, 0], "size": [5, 4, 3], "color": "d"}
+    {"from": [-5, -4, 3], "size": [3, 3, 6], "color": "s"}
+    {"from": [2, -4, 3], "size": [3, 3, 6], "color": "s"}
+    {"from": [-6, -5, 9], "size": [12, 10, 7], "color": "v"}
+    {"from": [-4, -6, 11], "size": [8, 12, 3], "color": "l"}
+shapes:
+    {"type": "ramp", "from": [-6, -4, 16], "size": [12, 8, 4], "color": "p"}
+    {"type": "cylinder", "center": [0, 0, 12], "radius": 3.5, "height": 7, "color": "m"}
+    {"type": "sphere", "center": [0, -4.5, 12.5], "radius": 2.0, "color": "y"}
+
+@Model/nc/enemy_walker_charge
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -5, 0], "size": [6, 5, 3], "color": "d"}
+    {"from": [1, -5, 0], "size": [6, 5, 3], "color": "d"}
+    {"from": [-6, -4, 3], "size": [4, 4, 5], "color": "s"}
+    {"from": [2, -4, 3], "size": [4, 4, 5], "color": "s"}
+    {"from": [-6, -5, 8], "size": [12, 10, 7], "color": "v"}
+    {"from": [-4, -6, 10], "size": [8, 12, 3], "color": "o"}
+shapes:
+    {"type": "ramp", "from": [-6, -4, 15], "size": [12, 8, 4], "color": "r"}
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 3.5, "height": 7, "color": "m"}
+    {"type": "sphere", "center": [0, -4.8, 12.0], "radius": 2.4, "color": "r"}
+    {"type": "cylinder", "center": [6, -2, 12], "radius": 2.2, "height": 6, "color": "y"}
+    {"type": "sphere", "center": [6, -5.5, 12], "radius": 1.8, "color": "y"}
+
+@Model/nc/enemy_walker_fire
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -5, 0], "size": [6, 5, 3], "color": "d"}
+    {"from": [1, -5, 0], "size": [6, 5, 3], "color": "d"}
+    {"from": [-6, -4, 3], "size": [4, 4, 5], "color": "s"}
+    {"from": [2, -4, 3], "size": [4, 4, 5], "color": "s"}
+    {"from": [-6, -5, 8], "size": [12, 10, 7], "color": "v"}
+    {"from": [-4, -6, 10], "size": [8, 12, 3], "color": "y"}
+shapes:
+    {"type": "ramp", "from": [-6, -4, 15], "size": [12, 8, 4], "color": "y"}
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 3.5, "height": 7, "color": "m"}
+    {"type": "sphere", "center": [0, -4.8, 12.0], "radius": 2.2, "color": "w"}
+    {"type": "cylinder", "center": [6, -2, 12], "radius": 2.5, "height": 7, "color": "o"}
+    {"type": "sphere", "center": [6, -6.5, 12], "radius": 2.8, "color": "w"}
+
+# --- 12 SIGNATURE MEGA-STYLE BOSS ROBOTS (High-Detail 0.0625 Grid) ---
+@Model/nc/boss_volt
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-9, -5, 0], "size": [6, 5, 3], "color": "b"}
+    {"from": [3, -5, 0], "size": [6, 5, 3], "color": "b"}
+    {"from": [-8, -4, 3], "size": [4, 4, 8], "color": "C"}
+    {"from": [4, -4, 3], "size": [4, 4, 8], "color": "C"}
+    {"from": [-9, -5, 11], "size": [18, 10, 11], "color": "s"}
+    {"from": [-7, -6, 14], "size": [14, 12, 4], "color": "C"}
+    {"from": [-3, -7, 15], "size": [6, 14, 4], "color": "y"}
+    {"from": [-5, -5, 24], "size": [10, 10, 4], "color": "k"}
+    {"from": [-4, -6, 25], "size": [8, 12, 2], "color": "y"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 26], "radius": 5.5, "color": "C"}
+    {"type": "cylinder", "center": [-11, 0, 19], "radius": 3.2, "height": 9, "color": "y"}
+    {"type": "cylinder", "center": [11, 0, 19], "radius": 3.2, "height": 9, "color": "y"}
+    {"type": "sphere", "center": [-11, 0, 24], "radius": 2.4, "color": "c"}
+    {"type": "sphere", "center": [11, 0, 24], "radius": 2.4, "color": "c"}
+    {"type": "ramp", "from": [-8, -3, 29], "size": [7, 6, 6], "color": "y"}
+    {"type": "ramp", "from": [1, -3, 29], "size": [7, 6, 6], "color": "c"}
+    {"type": "cylinder", "center": [-5, -6, 10], "radius": 2.2, "height": 8, "color": "c"}
+    {"type": "cylinder", "center": [5, -6, 10], "radius": 2.2, "height": 8, "color": "c"}
+
+@Model/nc/boss_cryo
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-9, -6, 0], "size": [18, 12, 7], "color": "b"}
+    {"from": [-8, -5, 7], "size": [16, 10, 13], "color": "i"}
+    {"from": [-6, -6, 11], "size": [12, 12, 5], "color": "c"}
+    {"from": [-4, -6, 23], "size": [8, 12, 3], "color": "k"}
+    {"from": [-3, -7, 24], "size": [6, 14, 2], "color": "w"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 25], "radius": 5.2, "color": "w"}
+    {"type": "cylinder", "center": [0, 0, 14], "radius": 4.2, "height": 8, "color": "v"}
+    {"type": "ramp", "from": [-13, -3, 15], "size": [5, 6, 11], "color": "c"}
+    {"type": "ramp", "from": [8, -3, 15], "size": [5, 6, 11], "color": "c"}
+    {"type": "ramp", "from": [-6, -2, 28], "size": [12, 4, 6], "color": "i"}
+    {"type": "cylinder", "center": [-10, 0, 11], "radius": 2.6, "height": 7, "color": "w"}
+    {"type": "cylinder", "center": [10, 0, 11], "radius": 2.6, "height": 7, "color": "w"}
+
+@Model/nc/boss_mag
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-10, -6, 0], "size": [7, 12, 5], "color": "d"}
+    {"from": [3, -6, 0], "size": [7, 12, 5], "color": "d"}
+    {"from": [-9, -5, 5], "size": [5, 10, 6], "color": "m"}
+    {"from": [4, -5, 5], "size": [5, 10, 6], "color": "m"}
+    {"from": [-10, -6, 11], "size": [20, 12, 12], "color": "V"}
+    {"from": [-7, -7, 14], "size": [14, 14, 6], "color": "p"}
+    {"from": [-4, -7, 25], "size": [8, 14, 2], "color": "c"}
+shapes:
+    {"type": "cylinder", "center": [-13, 0, 18], "radius": 3.8, "height": 11, "color": "p"}
+    {"type": "cylinder", "center": [13, 0, 18], "radius": 3.8, "height": 11, "color": "c"}
+    {"type": "sphere", "center": [0, 0, 26], "radius": 5.4, "color": "p"}
+    {"type": "ramp", "from": [-11, -4, 22], "size": [22, 8, 4], "color": "m"}
+    {"type": "sphere", "center": [0, -6, 17], "radius": 2.6, "color": "y"}
+
+@Model/nc/boss_pyro
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-9, -5, 0], "size": [6, 10, 4], "color": "O"}
+    {"from": [3, -5, 0], "size": [6, 10, 4], "color": "O"}
+    {"from": [-8, -4, 4], "size": [4, 8, 7], "color": "r"}
+    {"from": [4, -4, 4], "size": [4, 8, 7], "color": "r"}
+    {"from": [-9, -6, 11], "size": [18, 12, 12], "color": "O"}
+    {"from": [-6, -7, 13], "size": [12, 14, 7], "color": "y"}
+    {"from": [-4, -7, 24], "size": [8, 14, 2], "color": "w"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 17], "radius": 5.2, "color": "o"}
+    {"type": "cylinder", "center": [0, 0, 26], "radius": 5.0, "height": 7.5, "color": "r"}
+    {"type": "cylinder", "center": [0, 0, 31], "radius": 3.4, "height": 3.0, "color": "y"}
+    {"type": "ramp", "from": [-13, -3, 19], "size": [7, 6, 7], "color": "y"}
+    {"type": "ramp", "from": [6, -3, 19], "size": [7, 6, 7], "color": "y"}
+    {"type": "cylinder", "center": [-12, 0, 14], "radius": 2.6, "height": 8, "color": "o"}
+    {"type": "cylinder", "center": [12, 0, 14], "radius": 2.6, "height": 8, "color": "o"}
+
+@Model/nc/boss_phase
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-7, -5, 5], "size": [14, 10, 14], "color": "V"}
+    {"from": [-5, -6, 9], "size": [10, 12, 6], "color": "k"}
+    {"from": [-3, -7, 11], "size": [6, 14, 3], "color": "c"}
+    {"from": [-4, -6, 23], "size": [8, 12, 2], "color": "p"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 24], "radius": 5.8, "color": "v"}
+    {"type": "cylinder", "center": [0, 0, 4], "radius": 6.5, "height": 3.2, "color": "p"}
+    {"type": "cylinder", "center": [0, 0, 15], "radius": 7.2, "height": 1.6, "color": "c"}
+    {"type": "ramp", "from": [-14, -3, 13], "size": [7, 6, 10], "color": "p"}
+    {"type": "ramp", "from": [7, -3, 13], "size": [7, 6, 10], "color": "c"}
+    {"type": "sphere", "center": [-11, 0, 24], "radius": 2.0, "color": "w"}
+    {"type": "sphere", "center": [11, 0, 24], "radius": 2.0, "color": "w"}
+
+@Model/nc/boss_saw
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-8, -5, 0], "size": [5, 10, 4], "color": "L"}
+    {"from": [3, -5, 0], "size": [5, 10, 4], "color": "L"}
+    {"from": [-7, -4, 4], "size": [4, 8, 7], "color": "s"}
+    {"from": [3, -4, 4], "size": [4, 8, 7], "color": "s"}
+    {"from": [-9, -5, 11], "size": [18, 10, 11], "color": "d"}
+    {"from": [-6, -6, 13], "size": [12, 12, 6], "color": "L"}
+    {"from": [-4, -6, 24], "size": [8, 12, 2], "color": "y"}
+shapes:
+    {"type": "cylinder", "center": [-12, 0, 16], "radius": 5.5, "height": 2.4, "color": "l"}
+    {"type": "cylinder", "center": [12, 0, 16], "radius": 5.5, "height": 2.4, "color": "l"}
+    {"type": "sphere", "center": [-12, 0, 16], "radius": 2.0, "color": "w"}
+    {"type": "sphere", "center": [12, 0, 16], "radius": 2.0, "color": "w"}
+    {"type": "sphere", "center": [0, 0, 25], "radius": 5.0, "color": "l"}
+    {"type": "ramp", "from": [-7, -3, 28], "size": [14, 6, 5], "color": "y"}
+
+@Model/nc/boss_storm
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-8, -5, 5], "size": [16, 10, 14], "color": "C"}
+    {"from": [-5, -6, 9], "size": [10, 12, 7], "color": "s"}
+    {"from": [-4, -6, 24], "size": [8, 12, 2], "color": "y"}
+shapes:
+    {"type": "ramp", "from": [-19, -3, 14], "size": [11, 6, 9], "color": "y"}
+    {"type": "ramp", "from": [8, -3, 14], "size": [11, 6, 9], "color": "y"}
+    {"type": "ramp", "from": [-16, -2, 21], "size": [8, 4, 6], "color": "c"}
+    {"type": "ramp", "from": [8, -2, 21], "size": [8, 4, 6], "color": "c"}
+    {"type": "sphere", "center": [0, 0, 25], "radius": 5.2, "color": "w"}
+    {"type": "cylinder", "center": [0, 0, 3], "radius": 4.5, "height": 4.5, "color": "p"}
+    {"type": "cylinder", "center": [0, 0, 1], "radius": 3.0, "height": 2.5, "color": "c"}
+
+@Model/nc/boss_glacier
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-10, -6, 0], "size": [20, 12, 10], "color": "b"}
+    {"from": [-9, -6, 10], "size": [18, 12, 12], "color": "o"}
+    {"from": [-6, -7, 13], "size": [12, 14, 6], "color": "i"}
+    {"from": [-4, -7, 25], "size": [8, 14, 2], "color": "c"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 17], "radius": 5.5, "color": "i"}
+    {"type": "cylinder", "center": [-12, 0, 16], "radius": 3.6, "height": 11, "color": "r"}
+    {"type": "cylinder", "center": [12, 0, 16], "radius": 3.6, "height": 11, "color": "i"}
+    {"type": "ramp", "from": [-9, -4, 22], "size": [18, 8, 7], "color": "w"}
+    {"type": "sphere", "center": [0, 0, 26], "radius": 4.6, "color": "c"}
+
+@Model/nc/boss_ghost
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-8, -5, 6], "size": [16, 10, 14], "color": "k"}
+    {"from": [-6, -6, 10], "size": [12, 12, 6], "color": "V"}
+    {"from": [-4, -7, 23], "size": [8, 14, 2], "color": "r"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 24], "radius": 5.6, "color": "p"}
+    {"type": "cylinder", "center": [0, 0, 12], "radius": 7.5, "height": 3.0, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 4], "radius": 5.0, "height": 3.0, "color": "v"}
+    {"type": "ramp", "from": [-14, -3, 16], "size": [7, 6, 9], "color": "v"}
+    {"type": "ramp", "from": [7, -3, 16], "size": [7, 6, 9], "color": "v"}
+
+@Model/nc/boss_hydra
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-11, -6, 0], "size": [22, 12, 10], "color": "m"}
+    {"from": [-10, -6, 10], "size": [20, 12, 11], "color": "L"}
+    {"from": [-7, -7, 13], "size": [14, 14, 6], "color": "r"}
+shapes:
+    {"type": "sphere", "center": [-8.5, 0, 25], "radius": 4.2, "color": "o"}
+    {"type": "sphere", "center": [0, 0, 27.5], "radius": 4.8, "color": "y"}
+    {"type": "sphere", "center": [8.5, 0, 25], "radius": 4.2, "color": "o"}
+    {"type": "cylinder", "center": [0, 0, 16], "radius": 5.4, "height": 8, "color": "r"}
+    {"type": "ramp", "from": [-11, -4, 20], "size": [22, 8, 4], "color": "l"}
+    {"type": "cylinder", "center": [-13, 0, 13], "radius": 3.0, "height": 9, "color": "o"}
+    {"type": "cylinder", "center": [13, 0, 13], "radius": 3.0, "height": 9, "color": "o"}
+
+@Model/nc/boss_prism
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-8, -6, 4], "size": [16, 12, 15], "color": "w"}
+    {"from": [-6, -7, 9], "size": [12, 14, 6], "color": "c"}
+    {"from": [-4, -7, 25], "size": [8, 14, 2], "color": "p"}
+shapes:
+    {"type": "ramp", "from": [-11, -5, 19], "size": [22, 10, 8], "color": "c"}
+    {"type": "sphere", "center": [0, 0, 26], "radius": 5.0, "color": "p"}
+    {"type": "cylinder", "center": [-11, 0, 14], "radius": 3.0, "height": 13, "color": "v"}
+    {"type": "cylinder", "center": [11, 0, 14], "radius": 3.0, "height": 13, "color": "y"}
+    {"type": "sphere", "center": [-11, 0, 22], "radius": 2.4, "color": "w"}
+    {"type": "sphere", "center": [11, 0, 22], "radius": 2.4, "color": "w"}
+
+@Model/nc/boss_omega
+palette = nc
+unit = 0.08
+blocks:
+    {"from": [-9, -5, 0], "size": [7, 10, 8], "color": "k"}
+    {"from": [2, -5, 0], "size": [7, 10, 8], "color": "k"}
+    {"from": [-10, -6, 8], "size": [20, 12, 12], "color": "p"}
+    {"from": [-7, -7, 11], "size": [14, 14, 6], "color": "k"}
+    {"from": [-4, -7, 22], "size": [8, 14, 3], "color": "y"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 14], "radius": 5.2, "color": "c"}
+    {"type": "cylinder", "center": [-12, 0, 14], "radius": 3.4, "height": 12, "color": "y"}
+    {"type": "cylinder", "center": [12, 0, 14], "radius": 3.4, "height": 12, "color": "y"}
+    {"type": "ramp", "from": [-10, -4, 20], "size": [20, 8, 6], "color": "v"}
+    {"type": "sphere", "center": [0, 0, 24], "radius": 4.5, "color": "r"}
+    {"type": "ramp", "from": [-7, -2, 26], "size": [14, 4, 4], "color": "y"}
+
+# --- INTERACTIVE PROPS & FX ---
+@Model/nc/checkpoint_off
+palette = nc
+unit = 0.08
+blocks:
+    {"from": [-3, -3, 0], "size": [6, 6, 2], "color": "s"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 9], "radius": 1.6, "height": 16, "color": "m"}
+    {"type": "sphere", "center": [0, 0, 18], "radius": 3.0, "color": "g"}
+
+@Model/nc/checkpoint_on
+palette = nc
+unit = 0.08
+blocks:
+    {"from": [-3, -3, 0], "size": [6, 6, 2], "color": "s"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 9], "radius": 1.8, "height": 16, "color": "c"}
+    {"type": "sphere", "center": [0, 0, 18], "radius": 3.4, "color": "l"}
+    {"type": "cylinder", "center": [0, 0, 18], "radius": 4.4, "height": 1.2, "color": "y"}
+
+@Model/nc/pickup_health
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "sphere", "center": [0, 0, 3.5], "radius": 3.4, "color": "l"}
+    {"type": "cylinder", "center": [0, 0, 3.5], "radius": 1.5, "height": 7.5, "color": "w"}
+
+@Model/nc/pickup_energy
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "cylinder", "center": [0, 0, 4], "radius": 3.0, "height": 7.0, "color": "c"}
+    {"type": "sphere", "center": [0, 0, 8], "radius": 2.4, "color": "y"}
+
+@Model/nc/pedestal
+palette = nc
+unit = 0.1
+blocks:
+    {"from": [-14, -14, 0], "size": [28, 28, 3], "color": "d"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 4.5], "radius": 11, "height": 3.2, "color": "p"}
+    {"type": "cylinder", "center": [0, 0, 6.5], "radius": 8, "height": 1.5, "color": "c"}
+
+@Model/nc/fx_burst
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "sphere", "center": [0, 0, 0], "radius": 4.5, "color": "y"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.8, "color": "p"}
+
+@Model/nc/scrap
+palette = nc
+unit = 0.08
+blocks:
+    {"from": [-2, -2, -2], "size": [4, 4, 4], "color": "p"}
+    {"from": [-1, -1, 1], "size": [2, 2, 2], "color": "c"}
+
+@Model/nc/spark
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.0, "color": "y"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 1.1, "color": "w"}
+
+@Model/nc/blast
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 6.0, "height": 2.0, "color": "c"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 3.5, "color": "p"}
+
+@Model/nc/victory_orb
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "sphere", "center": [0, 0, 0], "radius": 4.0, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 5.5, "height": 1.2, "color": "y"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.2, "color": "w"}
+
+@Model/nc/death_orb
+palette = nc
+unit = 0.07
+shapes:
+    {"type": "sphere", "center": [0, 0, 0], "radius": 4.2, "color": "c"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.5, "color": "w"}
+
+@Model/nc/teleport_beam
+palette = nc
+unit = 0.08
+shapes:
+    {"type": "cylinder", "center": [0, 0, 12], "radius": 2.6, "height": 24, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 12], "radius": 1.3, "height": 24, "color": "w"}
+    {"type": "cylinder", "center": [0, 0, 1], "radius": 4.5, "height": 1.4, "color": "y"}
+
+@Model/nc/ladder
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-6, -2, 0], "size": [2, 3, 16], "color": "s"}
+    {"from": [4, -2, 0], "size": [2, 3, 16], "color": "s"}
+    {"from": [-4, -1, 2], "size": [8, 2, 2], "color": "c"}
+    {"from": [-4, -1, 7], "size": [8, 2, 2], "color": "y"}
+    {"from": [-4, -1, 13], "size": [8, 2, 2], "color": "c"}
+
+@Model/nc/boss_door_frame
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-4, -18, 0], "size": [8, 3, 16], "color": "s"}
+    {"from": [-4, 15, 0], "size": [8, 3, 16], "color": "s"}
+    {"from": [-2, -16, 4], "size": [4, 2, 8], "color": "C"}
+    {"from": [-2, 14, 4], "size": [4, 2, 8], "color": "C"}
+
+@Model/nc/boss_shutter
+palette = nc
+unit = 0.125
+blocks:
+    {"from": [-3, -8, 0], "size": [6, 16, 32], "color": "s"}
+    {"from": [-2, -9, 4], "size": [4, 18, 4], "color": "C"}
+    {"from": [-2, -9, 14], "size": [4, 18, 4], "color": "y"}
+    {"from": [-2, -9, 24], "size": [4, 18, 4], "color": "C"}
+
+# --- ARTICULATED BOSS LIMB PODS & ANIMATED AURA SATELLITES ---
+@Model/nc/boss_pod
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-3, -3, -2], "size": [6, 6, 5], "color": "s"}
+    {"from": [-2, -4, -1], "size": [4, 8, 3], "color": "p"}
+shapes:
+    {"type": "ramp", "from": [-3, -2, 3], "size": [7, 4, 3], "color": "c"}
+    {"type": "sphere", "center": [3, 0, 0], "radius": 2.2, "color": "y"}
+
+@Model/nc/boss_ring
+palette = nc
+unit = 0.07
+shapes:
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 11.0, "height": 1.0, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 8.5, "height": 1.4, "color": "p"}
+    {"type": "sphere", "center": [10.5, 0, 0], "radius": 2.0, "color": "y"}
+    {"type": "sphere", "center": [-10.5, 0, 0], "radius": 2.0, "color": "y"}
+
+@Model/nc/boss_blade
+palette = nc
+unit = 0.0625
+blocks:
+    {"from": [-5, -1, -1], "size": [10, 2, 2], "color": "w"}
+    {"from": [-1, -5, -1], "size": [2, 10, 2], "color": "w"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 0], "radius": 4.2, "height": 1.6, "color": "p"}
+    {"type": "sphere", "center": [0, 0, 0], "radius": 2.2, "color": "y"}
+
+# --- BACKGROUND CYBERPUNK ARCHITECTURE MODELS (harmonious muted slate + crisp accents) ---
+@Model/nc/bg_tower
+palette = nc
+unit = 0.3
+blocks:
+    {"from": [-4, -3, 0], "size": [8, 6, 22], "color": "d"}
+    {"from": [-5, -4, 0], "size": [10, 8, 3], "color": "s"}
+    {"from": [-3, 2, 4], "size": [6, 2, 1], "color": "b"}
+    {"from": [-3, 2, 9], "size": [6, 2, 1], "color": "q"}
+    {"from": [-3, 2, 14], "size": [6, 2, 1], "color": "b"}
+    {"from": [-3, 2, 18], "size": [6, 2, 1], "color": "C"}
+shapes:
+    {"type": "ramp", "from": [-4, -3, 22], "size": [8, 6, 4], "color": "s"}
+    {"type": "cylinder", "center": [0, 0, 27.5], "radius": 0.6, "height": 5, "color": "m"}
+    {"type": "sphere", "center": [0, 0, 30.5], "radius": 1.0, "color": "C"}
+
+@Model/nc/bg_dome
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-6, -4, 0], "size": [12, 8, 7], "color": "d"}
+    {"from": [-4, 3, 2], "size": [8, 2, 2], "color": "b"}
+shapes:
+    {"type": "sphere", "center": [0, 0, 8], "radius": 6.0, "color": "s"}
+    {"type": "cylinder", "center": [0, 0, 8], "radius": 6.5, "height": 1.2, "color": "C"}
+    {"type": "cylinder", "center": [0, 0, 14.5], "radius": 0.6, "height": 3.5, "color": "m"}
+
+@Model/nc/bg_pipe
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-3, -3, 0], "size": [6, 6, 3], "color": "d"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 2.1, "height": 20, "color": "s"}
+    {"type": "cylinder", "center": [0, 0, 6], "radius": 2.6, "height": 1.4, "color": "b"}
+    {"type": "cylinder", "center": [0, 0, 12], "radius": 2.6, "height": 1.4, "color": "m"}
+    {"type": "cylinder", "center": [0, 0, 18], "radius": 2.6, "height": 1.4, "color": "C"}
+
+@Model/nc/bg_sign_pink
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-6, -1, 0], "size": [12, 2, 7], "color": "q"}
+    {"from": [-5, 0, 1], "size": [10, 2, 5], "color": "d"}
+    {"from": [-4, 1, 3], "size": [8, 2, 1], "color": "P"}
+    {"from": [-4, 1, 1], "size": [5, 2, 1], "color": "C"}
+shapes:
+    {"type": "cylinder", "center": [-5, 0, -2], "radius": 0.6, "height": 4, "color": "s"}
+    {"type": "cylinder", "center": [5, 0, -2], "radius": 0.6, "height": 4, "color": "s"}
+
+@Model/nc/bg_sign_cyan
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-6, -1, 0], "size": [12, 2, 7], "color": "b"}
+    {"from": [-5, 0, 1], "size": [10, 2, 5], "color": "d"}
+    {"from": [-4, 1, 3], "size": [8, 2, 1], "color": "C"}
+    {"from": [-4, 1, 1], "size": [6, 2, 1], "color": "P"}
+shapes:
+    {"type": "cylinder", "center": [-5, 0, -2], "radius": 0.6, "height": 4, "color": "s"}
+    {"type": "cylinder", "center": [5, 0, -2], "radius": 0.6, "height": 4, "color": "s"}
+
+@Model/nc/bg_arch
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-7, -2, 0], "size": [2, 4, 12], "color": "d"}
+    {"from": [5, -2, 0], "size": [2, 4, 12], "color": "d"}
+shapes:
+    {"type": "ramp", "from": [-7, -2, 12], "size": [7, 4, 4], "color": "s"}
+    {"type": "ramp", "from": [0, -2, 12], "size": [7, 4, 4], "color": "m"}
+
+@Model/nc/bg_orb
+palette = nc
+unit = 0.25
+shapes:
+    {"type": "sphere", "center": [0, 0, 4], "radius": 4.2, "color": "s"}
+    {"type": "cylinder", "center": [0, 0, 4], "radius": 5.8, "height": 0.9, "color": "m"}
+    {"type": "cylinder", "center": [0, 0, 4], "radius": 6.3, "height": 0.4, "color": "C"}
+
+@Model/nc/bg_pylon
+palette = nc
+unit = 0.25
+shapes:
+    {"type": "cylinder", "center": [0, 0, 7], "radius": 2.3, "height": 14, "color": "d"}
+    {"type": "ramp", "from": [-4, -2, 14], "size": [8, 4, 5], "color": "s"}
+    {"type": "sphere", "center": [2.2, 0, 18.8], "radius": 1.6, "color": "Y"}
+
+@Model/nc/title_monument
+palette = nc
+unit = 0.125
+blocks:
+    {"from": [-14, -10, 0], "size": [28, 20, 3], "color": "d"}
+    {"from": [-11, -8, 3], "size": [22, 16, 3], "color": "s"}
+    {"from": [-8, -6, 6], "size": [16, 12, 2], "color": "m"}
+    {"from": [-5, -4, 8], "size": [10, 8, 1], "color": "c"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 4], "radius": 13, "height": 1.2, "color": "p"}
+    {"type": "cylinder", "center": [0, 0, 7], "radius": 10, "height": 1.0, "color": "c"}
+    {"type": "ramp", "from": [-14, -5, 3], "size": [5, 10, 4], "color": "s"}
+    {"type": "ramp", "from": [9, -5, 3], "size": [5, 10, 4], "color": "s"}
+
+@Model/nc/power_capsule
+palette = nc
+unit = 0.1
+blocks:
+    {"from": [-10, -10, 0], "size": [20, 20, 3], "color": "d"}
+    {"from": [-8, -8, 3], "size": [16, 16, 2], "color": "s"}
+    {"from": [-6, -6, 5], "size": [12, 12, 2], "color": "m"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 7.2, "height": 11, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 5.4, "height": 11, "color": "i"}
+    {"type": "sphere", "center": [0, 0, 11], "radius": 3.8, "color": "y"}
+    {"type": "cylinder", "center": [0, 0, 17.5], "radius": 8.0, "height": 2.5, "color": "p"}
+    {"type": "cylinder", "center": [0, 0, 19.5], "radius": 5.0, "height": 1.8, "color": "w"}
+    {"type": "cylinder", "center": [-7, -7, 11], "radius": 1.2, "height": 12, "color": "d"}
+    {"type": "cylinder", "center": [7, -7, 11], "radius": 1.2, "height": 12, "color": "d"}
+    {"type": "cylinder", "center": [-7, 7, 11], "radius": 1.2, "height": 12, "color": "d"}
+    {"type": "cylinder", "center": [7, 7, 11], "radius": 1.2, "height": 12, "color": "d"}
+
+@Model/nc/power_capsule_open
+palette = nc
+unit = 0.1
+blocks:
+    {"from": [-10, -10, 0], "size": [20, 20, 3], "color": "d"}
+    {"from": [-8, -8, 3], "size": [16, 16, 2], "color": "s"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 6], "radius": 6.8, "height": 4, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 20], "radius": 8.0, "height": 2, "color": "p"}
+    {"type": "cylinder", "center": [-7, -7, 12], "radius": 1.2, "height": 14, "color": "d"}
+    {"type": "cylinder", "center": [7, -7, 12], "radius": 1.2, "height": 14, "color": "d"}
+
+@Model/nc/sliding_wall_panel
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-16, -2, 0], "size": [32, 3, 28], "color": "d"}
+    {"from": [-15, -1, 2], "size": [30, 3, 24], "color": "s"}
+    {"from": [-14, 0, 4], "size": [28, 2, 20], "color": "m"}
+    {"from": [-15, 1, 8], "size": [30, 1, 2], "color": "c"}
+    {"from": [-15, 1, 18], "size": [30, 1, 2], "color": "p"}
+    {"from": [-12, 1, 13], "size": [24, 1, 2], "color": "y"}
+
+@Model/nc/sliding_floor_wall
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-16, -13, -1], "size": [32, 26, 2], "color": "d"}
+    {"from": [-15, -12, 1], "size": [30, 24, 1], "color": "s"}
+    {"from": [-14, -10, 2], "size": [28, 20, 1], "color": "m"}
+    {"from": [-16, -13, 1], "size": [32, 2, 3], "color": "d"}
+    {"from": [-15, -12, 3], "size": [30, 1, 1], "color": "c"}
+    {"from": [-16, 11, 1], "size": [32, 2, 2], "color": "d"}
+    {"from": [-15, 11, 3], "size": [30, 1, 1], "color": "p"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 2.5], "radius": 5.5, "height": 0.8, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 2.6], "radius": 3.2, "height": 0.9, "color": "p"}
+    {"type": "ramp", "from": [-14, -1, 2.5], "size": [28, 2, 0.8], "color": "y"}
+    {"type": "cylinder", "center": [-12, 0, 2.6], "radius": 1.5, "height": 0.9, "color": "c"}
+    {"type": "cylinder", "center": [12, 0, 2.6], "radius": 1.5, "height": 0.9, "color": "c"}

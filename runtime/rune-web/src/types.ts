@@ -87,6 +87,11 @@ export interface HelperDefinition {
   body: string[];
 }
 
+export interface ActionMatchCase {
+  pattern: string;
+  steps: ActionStep[];
+}
+
 export interface ActionStep {
   Statement?: string;
   Conditional?: {
@@ -98,6 +103,10 @@ export interface ActionStep {
     index_name: string | null;
     collection: string;
     steps: ActionStep[];
+  };
+  Match?: {
+    expression: string;
+    cases: ActionMatchCase[];
   };
 }
 
@@ -174,6 +183,55 @@ export interface SoundDefinition {
   sequence?: [number, number][];
 }
 
+export interface ReverbEffectConfig {
+  decay?: number;
+  wet?: number;
+  pre_delay?: number;
+  reverse?: boolean;
+  filter?: number;
+  tracks?: string[];
+}
+
+export interface DelayEffectConfig {
+  time?: number;
+  feedback?: number;
+  wet?: number;
+  damping?: number;
+  filter?: number;
+  tracks?: string[];
+}
+
+export interface FilterEffectConfig {
+  type?: 'lowpass' | 'highpass' | 'bandpass' | 'notch';
+  cutoff?: number;
+  frequency?: number;
+  q?: number;
+  resonance?: number;
+}
+
+export interface CrushEffectConfig {
+  bits?: number;
+  drive?: number;
+  wet?: number;
+}
+
+export interface ChorusEffectConfig {
+  rate?: number;
+  depth?: number;
+  delay?: number;
+  wet?: number;
+}
+
+export interface MusicEffectsConfig {
+  reverb?: ReverbEffectConfig;
+  delay?: DelayEffectConfig;
+  filter?: FilterEffectConfig;
+  crush?: CrushEffectConfig;
+  drive?: CrushEffectConfig;
+  chorus?: ChorusEffectConfig;
+  tracks?: Record<string, { reverb?: number; delay?: number; chorus?: number; filter?: number }>;
+}
+
 /** Background music definition from `@Music`. */
 export interface MusicDefinition {
   music_type?: '8bit' | 'chiptune' | 'synth' | string;
@@ -189,6 +247,13 @@ export interface MusicDefinition {
   sections?: Record<string, { bars: number; [channel: string]: string | number }>;
   arrangement?: Array<string | { section: string; repeat: number }>;
   instruments?: Record<string, string>;
+  effects?: MusicEffectsConfig | null;
+  track_effects?: Record<string, { reverb?: number; delay?: number; chorus?: number; filter?: number }> | null;
+  reverb?: ReverbEffectConfig | null;
+  delay?: DelayEffectConfig | null;
+  filter?: FilterEffectConfig | null;
+  crush?: CrushEffectConfig | null;
+  chorus?: ChorusEffectConfig | null;
 }
 
 /** Configuration passed to boot(). */

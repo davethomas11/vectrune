@@ -3595,10 +3595,252 @@ var __RuneWeb = (() => {
     return count;
   }
 
+  // src/pixel3d/sidemap.ts
+  function getSideMap(name2) {
+    const maps = globalThis.__RuneSideMaps;
+    const map = maps?.[name2];
+    if (!map) throw new Error(`Unknown @SideMap/${name2}`);
+    return map;
+  }
+  function sideLevel(fgNameValue, bgNameValue, optionsValue) {
+    if (typeof fgNameValue !== "string" || !fgNameValue) {
+      throw new Error("side_level requires a foreground @SideMap name");
+    }
+    const fg = getSideMap(fgNameValue);
+    const bg = typeof bgNameValue === "string" && bgNameValue.length > 0 ? getSideMap(bgNameValue) : void 0;
+    const opts = optionsValue && typeof optionsValue === "object" && !Array.isArray(optionsValue) ? optionsValue : {};
+    const width = fg.width;
+    const height = fg.height;
+    const planeY = opts.plane_y ?? fg.planeY ?? 7;
+    const depthY = opts.depth_y ?? fg.depthY ?? 20;
+    const marginZ = opts.margin_z ?? 4;
+    const materials = opts.materials ?? fg.materials;
+    if (!Array.isArray(materials) || materials.length === 0) {
+      throw new Error(`@SideMap/${fgNameValue} needs materials = [...]`);
+    }
+    let spawn = { x: 4.5, y: planeY, z: 3, angle: 0, pitch: 0, vz: 0 };
+    const world = voxelWorld(width, depthY, height + marginZ, materials, {
+      seed: opts.seed ?? 701,
+      biome: opts.biome ?? "meadow",
+      spawn,
+      renderDistance: opts.render_distance ?? 128
+    });
+    const sceneryRaw = [];
+    const entities = [];
+    const barriers = [];
+    const hazards = [];
+    const ladders = [];
+    const bossDoors = [];
+    const checkpoints = [];
+    const pickups = [];
+    let boss = null;
+    for (let row = 0; row < height; row++) {
+      const z = height - 1 - row;
+      const line = fg.rows[row];
+      let runVoxel = 0;
+      let runY0 = 0;
+      let runYSpan = 0;
+      let runStart = 0;
+      const flushRun = (endX) => {
+        if (runVoxel > 0 && endX > runStart) {
+          voxelFill(world, [runStart, runY0, z], [endX - runStart, runYSpan, 1], runVoxel);
+        }
+        runVoxel = 0;
+      };
+      for (let x = 0; x < width; x++) {
+        const ch = line[x];
+        const entry = fg.legend[ch];
+        if (!entry) {
+          flushRun(x);
+          continue;
+        }
+        if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan) {
+          } else {
+            flushRun(x);
+            runVoxel = entry.voxel;
+            runY0 = y0;
+            runYSpan = ySpan;
+            runStart = x;
+          }
+        } else {
+          flushRun(x);
+        }
+        if (entry.spawn) {
+          spawn = { x: x + 0.5, y: planeY, z, angle: 0, pitch: 0, vz: 0 };
+          world.spawn = spawn;
+        }
+        if (entry.barrier) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          barriers.push({
+            x,
+            z,
+            y_start: y0,
+            y_span: ySpan,
+            kind: entry.barrier,
+            voxel: entry.voxel ?? 0,
+            open: false,
+            model: entry.model ?? "",
+            tag: entry.tag ?? entry.barrier
+          });
+        }
+        if (entry.hazard) {
+          hazards.push({
+            x,
+            z,
+            kind: entry.hazard,
+            frozen: false,
+            model: entry.model ?? ""
+          });
+        }
+        if (entry.ladder) {
+          ladders.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z
+          });
+          if (entry.model) {
+            sceneryRaw.push({
+              x: x + 0.5,
+              y: entry.y ?? planeY,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+        if (entry.boss_door) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          bossDoors.push({
+            x,
+            z,
+            y_start: y0,
+            y_span: ySpan,
+            voxel: entry.voxel ?? 4
+          });
+          if (entry.model) {
+            sceneryRaw.push({
+              x: x + 0.5,
+              y: entry.y ?? planeY,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+        if (entry.checkpoint) {
+          checkpoints.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            active: false,
+            model: entry.model ?? ""
+          });
+        }
+        if (entry.pickup) {
+          pickups.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0.35),
+            base: z + (entry.zOffset ?? 0.35),
+            kind: entry.pickup,
+            model: entry.model ?? "",
+            visible: true
+          });
+        }
+        if (entry.entity) {
+          const item = {
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            home_x: x + 0.5,
+            home_z: z + (entry.zOffset ?? 0),
+            kind: entry.entity,
+            model: entry.model ?? "",
+            hp: entry.hp ?? 3,
+            max_hp: entry.hp ?? 3,
+            dir: -1,
+            cd: 20,
+            alive: true,
+            visible: true
+          };
+          if (entry.role === "boss" || entry.entity === "boss") {
+            boss = item;
+          } else {
+            entities.push(item);
+          }
+        } else if (entry.model && !entry.barrier && !entry.hazard && !entry.ladder && !entry.boss_door && !entry.checkpoint && !entry.pickup) {
+          sceneryRaw.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            model: entry.model,
+            scale: entry.scale ?? 1,
+            angle: entry.angle ?? 0
+          });
+        }
+      }
+      flushRun(width);
+    }
+    if (bg) {
+      const xScale = width / Math.max(1, bg.width);
+      for (let row = 0; row < bg.height; row++) {
+        const z = bg.height - 1 - row;
+        const line = bg.rows[row];
+        for (let bx = 0; bx < bg.width; bx++) {
+          const ch = line[bx];
+          const entry = bg.legend[ch];
+          if (!entry) continue;
+          const wx = Math.floor(bx * xScale);
+          if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
+            const y0 = entry.depth ? entry.depth[0] : 0;
+            const ySpan = entry.depth ? entry.depth[1] : 2;
+            if (wx >= 0 && wx < width && z >= 0 && z < height + marginZ) {
+              voxelFill(world, [wx, y0, z], [Math.max(1, Math.min(width - wx, Math.round(xScale))), ySpan, 1], entry.voxel);
+            }
+          }
+          if (entry.model) {
+            sceneryRaw.push({
+              x: (bx + 0.5) * xScale,
+              y: entry.y ?? bg.planeY ?? 2.5,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+      }
+    }
+    return {
+      world,
+      width,
+      height,
+      plane_y: planeY,
+      spawn,
+      scenery: entityGroup(sceneryRaw),
+      entities,
+      barriers,
+      hazards,
+      ladders,
+      boss_doors: bossDoors,
+      checkpoints,
+      pickups,
+      boss
+    };
+  }
+
   // src/expression.ts
   var MAX_DEPTH = 64;
   var voxelFunctions = {
     voxel_world: (width, height, depth, materials, options) => voxelWorld(width, height, depth, materials, options),
+    side_level: (fg, bg, options) => sideLevel(fg, bg, options),
     nearby: (entities, position, radius) => nearby(entities, position, radius),
     entity_group: (entities) => entityGroup(entities),
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
@@ -3610,6 +3852,7 @@ var __RuneWeb = (() => {
   };
   var voxelArity = {
     voxel_world: [4, 5],
+    side_level: [1, 3],
     nearby: [3, 3],
     entity_group: [0, 1],
     voxel_generate: [1, 2],
@@ -6732,6 +6975,39 @@ var __RuneWeb = (() => {
           )
         )) {
           if (!executeSteps(conditional.steps || [], locals, true)) return false;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(step, "Match")) {
+        const matchStep = step.Match;
+        const targetVal = evaluateExpression(
+          matchStep.expression,
+          buildScope(locals, matchStep.expression)
+        );
+        for (const c of matchStep.cases) {
+          const pat = c.pattern.trim();
+          let matched = false;
+          if (pat === "else" || pat === "_" || pat === "default" || pat === "*") {
+            matched = true;
+          } else {
+            const parts = splitTopLevel(pat, ",");
+            for (const p of parts) {
+              const trimmedP = p.trim();
+              let caseVal;
+              try {
+                caseVal = evaluateExpression(trimmedP, buildScope(locals, trimmedP));
+              } catch {
+                caseVal = trimmedP;
+              }
+              if (caseVal === targetVal || String(caseVal) === String(targetVal) || trimmedP === targetVal) {
+                matched = true;
+                break;
+              }
+            }
+          }
+          if (matched) {
+            if (!executeSteps(c.steps || [], locals, true)) return false;
+            break;
+          }
         }
       }
       if (Object.prototype.hasOwnProperty.call(step, "ForLoop")) {

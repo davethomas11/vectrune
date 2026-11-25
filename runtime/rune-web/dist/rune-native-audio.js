@@ -103,6 +103,25 @@ var __RuneNativeAudio = (() => {
       this.Q = new Param(1);
     }
   };
+  var Delay = class extends Node {
+    constructor() {
+      super(...arguments);
+      this.delayTime = new Param(0.25);
+    }
+  };
+  var Convolver = class extends Node {
+    constructor() {
+      super(...arguments);
+      this.buffer = null;
+    }
+  };
+  var WaveShaper = class extends Node {
+    constructor() {
+      super(...arguments);
+      this.curve = null;
+      this.oversample = "none";
+    }
+  };
   var Source = class extends Node {
     constructor(noise = false) {
       super();
@@ -169,10 +188,19 @@ var __RuneNativeAudio = (() => {
     createBiquadFilter() {
       return new Filter();
     }
+    createDelay(_max) {
+      return new Delay();
+    }
+    createConvolver() {
+      return new Convolver();
+    }
+    createWaveShaper() {
+      return new WaveShaper();
+    }
     createBuffer(channels, length) {
-      if (channels !== 1 || length < 1 || length > this.sampleRate * 60) throw new Error("Invalid native synth noise buffer");
-      const data = new Float32Array(length);
-      return { getChannelData: () => data };
+      if (channels < 1 || channels > 2 || length < 1 || length > this.sampleRate * 60) throw new Error("Invalid native synth buffer");
+      const data = [new Float32Array(length), new Float32Array(length)];
+      return { getChannelData: (c = 0) => data[c] || data[0] };
     }
   };
   var nextTimer = 1;

@@ -525,8 +525,34 @@ It also works on legacy songs. Arrangements expand once at registration and
 share the existing hardware-clock scheduler, pause, resume, mute and looping.
 `loop = true` repeats the complete arrangement. Non-looping scores let the
 final note finish before stopping. Existing songs retain their syntax and
-instrument defaults. See [the complete score](../../examples/games/skybound_2/sound.rune),
-`runtime/rune-web/src/music_arrangement.ts`, and `tests/music_arrangement.rs`.
+instrument defaults.
+
+Songs can also declare sound effects directly in the score via `effects` (or shorthand top-level keys like `reverb = ...` and `delay = ...`) and `track_effects`:
+
+```rune
+@Music/cyber_nexus
+tempo = 144
+instruments = {"lead":"sawtooth","arp":"square","harmony":"strings","bass":"triangle","drums":"drums"}
+effects = {
+    "reverb": {"decay": 2.0, "wet": 0.25, "pre_delay": 0.01, "filter": 3500},
+    "delay": {"time": 0.25, "feedback": 0.35, "wet": 0.22, "damping": 2800},
+    "filter": {"type": "lowpass", "cutoff": 5500, "q": 1.2},
+    "crush": {"bits": 8, "drive": 0.2},
+    "chorus": {"rate": 1.2, "depth": 0.0025, "wet": 0.28}
+}
+track_effects = {
+    "lead": {"reverb": 0.35, "delay": 0.3},
+    "arp": {"delay": 0.45, "reverb": 0.25},
+    "bass": {"reverb": 0, "delay": 0}
+}
+```
+
+- **Reverb**: Convolution-based algorithmic stereo impulse response. Controls decay length (`decay`, seconds), wet mix (`wet`, 0.0-1.0), pre-delay (`pre_delay`, seconds), optional `reverse` swell envelope, and high-frequency damping (`filter`, Hz).
+- **Delay**: Feedback echo network with lowpass damping. Controls delay time (`time`, seconds or beat divisions), feedback gain (`feedback`, 0.0-0.92), wet mix (`wet`, 0.0-1.0), and warmth damping (`damping` or `filter`, Hz).
+- **Master Filter**: Bus-level filter. Supports `lowpass`, `highpass`, `bandpass`, or `notch` with frequency (`cutoff`, Hz) and resonance (`q`).
+- **Bitcrush / Lo-Fi Drive**: Wave-shaped bit depth reduction (`bits`, e.g. 4, 8, 12, 16) and soft overdrive saturation (`drive`, 0.0-1.0) for authentic retro DAC crunch.
+- **Chorus**: Stereo delay modulation with LFO rate (`rate`, Hz), depth (`depth`, seconds), and wet mix (`wet`, 0.0-1.0).
+- **Per-Channel Sends (`track_effects`)**: Route individual tracks into reverb, delay, or chorus. By default, melodic channels send full signal, while low-end channels (`bass` and kick drum) bypass delay to keep mixes punchy and uncluttered. See `runtime/rune-web/src/audio.ts`.
 
 ## Camera movement performance (v0.3.5)
 

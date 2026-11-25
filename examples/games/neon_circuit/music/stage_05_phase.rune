@@ -1,0 +1,53 @@
+# Stage 05 — Phase Phantom (Holo-Net Spire — Ethereal G Minor, 32-Bar Arrangement)
+@Music/nc_stage_05
+type = synth
+tempo = 138
+time_signature = 4/4
+loop = true
+volume = 0.068
+instruments = {"lead":"bell","arp":"pluck","harmony":"strings","bass":"triangle","drums":"drums"}
+effects = {
+    "reverb": {"decay": 2.6, "wet": 0.28, "filter": 3800},
+    "delay": {"time": 0.333, "feedback": 0.38, "wet": 0.22},
+    "chorus": {"rate": 1.3, "depth": 0.003, "wet": 0.30}
+}
+track_effects = {
+    "lead": {"reverb": 0.35, "delay": 0.25},
+    "arp": {"reverb": 0.4, "delay": 0.35, "chorus": 0.3},
+    "bass": {"reverb": 0.05, "delay": 0}
+}
+sections = {
+    "intro": {
+        "bars": 4,
+        "lead": "G5:4 D6:4 Bb5:4 G5:4 | F5:4 C6:4 A5:4 F5:4 | Eb5:4 Bb5:4 G5:4 Eb5:4 | D5:1",
+        "arp": "G4:8 Bb4:8 D5:8 G5:8 D5:8 Bb4:8 D5:8 G5:8 | F4:8 A4:8 C5:8 F5:8 C5:8 A4:8 C5:8 F5:8 | Eb4:8 G4:8 Bb4:8 Eb5:8 Bb4:8 G4:8 Bb4:8 Eb5:8 | D4:8 F#4:8 A4:8 D5:8 A4:8 F#4:8 A4:8 D5:8",
+        "harmony": "[G3,Bb3,D4]:1 | [F3,A3,C4]:1 | [Eb3,G3,Bb3]:1 | [D3,F#3,A3]:1",
+        "bass": "G2:2 D3:2 | F2:2 C3:2 | Eb2:2 Bb2:2 | D2:2 A1:2",
+        "drums": "crash:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 kick:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 tom:4 | kick:8 tom:8 snare:4 crash:4 hihat:4"
+    },
+    "verse": {
+        "bars": 8,
+        "lead": "G5:8 Bb5:8 D6:8 Bb5:8 C6:4 A5:4 | Bb5:8 A5:8 G5:8 F5:8 Eb5:4 D5:4 | G5:8 A5:8 Bb5:8 C6:8 D6:4 F6:4 | Eb6:4 D6:4 C6:2 | D6:8 C6:8 Bb5:8 A5:8 Bb5:4 G5:4 | A5:8 Bb5:8 C6:8 A5:8 G5:4 D5:4 | Eb5:8 F5:8 G5:8 A5:8 Bb5:8 A5:8 G5:8 F#5:8 | G5:1",
+        "arp": "G4:8 D5:8 Bb4:8 D5:8 F4:8 C5:8 A4:8 C5:8 | Eb4:8 Bb4:8 G4:8 Bb4:8 D4:8 A4:8 F#4:8 A4:8 | G4:8 D5:8 Bb4:8 D5:8 Bb4:8 F5:8 D5:8 F5:8 | C5:8 G5:8 Eb5:8 G5:8 C5:8 G5:8 Eb5:8 G5:8 | G4:8 D5:8 Bb4:8 D5:8 G4:8 D5:8 Bb4:8 D5:8 | F4:8 C5:8 A4:8 C5:8 G4:8 D5:8 B4:8 D5:8 | Eb4:8 Bb4:8 G4:8 Bb4:8 D4:8 A4:8 F#4:8 A4:8 | G4:8 D5:8 Bb4:8 D5:8 G4:4 D5:4",
+        "harmony": "[G3,Bb3,D4]:2 [F3,A3,C4]:2 | [Eb3,G3,Bb3]:2 [D3,F#3,A3]:2 | [G3,Bb3,D4]:2 [Bb3,D4,F4]:2 | [C4,Eb4,G4]:1 | [G3,Bb3,D4]:1 | [F3,A3,C4]:2 [G3,Bb3,D4]:2 | [Eb3,G3,Bb3]:2 [D3,F#3,A3]:2 | [G3,Bb3,D4]:1",
+        "bass": "G2:8 G2:8 D3:8 G2:8 F2:4 C3:4 | Eb2:8 Eb2:8 Bb2:8 Eb2:8 D2:4 A1:4 | G2:8 G2:8 D3:8 G2:8 Bb2:4 F2:4 | C2:4 G2:4 C3:2 | G2:8 G2:8 D3:8 G2:8 Bb2:4 G2:4 | F2:8 F2:8 C3:8 F2:8 G2:4 D2:4 | Eb2:4 Bb2:4 D2:4 A1:4 | G2:4 D2:4 G2:2",
+        "drums": "kick:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 kick:8 snare:4 hihat:4 | kick:4 hihat:8 hihat:8 snare:4 tom:4 | kick:4 snare:4 kick:8 hihat:8 snare:4 | crash:4 hihat:8 hihat:8 snare:4 hihat:4 | kick:4 hihat:8 kick:8 snare:4 hihat:4 | kick:4 tom:4 snare:4 tom:4 | kick:4 snare:4 crash:4 hihat:4"
+    },
+    "chorus": {
+        "bars": 8,
+        "lead": "D6:4 G6:4 F6:8 Eb6:8 D6:4 | C6:8 D6:8 Eb6:4 D6:4 C6:4 | Bb5:4 D6:4 C6:8 Bb5:8 A5:4 | Bb5:2 A5:4 D5:4 | D6:4 G6:4 F6:8 Eb6:8 D6:4 | Eb6:4 F6:4 G6:2 | F6:8 Eb6:8 D6:8 C6:8 D6:4 F#5:4 | G5:1",
+        "arp": "G5:8 D5:8 Bb4:8 G5:8 F5:8 C5:8 A4:8 F5:8 | C5:8 G4:8 Eb4:8 C5:8 D5:8 A4:8 F#4:8 D5:8 | Bb4:8 F4:8 D4:8 Bb4:8 F4:8 A4:8 C5:8 F5:8 | G4:8 Bb4:8 D5:8 G5:8 D4:8 F#4:8 A4:8 D5:8 | G5:8 D5:8 Bb4:8 G5:8 F5:8 C5:8 A4:8 F5:8 | Eb5:8 Bb4:8 G4:8 Eb5:8 C5:8 G4:8 Eb4:8 C5:8 | D5:8 A4:8 F4:8 D5:8 D5:8 A4:8 F#4:8 D5:8 | G5:8 D5:8 Bb4:8 G5:8 G4:4 D5:4",
+        "harmony": "[G3,Bb3,D4]:2 [F3,A3,C4]:2 | [C4,Eb4,G4]:2 [D3,F#3,A3]:2 | [Bb3,D4,F4]:2 [F3,A3,C4]:2 | [G3,Bb3,D4]:2 [D3,F#3,A3]:2 | [G3,Bb3,D4]:2 [F3,A3,C4]:2 | [Eb3,G3,Bb3]:2 [C4,Eb4,G4]:2 | [D3,F3,A3]:2 [D3,F#3,A3]:2 | [G3,Bb3,D4]:1",
+        "bass": "G2:8 G3:8 G2:8 G3:8 F2:8 F3:8 F2:8 F3:8 | C2:8 C3:8 C2:8 C3:8 D2:8 D3:8 D2:8 D3:8 | Bb1:8 Bb2:8 Bb1:8 Bb2:8 F2:8 F3:8 F2:8 F3:8 | G2:8 G3:8 G2:8 G3:8 D2:4 A1:4 | G2:8 G3:8 G2:8 G3:8 F2:8 F3:8 F2:8 F3:8 | Eb2:8 Eb3:8 Eb2:8 Eb3:8 C2:8 C3:8 C2:8 C3:8 | D2:8 D3:8 D2:8 D3:8 D2:8 D3:8 D2:8 D3:8 | G2:4 D2:4 G2:2",
+        "drums": "crash:4 hihat:8 kick:8 snare:4 hihat:4 | kick:4 hihat:8 kick:8 snare:4 hihat:4 | kick:4 hihat:8 kick:8 snare:4 tom:4 | kick:4 snare:4 tom:8 tom:8 crash:4 | kick:4 hihat:8 kick:8 snare:4 hihat:4 | kick:4 hihat:8 kick:8 snare:4 hihat:4 | kick:4 tom:4 snare:4 tom:4 | kick:8 kick:8 snare:4 crash:4 hihat:4"
+    },
+    "bridge": {
+        "bars": 4,
+        "lead": "Eb6:2 D6:4 C6:4 | D6:2 Bb5:4 G5:4 | C6:4 D6:4 Eb6:4 F6:4 | D6:1",
+        "arp": "Eb4:8 G4:8 Bb4:8 Eb5:8 Bb4:8 G4:8 Bb4:8 Eb5:8 | Bb3:8 D4:8 F4:8 Bb4:8 G4:8 Bb4:8 D5:8 G5:8 | C4:8 Eb4:8 G4:8 C5:8 F4:8 A4:8 C5:8 F5:8 | D4:8 F#4:8 A4:8 D5:8 A4:8 F#4:8 D4:4",
+        "harmony": "[Eb3,G3,Bb3]:1 | [Bb3,D4,F4]:2 [G3,Bb3,D4]:2 | [C4,Eb4,G4]:2 [F3,A3,C4]:2 | [D3,F#3,A3]:1",
+        "bass": "Eb2:4 Bb2:4 Eb2:4 Bb2:4 | Bb1:4 F2:4 G2:4 D3:4 | C2:4 G2:4 F2:4 C3:4 | D2:4 A1:4 D2:2",
+        "drums": "kick:4 hihat:4 snare:4 hihat:4 | kick:4 hihat:4 snare:4 hihat:4 | kick:4 tom:4 snare:4 tom:4 | kick:8 snare:8 tom:8 tom:8 crash:4 hihat:4"
+    }
+}
+arrangement = ["intro","verse","chorus","bridge","chorus"]

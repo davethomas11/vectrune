@@ -7,9 +7,9 @@ class Param {
   linearRampToValueAtTime(_value: number) {}
 }
 class Node {
-  gain = new Param(); frequency = new Param(); Q = new Param();
+  gain = new Param(); frequency = new Param(); Q = new Param(); delayTime = new Param();
   connect = vi.fn(); disconnect = vi.fn(); start = vi.fn(); stop = vi.fn();
-  type = 'square'; buffer: unknown;
+  type = 'square'; buffer: unknown; curve: unknown; oversample = 'none';
 }
 class Context {
   static instances: Context[] = [];
@@ -21,6 +21,9 @@ class Context {
   createOscillator() { const node = new Node(); this.oscillators.push(node); return node; }
   createBufferSource() { return new Node(); }
   createBiquadFilter() { return new Node(); }
+  createDelay(_max?: number) { return new Node(); }
+  createConvolver() { return new Node(); }
+  createWaveShaper() { return new Node(); }
   createBuffer(_channels: number, length: number) { return { getChannelData: () => new Float32Array(length) }; }
 }
 
@@ -164,5 +167,69 @@ describe('shared audio lifecycle', () => {
     audio.playMusic('march'); Context.instances[0].currentTime=0.2; frames[0](0);
     expect(host.playback_playing).toBe(true);
     audio.stopMusic(); expect(host.playback_playing).toBe(false);
+  });
+
+  it('instantiates and routes chip effects: reverb, delay, filter, crush, and chorus', () => {
+    audio.configureAudioHost({ syncPage: false });
+    const createDelaySpy = vi.spyOn(Context.prototype, 'createDelay');
+    const createConvolverSpy = vi.spyOn(Context.prototype, 'createConvolver');
+    const createFilterSpy = vi.spyOn(Context.prototype, 'createBiquadFilter');
+    const createShaperSpy = vi.spyOn(Context.prototype, 'createWaveShaper');
+
+    audio.registerMusic({
+      fx_track: {
+        tempo: 120,
+        volume: 0.1,
+        lead: 'E4:4 G4:4',
+        bass: 'E2:4 B1:4',
+        effects: {
+          reverb: { decay: 2.0, wet: 0.3 },
+          delay: { time: 0.25, feedback: 0.35, wet: 0.25, damping: 3000 },
+          filter: { type: 'lowpass', cutoff: 5000, q: 1.5 },
+          crush: { bits: 8, drive: 0.2 },
+          chorus: { rate: 1.2, wet: 0.3 },
+        },
+      },
+    });
+
+    audio.playMusic('fx_track');
+    expect(createDelaySpy).toHaveBeenCalled();
+    expect(createConvolverSpy).toHaveBeenCalled();
+    expect(createFilterSpy).toHaveBeenCalled();
+    expect(createShaperSpy).toHaveBeenCalled();
+
+    audio.stopMusic();
+    createDelaySpy.mockRestore();
+    createConvolverSpy.mockRestore();
+    createFilterSpy.mockRestore();
+    createShaperSpy.mockRestore();
+  });
+
+  it('honors top-level reverb and delay and per-track effects sends', () => {
+    audio.configureAudioHost({ syncPage: false });
+    const createDelaySpy = vi.spyOn(Context.prototype, 'createDelay');
+    const createConvolverSpy = vi.spyOn(Context.prototype, 'createConvolver');
+
+    audio.registerMusic({
+      shorthand_fx: {
+        tempo: 140,
+        lead: 'A4:4 C5:4',
+        bass: 'A2:4 E2:4',
+        reverb: { decay: 1.5, wet: 0.25 },
+        delay: { time: 0.3, feedback: 0.4, wet: 0.2 },
+        track_effects: {
+          lead: { reverb: 0.5, delay: 0.4 },
+          bass: { reverb: 0, delay: 0 },
+        },
+      },
+    });
+
+    audio.playMusic('shorthand_fx');
+    expect(createDelaySpy).toHaveBeenCalled();
+    expect(createConvolverSpy).toHaveBeenCalled();
+
+    audio.stopMusic();
+    createDelaySpy.mockRestore();
+    createConvolverSpy.mockRestore();
   });
 });

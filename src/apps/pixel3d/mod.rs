@@ -513,6 +513,70 @@ pub fn parse_map_simple(map_section: &crate::rune_ast::Section) -> Result<Json> 
     }))
 }
 
+pub fn parse_side_map(section: &crate::rune_ast::Section) -> Result<Json> {
+    let grid_rows = section
+        .series
+        .get("grid")
+        .context("SideMap needs grid:")?;
+    ensure!(!grid_rows.is_empty(), "SideMap grid cannot be empty");
+    let map_height = grid_rows.len();
+    let first_row = json_value(&grid_rows[0]);
+    let map_width = first_row
+        .as_str()
+        .context("SideMap grid rows must be strings")?
+        .len();
+    ensure!(map_width > 0 && map_width <= 4096 && map_height <= 256, "SideMap grid dimensions out of range");
+
+    let legend = section
+        .kv
+        .get("legend")
+        .map(json_value)
+        .context("SideMap needs legend = { ... }")?;
+    ensure!(legend.is_object(), "SideMap legend must be an object");
+
+    let mut rows = Vec::with_capacity(map_height);
+    for (idx, row) in grid_rows.iter().enumerate() {
+        let row_val = json_value(row);
+        let row_str = row_val
+            .as_str()
+            .context(format!("SideMap row {} must be a string", idx + 1))?;
+        ensure!(
+            row_str.len() == map_width,
+            "SideMap row {} length mismatch (expected {}, got {})",
+            idx + 1,
+            map_width,
+            row_str.len()
+        );
+        rows.push(Json::String(row_str.to_string()));
+    }
+
+    let mut out = json!({
+        "width": map_width,
+        "height": map_height,
+        "legend": legend,
+        "rows": rows,
+    });
+    if let Some(materials) = section.kv.get("materials") {
+        let mats = json_value(materials);
+        ensure!(
+            mats.as_array().is_some_and(|a| !a.is_empty() && a.iter().all(Json::is_string)),
+            "SideMap materials must be a non-empty array of texture names"
+        );
+        out["materials"] = mats;
+    }
+    if let Some(plane_y) = section.kv.get("plane_y") {
+        let v = json_value(plane_y).as_f64().context("SideMap plane_y must be numeric")?;
+        ensure!(v.is_finite() && v >= 0.0 && v <= 256.0, "SideMap plane_y out of range");
+        out["planeY"] = json!(v);
+    }
+    if let Some(depth_y) = section.kv.get("depth_y") {
+        let v = json_value(depth_y).as_f64().context("SideMap depth_y must be numeric")?;
+        ensure!(v.is_finite() && v.fract() == 0.0 && v >= 1.0 && v <= 256.0, "SideMap depth_y must be an integer 1..=256");
+        out["depthY"] = json!(v as i64);
+    }
+    Ok(out)
+}
+
 #[allow(dead_code)]
 pub struct Game3D {
     pub title: String,
@@ -575,6 +639,16 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         }
     }
 
+    let mut side_maps = Map::new();
+    for section in &doc.sections {
+        if section.path.first().map(String::as_str) == Some("SideMap") && section.path.len() >= 2 {
+            let map_id = section.path[1..].join("/");
+            let parsed = parse_side_map(section)
+                .with_context(|| format!("Invalid @SideMap/{map_id}"))?;
+            side_maps.insert(map_id, parsed);
+        }
+    }
+
     let scene_map = maps
         .get(map_name)
         .cloned()
@@ -589,6 +663,7 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         "models": assets_json["models"],
         "map": scene_map,
         "maps": maps,
+        "sideMaps": side_maps,
         "camera": text(scene, "camera").unwrap_or("player"),
         "things": scene.kv.get("things").map(json_value).unwrap_or(json!([])),
         "weapon": scene.kv.get("weapon").map(json_value).unwrap_or(Json::Null),
@@ -624,6 +699,17 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         let radius = value.as_f64().context("Scene render_radius must be a number")?;
         ensure!(radius.is_finite() && radius > 0.0 && radius <= 4096.0, "Scene render_radius must be in (0, 4096]");
         config["renderRadius"] = json!(radius);
+    }
+    if let Some(value) = scene.kv.get("outline") {
+        let value = json_value(value);
+        ensure!(value.is_boolean(), "Scene outline must be boolean");
+        config["outline"] = value;
+    }
+    if let Some(value) = scene.kv.get("outline_color") {
+        let value = json_value(value);
+        let hex = value.as_str().context("Scene outline_color must be #RRGGBB")?;
+        let rgb = color(hex)?.context("Scene outline_color must be opaque")?;
+        config["outlineColor"] = json!(rgb);
     }
     if let Some(value) = scene.kv.get("pause_ui") {
         let value = json_value(value);

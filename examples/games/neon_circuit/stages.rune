@@ -1,0 +1,351 @@
+# Stage catalog, selector metadata, hints, and @SideMap loader
+@Logic/neon_circuit
+
+action build_stage_catalog:
+    stages = [
+        {
+            "id": 0, "code": "01", "short": "01 VOLT", "name": "VOLT VIPER",
+            "sector": "NEON POWER GRID", "tier": 1, "color": 62975,
+            "fg": "lvl_01_fg", "bg": "lvl_01_bg", "sky": "sky_01", "music": "nc_stage_01",
+            "model": "nc/boss_volt", "unlocks": "volt", "unlock_label": "VOLT SURGE",
+            "skill_desc": "AIR DASH (SHIFT/K) + CHARGE VOLT RELAYS",
+            "requires": [],
+            "hint": "INTRO UNIT - UNLOCKS: VOLT SURGE (AIR DASH + RELAY CHARGE)",
+            "weakness": "saw"
+        },
+        {
+            "id": 1, "code": "02", "short": "02 CRYO", "name": "CRYO SHADE",
+            "sector": "CRYO SERVER VAULT", "tier": 1, "color": 9370367,
+            "fg": "lvl_02_fg", "bg": "lvl_02_bg", "sky": "sky_02", "music": "nc_stage_02",
+            "model": "nc/boss_cryo", "unlocks": "cryo", "unlock_label": "CRYO LANCE",
+            "skill_desc": "FREEZES SCORCHING THERMAL VENTS INTO ICE BRIDGES",
+            "requires": [],
+            "hint": "INTRO UNIT - UNLOCKS: CRYO LANCE (FREEZES THERMAL VENTS)",
+            "weakness": "nova"
+        },
+        {
+            "id": 2, "code": "03", "short": "03 MAG", "name": "MAG TITAN",
+            "sector": "MAG-LEV SCRAPYARD", "tier": 1, "color": 11544319,
+            "fg": "lvl_03_fg", "bg": "lvl_03_bg", "sky": "sky_03", "music": "nc_stage_03",
+            "model": "nc/boss_mag", "unlocks": "mag", "unlock_label": "MAG CLAW",
+            "skill_desc": "DOUBLE MAG-BOOST JUMP IN MIDAIR",
+            "requires": [],
+            "hint": "INTRO UNIT - UNLOCKS: MAG CLAW (DOUBLE MAG-BOOST JUMP)",
+            "weakness": "volt"
+        },
+        {
+            "id": 3, "code": "04", "short": "04 PYRO", "name": "PYRO NOVA",
+            "sector": "PLASMA FOUNDRY", "tier": 1, "color": 16739072,
+            "fg": "lvl_04_fg", "bg": "lvl_04_bg", "sky": "sky_04", "music": "nc_stage_04",
+            "model": "nc/boss_pyro", "unlocks": "nova", "unlock_label": "NOVA BREAKER",
+            "skill_desc": "SHATTERS REINFORCED BLAST WALLS",
+            "requires": [],
+            "hint": "INTRO UNIT - UNLOCKS: NOVA BREAKER (SHATTERS BLAST WALLS)",
+            "weakness": "cryo"
+        },
+        {
+            "id": 4, "code": "05", "short": "05 PHASE", "name": "PHASE PHANTOM",
+            "sector": "HOLO-NET SPIRE", "tier": 1, "color": 16719515,
+            "fg": "lvl_05_fg", "bg": "lvl_05_bg", "sky": "sky_05", "music": "nc_stage_05",
+            "model": "nc/boss_phase", "unlocks": "phase", "unlock_label": "PHASE BEAM",
+            "skill_desc": "PIERCES WALLS & DEACTIVATES HOLO-SHIELDS",
+            "requires": [],
+            "hint": "INTRO UNIT - UNLOCKS: PHASE BEAM (PIERCES HOLO-SHIELDS)",
+            "weakness": "mag"
+        },
+        {
+            "id": 5, "code": "06", "short": "06 SAW", "name": "PULSE SAW",
+            "sector": "BIO-SYNTH CONDUIT", "tier": 1, "color": 3800852,
+            "fg": "lvl_06_fg", "bg": "lvl_06_bg", "sky": "sky_06", "music": "nc_stage_06",
+            "model": "nc/boss_saw", "unlocks": "saw", "unlock_label": "HYPER SAW",
+            "skill_desc": "SLICES ARMORED CABLE BARRIERS",
+            "requires": [],
+            "hint": "INTRO UNIT - UNLOCKS: HYPER SAW (CUTS CABLE BARRIERS)",
+            "weakness": "phase"
+        },
+        {
+            "id": 6, "code": "07", "short": "07 STORM", "name": "STORM VALKYRIE",
+            "sector": "SKYLINE WIND TURBINE", "tier": 2, "color": 16770560,
+            "fg": "lvl_07_fg", "bg": "lvl_07_bg", "sky": "sky_07", "music": "nc_stage_07",
+            "model": "nc/boss_storm", "unlocks": "", "unlock_label": "SKY CORE",
+            "skill_desc": "MASTER SKY CORE RECOVERED",
+            "requires": ["volt", "mag"],
+            "hint": "NEEDS: VOLT SURGE + MAG CLAW (RELAY + AIR DASH + DOUBLE JUMP)",
+            "weakness": "cryo"
+        },
+        {
+            "id": 7, "code": "08", "short": "08 GLACR", "name": "GLACIER REACTOR",
+            "sector": "THERMAL-CRYO CORE", "tier": 2, "color": 9370367,
+            "fg": "lvl_08_fg", "bg": "lvl_08_bg", "sky": "sky_08", "music": "nc_stage_08",
+            "model": "nc/boss_glacier", "unlocks": "", "unlock_label": "CRYO CORE",
+            "skill_desc": "MASTER CRYO CORE RECOVERED",
+            "requires": ["cryo", "nova"],
+            "hint": "NEEDS: CRYO LANCE + NOVA BREAKER (FREEZE VENTS + BLAST WALL)",
+            "weakness": "volt"
+        },
+        {
+            "id": 8, "code": "09", "short": "09 GHOST", "name": "GHOST PROTOCOL",
+            "sector": "BLACK-ICE MAINFRAME", "tier": 2, "color": 16719515,
+            "fg": "lvl_09_fg", "bg": "lvl_09_bg", "sky": "sky_09", "music": "nc_stage_09",
+            "model": "nc/boss_ghost", "unlocks": "", "unlock_label": "MAINFRAME CORE",
+            "skill_desc": "MASTER MAINFRAME CORE RECOVERED",
+            "requires": ["phase", "volt"],
+            "hint": "NEEDS: PHASE BEAM + VOLT SURGE (HOLO-SHIELD + DASH + RELAY)",
+            "weakness": "saw"
+        },
+        {
+            "id": 9, "code": "10", "short": "10 HYDRA", "name": "IRON HYDRA",
+            "sector": "MECHA ASSEMBLY TRENCH", "tier": 2, "color": 3800852,
+            "fg": "lvl_10_fg", "bg": "lvl_10_bg", "sky": "sky_10", "music": "nc_stage_10",
+            "model": "nc/boss_hydra", "unlocks": "", "unlock_label": "HYDRA CORE",
+            "skill_desc": "MASTER HYDRA CORE RECOVERED",
+            "requires": ["saw", "nova"],
+            "hint": "NEEDS: HYPER SAW + NOVA BREAKER (CABLE BARRIER + BLAST WALL)",
+            "weakness": "phase"
+        },
+        {
+            "id": 10, "code": "11", "short": "11 PRISM", "name": "PRISM ARCHON",
+            "sector": "ORBITAL LASER ARRAY", "tier": 2, "color": 62975,
+            "fg": "lvl_11_fg", "bg": "lvl_11_bg", "sky": "sky_11", "music": "nc_stage_11",
+            "model": "nc/boss_prism", "unlocks": "", "unlock_label": "PRISM CORE",
+            "skill_desc": "MASTER PRISM CORE RECOVERED",
+            "requires": ["mag", "phase", "cryo"],
+            "hint": "NEEDS: MAG CLAW + PHASE BEAM + CRYO LANCE",
+            "weakness": "nova"
+        },
+        {
+            "id": 11, "code": "12", "short": "12 OMEGA", "name": "OMEGA OVERLORD",
+            "sector": "NEON CITADEL NEXUS", "tier": 2, "color": 16717636,
+            "fg": "lvl_12_fg", "bg": "lvl_12_bg", "sky": "sky_12", "music": "nc_stage_12",
+            "model": "nc/boss_omega", "unlocks": "", "unlock_label": "CITADEL KEY",
+            "skill_desc": "CITADEL MASTER KEY RECOVERED",
+            "requires": ["volt", "cryo", "mag", "nova", "phase", "saw"],
+            "hint": "NEEDS: ALL 6 INTRO SKILLS (VOLT, CRYO, MAG, NOVA, PHASE, SAW)",
+            "weakness": "mag"
+        }
+    ]
+
+action build_title_scene:
+    world = null
+    scenery = []
+    title_scenery = [
+        {"x": 11.2, "y": 11.0, "z": 0.0, "model": "nc/bg_pylon", "angle": 0, "scale": 0.9, "visible": true},
+        {"x": 24.8, "y": 11.0, "z": 0.0, "model": "nc/bg_pylon", "angle": 180, "scale": 0.9, "visible": true},
+        {"x": 9.2, "y": 6.8, "z": 0.0, "model": "nc/bg_tower", "angle": 15, "scale": 1.05, "visible": true},
+        {"x": 26.8, "y": 6.8, "z": 0.0, "model": "nc/bg_tower", "angle": 165, "scale": 1.05, "visible": true},
+        {"x": 5.8, "y": 3.5, "z": 0.0, "model": "nc/bg_dome", "angle": 0, "scale": 1.15, "visible": true},
+        {"x": 30.2, "y": 3.5, "z": 0.0, "model": "nc/bg_arch", "angle": 0, "scale": 1.2, "visible": true},
+        {"x": 12.2, "y": 4.0, "z": 1.6, "model": "nc/bg_sign_cyan", "angle": 15, "scale": 0.85, "visible": true},
+        {"x": 23.8, "y": 4.0, "z": 1.6, "model": "nc/bg_sign_pink", "angle": 345, "scale": 0.85, "visible": true},
+        {"x": 7.5, "y": -2.5, "z": 0.0, "model": "nc/bg_tower", "angle": 0, "scale": 1.45, "visible": true},
+        {"x": 28.5, "y": -2.5, "z": 0.0, "model": "nc/bg_tower", "angle": 180, "scale": 1.45, "visible": true},
+        {"x": 13.8, "y": -6.0, "z": 0.0, "model": "nc/bg_dome", "angle": 0, "scale": 1.35, "visible": true},
+        {"x": 22.2, "y": -6.0, "z": 0.0, "model": "nc/bg_dome", "angle": 0, "scale": 1.35, "visible": true},
+        {"x": 11.2, "y": 2.0, "z": 4.8, "model": "nc/bg_orb", "angle": 0, "scale": 0.85, "visible": true},
+        {"x": 24.8, "y": 2.0, "z": 4.8, "model": "nc/bg_orb", "angle": 0, "scale": 0.85, "visible": true}
+    ]
+    level_map = "sky_title"
+    barriers = []
+    barriers_fx = []
+    hazards = []
+    hazards_fx = []
+    ladders = []
+    ladder_caps = []
+    boss_doors = []
+    boss_door_locked = false
+    boss_door_opened = false
+    boss_gate_x = -1
+    boss_shutter_fx = {"visible": false}
+    checkpoints = []
+    pickups = []
+    enemies = []
+    shots = []
+    enemy_shots = []
+    effects = []
+    boss_entity = {"visible": false, "alive": false, "hp": 0, "max_hp": 1, "dissolve": 0}
+    boss_satellites = []
+    select_pedestal = {"visible": false}
+    select_boss = {"visible": false}
+    weapon_model = {"visible": false}
+    respawn_beam = {"visible": false}
+    title_monument = {"x": 18.0, "y": 11.8, "z": 0.0, "model": "nc/title_monument", "angle": 0, "scale": 1.05, "visible": true}
+    avatar = {"x": 18.0, "y": 11.8, "z": 1.18, "model": "nc/hero_victory", "angle": 75, "scale": 1.18, "visible": true}
+    victory_item = {"x": 18.0, "y": 11.8, "z": 3.15, "model": "nc/victory_orb", "angle": 0, "scale": 0.65, "visible": true}
+    camera = {"x": 18.0, "y": 19.6, "z": 2.0, "angle": 270, "pitch": 2}
+
+action build_select_arena:
+    built = side_level("lvl_01_fg", "lvl_01_bg")
+    world = built.world
+    world = voxel_fill(world, [2, 4, 2], [36, 6, 15], 0)
+    world = voxel_fill(world, [2, 5, 1], [36, 4, 1], 1)
+    scenery = built.scenery
+    title_scenery = []
+    title_monument = {"visible": false}
+    level_map = "sky_title"
+    barriers = []
+    barriers_fx = []
+    hazards = []
+    hazards_fx = []
+    ladders = []
+    ladder_caps = []
+    boss_doors = []
+    boss_door_locked = false
+    boss_door_opened = false
+    boss_gate_x = -1
+    boss_shutter_fx = {"visible": false}
+    checkpoints = []
+    pickups = []
+    enemies = []
+    shots = []
+    enemy_shots = []
+    effects = []
+    boss_entity = {"visible": false, "alive": false, "hp": 0, "max_hp": 1, "dissolve": 0}
+    boss_satellites = []
+    victory_item = {"visible": false, "x": 14, "y": 7, "z": 4, "model": "nc/victory_orb", "angle": 0, "scale": 1}
+    avatar = {"x": 12.5, "y": 7, "z": 2.0, "model": "nc/hero_idle", "angle": 0, "visible": true}
+    weapon_model = {"visible": false}
+    respawn_beam = {"visible": false}
+    select_pedestal = {"x": 21.5, "y": 7, "z": 2.0, "model": "nc/pedestal", "scale": 1.15, "visible": true}
+    call refresh_select_preview
+    camera = {"x": 17.5, "y": 17.5, "z": 3.4, "angle": 270, "pitch": -3}
+
+action refresh_select_preview:
+    st = stages[selected_stage]
+    select_boss = {
+        "x": 21.5,
+        "y": 7,
+        "z": 2.9,
+        "model": st.model,
+        "angle": select_spin,
+        "scale": 1.2,
+        "visible": true
+    }
+    selected_title = st.code + " " + st.name
+    selected_sector = st.sector
+    selected_hint = st.hint
+    beaten = campaign.defeated[st.code] == true
+    selected_status_label = beaten ? "DEFEATED" : (st.tier == 1 ? "TIER 1 INTRO" : "TIER 2 MASTER")
+    call refresh_ui
+
+action load_stage(stage_idx):
+    current_stage = stage_idx
+    selected_stage = stage_idx
+    st = stages[stage_idx]
+    built = side_level(st.fg, st.bg)
+    world = built.world
+    level_width = built.width
+    level_height = built.height
+    scenery = built.scenery
+    barriers = built.barriers
+    barriers_fx = []
+    hazards = built.hazards
+    hazards_fx = []
+    ladders = built.ladders
+    ladder_caps = []
+    for lad in ladders:
+        has_above = false
+        for other in ladders:
+            if abs(other.x - lad.x) < 0.2 && abs(other.z - (lad.z + 1)) < 0.2:
+                has_above = true
+        if !has_above:
+            ladder_caps.push({"x": lad.x, "z": lad.z + 1.0, "rung_z": lad.z})
+    boss_doors = built.boss_doors
+    boss_door_locked = false
+    boss_door_opened = false
+    boss_gate_x = built.boss_doors.length > 0 ? built.boss_doors[0].x : -1
+    boss_shutter_fx = {
+        "x": boss_gate_x >= 0 ? boss_gate_x + 0.5 : 0,
+        "y": 7.0,
+        "z": 2.0,
+        "model": "nc/boss_shutter",
+        "angle": 0,
+        "scale": 1.0,
+        "visible": boss_gate_x >= 0
+    }
+    on_ladder = false
+    climb_phase = 0
+    death_ticks = 0
+    pan_ticks = 0
+    respawn_ticks = 0
+    respawn_beam = {"x": built.spawn.x, "y": 7, "z": built.spawn.z, "model": "nc/teleport_beam", "angle": 0, "scale": 1, "visible": false}
+    power_capsule = {"x": built.spawn.x, "y": 7, "z": built.spawn.z - 0.2, "model": "nc/power_capsule", "angle": 0, "scale": 1.15, "visible": false}
+    escape_floor = []
+    escape_flip_ticks = 0
+    escape_ticks = 0
+    checkpoints = built.checkpoints
+    pickups = built.pickups
+    enemies = built.entities
+    for e in enemies:
+        e.base_model = e.model
+        e.charge_ticks = 0
+        e.fire_ticks = 0
+        e.hurt_ticks = 0
+        e.scale = 1.0
+        e.angle = 0
+        e.dissolve = 0
+    shots = []
+    enemy_shots = []
+    effects = []
+    player = {"x": built.spawn.x, "y": 7, "z": built.spawn.z, "angle": 0, "pitch": 0, "vz": 0}
+    checkpoint = {"x": built.spawn.x, "z": built.spawn.z}
+    facing = 1
+    velocity = 0
+    grounded = true
+    jumps = 0
+    jump_held = false
+    coyote_ticks = 0
+    jump_buffer = 0
+    cam_shake = 0
+    dash_ticks = 0
+    dash_ready = true
+    dash_held = false
+    prev_w_held = false
+    next_w_held = false
+    wheel_held = false
+    wheel_open = false
+    wheel_cooldown = 0
+    wheel_last_dir = 0
+    wheel_ticks = 0
+    cooldown = 0
+    invulnerable = 0
+    hurt_ticks = 0
+    health = max_health
+    weapon_energy = 28
+    boss_active = false
+    boss_defeated_now = false
+    boss_defeat_ticks = 0
+    victory_ticks = 0
+    boss_phase = 0
+    boss_clock = 0
+    boss_state = "idle"
+    boss_state_ticks = 0
+    boss_hurt_ticks = 0
+    boss_land_ticks = 0
+    boss_entity = {"visible": false, "alive": false, "hp": 0, "max_hp": 1, "dissolve": 0}
+    boss_satellites = []
+    if built.boss != null:
+        boss_entity = built.boss
+        boss_entity.vz = 0
+        boss_entity.angle = 212
+        boss_entity.scale = 1.0
+        boss_entity.dissolve = 0
+        boss_satellites = [
+            {"x": boss_entity.x - 1.1, "y": 7.1, "z": boss_entity.z + 1.1, "model": "nc/boss_pod", "angle": 0, "scale": 0.9, "dissolve": 0, "visible": true},
+            {"x": boss_entity.x + 1.1, "y": 6.9, "z": boss_entity.z + 1.1, "model": "nc/boss_pod", "angle": 180, "scale": 0.9, "dissolve": 0, "visible": true},
+            {"x": boss_entity.x, "y": 7.25, "z": boss_entity.z + 0.95, "model": "nc/boss_ring", "angle": 0, "scale": 0.85, "dissolve": 0, "visible": true}
+        ]
+    victory_item = {"visible": false, "x": player.x, "y": 7, "z": player.z + 2, "model": "nc/victory_orb", "angle": 0, "scale": 1}
+    title_scenery = []
+    title_monument = {"visible": false}
+    select_pedestal = {"visible": false}
+    select_boss = {"visible": false}
+    avatar = {"x": player.x, "y": 7, "z": player.z, "model": "nc/hero_idle", "angle": 0, "visible": true}
+    weapon_model = {"x": player.x + 0.20, "y": 7, "z": player.z + 0.7, "model": "nc/gun_buster", "angle": 0, "visible": true}
+    level_map = st.sky
+    status = "playing"
+    notice_text = st.code + " " + st.name + " // " + st.sector
+    notice_ticks = 110
+    camera = {"x": max(10, player.x + 4), "y": 19, "z": max(4, player.z + 2.5), "angle": 270, "pitch": 0}
+    call play_stage_music st.music
+    call sync_weapon_model
+    call refresh_ui

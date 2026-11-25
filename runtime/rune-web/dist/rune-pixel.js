@@ -1983,14 +1983,15 @@ var __RunePixelRuntime = (() => {
     listen(canvas, "keydown", (e) => {
       options.interact();
       if (Object.prototype.hasOwnProperty.call(controls.profile.keys, e.code) || Object.prototype.hasOwnProperty.call(controls.profile.commands, e.code)) e.preventDefault();
+      if (options.paused() && !e.repeat && options.menuKey?.(e.code)) return;
       if (!options.playing() && !controls.profile.commands[e.code]) {
+        if (!e.repeat && options.menuKey?.(e.code)) return;
         const binding = controls.profile.keys[e.code];
         const input = typeof binding === "string" ? binding : binding?.input;
         if (input && options.advanceInputs?.includes(input)) {
           if (!e.repeat) options.advance();
           return;
         }
-        if (!e.repeat && options.menuKey?.(e.code)) return;
       }
       send({ device: "keyboard", code: e.code, value: true });
     });
@@ -3968,10 +3969,252 @@ var __RunePixelRuntime = (() => {
     return count;
   }
 
+  // src/pixel3d/sidemap.ts
+  function getSideMap(name2) {
+    const maps = globalThis.__RuneSideMaps;
+    const map = maps?.[name2];
+    if (!map) throw new Error(`Unknown @SideMap/${name2}`);
+    return map;
+  }
+  function sideLevel(fgNameValue, bgNameValue, optionsValue) {
+    if (typeof fgNameValue !== "string" || !fgNameValue) {
+      throw new Error("side_level requires a foreground @SideMap name");
+    }
+    const fg = getSideMap(fgNameValue);
+    const bg = typeof bgNameValue === "string" && bgNameValue.length > 0 ? getSideMap(bgNameValue) : void 0;
+    const opts = optionsValue && typeof optionsValue === "object" && !Array.isArray(optionsValue) ? optionsValue : {};
+    const width = fg.width;
+    const height = fg.height;
+    const planeY = opts.plane_y ?? fg.planeY ?? 7;
+    const depthY = opts.depth_y ?? fg.depthY ?? 20;
+    const marginZ = opts.margin_z ?? 4;
+    const materials = opts.materials ?? fg.materials;
+    if (!Array.isArray(materials) || materials.length === 0) {
+      throw new Error(`@SideMap/${fgNameValue} needs materials = [...]`);
+    }
+    let spawn = { x: 4.5, y: planeY, z: 3, angle: 0, pitch: 0, vz: 0 };
+    const world = voxelWorld(width, depthY, height + marginZ, materials, {
+      seed: opts.seed ?? 701,
+      biome: opts.biome ?? "meadow",
+      spawn,
+      renderDistance: opts.render_distance ?? 128
+    });
+    const sceneryRaw = [];
+    const entities = [];
+    const barriers = [];
+    const hazards = [];
+    const ladders = [];
+    const bossDoors = [];
+    const checkpoints = [];
+    const pickups = [];
+    let boss = null;
+    for (let row = 0; row < height; row++) {
+      const z = height - 1 - row;
+      const line = fg.rows[row];
+      let runVoxel = 0;
+      let runY0 = 0;
+      let runYSpan = 0;
+      let runStart = 0;
+      const flushRun = (endX) => {
+        if (runVoxel > 0 && endX > runStart) {
+          voxelFill(world, [runStart, runY0, z], [endX - runStart, runYSpan, 1], runVoxel);
+        }
+        runVoxel = 0;
+      };
+      for (let x = 0; x < width; x++) {
+        const ch = line[x];
+        const entry = fg.legend[ch];
+        if (!entry) {
+          flushRun(x);
+          continue;
+        }
+        if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan) {
+          } else {
+            flushRun(x);
+            runVoxel = entry.voxel;
+            runY0 = y0;
+            runYSpan = ySpan;
+            runStart = x;
+          }
+        } else {
+          flushRun(x);
+        }
+        if (entry.spawn) {
+          spawn = { x: x + 0.5, y: planeY, z, angle: 0, pitch: 0, vz: 0 };
+          world.spawn = spawn;
+        }
+        if (entry.barrier) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          barriers.push({
+            x,
+            z,
+            y_start: y0,
+            y_span: ySpan,
+            kind: entry.barrier,
+            voxel: entry.voxel ?? 0,
+            open: false,
+            model: entry.model ?? "",
+            tag: entry.tag ?? entry.barrier
+          });
+        }
+        if (entry.hazard) {
+          hazards.push({
+            x,
+            z,
+            kind: entry.hazard,
+            frozen: false,
+            model: entry.model ?? ""
+          });
+        }
+        if (entry.ladder) {
+          ladders.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z
+          });
+          if (entry.model) {
+            sceneryRaw.push({
+              x: x + 0.5,
+              y: entry.y ?? planeY,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+        if (entry.boss_door) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          bossDoors.push({
+            x,
+            z,
+            y_start: y0,
+            y_span: ySpan,
+            voxel: entry.voxel ?? 4
+          });
+          if (entry.model) {
+            sceneryRaw.push({
+              x: x + 0.5,
+              y: entry.y ?? planeY,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+        if (entry.checkpoint) {
+          checkpoints.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            active: false,
+            model: entry.model ?? ""
+          });
+        }
+        if (entry.pickup) {
+          pickups.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0.35),
+            base: z + (entry.zOffset ?? 0.35),
+            kind: entry.pickup,
+            model: entry.model ?? "",
+            visible: true
+          });
+        }
+        if (entry.entity) {
+          const item = {
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            home_x: x + 0.5,
+            home_z: z + (entry.zOffset ?? 0),
+            kind: entry.entity,
+            model: entry.model ?? "",
+            hp: entry.hp ?? 3,
+            max_hp: entry.hp ?? 3,
+            dir: -1,
+            cd: 20,
+            alive: true,
+            visible: true
+          };
+          if (entry.role === "boss" || entry.entity === "boss") {
+            boss = item;
+          } else {
+            entities.push(item);
+          }
+        } else if (entry.model && !entry.barrier && !entry.hazard && !entry.ladder && !entry.boss_door && !entry.checkpoint && !entry.pickup) {
+          sceneryRaw.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            model: entry.model,
+            scale: entry.scale ?? 1,
+            angle: entry.angle ?? 0
+          });
+        }
+      }
+      flushRun(width);
+    }
+    if (bg) {
+      const xScale = width / Math.max(1, bg.width);
+      for (let row = 0; row < bg.height; row++) {
+        const z = bg.height - 1 - row;
+        const line = bg.rows[row];
+        for (let bx = 0; bx < bg.width; bx++) {
+          const ch = line[bx];
+          const entry = bg.legend[ch];
+          if (!entry) continue;
+          const wx = Math.floor(bx * xScale);
+          if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
+            const y0 = entry.depth ? entry.depth[0] : 0;
+            const ySpan = entry.depth ? entry.depth[1] : 2;
+            if (wx >= 0 && wx < width && z >= 0 && z < height + marginZ) {
+              voxelFill(world, [wx, y0, z], [Math.max(1, Math.min(width - wx, Math.round(xScale))), ySpan, 1], entry.voxel);
+            }
+          }
+          if (entry.model) {
+            sceneryRaw.push({
+              x: (bx + 0.5) * xScale,
+              y: entry.y ?? bg.planeY ?? 2.5,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+      }
+    }
+    return {
+      world,
+      width,
+      height,
+      plane_y: planeY,
+      spawn,
+      scenery: entityGroup(sceneryRaw),
+      entities,
+      barriers,
+      hazards,
+      ladders,
+      boss_doors: bossDoors,
+      checkpoints,
+      pickups,
+      boss
+    };
+  }
+
   // src/expression.ts
   var MAX_DEPTH = 64;
   var voxelFunctions = {
     voxel_world: (width, height, depth, materials, options) => voxelWorld(width, height, depth, materials, options),
+    side_level: (fg, bg, options) => sideLevel(fg, bg, options),
     nearby: (entities, position, radius) => nearby(entities, position, radius),
     entity_group: (entities) => entityGroup(entities),
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
@@ -3983,6 +4226,7 @@ var __RunePixelRuntime = (() => {
   };
   var voxelArity = {
     voxel_world: [4, 5],
+    side_level: [1, 3],
     nearby: [3, 3],
     entity_group: [0, 1],
     voxel_generate: [1, 2],
@@ -6570,6 +6814,15 @@ var __RunePixelRuntime = (() => {
     audioMuted = muted;
     if (masterGain && audioCtx) masterGain.gain.setValueAtTime(muted ? 0 : 1, audioCtx.currentTime);
   }
+  var sfxMasterGain = null;
+  function sfxOutput(ctx2) {
+    if (!sfxMasterGain) {
+      sfxMasterGain = ctx2.createGain();
+      sfxMasterGain.gain.setValueAtTime(0.65, ctx2.currentTime);
+      sfxMasterGain.connect(audioOutput(ctx2));
+    }
+    return sfxMasterGain;
+  }
   function audioOutput(ctx2) {
     if (!masterGain) {
       masterGain = ctx2.createGain();
@@ -6655,7 +6908,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.25, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.13);
         break;
@@ -6670,7 +6923,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.1);
         break;
@@ -6692,7 +6945,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.09);
         break;
@@ -6707,7 +6960,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.29);
         break;
@@ -6723,7 +6976,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.3, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.62);
         break;
@@ -6740,7 +6993,7 @@ var __RunePixelRuntime = (() => {
           gain.gain.setValueAtTime(0.25, start);
           gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
           osc.connect(gain);
-          gain.connect(audioOutput(ctx2));
+          gain.connect(sfxOutput(ctx2));
           osc.start(start);
           osc.stop(start + 0.16);
         });
@@ -6755,7 +7008,7 @@ var __RunePixelRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.16);
         break;
@@ -6782,7 +7035,7 @@ var __RunePixelRuntime = (() => {
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     noise2.connect(filter);
     filter.connect(gain);
-    gain.connect(audioOutput(ctx2));
+    gain.connect(sfxOutput(ctx2));
     noise2.start(now);
     noise2.stop(now + duration + 0.01);
   }
@@ -6808,7 +7061,7 @@ var __RunePixelRuntime = (() => {
         gain2.gain.setValueAtTime(volume, start);
         gain2.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
         osc2.connect(gain2);
-        gain2.connect(audioOutput(ctx2));
+        gain2.connect(sfxOutput(ctx2));
         osc2.start(start);
         osc2.stop(start + noteDur + 0.01);
         offset += noteDur;
@@ -6837,13 +7090,14 @@ var __RunePixelRuntime = (() => {
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     osc.connect(gain);
-    gain.connect(audioOutput(ctx2));
+    gain.connect(sfxOutput(ctx2));
     osc.start(now);
     osc.stop(now + duration + 0.01);
   }
   var activeMusicTrackName = null;
   var musicSchedulerTimer = null;
   var musicMasterGain = null;
+  var musicEffectsBus = null;
   var musicVolume = 0.2;
   var musicTempoBpm = 128;
   var musicLoop = true;
@@ -6985,6 +7239,254 @@ var __RunePixelRuntime = (() => {
     const totalBars = appBars > 0 ? appBars : def?.bars || (maxTrackBeats ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     return { timeSignature, totalBars, totalBeats: Math.max(maxTrackBeats, totalBars * beatsPerBar) };
   }
+  function generateReverbImpulse(ctx2, decay = 1.5, preDelay = 0.01, reverse = false) {
+    const sampleRate = ctx2.sampleRate || 44100;
+    const length = Math.max(128, Math.floor(sampleRate * Math.max(0.05, Math.min(10, decay))));
+    const buffer = ctx2.createBuffer(2, length, sampleRate);
+    const left = buffer.getChannelData(0);
+    const right = buffer.getChannelData(1);
+    const preDelaySamples = Math.floor(sampleRate * Math.max(0, preDelay));
+    for (let i = 0; i < length; i++) {
+      if (i < preDelaySamples) {
+        left[i] = 0;
+        right[i] = 0;
+      } else {
+        const idx = reverse ? length - 1 - i : i - preDelaySamples;
+        const progress = idx / (length - preDelaySamples);
+        const env = Math.exp(-3.5 * progress);
+        left[i] = (Math.random() * 2 - 1) * env;
+        right[i] = (Math.random() * 2 - 1) * env;
+      }
+    }
+    return buffer;
+  }
+  function generateBitcrushCurve(bits = 8, drive = 0) {
+    const n = 4096;
+    const curve = new Float32Array(n);
+    const clampedBits = Math.max(2, Math.min(16, bits));
+    const steps = Math.pow(2, clampedBits);
+    const driveGain = 1 + Math.max(0, Math.min(5, drive * 4));
+    for (let i = 0; i < n; i++) {
+      let x = i * 2 / (n - 1) - 1;
+      if (drive > 0) {
+        x = Math.tanh(x * driveGain);
+      }
+      if (clampedBits < 16) {
+        x = Math.round(x * (steps / 2)) / (steps / 2);
+      }
+      curve[i] = Math.max(-1, Math.min(1, x));
+    }
+    return curve;
+  }
+  function buildMusicEffectsBus(ctx2, def, channels2, destination) {
+    const fx = def.effects || {};
+    const reverbConfig = fx.reverb || def.reverb;
+    const delayConfig = fx.delay || def.delay;
+    const filterConfig = fx.filter || def.filter;
+    const crushConfig = fx.crush || fx.drive || def.crush;
+    const chorusConfig = fx.chorus || def.chorus;
+    const trackFx = def.track_effects || fx.tracks || {};
+    if (!reverbConfig && !delayConfig && !filterConfig && !crushConfig && !chorusConfig && !Object.keys(trackFx).length) {
+      return null;
+    }
+    const nodesToClean = [];
+    const lfoNodes = [];
+    const dryBus = ctx2.createGain();
+    dryBus.gain.setValueAtTime(1, ctx2.currentTime);
+    nodesToClean.push(dryBus);
+    let insertHead = dryBus;
+    if (filterConfig && typeof ctx2.createBiquadFilter === "function") {
+      const fNode = ctx2.createBiquadFilter();
+      fNode.type = filterConfig.type || "lowpass";
+      const cutoff = filterConfig.cutoff || filterConfig.frequency || 4e3;
+      fNode.frequency.setValueAtTime(Math.max(20, Math.min(2e4, cutoff)), ctx2.currentTime);
+      const q = filterConfig.q || filterConfig.resonance || 1;
+      fNode.Q.setValueAtTime(Math.max(0.1, q), ctx2.currentTime);
+      insertHead.connect(fNode);
+      insertHead = fNode;
+      nodesToClean.push(fNode);
+    }
+    if (crushConfig && typeof ctx2.createWaveShaper === "function") {
+      const wsNode = ctx2.createWaveShaper();
+      const bits = crushConfig.bits !== void 0 ? crushConfig.bits : 8;
+      const drive = crushConfig.drive !== void 0 ? crushConfig.drive : 0;
+      wsNode.curve = generateBitcrushCurve(bits, drive);
+      wsNode.oversample = "none";
+      insertHead.connect(wsNode);
+      insertHead = wsNode;
+      nodesToClean.push(wsNode);
+    }
+    insertHead.connect(destination);
+    let delayInput = null;
+    if (delayConfig && typeof ctx2.createDelay === "function") {
+      delayInput = ctx2.createGain();
+      delayInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(delayInput);
+      const dNode = ctx2.createDelay(5);
+      const dTime = Math.max(0.01, Math.min(4, delayConfig.time ?? 0.25));
+      dNode.delayTime.setValueAtTime(dTime, ctx2.currentTime);
+      const dampFilter = ctx2.createBiquadFilter();
+      dampFilter.type = "lowpass";
+      const dampFreq = delayConfig.damping || delayConfig.filter || 2800;
+      dampFilter.frequency.setValueAtTime(dampFreq, ctx2.currentTime);
+      const fbGain = ctx2.createGain();
+      const fbVal = Math.max(0, Math.min(0.92, delayConfig.feedback ?? 0.35));
+      fbGain.gain.setValueAtTime(fbVal, ctx2.currentTime);
+      const delayWet = ctx2.createGain();
+      const dWetVal = Math.max(0, Math.min(1, delayConfig.wet ?? 0.25));
+      delayWet.gain.setValueAtTime(dWetVal, ctx2.currentTime);
+      delayInput.connect(dNode);
+      dNode.connect(dampFilter);
+      dampFilter.connect(fbGain);
+      fbGain.connect(dNode);
+      dampFilter.connect(delayWet);
+      delayWet.connect(destination);
+      nodesToClean.push(dNode, dampFilter, fbGain, delayWet);
+    }
+    let revInput = null;
+    if (reverbConfig && typeof ctx2.createConvolver === "function") {
+      revInput = ctx2.createGain();
+      revInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(revInput);
+      const conv = ctx2.createConvolver();
+      conv.buffer = generateReverbImpulse(
+        ctx2,
+        reverbConfig.decay ?? 1.5,
+        reverbConfig.pre_delay ?? 0.01,
+        reverbConfig.reverse ?? false
+      );
+      revInput.connect(conv);
+      nodesToClean.push(conv);
+      let revOut = conv;
+      if (reverbConfig.filter) {
+        const rf = ctx2.createBiquadFilter();
+        rf.type = "lowpass";
+        rf.frequency.setValueAtTime(reverbConfig.filter, ctx2.currentTime);
+        conv.connect(rf);
+        revOut = rf;
+        nodesToClean.push(rf);
+      }
+      const revWet = ctx2.createGain();
+      const wetVal = Math.max(0, Math.min(1, reverbConfig.wet ?? 0.25));
+      revWet.gain.setValueAtTime(wetVal, ctx2.currentTime);
+      revOut.connect(revWet);
+      revWet.connect(destination);
+      nodesToClean.push(revWet);
+    }
+    let chorusInput = null;
+    if (chorusConfig && typeof ctx2.createDelay === "function" && typeof ctx2.createOscillator === "function") {
+      chorusInput = ctx2.createGain();
+      chorusInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(chorusInput);
+      const cd = ctx2.createDelay(0.1);
+      const baseDelay = chorusConfig.delay ?? 0.018;
+      cd.delayTime.setValueAtTime(baseDelay, ctx2.currentTime);
+      const lfo = ctx2.createOscillator();
+      lfo.type = "sine";
+      const rate = chorusConfig.rate ?? 1.2;
+      lfo.frequency.setValueAtTime(rate, ctx2.currentTime);
+      const lfoGain = ctx2.createGain();
+      const depth = chorusConfig.depth ?? 25e-4;
+      lfoGain.gain.setValueAtTime(depth, ctx2.currentTime);
+      lfo.connect(lfoGain);
+      lfoGain.connect(cd.delayTime);
+      lfo.start(ctx2.currentTime);
+      lfoNodes.push(lfo);
+      const chorusWet = ctx2.createGain();
+      const cWetVal = Math.max(0, Math.min(1, chorusConfig.wet ?? 0.3));
+      chorusWet.gain.setValueAtTime(cWetVal, ctx2.currentTime);
+      chorusInput.connect(cd);
+      cd.connect(chorusWet);
+      chorusWet.connect(destination);
+      nodesToClean.push(cd, lfoGain, chorusWet);
+    }
+    const masterInput = ctx2.createGain();
+    masterInput.gain.setValueAtTime(1, ctx2.currentTime);
+    masterInput.connect(dryBus);
+    nodesToClean.push(masterInput);
+    const channelGains = {};
+    for (const ch of channels2) {
+      const cg = ctx2.createGain();
+      cg.gain.setValueAtTime(1, ctx2.currentTime);
+      cg.connect(dryBus);
+      nodesToClean.push(cg);
+      const chFx = trackFx[ch] || {};
+      if (delayInput) {
+        let dSend = 0;
+        if (chFx.delay !== void 0) {
+          dSend = chFx.delay;
+        } else if (delayConfig?.tracks) {
+          dSend = delayConfig.tracks.includes(ch) ? 1 : 0;
+        } else {
+          dSend = ch === "drums" || ch === "bass" ? 0 : 1;
+        }
+        if (dSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(dSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(delayInput);
+          nodesToClean.push(sg);
+        }
+      }
+      if (revInput) {
+        let rSend = 0;
+        if (chFx.reverb !== void 0) {
+          rSend = chFx.reverb;
+        } else if (reverbConfig?.tracks) {
+          rSend = reverbConfig.tracks.includes(ch) ? 1 : 0;
+        } else {
+          rSend = ch === "bass" ? 0.05 : ch === "drums" ? 0.25 : 1;
+        }
+        if (rSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(rSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(revInput);
+          nodesToClean.push(sg);
+        }
+      }
+      if (chorusInput) {
+        let cSend = 0;
+        if (chFx.chorus !== void 0) {
+          cSend = chFx.chorus;
+        } else {
+          cSend = ch === "drums" || ch === "bass" ? 0 : 0.8;
+        }
+        if (cSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(cSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(chorusInput);
+          nodesToClean.push(sg);
+        }
+      }
+      channelGains[ch] = cg;
+    }
+    const cleanup = () => {
+      for (const lfo of lfoNodes) {
+        try {
+          lfo.stop();
+        } catch {
+        }
+        try {
+          lfo.disconnect();
+        } catch {
+        }
+      }
+      for (const n of nodesToClean) {
+        try {
+          n.disconnect?.();
+        } catch {
+        }
+      }
+    };
+    return {
+      masterInput,
+      channelGains,
+      lfoNodes,
+      cleanup
+    };
+  }
   function startMusicAtBeat(ctx2, trackName, startBeat) {
     const timing = musicTiming(trackName);
     const beat = Math.max(0, Math.min(timing.totalBeats - 1e-6, Number.isFinite(startBeat) ? startBeat : 0));
@@ -7002,6 +7504,8 @@ var __RunePixelRuntime = (() => {
     musicMasterGain = ctx2.createGain();
     musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
     musicMasterGain.connect(audioOutput(ctx2));
+    const def = registeredMusic[trackName];
+    musicEffectsBus = def ? buildMusicEffectsBus(ctx2, def, Object.keys(tracksState), musicMasterGain) : null;
     musicStartTime = ctx2.currentTime + 0.05 - beat * 60 / musicTempoBpm;
     audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
     audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
@@ -7022,6 +7526,10 @@ var __RunePixelRuntime = (() => {
     disconnectMusicGain();
   }
   function disconnectMusicGain() {
+    if (musicEffectsBus) {
+      musicEffectsBus.cleanup();
+      musicEffectsBus = null;
+    }
     if (!musicMasterGain) return;
     musicMasterGain.disconnect();
     musicMasterGain = null;
@@ -7092,7 +7600,8 @@ var __RunePixelRuntime = (() => {
         const remainingBeats = event.beats - (track.elapsedInNote ?? 0);
         const eventDurationSec = remainingBeats * secondsPerBeat;
         if (!event.isRest && eventTime >= ctx2.currentTime - 0.05) {
-          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, musicMasterGain, track.instrument);
+          const targetDest = musicEffectsBus ? musicEffectsBus.channelGains[trackKey] || musicEffectsBus.masterInput : musicMasterGain;
+          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, targetDest, track.instrument);
         }
         track.nextBeat += remainingBeats;
         track.elapsedInNote = 0;
@@ -7171,13 +7680,25 @@ var __RunePixelRuntime = (() => {
       const gain = ctx2.createGain();
       const inst = instrumentOverride || (channel === "bass" ? "triangle" : "square");
       if (inst === "brass" || inst === "strings" || inst === "bell") {
-        const length = Math.max(0.06, durationSec * (inst === "bell" ? 1.25 : 0.94));
-        const attack = Math.min(length * 0.25, inst === "strings" ? 0.09 : 0.018);
-        osc.type = inst === "brass" ? "sawtooth" : inst === "strings" ? "triangle" : "sine";
+        const isBell = inst === "bell";
+        const isStrings = inst === "strings";
+        const length = Math.max(0.06, durationSec * (isBell ? 1.25 : 1));
+        const attack = Math.min(length * 0.25, isStrings ? 0.06 : 0.018);
+        osc.type = inst === "brass" ? "sawtooth" : isStrings ? "triangle" : "sine";
         osc.frequency.setValueAtTime(freq, time);
+        const peak = (isStrings ? 0.13 : 0.23) * chordGainMultiplier;
         gain.gain.setValueAtTime(1e-3, time);
-        gain.gain.linearRampToValueAtTime((inst === "strings" ? 0.11 : 0.23) * chordGainMultiplier, time + attack);
-        gain.gain.exponentialRampToValueAtTime(1e-3, time + length);
+        gain.gain.linearRampToValueAtTime(peak, time + attack);
+        if (isBell) {
+          gain.gain.exponentialRampToValueAtTime(1e-3, time + length);
+        } else {
+          const sustainLevel = peak * 0.82;
+          const releaseTime = Math.min(0.04, durationSec * 0.08);
+          const sustainEnd = time + Math.max(attack, durationSec - releaseTime);
+          gain.gain.linearRampToValueAtTime(sustainLevel, time + attack + 0.04);
+          gain.gain.setValueAtTime(sustainLevel, sustainEnd);
+          gain.gain.exponentialRampToValueAtTime(1e-3, time + durationSec);
+        }
         const filter = ctx2.createBiquadFilter();
         filter.type = "lowpass";
         filter.frequency.setValueAtTime(Math.min(9e3, freq * (inst === "brass" ? 5 : 3)), time);
@@ -7185,23 +7706,33 @@ var __RunePixelRuntime = (() => {
         filter.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + length + 0.015);
+        osc.stop(time + (isBell ? length : durationSec) + 0.015);
       } else if (inst === "sawtooth" || inst === "synth") {
         osc.type = "sawtooth";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.88, 0.4);
-        gain.gain.setValueAtTime(0.18 * chordGainMultiplier, time);
-        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        const releaseTime = Math.min(0.035, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+        const peak = 0.18 * chordGainMultiplier;
+        gain.gain.setValueAtTime(peak, time);
+        if (sustainEnd > time + 0.04) {
+          gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
+        }
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       } else if (inst === "triangle" || inst === "bass") {
         osc.type = "triangle";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.9, 0.45);
-        gain.gain.setValueAtTime(0.28 * chordGainMultiplier, time);
-        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        const noteSoundLen = durationSec * 0.9;
+        const peak = 0.28 * chordGainMultiplier;
+        gain.gain.setValueAtTime(peak, time);
+        const sustainEnd = time + durationSec * 0.82;
+        if (sustainEnd > time + 0.04) {
+          gain.gain.setValueAtTime(peak * 0.9, sustainEnd);
+        }
+        gain.gain.exponentialRampToValueAtTime(3e-3, time + noteSoundLen);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
@@ -7209,17 +7740,22 @@ var __RunePixelRuntime = (() => {
       } else if (inst === "sine") {
         osc.type = "sine";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.9, 0.5);
-        gain.gain.setValueAtTime(0.25 * chordGainMultiplier, time);
-        gain.gain.exponentialRampToValueAtTime(2e-3, time + noteSoundLen);
+        const releaseTime = Math.min(0.03, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+        const peak = 0.25 * chordGainMultiplier;
+        gain.gain.setValueAtTime(peak, time);
+        if (sustainEnd > time + 0.04) {
+          gain.gain.setValueAtTime(peak * 0.9, sustainEnd);
+        }
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       } else if (inst === "pluck") {
         osc.type = "triangle";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.6, 0.15);
+        const noteSoundLen = Math.min(durationSec * 0.85, 0.45);
         gain.gain.setValueAtTime(0.3 * chordGainMultiplier, time);
         gain.gain.exponentialRampToValueAtTime(1e-3, time + noteSoundLen);
         osc.connect(gain);
@@ -7229,13 +7765,18 @@ var __RunePixelRuntime = (() => {
       } else {
         osc.type = "square";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.85, 0.35);
-        gain.gain.setValueAtTime(0.2 * chordGainMultiplier, time);
-        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        const releaseTime = Math.min(0.03, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+        const peak = 0.2 * chordGainMultiplier;
+        gain.gain.setValueAtTime(peak, time);
+        if (sustainEnd > time + 0.04) {
+          gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
+        }
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       }
     }
   }
@@ -8146,6 +8687,39 @@ var __RunePixelRuntime = (() => {
           )
         )) {
           if (!executeSteps(conditional.steps || [], locals, true)) return false;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(step, "Match")) {
+        const matchStep = step.Match;
+        const targetVal = evaluateExpression(
+          matchStep.expression,
+          buildScope(locals, matchStep.expression)
+        );
+        for (const c of matchStep.cases) {
+          const pat = c.pattern.trim();
+          let matched = false;
+          if (pat === "else" || pat === "_" || pat === "default" || pat === "*") {
+            matched = true;
+          } else {
+            const parts = splitTopLevel(pat, ",");
+            for (const p of parts) {
+              const trimmedP = p.trim();
+              let caseVal;
+              try {
+                caseVal = evaluateExpression(trimmedP, buildScope(locals, trimmedP));
+              } catch {
+                caseVal = trimmedP;
+              }
+              if (caseVal === targetVal || String(caseVal) === String(targetVal) || trimmedP === targetVal) {
+                matched = true;
+                break;
+              }
+            }
+          }
+          if (matched) {
+            if (!executeSteps(c.steps || [], locals, true)) return false;
+            break;
+          }
         }
       }
       if (Object.prototype.hasOwnProperty.call(step, "ForLoop")) {

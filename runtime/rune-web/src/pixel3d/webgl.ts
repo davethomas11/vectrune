@@ -492,7 +492,7 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
         gl.uniform1i(loc.sceneDepth, 1);
         gl.uniform1i(loc.radius, outlineRadius);
         gl.uniform1i(loc.diagonal, Math.floor(outlineRadius / Math.SQRT2));
-        gl.uniform3f(loc.ink, palette[0], palette[1], palette[2]);
+        gl.uniform3f(loc.ink, palette[0] ?? 0.02, palette[1] ?? 0.01, palette[2] ?? 0.05);
         gl.bindVertexArray(skyVao);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
       }

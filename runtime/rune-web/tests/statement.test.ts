@@ -291,4 +291,66 @@ describe('executeStatement', () => {
     expect(app.state.lead_track).toBe('C4:8 G4:4');
     expect((app.state.active_steps as any[]).length).toBe(2);
   });
+
+  it('evaluates match steps and executes only the matching branch', () => {
+    const app = setupTestContext({ status: 'select', result: 'none', hits: 0 });
+    const steps = [
+      {
+        Match: {
+          expression: 'status',
+          cases: [
+            {
+              pattern: '"title"',
+              steps: [{ Statement: 'result = "title_hit"' }],
+            },
+            {
+              pattern: '"select"',
+              steps: [
+                { Statement: 'result = "select_hit"' },
+                { Statement: 'hits = hits + 1' },
+              ],
+            },
+            {
+              pattern: 'else',
+              steps: [{ Statement: 'result = "fallback"' }],
+            },
+          ],
+        },
+      },
+    ];
+    executeSteps(steps, {});
+    expect(app.state.result).toBe('select_hit');
+    expect(app.state.hits).toBe(1);
+
+    // Test fallback / else branch
+    app.state.status = 'unknown_state';
+    executeSteps(steps, {});
+    expect(app.state.result).toBe('fallback');
+    expect(app.state.hits).toBe(1); // not incremented
+
+    // Test multi-pattern matching
+    const multiSteps = [
+      {
+        Match: {
+          expression: 'mode',
+          cases: [
+            {
+              pattern: '"easy", "normal"',
+              steps: [{ Statement: 'lives = 3' }],
+            },
+            {
+              pattern: '"hard", "expert"',
+              steps: [{ Statement: 'lives = 1' }],
+            },
+          ],
+        },
+      },
+    ];
+    app.state.lives = 0;
+    executeSteps(multiSteps, { mode: 'normal' });
+    expect(app.state.lives).toBe(3);
+
+    executeSteps(multiSteps, { mode: 'hard' });
+    expect(app.state.lives).toBe(1);
+  });
 });

@@ -1,0 +1,115 @@
+#!RUNE
+import "assets.rune"
+import "sounds.rune"
+import "music/title.rune"
+import "music/select.rune"
+import "music/boss.rune"
+import "music/victory.rune"
+import "music/stage_01_volt.rune"
+import "music/stage_02_cryo.rune"
+import "music/stage_03_mag.rune"
+import "music/stage_04_pyro.rune"
+import "music/stage_05_phase.rune"
+import "music/stage_06_saw.rune"
+import "music/stage_07_storm.rune"
+import "music/stage_08_glacier.rune"
+import "music/stage_09_ghost.rune"
+import "music/stage_10_hydra.rune"
+import "music/stage_11_prism.rune"
+import "music/stage_12_omega.rune"
+import "levels/01_volt.rune"
+import "levels/02_cryo.rune"
+import "levels/03_mag.rune"
+import "levels/04_pyro.rune"
+import "levels/05_phase.rune"
+import "levels/06_saw.rune"
+import "levels/07_storm.rune"
+import "levels/08_glacier.rune"
+import "levels/09_ghost.rune"
+import "levels/10_hydra.rune"
+import "levels/11_prism.rune"
+import "levels/12_omega.rune"
+import "stages.rune"
+import "combat.rune"
+import "logic.rune"
+import "controls.rune"
+import "shell.rune"
+
+@App
+name = Neon Circuit
+type = pixel-3d
+runtime = hybrid
+scene = neon_circuit
+resolution = [576,360]
+tick_rate = 30
+port = 3032
+shell = neon_cabinet
+
+@Perspective/neon_cam
+fov = 70
+
+@Scene/neon_circuit
+logic = neon_circuit
+map = sky_title
+world = world
+camera = camera
+perspective = neon_cam
+outline = true
+outline_color = "#05020d"
+title_scene = neon_title
+things = ["scenery","title_scenery","title_monument","barriers_fx","hazards_fx","boss_shutter_fx","checkpoints","pickups","enemies","boss_entity","boss_satellites","shots","enemy_shots","avatar","weapon_model","respawn_beam","victory_item","effects","select_pedestal","select_boss","power_capsule","escape_floor"]
+persistence = {"key":"neon-circuit-save-v1","state":"campaign"}
+controls = neon_circuit
+click_to_start = false
+render_radius = 96
+ui = ui
+pause_ui = pause_ui
+restart_action = return_to_title
+click_to_start = true
+mouse_look = false
+presentation = {
+    "defeat": "CIRCUIT FLATLINED",
+    "instructions": [
+        "A D / ARROWS MOVE - SPACE JUMP - X / CLICK FIRE",
+        "Q / E CYCLE WEAPONS - SHIFT / K SURGE DASH",
+        "DEFEAT 6 INTRO ROBOTS TO UNLOCK GUNS & SKILLS",
+        "USE NEW SKILLS TO BREACH THE 6 MASTER SECTORS"
+    ],
+    "objective": "DISMANTLE ALL 12 ROGUE ROBOTS",
+    "subtitle": "NEON CYBERPUNK ACTION PLATFORMER",
+    "title": "NEON CIRCUIT",
+    "victory": "CITADEL LIBERATED"
+}
+
+@Scene/neon_title
+map = sky_title
+things = ["title_scenery","title_monument","avatar","victory_item"]
+camera = title_camera
+perspective = neon_cam
+heading = NEON CIRCUIT
+subtitle = CYBERNETIC ACTION PLATFORMER // 12 ROGUE ROBOTS
+prompt = ARROWS / W-S MOVE  |  ENTER / CLICK CONFIRM  |  ESC CANCEL
+
+@Camera/title_camera
+duration = 14
+loop = true
+points = [
+    {"x":18,"y":19.8,"height":2.0,"angle":270,"pitch":2},
+    {"x":20.5,"y":19.2,"height":2.2,"angle":256,"pitch":3},
+    {"x":18,"y":19.8,"height":2.0,"angle":270,"pitch":2},
+    {"x":15.5,"y":19.2,"height":2.2,"angle":284,"pitch":3}
+]
+
+@Map/sky_title
+floor = nc/title_grid
+sky = {"seed":901,"zenith":"#060512","horizon":"#1c1238","cloud":"#4a2159","speed":0.04}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Page/neon_circuit
+logic = neon_circuit
+view:
+    canvas data-rune-pixel-3d=true

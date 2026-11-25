@@ -31,6 +31,39 @@ arrangement = ["verse",{"section":"chorus","repeat":2},"bridge","chorus"]
 }
 
 #[test]
+fn parses_song_effects_and_per_track_sends() {
+    let frontend = score(r#"
+tempo = 140
+instruments = {"lead":"sawtooth","bass":"triangle","drums":"drums"}
+effects = {
+    "reverb": {"decay": 2.2, "wet": 0.3},
+    "delay": {"time": 0.25, "feedback": 0.35, "wet": 0.2, "damping": 3200},
+    "filter": {"type": "lowpass", "cutoff": 5000, "q": 1.2},
+    "crush": {"bits": 8, "drive": 0.25},
+    "chorus": {"rate": 1.2, "wet": 0.28}
+}
+track_effects = {
+    "lead": {"reverb": 0.4, "delay": 0.35},
+    "bass": {"reverb": 0, "delay": 0}
+}
+sections = {"main":{"bars":1,"lead":"E5:1"}}
+arrangement = ["main"]
+"#).unwrap();
+    let song = &frontend.music["odyssey"];
+    assert!(song.effects.is_some());
+    assert!(song.track_effects.is_some());
+    let fx = song.effects.as_ref().unwrap();
+    assert_eq!(fx["reverb"]["decay"], 2.2);
+    assert_eq!(fx["delay"]["time"], 0.25);
+    assert_eq!(fx["filter"]["type"], "lowpass");
+    assert_eq!(fx["crush"]["bits"], 8.0);
+    assert_eq!(fx["chorus"]["rate"], 1.2);
+    let track_fx = song.track_effects.as_ref().unwrap();
+    assert_eq!(track_fx["lead"]["reverb"], 0.4);
+    assert_eq!(track_fx["bass"]["reverb"], 0.0);
+}
+
+#[test]
 fn rejects_bad_song_forms_before_export() {
     let section = r#"sections = {"verse":{"bars":1,"lead":"D5:1"}}"#;
     for tail in [

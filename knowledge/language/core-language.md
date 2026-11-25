@@ -323,6 +323,27 @@ if condition1:
 All statements within an indented block are executed when their `if` condition is true.
 Nested conditionals can go as deep as needed; proper indentation is critical for parsing.
 
+## Pattern matching and switch blocks
+
+Pattern matching with `match` (or `switch`) evaluates an expression once and executes only the first matching case branch without evaluating remaining branches:
+
+```rune
+match status:
+    "title":
+        statement1
+    "select":
+        statement2
+    "playing", "player_dying":
+        statement3
+    else:
+        fallback_statement
+```
+
+- Supports literals (strings, numbers, booleans) and context identifiers.
+- Comma-separated patterns (e.g. `"easy", "normal":`) match if any pattern matches.
+- Wildcards `else:`, `default:`, `_:` handle unmatched fallbacks.
+- Supported in native REST / Route `run:` blocks as well as Rune-Web and Pixel-3D actions.
+
 ## Arithmetic and comparisons
 
 Vectrune supports arithmetic-style expressions and equality checks in runtime evaluation.

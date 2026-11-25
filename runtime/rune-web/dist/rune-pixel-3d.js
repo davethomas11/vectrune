@@ -2130,14 +2130,15 @@ var __RunePixel3DRuntime = (() => {
     listen(canvas, "keydown", (e) => {
       options.interact();
       if (Object.prototype.hasOwnProperty.call(controls.profile.keys, e.code) || Object.prototype.hasOwnProperty.call(controls.profile.commands, e.code)) e.preventDefault();
+      if (options.paused() && !e.repeat && options.menuKey?.(e.code)) return;
       if (!options.playing() && !controls.profile.commands[e.code]) {
+        if (!e.repeat && options.menuKey?.(e.code)) return;
         const binding = controls.profile.keys[e.code];
         const input = typeof binding === "string" ? binding : binding?.input;
         if (input && options.advanceInputs?.includes(input)) {
           if (!e.repeat) options.advance();
           return;
         }
-        if (!e.repeat && options.menuKey?.(e.code)) return;
       }
       send({ device: "keyboard", code: e.code, value: true });
     });
@@ -4182,10 +4183,252 @@ var __RunePixel3DRuntime = (() => {
     }
   }
 
+  // src/pixel3d/sidemap.ts
+  function getSideMap(name2) {
+    const maps = globalThis.__RuneSideMaps;
+    const map = maps?.[name2];
+    if (!map) throw new Error(`Unknown @SideMap/${name2}`);
+    return map;
+  }
+  function sideLevel(fgNameValue, bgNameValue, optionsValue) {
+    if (typeof fgNameValue !== "string" || !fgNameValue) {
+      throw new Error("side_level requires a foreground @SideMap name");
+    }
+    const fg = getSideMap(fgNameValue);
+    const bg = typeof bgNameValue === "string" && bgNameValue.length > 0 ? getSideMap(bgNameValue) : void 0;
+    const opts = optionsValue && typeof optionsValue === "object" && !Array.isArray(optionsValue) ? optionsValue : {};
+    const width = fg.width;
+    const height = fg.height;
+    const planeY = opts.plane_y ?? fg.planeY ?? 7;
+    const depthY = opts.depth_y ?? fg.depthY ?? 20;
+    const marginZ = opts.margin_z ?? 4;
+    const materials = opts.materials ?? fg.materials;
+    if (!Array.isArray(materials) || materials.length === 0) {
+      throw new Error(`@SideMap/${fgNameValue} needs materials = [...]`);
+    }
+    let spawn = { x: 4.5, y: planeY, z: 3, angle: 0, pitch: 0, vz: 0 };
+    const world = voxelWorld(width, depthY, height + marginZ, materials, {
+      seed: opts.seed ?? 701,
+      biome: opts.biome ?? "meadow",
+      spawn,
+      renderDistance: opts.render_distance ?? 128
+    });
+    const sceneryRaw = [];
+    const entities = [];
+    const barriers = [];
+    const hazards = [];
+    const ladders = [];
+    const bossDoors = [];
+    const checkpoints = [];
+    const pickups = [];
+    let boss = null;
+    for (let row = 0; row < height; row++) {
+      const z = height - 1 - row;
+      const line = fg.rows[row];
+      let runVoxel = 0;
+      let runY0 = 0;
+      let runYSpan = 0;
+      let runStart = 0;
+      const flushRun = (endX) => {
+        if (runVoxel > 0 && endX > runStart) {
+          voxelFill(world, [runStart, runY0, z], [endX - runStart, runYSpan, 1], runVoxel);
+        }
+        runVoxel = 0;
+      };
+      for (let x = 0; x < width; x++) {
+        const ch = line[x];
+        const entry = fg.legend[ch];
+        if (!entry) {
+          flushRun(x);
+          continue;
+        }
+        if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          if (runVoxel === entry.voxel && runY0 === y0 && runYSpan === ySpan) {
+          } else {
+            flushRun(x);
+            runVoxel = entry.voxel;
+            runY0 = y0;
+            runYSpan = ySpan;
+            runStart = x;
+          }
+        } else {
+          flushRun(x);
+        }
+        if (entry.spawn) {
+          spawn = { x: x + 0.5, y: planeY, z, angle: 0, pitch: 0, vz: 0 };
+          world.spawn = spawn;
+        }
+        if (entry.barrier) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          barriers.push({
+            x,
+            z,
+            y_start: y0,
+            y_span: ySpan,
+            kind: entry.barrier,
+            voxel: entry.voxel ?? 0,
+            open: false,
+            model: entry.model ?? "",
+            tag: entry.tag ?? entry.barrier
+          });
+        }
+        if (entry.hazard) {
+          hazards.push({
+            x,
+            z,
+            kind: entry.hazard,
+            frozen: false,
+            model: entry.model ?? ""
+          });
+        }
+        if (entry.ladder) {
+          ladders.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z
+          });
+          if (entry.model) {
+            sceneryRaw.push({
+              x: x + 0.5,
+              y: entry.y ?? planeY,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+        if (entry.boss_door) {
+          const y0 = entry.depth ? entry.depth[0] : Math.max(0, Math.floor(planeY) - 2);
+          const ySpan = entry.depth ? entry.depth[1] : 4;
+          bossDoors.push({
+            x,
+            z,
+            y_start: y0,
+            y_span: ySpan,
+            voxel: entry.voxel ?? 4
+          });
+          if (entry.model) {
+            sceneryRaw.push({
+              x: x + 0.5,
+              y: entry.y ?? planeY,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+        if (entry.checkpoint) {
+          checkpoints.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            active: false,
+            model: entry.model ?? ""
+          });
+        }
+        if (entry.pickup) {
+          pickups.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0.35),
+            base: z + (entry.zOffset ?? 0.35),
+            kind: entry.pickup,
+            model: entry.model ?? "",
+            visible: true
+          });
+        }
+        if (entry.entity) {
+          const item = {
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            home_x: x + 0.5,
+            home_z: z + (entry.zOffset ?? 0),
+            kind: entry.entity,
+            model: entry.model ?? "",
+            hp: entry.hp ?? 3,
+            max_hp: entry.hp ?? 3,
+            dir: -1,
+            cd: 20,
+            alive: true,
+            visible: true
+          };
+          if (entry.role === "boss" || entry.entity === "boss") {
+            boss = item;
+          } else {
+            entities.push(item);
+          }
+        } else if (entry.model && !entry.barrier && !entry.hazard && !entry.ladder && !entry.boss_door && !entry.checkpoint && !entry.pickup) {
+          sceneryRaw.push({
+            x: x + 0.5,
+            y: entry.y ?? planeY,
+            z: z + (entry.zOffset ?? 0),
+            model: entry.model,
+            scale: entry.scale ?? 1,
+            angle: entry.angle ?? 0
+          });
+        }
+      }
+      flushRun(width);
+    }
+    if (bg) {
+      const xScale = width / Math.max(1, bg.width);
+      for (let row = 0; row < bg.height; row++) {
+        const z = bg.height - 1 - row;
+        const line = bg.rows[row];
+        for (let bx = 0; bx < bg.width; bx++) {
+          const ch = line[bx];
+          const entry = bg.legend[ch];
+          if (!entry) continue;
+          const wx = Math.floor(bx * xScale);
+          if (entry.voxel && entry.voxel > 0 && !entry.boss_door) {
+            const y0 = entry.depth ? entry.depth[0] : 0;
+            const ySpan = entry.depth ? entry.depth[1] : 2;
+            if (wx >= 0 && wx < width && z >= 0 && z < height + marginZ) {
+              voxelFill(world, [wx, y0, z], [Math.max(1, Math.min(width - wx, Math.round(xScale))), ySpan, 1], entry.voxel);
+            }
+          }
+          if (entry.model) {
+            sceneryRaw.push({
+              x: (bx + 0.5) * xScale,
+              y: entry.y ?? bg.planeY ?? 2.5,
+              z: z + (entry.zOffset ?? 0),
+              model: entry.model,
+              scale: entry.scale ?? 1,
+              angle: entry.angle ?? 0
+            });
+          }
+        }
+      }
+    }
+    return {
+      world,
+      width,
+      height,
+      plane_y: planeY,
+      spawn,
+      scenery: entityGroup(sceneryRaw),
+      entities,
+      barriers,
+      hazards,
+      ladders,
+      boss_doors: bossDoors,
+      checkpoints,
+      pickups,
+      boss
+    };
+  }
+
   // src/expression.ts
   var MAX_DEPTH = 64;
   var voxelFunctions = {
     voxel_world: (width, height, depth, materials, options) => voxelWorld(width, height, depth, materials, options),
+    side_level: (fg, bg, options) => sideLevel(fg, bg, options),
     nearby: (entities, position, radius) => nearby(entities, position, radius),
     entity_group: (entities) => entityGroup(entities),
     voxel_generate: (seed, biome) => voxelGenerate(seed, biome),
@@ -4197,6 +4440,7 @@ var __RunePixel3DRuntime = (() => {
   };
   var voxelArity = {
     voxel_world: [4, 5],
+    side_level: [1, 3],
     nearby: [3, 3],
     entity_group: [0, 1],
     voxel_generate: [1, 2],
@@ -6784,6 +7028,15 @@ var __RunePixel3DRuntime = (() => {
     audioMuted = muted;
     if (masterGain && audioCtx) masterGain.gain.setValueAtTime(muted ? 0 : 1, audioCtx.currentTime);
   }
+  var sfxMasterGain = null;
+  function sfxOutput(ctx2) {
+    if (!sfxMasterGain) {
+      sfxMasterGain = ctx2.createGain();
+      sfxMasterGain.gain.setValueAtTime(0.65, ctx2.currentTime);
+      sfxMasterGain.connect(audioOutput(ctx2));
+    }
+    return sfxMasterGain;
+  }
   function audioOutput(ctx2) {
     if (!masterGain) {
       masterGain = ctx2.createGain();
@@ -6869,7 +7122,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.25, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.13);
         break;
@@ -6884,7 +7137,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.1);
         break;
@@ -6906,7 +7159,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.09);
         break;
@@ -6921,7 +7174,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.29);
         break;
@@ -6937,7 +7190,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.3, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.62);
         break;
@@ -6954,7 +7207,7 @@ var __RunePixel3DRuntime = (() => {
           gain.gain.setValueAtTime(0.25, start);
           gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
           osc.connect(gain);
-          gain.connect(audioOutput(ctx2));
+          gain.connect(sfxOutput(ctx2));
           osc.start(start);
           osc.stop(start + 0.16);
         });
@@ -6969,7 +7222,7 @@ var __RunePixel3DRuntime = (() => {
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
         osc.connect(gain);
-        gain.connect(audioOutput(ctx2));
+        gain.connect(sfxOutput(ctx2));
         osc.start(now);
         osc.stop(now + 0.16);
         break;
@@ -6996,7 +7249,7 @@ var __RunePixel3DRuntime = (() => {
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     noise3.connect(filter);
     filter.connect(gain);
-    gain.connect(audioOutput(ctx2));
+    gain.connect(sfxOutput(ctx2));
     noise3.start(now);
     noise3.stop(now + duration + 0.01);
   }
@@ -7022,7 +7275,7 @@ var __RunePixel3DRuntime = (() => {
         gain2.gain.setValueAtTime(volume, start);
         gain2.gain.exponentialRampToValueAtTime(0.01, start + noteDur);
         osc2.connect(gain2);
-        gain2.connect(audioOutput(ctx2));
+        gain2.connect(sfxOutput(ctx2));
         osc2.start(start);
         osc2.stop(start + noteDur + 0.01);
         offset += noteDur;
@@ -7051,13 +7304,14 @@ var __RunePixel3DRuntime = (() => {
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(1e-3, now + duration);
     osc.connect(gain);
-    gain.connect(audioOutput(ctx2));
+    gain.connect(sfxOutput(ctx2));
     osc.start(now);
     osc.stop(now + duration + 0.01);
   }
   var activeMusicTrackName = null;
   var musicSchedulerTimer = null;
   var musicMasterGain = null;
+  var musicEffectsBus = null;
   var musicVolume = 0.2;
   var musicTempoBpm = 128;
   var musicLoop = true;
@@ -7199,6 +7453,254 @@ var __RunePixel3DRuntime = (() => {
     const totalBars = appBars > 0 ? appBars : def?.bars || (maxTrackBeats ? Math.ceil(maxTrackBeats / beatsPerBar) : 4);
     return { timeSignature, totalBars, totalBeats: Math.max(maxTrackBeats, totalBars * beatsPerBar) };
   }
+  function generateReverbImpulse(ctx2, decay = 1.5, preDelay = 0.01, reverse = false) {
+    const sampleRate = ctx2.sampleRate || 44100;
+    const length = Math.max(128, Math.floor(sampleRate * Math.max(0.05, Math.min(10, decay))));
+    const buffer = ctx2.createBuffer(2, length, sampleRate);
+    const left = buffer.getChannelData(0);
+    const right = buffer.getChannelData(1);
+    const preDelaySamples = Math.floor(sampleRate * Math.max(0, preDelay));
+    for (let i = 0; i < length; i++) {
+      if (i < preDelaySamples) {
+        left[i] = 0;
+        right[i] = 0;
+      } else {
+        const idx = reverse ? length - 1 - i : i - preDelaySamples;
+        const progress = idx / (length - preDelaySamples);
+        const env = Math.exp(-3.5 * progress);
+        left[i] = (Math.random() * 2 - 1) * env;
+        right[i] = (Math.random() * 2 - 1) * env;
+      }
+    }
+    return buffer;
+  }
+  function generateBitcrushCurve(bits = 8, drive = 0) {
+    const n = 4096;
+    const curve = new Float32Array(n);
+    const clampedBits = Math.max(2, Math.min(16, bits));
+    const steps = Math.pow(2, clampedBits);
+    const driveGain = 1 + Math.max(0, Math.min(5, drive * 4));
+    for (let i = 0; i < n; i++) {
+      let x = i * 2 / (n - 1) - 1;
+      if (drive > 0) {
+        x = Math.tanh(x * driveGain);
+      }
+      if (clampedBits < 16) {
+        x = Math.round(x * (steps / 2)) / (steps / 2);
+      }
+      curve[i] = Math.max(-1, Math.min(1, x));
+    }
+    return curve;
+  }
+  function buildMusicEffectsBus(ctx2, def, channels2, destination) {
+    const fx = def.effects || {};
+    const reverbConfig = fx.reverb || def.reverb;
+    const delayConfig = fx.delay || def.delay;
+    const filterConfig = fx.filter || def.filter;
+    const crushConfig = fx.crush || fx.drive || def.crush;
+    const chorusConfig = fx.chorus || def.chorus;
+    const trackFx = def.track_effects || fx.tracks || {};
+    if (!reverbConfig && !delayConfig && !filterConfig && !crushConfig && !chorusConfig && !Object.keys(trackFx).length) {
+      return null;
+    }
+    const nodesToClean = [];
+    const lfoNodes = [];
+    const dryBus = ctx2.createGain();
+    dryBus.gain.setValueAtTime(1, ctx2.currentTime);
+    nodesToClean.push(dryBus);
+    let insertHead = dryBus;
+    if (filterConfig && typeof ctx2.createBiquadFilter === "function") {
+      const fNode = ctx2.createBiquadFilter();
+      fNode.type = filterConfig.type || "lowpass";
+      const cutoff = filterConfig.cutoff || filterConfig.frequency || 4e3;
+      fNode.frequency.setValueAtTime(Math.max(20, Math.min(2e4, cutoff)), ctx2.currentTime);
+      const q = filterConfig.q || filterConfig.resonance || 1;
+      fNode.Q.setValueAtTime(Math.max(0.1, q), ctx2.currentTime);
+      insertHead.connect(fNode);
+      insertHead = fNode;
+      nodesToClean.push(fNode);
+    }
+    if (crushConfig && typeof ctx2.createWaveShaper === "function") {
+      const wsNode = ctx2.createWaveShaper();
+      const bits = crushConfig.bits !== void 0 ? crushConfig.bits : 8;
+      const drive = crushConfig.drive !== void 0 ? crushConfig.drive : 0;
+      wsNode.curve = generateBitcrushCurve(bits, drive);
+      wsNode.oversample = "none";
+      insertHead.connect(wsNode);
+      insertHead = wsNode;
+      nodesToClean.push(wsNode);
+    }
+    insertHead.connect(destination);
+    let delayInput = null;
+    if (delayConfig && typeof ctx2.createDelay === "function") {
+      delayInput = ctx2.createGain();
+      delayInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(delayInput);
+      const dNode = ctx2.createDelay(5);
+      const dTime = Math.max(0.01, Math.min(4, delayConfig.time ?? 0.25));
+      dNode.delayTime.setValueAtTime(dTime, ctx2.currentTime);
+      const dampFilter = ctx2.createBiquadFilter();
+      dampFilter.type = "lowpass";
+      const dampFreq = delayConfig.damping || delayConfig.filter || 2800;
+      dampFilter.frequency.setValueAtTime(dampFreq, ctx2.currentTime);
+      const fbGain = ctx2.createGain();
+      const fbVal = Math.max(0, Math.min(0.92, delayConfig.feedback ?? 0.35));
+      fbGain.gain.setValueAtTime(fbVal, ctx2.currentTime);
+      const delayWet = ctx2.createGain();
+      const dWetVal = Math.max(0, Math.min(1, delayConfig.wet ?? 0.25));
+      delayWet.gain.setValueAtTime(dWetVal, ctx2.currentTime);
+      delayInput.connect(dNode);
+      dNode.connect(dampFilter);
+      dampFilter.connect(fbGain);
+      fbGain.connect(dNode);
+      dampFilter.connect(delayWet);
+      delayWet.connect(destination);
+      nodesToClean.push(dNode, dampFilter, fbGain, delayWet);
+    }
+    let revInput = null;
+    if (reverbConfig && typeof ctx2.createConvolver === "function") {
+      revInput = ctx2.createGain();
+      revInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(revInput);
+      const conv = ctx2.createConvolver();
+      conv.buffer = generateReverbImpulse(
+        ctx2,
+        reverbConfig.decay ?? 1.5,
+        reverbConfig.pre_delay ?? 0.01,
+        reverbConfig.reverse ?? false
+      );
+      revInput.connect(conv);
+      nodesToClean.push(conv);
+      let revOut = conv;
+      if (reverbConfig.filter) {
+        const rf = ctx2.createBiquadFilter();
+        rf.type = "lowpass";
+        rf.frequency.setValueAtTime(reverbConfig.filter, ctx2.currentTime);
+        conv.connect(rf);
+        revOut = rf;
+        nodesToClean.push(rf);
+      }
+      const revWet = ctx2.createGain();
+      const wetVal = Math.max(0, Math.min(1, reverbConfig.wet ?? 0.25));
+      revWet.gain.setValueAtTime(wetVal, ctx2.currentTime);
+      revOut.connect(revWet);
+      revWet.connect(destination);
+      nodesToClean.push(revWet);
+    }
+    let chorusInput = null;
+    if (chorusConfig && typeof ctx2.createDelay === "function" && typeof ctx2.createOscillator === "function") {
+      chorusInput = ctx2.createGain();
+      chorusInput.gain.setValueAtTime(1, ctx2.currentTime);
+      nodesToClean.push(chorusInput);
+      const cd = ctx2.createDelay(0.1);
+      const baseDelay = chorusConfig.delay ?? 0.018;
+      cd.delayTime.setValueAtTime(baseDelay, ctx2.currentTime);
+      const lfo = ctx2.createOscillator();
+      lfo.type = "sine";
+      const rate = chorusConfig.rate ?? 1.2;
+      lfo.frequency.setValueAtTime(rate, ctx2.currentTime);
+      const lfoGain = ctx2.createGain();
+      const depth = chorusConfig.depth ?? 25e-4;
+      lfoGain.gain.setValueAtTime(depth, ctx2.currentTime);
+      lfo.connect(lfoGain);
+      lfoGain.connect(cd.delayTime);
+      lfo.start(ctx2.currentTime);
+      lfoNodes.push(lfo);
+      const chorusWet = ctx2.createGain();
+      const cWetVal = Math.max(0, Math.min(1, chorusConfig.wet ?? 0.3));
+      chorusWet.gain.setValueAtTime(cWetVal, ctx2.currentTime);
+      chorusInput.connect(cd);
+      cd.connect(chorusWet);
+      chorusWet.connect(destination);
+      nodesToClean.push(cd, lfoGain, chorusWet);
+    }
+    const masterInput = ctx2.createGain();
+    masterInput.gain.setValueAtTime(1, ctx2.currentTime);
+    masterInput.connect(dryBus);
+    nodesToClean.push(masterInput);
+    const channelGains = {};
+    for (const ch of channels2) {
+      const cg = ctx2.createGain();
+      cg.gain.setValueAtTime(1, ctx2.currentTime);
+      cg.connect(dryBus);
+      nodesToClean.push(cg);
+      const chFx = trackFx[ch] || {};
+      if (delayInput) {
+        let dSend = 0;
+        if (chFx.delay !== void 0) {
+          dSend = chFx.delay;
+        } else if (delayConfig?.tracks) {
+          dSend = delayConfig.tracks.includes(ch) ? 1 : 0;
+        } else {
+          dSend = ch === "drums" || ch === "bass" ? 0 : 1;
+        }
+        if (dSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(dSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(delayInput);
+          nodesToClean.push(sg);
+        }
+      }
+      if (revInput) {
+        let rSend = 0;
+        if (chFx.reverb !== void 0) {
+          rSend = chFx.reverb;
+        } else if (reverbConfig?.tracks) {
+          rSend = reverbConfig.tracks.includes(ch) ? 1 : 0;
+        } else {
+          rSend = ch === "bass" ? 0.05 : ch === "drums" ? 0.25 : 1;
+        }
+        if (rSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(rSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(revInput);
+          nodesToClean.push(sg);
+        }
+      }
+      if (chorusInput) {
+        let cSend = 0;
+        if (chFx.chorus !== void 0) {
+          cSend = chFx.chorus;
+        } else {
+          cSend = ch === "drums" || ch === "bass" ? 0 : 0.8;
+        }
+        if (cSend > 0) {
+          const sg = ctx2.createGain();
+          sg.gain.setValueAtTime(cSend, ctx2.currentTime);
+          cg.connect(sg);
+          sg.connect(chorusInput);
+          nodesToClean.push(sg);
+        }
+      }
+      channelGains[ch] = cg;
+    }
+    const cleanup = () => {
+      for (const lfo of lfoNodes) {
+        try {
+          lfo.stop();
+        } catch {
+        }
+        try {
+          lfo.disconnect();
+        } catch {
+        }
+      }
+      for (const n of nodesToClean) {
+        try {
+          n.disconnect?.();
+        } catch {
+        }
+      }
+    };
+    return {
+      masterInput,
+      channelGains,
+      lfoNodes,
+      cleanup
+    };
+  }
   function startMusicAtBeat(ctx2, trackName, startBeat) {
     const timing = musicTiming(trackName);
     const beat = Math.max(0, Math.min(timing.totalBeats - 1e-6, Number.isFinite(startBeat) ? startBeat : 0));
@@ -7216,6 +7718,8 @@ var __RunePixel3DRuntime = (() => {
     musicMasterGain = ctx2.createGain();
     musicMasterGain.gain.setValueAtTime(musicVolume, ctx2.currentTime);
     musicMasterGain.connect(audioOutput(ctx2));
+    const def = registeredMusic[trackName];
+    musicEffectsBus = def ? buildMusicEffectsBus(ctx2, def, Object.keys(tracksState), musicMasterGain) : null;
     musicStartTime = ctx2.currentTime + 0.05 - beat * 60 / musicTempoBpm;
     audioSync.configure({ getAudioContext: () => audioCtx, syncPage: syncPageAudio });
     audioSync.onPlay({ ...timing, track: trackName, tempo: musicTempoBpm, startTime: musicStartTime, startBeat: beat });
@@ -7236,6 +7740,10 @@ var __RunePixel3DRuntime = (() => {
     disconnectMusicGain();
   }
   function disconnectMusicGain() {
+    if (musicEffectsBus) {
+      musicEffectsBus.cleanup();
+      musicEffectsBus = null;
+    }
     if (!musicMasterGain) return;
     musicMasterGain.disconnect();
     musicMasterGain = null;
@@ -7306,7 +7814,8 @@ var __RunePixel3DRuntime = (() => {
         const remainingBeats = event.beats - (track.elapsedInNote ?? 0);
         const eventDurationSec = remainingBeats * secondsPerBeat;
         if (!event.isRest && eventTime >= ctx2.currentTime - 0.05) {
-          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, musicMasterGain, track.instrument);
+          const targetDest = musicEffectsBus ? musicEffectsBus.channelGains[trackKey] || musicEffectsBus.masterInput : musicMasterGain;
+          scheduleTrackNote(ctx2, trackKey, event, eventTime, eventDurationSec, targetDest, track.instrument);
         }
         track.nextBeat += remainingBeats;
         track.elapsedInNote = 0;
@@ -7385,13 +7894,25 @@ var __RunePixel3DRuntime = (() => {
       const gain = ctx2.createGain();
       const inst = instrumentOverride || (channel === "bass" ? "triangle" : "square");
       if (inst === "brass" || inst === "strings" || inst === "bell") {
-        const length = Math.max(0.06, durationSec * (inst === "bell" ? 1.25 : 0.94));
-        const attack = Math.min(length * 0.25, inst === "strings" ? 0.09 : 0.018);
-        osc.type = inst === "brass" ? "sawtooth" : inst === "strings" ? "triangle" : "sine";
+        const isBell = inst === "bell";
+        const isStrings = inst === "strings";
+        const length = Math.max(0.06, durationSec * (isBell ? 1.25 : 1));
+        const attack = Math.min(length * 0.25, isStrings ? 0.06 : 0.018);
+        osc.type = inst === "brass" ? "sawtooth" : isStrings ? "triangle" : "sine";
         osc.frequency.setValueAtTime(freq, time);
+        const peak = (isStrings ? 0.13 : 0.23) * chordGainMultiplier;
         gain.gain.setValueAtTime(1e-3, time);
-        gain.gain.linearRampToValueAtTime((inst === "strings" ? 0.11 : 0.23) * chordGainMultiplier, time + attack);
-        gain.gain.exponentialRampToValueAtTime(1e-3, time + length);
+        gain.gain.linearRampToValueAtTime(peak, time + attack);
+        if (isBell) {
+          gain.gain.exponentialRampToValueAtTime(1e-3, time + length);
+        } else {
+          const sustainLevel = peak * 0.82;
+          const releaseTime = Math.min(0.04, durationSec * 0.08);
+          const sustainEnd = time + Math.max(attack, durationSec - releaseTime);
+          gain.gain.linearRampToValueAtTime(sustainLevel, time + attack + 0.04);
+          gain.gain.setValueAtTime(sustainLevel, sustainEnd);
+          gain.gain.exponentialRampToValueAtTime(1e-3, time + durationSec);
+        }
         const filter = ctx2.createBiquadFilter();
         filter.type = "lowpass";
         filter.frequency.setValueAtTime(Math.min(9e3, freq * (inst === "brass" ? 5 : 3)), time);
@@ -7399,23 +7920,33 @@ var __RunePixel3DRuntime = (() => {
         filter.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + length + 0.015);
+        osc.stop(time + (isBell ? length : durationSec) + 0.015);
       } else if (inst === "sawtooth" || inst === "synth") {
         osc.type = "sawtooth";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.88, 0.4);
-        gain.gain.setValueAtTime(0.18 * chordGainMultiplier, time);
-        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        const releaseTime = Math.min(0.035, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+        const peak = 0.18 * chordGainMultiplier;
+        gain.gain.setValueAtTime(peak, time);
+        if (sustainEnd > time + 0.04) {
+          gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
+        }
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       } else if (inst === "triangle" || inst === "bass") {
         osc.type = "triangle";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.9, 0.45);
-        gain.gain.setValueAtTime(0.28 * chordGainMultiplier, time);
-        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        const noteSoundLen = durationSec * 0.9;
+        const peak = 0.28 * chordGainMultiplier;
+        gain.gain.setValueAtTime(peak, time);
+        const sustainEnd = time + durationSec * 0.82;
+        if (sustainEnd > time + 0.04) {
+          gain.gain.setValueAtTime(peak * 0.9, sustainEnd);
+        }
+        gain.gain.exponentialRampToValueAtTime(3e-3, time + noteSoundLen);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
@@ -7423,17 +7954,22 @@ var __RunePixel3DRuntime = (() => {
       } else if (inst === "sine") {
         osc.type = "sine";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.9, 0.5);
-        gain.gain.setValueAtTime(0.25 * chordGainMultiplier, time);
-        gain.gain.exponentialRampToValueAtTime(2e-3, time + noteSoundLen);
+        const releaseTime = Math.min(0.03, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+        const peak = 0.25 * chordGainMultiplier;
+        gain.gain.setValueAtTime(peak, time);
+        if (sustainEnd > time + 0.04) {
+          gain.gain.setValueAtTime(peak * 0.9, sustainEnd);
+        }
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       } else if (inst === "pluck") {
         osc.type = "triangle";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.6, 0.15);
+        const noteSoundLen = Math.min(durationSec * 0.85, 0.45);
         gain.gain.setValueAtTime(0.3 * chordGainMultiplier, time);
         gain.gain.exponentialRampToValueAtTime(1e-3, time + noteSoundLen);
         osc.connect(gain);
@@ -7443,13 +7979,18 @@ var __RunePixel3DRuntime = (() => {
       } else {
         osc.type = "square";
         osc.frequency.setValueAtTime(freq, time);
-        const noteSoundLen = Math.min(durationSec * 0.85, 0.35);
-        gain.gain.setValueAtTime(0.2 * chordGainMultiplier, time);
-        gain.gain.exponentialRampToValueAtTime(5e-3, time + noteSoundLen);
+        const releaseTime = Math.min(0.03, durationSec * 0.08);
+        const sustainEnd = time + Math.max(0.02, durationSec - releaseTime);
+        const peak = 0.2 * chordGainMultiplier;
+        gain.gain.setValueAtTime(peak, time);
+        if (sustainEnd > time + 0.04) {
+          gain.gain.setValueAtTime(peak * 0.85, sustainEnd);
+        }
+        gain.gain.exponentialRampToValueAtTime(2e-3, time + durationSec);
         osc.connect(gain);
         gain.connect(destination);
         osc.start(time);
-        osc.stop(time + noteSoundLen + 0.01);
+        osc.stop(time + durationSec + 0.01);
       }
     }
   }
@@ -8362,6 +8903,39 @@ var __RunePixel3DRuntime = (() => {
           if (!executeSteps(conditional.steps || [], locals, true)) return false;
         }
       }
+      if (Object.prototype.hasOwnProperty.call(step, "Match")) {
+        const matchStep = step.Match;
+        const targetVal = evaluateExpression(
+          matchStep.expression,
+          buildScope(locals, matchStep.expression)
+        );
+        for (const c of matchStep.cases) {
+          const pat = c.pattern.trim();
+          let matched = false;
+          if (pat === "else" || pat === "_" || pat === "default" || pat === "*") {
+            matched = true;
+          } else {
+            const parts = splitTopLevel(pat, ",");
+            for (const p of parts) {
+              const trimmedP = p.trim();
+              let caseVal;
+              try {
+                caseVal = evaluateExpression(trimmedP, buildScope(locals, trimmedP));
+              } catch {
+                caseVal = trimmedP;
+              }
+              if (caseVal === targetVal || String(caseVal) === String(targetVal) || trimmedP === targetVal) {
+                matched = true;
+                break;
+              }
+            }
+          }
+          if (matched) {
+            if (!executeSteps(c.steps || [], locals, true)) return false;
+            break;
+          }
+        }
+      }
       if (Object.prototype.hasOwnProperty.call(step, "ForLoop")) {
         const loop = step.ForLoop;
         const collection = evaluateExpression(
@@ -9124,8 +9698,25 @@ var __RunePixel3DRuntime = (() => {
     }
     if (hud.panel !== null) {
       const p = hud.panel;
-      if (!p || !["title", "body", "footer"].every((k) => typeof Reflect.get(p, k) === "string") || !Array.isArray(p.choices) || p.choices.length > 3 || !p.choices.every((c) => typeof c === "string") || !Number.isInteger(p.selected) || p.selected < 0 || p.selected >= Math.max(1, p.choices.length)) {
-        throw new Error("Pixel-3d ui panel needs title/body/footer, up to three choices, and a valid selected index");
+      if (!p || !["title", "body", "footer"].every((k) => typeof Reflect.get(p, k) === "string") || !Array.isArray(p.choices) || p.choices.length > 5 || !p.choices.every((c) => typeof c === "string") || !Number.isInteger(p.selected) || p.selected < 0 || p.selected >= Math.max(1, p.choices.length)) {
+        throw new Error("Pixel-3d ui panel needs title/body/footer, up to five choices, and a valid selected index");
+      }
+    }
+    if (hud.grid !== void 0) {
+      const g = hud.grid;
+      if (!g || !Number.isInteger(g.columns) || g.columns < 1 || g.columns > 8 || !Array.isArray(g.items) || g.items.length > 24 || !g.items.every((it) => it && typeof it.label === "string")) {
+        throw new Error("Pixel-3d ui grid needs columns (1-8) and up to 24 labeled items");
+      }
+    }
+    if (hud.slots !== void 0) {
+      if (!Array.isArray(hud.slots) || hud.slots.length > 12 || !hud.slots.every((s) => s && typeof s.label === "string" && Number.isInteger(s.color) && s.color >= 0 && s.color <= 16777215)) {
+        throw new Error("Pixel-3d ui slots needs up to 12 slots with label and color");
+      }
+    }
+    if (hud.wheel !== void 0 && hud.wheel !== null) {
+      const w = hud.wheel;
+      if (!w || !Array.isArray(w.items) || w.items.length > 12 || !w.items.every((it) => it && typeof it.label === "string" && Number.isInteger(it.color) && it.color >= 0 && it.color <= 16777215)) {
+        throw new Error("Pixel-3d ui wheel needs up to 12 items with label and color");
       }
     }
     return hud;
@@ -9154,6 +9745,17 @@ var __RunePixel3DRuntime = (() => {
       if (line) lines.push(line);
     }
     return lines;
+  }
+  function floatingPanelLayout(width, height, ui, status, top) {
+    const p = ui.panel;
+    const maxWidth = status === "title" ? 320 : status === "playing" ? 360 : width - 48;
+    const bw = Math.min(width - 32, Math.max(180, maxWidth));
+    const panelColumns = Math.max(1, Math.floor((bw - 20) / 4));
+    const body = wrapText(p.body, panelColumns).slice(0, 4);
+    const bh = 38 + body.length * 9 + p.choices.length * 13;
+    const bx = Math.floor((width - bw) / 2);
+    const y = status === "title" ? Math.max(top + 28, height - bh - 28) : p.choices.length <= 1 ? Math.max(top + 8, Math.floor(height * 0.16)) : Math.max(top + 28, Math.floor((height - bh - 12) / 2));
+    return { panelColumns, body, bh, bw, bx, y };
   }
   function renderFloatingHud(canvas, ui, status, paused, sprites) {
     const W = canvas.width, H = canvas.height, ink = 1518397, gold = 16767621;
@@ -9217,13 +9819,23 @@ var __RunePixel3DRuntime = (() => {
       text(heading, Math.floor((W - heading.length * 8) / 2), top + 26, gold, 2);
     }
     if (ui.panel) {
-      const p = ui.panel, panelColumns = Math.max(1, Math.floor((W - 48) / 4));
-      const body = wrapText(p.body, panelColumns).slice(0, 4);
-      const y = Math.max(top + 45, Math.floor((H - (48 + body.length * 9 + p.choices.length * 12)) / 2));
-      text(p.title.slice(0, panelColumns), 24, y, gold);
-      body.forEach((line, i) => text(line, 24, y + 14 + i * 9, 14937833));
-      p.choices.forEach((choice, i) => text(`${i === p.selected ? ">" : " "} ${i + 1} ${choice}`.slice(0, panelColumns), 24, y + 19 + body.length * 9 + i * 12, i === p.selected ? gold : 14937833));
-      text(p.footer.slice(0, panelColumns), 24, y + 25 + body.length * 9 + p.choices.length * 12, 9105871);
+      const p = ui.panel;
+      const { panelColumns, body, bh, bw, bx, y } = floatingPanelLayout(W, H, ui, status, top);
+      canvas.rect(bx, y, bw, bh, 590872);
+      canvas.rect(bx, y, bw, 2, 16719515);
+      canvas.rect(bx, y + bh - 2, bw, 2, 62975);
+      canvas.rect(bx, y, 2, bh, 62975);
+      canvas.rect(bx + bw - 2, y, 2, bh, 16719515);
+      text(p.title.slice(0, panelColumns), bx + 10, y + 7, gold);
+      body.forEach((line, i) => text(line, bx + 10, y + 18 + i * 9, 14937833));
+      p.choices.forEach((choice, i) => {
+        const cy = y + 22 + body.length * 9 + i * 13;
+        if (i === p.selected) canvas.rect(bx + 8, cy - 2, bw - 16, 10, 2757716);
+        text(`${i === p.selected ? ">" : " "} ${choice}`.slice(0, panelColumns), bx + 10, cy, i === p.selected ? 62975 : 14937833);
+      });
+      if (p.footer) text(p.footer.slice(0, panelColumns), bx + 10, y + bh - 11, 9105871);
+    } else if (ui.grid) {
+      renderHudGrid(canvas, ui.grid, W, H, top, text);
     } else if (ui.notice) {
       const lines = wrapText(ui.notice, columns - 5).slice(0, 2);
       const y = top + 25;
@@ -9231,7 +9843,225 @@ var __RunePixel3DRuntime = (() => {
       const left = ui.noticeIcon ? 8 + asset(ui.noticeIcon).width + 6 : 8;
       lines.forEach((line, i) => text(line, left, y + i * 9, gold));
     }
+    if (ui.wheel && ui.wheel.active !== false && ui.wheel.items && ui.wheel.items.length > 0 && !ui.panel && !ui.grid) {
+      renderHudWheel(canvas, ui.wheel, W, H, text);
+    } else if (ui.slots && ui.slots.length > 0 && !ui.panel && !ui.grid) {
+      renderHudSlots(canvas, ui.slots, W, H, text);
+    }
     if (ui.prompt) text(ui.prompt.slice(0, columns), 8, H - 12, 14937833);
+  }
+  function gridLayout(grid, W, H) {
+    const cols = Math.max(1, grid.columns);
+    const rows = Math.max(1, Math.ceil(grid.items.length / cols));
+    const padX = 12, gap = 4;
+    const cellW = Math.floor((W - padX * 2 - gap * (cols - 1)) / cols);
+    const cellH = rows <= 2 ? 22 : 18;
+    const headerH = grid.title ? 12 : 4;
+    const footerH = grid.footer ? 11 : 4;
+    const totalH = headerH + rows * cellH + (rows - 1) * gap + footerH + 6;
+    const y0 = Math.max(44, H - totalH - 16);
+    return { cols, rows, padX, gap, cellW, cellH, headerH, footerH, totalH, y0 };
+  }
+  function renderHudGrid(canvas, grid, W, H, _top, text) {
+    const { cols, padX, gap, cellW, cellH, headerH, totalH, y0 } = gridLayout(grid, W, H);
+    canvas.rect(padX - 4, y0, W - (padX - 4) * 2, totalH, 590872);
+    canvas.rect(padX - 4, y0, W - (padX - 4) * 2, 1, 62975);
+    canvas.rect(padX - 4, y0 + totalH - 1, W - (padX - 4) * 2, 1, 16719515);
+    if (grid.title) {
+      text(grid.title.slice(0, Math.floor((W - padX * 2) / 4)), padX, y0 + 4, 62975);
+    }
+    const maxChars = Math.max(1, Math.floor((cellW - 6) / 4));
+    grid.items.forEach((item, i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = padX + col * (cellW + gap);
+      const y = y0 + headerH + row * (cellH + gap);
+      const accent = item.color ?? 62975;
+      const bg = item.selected ? 2495053 : item.disabled ? 919580 : 1247785;
+      const border = item.selected ? 16770560 : item.disabled ? 3877992 : accent;
+      canvas.rect(x, y, cellW, cellH, bg);
+      canvas.rect(x, y, cellW, 1, border);
+      canvas.rect(x, y + cellH - 1, cellW, 1, border);
+      canvas.rect(x, y, 1, cellH, border);
+      canvas.rect(x + cellW - 1, y, 1, cellH, border);
+      if (item.selected) canvas.rect(x + 1, y + 1, cellW - 2, 1, accent);
+      const textColor = item.selected ? 16770560 : item.disabled ? 6705817 : 16054271;
+      text(item.label.slice(0, maxChars), x + 3, y + 4, textColor);
+      if (item.sub) {
+        text(item.sub.slice(0, maxChars), x + 3, y + 12, item.selected ? 62975 : accent);
+      } else if (item.badge) {
+        text(item.badge.slice(0, maxChars), x + 3, y + 12, item.selected ? 62975 : accent);
+      }
+    });
+    if (grid.footer) {
+      text(grid.footer.slice(0, Math.floor((W - padX * 2) / 4)), padX, y0 + totalH - 9, 16770560);
+    }
+  }
+  function slotsLayout(slots, W, H) {
+    const gap = 3, margin = 8;
+    const totalW = W - margin * 2;
+    const slotW = Math.floor((totalW - gap * (slots.length - 1)) / slots.length);
+    const slotH = 12;
+    const y = H - 27;
+    return { gap, margin, slotW, slotH, y };
+  }
+  function renderHudSlots(canvas, slots, W, H, text) {
+    const { gap, margin, slotW, slotH, y } = slotsLayout(slots, W, H);
+    const maxChars = Math.max(1, Math.floor((slotW - 4) / 4));
+    slots.forEach((slot, i) => {
+      const x = margin + i * (slotW + gap);
+      const bg = slot.selected ? 2495053 : slot.locked ? 590872 : 1247785;
+      const border = slot.selected ? 16770560 : slot.locked ? 2891853 : slot.color;
+      canvas.rect(x, y, slotW, slotH, bg);
+      canvas.rect(x, y, slotW, 1, border);
+      canvas.rect(x, y + slotH - 1, slotW, 1, border);
+      canvas.rect(x, y, 1, slotH, border);
+      canvas.rect(x + slotW - 1, y, 1, slotH, border);
+      const labelColor = slot.selected ? 16770560 : slot.locked ? 5390970 : slot.color;
+      const label = slot.label.slice(0, maxChars);
+      const tx = x + Math.max(2, Math.floor((slotW - label.length * 4) / 2));
+      text(label, tx, y + 4, labelColor);
+    });
+  }
+  function wheelLayout(wheel, W, H) {
+    const items = wheel.items || [];
+    const cx = Math.floor(W / 2);
+    const cy = Math.floor(H / 2) - 6;
+    const radius = Math.min(88, Math.floor(H * 0.28));
+    const itemW = 56;
+    const itemH = 18;
+    const hubW = 108;
+    const hubH = 34;
+    return { items, cx, cy, radius, itemW, itemH, hubW, hubH };
+  }
+  function renderHudWheel(canvas, wheel, W, H, text) {
+    const { items, cx, cy, radius, itemW, itemH, hubW, hubH } = wheelLayout(wheel, W, H);
+    if (!items.length) return;
+    const bgPad = radius + 38;
+    canvas.rect(cx - bgPad, cy - radius - 20, bgPad * 2, (radius + 20) * 2, 394002);
+    canvas.rect(cx - bgPad, cy - radius - 20, bgPad * 2, 1, 1773883);
+    canvas.rect(cx - bgPad, cy + radius + 20 - 1, bgPad * 2, 1, 1773883);
+    canvas.rect(cx - bgPad, cy - radius - 20, 1, (radius + 20) * 2, 1773883);
+    canvas.rect(cx + bgPad - 1, cy - radius - 20, 1, (radius + 20) * 2, 1773883);
+    const selectedItem = items.find((it) => it.selected) || items[0];
+    items.forEach((item, i) => {
+      const angle = -Math.PI / 2 + i * 2 * Math.PI / items.length;
+      const nx = Math.round(cx + Math.cos(angle) * radius);
+      const ny = Math.round(cy + Math.sin(angle) * radius);
+      const spokeColor = item.selected ? 62975 : item.locked ? 1642291 : 3617891;
+      const steps = 8;
+      for (let s = 2; s < steps; s++) {
+        const t = s / steps;
+        const sx = Math.round(cx + (nx - cx) * t);
+        const sy = Math.round(cy + (ny - cy) * t);
+        canvas.rect(sx, sy, 1, 1, spokeColor);
+      }
+    });
+    const hubBorder = selectedItem ? selectedItem.selected ? 16770560 : selectedItem.color : 62975;
+    canvas.rect(cx - hubW / 2, cy - hubH / 2, hubW, hubH, 1313579);
+    canvas.rect(cx - hubW / 2, cy - hubH / 2, hubW, 1, hubBorder);
+    canvas.rect(cx - hubW / 2, cy + hubH / 2 - 1, hubW, 1, hubBorder);
+    canvas.rect(cx - hubW / 2, cy - hubH / 2, 1, hubH, hubBorder);
+    canvas.rect(cx + hubW / 2 - 1, cy - hubH / 2, 1, hubH, hubBorder);
+    if (selectedItem?.selected) {
+      canvas.rect(cx - hubW / 2 + 1, cy - hubH / 2 + 1, hubW - 2, 1, 62975);
+    }
+    const titleText = (wheel.title || "WEAPON WHEEL").slice(0, 20);
+    const titleX = cx - Math.floor(titleText.length * 4 / 2);
+    text(titleText, titleX, cy - hubH / 2 + 3, 62975);
+    const selName = (selectedItem ? selectedItem.label : "").slice(0, 20);
+    const selX = cx - Math.floor(selName.length * 4 / 2);
+    text(selName, selX, cy - 2, 16770560);
+    const subPrompt = "[TAB/Q/E] SELECT".slice(0, 20);
+    const subX = cx - Math.floor(subPrompt.length * 4 / 2);
+    text(subPrompt, subX, cy + hubH / 2 - 9, 9105871);
+    const maxChars = Math.max(1, Math.floor((itemW - 4) / 4));
+    items.forEach((item, i) => {
+      const angle = -Math.PI / 2 + i * 2 * Math.PI / items.length;
+      const nx = Math.round(cx + Math.cos(angle) * radius);
+      const ny = Math.round(cy + Math.sin(angle) * radius);
+      const x = nx - Math.floor(itemW / 2);
+      const y = ny - Math.floor(itemH / 2);
+      const bg = item.selected ? 3020889 : item.locked ? 656663 : 1313579;
+      const border = item.selected ? 16770560 : item.locked ? 2891853 : item.color;
+      canvas.rect(x, y, itemW, itemH, bg);
+      canvas.rect(x, y, itemW, 1, border);
+      canvas.rect(x, y + itemH - 1, itemW, 1, border);
+      canvas.rect(x, y, 1, itemH, border);
+      canvas.rect(x + itemW - 1, y, 1, itemH, border);
+      if (item.selected) {
+        canvas.rect(x + 1, y + 1, itemW - 2, 1, 62975);
+        canvas.rect(x - 2, y - 2, itemW + 4, 1, 16770560);
+        canvas.rect(x - 2, y + itemH + 1, itemW + 4, 1, 16770560);
+      }
+      const labelColor = item.selected ? 16770560 : item.locked ? 5588087 : item.color;
+      const label = item.label.slice(0, maxChars);
+      const tx = x + Math.max(2, Math.floor((itemW - label.length * 4) / 2));
+      text(label, tx, y + 3, labelColor);
+      const sub = item.locked ? "LOCKED" : item.sub || (item.selected ? "EQUIPPED" : "READY");
+      const subColor = item.selected ? 62975 : item.locked ? 4010073 : 9105871;
+      const sx = x + Math.max(2, Math.floor((itemW - sub.slice(0, maxChars).length * 4) / 2));
+      text(sub.slice(0, maxChars), sx, y + 10, subColor);
+    });
+  }
+  function collectHudHitRegions(width, height, ui, status, paused) {
+    if (!ui) return [];
+    const regions = [];
+    if (ui.panel && ui.panel.choiceActions?.length) {
+      const p = ui.panel;
+      const top = ui.meters.length ? 44 : 8;
+      const { body, bw, bx, y } = floatingPanelLayout(width, height, ui, status, top);
+      p.choices.forEach((_, i) => {
+        const ca = p.choiceActions?.[i];
+        if (!ca) return;
+        const cy = y + 22 + body.length * 9 + i * 13;
+        regions.push({ x: bx + 8, y: cy - 3, w: bw - 16, h: 12, action: ca.action, args: ca.args ?? [] });
+      });
+    } else if (ui.grid) {
+      const { cols, padX, gap, cellW, cellH, headerH, y0 } = gridLayout(ui.grid, width, height);
+      ui.grid.items.forEach((item, i) => {
+        if (!item.action) return;
+        const col = i % cols, row = Math.floor(i / cols);
+        regions.push({
+          x: padX + col * (cellW + gap),
+          y: y0 + headerH + row * (cellH + gap),
+          w: cellW,
+          h: cellH,
+          action: item.action,
+          args: item.args ?? []
+        });
+      });
+    }
+    if (ui.wheel && ui.wheel.active !== false && ui.wheel.items && ui.wheel.items.length > 0 && status === "playing" && !paused) {
+      const { items, cx, cy, radius, itemW, itemH } = wheelLayout(ui.wheel, width, height);
+      items.forEach((item, i) => {
+        if (!item.action || item.locked) return;
+        const angle = -Math.PI / 2 + i * 2 * Math.PI / items.length;
+        const nx = Math.round(cx + Math.cos(angle) * radius);
+        const ny = Math.round(cy + Math.sin(angle) * radius);
+        regions.push({
+          x: nx - Math.floor(itemW / 2),
+          y: ny - Math.floor(itemH / 2),
+          w: itemW,
+          h: itemH,
+          action: item.action,
+          args: item.args ?? []
+        });
+      });
+    } else if (ui.slots && ui.slots.length > 0 && status === "playing" && !paused) {
+      const { gap, margin, slotW, slotH, y } = slotsLayout(ui.slots, width, height);
+      ui.slots.forEach((slot, i) => {
+        if (!slot.action || slot.locked) return;
+        regions.push({
+          x: margin + i * (slotW + gap),
+          y,
+          w: slotW,
+          h: slotH,
+          action: slot.action,
+          args: slot.args ?? []
+        });
+      });
+    }
+    return regions;
   }
   function renderHud(canvas, ui, status, paused, sprites = {}) {
     if (ui.cinema) {
@@ -9506,6 +10336,8 @@ var __RunePixel3DRuntime = (() => {
     "%": "101001010100101",
     "[": "011010010010011",
     "]": "110010010010110",
+    "(": "010100100100010",
+    ")": "010001001001010",
     "/": "001010010010100",
     ".": "000000000000010",
     ",": "000000000010010",
@@ -9523,9 +10355,12 @@ var __RunePixel3DRuntime = (() => {
       this.hudScale = 1;
       this.drawScale = 1;
       this.silhouettes = false;
+      this.outlineColor = 4278190080;
       this.width = config.width;
       this.height = config.height;
       this.fov = config.fov || 66;
+      this.silhouettes = Boolean(config.outline);
+      if (config.outlineColor !== void 0) this.outlineColor = packed(config.outlineColor);
       this.buffer = new Uint32Array(this.width * this.height);
       this.zBuffer = new Float64Array(this.width);
       this.pixelDepth = new Float64Array(this.width * this.height);
@@ -9557,14 +10392,14 @@ var __RunePixel3DRuntime = (() => {
     setPalette(colors, silhouettes = false) {
       if (colors === void 0) {
         this.palette = void 0;
-        this.silhouettes = false;
+        this.silhouettes = silhouettes || Boolean(this.config.outline);
         return;
       }
       if (colors.length < 2 || colors.length > 16 || !colors.every((color) => Number.isInteger(color) && color >= 0 && color <= 16777215)) {
         throw new Error("Pixel-3d palette needs 2 to 16 RGB colors, from darkest to lightest");
       }
       this.palette = Uint32Array.from({ length: 256 }, (_, light) => packed(colors[Math.floor(light * colors.length / 256)]));
-      this.silhouettes = silhouettes;
+      this.silhouettes = silhouettes || Boolean(this.config.outline);
     }
     render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks, tethers = []) {
       const W = this.width;
@@ -9707,7 +10542,7 @@ var __RunePixel3DRuntime = (() => {
             const left = Math.max(0, x - diagonal), right = Math.min(width - 1, x + diagonal);
             edge = Math.min(edge, depth[upper + left], depth[upper + right], depth[lower + left], depth[lower + right]);
           }
-          if (depth[i] - edge > Math.max(0.12, edge * 0.025)) buffer[i] = 4278190080;
+          if (depth[i] - edge > Math.max(0.12, edge * 0.025)) buffer[i] = this.outlineColor;
         }
       }
     }
@@ -9802,6 +10637,15 @@ var __RunePixel3DRuntime = (() => {
         centered(title.subtitle, top + 5 * scale + 12, 10340050);
         this.rect(0, H - 23, W, 23, 528152);
         centered(title.prompt, H - 15, 10873068);
+        if (stats.ui?.panel) {
+          const canvas = this.drawScale === 1 ? this : {
+            width: W,
+            height: H,
+            rect: this.rect.bind(this),
+            text: this.text.bind(this)
+          };
+          renderHud(canvas, { ...stats.ui, style: "floating", heading: "", detail: "", objective: "", prompt: "" }, stats.status || "title", false, this.config.sprites);
+        }
         return;
       }
       if (stats.ui) {
@@ -10224,6 +11068,8 @@ var __RunePixel3DRuntime = (() => {
       }
       this.raycaster = new Raycaster3D({
         fov: config.fov,
+        outline: config.outline,
+        outlineColor: config.outlineColor,
         width: config.width,
         height: config.height,
         textures: config.textures,
@@ -10231,7 +11077,10 @@ var __RunePixel3DRuntime = (() => {
         models: config.models,
         map: config.map
       });
-      Object.assign(globalThis, { __RuneSpatialMaps: config.maps || {} });
+      Object.assign(globalThis, {
+        __RuneSpatialMaps: config.maps || {},
+        __RuneSideMaps: config.sideMaps || {}
+      });
       const spatialMap = {
         width: config.map.width,
         height: config.map.height,
@@ -10378,8 +11227,18 @@ var __RunePixel3DRuntime = (() => {
     persist() {
       if (this.save) this.save.flush(this.app.state[this.save.config.state]);
     }
+    hasAction(action) {
+      return Boolean(this.context.actionDefinitions[action]);
+    }
     invoke(action, args = []) {
       this.invalidateFrame();
+      if (action === "host.mute") {
+        this.muted = !this.muted;
+        return;
+      }
+      if (action === "resume_game" || action === "host.resume" || action === "restart_current_stage") {
+        this.paused = false;
+      }
       if (action === this.config.restartAction) {
         if (this.app.state.status === "playing" && !this.paused) return;
         this.paused = false;
@@ -10394,7 +11253,13 @@ var __RunePixel3DRuntime = (() => {
         this.app.invokeAction(action, args);
         this.app.computeDerived();
       });
-      if (this._paused) pauseMusic();
+      if (this._paused && this.app.state.status !== "playing") {
+        this._paused = false;
+        setAudioMuted(this._muted);
+        resumeMusic();
+      } else if (this._paused) {
+        pauseMusic();
+      }
       this.syncScene();
       this.persist();
     }
@@ -11333,7 +12198,7 @@ void main() {
           gl.uniform1i(loc.sceneDepth, 1);
           gl.uniform1i(loc.radius, outlineRadius);
           gl.uniform1i(loc.diagonal, Math.floor(outlineRadius / Math.SQRT2));
-          gl.uniform3f(loc.ink, palette[0], palette[1], palette[2]);
+          gl.uniform3f(loc.ink, palette[0] ?? 0.02, palette[1] ?? 0.01, palette[2] ?? 0.05);
           gl.bindVertexArray(skyVao);
           gl.drawArrays(gl.TRIANGLES, 0, 3);
         }
@@ -11653,6 +12518,28 @@ void main() {
       });
     }
     let pointerLockUnavailable = false;
+    const activeHud = () => game.paused && game.config.pauseUi && game.app.state.status === "playing" ? game.app.state[game.config.pauseUi] : game.config.ui ? game.app.state[game.config.ui] : void 0;
+    const handleMenuKey = (code) => {
+      const p = activeHud()?.panel;
+      if (!p?.choiceActions?.length) return false;
+      if ((code === "ArrowUp" || code === "KeyW") && game.hasAction("menu_move")) {
+        game.invoke("menu_move", [-1]);
+        return true;
+      }
+      if ((code === "ArrowDown" || code === "KeyS") && game.hasAction("menu_move")) {
+        game.invoke("menu_move", [1]);
+        return true;
+      }
+      if (game.paused && (code === "Enter" || code === "Space")) {
+        const ca = p.choiceActions[p.selected ?? 0];
+        if (ca) {
+          clear(true);
+          game.activate(ca.action, ca.args ?? []);
+          return true;
+        }
+      }
+      return false;
+    };
     mapped = game.controls ? mountControls(canvas, game.controls, {
       state: () => game.app.state,
       playing: () => game.app.state.status === "playing",
@@ -11675,6 +12562,7 @@ void main() {
       unlockedCanvasLook: () => pointerLockUnavailable,
       advanceInputs: ["fire", "use"],
       expanded: fullscreen.expanded,
+      menuKey: handleMenuKey,
       tapToAdvance: game.config.clickToStart
     }) : void 0;
     const mappedStyle = mapped ? document.createElement("style") : void 0;
@@ -11750,13 +12638,27 @@ void main() {
         lookAccumY = 0;
       }
     });
-    listen(canvas, "click", () => {
+    listen(canvas, "click", ((event) => {
       if (Date.now() - lastTouchAt < 700 || mapped?.recentTouch()) return;
       unlockAudio();
       canvas.focus();
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        const cx = (event.clientX - rect.left) * (width / rect.width);
+        const cy = (event.clientY - rect.top) * (height / rect.height);
+        const regions = collectHudHitRegions(width, height, activeHud(), String(game.app.state.status ?? "playing"), game.paused);
+        const hit = regions.find((r) => cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
+        if (hit) {
+          clear(true);
+          game.activate(hit.action, hit.args);
+          return;
+        }
+      }
       if (game.app.state.status !== "playing") {
         if (game.config.clickToStart === false) return;
-        if (game.app.state.status === "title" || game.app.state.status === "story") {
+        if (game.app.state.status === "title" || game.app.state.status === "story" || game.app.state.status === "select" || game.app.state.status === "stage_clear" || game.app.state.status === "boss_victory") {
+          const panel = activeHud()?.panel;
+          if (panel?.choiceActions && panel.choiceActions.length > 1) return;
           game.invoke("advance");
           return;
         }
@@ -11776,7 +12678,7 @@ void main() {
           pointerLockUnavailable = true;
         }
       }
-    });
+    }));
     listen(document, "mousemove", ((event) => {
       if (mapped) return;
       if (document.pointerLockElement === canvas) {
@@ -11793,6 +12695,32 @@ void main() {
           clear();
           game.activate(menu.dataset.pixelMenuClose);
           return;
+        }
+        if (document.pointerLockElement === canvas) {
+          event.preventDefault();
+          document.exitPointerLock?.();
+          clear();
+          return;
+        }
+        if (isPausableStatus(game.app.state.status) && (game.config.pauseUi || document.querySelector("[data-pixel-paused]"))) {
+          event.preventDefault();
+          clear(true);
+          game.paused = !game.paused;
+          return;
+        }
+        if (game.app.state.status !== "playing") {
+          if (game.hasAction("back")) {
+            event.preventDefault();
+            clear(true);
+            game.activate("back");
+            return;
+          }
+          if (game.app.state.status !== "title" && game.config.restartAction) {
+            event.preventDefault();
+            clear(true);
+            game.activate(game.config.restartAction);
+            return;
+          }
         }
       }
       unlockAudio();

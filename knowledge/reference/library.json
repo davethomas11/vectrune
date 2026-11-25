@@ -871,6 +871,30 @@
       "fields": []
     },
     {
+      "id": "match",
+      "category": "language",
+      "name": "match",
+      "signature": "match expression:\n    pattern:\n        statement\n    else:\n        fallback",
+      "summary": "Evaluate an expression and execute the first matching case branch without evaluating remaining branches.",
+      "sources": [
+        "src/core/mod.rs",
+        "src/apps/rune_web/parser.rs",
+        "runtime/rune-web/src/statement.ts"
+      ],
+      "returns": "",
+      "errors": "",
+      "example": "match status:\n    \"active\":\n        respond 200 \"Active\"\n    else:\n        respond 404 \"Not Found\"",
+      "parameters": [],
+      "aliases": [
+        "switch"
+      ],
+      "notes": [
+        "Supported across native REST / Route run blocks and Rune-Web / Pixel-3D actions.",
+        "Matches literals, identifiers, comma-separated lists, and wildcard fallbacks (else, default, _)."
+      ],
+      "fields": []
+    },
+    {
       "id": "path-lookup",
       "category": "language",
       "name": "path lookup",
@@ -3751,6 +3775,18 @@
           "type": "object",
           "default": "channel defaults",
           "description": "Channel-to-synth-voice map. Supports square, sine, triangle, bass, sawtooth, synth, pluck, drums, brass, strings and bell. Works with legacy tracks and arranged sections in browser/native hosts."
+        },
+        {
+          "name": "effects",
+          "type": "object",
+          "default": "—",
+          "description": "Chip engine effects chain: reverb (decay, wet, pre_delay, reverse, filter), delay (time, feedback, wet, damping), filter (type, cutoff, q), crush/drive (bits, drive, wet), and chorus (rate, depth, delay, wet). Top-level shorthand keys (reverb, delay, etc.) are also supported."
+        },
+        {
+          "name": "track_effects",
+          "type": "object",
+          "default": "—",
+          "description": "Per-channel effect send levels (e.g. {lead: {reverb: 0.4, delay: 0.3}, bass: {reverb: 0, delay: 0}}). By default melodic tracks send 100% and bass/drums avoid muddy echoes."
         }
       ]
     },
