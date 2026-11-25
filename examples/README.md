@@ -40,6 +40,7 @@ port 3000; run one at a time or choose another port with `--port`.
 | Tic-tac-toe | [tic_tac_toe/tic_tac_toe.rune](games/tic_tac_toe/tic_tac_toe.rune) |
 | Monster City | [monster_city/monster_city.rune](games/monster_city/monster_city.rune) |
 | Vect Breach | [vect_breach/vect_breach.rune](games/vect_breach/vect_breach.rune) |
+| Signal Run | [signal_run/signal_run.rune](games/signal_run/signal_run.rune) |
 | Rune Crypt | [rune_crypt/rune_crypt.rune](games/rune_crypt/rune_crypt.rune) |
 | Rune Miners | [rune_miners/rune_miners.rune](games/rune_miners/rune_miners.rune) |
 | Skybound | [skybound/skybound.rune](games/skybound/skybound.rune) |

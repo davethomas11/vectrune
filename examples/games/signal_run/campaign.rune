@@ -1,0 +1,241 @@
+@Logic/signal_run
+state:
+    status = "title"
+    mission = 1
+    level_map = "cinder"
+    planet = ""
+    briefing = ""
+    job = ""
+    recovered = ""
+    world = null
+    flying = false
+    gates = []
+    gate_index = 0
+    ship_speed = 0
+    ship_blocked = false
+    space_clear = true
+    line_fraction = 1
+    player = {"x":3.5,"y":8.5,"z":2,"angle":0,"pitch":0,"vz":0}
+    view_camera = {"x":3.5,"y":8.5,"z":2,"angle":0,"pitch":0}
+    view_weapon = {}
+    line_clear = true
+    clock = 0
+    jump_held = false
+    shuttle = {}
+    boarding_point = {}
+    relay = {}
+    drones = []
+    bolts = []
+    tracers = []
+    repairs = []
+    landmarks = []
+    shield = 100
+    energy = 8
+    recharge = 0
+    fire_delay = 0
+    hit_grace = 0
+    flash = 0
+    weapon = {}
+    use_held = false
+    claimed = false
+    warden_down = false
+    notice = ""
+    notice_ticks = 0
+    ui = {"meters":[],"objective":"","detail":"","prompt":"","notice":"","panel":null}
+    pause_ui = {"meters":[],"objective":"","detail":"","prompt":"P / PAUSE: RESUME","notice":"","panel":null,"heading":"FLIGHT PAUSED"}
+    continue_hidden = false
+    continue_label = "Begin campaign"
+
+action initialize:
+    call load_mission
+    call load_flight
+    call refresh_hud
+
+action start:
+    call advance
+
+action advance:
+    if cinema_kind != "":
+        call finish_cinema
+        call refresh_hud
+        stop
+    if status == "title":
+        status = "story"
+        call refresh_hud
+        stop
+    if status == "story":
+        call load_flight
+        call begin_cinema "launch"
+        music.play "signal_orbit"
+    if status == "gameover":
+        status = "playing"
+        if !flying:
+            call load_mission
+        if flying:
+            call load_flight
+            call begin_cinema "launch"
+        music.play "signal_orbit"
+    if status == "won":
+        mission = 1
+        status = "title"
+        call load_mission
+        call load_flight
+    call refresh_hud
+
+action tick(input):
+    if cinema_kind != "":
+        call tick_cinema
+        call refresh_hud
+        stop
+    stop when status != "playing"
+    clock += 1
+    use_pressed = input.use == true && use_held == false
+    use_held = input.use == true
+    notice_ticks = max(0, notice_ticks - 1)
+    if flying:
+        call fly_ship input, use_pressed
+        if flying && status == "playing":
+            call update_combat input
+        call refresh_hud
+        stop
+    call move_pilot input
+    call update_combat input
+    if status == "playing" && use_pressed == true:
+        call interact
+    call refresh_hud
+
+action interact:
+    if claimed == false && distance(player, relay) < 1.45 && abs(relay.z - player.z) < 0.65:
+        if mission == 3 && warden_down == false:
+            notice = "The Warden is still jamming the broadcast."
+            notice_ticks = 160
+            stop
+        claimed = true
+        relay.model = "signal/beacon_live"
+        notice = recovered
+        sound.play "signal_confirm"
+        notice_ticks = 160
+        stop
+    if distance(player, boarding_point) < 1.45 && abs(boarding_point.z - player.z) < 0.65:
+        if claimed == false:
+            notice = "The shuttle needs this planet's signal."
+            notice_ticks = 90
+            stop
+        call begin_cinema "departure"
+
+action refresh_hud:
+    if cinema_kind != "":
+        call cinema_hud
+        stop
+    view_camera = player
+    view_weapon = weapon
+    ui.cinema = null
+    continue_hidden = status == "playing"
+    ui.heading = ""
+    ui.panel = null
+    ui.meters = []
+    ui.detail = ""
+    ui.objective = ""
+    ui.prompt = ""
+    ui.notice = ""
+    if status == "title":
+        continue_label = "Begin campaign"
+        ui.heading = "SIGNAL RUN"
+        ui.panel = {"title":"LUMEN FLIGHT DECK","body":"Three planets. One missing colony.|In 2196, a courier follows a distress call that somebody tried to erase.","choices":[],"selected":0,"footer":"ENTER / BEGIN CAMPAIGN"}
+        stop
+    if status == "story":
+        continue_label = "Take the controls"
+        ui.heading = "CRUISER FLIGHT PLAN"
+        if mission == 1:
+            ui.heading = "INBOUND TRANSMISSION"
+        ui.panel = {"title":planet,"body":briefing,"choices":[],"selected":0,"footer":"ENTER / TAKE THE CONTROLS"}
+        stop
+    if status == "gameover":
+        continue_label = flying ? "Retry flight" : "Retry landing"
+        ui.heading = "SIGNAL LOST"
+        ui.panel = {"title":planet,"body":flying ? "Lumen: 'The cruiser has a spare shuttle. Let's try again.'" : "Lumen: 'I still have your beacon. Let's try that landing again.'","choices":[],"selected":0,"footer":"ENTER / RETRY"}
+        stop
+    if status == "won":
+        continue_label = "New campaign"
+        ui.heading = "SIGNAL RESTORED"
+        ui.panel = {"title":"LUMEN / FINAL TRANSMISSION","body":"The colony ships are clear. The miners are going home.|A child's voice comes over the radio: 'We heard you knock back.'","choices":[],"selected":0,"footer":"ENTER / RETURN TO FLIGHT DECK"}
+        stop
+
+    ui.meters = [{"label":"SUIT","value":shield,"max":100,"color":6547945},{"label":"PULSE","value":energy,"max":8,"color":16759088}]
+    if flying:
+        ui.meters[0].label = "HULL"
+        call flight_hud
+    if !flying:
+        call ground_hud
+    if notice_ticks > 0:
+        ui.notice = notice
+    pause_ui.meters = ui.meters
+    pause_ui.detail = ui.detail
+    pause_ui.objective = ui.objective
+
+action ground_hud:
+    ui.detail = planet + "  /  " + mission + " OF 3"
+    target = relay
+    ui.objective = job
+    if mission == 3 && warden_down == true:
+        ui.objective = "Broadcast the distress signal"
+    if claimed == true:
+        target = boarding_point
+        ui.objective = "Return to the shuttle"
+    bearing = (angle_to(player, target) - player.angle + 540) % 360 - 180
+    direction = "AHEAD"
+    if bearing > 15:
+        direction = "TURN RIGHT"
+    if bearing < -15:
+        direction = "TURN LEFT"
+    gap = distance(player, target)
+    ui.prompt = direction + " / " + ceil(gap) + " TILES"
+    if target.z - player.z >= 0.65:
+        ui.prompt += " / ABOVE"
+    if player.z - target.z >= 0.65:
+        ui.prompt += " / BELOW"
+    if gap < 1.45 && abs(target.z - player.z) < 0.65:
+        ui.prompt = "E / USE: ACCESS BEACON"
+        if claimed == true:
+            ui.prompt = "E / USE: BOARD SHUTTLE"
+action aim_view(input):
+    heading_delta = 0
+    if input.turn_left == true:
+        heading_delta -= 4
+    if input.turn_right == true:
+        heading_delta += 4
+    if input.look_x:
+        heading_delta += clamp(input.look_x * 0.16, -90, 90)
+    player.angle = (player.angle + heading_delta + 360) % 360
+    pitch_delta = (input.look_up ? 3 : 0) - (input.look_down ? 3 : 0)
+    if input.look_y:
+        pitch_delta -= input.look_y * 0.16
+    player.pitch = clamp(player.pitch + pitch_delta, -70, 70)
+
+action move_pilot(input):
+    call aim_view input
+    forward = 0
+    lateral = 0
+    if input.move_y:
+        forward = input.move_y
+    if input.move_x:
+        lateral = input.move_x
+    if input.forward == true:
+        forward += 1
+    if input.back == true:
+        forward -= 1
+    if input.left == true:
+        lateral -= 1
+    if input.right == true:
+        lateral += 1
+    forward = clamp(forward, -1, 1)
+    lateral = clamp(lateral, -1, 1)
+    pace = input.sprint == true ? 0.19 : 0.125
+    speed = pace / max(1, sqrt(forward * forward + lateral * lateral))
+    dx = (cos(player.angle) * forward - sin(player.angle) * lateral) * speed
+    dy = (sin(player.angle) * forward + cos(player.angle) * lateral) * speed
+    jump = input.jump == true && jump_held == false
+    jump_held = input.jump == true
+    player = voxel_move(world, player, dx, dy, jump, {"jumpSpeed":0.38})
+    if forward != 0 || lateral != 0:
+        weapon.bob += pace * 2.3

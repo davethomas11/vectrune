@@ -1,0 +1,235 @@
+@Logic/signal_run
+action prepare_drones:
+    for drone in drones:
+        drone.model = "signal/drone"
+        drone.home = {"x":drone.x,"y":drone.y,"z":drone.z}
+        drone.scale = 1
+        drone.radius = 1.1
+        drone.height = 1
+        drone.visible = true
+        drone.death = 0
+        drone.fall = 0
+        if drone.warden == true:
+            drone.model = "signal/warden"
+            drone.scale = 1.45
+            drone.radius = 1.7
+            drone.height = 1.85
+
+# Check the entire volume so a drone cannot pass through a wall or a deck.
+action check_space(x, y, z, radius, height):
+    space_clear = x - radius >= 0 && x + radius < world.width && y - radius >= 0 && y + radius < world.height && z >= 0.1 && z + height < world.depth - 0.4
+    stop when !space_clear
+    for bz in range(floor(z), floor(z + height) + 1):
+        for by in range(floor(y - radius), floor(y + radius) + 1):
+            for bx in range(floor(x - radius), floor(x + radius) + 1):
+                if world.cells[(bz * world.height + by) * world.width + bx] != 0:
+                    space_clear = false
+                    stop
+
+action update_combat(input):
+    flash = max(0, flash - 1)
+    hit_grace = max(0, hit_grace - 1)
+    fire_delay = max(0, fire_delay - 1)
+    recharge = max(0, recharge - 1)
+    if energy < 8 && recharge == 0:
+        energy += 1
+        recharge = 7
+    if fire_delay <= 4:
+        weapon.sprite = flying ? "signal/cockpit" : "signal/blaster"
+        weapon.y = flying ? 0 : 4
+    if input.fire == true && fire_delay == 0 && energy > 0:
+        call fire_pulse
+
+    for pack in repairs:
+        if pack.visible == true && shield < 100 && distance(player, pack) < 0.6 && abs(player.z - pack.z) < 0.6:
+            shield = min(100, shield + 35)
+            pack.visible = false
+            sound.play "signal_confirm"
+
+    call move_bolts
+    call move_tracers
+    stop when status != "playing"
+    for drone in drones:
+        if drone.visible && drone.hp > 0:
+            call fly_drone drone
+        if drone.visible && drone.hp <= 0:
+            call drone_death drone
+
+# Sample in world coordinates so decks and walls occlude attacks in either direction.
+action trace_clear(from, to):
+    line_clear = true
+    line_fraction = 1
+    dx = to.x - from.x
+    dy = to.y - from.y
+    dz = to.z - from.z
+    steps = max(1, ceil(max(abs(dx), abs(dy), abs(dz)) / 0.14))
+    for step in range(1, steps + 1):
+        t = step / steps
+        x = floor(from.x + t * dx)
+        y = floor(from.y + t * dy)
+        z = floor(from.z + t * dz)
+        if x < 0 || x >= world.width || y < 0 || y >= world.height || z < 0 || z >= world.depth:
+            line_clear = false
+            line_fraction = (step - 1) / steps
+            stop
+        if world.cells[(z * world.height + y) * world.width + x] != 0:
+            line_clear = false
+            line_fraction = (step - 1) / steps
+            stop
+
+action fire_pulse:
+    energy -= 1
+    fire_delay = 8
+    recharge = 29
+    if energy == 0:
+        notice = "Pulse cell recharging"
+        notice_ticks = 55
+    weapon.sprite = flying ? "signal/cockpit_fire" : "signal/blaster_fire"
+    weapon.y = flying ? 0 : 9
+    sound.play "signal_pulse"
+    eye = {"x":player.x,"y":player.y,"z":player.z + 1.25}
+    aim_x = cos(player.angle) * cos(player.pitch)
+    aim_y = sin(player.angle) * cos(player.pitch)
+    aim_z = sin(player.pitch)
+    nearest = flying ? 22 : 16
+    travel = nearest
+    target_index = -1
+    for index in range(0, drones.length):
+        target = drones[index]
+        if target.visible == true:
+            dx = target.x - eye.x
+            dy = target.y - eye.y
+            dz = target.z + target.scale * 0.54 - eye.z
+            along = dx * aim_x + dy * aim_y + dz * aim_z
+            radius = target.scale * 0.62
+            miss_squared = dx * dx + dy * dy + dz * dz - along * along
+            if along > 0 && along < nearest && miss_squared < radius * radius:
+                hit = max(0, along - sqrt(radius * radius - miss_squared))
+                contact = {"x":eye.x + aim_x * hit,"y":eye.y + aim_y * hit,"z":eye.z + aim_z * hit}
+                call trace_clear eye, contact
+                if line_clear == true:
+                    target_index = index
+                    nearest = along
+                    travel = hit
+    end = {"x":eye.x + aim_x * travel,"y":eye.y + aim_y * travel,"z":eye.z + aim_z * travel}
+    call trace_clear eye, end
+    travel *= line_fraction
+    if travel > 0.65:
+        tracers.push({"x":eye.x,"y":eye.y,"z":eye.z,"vx":aim_x,"vy":aim_y,"vz":aim_z,"angle":player.angle,"remaining":travel,"model":"signal/pulse","visible":true})
+    stop when target_index < 0
+    drones[target_index].hp -= 1
+    sound.play "signal_hit"
+    if drones[target_index].hp <= 0:
+        drones[target_index].fall = 0.04
+        if drones[target_index].warden == true:
+            warden_down = true
+            notice = "Warden offline. Lumen: 'I have a channel!'"
+            notice_ticks = 125
+
+action fly_drone(drone):
+    gap = distance(drone, player)
+    stop when gap > 24
+    drone.angle = angle_to(drone, player)
+    orbit = clock * 2 + drone.home.x * 27
+    target_x = drone.home.x + cos(orbit) * 1.65
+    target_y = drone.home.y + sin(orbit) * 1.65
+    target_z = drone.home.z + sin(orbit * 1.7) * 0.55
+    muzzle = {"x":drone.x,"y":drone.y,"z":drone.z + drone.scale * 0.54}
+    eye = {"x":player.x,"y":player.y,"z":player.z + 1.15}
+    call trace_clear muzzle, eye
+    can_attack = line_clear && gap < (flying ? 19 : 13)
+    if can_attack && gap > 3.6 && drone.phase > 13:
+        target_x = clamp(player.x, drone.home.x - 4, drone.home.x + 4)
+        target_y = clamp(player.y, drone.home.y - 4, drone.home.y + 4)
+        target_z = clamp(player.z + 0.63, drone.home.z - 1, drone.home.z + 1.8)
+    speed = drone.warden ? 0.042 : 0.075
+    if drone.phase > 13 || !can_attack:
+        dx = clamp(target_x - drone.x, -speed, speed)
+        dy = clamp(target_y - drone.y, -speed, speed)
+        dz = clamp(target_z - drone.z, -speed, speed)
+        call check_space drone.x + dx, drone.y, drone.z, drone.radius, drone.height
+        if space_clear:
+            drone.x += dx
+        call check_space drone.x, drone.y + dy, drone.z, drone.radius, drone.height
+        if space_clear:
+            drone.y += dy
+        call check_space drone.x, drone.y, drone.z + dz, drone.radius, drone.height
+        if space_clear:
+            drone.z += dz
+    stop when !can_attack
+    drone.phase -= 1
+    if drone.phase == 13:
+        sound.play "signal_charge"
+        drone.model = "signal/drone_charge"
+        if drone.warden == true:
+            drone.model = "signal/warden_charge"
+    if drone.phase <= 0:
+        muzzle = {"x":drone.x,"y":drone.y,"z":drone.z + drone.scale * 0.54}
+        drone.angle = angle_to(drone, player)
+        gap = distance(drone, player)
+        elevation = atan2(eye.z - muzzle.z, gap)
+        drone.phase = 68
+        drone.model = "signal/drone"
+        if drone.warden == true:
+            drone.phase = 45
+            drone.model = "signal/warden"
+            call launch_bolt muzzle, drone.angle - 12, elevation, 0.22, 16
+            call launch_bolt muzzle, drone.angle + 12, elevation, 0.22, 16
+        call launch_bolt muzzle, drone.angle, elevation, 0.19, 12
+
+action launch_bolt(muzzle, yaw, pitch, speed, damage):
+    bolts.push({"x":muzzle.x,"y":muzzle.y,"z":muzzle.z,"vx":cos(yaw) * cos(pitch) * speed,"vy":sin(yaw) * cos(pitch) * speed,"vz":sin(pitch) * speed,"angle":yaw,"damage":damage,"life":95,"visible":true,"model":"signal/bolt"})
+
+action move_bolts:
+    for bolt in bolts:
+        if bolt.visible == true:
+            bolt.life -= 1
+            next = {"x":bolt.x + bolt.vx,"y":bolt.y + bolt.vy,"z":bolt.z + bolt.vz}
+            call trace_clear bolt, next
+            if bolt.life <= 0 || line_clear == false:
+                bolt.visible = false
+            if bolt.visible == true:
+                bolt.x = next.x
+                bolt.y = next.y
+                bolt.z = next.z
+                if distance(bolt, player) < 0.35 && bolt.z > player.z && bolt.z < player.z + 1.6:
+                    bolt.visible = false
+                    if hit_grace == 0:
+                        call damage_pilot bolt.damage
+    bolts = bolts.filter(b => b.visible == true)
+
+
+action damage_pilot(points):
+    shield = max(0, shield - points)
+    hit_grace = 12
+    flash = 4
+    sound.play "signal_hit"
+    if shield == 0:
+        status = "gameover"
+        music.stop
+
+action drone_death(drone):
+    drone.death += 1
+    drone.angle += 15
+    drone.dissolve = clamp((drone.death - 5) / 19, 0, 1)
+    if drone.death == 1:
+        drone.model = drone.warden ? "signal/warden_charge" : "signal/drone_charge"
+    if !flying:
+        drone.fall = min(0.25, drone.fall + 0.025)
+        call check_space drone.x, drone.y, drone.z - drone.fall, drone.radius, drone.height
+        if space_clear:
+            drone.z -= drone.fall
+    if drone.death >= 24:
+        drone.visible = false
+
+action move_tracers:
+    for pulse in tracers:
+        stride = min(1.24, pulse.remaining)
+        pulse.x += pulse.vx * stride
+        pulse.y += pulse.vy * stride
+        pulse.z += pulse.vz * stride
+        pulse.remaining -= stride
+        # Retain the endpoint for one frame so short shots also leave a flash.
+        if stride == 0:
+            pulse.visible = false
+    tracers = tracers.filter(pulse => pulse.visible == true)

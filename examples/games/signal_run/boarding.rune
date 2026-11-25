@@ -1,0 +1,97 @@
+@Logic/signal_run
+# The shuttle lands pointing north, leaving its stern ramp clear of the level.
+action park_cinema_shuttle:
+    cinema_ship.x = shuttle.x
+    cinema_ship.y = shuttle.y
+    cinema_ship.z = shuttle.z
+    cinema_ship.angle = shuttle.angle
+    cinema_ship.scale = 1
+    cinema_ship.model = "signal/shuttle_open"
+    cinema_glow.visible = false
+
+action extend_hatch(open, extension):
+    side_x = cos(cinema_ship.angle + 90) * open * 0.375
+    side_y = sin(cinema_ship.angle + 90) * open * 0.375
+    cinema_port_hatch.x = cinema_ship.x - side_x
+    cinema_port_hatch.y = cinema_ship.y - side_y
+    cinema_port_hatch.z = cinema_ship.z
+    cinema_port_hatch.angle = cinema_ship.angle
+    cinema_port_hatch.visible = true
+    cinema_starboard_hatch.x = cinema_ship.x + side_x
+    cinema_starboard_hatch.y = cinema_ship.y + side_y
+    cinema_starboard_hatch.z = cinema_ship.z
+    cinema_starboard_hatch.angle = cinema_ship.angle
+    cinema_starboard_hatch.visible = true
+
+    # Keep the top of the ramp at cabin-floor height as it telescopes out.
+    hinge = -0.875 * (1 - extension)
+    cinema_ramp.x = cinema_ship.x + cos(cinema_ship.angle) * hinge
+    cinema_ramp.y = cinema_ship.y + sin(cinema_ship.angle) * hinge
+    cinema_ramp.z = cinema_ship.z + 0.5 * (1 - extension)
+    cinema_ramp.angle = cinema_ship.angle
+    cinema_ramp.scale = max(0.01, extension)
+    cinema_ramp.visible = extension > 0.06
+
+action seal_cinema_hatch:
+    cinema_ship.model = "signal/shuttle"
+    cinema_port_hatch.visible = false
+    cinema_starboard_hatch.visible = false
+    cinema_ramp.visible = false
+    cinema_pilot.visible = false
+    cinema_glow.visible = true
+
+action disembark_shot(tick):
+    call park_cinema_shuttle
+    if tick == 0:
+        sound.play "signal_hatch"
+    opening = min(clamp(tick / 13, 0, 1), clamp((98 - tick) / 14, 0, 1))
+    extension = min(clamp((tick - 7) / 16, 0, 1), clamp((88 - tick) / 17, 0, 1))
+    call extend_hatch opening, extension
+    cinema_pilot.visible = tick >= 23
+    if cinema_pilot.visible:
+        walk = clamp((tick - 23) / 45, 0, 1)
+        cinema_pilot.x = shuttle.x
+        cinema_pilot.y = shuttle.y + 0.55 + (boarding_point.y - shuttle.y - 0.55) * walk
+        if walk == 1:
+            cinema_pilot.y = boarding_point.y
+        call place_pilot_feet
+        cinema_pilot.angle = 90 * (1 - clamp((tick - 66) / 12, 0, 1))
+        call animate_pilot tick, tick < 68
+    cinema_caption = "HATCH OPENING"
+    if tick >= 23:
+        cinema_caption = "PILOT DISEMBARKING"
+    call frame_target 4.7 + 0.17 * tick / 100, 13.85, 3.7, shuttle.x, shuttle.y + 1.35, shuttle.z + 0.85
+
+action board_shot(tick):
+    call park_cinema_shuttle
+    if tick == 0:
+        sound.play "signal_hatch"
+    opening = min(clamp(tick / 13, 0, 1), clamp((99 - tick) / 14, 0, 1))
+    extension = min(clamp((tick - 7) / 16, 0, 1), clamp((88 - tick) / 16, 0, 1))
+    call extend_hatch opening, extension
+    cinema_pilot.visible = tick < 70
+    if cinema_pilot.visible:
+        approach = clamp((tick - 15) / 21, 0, 1)
+        climb = clamp((tick - 36) / 34, 0, 1)
+        start_y = shuttle.y + 2.75
+        cinema_pilot.x = cinema_board_start.x + (shuttle.x - cinema_board_start.x) * approach
+        cinema_pilot.y = cinema_board_start.y + (start_y - cinema_board_start.y) * approach - 2.2 * climb
+        call place_pilot_feet
+        if tick < 36:
+            cinema_pilot.z = cinema_board_start.z + (shuttle.z - cinema_board_start.z) * approach
+        cinema_pilot.angle = 270
+        if tick < 36:
+            cinema_pilot.angle = atan2(start_y - cinema_board_start.y, shuttle.x - cinema_board_start.x)
+        call animate_pilot tick, tick >= 15
+    cinema_caption = "PILOT BOARDING"
+    if tick >= 70:
+        cinema_caption = "STOWING RAMP / SEALING HATCH"
+    call frame_target 4.85 - 0.18 * tick / 100, 13.75, 3.72, shuttle.x, shuttle.y + 1.35, shuttle.z + 0.85
+
+action animate_pilot(tick, walking):
+    cinema_pilot.model = "signal/pilot_idle"
+    if walking:
+        cinema_pilot.model = floor(tick / 5) % 2 == 0 ? "signal/pilot_step_left" : "signal/pilot_step_right"
+
+action place_pilot_feet:
+    cinema_pilot.z = shuttle.z + clamp((shuttle.y + 2.75 - cinema_pilot.y) / 1.875, 0, 1) * 0.5

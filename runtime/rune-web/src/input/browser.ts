@@ -5,7 +5,7 @@ import { mountControlTouch } from './touch';
 export function mountControls(canvas: HTMLCanvasElement, controls: GameControls, options: {
   state?(): Record<string, unknown>;
   playing(): boolean; paused(): boolean; resume(): void; advance(): void;
-  fullscreen(): void; interact(): void; lockedMouse?: boolean;
+  fullscreen(): void; interact(): void; lockedMouse?: boolean; unlockedCanvasLook?(): boolean;
   expanded?(): boolean;
   menuKey?(code: string): boolean;
   advanceInputs?: string[];
@@ -41,8 +41,13 @@ export function mountControls(canvas: HTMLCanvasElement, controls: GameControls,
   });
   listen(canvas, 'contextmenu', (e: Event) => { if (controls.profile.mouse.Right) e.preventDefault(); });
   listen(document, 'mousemove', (e: MouseEvent) => {
-    if (!options.playing() || (options.lockedMouse ? document.pointerLockElement !== canvas : document.activeElement !== canvas)) return;
-    send({ device: 'mouse', code: 'MoveX', value: e.movementX }); send({ device: 'mouse', code: 'MoveY', value: e.movementY });
+    if (!options.playing() || options.paused()) return;
+    const lock = document.pointerLockElement;
+    const focused = document.activeElement === canvas;
+    const canvasLook = options.unlockedCanvasLook?.() && !lock && focused && e.target === canvas;
+    if (options.lockedMouse ? lock !== canvas && !canvasLook : !focused) return;
+    send({ device: 'mouse', code: 'MoveX', value: e.movementX });
+    send({ device: 'mouse', code: 'MoveY', value: e.movementY });
   });
   canvas.addEventListener('wheel', e => {
     if (document.activeElement !== canvas || !options.playing()) return;

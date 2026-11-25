@@ -1,0 +1,86 @@
+@Page/signal_flight_deck
+title = Signal Run
+logic = signal_flight_deck
+style = signal_flight_deck
+view:
+    main .flight-deck:
+        header:
+            p .eyebrow "LUMEN COURIER SERVICE"
+            h1 "Signal Run"
+            p .intro "Launch from the cruiser and follow a missing colony’s signal across three worlds."
+        div .game-surface:
+            canvas data-rune-pixel-3d=true tabindex=0 aria-label="Signal Run. Move with WASD, look in all directions with the mouse or arrow keys, jump with Space, fire with click or X, and use E to interact."
+        div .controls:
+            button .primary data-pixel-action=advance data-pixel-hidden=continue_hidden data-pixel-text=continue_label "Begin campaign"
+            button data-pixel-pause=true "Pause / P"
+            button data-pixel-mute=true "Sound / M"
+            button data-pixel-fullscreen=true "Fullscreen / F"
+        p .keys "WASD move or fly · Mouse or arrows aim · Click or X fire · E interact or land"
+        p .keys "Space jumps on foot or climbs in flight · Ctrl descends in flight · Shift sprints or boosts"
+        p .keys "Click the game to capture the mouse. Press Esc to release it."
+        p .status data-pixel-text=ui.objective aria-live=polite
+
+@Style/signal_flight_deck
+rules:
+    :root:
+        color-scheme = dark
+    body:
+        margin = 0
+        background = #101824
+        color = #dcebf0
+        font-family = system-ui, sans-serif
+    .flight-deck:
+        box-sizing = border-box
+        width = min(100%, 970px)
+        margin = 0 auto
+        padding = clamp(16px, 4vw, 48px)
+    header:
+        margin-bottom = 18px
+    h1:
+        font-size = clamp(2rem, 6vw, 3.6rem)
+        letter-spacing = -0.05em
+        line-height = 1
+        margin = 3px 0 9px
+    .eyebrow:
+        margin = 0
+        color = #78e3cf
+        font-family = monospace
+        letter-spacing = 0.16em
+    .intro:
+        color = #a3b8ca
+        margin = 0
+    .game-surface:
+        border = 1px solid #3f6e79
+        background = #070d15
+    canvas:
+        width = 100%
+        height = auto
+        display = block
+        image-rendering = pixelated
+    .controls:
+        display = flex
+        flex-wrap = wrap
+        gap = 8px
+        margin-top = 12px
+    button:
+        border = 1px solid #3f6e79
+        border-radius = 3px
+        padding = 8px 13px
+        background = #162833
+        color = #eefaff
+        font = inherit
+        cursor = pointer
+    button.primary:
+        background = #76dfcf
+        color = #0b2425
+        border-color = #76dfcf
+        font-weight = 700
+    .keys:
+        color = #a3b8ca
+        font-size = 0.9rem
+    .status:
+        position = absolute
+        width = 1px
+        height = 1px
+        overflow = hidden
+        clip-path = inset(50%)

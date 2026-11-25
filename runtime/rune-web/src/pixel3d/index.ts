@@ -327,13 +327,15 @@ export function mount(
   for (const button of Array.from(document.querySelectorAll('[data-pixel-fullscreen]'))) {
     listen(button, 'click', () => { void fullscreen.toggle().catch(() => {}); });
   }
+  let pointerLockUnavailable = false;
   mapped = game.controls ? mountControls(canvas, game.controls, {
     state: () => game.app.state,
     playing: () => game.app.state.status === 'playing', paused: () => game.paused,
     resume: () => { clear(true); game.paused = false; },
     advance: () => { clear(); if (['title', 'story', 'gameover', 'won'].includes(String(game.app.state.status))) game.invoke('advance'); else start(); },
     fullscreen: () => { void fullscreen.toggle().catch(() => {}); },
-    interact: unlockAudio, lockedMouse: true, advanceInputs: ['fire', 'use'], expanded: fullscreen.expanded,
+    interact: unlockAudio, lockedMouse: true, unlockedCanvasLook: () => pointerLockUnavailable,
+    advanceInputs: ['fire', 'use'], expanded: fullscreen.expanded,
     tapToAdvance: game.config.clickToStart,
   }) : undefined;
   const mappedStyle = mapped ? document.createElement('style') : undefined;
@@ -370,7 +372,11 @@ export function mount(
   listen(document, 'mouseup', ((event: MouseEvent) => {
     if (event.button === 0) mouseFire = false;
   }) as EventListener);
+  listen(document, 'pointerlockerror', () => {
+    if (document.activeElement === canvas && game.config.mouseLook !== false) pointerLockUnavailable = true;
+  });
   listen(document, 'pointerlockchange', () => {
+    if (document.pointerLockElement === canvas) pointerLockUnavailable = false;
     if (!game.paused && document.pointerLockElement !== canvas) {
       // The browser queues this event: keep keys pressed after Escape intact.
       mouseFire = false;
@@ -395,9 +401,15 @@ export function mount(
       return;
     }
     if (game.config.mouseLook !== false && document.pointerLockElement !== canvas) {
-      const lock = canvas.requestPointerLock?.();
-      // Shooting still works when embedding or browser policy denies mouse lock.
-      lock?.catch(() => {});
+      if (!canvas.requestPointerLock) {
+        pointerLockUnavailable = true;
+        return;
+      }
+      try {
+        canvas.requestPointerLock()?.catch(() => { pointerLockUnavailable = true; });
+      } catch {
+        pointerLockUnavailable = true;
+      }
     }
   });
 
