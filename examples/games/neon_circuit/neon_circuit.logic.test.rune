@@ -75,12 +75,29 @@ run:
     invoke tick {}
     assert state.boss_entity.dissolve > 0
     invoke wait_ticks 75
+    assert state.status == "escape_flip"
+    assert state.escape_floor.length > 0
+    assert state.power_capsule.visible == true
+    invoke wait_ticks 45
+    assert state.status == "escape"
+    assert state.camera.pitch == -42
+    assert state.camera.angle == 238
+    invoke tick {"left": true, "aim_up": true}
+    assert state.player.y < 7.0
+    assert state.avatar.model == "nc/hero_run0"
+    invoke tick {"left": true, "duck": true}
+    invoke tick {"left": true}
+    assert state.avatar.model == "nc/hero_run1"
+    invoke collect_power_container
     assert state.status == "boss_victory"
+    assert state.power_capsule.model == "nc/power_capsule_open"
     assert state.victory_item.visible == true
     assert state.avatar.model == "nc/hero_victory"
     assert state.ui.panel.title == "VICTORY // VOLT VIPER DEFEATED!"
     invoke finish_boss_victory
     assert state.status == "stage_clear"
+    assert state.power_capsule.visible == false
+    assert state.escape_floor.length == 0
     invoke load_stage 2
     invoke on_boss_defeated
     assert state.campaign.weapons.mag == true

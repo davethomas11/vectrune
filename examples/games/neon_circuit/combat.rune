@@ -782,6 +782,11 @@ action on_boss_defeated:
     cam_shake = 12
     shots = []
     enemy_shots = []
+    if player.x < boss_entity.x - 12:
+        player.x = boss_entity.x - 4.0
+        player.z = boss_entity.z
+    avatar.visible = true
+    avatar.dissolve = 0
     st = stages[current_stage]
     campaign.defeated[st.code] = true
     if st.unlocks != "":
@@ -828,24 +833,239 @@ action tick_boss_dying:
         for sat in boss_satellites:
             sat.visible = false
         sound.play "nc_explode"
-        sound.play "nc_weapon_get"
-        call play_stage_music "nc_victory"
-        status = "boss_victory"
-        victory_ticks = 0
-        avatar.model = "nc/hero_victory"
-        avatar.angle = 0
-        avatar.visible = true
-        weapon_model.visible = false
-        victory_item = {
-            "x": player.x,
-            "y": 7,
-            "z": player.z + 2.3,
-            "model": "nc/victory_orb",
+        call start_escape_flip
+        stop when true
+    call refresh_ui
+
+action start_escape_flip:
+    status = "escape_flip"
+    escape_flip_ticks = 0
+    escape_ticks = 0
+    shots = []
+    enemy_shots = []
+    call unlock_boss_door
+    boss_shutter_fx.visible = false
+
+    facing = -1
+    player.vz = 0
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z
+    avatar.model = "nc/hero_idle"
+    avatar.angle = 180
+    avatar.dissolve = 0
+    avatar.visible = true
+    weapon_model.visible = false
+
+    power_capsule.x = 4.5
+    power_capsule.y = 7.0
+    power_capsule.z = 1.95
+    power_capsule.model = "nc/power_capsule"
+    power_capsule.angle = 0
+    power_capsule.scale = 1.15
+    power_capsule.visible = true
+
+    victory_item.x = 4.5
+    victory_item.y = 7.0
+    victory_item.z = 3.05
+    victory_item.model = "nc/victory_orb"
+    victory_item.scale = 0.95
+    victory_item.visible = true
+
+    panels = []
+    for i in range(0, 17):
+        panels.push({
+            "x": 3.5 + i * 7.5,
+            "y": 3.8,
+            "z": 13.5,
+            "model": "nc/sliding_wall_panel",
             "angle": 0,
             "scale": 1.0,
             "visible": true
-        }
-        call victory_sparkles player.x, player.z
+        })
+    escape_floor = panels
+    sound.play "nc_dash"
+    call refresh_ui
+
+action tick_escape_flip:
+    escape_flip_ticks = escape_flip_ticks + 1
+    t = clamp(escape_flip_ticks / 45.0, 0, 1.0)
+    player.z = player.z + (2.0 - player.z) * 0.22
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z
+    avatar.model = "nc/hero_idle"
+    avatar.angle = 180
+    avatar.visible = true
+
+    if escape_flip_ticks <= 22:
+        s1 = clamp(escape_flip_ticks / 22.0, 0, 1.0)
+        wall_z = 13.5 - s1 * 11.5
+        for p in escape_floor:
+            p.model = "nc/sliding_wall_panel"
+            p.y = 3.8
+            p.z = wall_z
+            p.angle = 0
+
+    if escape_flip_ticks == 23:
+        sound.play "nc_barrier_open"
+        cam_shake = 6
+        world = voxel_fill(world, [1, 4, 1], [level_width - 2, 8, level_height - 1], 0)
+        for sc in scenery:
+            if sc.y > 4.2:
+                sc.visible = false
+        for e in enemies:
+            e.visible = false
+        for pk in pickups:
+            pk.visible = false
+        for cp in checkpoints:
+            cp.visible = false
+        for bf in barriers_fx:
+            bf.visible = false
+        for hf in hazards_fx:
+            hf.visible = false
+
+    if escape_flip_ticks > 22:
+        s2 = clamp((escape_flip_ticks - 22) / 23.0, 0, 1.0)
+        floor_y = 4.6 + s2 * 2.4
+        floor_z = 1.75 - s2 * 0.50
+        for p in escape_floor:
+            p.model = "nc/sliding_floor_wall"
+            p.y = floor_y
+            p.z = floor_z
+            p.angle = 0
+
+    camera.angle = 270.0 - t * 32.0
+    camera.pitch = -t * 42.0
+    camera.x = clamp(player.x + t * 3.5, 4.0, level_width - 1.5)
+    camera.y = clamp(19.0 - t * 5.5, 4.0, 19.2)
+    camera.z = clamp(player.z + 2.5 + t * 3.7, 2.5, 14.5)
+    if escape_flip_ticks % 15 == 0:
+        sound.play "nc_dash"
+        call burst player.x, player.z + 0.5, 4
+    if escape_flip_ticks >= 45:
+        player.z = 2.0
+        sound.play "nc_checkpoint"
+        status = "escape"
+        escape_ticks = 0
+        st = stages[current_stage]
+        call play_stage_music st.music
+        notice_text = "PERSPECTIVE SHIFT COMPLETE // ESCAPE TO START"
+        notice_ticks = 90
+    call refresh_ui
+
+action tick_escape(input):
+    escape_ticks = escape_ticks + 1
+    spd_mult = input.dash == true ? 1.4 : 1.0
+    move_x = 0
+    if input.left == true || (input.move_x != null && input.move_x < -0.25):
+        move_x = -0.34 * spd_mult
+        facing = -1
+    if input.right == true || (input.move_x != null && input.move_x > 0.25):
+        move_x = 0.34 * spd_mult
+        facing = 1
+    move_y = 0
+    if input.aim_up == true || input.up == true || (input.duck_axis != null && input.duck_axis < -0.25):
+        move_y = -0.22 * spd_mult
+    if input.duck == true || input.down == true || (input.duck_axis != null && input.duck_axis > 0.25):
+        move_y = 0.22 * spd_mult
+    player.x = clamp(player.x + move_x, 3.0, level_width - 3.0)
+    player.y = clamp(player.y + move_y, 5.0, 9.0)
+    if input.jump == true && player.z <= 2.05:
+        player.vz = 0.40
+        sound.play "nc_jump"
+    player.vz = player.vz - 0.028
+    player.z = player.z + player.vz
+    if player.z < 2.0:
+        player.z = 2.0
+        player.vz = 0
+
+    iso_angle = facing < 0 ? 180 : 0
+    if move_x < -0.01 && move_y < -0.01:
+        iso_angle = 215
+    if move_x < -0.01 && move_y > 0.01:
+        iso_angle = 145
+    if move_x > 0.01 && move_y < -0.01:
+        iso_angle = 325
+    if move_x > 0.01 && move_y > 0.01:
+        iso_angle = 35
+    if abs(move_x) <= 0.01 && move_y < -0.01:
+        iso_angle = 270
+    if abs(move_x) <= 0.01 && move_y > 0.01:
+        iso_angle = 90
+
+    is_moving = abs(move_x) > 0.01 || abs(move_y) > 0.01
+    hero_m = "nc/hero_idle"
+    if is_moving:
+        run_f = floor(escape_ticks / 3) % 4
+        if run_f == 0:
+            hero_m = "nc/hero_run0"
+        if run_f == 1:
+            hero_m = "nc/hero_run1"
+        if run_f == 2:
+            hero_m = "nc/hero_run2"
+        if run_f == 3:
+            hero_m = "nc/hero_run3"
+    if is_moving && input.dash == true:
+        hero_m = "nc/hero_dash"
+    if player.z > 2.08:
+        hero_m = "nc/hero_jump"
+
+    avatar.x = player.x
+    avatar.y = player.y
+    avatar.z = player.z
+    avatar.angle = iso_angle
+    avatar.model = hero_m
+    avatar.dissolve = 0
+    avatar.visible = true
+    weapon_model.visible = false
+    cam_tx = clamp(player.x + 3.5, 4.0, level_width - 1.5)
+    cam_ty = clamp(player.y + 6.5, 4.0, 18.5)
+    cam_tz = clamp(player.z + 6.2, 2.5, 14.5)
+    camera.x = camera.x + (cam_tx - camera.x) * 0.25
+    camera.y = camera.y + (cam_ty - camera.y) * 0.25
+    camera.z = camera.z + (cam_tz - camera.z) * 0.25
+    camera.angle = 238
+    camera.pitch = -42
+    power_capsule.angle = (escape_ticks * 2) % 360
+    victory_item.x = power_capsule.x
+    victory_item.y = power_capsule.y
+    victory_item.z = power_capsule.z + 1.1 + sin(escape_ticks * 0.12) * 0.12
+    victory_item.angle = (escape_ticks * 5) % 360
+    dist_x = abs(player.x - power_capsule.x)
+    dist_y = abs(player.y - power_capsule.y)
+    if dist_x < 2.0 && dist_y < 2.2:
+        call collect_power_container
+        stop when true
+    call update_effects
+    call refresh_ui
+
+action collect_power_container:
+    power_capsule.model = "nc/power_capsule_open"
+    power_capsule.angle = 0
+    sound.play "nc_weapon_get"
+    call play_stage_music "nc_victory"
+    status = "boss_victory"
+    victory_ticks = 0
+    player.x = power_capsule.x + 2.2
+    player.y = 7.0
+    player.z = 2.05
+    avatar.x = player.x
+    avatar.y = 7.0
+    avatar.z = player.z
+    avatar.model = "nc/hero_victory"
+    avatar.angle = 0
+    avatar.visible = true
+    weapon_model.visible = false
+    victory_item.x = player.x
+    victory_item.y = player.y
+    victory_item.z = player.z + 2.3
+    victory_item.visible = true
+    call victory_sparkles player.x, player.z
+    camera.x = 9.5
+    camera.angle = 270
+    camera.pitch = 0
+    camera.y = 18
     call refresh_ui
 
 action tick_boss_victory(input):
@@ -875,13 +1095,15 @@ action tick_boss_victory(input):
     victory_input_held = input.jump == true || input.fire == true
     if victory_ticks >= 145 || (victory_ticks >= 35 && pressed):
         call finish_boss_victory
-    else:
-        call refresh_ui
+        stop when true
+    call refresh_ui
 
 action finish_boss_victory:
     victory_item.visible = false
+    power_capsule.visible = false
+    escape_floor = []
     if defeated_count >= 12:
         status = "won"
-    else:
+    if defeated_count < 12:
         status = "stage_clear"
     call refresh_ui

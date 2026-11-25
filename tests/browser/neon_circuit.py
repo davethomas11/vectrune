@@ -193,8 +193,44 @@ with tempfile.TemporaryDirectory(prefix="neon-circuit-") as folder, sync_playwri
     if SHOTS_DIR:
         canvas.screenshot(path=str(Path(SHOTS_DIR) / "05_boss_dying.png"))
 
-    page.evaluate("() => { for (let i = 0; i < 50; i++) __RunePixel3D.step({}); }")
+    page.evaluate("""() => {
+      const g = __RunePixel3D, s = g.app.state;
+      while (s.status === 'boss_dying') g.step({});
+      for (let i = 0; i < 12; i++) g.step({});
+      g.frame();
+    }""")
+    assert page.evaluate("__RunePixel3D.app.state.status") == "escape_flip"
+    assert page.evaluate("__RunePixel3D.app.state.escape_floor.length > 0")
+    if SHOTS_DIR:
+        canvas.screenshot(path=str(Path(SHOTS_DIR) / "05b_escape_flip.png"))
+
+    page.evaluate("""() => {
+      const g = __RunePixel3D, s = g.app.state;
+      while (s.status === 'escape_flip') { g.step({}); g.frame(); }
+    }""")
+    assert page.evaluate("__RunePixel3D.app.state.status") == "escape"
+    assert page.evaluate("__RunePixel3D.app.state.camera.pitch") == -42
+    assert page.evaluate("__RunePixel3D.app.state.camera.angle") == 238
+    # Exercise full isometric movement, jump, and all hero_run0..hero_run3 frames through actual renderer
+    page.evaluate("""() => {
+      const g = __RunePixel3D;
+      for (let i = 0; i < 16; i++) {
+        g.step({ left: true, aim_up: i < 8, duck: i >= 8, jump: i === 4 });
+        g.frame();
+      }
+    }""")
+    if SHOTS_DIR:
+        canvas.screenshot(path=str(Path(SHOTS_DIR) / "05c_escape_isometric.png"))
+
+    # Axel navigates back to start container in top-down isometric view and collects power core
+    page.evaluate("""() => {
+      const g = __RunePixel3D, s = g.app.state;
+      s.player.x = 4.5;
+      s.player.y = 7.0;
+      g.step({});
+    }""")
     assert page.evaluate("__RunePixel3D.app.state.status") == "boss_victory"
+    assert page.evaluate("__RunePixel3D.app.state.power_capsule.model") == "nc/power_capsule_open"
     assert page.evaluate("__RunePixel3D.app.state.avatar.model") == "nc/hero_victory"
     assert page.evaluate("__RunePixel3D.app.state.avatar.x === __RunePixel3D.app.state.player.x")
     assert "VOLT VIPER DEFEATED" in page.evaluate("__RunePixel3D.app.state.ui.panel.title")

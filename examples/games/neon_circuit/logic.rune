@@ -40,6 +40,10 @@ state:
     avatar = {"x": 12.5, "y": 7, "z": 2.1, "model": "nc/hero_idle", "angle": 0, "visible": true}
     weapon_model = {"x": 13.0, "y": 7.1, "z": 2.9, "model": "nc/gun_buster", "angle": 0, "visible": false}
     victory_item = {"x": 12.5, "y": 7, "z": 4.0, "model": "nc/victory_orb", "angle": 0, "scale": 1, "visible": false}
+    power_capsule = {"x": 4.5, "y": 7, "z": 2.0, "model": "nc/power_capsule", "angle": 0, "scale": 1.15, "visible": false}
+    escape_floor = []
+    escape_flip_ticks = 0
+    escape_ticks = 0
     select_pedestal = {"x": 21.5, "y": 7, "z": 2.0, "model": "nc/pedestal", "scale": 1.15, "visible": true}
     select_boss = {"x": 21.5, "y": 7, "z": 2.9, "model": "nc/boss_volt", "angle": 0, "scale": 1.2, "visible": true}
     title_monument = {"x": 18.0, "y": 13.5, "z": 0.0, "model": "nc/title_monument", "angle": 0, "scale": 1.15, "visible": false}
@@ -253,8 +257,38 @@ action refresh_ui:
                 "meters": [],
                 "objective": "TARGET CRITICAL // " + st.name,
                 "detail": "REACTOR OVERLOAD IN PROGRESS...",
-                "notice": "",
+                "notice": "ROBOT CRITICAL // DIMENSIONAL FLIP IMMINENT",
                 "prompt": "",
+                "panel": null
+            }
+        "escape_flip":
+            st = stages[current_stage]
+            ui = {
+                "style": "floating",
+                "heading": "",
+                "meters": [],
+                "objective": "DIMENSIONAL FLIP // " + st.name,
+                "detail": "BACKGROUND WALL SLIDING DOWN TO BECOME FLOOR...",
+                "notice": "PERSPECTIVE SHIFTING TO TOP-DOWN ISOMETRIC",
+                "prompt": "PREPARE FOR EXTRACTION ESCAPE",
+                "panel": null
+            }
+        "escape":
+            st = stages[current_stage]
+            dist = floor(abs(player.x - power_capsule.x))
+            meters = [
+                {"label": "AXEL", "value": health, "max": max_health, "color": 62975, "display": "pips", "icon": "nc/hp_full", "emptyIcon": "nc/hp_empty"},
+                {"label": "CAPSULE", "value": max(0, min(100, 100 - dist)), "max": 100, "color": 16770560, "display": "bar"}
+            ]
+            ui = {
+                "style": "floating",
+                "heading": "",
+                "meters": meters,
+                "objective": "ESCAPE TO START CAPSULE: " + dist + "M",
+                "detail": "TOP-DOWN ISOMETRIC ESCAPE // RETRIEVE POWER CORE",
+                "notice": notice_ticks > 0 ? notice_text : ("EXTRACTION CAPSULE: " + dist + "M"),
+                "slots": [],
+                "prompt": "A/D MOVE | W/S DEPTH | SPACE JUMP | ESCAPE TO CAPSULE",
                 "panel": null
             }
         "boss_victory":
@@ -401,9 +435,11 @@ action count_progress:
     has_progress = c > 0 || campaign.weapons.volt == true || campaign.weapons.cryo == true || campaign.weapons.mag == true || campaign.weapons.nova == true || campaign.weapons.phase == true || campaign.weapons.saw == true
 
 action start:
+    stop when status != "title"
     call continue_game
 
 action continue_game:
+    stop when status != "title"
     title_confirm = false
     title_selected = 0
     call open_select
@@ -792,6 +828,12 @@ action tick(input):
             stop when true
         "boss_dying":
             call tick_boss_dying
+            stop when true
+        "escape_flip":
+            call tick_escape_flip
+            stop when true
+        "escape":
+            call tick_escape input
             stop when true
         "boss_victory":
             call tick_boss_victory input

@@ -1236,3 +1236,62 @@ shapes:
     {"type": "cylinder", "center": [0, 0, 7], "radius": 10, "height": 1.0, "color": "c"}
     {"type": "ramp", "from": [-14, -5, 3], "size": [5, 10, 4], "color": "s"}
     {"type": "ramp", "from": [9, -5, 3], "size": [5, 10, 4], "color": "s"}
+
+@Model/nc/power_capsule
+palette = nc
+unit = 0.1
+blocks:
+    {"from": [-10, -10, 0], "size": [20, 20, 3], "color": "d"}
+    {"from": [-8, -8, 3], "size": [16, 16, 2], "color": "s"}
+    {"from": [-6, -6, 5], "size": [12, 12, 2], "color": "m"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 7.2, "height": 11, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 11], "radius": 5.4, "height": 11, "color": "i"}
+    {"type": "sphere", "center": [0, 0, 11], "radius": 3.8, "color": "y"}
+    {"type": "cylinder", "center": [0, 0, 17.5], "radius": 8.0, "height": 2.5, "color": "p"}
+    {"type": "cylinder", "center": [0, 0, 19.5], "radius": 5.0, "height": 1.8, "color": "w"}
+    {"type": "cylinder", "center": [-7, -7, 11], "radius": 1.2, "height": 12, "color": "d"}
+    {"type": "cylinder", "center": [7, -7, 11], "radius": 1.2, "height": 12, "color": "d"}
+    {"type": "cylinder", "center": [-7, 7, 11], "radius": 1.2, "height": 12, "color": "d"}
+    {"type": "cylinder", "center": [7, 7, 11], "radius": 1.2, "height": 12, "color": "d"}
+
+@Model/nc/power_capsule_open
+palette = nc
+unit = 0.1
+blocks:
+    {"from": [-10, -10, 0], "size": [20, 20, 3], "color": "d"}
+    {"from": [-8, -8, 3], "size": [16, 16, 2], "color": "s"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 6], "radius": 6.8, "height": 4, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 20], "radius": 8.0, "height": 2, "color": "p"}
+    {"type": "cylinder", "center": [-7, -7, 12], "radius": 1.2, "height": 14, "color": "d"}
+    {"type": "cylinder", "center": [7, -7, 12], "radius": 1.2, "height": 14, "color": "d"}
+
+@Model/nc/sliding_wall_panel
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-16, -2, 0], "size": [32, 3, 28], "color": "d"}
+    {"from": [-15, -1, 2], "size": [30, 3, 24], "color": "s"}
+    {"from": [-14, 0, 4], "size": [28, 2, 20], "color": "m"}
+    {"from": [-15, 1, 8], "size": [30, 1, 2], "color": "c"}
+    {"from": [-15, 1, 18], "size": [30, 1, 2], "color": "p"}
+    {"from": [-12, 1, 13], "size": [24, 1, 2], "color": "y"}
+
+@Model/nc/sliding_floor_wall
+palette = nc
+unit = 0.25
+blocks:
+    {"from": [-16, -13, -1], "size": [32, 26, 2], "color": "d"}
+    {"from": [-15, -12, 1], "size": [30, 24, 1], "color": "s"}
+    {"from": [-14, -10, 2], "size": [28, 20, 1], "color": "m"}
+    {"from": [-16, -13, 1], "size": [32, 2, 3], "color": "d"}
+    {"from": [-15, -12, 3], "size": [30, 1, 1], "color": "c"}
+    {"from": [-16, 11, 1], "size": [32, 2, 2], "color": "d"}
+    {"from": [-15, 11, 3], "size": [30, 1, 1], "color": "p"}
+shapes:
+    {"type": "cylinder", "center": [0, 0, 2.5], "radius": 5.5, "height": 0.8, "color": "c"}
+    {"type": "cylinder", "center": [0, 0, 2.6], "radius": 3.2, "height": 0.9, "color": "p"}
+    {"type": "ramp", "from": [-14, -1, 2.5], "size": [28, 2, 0.8], "color": "y"}
+    {"type": "cylinder", "center": [-12, 0, 2.6], "radius": 1.5, "height": 0.9, "color": "c"}
+    {"type": "cylinder", "center": [12, 0, 2.6], "radius": 1.5, "height": 0.9, "color": "c"}
