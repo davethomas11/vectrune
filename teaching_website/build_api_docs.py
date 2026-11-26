@@ -85,6 +85,13 @@ def build_docs(destination, binary, base='/', site_url='https://vectrune.com', s
                 archive.writestr(entry, source.read_bytes())
     for name, source in [('graphql', 'graphql_example'), ('websocket', 'websocket_example')]:
         shutil.copyfile(site / f'parts/pages/examples/{source}.rune', downloads / f'{name}.rune')
+    with zipfile.ZipFile(downloads / 'ascii-animator.zip', 'w') as archive:
+        examples = ROOT / 'examples/ascii'
+        for source in sorted(examples.rglob('*')):
+            if source.is_file() and (source.suffix == '.rune' or source.name == 'README.md'):
+                entry = zipfile.ZipInfo('ascii/' + source.relative_to(examples).as_posix())
+                entry.compress_type = zipfile.ZIP_DEFLATED
+                archive.writestr(entry, source.read_bytes())
     docs_base = base + 'docs/'
     category_map = {category['id']: category for category in categories}
     search = []

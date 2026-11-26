@@ -4,6 +4,43 @@ purpose:
   - shared knowledge source for AI and docs
   - stable reference layer between runtime behavior and rendered docs
 pages:
+  - id: example.borrowed-morning
+    path: examples/borrowed-morning.md
+    kind: page
+    title: The Kingdom of Borrowed Mornings
+    audience:
+      - ai
+      - human
+    sources:
+      - examples/ascii/borrowed_morning.rune
+      - examples/ascii/borrowed_morning/scenes.rune
+      - tests/borrowed_morning.rs
+  - id: runtime.ascii3d
+    path: runtime/ascii3d.md
+    kind: page
+    title: Ascii3D Raycasting Augmentation
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/ascii_animator/ascii3d.rs
+      - examples/ascii/sentinel.rune
+      - examples/ascii/halls.rune
+      - examples/ascii/descent.rune
+      - tests/ascii3d.rs
+  - id: runtime.ascii-animator
+    path: runtime/ascii-animator.md
+    kind: page
+    title: ASCII Animator
+    audience:
+      - ai
+      - human
+    sources:
+      - src/apps/ascii_animator.rs
+      - src/cli/ascii.rs
+      - examples/ascii/
+      - tests/ascii_animator.rs
+      - tests/terminal/test_ascii_animator.py
   - id: runtime.storage
     path: runtime/storage.md
     kind: page

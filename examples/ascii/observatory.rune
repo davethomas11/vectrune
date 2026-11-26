@@ -1,0 +1,55 @@
+@App
+type = ascii-animator
+scene = mission
+
+@AsciiAnimator/mission
+size = [78, 23]
+fps = 10
+logic = mission
+
+@Logic/mission
+state:
+    ticks = 0
+    paused = false
+    signal = []
+    load = []
+    canvas = []
+keys:
+    Space -> pause
+action initialize:
+    signal = []
+    load = []
+    for i in range(0, 32):
+        signal.push(50 + sin(i * 18) * 35 + cos(i * 41) * 12)
+        load.push(45 + cos(i * 12) * 25)
+    call paint
+action pause:
+    paused = not paused
+action tick:
+    if not paused:
+        ticks += 1
+        signal.push(50 + sin(ticks * 18) * 35 + cos(ticks * 41) * 12)
+        load.push(45 + cos(ticks * 12) * 25 + sin(ticks * 35) * 8)
+        signal = signal.slice(max(0, signal.length - 32))
+        load = load.slice(max(0, load.length - 32))
+    call paint
+action paint:
+    canvas = [
+        {"type": "text", "x": 2, "y": 0, "text": "O R B I T A L   O B S E R V A T O R Y   /   SIMULATED TELEMETRY", "color": "cyan"},
+        {"type": "box", "x": 1, "y": 2, "width": 38, "height": 11, "color": "blue"},
+        {"type": "box", "x": 40, "y": 2, "width": 37, "height": 11, "color": "blue"},
+        {"type": "text", "x": 3, "y": 3, "text": "SIGNAL / 0 - 100", "color": "cyan"},
+        {"type": "text", "x": 42, "y": 3, "text": "REACTOR LOAD / 0 - 100", "color": "green"},
+        {"type": "plot", "x": 3, "y": 5, "width": 33, "height": 6, "values": signal, "min": 0, "max": 100, "color": "cyan"},
+        {"type": "plot", "x": 42, "y": 5, "width": 32, "height": 6, "values": load, "min": 0, "max": 100, "color": "green"},
+        {"type": "box", "x": 1, "y": 14, "width": 38, "height": 8, "color": "blue"},
+        {"type": "box", "x": 40, "y": 14, "width": 37, "height": 8, "color": "blue"},
+        {"type": "text", "x": 3, "y": 15, "text": "RADAR / SECTOR 07", "color": "yellow"},
+        {"type": "line", "x": 19, "y": 18, "x2": 19 + cos(ticks * 12) * 15, "y2": 18 + sin(ticks * 12) * 2, "glyph": ".", "color": "green"},
+        {"type": "text", "x": 26, "y": 17, "text": "<*>", "color": "yellow"},
+        {"type": "text", "x": 10, "y": 20, "text": "+", "color": "cyan"},
+        {"type": "text", "x": 42, "y": 15, "text": "UPLINK  [ OK ]   CREW  [ OK ]", "color": "green"},
+        {"type": "text", "x": 42, "y": 17, "text": "PACKETS  " + ticks * 147, "color": "white"},
+        {"type": "text", "x": 42, "y": 19, "text": paused ? "STATUS   PAUSED" : "STATUS   TRACKING", "color": "yellow"},
+        {"type": "text", "x": 2, "y": 22, "text": "Space: freeze/resume telemetry   |   Q: close mission control", "color": "cyan"}
+    ]

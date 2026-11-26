@@ -1,6 +1,21 @@
 version: 1
 status: starter
 app_types:
+  - name: ascii-animator
+    summary: Native terminal ASCII animation, simulated dashboards and keyboard-controlled games.
+    behavior:
+      - "@App scene selects @AsciiAnimator/name with size, fps, logic and optional canvas state-field binding."
+      - "Shared @Logic initialize/tick actions drive ordered text, line, box, sprite and plot drawing objects."
+      - "Default CLI builds include the terminal host and ASCII generators; examples are local Rune files, not embedded demos. Browser/HTTP/Lambda hosting is not supported."
+      - "Optional @Ascii3D scenes add textured grid raycasting and depth-tested entities behind ordinary ASCII HUD layers."
+      - "AsciiAnimator spatial binds a non-repeating Ascii3D grid to shared slide/sees helpers; repeating corridors use explicit script motion."
+      - "Q, Esc and Ctrl-C restore the terminal; --plain captures the final frame without ANSI escapes or delays."
+    sources:
+      - src/apps/ascii_animator.rs
+      - src/cli/ascii.rs
+      - examples/ascii/
+      - knowledge/runtime/ascii-animator.md
+      - knowledge/runtime/ascii3d.md
   - name: rune-db
     summary: Experimental standalone Rune DB host for persistent key/value documents, atomic intent packets and durable streams.
     behavior:

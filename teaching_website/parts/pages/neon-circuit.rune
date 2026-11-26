@@ -1,0 +1,12 @@
+@Component/NeonCircuitPage
+view:
+    div .page .application-guide .space-invaders-page:
+        section .card .showcase-intro:
+            div .section-heading:
+                span .tag .tag-advanced "Pixel 3D"
+                h1 "%i18n.NeonCircuit.title%"
+                p .lead "%i18n.NeonCircuit.description%"
+                p "%i18n.NeonCircuit.features%"
+            a .secondary-cta href="/assets/games/neon-circuit/index.html" target=_blank rel=noopener "%i18n.NeonCircuit.standalone%"
+
+        WebExample game=true title="{i18n.NeonCircuit.title}" preview="/assets/games/neon-circuit/index.html" files="{sources ../../../examples/games/neon_circuit/neon_circuit.rune}" show_heading=false

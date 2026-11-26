@@ -1,20 +1,27 @@
 {
-  "version": "0.3.11",
+  "version": "0.3.12",
   "locales": {
     "en_us": {
-      "intro": "Configure HTTP requests, read multiple Rune DB records in one call, and play VectRaiders with its full alien formation.",
-      "summary": "Fetch and fetch-json support custom headers, timeouts, response limits, and redirect handling. Rune DB adds snapshot batch reads, and generator shorthand works across runtimes."
+      "intro": "Animate your terminal with ASCII Animator, play GIFs or export them as runnable Rune animations, and explore Neon Circuit's latest Pixel 3D lighting and camera transitions.",
+      "summary": "ASCII Animator brings animated scenes, graphs, synth tones, typed adventures, and CLI art generators with GIF playback and self-contained Rune export. Neon Circuit showcases a twelve-sector Pixel 3D campaign and finale. Rune Studio gains workspace and note-editing improvements."
     },
     "es": {
-      "intro": "Configura peticiones HTTP, lee varios registros de Rune DB en una sola llamada y juega a VectRaiders con la formación alienígena completa.",
-      "summary": "Fetch y fetch-json admiten encabezados personalizados, tiempos de espera, límites de respuesta y control de redirecciones. Rune DB añade lecturas múltiples en una sola captura y se recupera la sintaxis abreviada de los generadores."
+      "intro": "Anima tu terminal con ASCII Animator, reproduce GIF o expórtalos como animaciones Rune ejecutables y explora las nuevas luces y transiciones de cámara de Pixel 3D en Neon Circuit.",
+      "summary": "ASCII Animator incorpora escenas animadas, gráficos, tonos, aventuras de texto y generadores de arte para la CLI con reproducción de GIF y exportación Rune independiente. Neon Circuit muestra una campaña Pixel 3D de doce sectores y un nivel final. Rune Studio mejora su espacio de trabajo y la edición de notas."
     },
     "fr": {
-      "intro": "Configurez les requêtes HTTP, lisez plusieurs enregistrements Rune DB en un appel et retrouvez la formation complète dans VectRaiders.",
-      "summary": "Fetch et fetch-json acceptent des en-têtes personnalisés, des délais, des limites de réponse et le contrôle des redirections. Rune DB ajoute la lecture groupée à un instant donné, et le raccourci des générateurs fonctionne de nouveau dans les différents environnements."
+      "intro": "Animez votre terminal avec ASCII Animator, lisez des GIF ou exportez-les en animations Rune exécutables et découvrez les nouveaux éclairages et transitions de caméra Pixel 3D de Neon Circuit.",
+      "summary": "ASCII Animator apporte des scènes animées, des graphiques, des sons, des aventures textuelles et des générateurs d'art en CLI avec lecture de GIF et export Rune autonome. Neon Circuit présente une campagne Pixel 3D de douze secteurs et un niveau final. Rune Studio améliore son espace de travail et l'édition des notes."
     }
   },
   "releases": [
+    {
+      "tag": "v0.3.12",
+      "tagged_on": null,
+      "github_tag": false,
+      "published_on": null,
+      "summary": "Introduces ASCII Animator, Ascii3D, CLI art generators, terminal GIF playback, self-contained GIF-to-Rune animation export and the Borrowed Mornings text adventure. Adds Neon Circuit to the website with enhanced Pixel 3D lighting, perspective-changing returns and a finale. Improves Rune Studio editing, navigation fragments and audio effects."
+    },
     {
       "tag": "v0.3.11",
       "tagged_on": "2026-11-19",

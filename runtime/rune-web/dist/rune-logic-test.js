@@ -1644,7 +1644,8 @@ var __RuneWeb = (() => {
   __export(index_exports, {
     boot: () => boot,
     invoke: () => invoke,
-    snapshot: () => snapshot
+    snapshot: () => snapshot,
+    takeAudio: () => takeAudio
   });
 
   // src/context.ts
@@ -7555,6 +7556,10 @@ var __RuneWeb = (() => {
   function snapshot() {
     flush();
     return JSON.stringify({ state: app.state, derived: app.derived, mock });
+  }
+  function takeAudio() {
+    flush();
+    return JSON.stringify(mock.audio.splice(0));
   }
   return __toCommonJS(index_exports);
 })();

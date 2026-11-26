@@ -1,6 +1,8 @@
 //! Shared-synth voice bridge and bounded native PCM mixer.
 //! QuickJS runs on the window thread. The audio callback only consumes voice data.
-use anyhow::{Context as _, Result};
+#[cfg(any(feature = "pixel-desktop", test))]
+use anyhow::Context as _;
+use anyhow::{ensure, Result};
 use crossbeam_queue::ArrayQueue;
 use serde::Deserialize;
 use std::{
@@ -12,9 +14,7 @@ use std::{
     time::Instant,
 };
 
-#[cfg(feature = "pixel-desktop")]
 mod output;
-#[cfg(feature = "pixel-desktop")]
 pub use output::Output;
 
 const MAX_VOICES: usize = 128;
@@ -56,6 +56,7 @@ impl Envelope {
         }
         value
     }
+    #[cfg(any(feature = "pixel-desktop", test))]
     fn valid(&self) -> bool {
         self.initial.is_finite()
             && self.events.len() <= 64
@@ -72,7 +73,7 @@ struct Gain {
     connected: bool,
     envelope: Envelope,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum Wave {
     Sine,
@@ -113,6 +114,7 @@ enum Command {
     Gain { gain: Gain },
 }
 impl Command {
+    #[cfg(any(feature = "pixel-desktop", test))]
     fn valid(&self) -> bool {
         match self {
             Self::Gain { gain } => gain.envelope.valid(),
@@ -149,6 +151,48 @@ pub struct Bridge {
     pub stats: Arc<Stats>,
     silent_since: Option<Instant>,
 }
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Tone {
+    frequency: f64,
+    #[serde(default)]
+    end_frequency: Option<f64>,
+    #[serde(default = "tone_duration")]
+    duration: f64,
+    #[serde(default = "tone_volume")]
+    volume: f64,
+    #[serde(default = "tone_wave")]
+    wave: Wave,
+}
+fn tone_duration() -> f64 {
+    0.1
+}
+fn tone_volume() -> f64 {
+    0.15
+}
+fn tone_wave() -> Wave {
+    Wave::Sine
+}
+impl Tone {
+    pub fn validate(&self) -> Result<()> {
+        ensure!(
+            (20.0..=8000.0).contains(&self.frequency)
+                && self
+                    .end_frequency
+                    .is_none_or(|f| (20.0..=8000.0).contains(&f)),
+            "Tone frequency and end_frequency must be 20-8000 Hz"
+        );
+        ensure!(
+            (0.01..=1.0).contains(&self.duration),
+            "Tone duration must be 0.01-1 seconds"
+        );
+        ensure!(
+            (0.0..=0.5).contains(&self.volume),
+            "Tone volume must be 0-0.5"
+        );
+        Ok(())
+    }
+}
 impl Bridge {
     pub fn silent() -> Self {
         Self {
@@ -164,6 +208,76 @@ impl Bridge {
             .map(|t| t.elapsed().as_secs_f64())
             .unwrap_or_else(|| self.clock.load(Ordering::Relaxed) as f64 / self.rate as f64)
     }
+    pub fn tone(&self, tone: &Tone) -> Result<()> {
+        tone.validate()?;
+        let Some(sender) = &self.sender else {
+            return Ok(());
+        };
+        let start = self.now();
+        let end = start + tone.duration;
+        // Each cue gets its own envelope route, so overlapping cues never share gains.
+        static NEXT_GAIN: AtomicU64 = AtomicU64::new(1 << 63);
+        let route = NEXT_GAIN.fetch_add(1, Ordering::Relaxed);
+        let edge = (tone.duration / 4.0).min(0.005);
+        let command = Command::Voice(VoiceSpec {
+            wave: tone.wave,
+            start,
+            end,
+            frequency: Envelope {
+                initial: tone.frequency,
+                events: vec![
+                    Event {
+                        time: start,
+                        value: tone.frequency,
+                        ramp: Ramp::Set,
+                    },
+                    Event {
+                        time: end,
+                        value: tone.end_frequency.unwrap_or(tone.frequency),
+                        ramp: Ramp::Linear,
+                    },
+                ],
+            },
+            routes: vec![route],
+            gains: vec![Gain {
+                id: route,
+                connected: true,
+                envelope: Envelope {
+                    initial: 0.0,
+                    events: vec![
+                        Event {
+                            time: start,
+                            value: 0.0,
+                            ramp: Ramp::Set,
+                        },
+                        Event {
+                            time: start + edge,
+                            value: tone.volume,
+                            ramp: Ramp::Linear,
+                        },
+                        Event {
+                            time: end - edge,
+                            value: tone.volume,
+                            ramp: Ramp::Set,
+                        },
+                        Event {
+                            time: end,
+                            value: 0.0,
+                            ramp: Ramp::Linear,
+                        },
+                    ],
+                },
+            }],
+            filters: vec![],
+            seed: route as u32,
+        });
+        if sender.push(command).is_err() {
+            self.stats.dropped.fetch_add(1, Ordering::Relaxed);
+            anyhow::bail!("Native tone queue is full");
+        }
+        Ok(())
+    }
+    #[cfg(any(feature = "pixel-desktop", test))]
     pub fn install(&self, context: &rquickjs::Context) -> Result<()> {
         context
             .with(|ctx| -> Result<()> {
@@ -435,11 +549,60 @@ mod tests {
     use crate::rune_parser::load_rune_document_from_path;
     use std::path::Path;
 
+    #[test]
+    fn short_tones_share_the_mixer_and_release_their_voices() {
+        for wave in ["sine", "square", "triangle", "sawtooth", "noise"] {
+            let tone: Tone = serde_json::from_value(serde_json::json!({
+                "frequency": 880, "end_frequency": 110,
+                "duration": 0.08, "volume": 0.15, "wave": wave
+            }))
+            .unwrap();
+            let (mut mixer, bridge) = Mixer::new(48000);
+            mixer.render(48000);
+            bridge.tone(&tone).unwrap();
+            mixer.commands();
+            let sweep = &mixer.voices[0].spec.frequency;
+            assert_eq!(sweep.at(1.0), 880.0);
+            assert!((sweep.at(1.04) - 495.0).abs() < 1e-6);
+            assert!((sweep.at(1.08) - 110.0).abs() < 1e-6);
+            let data = mixer.render(4800);
+            assert!(data.iter().all(|s| s.is_finite() && s.abs() <= 0.15));
+            assert!(rms(&data[..3840]) > 0.02, "{wave} must produce audible PCM");
+            assert_eq!(data[0], 0.0, "Attack must begin at zero");
+            assert!(data[3840..].iter().all(|s| *s == 0.0));
+            mixer.commands();
+            assert!(mixer.voices.is_empty());
+            assert!(mixer.gains.is_empty());
+            assert_eq!(bridge.stats.dropped.load(Ordering::Relaxed), 0);
+        }
+    }
+
+    #[test]
+    fn overlapping_tones_have_independent_envelopes_and_queue_overflow_is_explicit() {
+        let tone: Tone = serde_json::from_value(serde_json::json!({"frequency": 440})).unwrap();
+        let (mut mixer, bridge) = Mixer::new(48000);
+        bridge.tone(&tone).unwrap();
+        bridge.tone(&tone).unwrap();
+        mixer.commands();
+        assert_ne!(mixer.voices[0].spec.routes, mixer.voices[1].spec.routes);
+        assert_eq!(mixer.gains.len(), 2);
+        let (_, bridge) = Mixer::new(48000);
+        for _ in 0..512 {
+            bridge.tone(&tone).unwrap();
+        }
+        assert!(bridge
+            .tone(&tone)
+            .unwrap_err()
+            .to_string()
+            .contains("queue is full"));
+    }
+
     fn game(context: &rquickjs::Context, bridge: &Bridge) {
         bridge.install(context).unwrap();
-        let doc =
-            load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune"))
-                .unwrap();
+        let doc = load_rune_document_from_path(Path::new(
+            "examples/games/monster_city/monster_city.rune",
+        ))
+        .unwrap();
         let game = crate::apps::pixel::compile(&doc).unwrap();
         context.with(|ctx| {
             ctx.eval::<(), _>(game.script.as_str()).unwrap();
@@ -476,9 +639,10 @@ mod tests {
         let context = rquickjs::Context::full(&runtime).unwrap();
         let (mut mixer, bridge) = Mixer::new(48000);
         bridge.install(&context).unwrap();
-        let doc =
-            load_rune_document_from_path(Path::new("examples/games/monster_city/monster_city.rune"))
-                .unwrap();
+        let doc = load_rune_document_from_path(Path::new(
+            "examples/games/monster_city/monster_city.rune",
+        ))
+        .unwrap();
         let compiled = crate::apps::pixel::compile(&doc).unwrap();
         context
             .with(|ctx| ctx.eval::<(), _>(compiled.script.as_str()))

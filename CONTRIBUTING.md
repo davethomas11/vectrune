@@ -35,6 +35,11 @@ A pull request should describe:
 
 Run the relevant Vectrune tests before submitting a pull request.
 
+Native Linux builds require ALSA development headers for the shared game/ASCII
+audio backend (`sudo apt-get install libasound2-dev` on Debian/Ubuntu, or
+`sudo dnf install alsa-lib-devel` on Fedora). macOS and Windows use system audio
+backends. Headless tests and ASCII `--plain`/`--mute` do not open audio devices.
+
 New language or runtime behavior should include corresponding tests where practical.
 
 ## AI disclosure example

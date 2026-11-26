@@ -10,9 +10,62 @@
     "src/apps/rest/swagger/",
     "src/apps/graphql/",
     "src/apps/rest/ws.rs",
+    "src/apps/ascii_animator/ascii3d.rs",
+    "examples/ascii/halls.rune",
+    "examples/ascii/sentinel.rune",
+    "examples/ascii/descent.rune",
     "examples/games/vect_breach/"
   ],
   "pages": [
+    {
+      "route": "docs/ascii-animator",
+      "label": "ASCII Animator and Ascii3D",
+      "title": "Terminal animation and first-person Ascii3D",
+      "description": "Build terminal screensavers, graphs and games with ASCII Animator; add textured raycast worlds and depth-tested sprites with Ascii3D. Available in v0.3.12, native terminal only.",
+      "sections": [
+        {
+          "title": "Generate your own art and animation",
+          "paragraphs": ["Generate a runnable starter Rune animation, convert an image to ASCII, or render a text banner. These commands need no checkout or example directory. Results go to stdout unless -o selects a new file; existing files are never overwritten. Linux source builds require ALSA development headers (libasound2-dev on Debian/Ubuntu).", "generate accepts --text (default Hello, ASCII!), --width (3-240, default 60), and --height (3-80, default 12). Text must fit within width minus two. image accepts PNG, JPEG, GIF (first frame), WebP and BMP, --width (1-240, default 80), and --invert. Height preserves aspect with a 0.5 terminal-cell correction; transparent pixels composite onto black. Inputs are limited to 8192x8192 and 64 MiB decoded, outputs to 1000 rows. text renders 1-120 printable ASCII characters into an 8-row banner. image/text produce plain art, not Rune apps.", "The nine example apps are ordinary downloadable Rune files, not embedded demos. Run them using ascii run <local-path>. Q, Esc and Ctrl-C exit playback and restore the terminal."],
+          "command": "vectrune ascii generate --text \"Hello!\" -o animation.rune\nvectrune ascii run animation.rune\nvectrune ascii image photo.png --width 80 -o photo.txt\nvectrune ascii text \"VECTRUNE\"\n# With a checkout:\nvectrune ascii run examples/ascii/sentinel.rune",
+          "links": [{"href": "/assets/content/docs/ascii-animator.zip", "label": "Download all nine Rune examples"}]
+        },
+        {
+          "title": "Banner fonts and drawing characters",
+          "paragraphs": ["ascii text accepts --font bitmap (default 8x8 glyphs), compact (the same 8-row shapes with blank edge columns removed; spaces are four columns), or double (16x16 doubled bitmap glyphs). --char selects filled pixels (default #), and --background selects empty pixels and separators (default space). Both must be exactly one printable ASCII character. Compact/bitmap use one-column separators; double uses two. Padding is retained, with no ANSI color or external font files."],
+          "command": "vectrune ascii text \"HELLO\" --font compact --char \"*\"\nvectrune ascii text \"RUNE\" --font double --char \"@\" --background \".\" -o banner.txt"
+        },
+        {
+          "title": "Add an Ascii3D layer to the canvas",
+          "paragraphs": ["Keep @App type = ascii-animator. A named @Ascii3D section declares a rectangular grid and character textures; its camera and entity fields bind top-level @Logic state. An ascii3d canvas object renders the viewport, then ordinary 2D text/boxes draw the HUD. In map rows '.' is empty; other characters need wall materials referencing @AsciiSprite textures.", "Maps are 3-128 columns/rows, solid on left/right and also top/bottom unless repeat_y is true. Wall frames must be rectangular and equal-sized. Camera angle 0 faces +X and 90 faces +Y. Optional eye height and pitch shift the projection. Entities scale with distance and are depth-tested against walls, floor, ceiling and other sprites."],
+          "links": [{"route": "docs/library/declarations", "label": "Ascii3D, AsciiAnimator and AsciiSprite field reference"}]
+        },
+        {
+          "title": "Endless Halls: a complete screensaver",
+          "paragraphs": ["This runnable file repeats corridor rows along Y, scrolls perspective floor tiles and animated textures, and wraps its camera and lamp positions explicitly. Up/Down changes speed; Space freezes drift."],
+          "source": "examples/ascii/halls.rune"
+        },
+        {
+          "title": "First-person combat and downhill rails",
+          "paragraphs": ["Sentinel: Enter starts, W/S moves, Left/Right turns, A/D strafes, Space fires, P pauses and R restarts. Clear six drones. The optional AsciiAnimator spatial field binds its non-repeating grid to existing slide/sees collision and visibility helpers, so shots cannot pass through walls.", "Descent: Enter starts, A/D or Left/Right steers, Space fires, P pauses and R restarts. The camera advances automatically and accelerates. Destroy aligned turrets before passing them; missed turrets cost 10 shield, direct collisions cost 30. Reach 1000 meters to win.", "Ascii3D is a 2.5D raycaster with fixed-height walls and planar floor/ceiling, not a polygon renderer. Descent's downhill effect uses a pitched camera, scrolling floor, head bob and decreasing altitude; actual slopes and vertical physics are not modeled. Repeating maps cannot be the spatial-helper binding."]
+        },
+        {
+          "title": "A complete original text adventure",
+          "paragraphs": ["The Kingdom of Borrowed Mornings follows Tamsin Thread, the royal sock-mender, through nine animated areas. A magpie notary has trapped dawn in a torn contract. Repair a windmill, share bread with a troll, remember a frog's lullaby and mend the law itself. A short synthesized melody accompanies the title and sunrise ending.", "Type BEGIN, then HELP. LOOK, directions, TAKE, TALK TO, USE item ON object, GIVE item TO person, INVENTORY, JOURNAL, MAP and progressive HINT commands guide exploration. There are no deaths, timers or item loss from wrong actions; saves are not implemented. Keep borrowed_morning.rune beside its borrowed_morning directory. The terminal needs 78x30. Use --mute without an audio device.", "AsciiAnimator command = command names a one-parameter Logic action. The native prompt submits lowercased text with whitespace collapsed, up to 120 printable ASCII characters. Enter submits, Backspace edits, Ctrl-U clears, Esc/Ctrl-C exits; Q is ordinary text. Animation continues while typing. Command-mode apps cannot also declare key bindings. Plain captures accept repeated --commands, one per tick, without --keys."],
+          "command": "vectrune ascii run examples/ascii/borrowed_morning.rune\nvectrune ascii run examples/ascii/borrowed_morning.rune --plain --frames 2 --commands \"begin\" --commands \"talk to kettle\"",
+          "links": [{"href": "/assets/content/docs/ascii-animator.zip", "label": "Download all nine examples, including adventure scenes and walkthrough"}]
+        },
+        {
+          "title": "Simple native sound cues",
+          "paragraphs": ["Sentinel uses short synth cues for shots, hits, drone destruction, damage and win/loss. Declare @AsciiTone/name with frequency (20-8000 Hz), optional end_frequency, duration (0.01-1 seconds, default 0.1), volume (0-0.5, default 0.15), and wave (sine, square, triangle, sawtooth or noise; default sine). Play it with sound \"name\" inside a Logic action. No sound files or WebAudio setup are required.", "Cues reuse the native game mixer and are consumed once per action. --mute skips the audio device, including direct file launches; --plain is always silent. Missing devices produce an explicit error with mute guidance. Static musl Linux builds cannot load external ALSA plugins; plugin-only configurations may need the GNU build."],
+          "command": "vectrune ascii run examples/ascii/sentinel.rune --mute\nvectrune examples/ascii/sentinel.rune --mute"
+        },
+        {
+          "title": "Capture a frame or script keyboard input",
+          "paragraphs": ["Plain mode prints only the final rectangular frame, without ANSI sequences, sound, keyboard polling or delays. It defaults to one tick. Keys are supplied once per tick before simulation advances. Interactive terminals need at least canvas height plus one row."],
+          "command": "vectrune ascii run examples/ascii/halls.rune --plain --frames 120\nvectrune ascii run examples/ascii/sentinel.rune --plain --frames 20 --keys Enter,Space\nvectrune ascii run examples/ascii/descent.rune --plain --frames 60 --keys Enter,Space"
+        }
+      ]
+    },
     {
       "route": "docs/getting-started",
       "label": "Quickstart",

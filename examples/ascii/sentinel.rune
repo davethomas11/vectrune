@@ -1,0 +1,225 @@
+@App
+type = ascii-animator
+scene = sentinel
+
+@AsciiAnimator/sentinel
+size = [78, 23]
+fps = 15
+logic = sentinel
+spatial = bunker
+
+@AsciiTone/shot
+frequency = 1000
+end_frequency = 160
+duration = 0.07
+wave = square
+volume = 0.12
+
+@AsciiTone/hit
+frequency = 500
+end_frequency = 850
+duration = 0.06
+wave = triangle
+
+@AsciiTone/down
+frequency = 350
+end_frequency = 70
+duration = 0.18
+wave = sawtooth
+volume = 0.12
+
+@AsciiTone/hurt
+frequency = 100
+end_frequency = 50
+duration = 0.12
+wave = noise
+volume = 0.1
+
+@AsciiTone/win
+frequency = 440
+end_frequency = 880
+duration = 0.5
+
+@AsciiTone/lose
+frequency = 220
+end_frequency = 40
+duration = 0.5
+wave = triangle
+
+@Ascii3D/bunker
+map = [
+    "################",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#.....##.......#",
+    "#.....##.......#",
+    "#..............#",
+    "#..##.....XX...#",
+    "#..##.....XX...#",
+    "#..............#",
+    "#.......##.....#",
+    "#.......##.....#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "################"
+]
+walls = {"#": {"texture": "brick", "color": "cyan"}, "X": {"texture": "panel", "color": "magenta"}}
+camera = camera
+entities = drones
+fov = 65
+floor = gray
+ceiling = blue
+
+@AsciiSprite/brick
+frames = [["====+===", "....|...", "+======+", "|......."]]
+
+@AsciiSprite/panel
+fps = 3
+frames = [["[======]", "| +  + |", "|:----:|", "[======]"], ["[======]", "| *  * |", "|:----:|", "[======]"]]
+
+@AsciiSprite/drone
+fps = 4
+frames = [[" .---. ", "[o===o]", " /|_|/ "], [" .---. ", "[O===O]", " /|_|/ "]]
+
+@Logic/sentinel
+state:
+    camera = {"x": 3.5, "y": 3.5, "angle": 0}
+    drones = []
+    ticks = 0
+    health = 100
+    kills = 0
+    flash = 0
+    hurt = 0
+    status = "title"
+    paused = false
+    canvas = []
+keys:
+    Enter -> start
+    KeyR -> start
+    KeyW -> forward
+    ArrowUp -> forward
+    KeyS -> backward
+    ArrowDown -> backward
+    ArrowLeft -> turn_left
+    ArrowRight -> turn_right
+    KeyA -> strafe_left
+    KeyD -> strafe_right
+    Space -> fire
+    KeyP -> pause
+action initialize:
+    call start
+    status = "title"
+    call paint
+action start:
+    camera = {"x": 3.5, "y": 3.5, "angle": 0}
+    drones = [
+        {"id": 1, "x": 7.5, "y": 3.5, "sprite": "drone", "size": 0.75, "color": "red", "health": 2, "cooldown": 0, "visible": true},
+        {"id": 2, "x": 12.5, "y": 2.5, "sprite": "drone", "size": 0.75, "color": "yellow", "health": 2, "cooldown": 0, "visible": true},
+        {"id": 3, "x": 3.5, "y": 6.5, "sprite": "drone", "size": 0.75, "color": "magenta", "health": 2, "cooldown": 0, "visible": true},
+        {"id": 4, "x": 9.5, "y": 9.5, "sprite": "drone", "size": 0.75, "color": "red", "health": 2, "cooldown": 0, "visible": true},
+        {"id": 5, "x": 13.5, "y": 13.5, "sprite": "drone", "size": 0.75, "color": "yellow", "health": 2, "cooldown": 0, "visible": true},
+        {"id": 6, "x": 2.5, "y": 13.5, "sprite": "drone", "size": 0.75, "color": "magenta", "health": 2, "cooldown": 0, "visible": true}
+    ]
+    ticks = 0
+    health = 100
+    kills = 0
+    flash = 0
+    hurt = 0
+    paused = false
+    status = "playing"
+action pause:
+    paused = not paused
+action forward:
+    call move 0.28, 0
+action backward:
+    call move -0.28, 0
+action strafe_left:
+    call move 0, -0.28
+action strafe_right:
+    call move 0, 0.28
+action move(forward, side):
+    if status == "playing" and not paused:
+        next = slide(camera.x, camera.y, cos(camera.angle) * forward - sin(camera.angle) * side, sin(camera.angle) * forward + cos(camera.angle) * side, 0.22)
+        camera.x = next.x
+        camera.y = next.y
+action turn_left:
+    if status == "playing" and not paused:
+        camera.angle = (camera.angle + 348) % 360
+action turn_right:
+    if status == "playing" and not paused:
+        camera.angle = (camera.angle + 12) % 360
+action fire:
+    if status != "playing" or paused or flash > 0:
+        stop
+    flash = 3
+    sound "shot"
+    target = -1
+    nearest = 12
+    for i in range(0, drones.length):
+        drone = drones[i]
+        if drone.visible:
+            dx = drone.x - camera.x
+            dy = drone.y - camera.y
+            forward = dx * cos(camera.angle) + dy * sin(camera.angle)
+            side = -dx * sin(camera.angle) + dy * cos(camera.angle)
+            if forward > 0 and forward < nearest and abs(side) < 0.4 and sees(camera, drone):
+                nearest = forward
+                target = i
+    if target >= 0:
+        drones[target].health -= 1
+        sound "hit"
+        if drones[target].health <= 0:
+            drones[target].visible = false
+            kills += 1
+            sound "down"
+            if kills == 6:
+                status = "won"
+                sound "win"
+action tick:
+    if status == "playing" and not paused:
+        ticks += 1
+        flash = max(0, flash - 1)
+        hurt = max(0, hurt - 1)
+        for drone in drones:
+            if drone.visible:
+                drone.cooldown = max(0, drone.cooldown - 1)
+                gap = distance(camera, drone)
+                if sees(camera, drone):
+                    if gap > 0.8:
+                        next = slide(drone.x, drone.y, (camera.x - drone.x) / gap * 0.022, (camera.y - drone.y) / gap * 0.022, 0.2)
+                        drone.x = next.x
+                        drone.y = next.y
+                    if gap < 1 and drone.cooldown == 0:
+                        health = max(0, health - 10)
+                        sound "hurt"
+                        hurt = 4
+                        drone.cooldown = 30
+        if health == 0:
+            status = "gameover"
+            sound "lose"
+    call paint
+action paint:
+    canvas = [
+        {"type": "ascii3d", "scene": "bunker", "x": 0, "y": 1, "width": 78, "height": 20},
+        {"type": "text", "x": 2, "y": 0, "text": "S E N T I N E L   /   ASCII3D   |   HP " + health + "   DRONES " + kills + "/6", "color": "cyan"},
+        {"type": "text", "x": 38, "y": 11, "text": "+", "color": flash > 0 ? "yellow" : "white"},
+        {"type": "text", "x": 35, "y": 18, "text": flash > 0 ? "  ***  " : "  |#|  ", "color": flash > 0 ? "yellow" : "white"},
+        {"type": "text", "x": 35, "y": 19, "text": " /===/ ", "color": "gray"},
+        {"type": "text", "x": 35, "y": 20, "text": "[_____]", "color": "cyan"},
+        {"type": "text", "x": 1, "y": 21, "text": "W/S: move  Arrows: turn  A/D: strafe  Space: fire  P: pause  R: retry", "color": "cyan"},
+        {"type": "text", "x": 1, "y": 22, "text": "Clear six security drones. Shots stop at walls. Q: exit", "color": "gray"}
+    ]
+    if hurt > 0:
+        canvas.push({"type": "box", "x": 0, "y": 1, "width": 78, "height": 20, "color": "red"})
+    if status == "title":
+        canvas.push({"type": "box", "x": 19, "y": 7, "width": 40, "height": 7, "fill": true, "color": "cyan"})
+        canvas.push({"type": "text", "x": 25, "y": 9, "text": "SENTINEL / THE SILENT BUNKER", "color": "yellow"})
+        canvas.push({"type": "text", "x": 25, "y": 11, "text": "ENTER TO DISABLE THE DRONES", "color": "white"})
+    if paused:
+        canvas.push({"type": "text", "x": 30, "y": 8, "text": "PAUSED / P RESUMES", "color": "yellow"})
+    if status == "won":
+        canvas.push({"type": "text", "x": 24, "y": 9, "text": "BUNKER SECURED! R TO PLAY AGAIN", "color": "green"})
+    if status == "gameover":
+        canvas.push({"type": "text", "x": 24, "y": 9, "text": "SUIT OFFLINE. R TO RETRY", "color": "red"})

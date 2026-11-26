@@ -1,4 +1,5 @@
 pub mod logic_testing;
+pub mod ascii;
 mod ai;
 pub mod developer;
 pub mod diagnostics;

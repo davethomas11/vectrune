@@ -31,6 +31,7 @@ view:
                     "starfall"        -> StarfallPage
                     "marble-run"      -> MarbleRunPage
                     "dog-walker"      -> DogWalkerPage
+                    "neon-circuit"    -> NeonCircuitPage
                     "studio"          -> RuneStudioPage
                     "music"           -> RuneStudioPage
                     "examples"        -> ExampleLab

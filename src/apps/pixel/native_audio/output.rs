@@ -1,4 +1,4 @@
-//! CPAL is confined to the desktop feature; the mixer is device-independent.
+//! Native device output shared by desktop games and terminal tones.
 use super::{Bridge, Mixer};
 use anyhow::{Context, Result};
 use cpal::{

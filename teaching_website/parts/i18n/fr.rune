@@ -12,6 +12,13 @@ DogWalker {
     play = "Jouer à Dog Walker"
     standalone = "Ouvrir Dog Walker dans un autre onglet"
 }
+NeonCircuit {
+    title = "Neon Circuit"
+    description = "Affrontez douze robots rebelles dans un jeu d'action et de plateformes néon. Débloquez armes et compétences, fuyez sur des passerelles de verre pivotantes et combattez le Conductor dans un final de cinq salles."
+    features = "Découvrez les éclairages améliorés, les modèles animés et les transitions entre vue latérale, vue de dessus et première personne de Pixel 3D. La progression est enregistrée dans ce navigateur ; l'aperçu et le jeu autonome partagent la même sauvegarde."
+    play = "Jouer à Neon Circuit"
+    standalone = "Ouvrir le jeu dans un nouvel onglet"
+}
 
 Starfall {
     title = "Starfall Protocol"

@@ -73,6 +73,17 @@ class ManPageTests(unittest.TestCase):
             self.assertIn(f'"{version}"', cli)
             self.assertIn('Usage: vectrune', cli)
             self.assertIn('vectrune test', cli)
+            for command in ['vectrune ascii generate', 'vectrune ascii image',
+                            'vectrune ascii text', 'vectrune ascii run']:
+                self.assertIn(command, cli)
+            for flag in ['\\-\\-font', '\\-\\-char', '\\-\\-background',
+                         '\\-\\-commands', '\\-\\-mute']:
+                self.assertIn(flag, cli)
+            self.assertIn('\\-\\-play', cli)
+            self.assertIn('\\-\\-rune', cli)
+            for declaration in ['@AsciiAnimator', '@Ascii3D', '@AsciiSprite', '@AsciiTone']:
+                self.assertIn(declaration, language)
+            self.assertNotIn('Unreleased', language.split('\\&@AsciiAnimator', 1)[1].split('.SS', 1)[0])
             self.assertIn('memory.set', language)
             self.assertIn('Runtime: Native / server', language)
             self.assertIn('Runtime: Rune\\-Web', language)

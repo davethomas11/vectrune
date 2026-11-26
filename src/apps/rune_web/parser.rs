@@ -1920,7 +1920,7 @@ fn parse_style_properties(body: &Value) -> Result<HashMap<String, String>, Parse
 }
 
 /// Parse a `@Logic/<name>` section.
-fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefinition, ParseError> {
+pub(crate) fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<LogicDefinition, ParseError> {
     let mut state = HashMap::new();
     let mut locals = HashMap::new();
     let mut derived = HashMap::new();

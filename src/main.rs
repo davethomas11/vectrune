@@ -45,6 +45,7 @@ async fn main() -> anyhow::Result<()> {
         .about("Vectrune: Structured data in motion.")
         .subcommands(cli::developer::commands())
         .subcommands(cli::storage::commands())
+        .subcommand(cli::ascii::command())
         .arg(
             Arg::new("SCRIPT")
                 .help("Path to the .rune, .vect, or .vectrune script, directory, or '-' to read from STDIN")
@@ -161,6 +162,13 @@ async fn main() -> anyhow::Result<()> {
                 .value_name("HOST")
                 .num_args(1)
                 .default_value("127.0.0.1"),
+        )
+        .arg(
+            Arg::new("mute")
+                .long("mute")
+                .requires("SCRIPT")
+                .help("Disable synthesized tones for a directly launched ASCII Animator app")
+                .action(clap::ArgAction::SetTrue),
         )
         .arg(
             Arg::new("watch")
@@ -304,6 +312,12 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .get_matches();
+
+    if let Some(("ascii", args)) = matches.subcommand() {
+        set_log_level(LogLevel::Error, true);
+        crate::util::set_log_stderr();
+        return cli::ascii::run(args);
+    }
 
     if let Some((name @ ("db" | "events"), args)) = matches.subcommand() {
         set_log_level(LogLevel::Error, true);
@@ -576,6 +590,18 @@ async fn main() -> anyhow::Result<()> {
         }
 
         let app_type = get_app_type(&doc);
+
+        anyhow::ensure!(
+            !matches.get_flag("mute")
+                || app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("ascii-animator")),
+            "--mute is only supported for ASCII Animator apps"
+        );
+
+        if app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("ascii-animator")) && output_format.is_none() {
+            anyhow::ensure!(!matches.get_flag("watch") && matches.get_one::<String>("target").is_none(), "ASCII Animator does not support --watch or --target");
+            apps::ascii_animator::run(apps::ascii_animator::compile(&doc)?, None, false, &[], matches.get_flag("mute"), &[])?;
+            break;
+        }
 
         if matches.get_one::<String>("target").is_some() {
             anyhow::ensure!(

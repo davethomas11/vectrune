@@ -1,0 +1,166 @@
+@App
+type = ascii-animator
+scene = descent
+
+@AsciiAnimator/descent
+size = [78, 23]
+fps = 20
+logic = descent
+
+@Ascii3D/tunnel
+map = [
+    "##.......##",
+    "#.........#",
+    "#.........#",
+    "X.........X",
+    "#.........#",
+    "#.........#",
+    "#.........#",
+    "#.........#",
+    "##.......##",
+    "#.........#",
+    "#.........#",
+    "X.........X",
+    "#.........#",
+    "#.........#",
+    "#.........#",
+    "#.........#"
+]
+walls = {"#": {"texture": "rib", "color": "blue"}, "X": {"texture": "vent", "color": "magenta"}}
+repeat_y = true
+camera = camera
+entities = targets
+fov = 75
+far = 40
+floor = cyan
+ceiling = gray
+
+@AsciiSprite/rib
+frames = [["|=|=|=|=", "|.|.|.|.", "|=|=|=|=", "|.|.|.|."]]
+
+@AsciiSprite/vent
+fps = 5
+frames = [["[++++++]", "|>>>>>>|", "[++++++]"], ["[++++++]", "|<<<<<<|", "[++++++]"]]
+
+@AsciiSprite/turret
+fps = 4
+frames = [[" .===. ", "[o-|-o]", " /===/ "], [" .===. ", "[O-|-O]", " /===/ "]]
+
+@Logic/descent
+state:
+    camera = {"x": 5.5, "y": 0.5, "angle": 90, "z": 0.5, "pitch": -9}
+    targets = []
+    ticks = 0
+    meters = 0
+    altitude = 1200
+    speed = 0.12
+    shield = 100
+    score = 0
+    flash = 0
+    hurt = 0
+    status = "title"
+    paused = false
+    canvas = []
+keys:
+    Enter -> start
+    KeyR -> start
+    ArrowLeft -> left
+    KeyA -> left
+    ArrowRight -> right
+    KeyD -> right
+    Space -> fire
+    KeyP -> pause
+action initialize:
+    call start
+    status = "title"
+    call paint
+action start:
+    camera = {"x": 5.5, "y": 0.5, "angle": 90, "z": 0.5, "pitch": -9}
+    targets = []
+    ticks = 0
+    meters = 0
+    altitude = 1200
+    speed = 0.12
+    shield = 100
+    score = 0
+    flash = 0
+    hurt = 0
+    paused = false
+    status = "playing"
+action pause:
+    paused = not paused
+action left:
+    if status == "playing" and not paused:
+        camera.x = max(2.5, camera.x - 0.55)
+action right:
+    if status == "playing" and not paused:
+        camera.x = min(8.5, camera.x + 0.55)
+action fire:
+    if status != "playing" or paused or flash > 0:
+        stop
+    flash = 3
+    nearest = 12
+    target = -1
+    for i in range(0, targets.length):
+        gap = targets[i].y - camera.y
+        if gap > 0 and gap < nearest and abs(targets[i].x - camera.x) < 0.7:
+            nearest = gap
+            target = i
+    if target >= 0:
+        targets[target].visible = false
+        score += 100
+action tick:
+    if status == "playing" and not paused:
+        ticks += 1
+        flash = max(0, flash - 1)
+        hurt = max(0, hurt - 1)
+        speed = min(0.32, 0.12 + meters * 0.0004)
+        camera.y += speed
+        meters += speed * 5
+        altitude = max(0, 1200 - meters * 1.2)
+        camera.pitch = -9 + sin(ticks * 6) * 1.5
+        camera.z = 0.5 + sin(ticks * 13) * 0.01
+        if ticks % 35 == 1:
+            targets.push({"id": ticks, "x": ticks % 105 == 1 ? 5.5 : (ticks % 70 == 1 ? 3 : 8), "y": camera.y + 9, "z": 0.15, "sprite": "turret", "size": 0.55, "color": "red", "visible": true})
+        for target in targets:
+            if target.visible and target.y <= camera.y + 0.25:
+                if abs(target.x - camera.x) < 0.8:
+                    shield = max(0, shield - 30)
+                else:
+                    shield = max(0, shield - 10)
+                hurt = 5
+                target.visible = false
+        targets = targets.filter it.visible
+        # Rebase the repeating tunnel and targets together to avoid unbounded coordinates.
+        if camera.y >= 16:
+            camera.y -= 16
+            for target in targets:
+                target.y -= 16
+        if shield == 0:
+            status = "gameover"
+        if meters >= 1000 and shield > 0:
+            status = "won"
+    call paint
+action paint:
+    canvas = [
+        {"type": "ascii3d", "scene": "tunnel", "x": 0, "y": 1, "width": 78, "height": 20},
+        {"type": "text", "x": 1, "y": 0, "text": "D E S C E N T   /   SHIELD " + shield + "   SCORE " + score + "   ALT " + floor(altitude) + "m", "color": "cyan"},
+        {"type": "text", "x": 38, "y": floor(11 + sin(camera.pitch) / cos(camera.pitch) * 25.4), "text": flash > 0 ? "*" : "+", "color": flash > 0 ? "yellow" : "white"},
+        {"type": "text", "x": 9, "y": 19, "text": flash > 0 ? "***" : "[=]", "color": flash > 0 ? "yellow" : "magenta"},
+        {"type": "text", "x": 65, "y": 19, "text": flash > 0 ? "***" : "[=]", "color": flash > 0 ? "yellow" : "magenta"},
+        {"type": "text", "x": 1, "y": 21, "text": "A/D or arrows: steer   Space: fire   P: pause   R: retry   Q: exit", "color": "cyan"},
+        {"type": "text", "x": 1, "y": 22, "text": "AUTOPILOT DOWNHILL / " + floor(meters) + "/1000m   Missed turrets drain shields.", "color": "yellow"}
+    ]
+    if hurt > 0:
+        canvas.push({"type": "box", "x": 0, "y": 1, "width": 78, "height": 20, "color": "red"})
+    if status == "title":
+        canvas.push({"type": "box", "x": 17, "y": 6, "width": 44, "height": 9, "fill": true, "color": "magenta"})
+        canvas.push({"type": "text", "x": 25, "y": 8, "text": "DESCENT / TUNNEL ATTACK", "color": "yellow"})
+        canvas.push({"type": "text", "x": 22, "y": 10, "text": "Aim by steering. Blast the turrets.", "color": "white"})
+        canvas.push({"type": "text", "x": 26, "y": 12, "text": "ENTER TO DROP INTO THE SHAFT", "color": "cyan"})
+    if paused:
+        canvas.push({"type": "text", "x": 30, "y": 8, "text": "PAUSED / P RESUMES", "color": "yellow"})
+    if status == "gameover":
+        canvas.push({"type": "text", "x": 24, "y": 9, "text": "SHIELDS LOST! R TO RETRY", "color": "red"})
+    if status == "won":
+        canvas.push({"type": "text", "x": 22, "y": 9, "text": "CORE REACHED! R TO RIDE AGAIN", "color": "green"})

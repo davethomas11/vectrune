@@ -2,6 +2,7 @@
 view:
     div .game-preview data-game-preview=true role=region aria-label="%i18n.GamePreview.label%":
         div .game-preview-track:
+            GamePreviewSlide route=neon-circuit title="{i18n.NeonCircuit.title}" image=/assets/neon-circuit-cover.png
             GamePreviewSlide route=dog-walker title="{i18n.DogWalker.title}" image=/assets/dog-walker-cover.png
             GamePreviewSlide route=games title="{i18n.Nav.vectraiders}" image=/assets/vectraiders-cover.png
             GamePreviewSlide route=vectworms title="{i18n.Nav.vectworms}" image=/assets/vectworms-cover.png

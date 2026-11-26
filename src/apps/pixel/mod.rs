@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 #[cfg(feature = "pixel-desktop")]
 pub mod desktop;
-#[cfg(any(feature = "pixel-desktop", test))]
 pub mod native_audio;
 #[cfg(any(feature = "pixel-desktop", test))]
 pub mod persistence;

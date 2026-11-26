@@ -81,11 +81,17 @@ jobs:
       - name: Install cargo-zigbuild
         run: cargo install cargo-zigbuild
 
+      - name: Build Linux audio dependency
+        if: contains(matrix.platform.target, 'linux')
+        run: bash .github/scripts/build-linux-audio.sh "${{ matrix.platform.target }}"
+
       - name: Build
         # We use zigbuild for Linux targets to handle cross-linking
         # MacOS and Windows can usually stay on standard cargo
         run: |
           if [[ "${{ matrix.platform.target }}" == *"linux"* ]]; then
+            export PKG_CONFIG_ALLOW_CROSS=1
+            export PKG_CONFIG_LIBDIR="$PWD/target/linux-audio/${{ matrix.platform.target }}/install/lib/pkgconfig"
             cargo zigbuild --release --target ${{ matrix.platform.target }}
           else
             cargo build --release --target ${{ matrix.platform.target }}
@@ -97,7 +103,11 @@ jobs:
         shell: bash
         run: |
           BIN="target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}"
+          if [[ "${{ matrix.platform.target }}" == *"linux"* ]]; then
+            "target/linux-audio/${{ matrix.platform.target }}/audio-backend-check"
+          fi
           "$BIN" --version
+          "$BIN" ascii run examples/ascii/borrowed_morning.rune --plain --frames 2 --commands begin --commands look
           "$BIN" examples/data/storage/checkout.vect
           "$BIN" examples/data/storage/replay.vect
           "$BIN" test examples/language/objects --json
@@ -114,6 +124,35 @@ jobs:
           cd target/${{ matrix.platform.target }}/release
           tar czf ../../../${{ matrix.platform.bin }}-${{ matrix.platform.name }}.tar.gz ${{ matrix.platform.bin }}
           cd -
+          if [[ "${{ matrix.platform.target }}" == *"linux"* ]]; then
+            mkdir -p audio-notices/licenses
+            cp "target/linux-audio/${{ matrix.platform.target }}/alsa-lib-1.2.14/COPYING" audio-notices/licenses/ALSA-LICENSE
+            cp docs/native-audio-builds.md audio-notices/licenses/
+            archive="${{ matrix.platform.bin }}-${{ matrix.platform.name }}.tar"
+            gzip -d "$archive.gz"
+            tar --append --file="$archive" -C audio-notices licenses
+            gzip -n "$archive"
+          fi
+
+      - name: Package Linux audio rebuild sources
+        if: matrix.platform.name == 'linux-x86_64'
+        shell: bash
+        run: |
+          mkdir -p audio-source
+          git archive --format=tar HEAD -o audio-source/vectrune-source.tar
+          cp Cargo.lock audio-source/
+          cp target/linux-audio/x86_64-unknown-linux-gnu/alsa-lib-1.2.14.tar.bz2 audio-source/
+          cp target/linux-audio/x86_64-unknown-linux-gnu/alsa-lib-1.2.14/COPYING audio-source/ALSA-LICENSE
+          cp docs/native-audio-builds.md audio-source/README.md
+          (cd audio-source && zip -q -r ../vectrune-audio-source.zip .)
+
+      - name: Upload Linux audio rebuild sources
+        if: matrix.platform.name == 'linux-x86_64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-audio-source
+          path: vectrune-audio-source.zip
+          if-no-files-found: error
 
       - name: Generate offline manuals
         if: matrix.platform.name == 'linux-x86_64'
@@ -175,7 +214,9 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.tar.gz
+          files: |
+            artifacts/*.tar.gz
+            artifacts/vectrune-audio-source.zip
           tag_name: ${{ inputs.tag || github.ref_name }}
           body_path: ${{ steps.release_notes.outputs.path }}
           generate_release_notes: true

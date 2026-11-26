@@ -7,6 +7,9 @@ view:
                 h2 "%i18n.SiteMenu.showcase_title%"
                 p "%i18n.SiteMenu.showcase_description%"
             div .home-showcase-grid:
+                a .showcase-tile href="{i18n.Common.base_path}neon-circuit" data-route-link=true click="navigate('neon-circuit')":
+                    img src=/assets/neon-circuit-cover.png width=640 height=400 alt="" decoding=async
+                    strong "%i18n.NeonCircuit.play%"
                 a .showcase-tile href="{i18n.Common.base_path}dog-walker" data-route-link=true click="navigate('dog-walker')":
                     img src=/assets/dog-walker-cover.png width=640 height=400 alt="" decoding=async
                     strong "%i18n.DogWalker.play%"

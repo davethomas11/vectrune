@@ -3,6 +3,10 @@
   "status": "starter",
   "app_types": [
     {
+      "name": "ascii-animator",
+      "summary": "Native terminal ASCII animation, simulated dashboards and keyboard-controlled games."
+    },
+    {
       "name": "rune-db",
       "summary": "Experimental standalone Rune DB host for persistent key/value documents, atomic intent packets and durable streams."
     },

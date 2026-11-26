@@ -1,0 +1,70 @@
+@App
+type = ascii-animator
+scene = rally
+
+@AsciiAnimator/rally
+size = [64, 22]
+fps = 15
+logic = rally
+
+@Logic/rally
+state:
+    paddle = 27
+    ball = {"x": 32, "y": 9, "dx": 0.6, "dy": 0.45}
+    score = 0
+    status = "playing"
+    canvas = []
+keys:
+    ArrowLeft -> left
+    KeyA -> left
+    ArrowRight -> right
+    KeyD -> right
+    Space -> pause
+    KeyR -> initialize
+action initialize:
+    paddle = 27
+    ball = {"x": 32, "y": 9, "dx": 0.6, "dy": 0.45}
+    score = 0
+    status = "playing"
+    call paint
+action left:
+    paddle = max(2, paddle - 3)
+action right:
+    paddle = min(53, paddle + 3)
+action pause:
+    if status == "paused":
+        status = "playing"
+        stop
+    if status == "playing":
+        status = "paused"
+action tick:
+    if status == "playing":
+        ball.x += ball.dx
+        ball.y += ball.dy
+        if ball.x <= 2 or ball.x >= 61:
+            ball.x = max(2, min(61, ball.x))
+            ball.dx = -ball.dx
+        if ball.y <= 3:
+            ball.y = 3
+            ball.dy = abs(ball.dy)
+        if ball.y >= 18 and ball.dy > 0:
+            if ball.x >= paddle and ball.x <= paddle + 8:
+                ball.y = 18
+                ball.dy = -min(0.85, ball.dy + 0.025)
+                ball.dx = (ball.x - paddle - 4) * 0.18
+                score += 10
+            else:
+                status = "gameover"
+    call paint
+action paint:
+    canvas = [
+        {"type": "box", "x": 0, "y": 1, "width": 64, "height": 20, "color": "blue"},
+        {"type": "text", "x": 2, "y": 0, "text": "NEON RALLY   |   SCORE " + score, "color": "cyan"},
+        {"type": "line", "x": paddle, "y": 19, "x2": paddle + 8, "y2": 19, "glyph": "=", "color": "magenta"},
+        {"type": "text", "x": ball.x, "y": ball.y, "text": "O", "color": "yellow"},
+        {"type": "text", "x": 2, "y": 21, "text": "Arrows/A/D: move  Space: pause  R: restart  Q: quit", "color": "cyan"}
+    ]
+    if status == "paused":
+        canvas.push({"type": "text", "x": 26, "y": 10, "text": "PAUSED", "color": "yellow"})
+    if status == "gameover":
+        canvas.push({"type": "text", "x": 19, "y": 10, "text": "BALL LOST! R TO RESTART", "color": "red"})

@@ -120,7 +120,7 @@ def check(base, directory, screenshots):
             page.keyboard.press('Enter')
             page.wait_for_function('document.querySelector("main").dataset.section === "content"')
             expect(page.locator('#content')).to_be_focused()
-            expect(page.locator('#site-navigation a.nav-link')).to_have_count(42)
+            expect(page.locator('#site-navigation a.nav-link')).to_have_count(43)
             expect(page.locator('#site-navigation [aria-current="page"]')).to_have_count(1)
             categories = page.locator('#site-navigation .menu-category')
             expect(categories).to_have_count(4)
@@ -353,7 +353,7 @@ def check_release_archive(base):
 
 
 def check_game_previews(base):
-    games = ['dog-walker', 'games', 'vectworms', 'monster-city', 'vect-breach',
+    games = ['neon-circuit', 'dog-walker', 'games', 'vectworms', 'monster-city', 'vect-breach',
              'rune-crypt', 'skybound-2', 'starfall', 'marble-run']
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
@@ -362,13 +362,13 @@ def check_game_previews(base):
         desktop.locator('[data-menu-category="games"] summary').click()
         preview = desktop.locator('.menu-panel-games .game-preview')
         count = preview.locator('.game-preview-count')
-        expect(count).to_have_text('2 / 9', timeout=9000)
+        expect(count).to_have_text('2 / 10', timeout=9000)
         preview.get_by_role('button', name='Pause slideshow').click()
         expect(preview.get_by_role('button', name='Play slideshow')).to_be_visible()
         preview.get_by_role('button', name='Previous game').click()
-        expect(count).to_have_text('1 / 9')
+        expect(count).to_have_text('1 / 10')
         preview.get_by_role('button', name='Previous game').click()
-        expect(count).to_have_text('9 / 9')
+        expect(count).to_have_text('10 / 10')
 
         phone = browser.new_page(
             viewport={'width': 390, 'height': 844}, has_touch=True, reduced_motion='reduce',

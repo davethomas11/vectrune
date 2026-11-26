@@ -35,6 +35,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install Linux audio headers
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20

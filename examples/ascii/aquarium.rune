@@ -1,0 +1,54 @@
+@App
+type = ascii-animator
+scene = reef
+
+@AsciiAnimator/reef
+size = [72, 22]
+fps = 12
+logic = reef
+
+@AsciiSprite/fish
+fps = 3
+frames = [["><(((o>"], ["><((o>"]]
+
+@AsciiSprite/jelly
+fps = 4
+frames = [[" .---.", "(o   o)", " | | |"], [" .---.", "(o   o)", "  | |"]]
+
+@Logic/reef
+state:
+    ticks = 0
+    fish = []
+    bubbles = []
+    canvas = []
+action initialize:
+    fish = [{"x": 4, "y": 5, "speed": 0.4}, {"x": 26, "y": 10, "speed": 0.7}, {"x": 51, "y": 15, "speed": 0.3}]
+    bubbles = []
+    for i in range(0, 16):
+        bubbles.push({"x": 5 + (i * 17) % 62, "y": 2 + i % 17})
+    call paint
+action tick:
+    ticks += 1
+    for f in fish:
+        f.x += f.speed
+        if f.x > 71:
+            f.x = -7
+    for b in bubbles:
+        b.y -= 0.25
+        if b.y < 2:
+            b.y = 19
+    call paint
+action paint:
+    canvas = [
+        {"type": "text", "x": 2, "y": 0, "text": "T H E   Q U I E T   R E E F", "color": "cyan"},
+        {"type": "line", "x": 0, "y": 2, "x2": 71, "y2": 2, "glyph": "~", "color": "blue"},
+        {"type": "line", "x": 0, "y": 20, "x2": 71, "y2": 20, "glyph": ".", "color": "yellow"}
+    ]
+    for b in bubbles:
+        canvas.push({"type": "text", "x": b.x, "y": b.y, "text": "o", "color": "blue"})
+    for f in fish:
+        canvas.push({"type": "sprite", "x": f.x, "y": f.y, "name": "fish", "color": "yellow"})
+    canvas.push({"type": "sprite", "x": 48 + sin(ticks * 3) * 8, "y": 4 + cos(ticks * 5) * 2, "name": "jelly", "color": "magenta"})
+    for i in range(0, 10):
+        canvas.push({"type": "line", "x": 3 + i * 7, "y": 19, "x2": 3 + i * 7 + sin(ticks * 8 + i * 30) * 2, "y2": 16 - i % 3, "glyph": "/", "color": "green"})
+    canvas.push({"type": "text", "x": 2, "y": 21, "text": "Breathe. Watch the reef. Q: return to shore.", "color": "cyan"})

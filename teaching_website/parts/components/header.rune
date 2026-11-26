@@ -74,6 +74,7 @@ view:
                             a .nav-link href="{i18n.Common.base_path}starfall" data-route-link=true aria-current="{activePage == 'starfall' ? 'page' : 'false'}" click="navigate('starfall')" "%i18n.Starfall.title%"
                             a .nav-link href="{i18n.Common.base_path}marble-run" data-route-link=true aria-current="{activePage == 'marble-run' ? 'page' : 'false'}" click="navigate('marble-run')" "%i18n.MarbleRun.title%"
                             a .nav-link href="{i18n.Common.base_path}dog-walker" data-route-link=true aria-current="{activePage == 'dog-walker' ? 'page' : 'false'}" click="navigate('dog-walker')" "%i18n.DogWalker.title%"
+                            a .nav-link href="{i18n.Common.base_path}neon-circuit" data-route-link=true aria-current="{activePage == 'neon-circuit' ? 'page' : 'false'}" click="navigate('neon-circuit')" "%i18n.NeonCircuit.title%"
                         GamePreview
             details .menu-category data-menu-category=tools name=site-sections:
                 summary .menu-category-label "%i18n.SiteMenu.tools%"

@@ -1,0 +1,41 @@
+@App
+type = ascii-animator
+scene = warp
+
+@AsciiAnimator/warp
+size = [72, 22]
+fps = 24
+logic = warp
+
+@Logic/warp
+state:
+    stars = []
+    ticks = 0
+    speed = 1
+    canvas = []
+keys:
+    ArrowUp -> faster
+    ArrowDown -> slower
+action initialize:
+    stars = []
+    for i in range(0, 90):
+        stars.push({"x": (i * 31) % 70 + 1, "y": (i * 13) % 18 + 2, "layer": i % 3})
+    call paint
+action faster:
+    speed = min(4, speed + 0.5)
+action slower:
+    speed = max(0.5, speed - 0.5)
+action tick:
+    ticks += 1
+    for star in stars:
+        star.x += (star.x - 36) * 0.018 * (star.layer + 1) * speed
+        star.y += (star.y - 11) * 0.018 * (star.layer + 1) * speed
+        if star.x < 1 or star.x > 70 or star.y < 2 or star.y > 19:
+            star.x = 30 + (ticks * 7 + star.layer * 13) % 13
+            star.y = 7 + (ticks * 3 + star.layer * 5) % 9
+    call paint
+action paint:
+    canvas = [{"type": "text", "x": 2, "y": 0, "text": "W A R P   D R I F T", "color": "cyan"}]
+    for star in stars:
+        canvas.push({"type": "text", "x": star.x, "y": star.y, "text": star.layer == 2 ? "+" : ".", "color": star.layer == 2 ? "white" : "blue"})
+    canvas.push({"type": "text", "x": 2, "y": 21, "text": "Up/Down: warp speed " + speed + "  |  Q: leave hyperspace", "color": "cyan"})

@@ -10,6 +10,13 @@ The grid-map semantics below remain unchanged.
 
 ## Neon Circuit
 
+Available on the teaching site in v0.3.12 at
+[/neon-circuit/](https://vectrune.com/neon-circuit/), with localized English,
+Spanish and French guide pages. The game itself is English. Embedded and
+standalone play use `/assets/games/neon-circuit/index.html` on the same origin,
+so campaign saves survive switching locales or opening a new tab. Progress
+is local to that browser/origin, not synchronized between devices.
+
 [Neon Circuit](../../examples/games/neon_circuit/neon_circuit.rune) starts as
 a side-scrolling action platformer. Each sector has its own entrance and
 route colors. Cyan marks checkpoints and warm red marks boss gates.

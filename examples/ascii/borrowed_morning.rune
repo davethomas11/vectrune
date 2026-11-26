@@ -1,0 +1,467 @@
+import "borrowed_morning/scenes.rune"
+
+@App
+type = ascii-animator
+scene = morning
+
+@AsciiAnimator/morning
+size = [78, 29]
+fps = 12
+logic = morning
+command = command
+
+@AsciiTone/c
+frequency = 261.63
+duration = 0.23
+volume = 0.08
+wave = triangle
+
+@AsciiTone/e
+frequency = 329.63
+duration = 0.23
+volume = 0.08
+wave = triangle
+
+@AsciiTone/g
+frequency = 392
+duration = 0.23
+volume = 0.08
+wave = triangle
+
+@AsciiTone/a
+frequency = 440
+duration = 0.23
+volume = 0.08
+wave = triangle
+
+@AsciiTone/high
+frequency = 523.25
+duration = 0.5
+volume = 0.08
+wave = triangle
+
+@AsciiTone/discovery
+frequency = 523
+end_frequency = 784
+duration = 0.18
+volume = 0.09
+
+@Logic/morning
+state:
+    ticks = 0
+    status = "title"
+    room = "cottage"
+    melody = true
+    inventory = ["sewing kit"]
+    flags = {"ribbon": false, "thimble": false, "apple": false, "mill": false, "flour": false, "bread": false, "troll": false, "song": false, "bottle": false, "dew": false, "vane": false, "seed": false, "light": false, "ring": false, "plant": false, "read": false}
+    journal = []
+    message = ["Type BEGIN to enter a kingdom that has misplaced its morning.", "HELP explains commands. MUSIC toggles the title tune.", "No deaths, timers, or unwinnable states. Curiosity is your superpower."]
+    rooms = {
+        "cottage": {"name": "The Royal Sock-Mender's Cottage", "art": "cottage", "color": "yellow", "exits": {"east": "square"}, "description": ["You are Tamsin Thread, apprentice mender of the royal socks.", "A ribbon and a thimble sit beside your trusty sewing kit.", "Outside, midnight has lasted three days. The kettle is furious."], "objects": "ribbon, thimble, kettle"},
+        "square": {"name": "Bellwether Square", "art": "square", "color": "cyan", "exits": {"west": "cottage", "east": "orchard", "north": "library", "south": "mill"}, "description": ["The dawn clock reads LATER. Mayor Wren wears a candle as a hat.", "Baker Bun kneads an empty bowl. Everyone is running out of dreams.", "The castle owes a debt to Master Quill, the magpie notary."], "objects": "baker, mayor, clock"},
+        "orchard": {"name": "The Orchard of Almost-Ripe Things", "art": "orchard", "color": "green", "exits": {"west": "square", "east": "marsh"}, "description": ["Moon apples glow like lanterns. An old scarecrow sneezes politely.", "One ripe apple hangs low. The scarecrow insists it is for guests.", "Beyond the trees, a marsh hums a tune it cannot quite remember."], "objects": "apple, scarecrow, trees"},
+        "mill": {"name": "The Windmill That Forgot to Wave", "art": "mill", "color": "gray", "exits": {"north": "square", "east": "bridge"}, "description": ["A torn sail flaps uselessly. The miller's ghost is only a bedsheet.", "Without flour, no bread; without bread, no proper adventure.", "The ghost whispers: 'A small repair can move a very large thing.'"], "objects": "sail, mill, ghost, flour"},
+        "bridge": {"name": "The Bridge of Unpaid Compliments", "art": "bridge", "color": "magenta", "exits": {"west": "mill", "east": "observatory"}, "description": ["An enormous troll in tiny spectacles blocks the eastern stair.", "'Toll: one compliment. Also perhaps breakfast,' he rumbles.", "His brass bell has not rung since the mornings stopped."], "objects": "troll, bell, bridge"},
+        "library": {"name": "The Library of Unfinished Endings", "art": "library", "color": "yellow", "exits": {"south": "square"}, "description": ["Archivist Silt, a snail, shelves books at a heroic quarter-inch.", "A nursery book lies open. Silt's stomach growls in footnotes.", "An old royal charter shows dawn belonged to EVERYONE, not ONE."], "objects": "librarian, book, charter"},
+        "marsh": {"name": "The Marsh Where Stars Go to Sleep", "art": "marsh", "color": "blue", "exits": {"west": "orchard"}, "description": ["A frog named Lady Plop guards a bottled star on a lily pad.", "She forgot her mother's song, and the star has forgotten its glow.", "Silver dew beads on the reeds. A thimble could carry some."], "objects": "frog, star, dew, reeds"},
+        "observatory": {"name": "The Observatory of Yesterday's Tomorrow", "art": "observatory", "color": "cyan", "exits": {"west": "bridge", "up": "tower"}, "description": ["A weather vane spins without choosing a direction.", "A sleeping clockwork seed waits beneath the telescope.", "The vane needs a tail; the seed needs a sip of moonlit water."], "objects": "vane, seed, telescope"},
+        "tower": {"name": "The Tower of Borrowed Mornings", "art": "tower", "color": "magenta", "exits": {"down": "observatory"}, "description": ["Master Quill sits on a throne of invoices. He looks terribly tired.", "His contract says: 'The dawn belongs to ONE.' A ragged edge shows.", "The missing EVERY has been torn away. You know a thing about mending."], "objects": "quill, contract, desk"}
+    }
+    canvas = []
+action initialize:
+    call paint
+action remember(note):
+    journal.push(note)
+    sound "discovery"
+action describe:
+    message = rooms[room].description
+    if room == "cottage" and flags.ribbon and flags.thimble:
+        message = ["The ribbon and thimble are safely in your adventure pockets.", "Your kettle is rooting for you. East lies Bellwether Square."]
+    if room == "mill" and flags.mill:
+        message = ["The mended sail turns. The bedsheet ghost waves a corner at you.", flags.flour ? "The flour has gone to a better place: an adventure." : "Fresh flour waits in a sack. TAKE FLOUR."]
+    if room == "bridge" and flags.troll:
+        message = ["The troll hums a breakfast song. The eastern stair is open.", "'Don't forget to ring that bell when the dawn needs a witness.'"]
+    if room == "library" and flags.song:
+        message = ["Silt reads contentedly beside a well-nibbled apple core.", "You know the lullaby now. The marsh lies east of the orchard.", "The charter says EVERYONE. Remember the missing EVERY."]
+    if room == "marsh" and flags.bottle:
+        message = ["Lady Plop sings her mother's song. Your bottled star glows.", flags.dew ? "You have collected enough moon dew." : "Silver dew beads on the reeds. USE THIMBLE ON DEW."]
+    if room == "observatory" and flags.seed:
+        message = ["The ribbon points at TOMORROW. The clockwork seed rests in your palm.", "The tower stair is awake. GO UP to meet Master Quill."]
+action start:
+    status = "playing"
+    call describe
+action command(input):
+    if input == "music":
+        melody = not melody
+        message = [melody ? "Music on. The title and ending carry a little tune." : "Music off. Listen to the rustle of imaginary parchment."]
+        call paint
+        stop
+    if input == "help":
+        message = ["LOOK; LOOK AT object; GO direction (or NORTH/SOUTH/EAST/WEST/UP/DOWN).", "TAKE item; TALK TO person; USE item ON object; GIVE item TO person.", "INVENTORY, JOURNAL, HINT, MAP, MUSIC. Try the nouns listed below.", "Special actions: SING at the marsh; READ CONTRACT; MEND CONTRACT.", "BEGIN starts. RESTART starts over after the ending. Esc exits."]
+        call paint
+        stop
+    if status == "title":
+        message = ["The kingdom is waiting. Type BEGIN (or HELP)."]
+        if input == "begin" or input == "start":
+            call start
+        call paint
+        stop
+    if status == "won":
+        message = ["The kingdom has its morning. Type RESTART to play again.", "Or linger: the sunrise is yours, and everyone else's, too."]
+        if input == "restart":
+            inventory = ["sewing kit"]
+            flags = {"ribbon": false, "thimble": false, "apple": false, "mill": false, "flour": false, "bread": false, "troll": false, "song": false, "bottle": false, "dew": false, "vane": false, "seed": false, "light": false, "ring": false, "plant": false, "read": false}
+            journal = []
+            room = "cottage"
+            call start
+        call paint
+        stop
+    if input == "look" or input == "l":
+        call describe
+        call paint
+        stop
+    if input == "inventory" or input == "i":
+        message = ["Your pockets: " + inventory.join(", "), "Your sewing kit is reusable. Gifts are only spent when useful."]
+        call paint
+        stop
+    if input == "journal":
+        message = journal.length > 0 ? journal.slice(max(0, journal.length - 5)) : ["Nothing recorded yet. Look around; talk to everyone."]
+        call paint
+        stop
+    if input == "map":
+        message = ["             LIBRARY", "COTTAGE ---- SQUARE ---- ORCHARD ---- MARSH", "               |", "              MILL ---- BRIDGE ---- OBSERVATORY", "                                        | UP: TOWER"]
+        call paint
+        stop
+    if input == "hint":
+        call hint
+        call paint
+        stop
+    direction = input.slice(0, 3) == "go " ? input.slice(3) : input
+    if ["north", "south", "east", "west", "up", "down", "n", "s", "e", "w", "u", "d"].includes(direction):
+        if direction == "n":
+            direction = "north"
+        if direction == "s":
+            direction = "south"
+        if direction == "e":
+            direction = "east"
+        if direction == "w":
+            direction = "west"
+        if direction == "u":
+            direction = "up"
+        if direction == "d":
+            direction = "down"
+        destination = rooms[room].exits[direction]
+        if not destination:
+            message = ["No path that way. LOOK shows exits; MAP shows the kingdom."]
+            call paint
+            stop
+        if room == "bridge" and direction == "east" and not flags.troll:
+            message = ["The troll blocks the stairs, apologetically. TALK TO TROLL.", "'I can't guard a bridge on an empty stomach,' he says."]
+            call paint
+            stop
+        if room == "observatory" and direction == "up" and not flags.seed:
+            message = ["The tower stair is asleep. Wake the observatory's clockwork seed."]
+            call paint
+            stop
+        room = destination
+        call describe
+        call paint
+        stop
+    if input.slice(0, 8) == "look at " or input.slice(0, 8) == "examine ":
+        noun = input.slice(8)
+        call examine noun
+        call paint
+        stop
+    if input.slice(0, 8) == "talk to " or input.slice(0, 5) == "talk ":
+        noun = input.slice(0, 8) == "talk to " ? input.slice(8) : input.slice(5)
+        call talk noun
+        call paint
+        stop
+    if input.slice(0, 5) == "take " or input.slice(0, 4) == "get ":
+        noun = input.slice(0, 5) == "take " ? input.slice(5) : input.slice(4)
+        call take noun
+        call paint
+        stop
+    if input.slice(0, 4) == "use " or input.slice(0, 5) == "give ":
+        giving = input.slice(0, 5) == "give "
+        parts = input.slice(giving ? 5 : 4).split(giving ? " to " : " on ")
+        if parts.length != 2:
+            message = ["Try USE item ON object, or GIVE item TO person.", "INVENTORY lists your items. LOOK lists things in this room."]
+            call paint
+            stop
+        call use parts[0], parts[1]
+        call paint
+        stop
+    if input == "sing" or input == "sing lullaby":
+        call use "lullaby", "frog"
+        call paint
+        stop
+    if input == "read contract":
+        call examine "contract"
+        call paint
+        stop
+    if input == "mend contract":
+        call use "sewing kit", "contract"
+        call paint
+        stop
+    message = ["I don't understand that yet. Try HELP for command patterns.", "Use the exact nouns shown below the scene; HINT nudges the next puzzle."]
+    call paint
+action take(noun):
+    if inventory.includes(noun):
+        message = ["You already have the " + noun + "."]
+        stop
+    if room == "cottage" and (noun == "ribbon" or noun == "thimble"):
+        inventory.push(noun)
+        flags[noun] = true
+        message = ["You pocket the " + noun + ". Small things have large destinies."]
+        sound "discovery"
+        stop
+    if room == "orchard" and noun == "apple" and not flags.apple:
+        inventory.push("apple")
+        flags.apple = true
+        message = ["You take the moon apple. 'For guests!' sneezes the scarecrow."]
+        stop
+    if room == "mill" and noun == "flour":
+        message = [flags.flour ? "The flour is already in your pockets or the baker's bowl." : "The torn sail must be mended before the mill can grind flour."]
+        if flags.mill and not flags.flour:
+            inventory.push("flour")
+            flags.flour = true
+            message = ["You scoop a bag of fresh flour. It smells like possibility."]
+        stop
+    if room == "marsh" and noun == "dew":
+        call use "thimble", "dew"
+        stop
+    message = ["You cannot take that here. LOOK lists this area's objects.", "Some treasures are gifts, not things to snatch."]
+action talk(noun):
+    message = ["Nobody by that name is here. LOOK lists people and objects."]
+    if room == "cottage" and noun == "kettle":
+        message = ["'I have boiled the same midnight seventeen times!' hisses the kettle.", "'Go mend the kingdom. Take your thimble; even the moon spills things.'"]
+    if room == "square" and noun == "baker":
+        message = ["'Bring flour and I'll bake a loaf,' says Bun.", "'Not for sale. Bread is what kindness smells like.'"]
+    if room == "square" and noun == "mayor":
+        message = ["'The old queen borrowed tomorrow to save us from a terrible winter.'", "'Quill says dawn belongs to ONE. Our charter used to say EVERYONE.'", "'Go to the tower. Please don't make the problem bigger.'"]
+    if room == "orchard" and noun == "scarecrow":
+        message = ["'Take the apple. A hungry reader is a sad reader. Ah-CHOO.'", "'Lady Plop's mother sang: Little star, remember where you are.'"]
+    if room == "mill" and noun == "ghost":
+        message = ["'I'm not haunting; I'm drying,' says the bedsheet.", "'USE SEWING KIT ON SAIL. I shall supervise from this clothesline.'"]
+    if room == "bridge" and noun == "troll":
+        message = [flags.troll ? "'You shared bread. That's better than any toll. The bell is yours.'" : "'I used to ring the morning bell. Now my tummy rings instead.'", "'A GIVE BREAD TO TROLL would be awfully considerate.'"]
+    if room == "library" and (noun == "librarian" or noun == "silt"):
+        message = ["'A moon apple would help me turn the page,' murmurs Silt.", "'I can teach you a lullaby. Stars remember kindness better than maps.'"]
+    if room == "marsh" and (noun == "frog" or noun == "plop"):
+        message = ["'My mother knew a lullaby. The librarian kept its last verse.'", "'SING it, and you may borrow my star. Do bring the dawn back.'"]
+    if room == "observatory" and noun == "telescope":
+        message = ["Through the telescope you hear yesterday muttering about tomorrow.", "'USE RIBBON ON VANE, then USE DEW ON SEED,' it suggests."]
+    if room == "tower" and (noun == "quill" or noun == "magpie"):
+        message = ["'I didn't steal dawn. I inherited the paperwork,' says Quill.", "'The contract has a hole. I cannot approve a morning through a hole.'", "'Light to read by, a bell to witness, something living to hold the seam.'", "'I used to sing. I would very much like to sing again.'"]
+    if room == "square" and noun == "baker" and flags.bread:
+        message = ["'Have you shared the loaf?' asks Bun. 'Good. That's what bread is for.'", "'When dawn returns, I'll bake a dragon big enough for the whole town.'"]
+    if room == "library" and (noun == "librarian" or noun == "silt") and flags.song:
+        message = ["Silt hums the lullaby. 'Remember EVERYONE when you reach the tower.'", "'Even magpies. Especially magpies who have forgotten how to sing.'"]
+    if room == "marsh" and (noun == "frog" or noun == "plop") and flags.bottle:
+        message = ["'The star is happy in your pocket,' says Lady Plop.", "'Thank you for remembering my mother. Bring us a morning.'"]
+action examine(noun):
+    message = ["Nothing special by that name here. Use the nouns below the scene."]
+    if room == "cottage" and noun == "ribbon":
+        message = ["A long red ribbon. A weather vane might enjoy a tail."]
+    if room == "cottage" and noun == "thimble":
+        message = ["A silver thimble, large enough for one very important sip."]
+    if room == "cottage" and noun == "kettle":
+        call talk "kettle"
+    if room == "square" and noun == "clock":
+        message = ["Its hands point to LATER and MUCH LATER. You prefer SOON."]
+    if room == "orchard" and (noun == "apple" or noun == "trees"):
+        message = ["The ripe moon apple glows. TAKE APPLE; it is freely offered."]
+    if room == "mill" and (noun == "mill" or noun == "sail"):
+        message = ["A simple tear keeps the entire windmill idle. You are a mender."]
+    if room == "bridge" and (noun == "bell" or noun == "bridge"):
+        message = ["The bell bears an inscription: 'Let kindness be heard.'"]
+    if room == "library" and (noun == "book" or noun == "charter"):
+        message = ["The nursery book's last page is stuck under Silt's hungry foot.", "The charter reads: 'Dawn belongs to EVERYONE, now and tomorrow.'", "Remember that word. Sometimes a missing piece changes everything."]
+    if room == "marsh" and (noun == "star" or noun == "frog"):
+        message = ["The star dozes in a bottle. A remembered song could wake it."]
+    if room == "marsh" and (noun == "dew" or noun == "reeds"):
+        message = ["Moon dew hangs on the reeds. USE THIMBLE ON DEW."]
+    if room == "observatory" and noun == "vane":
+        message = ["The vane needs a ribbon to catch the wind and find tomorrow."]
+    if room == "observatory" and noun == "seed":
+        message = ["A brass seed, wound but asleep. Dew will wake it once the vane is fixed."]
+    if room == "observatory" and noun == "telescope":
+        call talk "telescope"
+    if room == "tower" and noun == "contract":
+        flags.read = true
+        message = ["'Dawn belongs to ONE.' The page is torn before ONE.", "Restore EVERY and the contract will belong to EVERYONE again.", "USE STAR BOTTLE ON CONTRACT, USE BELL ON CONTRACT, USE SEED ON CONTRACT.", "Then MEND CONTRACT. Some laws need a needle, not a sword."]
+    if room == "tower" and (noun == "desk" or noun == "quill"):
+        call talk "quill"
+action use(item, target):
+    if not inventory.includes(item):
+        message = ["You don't have " + item + ". INVENTORY lists your belongings."]
+        stop
+    if room == "mill" and item == "sewing kit" and (target == "sail" or target == "mill"):
+        if flags.mill:
+            message = ["The sail is already sound. The mill waves its thanks."]
+            stop
+        flags.mill = true
+        message = ["Stitch, stitch. The sail catches the wind! The ghost applauds.", "Fresh flour spills into a sack. TAKE FLOUR."]
+        call remember "Mended a sail; the windmill works. Small repairs move kingdoms."
+        stop
+    if room == "square" and item == "flour" and target == "baker":
+        inventory = inventory.filter(value => value != "flour")
+        inventory.push("bread")
+        flags.bread = true
+        message = ["Bun bakes a warm loaf shaped like a sleeping dragon.", "'For sharing,' she says. You resist eating the entire tail."]
+        call remember "Bun baked bread for sharing. The bridge troll is hungry."
+        stop
+    if room == "bridge" and item == "bread" and target == "troll":
+        inventory = inventory.filter(value => value != "bread")
+        inventory.push("bell")
+        flags.troll = true
+        message = ["You share the loaf. The troll cries one enormous, happy tear.", "'Take my bell. Nobody should pay to see the morning.' The stair opens."]
+        call remember "The troll gave a bell: a witness to freely shared kindness."
+        stop
+    if room == "library" and item == "apple" and (target == "librarian" or target == "silt"):
+        inventory = inventory.filter(value => value != "apple")
+        inventory.push("lullaby")
+        flags.song = true
+        message = ["Silt munches. The page turns. He teaches you the missing verse:", "'Little star, remember where you are; home is never very far.'"]
+        call remember "Learned Lady Plop's lullaby. Sing it beside the marsh."
+        stop
+    if room == "marsh" and item == "lullaby" and (target == "frog" or target == "star"):
+        if flags.bottle:
+            message = ["Lady Plop sings along. You already have the star bottle."]
+            stop
+        inventory.push("star bottle")
+        flags.bottle = true
+        message = ["You sing. The frog's eyes shine; the star remembers its glow.", "'Take it. You remembered my mother.' You cradle the star bottle."]
+        call remember "A remembered song lit a star. Its bottle can light the contract."
+        stop
+    if room == "marsh" and item == "thimble" and (target == "dew" or target == "reeds"):
+        if flags.dew:
+            message = ["You collected enough dew. Moonlight dislikes being greedy."]
+            stop
+        inventory.push("dew")
+        flags.dew = true
+        message = ["You fill the thimble with moon dew. It tastes of nearly-morning."]
+        stop
+    if room == "observatory" and item == "ribbon" and target == "vane":
+        inventory = inventory.filter(value => value != "ribbon")
+        flags.vane = true
+        message = ["You tie a ribbon tail to the vane. It points firmly at TOMORROW.", "The telescope hums. The seed wants a sip of dew."]
+        stop
+    if room == "observatory" and item == "dew" and target == "seed":
+        if not flags.vane:
+            message = ["Fix the vane first, or the seed won't know which tomorrow to grow."]
+            stop
+        inventory = inventory.filter(value => value != "dew")
+        inventory.push("seed")
+        flags.seed = true
+        message = ["A sip of dew wakes the clockwork seed. Its gears purr like a kitten.", "The tower stair unfolds. GO UP."]
+        call remember "Woke the seed: a living promise that tomorrow can change."
+        stop
+    if room == "tower" and item == "star bottle" and target == "contract":
+        flags.light = true
+        message = ["Starlight reveals needle holes where EVERY used to be.", "The bottle stays in your hand; its light costs nothing."]
+        stop
+    if room == "tower" and item == "bell" and (target == "contract" or target == "quill"):
+        flags.ring = true
+        message = ["DING! The bell witnesses a gift freely given. Quill nods gravely.", "'Kindness: admissible evidence,' he says, wiping his beak."]
+        sound "high"
+        stop
+    if room == "tower" and item == "seed" and target == "contract":
+        flags.plant = true
+        message = ["You set the seed on the torn edge. It grows five parchment leaves:", "E V E R Y. Something living has supplied the missing letters."]
+        stop
+    if room == "tower" and item == "sewing kit" and target == "contract":
+        if not flags.read:
+            message = ["READ CONTRACT first. A good mender checks what the garment needs."]
+            stop
+        message = ["The seam needs starlight, a witness bell, and the seed's living letters.", "USE STAR BOTTLE ON CONTRACT; USE BELL ON CONTRACT; USE SEED ON CONTRACT."]
+        if flags.light and flags.ring and flags.plant:
+            status = "won"
+            ticks = 0
+            message = ["You stitch EVERY back to ONE. 'EVERYONE,' reads Master Quill.", "'That includes me?' he asks. 'Especially you,' you answer.", "The invoices become swallows. Dawn pours through every window.", "The queen names you Minister of Small Repairs. You keep your thimble.", "THE END. A morning belongs to everyone. Type RESTART to play again."]
+            journal.push("Restored EVERYONE. Nobody owns dawn; everybody gets a morning.")
+            sound "high"
+        stop
+    message = ["That doesn't help here, so you keep the " + item + ".", "Nothing was wasted. Try LOOK, TALK TO someone, or HINT."]
+action hint:
+    if not flags.thimble or not flags.ribbon:
+        message = ["Begin with small things. At the cottage: TAKE THIMBLE and TAKE RIBBON."]
+        stop
+    if not flags.mill:
+        message = ["South of the square, a sail is torn. USE SEWING KIT ON SAIL."]
+        stop
+    if not flags.flour:
+        message = ["The repaired mill makes flour. TAKE FLOUR at the mill."]
+        stop
+    if not flags.bread:
+        message = ["Bun needs flour. GIVE FLOUR TO BAKER in the square."]
+        stop
+    if not flags.troll:
+        message = ["The bridge east of the mill has a hungry troll. GIVE BREAD TO TROLL."]
+        stop
+    if not flags.apple:
+        message = ["The orchard east of the square offers a moon apple. TAKE APPLE."]
+        stop
+    if not flags.song:
+        message = ["The librarian north of the square is hungry. GIVE APPLE TO LIBRARIAN."]
+        stop
+    if not flags.bottle:
+        message = ["East of the orchard, a frog forgot a song. SING at the marsh."]
+        stop
+    if not flags.dew:
+        message = ["Moon dew rests on the marsh reeds. USE THIMBLE ON DEW."]
+        stop
+    if not flags.vane:
+        message = ["Beyond the bridge, tomorrow needs direction. USE RIBBON ON VANE."]
+        stop
+    if not flags.seed:
+        message = ["At the observatory: USE DEW ON SEED. Then GO UP to the tower."]
+        stop
+    message = ["At the tower, READ CONTRACT. Use star bottle, bell, and seed on it.", "Then MEND CONTRACT. The missing word is EVERY: dawn belongs to EVERYONE."]
+action tick:
+    ticks += 1
+    if melody and (status == "title" or status == "won"):
+        beat = ticks % 72
+        if beat == 1 or beat == 25:
+            sound "c"
+        if beat == 7 or beat == 31:
+            sound "e"
+        if beat == 13 or beat == 37:
+            sound "g"
+        if beat == 19:
+            sound "a"
+        if beat == 43:
+            sound "high"
+    call paint
+action paint:
+    canvas = [
+        {"type": "box", "x": 0, "y": 0, "width": 78, "height": 29, "color": "cyan"},
+        {"type": "text", "x": 2, "y": 1, "text": "THE KINGDOM OF BORROWED MORNINGS", "color": "yellow"},
+        {"type": "text", "x": 2, "y": 2, "text": "An original fairy-tale adventure / Tamsin Thread, Royal Sock-Mender", "color": "gray"},
+        {"type": "line", "x": 1, "y": 17, "x2": 76, "y2": 17, "glyph": "-", "color": "cyan"}
+    ]
+    scene = status == "title" ? "title" : (status == "won" ? "dawn" : rooms[room].art)
+    color = status == "title" ? "blue" : (status == "won" ? "yellow" : rooms[room].color)
+    canvas.push({"type": "sprite", "x": 9, "y": 5, "name": scene, "color": color})
+    for i in range(0, 9):
+        canvas.push({"type": "text", "x": 4 + i * 8, "y": 4, "text": (ticks + i * 7) % 24 < 12 ? "." : "*", "color": status == "won" ? "yellow" : "gray"})
+    if status == "title":
+        canvas.push({"type": "text", "x": 21, "y": 7, "text": "A kingdom. A debt. A missing word.", "color": "yellow"})
+        canvas.push({"type": "text", "x": 25, "y": 9, "text": "TYPE BEGIN TO THREAD THE NEEDLE", "color": "white"})
+        canvas.push({"type": "text", "x": 25, "y": 11, "text": "A story about small repairs.", "color": "cyan"})
+    if status == "playing":
+        canvas.push({"type": "text", "x": 2, "y": 3, "text": rooms[room].name, "color": "white"})
+        canvas.push({"type": "sprite", "x": 5 + sin(ticks * 5) * 1.5, "y": 12, "name": "tamsin", "color": "white"})
+    if status == "won":
+        canvas.push({"type": "text", "x": 23, "y": 6, "text": "D A W N   F O R   E V E R Y O N E", "color": "white"})
+    for i in range(0, message.length):
+        canvas.push({"type": "text", "x": 2, "y": 18 + i, "text": message[i], "color": i == 0 ? "white" : "gray"})
+    if status == "playing":
+        exits = []
+        for direction in ["north", "south", "east", "west", "up", "down"]:
+            if rooms[room].exits[direction]:
+                exits.push(direction)
+        canvas.push({"type": "text", "x": 2, "y": 24, "text": "Here: " + rooms[room].objects, "color": "yellow"})
+        canvas.push({"type": "text", "x": 2, "y": 25, "text": "Exits: " + exits.join(", ") + "  |  Repairs & memories: " + journal.length + "/7", "color": "cyan"})
+    canvas.push({"type": "text", "x": 2, "y": 27, "text": "Type commands below. HELP / LOOK / INVENTORY / JOURNAL / HINT / MAP", "color": "cyan"})

@@ -1,0 +1,91 @@
+@App
+type = ascii-animator
+scene = halls
+
+@AsciiAnimator/halls
+size = [78, 23]
+fps = 20
+logic = halls
+
+@Ascii3D/corridor
+map = [
+    "###.........###",
+    "#.............#",
+    "#.............#",
+    "A.............A",
+    "#....#...#....#",
+    "#....#...#....#",
+    "#.............#",
+    "#.............#",
+    "###.........###",
+    "#.............#",
+    "#.............#",
+    "A.............A",
+    "#....#...#....#",
+    "#....#...#....#",
+    "#.............#",
+    "#.............#"
+]
+walls = {"#": {"texture": "stone", "color": "cyan"}, "A": {"texture": "arch", "color": "yellow"}}
+repeat_y = true
+camera = camera
+entities = lamps
+fov = 70
+far = 48
+floor = gray
+ceiling = blue
+
+@AsciiSprite/stone
+frames = [["----+---", "    |   ", "+-------", "|       "]]
+
+@AsciiSprite/arch
+fps = 2
+frames = [["/######/", "| [++] |", "| .... |", "/######/"], ["/######/", "| [**] |", "| .... |", "/######/"]]
+
+@AsciiSprite/lamp
+fps = 3
+frames = [[" .-. ", "[ * ]", "  |  "], [" .-. ", "[ + ]", "  |  "]]
+
+@Logic/halls
+state:
+    camera = {"x": 7.5, "y": 0.5, "angle": 90, "z": 0.5, "pitch": 0}
+    lamps = []
+    ticks = 0
+    speed = 0.1
+    paused = false
+    canvas = []
+keys:
+    ArrowUp -> faster
+    ArrowDown -> slower
+    Space -> pause
+action initialize:
+    camera = {"x": 7.5, "y": 0.5, "angle": 90, "z": 0.5, "pitch": 0}
+    lamps = [
+        {"x": 5.5, "y": 2.5, "z": 0.35, "sprite": "lamp", "size": 0.3, "color": "yellow"},
+        {"x": 9.5, "y": 10.5, "z": 0.35, "sprite": "lamp", "size": 0.3, "color": "magenta"}
+    ]
+    ticks = 0
+    call paint
+action faster:
+    speed = min(0.3, speed + 0.025)
+action slower:
+    speed = max(0.025, speed - 0.025)
+action pause:
+    paused = not paused
+action tick:
+    if not paused:
+        ticks += 1
+        camera.y = (camera.y + speed) % 16
+        camera.x = 7.5 + sin(ticks * 1.5) * 0.25
+        camera.angle = 90 + sin(ticks * 0.7) * 5
+        camera.z = 0.5 + sin(ticks * 8) * 0.012
+        camera.pitch = sin(ticks * 1.1) * 1.5
+        lamps[0].y = camera.y + (2.5 - camera.y + 16) % 16
+        lamps[1].y = camera.y + (10.5 - camera.y + 16) % 16
+    call paint
+action paint:
+    canvas = [
+        {"type": "ascii3d", "scene": "corridor", "x": 0, "y": 1, "width": 78, "height": 21},
+        {"type": "text", "x": 2, "y": 0, "text": "E N D L E S S   H A L L S   /   ASCII3D", "color": "cyan"},
+        {"type": "text", "x": 2, "y": 22, "text": paused ? "Drift paused. Space resumes. Q: leave the halls." : "Up/Down: drift speed   Space: pause   Q: leave the halls.", "color": "yellow"}
+    ]

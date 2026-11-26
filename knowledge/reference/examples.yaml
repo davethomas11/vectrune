@@ -1,6 +1,108 @@
 version: 1
 status: starter
 examples:
+  - id: example.borrowed-morning
+    title: The Kingdom of Borrowed Mornings
+    summary: Original fairy-tale text adventure with nine animated locations, typed commands, inventory puzzles, journal, hints, a synth title theme and a complete sunrise ending.
+    source_path: examples/ascii/borrowed_morning.rune
+    companion_files:
+      - examples/ascii/borrowed_morning/scenes.rune
+      - examples/ascii/borrowed_morning/README.md
+    app_type: ascii-animator
+    concepts:
+      - typed command actions and nonblocking terminal prompt
+      - animated scene sprites and native synth melody
+      - inventory trades and reusable tools
+      - gated puzzles, journal, progressive hints and restart
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune ascii run examples/ascii/borrowed_morning.rune
+      - vectrune ascii run examples/ascii/borrowed_morning.rune --mute
+      - vectrune ascii run examples/ascii/borrowed_morning.rune --plain --frames 2 --commands "begin" --commands "look"
+    test_refs:
+      - tests/borrowed_morning.rs
+      - tests/terminal/test_ascii_animator.py
+    related_knowledge:
+      - example.borrowed-morning
+      - runtime.ascii-animator
+    status: recommended
+    notes:
+      - Local example with a relative scene import; keep its folder beside the entry file.
+      - Requires a 78x30 terminal. No deaths or timed puzzles. No save persistence.
+  - id: example.ascii-animator
+    title: ASCII Animator Terminal Collection
+    summary: Eight terminal demos including 2D screensavers and games, simulated telemetry, and Ascii3D shooting, endless halls and downhill tunnel attack.
+    source_path: examples/ascii/aquarium.rune
+    companion_files:
+      - examples/ascii/starfield.rune
+      - examples/ascii/observatory.rune
+      - examples/ascii/paddle.rune
+      - examples/ascii/meteors.rune
+      - examples/ascii/sentinel.rune
+      - examples/ascii/halls.rune
+      - examples/ascii/descent.rune
+      - examples/ascii/README.md
+    app_type: ascii-animator
+    concepts:
+      - ordered character-cell drawing
+      - deterministic animated sprites
+      - connected live graphs
+      - shared Rune Logic state and key actions
+      - collision, scoring, pause and restart
+      - textured grid raycasting and depth-tested ASCII sprites
+      - first-person collision and wall-aware aiming
+      - short native synth tones with silent plain captures
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune ascii generate --text "Hello!" -o animation.rune
+      - vectrune ascii run examples/ascii/aquarium.rune
+      - vectrune ascii run examples/ascii/observatory.rune --plain --frames 30
+      - vectrune ascii run examples/ascii/meteors.rune --plain --frames 40 --keys Enter,ArrowLeft
+      - vectrune ascii run examples/ascii/paddle.rune
+      - vectrune ascii run examples/ascii/sentinel.rune
+      - vectrune ascii run examples/ascii/sentinel.rune --mute
+      - vectrune ascii run examples/ascii/halls.rune
+      - vectrune ascii run examples/ascii/descent.rune
+    test_refs:
+      - tests/ascii_animator.rs
+      - tests/ascii3d.rs
+      - tests/terminal/test_ascii_animator.py
+    related_knowledge:
+      - runtime.ascii-animator
+      - runtime.ascii3d
+    status: recommended
+    notes:
+      - Requires a local checkout or downloaded example files; examples are not embedded.
+      - Terminal-only; observatory metrics are simulated, not real machine telemetry.
+  - id: example.game.neon-circuit
+    title: Neon Circuit
+    summary: Twelve-sector cyberpunk action platformer with unlockable weapons, overhead and first-person return encounters, enhanced lighting and a five-room finale.
+    source_path: examples/games/neon_circuit/neon_circuit.rune
+    app_type: pixel-3d
+    concepts:
+      - enhanced neon lighting and rotating voxel terrain
+      - animated models and cinematic camera transitions
+      - overhead and first-person escape encounters
+      - weapon wheel, campaign progression and local persistence
+    builtins: []
+    runtime_context: []
+    cli_workflows:
+      - vectrune examples/games/neon_circuit/neon_circuit.rune -o html > neon.html
+      - vectrune test examples/games/neon_circuit/neon_circuit.logic.test.rune
+    test_refs:
+      - tests/browser/neon_circuit.py
+      - tests/browser/neon_circuit_lighting.py
+      - tests/browser/neon_circuit_master.py
+      - tests/browser/neon_circuit_site.py
+    related_knowledge:
+      - runtime.pixel3d
+    status: recommended
+    notes:
+      - Available at /neon-circuit/ in English, Spanish and French; the game itself is English.
+      - Embedded and standalone play share /assets/games/neon-circuit/index.html and its local save.
+      - Saved campaign progress is local to the browser origin, not a cloud account.
   - id: example.storage.core
     title: Rune DB and Vect Event Workshop
     summary: Server-side Rune DB with a Rune-Web frontend, atomic checkout and resumable event replay, standalone hosts and browser-local persistence.

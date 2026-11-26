@@ -220,6 +220,7 @@
                             <li><a href="#lambda">lambda</a></li>
                             <li><a href="#sam">sam</a></li>
                             <li><a href="#repl">repl</a></li>
+                            <li><a href="#ascii-animator">ASCII Animator</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -459,6 +460,30 @@
         </ul>
 
         <h2 id="command-line-interface-cli-tools">3. Command-Line Interface (CLI) Tools</h2>
+        <h3 id="ascii-animator">ASCII Animator (v0.3.12)</h3>
+        <p>Terminal-only animation uses <code>@App type = ascii-animator</code>, a named <code>@AsciiAnimator</code> canvas and shared <code>@Logic</code> initialize/tick actions. Generate a starter animation with <code>ascii generate</code>, image art with <code>ascii image</code>, or a banner with <code>ascii text</code>. Generators need no example directory; <code>-o</code> writes a new file without overwriting. Example games are local files, not embedded in the binary.</p>
+        <pre><code>vectrune ascii generate --text "Hello!" -o animation.rune
+vectrune ascii run animation.rune
+vectrune ascii image photo.png --width 80
+vectrune ascii image animation.gif --play
+vectrune ascii image animation.gif --rune -o animation.rune
+vectrune ascii text "VECTRUNE"
+vectrune ascii text "RUNE" --font compact --char "*" --background "."
+# With a checkout or downloaded examples:
+vectrune ascii run examples/ascii/aquarium.rune
+vectrune ascii run examples/ascii/observatory.rune
+vectrune ascii run examples/ascii/paddle.rune
+vectrune ascii run examples/ascii/meteors.rune
+vectrune ascii run examples/ascii/sentinel.rune
+vectrune ascii run examples/ascii/halls.rune
+vectrune ascii run examples/ascii/descent.rune
+vectrune ascii run examples/ascii/starfield.rune
+vectrune ascii run examples/ascii/observatory.rune --plain --frames 30</code></pre>
+        <p>Q, Esc and Ctrl-C exit and restore the terminal. Plain mode prints only the final frame without ANSI codes or delays; <code>--keys Enter,ArrowLeft</code> supplies one key per tick in plain mode. The observatory uses simulated telemetry. See the <a href="https://github.com/davethomas11/vectrune/blob/main/knowledge/runtime/ascii-animator.md">ASCII Animator language guide</a> for syntax, key bindings, limits and a complete starter.</p>
+        <p><strong>GIF animation:</strong> <code>ascii image --play</code> loops GIF frames in the terminal; Space pauses, Q/Esc/Ctrl-C exits. <code>--rune -o animation.rune</code> exports a self-contained runnable app with composited frames. Delays round to 60 Hz ticks (minimum one); finite GIF loop counts are ignored. Animated modes allow up to 120 frames, 80 rows and 8 MiB of ASCII data. Default image output remains plain text with only the first GIF frame.</p>
+        <p><strong>Ascii3D augmentation:</strong> add a named <code>@Ascii3D</code> scene and draw <code>{type: "ascii3d", scene, x, y, width, height}</code> behind ordinary HUD objects. Textured grid walls and billboard sprites are depth-tested; a non-repeating scene can bind shared collision/visibility helpers through <code>@AsciiAnimator spatial</code>. Try <code>sentinel</code> for a first-person shooter, <code>halls</code> for an endless screensaver, and <code>descent</code> for downhill tunnel attack on rails. This is fixed-height 2.5D raycasting, not physical slopes. See the <a href="https://github.com/davethomas11/vectrune/blob/main/knowledge/runtime/ascii3d.md">Ascii3D language guide</a>.</p>
+        <p><strong>Simple synth cues:</strong> declare <code>@AsciiTone/name</code> and use <code>sound "name"</code> in an action. Sentinel includes shot, hit, damage and result cues through the shared native mixer. Use <code>--mute</code> to skip the audio device; plain captures are always silent. Linux source builds need ALSA development headers.</p>
+        <p><strong>Typed adventures:</strong> <code>@AsciiAnimator command = command</code> sends a normalized input string to a one-parameter action. Enter submits, Backspace edits, Ctrl-U clears, and Esc/Ctrl-C exits; Q is ordinary input. Try <code>vectrune ascii run examples/ascii/borrowed_morning.rune</code> for an original fairy-tale adventure with nine animated areas, inventory puzzles, hints, a title tune and a complete ending. Type BEGIN, then HELP. Plain mode can repeat <code>--commands "text"</code>, once per tick, instead of <code>--keys</code>.</p>
         <p><code>vectrune fmt &lt;entry-or-directory&gt; --line-width 100</code> formats Rune files and imports, wrapping top-level JSON object assignments with four-space indentation. The default width is 100 (minimum 20); individual strings, executable expressions, views and embedded code are preserved. Use <code>--check</code> to report changes without writing. Formatting reparses and compares documents before saving.</p>
         <p>Vectrune provides a powerful command-line interface for executing scripts, managing applications, and interacting with various services.</p>
 

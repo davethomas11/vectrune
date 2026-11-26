@@ -1,0 +1,76 @@
+@App
+type = ascii-animator
+scene = dodge
+
+@AsciiAnimator/dodge
+size = [64, 22]
+fps = 12
+logic = dodge
+
+@AsciiSprite/ship
+frames = [[" /A/ ", "<=|=>"]]
+
+@AsciiSprite/meteor
+fps = 6
+frames = [["(*)"], ["{o}"]]
+
+@Logic/dodge
+state:
+    player = 30
+    ticks = 0
+    score = 0
+    status = "title"
+    rocks = []
+    canvas = []
+keys:
+    Enter -> start
+    KeyR -> start
+    ArrowLeft -> left
+    KeyA -> left
+    ArrowRight -> right
+    KeyD -> right
+action initialize:
+    status = "title"
+    rocks = []
+    call paint
+action start:
+    player = 30
+    ticks = 0
+    score = 0
+    rocks = []
+    status = "playing"
+action left:
+    if status == "playing":
+        player = max(2, player - 3)
+action right:
+    if status == "playing":
+        player = min(57, player + 3)
+action tick:
+    if status == "playing":
+        ticks += 1
+        if ticks % 8 == 0:
+            rocks.push({"x": 2 + (ticks * 17) % 56, "y": 3, "speed": 0.35 + min(0.6, ticks * 0.001)})
+        for rock in rocks:
+            rock.y += rock.speed
+            if rock.y >= 17 and rock.y < 19 and rock.x + 2 >= player and rock.x <= player + 4:
+                status = "gameover"
+            if rock.y >= 20:
+                score += 10
+        rocks = rocks.filter it.y < 20
+    call paint
+action paint:
+    canvas = [
+        {"type": "box", "x": 0, "y": 1, "width": 64, "height": 20, "color": "blue"},
+        {"type": "text", "x": 2, "y": 0, "text": "METEOR COURIER   |   SCORE " + score, "color": "cyan"},
+        {"type": "sprite", "x": player, "y": 17, "name": "ship", "color": "cyan"},
+        {"type": "text", "x": 2, "y": 21, "text": "Arrows/A/D: dodge  Enter/R: start/restart  Q: quit", "color": "cyan"}
+    ]
+    for i in range(0, 24):
+        canvas.push({"type": "text", "x": 2 + (i * 19) % 59, "y": 3 + (i * 7 + floor(ticks / 3)) % 13, "text": ".", "color": "gray"})
+    for rock in rocks:
+        canvas.push({"type": "sprite", "x": rock.x, "y": rock.y, "name": "meteor", "color": "yellow"})
+    if status == "title":
+        canvas.push({"type": "text", "x": 17, "y": 8, "text": "DELIVER THE LAST STARLETTER", "color": "yellow"})
+        canvas.push({"type": "text", "x": 21, "y": 10, "text": "PRESS ENTER TO FLY", "color": "magenta"})
+    if status == "gameover":
+        canvas.push({"type": "text", "x": 19, "y": 10, "text": "SHIP LOST! R TO RETRY", "color": "red"})

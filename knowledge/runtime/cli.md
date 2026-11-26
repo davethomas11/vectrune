@@ -19,6 +19,41 @@ They support direct files, named datasource configuration and remote standalone
 servers. See [Rune DB and Vect Event](storage.md) and
 [`examples/data/storage/`](../../examples/data/storage/README.md).
 
+## ASCII Animator (v0.3.12)
+
+`vectrune ascii generate --text "Hello!" -o animation.rune` creates a runnable
+starter animation. `vectrune ascii image photo.png --width 80` converts an image
+to ASCII, and `vectrune ascii text "Hello"` renders a character banner.
+For GIF playback use `ascii image animation.gif --play` (Space pauses;
+Q/Esc/Ctrl-C exits). Use `ascii image animation.gif --rune -o animation.rune`
+to export a self-contained runnable app with composited frames and 60 Hz
+quantized GIF delays. Both modes loop continuously; animation limits are
+120 frames, 80 output rows and 8 MiB ASCII frame data. Default GIF output
+remains the first frame. `--play --frames N` bounds simulation ticks and
+cannot be combined with `--rune` or file output.
+Text accepts `--font bitmap|compact|double`, `--char` for filled pixels,
+and `--background` for empty pixels/spacing (single printable ASCII characters).
+Generators write to stdout unless `-o <new-file>` is provided; existing files
+are never overwritten. These commands need no example directory.
+Example apps remain ordinary Rune files, not embedded assets; there is no
+`ascii demo` or `ascii list` command.
+`vectrune ascii run <entry.rune>` runs a custom terminal app;
+`vectrune <entry.rune>` also launches `@App type = ascii-animator` directly.
+Q, Esc and Ctrl-C restore the terminal and exit.
+
+`ascii run` accepts `--frames N` for bounded playback and
+`--plain` to print only the final frame without ANSI codes or delays
+(default one tick). `--keys Enter,ArrowLeft` supplies one key per tick and
+requires plain mode. Interactive output requires a real terminal; redirected
+execution must use plain mode. `--mute` disables declared synth tones without
+opening an audio device, and also works for direct ASCII file execution.
+Plain mode is always silent. See [ASCII Animator](ascii-animator.md).
+Command-mode apps declare `@AsciiAnimator command = action`; Enter submits typed
+text, Backspace edits, Ctrl-U clears, and Esc/Ctrl-C exits (Q is ordinary text).
+Plain captures can repeat `--commands "text"` once per tick; this requires a
+command-mode app and cannot be combined with `--keys`.
+Try the complete [Borrowed Mornings adventure](../examples/borrowed-morning.md).
+
 ## Offline manuals
 
 Release archives include `man/man1/vectrune.1` and

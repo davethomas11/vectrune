@@ -144,7 +144,7 @@ pub fn check(doc: &RuneDocument) -> Vec<Diagnostic> {
         };
         if kind == "App" {
             if let Some(value) = section.kv.get("type").and_then(|v| v.as_str()) {
-                if !["REST", "GRAPHQL", "STATIC", "DYNAMIC-AI-WEB", "PIXEL", "PIXEL-3D", "RUNE-DB", "VECT-EVENT"]
+                if !["REST", "GRAPHQL", "STATIC", "DYNAMIC-AI-WEB", "PIXEL", "PIXEL-3D", "RUNE-DB", "VECT-EVENT", "ASCII-ANIMATOR"]
                     .contains(&value.to_uppercase().as_str())
                 {
                     report(
@@ -301,6 +301,11 @@ pub fn check(doc: &RuneDocument) -> Vec<Diagnostic> {
                 ),
                 suggestion: None,
             });
+        }
+    }
+    if crate::core::get_app_type(doc).is_some_and(|t| t.eq_ignore_ascii_case("ascii-animator")) {
+        if let Err(error) = crate::apps::ascii_animator::compile(doc) {
+            diagnostics.push(Diagnostic { severity: "error", code: "ascii-animator", file: None, section: "@App".into(), message: error.to_string(), location: None, suggestion: None });
         }
     }
     if crate::core::get_app_type(doc).is_some_and(|t| t.eq_ignore_ascii_case("pixel")) {

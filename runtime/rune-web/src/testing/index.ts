@@ -43,3 +43,8 @@ export function snapshot(): string {
   flush();
   return JSON.stringify({ state: app.state, derived: app.derived, mock });
 }
+
+export function takeAudio(): string {
+  flush();
+  return JSON.stringify(mock.audio.splice(0));
+}

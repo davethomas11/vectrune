@@ -2,6 +2,34 @@
 
 These examples are the first recommended teaching set for both humans and AI systems.
 
+## ASCII Animator (v0.3.12)
+
+`examples/ascii/` contains two screensavers (`starfield`, `aquarium`), a
+simulated telemetry dashboard (`observatory`) and two playable games
+(`paddle`, `meteors`). Run `vectrune ascii run examples/ascii/aquarium.rune`
+from a checkout (or use downloaded files); edit the Rune files
+to learn canvas drawing, sprite frames and shared `@Logic` key actions.
+Examples are not embedded. `vectrune ascii generate -o animation.rune`
+creates a starter without a checkout; `ascii image` and `ascii text` generate art.
+See [the runtime guide](../runtime/ascii-animator.md) and
+[`tests/ascii_animator.rs`](../../tests/ascii_animator.rs).
+The [Ascii3D augmentation](../runtime/ascii3d.md) adds `sentinel.rune`
+(first-person maze shooter), `halls.rune` (endless corridor screensaver) and
+`descent.rune` (downhill tunnel attack on rails). These demonstrate optional
+raycast canvas layers, wall/sprite depth, collision, combat and scrolling worlds.
+The [Kingdom of Borrowed Mornings](borrowed-morning.md) is a complete original
+typed-command adventure with nine animated locations, a synth title theme,
+inventory puzzles, hints, a journal and a sunrise ending.
+
+## Neon Circuit (v0.3.12)
+
+Play [Neon Circuit](https://vectrune.com/neon-circuit/) and inspect all imported
+source files on the same page. The twelve-sector campaign demonstrates
+enhanced Pixel 3D lighting, rotating terrain, animated models, weapon-wheel
+selection, overhead/first-person returns and a five-room finale. Embedded and
+standalone play share the same browser save. See the
+[Pixel 3D guide](../runtime/pixel3d.md) for mechanics and renderer details.
+
 They were chosen because they are small, high-signal, and already connected to existing docs, tests, or common workflows.
 
 ## 1. Minimal REST app
