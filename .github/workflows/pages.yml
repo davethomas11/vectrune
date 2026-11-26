@@ -58,6 +58,8 @@ jobs:
           npm run build
 
       - name: Check teaching site compiler compatibility guard
+        env:
+          VECTRUNE_BINARY: ${{ github.workspace }}/target/release/vectrune
         run: |
           python3 tests/browser/test_teaching_build.py
           python3 tests/browser/test_reference_inventory.py

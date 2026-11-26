@@ -447,7 +447,7 @@ fn descent_can_be_completed_by_steering_and_shooting_every_turret() {
 
 #[test]
 fn knowledge_starter_is_runnable_with_collision_and_turning() {
-    let guide = include_str!("../knowledge/runtime/ascii3d.md");
+    let guide = include_str!("../knowledge/runtime/ascii3d.md").replace("\r\n", "\n");
     let source = guide
         .split("```rune\n")
         .nth(1)

@@ -7,8 +7,13 @@ from unittest.mock import patch
 import json
 import zipfile
 import subprocess
+import os
 
 ROOT = Path(__file__).resolve().parents[2]
+BINARY = Path(os.environ.get(
+    'VECTRUNE_BINARY',
+    str(ROOT / 'target/debug' / ('vectrune.exe' if os.name == 'nt' else 'vectrune')),
+)).resolve()
 sys.path.insert(0, str(ROOT / 'teaching_website'))
 from reference_inventory import inventory, native_names, web_commands
 from build_api_docs import build_docs
@@ -126,7 +131,7 @@ class ReferenceInventoryTests(unittest.TestCase):
                 self.assertEqual(len(archive.namelist()), 12)
                 archive.extractall(Path(folder, 'extracted'))
             output = subprocess.run(
-                [str(ROOT / 'target/debug/vectrune'), 'ascii', 'run', 'ascii/borrowed_morning.rune',
+                [str(BINARY), 'ascii', 'run', 'ascii/borrowed_morning.rune',
                  '--plain', '--commands', 'begin'],
                 cwd=Path(folder, 'extracted'), capture_output=True, text=True, check=True)
             self.assertIn("Royal Sock-Mender", output.stdout)
