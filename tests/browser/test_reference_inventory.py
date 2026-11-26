@@ -114,7 +114,7 @@ class ReferenceInventoryTests(unittest.TestCase):
             self.assertIn('The Kingdom of Borrowed Mornings', page)
             self.assertIn('AsciiMusic scores (unreleased prototype)', page)
             self.assertIn('@AsciiMusic/haunted', page)
-            self.assertIn('120x36 terminal', page)
+            self.assertIn('160x48 terminal', page)
             self.assertIn('--commands', page)
             self.assertNotIn('vectrune ascii demo', page)
             library = Path(folder, 'docs/library/declarations/index.html').read_text(encoding='utf-8')

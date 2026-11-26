@@ -21,17 +21,40 @@ fn state(game: &Engine) -> Value {
 }
 
 #[test]
+fn larger_view_scales_scene_positions_without_changing_world_physics() {
+    let mut game = game();
+    game.key("Enter").unwrap();
+    game.key("ArrowRight").unwrap();
+    for _ in 0..6 {
+        game.step().unwrap();
+    }
+    let state = state(&game);
+    let sprite = state["canvas"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|object| object["name"] == "courier")
+        .unwrap();
+    let world_x = state["player"]["x"].as_f64().unwrap() - state["camera"].as_f64().unwrap();
+    let world_y = state["player"]["y"].as_f64().unwrap();
+    assert!((sprite["x"].as_f64().unwrap() - world_x * 4.0 / 3.0).abs() < 1e-9);
+    assert!((sprite["y"].as_f64().unwrap() - world_y * 4.0 / 3.0).abs() < 1e-9);
+    assert_eq!(state["platforms"][0]["y"], 28);
+    assert_eq!(state["platforms"][1]["x"], 33);
+}
+
+#[test]
 fn detailed_source_assets_keep_their_terminal_dimensions() {
     for (name, source, width, rows) in [
-        ("courier", (48, 80), 8, 7),
-        ("tree", (96, 256), 16, 21),
-        ("gear", (128, 128), 20, 10),
-        ("ghost", (64, 80), 10, 6),
-        ("seed", (56, 64), 9, 5),
-        ("moon", (96, 96), 16, 8),
-        ("floor", (96, 48), 15, 4),
-        ("mist", (192, 64), 32, 5),
-        ("gate", (128, 160), 20, 13),
+        ("courier", (48, 80), 11, 9),
+        ("tree", (96, 256), 21, 28),
+        ("gear", (128, 128), 27, 14),
+        ("ghost", (64, 80), 13, 8),
+        ("seed", (56, 64), 12, 7),
+        ("moon", (96, 96), 21, 11),
+        ("floor", (96, 48), 20, 5),
+        ("mist", (192, 64), 43, 7),
+        ("gate", (128, 160), 27, 17),
     ] {
         let path = format!("examples/ascii/games/clockwork/assets/{name}.gif");
         assert_eq!(image::image_dimensions(&path).unwrap(), source, "{name}");
@@ -166,8 +189,8 @@ fn final_platform_jump_clears_the_overhead_ghost_without_respawning() {
 #[test]
 fn jump_keeps_forward_momentum_when_terminal_key_repeat_stops() {
     let mut game = game();
-    assert_eq!(game.frame().unwrap().width, 120);
-    assert_eq!(game.frame().unwrap().height, 35);
+    assert_eq!(game.frame().unwrap().width, 160);
+    assert_eq!(game.frame().unwrap().height, 47);
     game.key("Enter").unwrap();
     game.key("ArrowRight").unwrap();
     for _ in 0..10 {

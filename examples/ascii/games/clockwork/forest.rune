@@ -5,37 +5,37 @@ type = ascii-animator
 scene = forest
 
 @AsciiAnimator/forest
-size = [120, 35]
+size = [160, 47]
 fps = 30
 logic = forest
 
 @AsciiSprite/courier
 source = assets/courier.gif
-width = 8
+width = 11
 @AsciiSprite/tree
 source = assets/tree.gif
-width = 16
+width = 21
 @AsciiSprite/gear
 source = assets/gear.gif
-width = 20
+width = 27
 @AsciiSprite/ghost
 source = assets/ghost.gif
-width = 10
+width = 13
 @AsciiSprite/seed
 source = assets/seed.gif
-width = 9
+width = 12
 @AsciiSprite/moon
 source = assets/moon.gif
-width = 16
+width = 21
 @AsciiSprite/floor
 source = assets/floor.gif
-width = 15
+width = 20
 @AsciiSprite/mist
 source = assets/mist.gif
-width = 32
+width = 43
 @AsciiSprite/gate
 source = assets/gate.gif
-width = 20
+width = 27
 
 @AsciiMusic/forest_theme
 tempo = 100
@@ -255,21 +255,24 @@ action paint:
         canvas.push({"type": "sprite", "name": "courier", "x": player.x - camera, "y": player.y, "color": "white"})
     for i in range(0, 5):
         canvas.push({"type": "sprite", "name": "mist", "x": (i * 32 + ticks * 0.1) % 160 - 32, "y": 29, "color": "gray"})
-    for row in [0, 33, 34]:
-        canvas.push({"type": "text", "x": 0, "y": row, "text": "                                                                                                                        "})
+    for object in canvas:
+        object.x *= 4 / 3
+        object.y *= 4 / 3
+    for row in [0, 45, 46]:
+        canvas.push({"type": "text", "x": 0, "y": row, "text": "                                                                                                                                                                "})
     canvas.push({"type": "text", "x": 1, "y": 0, "text": "THE THIRTEENTH BELL   |   CLOCKSEEDS " + collected + "/3   |   MUSIC " + (melody ? "ON" : "OFF"), "color": "cyan"})
-    canvas.push({"type": "text", "x": 1, "y": 33, "text": notice, "color": "yellow"})
-    canvas.push({"type": "text", "x": 1, "y": 34, "text": "A/D or arrows: move  Space: jump  Down/S: brake  P: pause  M: music  R: restart  Q: quit", "color": "cyan"})
+    canvas.push({"type": "text", "x": 1, "y": 45, "text": notice, "color": "yellow"})
+    canvas.push({"type": "text", "x": 1, "y": 46, "text": "A/D or arrows: move  Space: jump  Down/S: brake  P: pause  M: music  R: restart  Q: quit", "color": "cyan"})
     if status == "title":
-        canvas.push({"type": "box", "x": 29, "y": 10, "width": 61, "height": 11, "fill": true, "color": "blue"})
-        canvas.push({"type": "text", "x": 36, "y": 12, "text": "T H E   T H I R T E E N T H   B E L L", "color": "yellow"})
-        canvas.push({"type": "text", "x": 33, "y": 15, "text": "You are Wick, the forest's last little lamplighter.", "color": "white"})
-        canvas.push({"type": "text", "x": 33, "y": 16, "text": "Climb the gears. Gather three seeds. Wake its heart.", "color": "white"})
-        canvas.push({"type": "text", "x": 43, "y": 18, "text": "ENTER TO LIGHT YOUR LANTERN", "color": "cyan"})
+        canvas.push({"type": "box", "x": 49, "y": 16, "width": 61, "height": 11, "fill": true, "color": "blue"})
+        canvas.push({"type": "text", "x": 56, "y": 18, "text": "T H E   T H I R T E E N T H   B E L L", "color": "yellow"})
+        canvas.push({"type": "text", "x": 53, "y": 21, "text": "You are Wick, the forest's last little lamplighter.", "color": "white"})
+        canvas.push({"type": "text", "x": 53, "y": 22, "text": "Climb the gears. Gather three seeds. Wake its heart.", "color": "white"})
+        canvas.push({"type": "text", "x": 63, "y": 24, "text": "ENTER TO LIGHT YOUR LANTERN", "color": "cyan"})
     if status == "paused":
-        canvas.push({"type": "text", "x": 47, "y": 13, "text": "THE FOREST HOLDS ITS BREATH", "color": "yellow"})
+        canvas.push({"type": "text", "x": 67, "y": 19, "text": "THE FOREST HOLDS ITS BREATH", "color": "yellow"})
     if status == "won":
-        canvas.push({"type": "box", "x": 32, "y": 10, "width": 56, "height": 10, "fill": true, "color": "blue"})
-        canvas.push({"type": "text", "x": 41, "y": 12, "text": "THE FOREST TICKS AGAIN", "color": "yellow"})
-        canvas.push({"type": "text", "x": 36, "y": 15, "text": "Thank you, Wick. Tomorrow belongs to everyone.", "color": "white"})
-        canvas.push({"type": "text", "x": 46, "y": 17, "text": "R: ONE MORE MIDNIGHT", "color": "cyan"})
+        canvas.push({"type": "box", "x": 52, "y": 16, "width": 56, "height": 10, "fill": true, "color": "blue"})
+        canvas.push({"type": "text", "x": 61, "y": 18, "text": "THE FOREST TICKS AGAIN", "color": "yellow"})
+        canvas.push({"type": "text", "x": 56, "y": 21, "text": "Thank you, Wick. Tomorrow belongs to everyone.", "color": "white"})
+        canvas.push({"type": "text", "x": 66, "y": 23, "text": "R: ONE MORE MIDNIGHT", "color": "cyan"})

@@ -16,7 +16,7 @@ reserves a separate transparency palette index; optional asset-name arguments
 allow targeted regeneration without replacing the other checked-in artwork.
 Source GIFs are drawn at four times their design dimensions with finer original
 details, not nearest-neighbor enlarged. Runtime widths and collision rectangles
-remain unchanged (courier 48x80 source -> 8x7 terminal cells).
+remain in world coordinates (courier 48x80 source -> 11x9 terminal cells).
 
 All scenery and actor artwork is loaded from original on-disk GIFs at compile/
 startup time. Nine reusable sprites layer parallax trees, moon, gears, terrain,
@@ -27,8 +27,10 @@ M pauses/resumes music and disables/enables new sound effects;
 `--mute` avoids opening a device. P freezes gameplay/music; sprite animations
 continue on the host clock.
 
-Requires the unreleased GIF sprite/music runtime and a 120x36 terminal.
-The canvas is 120x35 at 30 FPS with larger sprites. Horizontal acceleration,
+Requires the unreleased GIF sprite/music runtime and a 160x48 terminal.
+The canvas is 160x47 at 30 FPS with larger sprites. Scene positions scale by 4/3
+only at draw time; physics, collision rectangles and camera remain in the same
+world coordinates, preserving the earlier movement feel. Horizontal acceleration,
 air steering, retained jump momentum, four-frame jump buffering and coyote time
 make platforming forgiving.
 Movement tuning keeps roughly the same jump height with quicker acceleration,

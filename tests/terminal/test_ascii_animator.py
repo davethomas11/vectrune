@@ -21,7 +21,7 @@ class AsciiTerminalTests(unittest.TestCase):
     def play(self, args, key=None, resize=False, exit_after=None):
         master, slave = pty.openpty()
         original = termios.tcgetattr(slave)
-        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 36, 120, 0, 0))
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 48, 160, 0, 0))
         process = subprocess.Popen(
             [str(BINARY), *args], stdin=slave, stdout=slave, stderr=slave, cwd=ROOT
         )
