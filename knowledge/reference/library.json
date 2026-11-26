@@ -59,6 +59,22 @@
   ],
   "entries": [
     {
+      "id": "mobile-web-packaging",
+      "category": "cli",
+      "name": "Mobile Web build and export",
+      "signature": "vectrune <source> --build android|ios | --export android|ios [--build-dir directory]",
+      "summary": "Compile a rune-mobile-web frontend and package the shared Rune-Web runtime into Capacitor WebViews.",
+      "runtime": "Source-build CLI; Android or iOS platform toolchain for native builds",
+      "sources": ["src/cli/mobile_web.rs", "src/main.rs", "tests/mobile_web_cli.rs", "knowledge/runtime/mobile-web.md"],
+      "returns": "Android debug APK, unsigned iOS Simulator app, or editable native IDE project.",
+      "errors": "Rejects unsupported frontends, conflicting CLI modes and overwrite of non-generated or editable export directories. Reports native tool failures.",
+      "example": "vectrune examples/rune_mobile_web --export android --build-dir ./mobile-project",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Builds need Node/npm and platform SDKs. --prepare-only skips native tools; --export requires no SDKs at generation time.", "Signing, device IPAs and store distribution remain manual. rune-mobile is reserved for future native execution.", "Bundled UI can operate offline, but no Rust compiler or HTTP backend ships on the device."],
+      "fields": []
+    },
+    {
       "id": "glowtide-fish-feeding",
       "category": "games",
       "name": "Glowtide fish and feeding",

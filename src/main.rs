@@ -84,6 +84,37 @@ async fn main() -> anyhow::Result<()> {
         .arg(Arg::new("pixel-frames").long("pixel-frames").hide(true).value_parser(clap::value_parser!(u64).range(1..)).requires("target"))
         .arg(Arg::new("fullscreen").long("fullscreen").action(clap::ArgAction::SetTrue).requires("target").help("Start the desktop pixel window in fullscreen"))
         .arg(
+            Arg::new("build")
+                .long("build")
+                .value_parser(["android", "ios"])
+                .requires("SCRIPT")
+                .conflicts_with_all(["output", "input", "calculate", "transform", "merge-with", "filter", "watch", "chunks-dir", "ai", "secondary-app", "target", "desktop"])
+                .help("Build a rune-mobile-web app: Android debug APK or unsigned iOS Simulator app"),
+        )
+        .arg(
+            Arg::new("export")
+                .long("export")
+                .value_parser(["android", "ios"])
+                .requires("SCRIPT")
+                .conflicts_with_all(["build", "prepare-only", "output", "input", "calculate", "transform", "merge-with", "filter", "watch", "chunks-dir", "ai", "secondary-app", "target", "desktop"])
+                .help("Export a Gradle or Xcode project for IDE signing and distribution; no SDKs required"),
+        )
+        .group(clap::ArgGroup::new("mobile-target").args(["build", "export"]))
+        .arg(
+            Arg::new("build-dir")
+                .long("build-dir")
+                .value_name("DIRECTORY")
+                .requires("mobile-target")
+                .help("Generated mobile project directory (default: <source>/.vectrune/rune-mobile-web)"),
+        )
+        .arg(
+            Arg::new("prepare-only")
+                .long("prepare-only")
+                .action(clap::ArgAction::SetTrue)
+                .requires("build")
+                .help("Export the mobile project without installing dependencies or invoking native build tools"),
+        )
+        .arg(
             Arg::new("path")
                 .long("path")
                 .help("Path to render when using -o html (default: /)")
@@ -450,6 +481,24 @@ async fn main() -> anyhow::Result<()> {
         let paths: Vec<_> = std::iter::once(script_paths[0]).chain(secondary.map(String::as_str)).map(std::path::PathBuf::from).collect();
         return cli::serve::run(&paths, port_override, host_override, watch_files).await;
     }
+    if let Some(target) = matches.get_one::<String>("build").or_else(|| matches.get_one::<String>("export")) {
+        anyhow::ensure!(script_paths.len() == 1 && script_paths[0] != "-",
+            "--build/--export requires exactly one Rune file or directory");
+        let mode = if matches.contains_id("export") {
+            cli::mobile_web::Mode::Export
+        } else if matches.get_flag("prepare-only") {
+            cli::mobile_web::Mode::Prepare
+        } else {
+            cli::mobile_web::Mode::Build
+        };
+        cli::mobile_web::build(
+            std::path::Path::new(script_paths[0]),
+            target,
+            matches.get_one::<String>("build-dir").map(std::path::Path::new),
+            mode,
+        ).await?;
+        return Ok(());
+    }
 
     if input_format.is_none()
         && calc_expr.is_none()
@@ -658,7 +707,7 @@ async fn main() -> anyhow::Result<()> {
         if output_format == Some("html") {
             let chunks_dir = matches.get_one::<String>("chunks-dir").map(|s| s.as_str());
             match get_frontend_type(&doc) {
-                Some("rune-web") => {
+                Some("rune-web" | "rune-mobile-web") => {
                     if let Some(dir) = chunks_dir {
                         let page_name = doc
                             .sections
@@ -680,7 +729,7 @@ async fn main() -> anyhow::Result<()> {
                 }
                 _ => {
                     return Err(anyhow::anyhow!(
-                        "-o html requires @Frontend type = rune-web or @Frontend type = static"
+                        "-o html requires @Frontend type = rune-web, rune-mobile-web or static"
                     ));
                 }
             }

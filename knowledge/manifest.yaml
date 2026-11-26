@@ -4,6 +4,16 @@ purpose:
   - shared knowledge source for AI and docs
   - stable reference layer between runtime behavior and rendered docs
 pages:
+  - id: runtime.mobile-web
+    path: runtime/mobile-web.md
+    kind: page
+    title: Rune Mobile Web
+    audience: [ai, human]
+    sources:
+      - src/cli/mobile_web.rs
+      - runtime/rune-mobile-web/README.md
+      - tests/mobile_web_cli.rs
+      - tests/browser/rune_mobile_web.py
   - id: language.logic-modules
     path: language/logic-modules.md
     kind: page

@@ -3,6 +3,39 @@
   "status": "starter",
   "examples": [
     {
+      "id": "example.web.mobile",
+      "title": "Rune Mobile Web counter",
+      "summary": "Offline WebView prototype with touch controls, navigation and persisted counter state.",
+      "source_path": "examples/rune_mobile_web/app.rune",
+      "companion_files": [
+        "examples/rune_mobile_web/style.rune"
+      ],
+      "app_type": "REST",
+      "concepts": [
+        "shared Rune-Web runtime packaged for Android and iOS",
+        "offline actions and browser-local storage",
+        "editable Gradle and Xcode project exports"
+      ],
+      "builtins": [],
+      "runtime_context": [],
+      "cli_workflows": [
+        "vectrune examples/rune_mobile_web --export android --build-dir ./mobile-project",
+        "vectrune examples/rune_mobile_web --build ios --prepare-only"
+      ],
+      "test_refs": [
+        "tests/mobile_web_cli.rs",
+        "tests/browser/rune_mobile_web.py",
+        "runtime/rune-mobile-web/tests/build.test.mjs"
+      ],
+      "related_knowledge": [
+        "runtime.mobile-web"
+      ],
+      "status": "experimental",
+      "notes": [
+        "Source builds only; native builds need platform SDKs, signing and distribution remain manual."
+      ]
+    },
+    {
       "id": "example.web.logic-modules",
       "title": "Composable Companions",
       "summary": "Ordinary Rune-Web page demonstrating namespaced wallet exports, independent composed entity care and qualified browser actions.",

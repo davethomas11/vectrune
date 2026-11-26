@@ -439,6 +439,8 @@
         <p><strong>Glowtide friends and feeding:</strong> Eight fish varieties now include angelfish, butterflyfish, glowing neon tetras and lionfish. Feeding costs one pearl per living fish or critter, minimum one pearl; dead residents do not add to the cost. Unaffordable feeding does not start a cooldown or drop food. Existing fish keep their species and care history.</p>
         <p><strong>Glowtide purchases:</strong> A fish profile's UPGRADES button offers a 120-pearl Style Kit with rounded bodies, expressive eyes and animated fins; Candy and glowing Moon patterns cost 80 each, then switch free. Tank care offers three levels of longer-lasting food and up to +30% base lifespan without revival or starvation protection. Passive income is halved (1.5 pearls/second initially), fractional earnings carry forward, and every reward respects the 100,000-pearl wallet cap. Ownership and care levels survive reload.</p>
 
+        <p><strong>Mobile Web prototype (source builds):</strong> <code>@Frontend type = rune-mobile-web</code> packages the shared Rune-Web runtime into Android/iOS WebViews. Use <code>--build android|ios</code> for a debug APK or unsigned Simulator app, or <code>--export android|ios --build-dir ./mobile-project</code> for editable IDE projects without SDKs at export time. Signing and store distribution remain manual; this is not the future native <code>rune-mobile</code> runtime. See <code>knowledge/runtime/mobile-web.md</code>.</p>
+
         <h3 id="api-response-handling">2.6. API & Response Handling</h3>
         <ul>
             <li><strong><code>respond [status_code] [message]</code></strong>: Generates an HTTP response (used within API route handlers).

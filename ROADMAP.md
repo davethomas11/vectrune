@@ -50,7 +50,9 @@ As Vectrune has rapidly evolved, various language processors and dialects develo
 3. **Phase 3: High-Performance TypeScript AST Runtime**: Pre-compile expressions in `runtime/rune-web` to eliminate per-frame regex string re-parsing during 60fps animations; unify emulator core.
 4. **Phase 4: REPL Modernization & `.vect` Script Alignment**: Connect `vectrune repl` and `.vect` scripts directly to the unified expression and collection engine.
 5. **Phase 5: Ahead-Of-Time (AOT) Compiler Architecture (`rune compiler`)**: Define bytecode/IR for compiling `.rune` into standalone native executables and WASM.
-6. **Phase 6: Rune Mobile & Native UI Architecture (`rune mobile`)**: Decouple reactive engine into a headless core (`@vectrune/core`) and build mobile presentation adapters (canvas/native UI bridge).
+6. **Phase 6: Rune Mobile & Native UI Architecture (`rune mobile`)**: Decouple reactive engine into a headless core (`@vectrune/core`) and build native mobile presentation adapters. `rune-mobile` is reserved for full native execution and UI.
+   - The separate [`rune-mobile-web`](runtime/rune-mobile-web/README.md) prototype bundles Rune-Web in Android/iOS Capacitor shells. Its documents use `@Frontend type = rune-mobile-web`; `vectrune <file-or-directory> --build android|ios` invokes the platform build tools. Shared headless core, full native rendering, AOT, and device performance validation remain future work.
+   - `--export android|ios --build-dir <directory>` generates editable Gradle/Xcode projects for IDE signing, with setup instructions and protection against overwriting native edits. `--prepare-only` remains available for regenerable build preparation.
 7. **Phase 7: Converge Vectrune Natural-Language Intent Compiler**: Modernize the natural language compiler to emit the unified Rune AST / IR directly.
 
 ---
