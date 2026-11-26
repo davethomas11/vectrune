@@ -109,6 +109,12 @@ class ManPageTests(unittest.TestCase):
     def test_release_packaging_preserves_binaries_and_bundles_both_manuals(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
         self.assertIn('export ALSA_STATIC=1', workflow)
+        self.assertNotIn('goto-bus-stop/setup-zig', workflow)
+        self.assertIn('ziglang==0.14.1', workflow)
+        self.assertIn('cargo install cargo-zigbuild --version 0.24.1 --locked', workflow)
+        for name in ['Install Zig', 'Install cargo-zigbuild']:
+            step_text = workflow.split(f'      - name: {name}\n', 1)[1].split('\n      - name:', 1)[0]
+            self.assertIn("if: contains(matrix.platform.target, 'linux')", step_text)
         audio_build = (ROOT / '.github/scripts/build-linux-audio.sh').read_text(encoding='utf-8')
         self.assertIn('CFLAGS="-Os -fPIC"', audio_build)
         step = workflow.split('      - name: Bundle offline manuals with every platform\n', 1)[1]

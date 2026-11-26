@@ -13,6 +13,10 @@ Linux source builds need ALSA headers (`libasound2-dev` on Debian/Ubuntu or
 `.github/scripts/build-linux-audio.sh` builds unmodified ALSA 1.2.14, verified
 by SHA-256, using Zig 0.14.1 for the release target. The release links that static
 library rather than requiring target-specific ALSA development packages.
+Only Linux jobs install Zig and cargo-zigbuild. CI installs the pinned
+`ziglang==0.14.1` binary wheel from PyPI and verifies `zig version`, avoiding
+the Zig setup action's remote version-index lookup. macOS and Windows use Cargo
+directly without either cross-build tool.
 GNU targets use a glibc 2.28 baseline. The static musl build cannot load external
 ALSA plugins; plugin-only device configurations may need the GNU build or
 `--mute`. A working output device and ALSA runtime configuration are still needed.
