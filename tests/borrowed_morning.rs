@@ -207,19 +207,25 @@ fn plain_cli_accepts_repeated_commands_without_a_device() {
 #[test]
 fn command_configuration_and_input_fail_explicitly() {
     use rune_runtime::rune_parser::parse_rune;
-    let source = std::fs::read_to_string("examples/ascii/borrowed_morning.rune")
-        .unwrap()
-        .replace("import \"borrowed_morning/scenes.rune\"\n", "");
-    for source in [
-        source.replace("command = command", "command = absent"),
-        source.replace("action command(input):", "action command:"),
-        source.replace("action command(input):", "action command(a, b):"),
-        source.replace(
-            "action initialize:",
-            "keys:\n    Enter -> start\naction initialize:",
-        ),
-    ] {
-        assert!(compile(&parse_rune(&source).unwrap()).is_err());
+    let source = std::fs::read_to_string("examples/ascii/borrowed_morning.rune").unwrap();
+    for ending in ["\n", "\r\n"] {
+        let source = source.replace("\r\n", "\n").replace('\n', ending);
+        let source = source
+            .lines()
+            .filter(|line| *line != "import \"borrowed_morning/scenes.rune\"")
+            .collect::<Vec<_>>()
+            .join(ending);
+        for source in [
+            source.replace("command = command", "command = absent"),
+            source.replace("action command(input):", "action command:"),
+            source.replace("action command(input):", "action command(a, b):"),
+            source.replace(
+                "action initialize:",
+                &format!("keys:{ending}    Enter -> start{ending}action initialize:"),
+            ),
+        ] {
+            assert!(compile(&parse_rune(&source).unwrap()).is_err());
+        }
     }
     let game = game();
     for input in ["hi\nthere", "\u{1b}[2J", &"a".repeat(121)] {
