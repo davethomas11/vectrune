@@ -6,6 +6,40 @@ import sys
 
 ROOT = Path(__file__).resolve().parent / "assets"
 ROOT.mkdir(exist_ok=True)
+SCALE = 4
+
+
+class DetailDraw:
+    """Draw in design coordinates, allowing subpixel details at source resolution."""
+    def __init__(self, image):
+        self.draw = ImageDraw.Draw(image)
+
+    def box(self, bounds):
+        return tuple(round(value * SCALE) for value in bounds)
+
+    def points(self, points):
+        return [self.box(point) for point in points]
+
+    def ellipse(self, bounds, **kwargs):
+        if "width" in kwargs:
+            kwargs["width"] = max(1, round(kwargs["width"] * SCALE))
+        self.draw.ellipse(self.box(bounds), **kwargs)
+
+    def rectangle(self, bounds, **kwargs):
+        self.draw.rectangle(self.box(bounds), **kwargs)
+
+    def polygon(self, points, **kwargs):
+        self.draw.polygon(self.points(points), **kwargs)
+
+    def line(self, points, fill, width=1):
+        self.draw.line(self.points(points), fill=fill, width=max(1, round(width * SCALE)))
+
+    def arc(self, bounds, start, end, fill, width=1):
+        self.draw.arc(self.box(bounds), start, end, fill=fill, width=max(1, round(width * SCALE)))
+
+    def point(self, point, fill):
+        x, y = point
+        self.ellipse((x, y, x + 0.5, y + 0.5), fill=fill)
 
 
 def asset(name, size, paint, count=8):
@@ -13,8 +47,8 @@ def asset(name, size, paint, count=8):
         return
     frames = []
     for frame in range(count):
-        image = Image.new("RGBA", size)
-        paint(ImageDraw.Draw(image), frame)
+        image = Image.new("RGBA", (size[0] * SCALE, size[1] * SCALE))
+        paint(DetailDraw(image), frame)
         # Reserve index 255 for transparency instead of assuming palette index 0.
         palette = image.convert("RGB").quantize(colors=255)
         transparent = image.getchannel("A").point(lambda alpha: 255 if alpha < 128 else 0)
@@ -26,7 +60,7 @@ def asset(name, size, paint, count=8):
 
 
 def courier(draw, frame):
-    sway = frame % 2
+    sway = math.sin(frame * math.pi / 4) * 0.7
     draw.polygon([(2, 4), (6, 0), (10, 4)], fill=(185, 185, 185))
     draw.rectangle((3, 4, 8, 8), fill="white")
     draw.rectangle((4, 6, 7, 6), fill="black")
@@ -34,6 +68,13 @@ def courier(draw, frame):
     draw.line([(3 + sway, 16), (2 + sway, 19)], fill="white", width=2)
     draw.line([(8 - sway, 16), (9 - sway, 19)], fill="white", width=2)
     draw.rectangle((9, 9, 11, 12), fill="white")
+    draw.line([(3, 4), (6, 1), (8, 3)], fill="white", width=0.4)
+    draw.line([(5, 10), (3, 15)], fill=(100, 100, 100), width=0.6)
+    draw.line([(7, 10), (9, 15)], fill=(120, 120, 120), width=0.5)
+    draw.line([(3, 9), (8, 9)], fill="white", width=0.4)
+    draw.rectangle((9.4, 9.5, 10.6, 11.5), fill=(80, 80, 80))
+    glow = 190 + round(60 * (1 + math.sin(frame * math.pi / 4)) / 2)
+    draw.ellipse((9.6, 10, 10.4, 11.2), fill=(glow, glow, glow))
 
 
 def tree(draw, frame):
@@ -45,6 +86,13 @@ def tree(draw, frame):
     draw.ellipse((10, 29, 13, 33), fill="black")
     draw.point((9, 40), fill="white")
     draw.point((15, 40), fill="white")
+    for y in range(27, 62, 5):
+        draw.line([(11, y), (12.5, y + 2), (11.5, y + 4)], fill=(65, 65, 65), width=0.5)
+    for y in [9, 22, 35]:
+        draw.line([(4 + sway, y + 5), (5 + sway, y + 1)], fill=(165, 165, 165), width=0.5)
+        draw.line([(19 + sway, y + 8), (18 + sway, y + 2)], fill=(180, 180, 180), width=0.5)
+    draw.line([(9, 63), (5, 63)], fill=(170, 170, 170), width=0.6)
+    draw.line([(14, 61), (20, 63)], fill=(170, 170, 170), width=0.6)
 
 
 def gear(draw, frame):
@@ -54,17 +102,27 @@ def gear(draw, frame):
         angle = (spoke + frame / 8) * math.pi / 4
         x, y = math.cos(angle), math.sin(angle)
         draw.line([(16 + x * 4, 16 + y * 4), (16 + x * 15, 16 + y * 15)], fill="white", width=2)
+        cx, cy = 16 + x * 10, 16 + y * 10
+        draw.ellipse((cx - 0.7, cy - 0.7, cx + 0.7, cy + 0.7), fill=(75, 75, 75))
+    draw.ellipse((14.5, 15.5, 17.5, 18.5), fill=(60, 60, 60))
+    draw.ellipse((15, 16, 16, 17), fill="white")
     draw.rectangle((0, 0, 31, 3), fill="white")
+    for x in range(2, 31, 4):
+        draw.line([(x, 1), (x + 1.5, 2)], fill=(100, 100, 100), width=0.5)
 
 
 def ghost(draw, frame):
-    y = frame % 3
+    y = (1 + math.sin(frame * math.pi / 4)) * 0.8
     draw.ellipse((2, y, 13, 12 + y), fill="white")
     draw.polygon([(2, 7 + y), (13, 7 + y), (15, 15 + y),
                   (11, 13 + y), (8, 16 + y), (4, 13 + y), (0, 16 + y)], fill="white")
     draw.rectangle((4, 4 + y, 6, 7 + y), fill="black")
     draw.rectangle((9, 4 + y, 11, 7 + y), fill="black")
     draw.rectangle((7, 10 + y, 8, 12 + y), fill="black")
+    draw.ellipse((4.5, 4.5 + y, 5.2, 5.2 + y), fill=(150, 150, 150))
+    draw.ellipse((9.5, 4.5 + y, 10.2, 5.2 + y), fill=(150, 150, 150))
+    draw.line([(2.5, 10 + y), (3, 12 + y)], fill=(200, 200, 200), width=0.4)
+    draw.line([(12.5, 10 + y), (12, 12 + y)], fill=(200, 200, 200), width=0.4)
 
 
 def seed(draw, frame):
@@ -74,10 +132,17 @@ def seed(draw, frame):
     draw.line([(6, 4), (6, 0), (10, 1)], fill="white")
     draw.point((0, frame % 12), fill="white")
     draw.point((13, 11 - frame % 8), fill="white")
+    draw.ellipse((3.5, 4.5, 9.5, 12.5), outline="white", width=0.4)
+    for y in [6, 9, 11]:
+        draw.line([(6, y), (8.5, y - 1)], fill=(70, 70, 70), width=0.4)
+    draw.line([(9, 1), (11, 2)], fill=(170, 170, 170), width=0.5)
 
 
 def moon(draw, frame):
     draw.ellipse((0, 0, 23, 23), fill=(160, 160, 160))
+    for x, y, r in [(4, 5, 1.5), (3, 15, 1), (8, 19, 1.8), (5, 10, 0.7)]:
+        draw.ellipse((x - r, y - r, x + r, y + r), fill=(105, 105, 105))
+        draw.arc((x - r, y - r, x + r, y + r), 30, 160, fill=(220, 220, 220), width=0.4)
     draw.ellipse((8, 2, 27, 20), fill=(0, 0, 0, 0))
     draw.line([(3, 10), (5, 12), (7, 10)], fill="white")
 
@@ -87,6 +152,9 @@ def floor(draw, frame):
     for x in range(0, 24, 6):
         draw.line([(x, 5), (x + 3, 8), (x, 11)], fill=(95, 95, 95))
     draw.point((frame * 3, 2), fill="white")
+    for x in range(1, 24, 4):
+        draw.line([(x, 0.5), (x + 1, 2.5)], fill=(110, 110, 110), width=0.5)
+        draw.line([(x + 1, 6), (x + 3, 7)], fill=(145, 145, 145), width=0.4)
 
 
 def mist(draw, frame):
@@ -94,6 +162,7 @@ def mist(draw, frame):
         y = 2 + i * 4
         x = (frame * 2 + i * 7) % 12
         draw.arc((x - 8, y, x + 18, y + 6), 180, 330, fill=(95, 95, 95), width=2)
+        draw.arc((x + 10, y + 0.5, x + 34, y + 4), 190, 320, fill=(65, 65, 65), width=0.5)
 
 
 def gate(draw, frame):
@@ -104,6 +173,11 @@ def gate(draw, frame):
         draw.line([(x, 12), (x, 39)], fill=(125, 125, 125))
     draw.ellipse((11, 4, 20, 13), outline="white")
     draw.line([(16, 9), (16 + round(math.sin(frame) * 4), 9 + round(math.cos(frame) * 4))], fill="white")
+    for y in range(18, 38, 5):
+        draw.line([(2, y), (3.5, y + 1), (2, y + 2)], fill="white", width=0.5)
+        draw.line([(29, y), (27.5, y + 1), (29, y + 2)], fill="white", width=0.5)
+    for x in [6, 13, 20, 27]:
+        draw.ellipse((x - 0.7, 20, x + 0.7, 21.5), fill=(220, 220, 220))
 
 
 asset("courier", (12, 20), courier)

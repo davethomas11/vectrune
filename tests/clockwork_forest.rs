@@ -21,6 +21,33 @@ fn state(game: &Engine) -> Value {
 }
 
 #[test]
+fn detailed_source_assets_keep_their_terminal_dimensions() {
+    for (name, source, width, rows) in [
+        ("courier", (48, 80), 8, 7),
+        ("tree", (96, 256), 16, 21),
+        ("gear", (128, 128), 20, 10),
+        ("ghost", (64, 80), 10, 6),
+        ("seed", (56, 64), 9, 5),
+        ("moon", (96, 96), 16, 8),
+        ("floor", (96, 48), 15, 4),
+        ("mist", (192, 64), 32, 5),
+        ("gate", (128, 160), 20, 13),
+    ] {
+        let path = format!("examples/ascii/games/clockwork/assets/{name}.gif");
+        assert_eq!(image::image_dimensions(&path).unwrap(), source, "{name}");
+        let mut cli = assert_cmd::cargo::cargo_bin_cmd!("vectrune");
+        let output = cli
+            .args(["ascii", "image", &path, "--width", &width.to_string()])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{name}");
+        let output = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(output.lines().count(), rows, "{name}");
+        assert!(output.lines().all(|row| row.len() == width), "{name}");
+    }
+}
+
+#[test]
 fn ghost_gif_keeps_a_bright_opaque_body_and_dark_eyes_in_every_frame() {
     use image::{AnimationDecoder, ImageReader};
     let reader = ImageReader::open("examples/ascii/games/clockwork/assets/ghost.gif").unwrap();

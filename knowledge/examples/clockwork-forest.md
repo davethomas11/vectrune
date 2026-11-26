@@ -14,6 +14,9 @@ clear of the jump from the last gear to the gate.
 Ghost GIFs use bright opaque bodies with dark eyes/mouth. The art generator
 reserves a separate transparency palette index; optional asset-name arguments
 allow targeted regeneration without replacing the other checked-in artwork.
+Source GIFs are drawn at four times their design dimensions with finer original
+details, not nearest-neighbor enlarged. Runtime widths and collision rectangles
+remain unchanged (courier 48x80 source -> 8x7 terminal cells).
 
 All scenery and actor artwork is loaded from original on-disk GIFs at compile/
 startup time. Nine reusable sprites layer parallax trees, moon, gears, terrain,
