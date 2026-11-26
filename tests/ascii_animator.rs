@@ -274,7 +274,8 @@ fn all_example_files_animate_and_cli_output_is_plain_and_rectangular() {
             game.key("Enter").unwrap();
         }
         for _ in 0..30 {
-            game.step().unwrap();
+            game.step()
+                .unwrap_or_else(|error| panic!("{name} tick failed: {error:#}"));
         }
         assert_ne!(
             initial,

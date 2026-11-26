@@ -557,7 +557,7 @@ impl Engine {
     where
         for<'js> T: rquickjs::FromJs<'js>,
     {
-        *self.deadline.lock().unwrap() = Instant::now() + Duration::from_millis(250);
+        *self.deadline.lock().unwrap() = Instant::now() + Duration::from_secs(1);
         self.context.with(|ctx| {
             ctx.eval(source)
                 .map_err(|e| anyhow!(CaughtError::from_error(&ctx, e).to_string()))

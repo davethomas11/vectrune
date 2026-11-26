@@ -271,7 +271,10 @@ array `.push(...)`, postfix `++`/`--`, `increment`, `decrement`, `invert`,
 ordinary conditionals, loops and matches. Unknown statements and I/O commands
 are rejected at compile time instead of being silently ignored.
 
-Logic runs with a 64 MiB VM limit and a 250 ms execution budget per VM operation.
+Logic runs with a 64 MiB VM limit and a one-second wall-clock safety limit per
+VM operation. This bounds runaway scripts, not frame timing; slow ticks do not
+change the configured simulation rate. The limit allows scheduling delays on
+busy machines without prematurely interrupting ordinary demo actions.
 Browser APIs, network requests, storage, downloads and clipboard are not
 provided by this host. The shared headless interpreter's effect records are
 checked and rejected, except declared tones routed to native audio.
