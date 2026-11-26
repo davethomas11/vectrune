@@ -36,6 +36,7 @@ mod emit_function_test {
                         steps: vec![
                             ast::ActionStep::Statement("window.__runeWebEmit(event_name, payload)".to_string()),
                         ],
+                        ..Default::default()
                     },
                 );
 
@@ -140,6 +141,7 @@ mod emit_function_test {
                 steps: vec![
                     ast::ActionStep::Statement("window.__runeWebEmit(event_name, payload)".to_string()),
                 ],
+                ..Default::default()
             },
         );
 

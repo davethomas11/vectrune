@@ -19,6 +19,15 @@ They support direct files, named datasource configuration and remote standalone
 servers. See [Rune DB and Vect Event](storage.md) and
 [`examples/data/storage/`](../../examples/data/storage/README.md).
 
+## Mobile Web (source builds)
+
+`vectrune examples/rune_mobile_web --build android|ios` packages a
+`rune-mobile-web` frontend into a debug APK or unsigned iOS Simulator app.
+`--export android|ios --build-dir <directory>` hands off an editable native
+project without installing dependencies or requiring SDKs. `--prepare-only`
+with `--build` skips native tooling. See [Rune Mobile Web](mobile-web.md) for
+platform prerequisites, generated-directory protections and signing limitations.
+
 ## ASCII Animator (v0.3.12)
 
 `vectrune ascii generate --text "Hello!" -o animation.rune` creates a runnable

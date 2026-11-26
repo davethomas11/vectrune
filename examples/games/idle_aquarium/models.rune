@@ -1,0 +1,568 @@
+@Palette/aqua
+colors = {
+    "n":"#102a4b", "d":"#124c68", "b":"#167eab", "c":"#39e9ee",
+    "w":"#eeffed", "s":"#c89e70", "g":"#ffe076", "o":"#ff9348",
+    "p":"#ff5db5", "v":"#a77cff", "r":"#ff557c", "l":"#6cf3aa",
+    "k":"#102039", "t":"#286e7d"
+}
+
+@Texture/aqua/sand
+palette = aqua
+size = [8,8]
+pixels:
+    {"runs":"s*8","repeat":8}
+
+@Model/aqua/tank
+palette = aqua
+unit = 0.5
+blocks:
+    {"from":[-18,-9,-2],"size":[18,18,1],"color":"n"}
+    {"from":[0,-9,-2],"size":[18,18,1],"color":"n"}
+    {"from":[-18,-9,-1],"size":[18,18,1],"color":"s"}
+    {"from":[0,-9,-1],"size":[18,18,1],"color":"s"}
+    {"from":[-18,-9,0],"size":[1,1,16],"color":"n"}
+    {"from":[17,-9,0],"size":[1,1,16],"color":"n"}
+    {"from":[-18,8,0],"size":[1,1,16],"color":"n"}
+    {"from":[17,8,0],"size":[1,1,16],"color":"n"}
+    {"from":[-18,-9,0],"size":[18,1,1],"color":"g"}
+    {"from":[0,-9,0],"size":[18,1,1],"color":"g"}
+
+@Model/aqua/glass-wide
+palette = aqua
+unit = 1
+glass = [8,18]
+shapes:
+    {"type":"sphere","center":[4,0,0],"radius":0.06,"color":"c"}
+
+@Model/aqua/glass-side
+palette = aqua
+unit = 1
+glass = [8,9]
+shapes:
+    {"type":"sphere","center":[4,0,0],"radius":0.06,"color":"c"}
+
+@Model/aqua/rail
+palette = aqua
+unit = 0.125
+blocks:
+    {"from":[0,0,0],"size":[24,1,1],"color":"c"}
+
+@Model/aqua/lamp
+palette = aqua
+unit = 1
+emissive = "c"
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.12,"color":"c"}
+
+@Model/aqua/coral
+palette = aqua
+unit = 0.125
+contact_shadow = 0.7
+blocks:
+    {"from":[-1,-1,0],"size":[3,3,15],"color":"r"}
+    {"from":[-7,-1,7],"size":[13,2,2],"color":"r"}
+    {"from":[-7,-1,7],"size":[2,2,7],"color":"p"}
+    {"from":[4,-1,7],"size":[2,2,11],"color":"p"}
+    {"from":[-1,-1,15],"size":[3,3,3],"color":"p"}
+shapes:
+    {"type":"sphere","center":[0,0,1],"radius":5,"color":"v"}
+
+@Model/aqua/kelp
+palette = aqua
+unit = 0.125
+blocks:
+    {"from":[-1,-1,0],"size":[2,2,30],"color":"t"}
+    {"from":[-5,-1,5],"size":[5,2,3],"color":"l"}
+    {"from":[0,-1,10],"size":[6,2,3],"color":"l"}
+    {"from":[-6,-1,17],"size":[6,2,3],"color":"l"}
+    {"from":[0,-1,23],"size":[5,2,3],"color":"l"}
+    {"from":[-2,-1,29],"size":[3,2,4],"color":"l"}
+
+@Model/aqua/anemone
+palette = aqua
+unit = 0.05
+contact_shadow = 0.6
+shapes:
+    {"type":"sphere","center":[0,0,4],"radius":13,"color":"b"}
+blocks:
+    {"from":[-12,-8,6],"size":[4,4,16],"color":"v"}
+    {"from":[-2,-8,6],"size":[4,4,24],"color":"c"}
+    {"from":[8,-8,6],"size":[4,4,18],"color":"v"}
+    {"from":[-7,4,6],"size":[4,4,20],"color":"c"}
+    {"from":[4,4,6],"size":[4,4,26],"color":"v"}
+
+@Model/aqua/rock
+palette = aqua
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.8,"color":"t"}
+    {"type":"sphere","center":[0.5,0.1,0.2],"radius":0.5,"color":"d"}
+
+@Model/aqua/clown
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-5,-2,-2],"size":[10,4,5],"color":"o"}
+    {"from":[-3,-2,-2],"size":[2,4,5],"color":"w"}
+    {"from":[1,-2,-2],"size":[2,4,5],"color":"w"}
+    {"from":[-8,-1,-3],"size":[3,2,7],"color":"o"}
+    {"from":[-1,-1,3],"size":[4,2,2],"color":"o"}
+    {"from":[3,-3,1],"size":[1,1,1],"color":"k"}
+    {"from":[3,2,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/tang
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-5,-2,-3],"size":[10,4,7],"color":"b"}
+    {"from":[-3,-3,1],"size":[6,6,1],"color":"c"}
+    {"from":[-8,-1,-3],"size":[3,2,7],"color":"g"}
+    {"from":[-2,-1,4],"size":[5,2,2],"color":"b"}
+    {"from":[3,-3,2],"size":[1,1,1],"color":"k"}
+    {"from":[3,2,2],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/royal
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-5,-2,-2],"size":[10,4,5],"color":"v"}
+    {"from":[-8,-1,-4],"size":[3,2,9],"color":"p"}
+    {"from":[-3,-1,3],"size":[6,2,4],"color":"p"}
+    {"from":[-2,-1,-5],"size":[5,2,3],"color":"g"}
+    {"from":[3,-3,1],"size":[1,1,1],"color":"k"}
+    {"from":[3,2,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/puffer
+palette = aqua
+unit = 0.05
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":10,"color":"g"}
+blocks:
+    {"from":[-16,-2,-4],"size":[8,4,10],"color":"o"}
+    {"from":[4,-9,2],"size":[3,3,3],"color":"k"}
+    {"from":[4,6,2],"size":[3,3,3],"color":"k"}
+    {"from":[-2,-2,9],"size":[4,4,5],"color":"w"}
+    {"from":[-2,-2,-13],"size":[4,4,5],"color":"w"}
+
+@Model/aqua/angel
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-4,-2,-3],"size":[8,4,7],"color":"w"}
+    {"from":[-2,-2,-3],"size":[1,4,7],"color":"k"}
+    {"from":[1,-2,-3],"size":[1,4,7],"color":"k"}
+    {"from":[-2,-1,4],"size":[3,2,8],"color":"g"}
+    {"from":[-2,-1,-11],"size":[3,2,8],"color":"g"}
+    {"from":[-8,-1,-4],"size":[4,2,9],"color":"w"}
+    {"from":[3,-3,1],"size":[1,1,1],"color":"k"}
+    {"from":[3,2,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/butterfly
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-4,-2,-4],"size":[8,4,9],"color":"g"}
+    {"from":[2,-2,-4],"size":[1,4,9],"color":"k"}
+    {"from":[-5,-3,1],"size":[2,1,3],"color":"k"}
+    {"from":[-5,2,1],"size":[2,1,3],"color":"k"}
+    {"from":[4,-1,-1],"size":[3,2,2],"color":"w"}
+    {"from":[-8,-1,-3],"size":[4,2,7],"color":"o"}
+    {"from":[-3,-1,5],"size":[5,2,3],"color":"w"}
+    {"from":[3,-3,2],"size":[1,1,1],"color":"k"}
+    {"from":[3,2,2],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/neon
+palette = aqua
+unit = 0.08
+emissive = "c"
+blocks:
+    {"from":[-7,-2,-2],"size":[14,4,4],"color":"b"}
+    {"from":[-7,-3,1],"size":[14,1,1],"color":"c"}
+    {"from":[-7,2,1],"size":[14,1,1],"color":"c"}
+    {"from":[-7,-2,-2],"size":[7,4,2],"color":"r"}
+    {"from":[-11,-1,-3],"size":[4,2,7],"color":"p"}
+    {"from":[5,-3,0],"size":[1,1,1],"color":"k"}
+    {"from":[5,2,0],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/lion
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-5,-2,-2],"size":[10,4,5],"color":"o"}
+    {"from":[-4,-2,-2],"size":[1,4,5],"color":"w"}
+    {"from":[-1,-2,-2],"size":[1,4,5],"color":"w"}
+    {"from":[2,-2,-2],"size":[1,4,5],"color":"w"}
+    {"from":[-6,-1,3],"size":[1,2,6],"color":"r"}
+    {"from":[-3,-1,3],"size":[1,2,8],"color":"r"}
+    {"from":[0,-1,3],"size":[1,2,6],"color":"r"}
+    {"from":[-3,-7,-1],"size":[5,5,1],"color":"p"}
+    {"from":[-3,2,-1],"size":[5,5,1],"color":"p"}
+    {"from":[-9,-1,-4],"size":[4,2,9],"color":"r"}
+    {"from":[3,-3,1],"size":[1,1,1],"color":"k"}
+    {"from":[3,2,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/bubble
+palette = aqua
+unit = 0.01
+emissive = "c"
+blocks:
+    {"from":[-7,-2,-10],"size":[4,4,20],"color":"c"}
+    {"from":[5,-2,-10],"size":[4,4,20],"color":"c"}
+    {"from":[-4,-2,8],"size":[10,4,4],"color":"w"}
+    {"from":[-4,-2,-10],"size":[10,4,4],"color":"c"}
+
+@Model/aqua/clown-style
+palette = aqua
+unit = 0.1
+shapes:
+    {"type":"sphere","center":[-2,0,0],"radius":3,"color":"o"}
+    {"type":"sphere","center":[1,0,0],"radius":3.5,"color":"o"}
+blocks:
+    {"from":[-2,-3,-2],"size":[1,6,5],"color":"w"}
+    {"from":[1,-3,-2],"size":[1,6,5],"color":"w"}
+    {"from":[2,-4,1],"size":[2,1,2],"color":"w"}
+    {"from":[3,-5,1],"size":[1,1,1],"color":"k"}
+    {"from":[2,3,1],"size":[2,1,2],"color":"w"}
+    {"from":[3,4,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/tang-style
+palette = aqua
+unit = 0.1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":4,"color":"b"}
+    {"type":"sphere","center":[2,0,0],"radius":2.5,"color":"b"}
+blocks:
+    {"from":[-3,-1,4],"size":[5,2,2],"color":"c"}
+    {"from":[2,-4,1],"size":[2,1,2],"color":"w"}
+    {"from":[3,-5,1],"size":[1,1,1],"color":"k"}
+    {"from":[2,3,1],"size":[2,1,2],"color":"w"}
+    {"from":[3,4,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/royal-style
+palette = aqua
+unit = 0.1
+shapes:
+    {"type":"sphere","center":[-2,0,0],"radius":3,"color":"g"}
+    {"type":"sphere","center":[1,0,0],"radius":3.5,"color":"v"}
+blocks:
+    {"from":[-2,-1,3],"size":[5,2,3],"color":"p"}
+    {"from":[2,-4,1],"size":[2,1,2],"color":"w"}
+    {"from":[3,-5,1],"size":[1,1,1],"color":"k"}
+    {"from":[2,3,1],"size":[2,1,2],"color":"w"}
+    {"from":[3,4,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/puffer-style
+palette = aqua
+unit = 0.1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":5,"color":"g"}
+blocks:
+    {"from":[2,-5,1],"size":[2,1,3],"color":"w"}
+    {"from":[3,-6,2],"size":[1,1,1],"color":"k"}
+    {"from":[2,4,1],"size":[2,1,3],"color":"w"}
+    {"from":[3,5,2],"size":[1,1,1],"color":"k"}
+    {"from":[-1,-1,5],"size":[2,2,2],"color":"w"}
+    {"from":[-1,-1,-7],"size":[2,2,2],"color":"w"}
+
+@Model/aqua/angel-style
+palette = aqua
+unit = 0.1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":3.5,"color":"w"}
+blocks:
+    {"from":[-2,-3,-2],"size":[1,6,5],"color":"k"}
+    {"from":[-1,-1,3],"size":[2,2,7],"color":"g"}
+    {"from":[-1,-1,-9],"size":[2,2,6],"color":"g"}
+    {"from":[2,-4,1],"size":[2,1,2],"color":"g"}
+    {"from":[3,-5,1],"size":[1,1,1],"color":"k"}
+    {"from":[2,3,1],"size":[2,1,2],"color":"g"}
+    {"from":[3,4,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/butterfly-style
+palette = aqua
+unit = 0.1
+shapes:
+    {"type":"sphere","center":[-1,0,0],"radius":4,"color":"g"}
+    {"type":"sphere","center":[3,0,0],"radius":2,"color":"w"}
+blocks:
+    {"from":[-3,-4,1],"size":[2,1,2],"color":"k"}
+    {"from":[-3,3,1],"size":[2,1,2],"color":"k"}
+    {"from":[3,-3,1],"size":[1,1,1],"color":"k"}
+    {"from":[3,2,1],"size":[1,1,1],"color":"k"}
+    {"from":[-2,-1,4],"size":[3,2,2],"color":"w"}
+
+@Model/aqua/neon-style
+palette = aqua
+unit = 0.08
+emissive = "c"
+shapes:
+    {"type":"sphere","center":[-3,0,0],"radius":2.5,"color":"r"}
+    {"type":"sphere","center":[0,0,0],"radius":2.5,"color":"b"}
+    {"type":"sphere","center":[3,0,0],"radius":2.5,"color":"b"}
+blocks:
+    {"from":[-5,-3,0],"size":[10,1,1],"color":"c"}
+    {"from":[-5,2,0],"size":[10,1,1],"color":"c"}
+    {"from":[3,-3,1],"size":[1,1,1],"color":"k"}
+    {"from":[3,2,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/lion-style
+palette = aqua
+unit = 0.1
+shapes:
+    {"type":"sphere","center":[-2,0,0],"radius":3,"color":"r"}
+    {"type":"sphere","center":[1,0,0],"radius":3.5,"color":"o"}
+blocks:
+    {"from":[-2,-3,-2],"size":[1,6,5],"color":"w"}
+    {"from":[0,-1,3],"size":[1,2,6],"color":"r"}
+    {"from":[-3,-1,3],"size":[1,2,7],"color":"r"}
+    {"from":[2,-4,1],"size":[2,1,2],"color":"w"}
+    {"from":[3,-5,1],"size":[1,1,1],"color":"k"}
+    {"from":[2,3,1],"size":[2,1,2],"color":"w"}
+    {"from":[3,4,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/style-tail
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-3,-1,-3],"size":[3,2,7],"color":"g"}
+    {"from":[-1,-1,-2],"size":[2,2,5],"color":"o"}
+
+@Model/aqua/style-fin
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-3,-2,-1],"size":[4,4,1],"color":"c"}
+
+@Model/aqua/candy-stripes
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-2,-4,-2],"size":[1,8,5],"color":"p"}
+    {"from":[0,-4,-2],"size":[1,8,5],"color":"v"}
+
+@Model/aqua/moon-stripes
+palette = aqua
+unit = 0.1
+emissive = "c"
+blocks:
+    {"from":[-2,-4,-2],"size":[1,8,5],"color":"c"}
+    {"from":[0,-4,-2],"size":[1,8,5],"color":"w"}
+
+@Model/aqua/dead
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-5,-2,-2],"size":[10,4,5],"color":"t"}
+    {"from":[-5,-2,2],"size":[10,4,1],"color":"w"}
+    {"from":[-8,-1,-3],"size":[3,2,7],"color":"d"}
+    {"from":[-1,-1,-4],"size":[4,2,2],"color":"d"}
+    {"from":[2,-3,-1],"size":[1,1,1],"color":"k"}
+    {"from":[4,-3,-1],"size":[1,1,1],"color":"k"}
+    {"from":[3,-3,0],"size":[1,1,1],"color":"k"}
+    {"from":[2,-3,1],"size":[1,1,1],"color":"k"}
+    {"from":[4,-3,1],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/decay
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-5,-2,-2],"size":[10,4,5],"color":"t"}
+    {"from":[-3,-2,2],"size":[6,4,1],"color":"l"}
+    {"from":[-8,-1,-3],"size":[3,2,7],"color":"d"}
+    {"from":[3,-3,0],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/crab
+palette = aqua
+unit = 0.08
+contact_shadow = 0.6
+blocks:
+    {"from":[-4,-3,1],"size":[8,6,4],"color":"o"}
+    {"from":[5,-5,2],"size":[4,2,3],"color":"o"}
+    {"from":[5,3,2],"size":[4,2,3],"color":"o"}
+    {"from":[8,-6,3],"size":[3,4,4],"color":"g"}
+    {"from":[8,2,3],"size":[3,4,4],"color":"g"}
+    {"from":[2,-2,5],"size":[2,1,3],"color":"w"}
+    {"from":[2,1,5],"size":[2,1,3],"color":"w"}
+    {"from":[3,-2,7],"size":[1,1,1],"color":"k"}
+    {"from":[3,1,7],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/crab_feet
+palette = aqua
+unit = 0.08
+blocks:
+    {"from":[-5,-6,0],"size":[2,6,1],"color":"r"}
+    {"from":[-1,-7,0],"size":[2,7,1],"color":"r"}
+    {"from":[3,-6,0],"size":[2,6,1],"color":"r"}
+
+@Model/aqua/dead_critter
+palette = aqua
+unit = 0.08
+blocks:
+    {"from":[-4,-3,0],"size":[8,6,4],"color":"t"}
+    {"from":[-3,-3,4],"size":[6,6,1],"color":"w"}
+    {"from":[3,-4,1],"size":[1,1,1],"color":"k"}
+    {"from":[5,-4,1],"size":[1,1,1],"color":"k"}
+    {"from":[4,-4,2],"size":[1,1,1],"color":"k"}
+    {"from":[3,-4,3],"size":[1,1,1],"color":"k"}
+    {"from":[5,-4,3],"size":[1,1,1],"color":"k"}
+
+@Model/aqua/hermit
+palette = aqua
+unit = 0.08
+contact_shadow = 0.6
+blocks:
+    {"from":[-4,-3,1],"size":[8,6,4],"color":"o"}
+    {"from":[4,-4,2],"size":[5,2,4],"color":"g"}
+    {"from":[4,2,2],"size":[5,2,4],"color":"g"}
+    {"from":[3,-2,5],"size":[1,1,3],"color":"w"}
+    {"from":[3,1,5],"size":[1,1,3],"color":"w"}
+    {"from":[3,-2,7],"size":[1,1,1],"color":"k"}
+    {"from":[3,1,7],"size":[1,1,1],"color":"k"}
+shapes:
+    {"type":"sphere","center":[-2,0,6],"radius":5,"color":"v"}
+    {"type":"sphere","center":[-3,-3,7],"radius":2,"color":"p"}
+
+@Model/aqua/shrimp
+palette = aqua
+unit = 0.08
+blocks:
+    {"from":[-6,-2,2],"size":[12,4,3],"color":"p"}
+    {"from":[-6,-1,5],"size":[8,2,2],"color":"r"}
+    {"from":[-9,-4,1],"size":[3,8,2],"color":"r"}
+    {"from":[5,-2,5],"size":[1,1,2],"color":"k"}
+    {"from":[5,1,5],"size":[1,1,2],"color":"k"}
+    {"from":[6,-3,5],"size":[6,1,1],"color":"w"}
+    {"from":[6,2,5],"size":[6,1,1],"color":"w"}
+
+@Model/aqua/shrimp_feet
+palette = aqua
+unit = 0.08
+blocks:
+    {"from":[-4,-4,0],"size":[1,4,2],"color":"p"}
+    {"from":[-1,-4,0],"size":[1,4,2],"color":"p"}
+    {"from":[2,-4,0],"size":[1,4,2],"color":"p"}
+    {"from":[5,-4,0],"size":[1,4,2],"color":"p"}
+
+@Model/aqua/snail
+palette = aqua
+unit = 0.08
+contact_shadow = 0.6
+blocks:
+    {"from":[-7,-3,0],"size":[14,6,2],"color":"l"}
+    {"from":[5,-2,2],"size":[1,1,5],"color":"c"}
+    {"from":[5,1,2],"size":[1,1,5],"color":"c"}
+    {"from":[5,-2,6],"size":[1,1,1],"color":"k"}
+    {"from":[5,1,6],"size":[1,1,1],"color":"k"}
+shapes:
+    {"type":"sphere","center":[-1,0,5],"radius":5,"color":"v"}
+    {"type":"sphere","center":[-1,-3,5],"radius":3,"color":"c"}
+    {"type":"sphere","center":[-1,-5,5],"radius":1,"color":"w"}
+
+@Model/aqua/blossom
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-1,-1,0],"size":[2,2,16],"color":"l"}
+    {"from":[-5,-1,5],"size":[5,2,2],"color":"l"}
+    {"from":[0,-1,9],"size":[5,2,2],"color":"t"}
+shapes:
+    {"type":"sphere","center":[-4,0,16],"radius":3,"color":"o"}
+    {"type":"sphere","center":[4,0,16],"radius":3,"color":"o"}
+    {"type":"sphere","center":[0,0,20],"radius":3,"color":"g"}
+    {"type":"sphere","center":[0,0,12],"radius":3,"color":"o"}
+    {"type":"sphere","center":[0,-1,16],"radius":2,"color":"g"}
+
+@Model/aqua/fan
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-1,-1,0],"size":[2,2,22],"color":"v"}
+    {"from":[-5,-1,8],"size":[10,2,2],"color":"p"}
+    {"from":[-5,-1,8],"size":[2,2,10],"color":"v"}
+    {"from":[4,-1,8],"size":[2,2,10],"color":"v"}
+    {"from":[-8,-1,13],"size":[16,2,2],"color":"p"}
+    {"from":[-8,-1,13],"size":[2,2,7],"color":"v"}
+    {"from":[7,-1,13],"size":[2,2,7],"color":"v"}
+shapes:
+    {"type":"sphere","center":[0,0,22],"radius":2,"color":"c"}
+    {"type":"sphere","center":[-5,0,18],"radius":2,"color":"c"}
+    {"type":"sphere","center":[5,0,18],"radius":2,"color":"c"}
+
+@Model/aqua/lily
+palette = aqua
+unit = 0.1
+emissive = "c"
+blocks:
+    {"from":[-1,-1,0],"size":[2,2,12],"color":"t"}
+    {"from":[-4,-1,4],"size":[8,2,2],"color":"l"}
+shapes:
+    {"type":"sphere","center":[-4,0,12],"radius":3,"color":"w"}
+    {"type":"sphere","center":[4,0,12],"radius":3,"color":"w"}
+    {"type":"sphere","center":[0,-4,12],"radius":3,"color":"w"}
+    {"type":"sphere","center":[0,4,12],"radius":3,"color":"w"}
+    {"type":"sphere","center":[0,0,14],"radius":2,"color":"c"}
+
+@Model/aqua/net
+palette = aqua
+unit = 0.1
+blocks:
+    {"from":[-8,-3,-6],"size":[16,1,1],"color":"c"}
+    {"from":[-8,-3,6],"size":[16,1,1],"color":"c"}
+    {"from":[-8,-3,-6],"size":[1,1,13],"color":"c"}
+    {"from":[7,-3,-6],"size":[1,1,13],"color":"c"}
+    {"from":[-4,-3,-6],"size":[1,1,13],"color":"w"}
+    {"from":[0,-3,-6],"size":[1,1,13],"color":"w"}
+    {"from":[4,-3,-6],"size":[1,1,13],"color":"w"}
+    {"from":[-8,-3,-2],"size":[16,1,1],"color":"w"}
+    {"from":[-8,-3,2],"size":[16,1,1],"color":"w"}
+    {"from":[-1,-3,7],"size":[2,2,14],"color":"g"}
+
+@Model/aqua/food
+palette = aqua
+unit = 0.01
+emissive = "g"
+blocks:
+    {"from":[-6,-6,-6],"size":[12,12,12],"color":"g"}
+
+@Model/aqua/flake
+palette = aqua
+unit = 0.01
+blocks:
+    {"from":[-10,-7,-2],"size":[20,14,4],"color":"o"}
+    {"from":[-5,-3,2],"size":[10,6,2],"color":"g"}
+
+@Model/aqua/algae
+palette = aqua
+unit = 0.01
+blocks:
+    {"from":[-7,-7,-5],"size":[14,14,10],"color":"l"}
+    {"from":[-4,-4,5],"size":[8,8,3],"color":"t"}
+
+@Model/aqua/chest
+palette = aqua
+unit = 0.05
+blocks:
+    {"from":[-13,-8,0],"size":[26,16,13],"color":"o"}
+    {"from":[-14,-9,13],"size":[28,18,4],"color":"g"}
+    {"from":[-3,-10,5],"size":[6,2,8],"color":"g"}
+
+@Model/aqua/pearl
+palette = aqua
+unit = 1
+emissive = "w"
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.3,"color":"w"}
+
+@Model/aqua/jelly
+palette = aqua
+unit = 0.05
+emissive = "vp"
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":14,"color":"v"}
+blocks:
+    {"from":[-10,-8,-22],"size":[3,3,20],"color":"p"}
+    {"from":[8,-8,-26],"size":[3,3,24],"color":"p"}
+    {"from":[-8,6,-24],"size":[3,3,22],"color":"p"}
+    {"from":[6,6,-20],"size":[3,3,18],"color":"p"}
+    {"from":[-6,-13,-1],"size":[3,2,3],"color":"k"}
+    {"from":[4,-13,-1],"size":[3,2,3],"color":"k"}

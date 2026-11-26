@@ -15,6 +15,8 @@ Examples include:
 - `@Component/HeroBanner`
 - `@Style/site`
 - `@Logic/site`
+- `@Module/Wallet`
+- `@Type/Pet`
 
 Within sections, common constructs are:
 - key-value pairs like `name = User API`
@@ -22,6 +24,12 @@ Within sections, common constructs are:
 - records introduced with `+` in data-oriented sections
 
 Frontend-oriented documents may also use `@Page`, `@Component`, `@Style`, and `@Logic` sections when `@Frontend type = rune-web` is configured. This is currently treated as a frontend mode layered onto app routing, not as a separate `@App type`.
+
+Source builds support [namespaced logic modules and composable entity types](logic-modules.md)
+in the shared Rune-Web runtime, including ordinary pages and Pixel game hosts.
+Use `modules = {"wallet":"Wallet"}` and `types = ["Pet"]` in `@Logic`.
+Module actions/helpers are exported explicitly; type constructors run in actions
+and return plain-data records with stable IDs. Existing flat logic stays compatible.
 
 ## Rune-Web components
 

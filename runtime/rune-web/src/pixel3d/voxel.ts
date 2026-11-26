@@ -368,6 +368,7 @@ function traceTerrainPose(world: VoxelWorld, cells: ArrayLike<number>, store: Ch
 }
 
 function terrainEntry(origin: number, direction: number, end: number): number {
+  if (origin === 0 && direction < 0) return Infinity;
   if (origin <= 0 && direction > 0) return -origin / direction;
   if (origin >= end && direction < 0) return (end - origin) / direction;
   return origin < 0 || origin >= end ? Infinity : -Infinity;
@@ -612,9 +613,8 @@ export function renderVoxels(world: VoxelWorld, camera: Camera3D, textures: Reco
   const ca = Math.cos(a), sa = Math.sin(a), cp = Math.cos(p), sp = Math.sin(p);
   const scale = Math.tan(fov * Math.PI / 360);
   if (![camera.x, camera.y, eye, camera.angle, camera.pitch ?? 0].every(Number.isFinite) ||
-      camera.x < 0 || camera.y < 0 || camera.x >= world.width || camera.y >= world.height ||
-      eye < 0 || eye >= world.depth || Math.abs(camera.pitch ?? 0) > 85) {
-    throw new Error('Voxel camera must be finite, inside the world, with pitch between -85 and 85 degrees');
+      Math.abs(camera.pitch ?? 0) > 85) {
+    throw new Error('Voxel camera must be finite, with pitch between -85 and 85 degrees');
   }
   if (pose) {
     if (!Array.isArray(pose.pivot) || pose.pivot.length !== 2 || !Array.isArray(pose.position) ||
@@ -641,8 +641,8 @@ export function renderVoxels(world: VoxelWorld, camera: Camera3D, textures: Reco
     origin.z = pose.pivot[1] - s * y + c * z;
   }
   const rays = cameraRays(camera, fov, width, height, depth);
-  const needsTerrainEntry = pose && (origin.x <= 0 || origin.x >= world.width ||
-    origin.y <= 0 || origin.y >= world.height || origin.z <= 0 || origin.z >= world.depth);
+  const needsTerrainEntry = origin.x <= 0 || origin.x >= world.width ||
+    origin.y <= 0 || origin.y >= world.height || origin.z <= 0 || origin.z >= world.depth;
   // The renderer consumes each hit immediately; gameplay queries still receive
   // independent objects. Avoid allocating an object for every terrain pixel.
   const hitOutput: VoxelHit = { x: 0, y: 0, z: 0, block: 0, distance: 0, face: 0 };
@@ -652,7 +652,7 @@ export function renderVoxels(world: VoxelWorld, camera: Camera3D, textures: Reco
   // traversal pays off when a ray can skip many empty cells.
   const chunks = (!pose || Math.min(world.width, world.height, world.depth) > 8) &&
     occupancy.count < occupancy.width*occupancy.height*occupancy.depth*.6 ? occupancy : undefined;
-  const crossings = !pose && rays && chunks && world.width<=256 && world.height<=256 ? rayCrossings(world, origin, rays, depth) : undefined;
+  const crossings = !pose && !needsTerrainEntry && rays && chunks && world.width<=256 && world.height<=256 ? rayCrossings(world, origin, rays, depth) : undefined;
   const visibleTiles = sourceStore && sourceStore.raw.size <= 1024
     ? visibleVoxelTiles(sourceStore, origin, ca, sa, cp, sp, c, s, scale, width, height, depth) : undefined;
   const tileWidth = Math.ceil(width / 8);

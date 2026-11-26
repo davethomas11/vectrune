@@ -87,9 +87,9 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     if (next instanceof Element && next.closest('[data-pixel-pause],[data-pixel-start],[data-pixel-fullscreen],[data-pixel-input],[data-pixel-mute],[data-pixel-action],[data-pixel-menu]')) return;
     if (game.app.state.status === 'playing') game.paused = true;
   }) as EventListener);
-  listen(window, 'blur', () => { clear(); game.paused = true; });
+  listen(window, 'blur', () => { game.flushSave(); clear(); game.paused = true; });
   listen(window, 'focus', () => { if(game.app.state.status !== 'playing') game.paused = false; });
-  listen(document, 'visibilitychange', () => { if (document.hidden) { clear(); game.paused = true; } previous = 0; accumulator = 0; });
+  listen(document, 'visibilitychange', () => { if (document.hidden) { game.flushSave(); clear(); game.paused = true; } previous = 0; accumulator = 0; });
   let inputButtonId = 0;
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-pixel-input]'))) {
     const key = button.dataset.pixelInput!;
@@ -175,7 +175,7 @@ export function mount(game: PixelEngine, canvas: HTMLCanvasElement): () => void 
     frameId = requestAnimationFrame(frame);
   };
   frame(performance.now());
-  const dispose = () => { stopped = true; game.paused = true; cancelAnimationFrame(frameId); mapped?.dispose(); abort.abort(); observer.disconnect(); clear(); };
+  const dispose = () => { game.flushSave(); stopped = true; game.paused = true; cancelAnimationFrame(frameId); mapped?.dispose(); abort.abort(); observer.disconnect(); clear(); };
   listen(window,'pagehide',dispose);
   return dispose;
 }

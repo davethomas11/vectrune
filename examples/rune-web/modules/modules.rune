@@ -1,0 +1,83 @@
+#!RUNE
+@App
+name = Composable companions
+type = REST
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = home
+
+@Module/Wallet
+exports = ["earn","spend","balance"]
+state:
+    pearls = 30
+    purchases = 0
+
+action earn(amount):
+    pearls += amount
+
+action spend(price):
+    stop when price<0 || pearls<price
+    pearls -= price
+    call purchased
+
+action purchased:
+    purchases += 1
+
+func balance():
+    return pearls
+
+@Type/Life
+state:
+    age = 0
+    hunger = 0
+    dead = false
+    lifespan = 5400
+    starvation = 1800
+
+action advance(seconds):
+    stop when dead
+    age += seconds
+    hunger += seconds
+    dead = age>=lifespan || hunger>=starvation
+
+action nourish(amount):
+    stop when dead
+    hunger = max(0,hunger-amount)
+
+@Type/Companion
+state:
+    name = "Pebble"
+    care = Life(id+"-care")
+
+action advance(seconds):
+    call care.advance seconds
+
+action feed:
+    call care.nourish 600
+
+@Logic/companions
+modules = {"wallet":"Wallet"}
+types = ["Life","Companion"]
+state:
+    pet = null
+
+action initialize:
+    pet = Companion("crab-1")
+
+action age:
+    call pet.advance 60
+
+@Page/home
+logic = companions
+view:
+    main:
+        h1 "Composable companions"
+        button click=initialize "Create Pebble"
+        p "Pearls: {wallet.pearls}"
+        p "{pet.name}: {pet.care.age}s old, hunger {pet.care.hunger}"
+        button click=wallet.earn(10) "Earn 10 pearls"
+        button click=wallet.spend(5) "Spend 5 pearls"
+        button click=age "Advance one minute"
+        button click=pet.feed "Feed Pebble"

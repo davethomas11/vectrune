@@ -6,6 +6,7 @@ import { normalizeLiteral, valueToString } from './utils';
 import { executeSteps } from './statement';
 import { playSound, playMusic, stopMusic, pauseMusic, resumeMusic } from './audio';
 import type { RuneApp } from './types';
+import { callableName, inLogicScope } from './modular';
 
 export function createLogicApp(render: RuneApp['render']): RuneApp {
   return {
@@ -47,21 +48,32 @@ export function createLogicApp(render: RuneApp['render']): RuneApp {
       locals?: Record<string, unknown>,
     ) {
       const context = ctx();
-      const def = context.actionDefinitions[name];
+      name = callableName(name, 'action');
+      let def = context.actionDefinitions[name];
+      let receiver: Record<string, unknown> | undefined;
+      if (def?.scope?.startsWith('@') && def.scope === context.logicOwner) receiver = context.logicState;
+      if (!def && name.includes('.')) {
+        const dot = name.lastIndexOf('.');
+        const value = evaluateExpression(name.slice(0, dot), buildScope(locals || {}));
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          receiver = value as Record<string, unknown>;
+          const type = receiver.__type;
+          if (typeof type === 'string') def = context.actionDefinitions[`${type}.${name.slice(dot + 1)}`];
+        }
+      }
       if (!def) {
+        if (name.includes('.') || context.logicOwner) throw new Error(`Unknown Rune-Web action: ${name}`);
         if (typeof window !== 'undefined' && typeof (window as any)[name] === 'function') {
           (window as any)[name](...args);
         }
         return;
       }
-      const scopedLocals: Record<string, unknown> = Object.assign(
-        {},
-        locals || {},
-      );
+      const scopedLocals: Record<string, unknown> = def.scope ? {} : Object.assign({}, locals);
+      if (receiver) scopedLocals.self = receiver;
       (def.params || []).forEach((param, index) => {
         scopedLocals[param] = args[index];
       });
-      executeSteps(def.steps || [], scopedLocals);
+      inLogicScope(name, def, receiver, () => executeSteps(def.steps || [], scopedLocals));
     },
   };
 

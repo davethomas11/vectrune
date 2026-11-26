@@ -1,0 +1,191 @@
+#!RUNE
+import "idle_aquarium.rune"
+
+@Test/Aquarium/HalfIncomeCarriesSavedFractions
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    assert state.income == 1.5
+    invoke wait_seconds 1
+    assert state.progress.pearls == 31
+    assert state.progress.income_remainder == 1
+    invoke initialize
+    invoke wait_seconds 1
+    assert state.progress.pearls == 33
+    assert state.progress.income_remainder == 0
+
+@Test/Aquarium/PearlCapAppliesToEveryReward
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke nearly_full
+    invoke wait_seconds 1
+    assert state.progress.pearls == 100000
+    invoke collect_treasure
+    assert state.progress.pearls == 100000
+    invoke award_pearls 2
+    assert state.progress.pearls == 100000
+    invoke oversize_wallet
+    invoke initialize
+    assert state.progress.pearls == 100000
+
+@Test/Aquarium/StyleAndPatternsArePurchasedOnce
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke inspect_fish 0
+    invoke open_fish_upgrades
+    invoke buy_fish_upgrade 0
+    assert state.progress.pearls == 30
+    assert state.progress.buddies[0].style == false
+    invoke upgrade_funds
+    invoke buy_fish_upgrade 1
+    assert state.progress.pearls == 10000
+    invoke buy_fish_upgrade 0
+    assert state.progress.pearls == 9880
+    assert state.fish[0].model == "aqua/clown-style"
+    assert state.fish_style.length == 4
+    invoke buy_fish_upgrade 0
+    assert state.progress.pearls == 9880
+    invoke buy_fish_upgrade 1
+    assert state.progress.pearls == 9800
+    assert state.progress.buddies[0].pattern == 1
+    invoke buy_fish_upgrade 2
+    assert state.progress.pearls == 9720
+    invoke buy_fish_upgrade 1
+    assert state.progress.pearls == 9720
+    assert state.progress.buddies[0].pattern == 1
+    assert state.shop_index == 1
+    assert state.fish_style[3].model == "aqua/candy-stripes"
+    invoke close_shop
+    invoke inspect_fish 1
+    invoke buy_fish_upgrade 1
+    assert state.progress.pearls == 9720
+    invoke buy_fish_upgrade 0
+    invoke buy_fish_upgrade 1
+    assert state.progress.pearls == 9520
+    assert state.progress.buddies[1].candy == true
+    invoke inspect_fish 0
+    invoke buy_fish_upgrade 3
+    assert state.progress.buddies[0].pattern == 0
+    invoke initialize
+    assert state.progress.buddies[0].style == true
+    assert state.progress.buddies[0].candy == true
+    assert state.progress.buddies[0].moon == true
+    assert state.fish[0].model == "aqua/clown-style"
+
+@Test/Aquarium/LongevityIsBoundedAndDoesNotRevive
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke upgrade_funds
+    invoke buy_care_upgrade 1
+    assert state.progress.life_level == 1
+    assert state.progress.pearls == 9800
+    assert state.progress.buddies[0].lifespan == 2970
+    assert state.progress.critters[0].lifespan == 5940
+    invoke initialize
+    assert state.progress.buddies[0].lifespan == 2970
+    invoke buy_care_upgrade 1
+    invoke buy_care_upgrade 1
+    assert state.progress.life_level == 3
+    assert state.progress.buddies[0].lifespan == 3510
+    assert state.progress.buddies[0].care.lifespan == 3510
+    assert state.progress.critters[0].lifespan == 7020
+    assert state.progress.pearls == 8300
+    invoke buy_care_upgrade 1
+    assert state.progress.pearls == 8300
+    invoke initialize
+    assert state.progress.buddies[0].lifespan == 3510
+    invoke inspect_fish 1
+    invoke mark_dead
+    invoke open_fish_upgrades
+    invoke buy_fish_upgrade 0
+    assert state.progress.pearls == 8300
+    assert state.progress.buddies[1].dead == true
+
+@Test/Aquarium/FoodUpgradeAffectsFutureFeedingsOnly
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke upgrade_funds
+    invoke feed
+    assert state.fed_ticks == 900
+    invoke buy_care_upgrade 0
+    assert state.fed_ticks == 900
+    assert state.feed_cooldown == 1200
+    invoke buy_care_upgrade 0
+    invoke buy_care_upgrade 0
+    assert state.progress.food_level == 3
+    assert state.progress.pearls == 8796
+    invoke buy_care_upgrade 0
+    assert state.progress.pearls == 8796
+    invoke ready_to_feed
+    invoke feed
+    assert state.fed_ticks == 1800
+    assert state.feed_cooldown == 2100
+    invoke wait_seconds 31
+    assert state.fed_ticks == 870
+
+@Test/Aquarium/CosmeticsHideOnDeathAndKeepSurvivingOwnership
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke upgrade_funds
+    invoke inspect_fish 0
+    invoke buy_fish_upgrade 0
+    invoke buy_fish_upgrade 2
+    invoke inspect_fish 1
+    invoke buy_fish_upgrade 0
+    invoke mark_dead
+    invoke animate
+    assert state.fish_style[4].visible == false
+    assert state.fish_style[0].visible == true
+    invoke inspect_fish 0
+    invoke open_fish_upgrades
+    invoke remove_fish 1
+    assert state.shop == ""
+    assert state.fish_style.length == 4
+    assert state.fish_style[0].owner == 0
+    assert state.progress.buddies[0].moon == true
+    invoke inspect_resident 3
+    assert state.selected_fish == 0
+
+@Test/Aquarium/CarePurchaseRequiresFunds
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke buy_care_upgrade 0
+    invoke buy_care_upgrade 1
+    assert state.progress.pearls == 30
+    assert state.progress.food_level == 0
+    assert state.progress.life_level == 0
+    assert state.progress.buddies[0].lifespan == 2700
+
+@Logic/aquarium
+action wait_seconds(seconds):
+    for i in range(0,seconds*30):
+        call tick {}
+
+action nearly_full:
+    progress.pearls = 99999
+
+action oversize_wallet:
+    progress.pearls = 100001
+
+action upgrade_funds:
+    progress.pearls = 10000
+
+action mark_dead:
+    progress.buddies[1].dead = true
+
+action ready_to_feed:
+    feed_cooldown = 0
+    fed_ticks = 0

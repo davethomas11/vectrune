@@ -8,6 +8,258 @@ seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](vo
 for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.
 The grid-map semantics below remain unchanged.
 
+## Glowtide Aquarium
+
+The aquarium shares fish/critter care through
+[`@Module/AquariumCare` and composed `@Type/AquariumLife`](../../examples/games/idle_aquarium/care.rune).
+These [language features](../language/logic-modules.md) use the shared Rune-Web
+runtime, not a Pixel-3D-only extension. Old saves migrate without losing names,
+ages or hunger; nested care records retain stable IDs across rebuilds and reloads.
+Legacy care fields remain compatible mirrors. No care timing or lighting changes
+are introduced by this refactor.
+
+Source builds batch idle saves every 150 simulation ticks (five running seconds)
+and use `save_revision` as an explicit dirty marker. Purchases, renames, net
+retrieval and reset still save immediately; pause, hidden/blurred pages, page
+disposal and normal native shutdown flush pending progression. An abrupt process
+kill can lose the last five running seconds. The save key/format is unchanged.
+
+Fish/critter movement, eating and lighting still run at 30 Hz; life/income run
+once per second. HUD/care counts refresh at the existing half-second checkpoints
+only when their inputs change, and user actions refresh immediately. The combined
+render/picking resident list is rebuilt only after membership or cosmetic changes; its records
+continue moving in place. Corpse searches are skipped when there are no dead fish.
+These changes do not slow feeding, scurrying, care timers or moving connectors.
+
+`python3 tests/browser/idle_aquarium_performance.py` measures starter and
+30-fish/12-critter/12-floral feeding tanks on the CPU renderer, asserts one save
+serialization per 150 ticks and verifies resident-list reuse. Optional
+`--baseline /path/to/older-generated.html` compares exact Standard/Enhanced
+framebuffer and depth hashes. Timing results are machine/load-dependent; this
+CPU stage does not promise a frame-rate gain. The subsequent opt-in GPU lighting
+stage is described under browser presentation below; adaptive quality remains pending.
+
+[Glowtide Aquarium](../../examples/games/idle_aquarium/idle_aquarium.rune)
+is a relaxed, model-based idle aquarium. Eight animated fish varieties earn
+pearls while the simulation runs. The starter tank is physically compact
+(scale 0.75); expansions grow it to 1.0 and 1.25 without moving the camera
+farther away. Reef, lights, bubbles and resident swimming bounds follow the
+tank size. Four glass panels replace the opaque walls, using Enhanced glass
+tint on CPU or GPU; Standard retains the open view and solid corner posts.
+Glass rotates around local Y before the instance's Z angle: the wide walls
+use `glass=[8,18]`, `pitch=90`, `angle=90`; the side walls use `[8,9]`
+and `pitch=90`. This aligns their height and horizontal span with the frame.
+Glass tint ignores surfaces within `1e-5` world-depth units of the pane on
+both CPU and GPU, avoiding precision-dependent tint on coplanar frame edges.
+Mouse/finger drags orbit freely through 360 degrees with eased movement.
+Small taps still select residents; menus, keyboards and pause block rotation.
+Left/right controls ease toward the same orbit target.
+
+Browser canvases can opt into horizontal drag actions with
+`data-pixel-drag-action=drag_orbit` and CSS `touch-action: none`. The action
+receives signed degrees (180 per canvas-width of horizontal drag). A movement
+over 8 CSS pixels starts dragging and suppresses resident/HUD click activation;
+HUD pointers retain priority. The host validates the action at mount time.
+This opt-in attribute leaves existing canvases unchanged.
+See `tests/browser/idle_aquarium_rotation.py` and
+`runtime/rune-web/src/pixel3d/index.ts`.
+
+Voxel rendering accepts finite cameras outside the world bounds, intersecting
+the volume before traversal (as already done for hinged terrain). Rays facing
+away produce sky rather than an error. Gameplay voxel movement/target bounds
+are unchanged. This permits full aquarium orbits without stopping the browser
+loop when the camera leaves the terrain volume. See
+`runtime/rune-web/src/pixel3d/voxel.ts` and `runtime/rune-web/tests/voxel.test.ts`.
+
+Start with 18 fish spaces, buy two tank
+expansions for 600 and 2,400 pearls to reach 24 and 30 spaces, buy five reef upgrades,
+and welcome a decorative moon jelly at reef level three. One sunset crab
+starts on the sand; bottom critters do not earn pearls but need feeding and age.
+Adoptions cycle through clownfish, blue tangs, royal grammas, puffers,
+angelfish, butterflyfish, neon tetras and lionfish. New models have distinct
+silhouettes, markings and fins; neon stripes emit a subtle glow in Enhanced.
+Existing saved species IDs 0-3, names and lifespans remain unchanged.
+New species reuse the existing 45-90-minute lifespan range; none changes income.
+
+Feeding costs one pearl per living fish or critter, minimum one pearl.
+Dead residents do not count. Price is recalculated at purchase; insufficient
+pearls leave food, cooldown and feeding duration unchanged, with an explicit
+notice. Successful feeding marks the save dirty. Buttons, quick HUD and menu
+share the cost/affordability state.
+It doubles living-fish income for 30 seconds, with a 40-second
+cooldown before food upgrades. Feeding scatters pellets, flakes and algae across the upper tank,
+independently of fish positions. They drift and sink at three different speeds,
+then rest on the sand until the current feeding window ends. Fish notice
+food at staggered times, reserve an available snack, swim toward it at
+individual speeds, and visibly bob and nibble for 1.6-4.2 seconds while it
+shrinks. Each finished snack earns two bonus pearls, once; fish take
+2-6-second breaks between snacks. Uneaten food expires without penalties.
+Collect an oyster gift every 20 seconds. The final 15 seconds of
+each simulation minute are a triple-income glow festival; feeding stacks
+with that multiplier.
+
+Passive income is half the original example rate:
+`living fish * (1 + reef level) * feeding multiplier * festival multiplier / 2`
+pearls per running second. A starter tank earns 1.5 pearls/second; a saved
+half-pearl remainder carries forward rather than being discarded; the persisted
+`income_remainder` is an integer half-pearl unit (0 or 1) to match save restoration.
+Snack and
+oyster rewards are unchanged. The wallet caps at **100,000 pearls** for every
+reward path; spending opens space again. Existing larger wallets clamp on
+restore. Lifetime earnings remain cumulative and uncapped.
+
+Tap a living fish, choose **UPGRADES**, then buy its **Style Kit** for 120
+pearls: a rounded species-specific body, expressive eyes and animated fins.
+**Candy** and **Moon stripes** cost 80 pearls each per fish and require its
+Style Kit. Owned patterns and original colors switch free; Moon stripes glow
+in Enhanced lighting. Ownership is per fish, not tank-wide. Applying a pattern
+moves the picker highlight and marks it "Active on this fish"; owned switches
+remain available even with an empty wallet. Cosmetic pieces select their owning fish and disappear
+on death. Purchases do not reset age, hunger or care; dead fish cannot be upgraded.
+
+The menu and browser shell offer **Tank care upgrades**, each capped at three levels:
+- **Long-lasting food:** 150 / 350 / 700 pearls. Each level adds ten seconds
+  to the next feeding window and cooldown, reaching 60 / 70 seconds.
+  An already-running feeding keeps its original duration. Hunger relief
+  and the per-resident feeding price do not change.
+- **Longevity:** 200 / 500 / 1,000 pearls. Each level adds 10% of base lifespan
+  to living and future fish/critters, up to +30%. Saved base lifespans prevent
+  compounding on reload. Dead residents stay dead; starvation limits are unchanged.
+
+Implementation: [`upgrades.rune`](../../examples/games/idle_aquarium/upgrades.rune).
+Purchase/cap guards are exercised by `upgrades.logic.test.rune`; real canvas
+purchase targets, animated geometry and persistence by
+`tests/browser/idle_aquarium_upgrades.py`.
+The picker replaces the profile HUD rather than leaving a null callout;
+browser regression coverage verifies simulation ticks continue in both upgrade shops.
+
+Hunger increases once per running second: 600 seconds fills the hunger meter,
+and 900 seconds without sufficient food causes starvation. Each completed snack
+removes 300 hunger seconds; dropping food alone does not feed a fish.
+Profiles show hunger, starvation time remaining, age and lifespan. Fish have
+varied 45/60/75/90-minute lifespans and die at their lifespan even when fed.
+Age and hunger stop while paused or closed; they never advance offline.
+Only living fish earn passive pearls. Dead fish occupy a space until removed.
+
+Dead fish float belly-up to the surface. Tap/click one to retrieve it with a
+brief net animation and free its space; replacements are purchased with pearls,
+not automatically respawned. After 120 running seconds, unretrieved fish turn
+green and gradually sink to the sand. Hungry living fish without a snack swim
+over, nibble for 3-4 seconds per bite, and reduce their hunger by 180 seconds
+per bite. Six bites consume the body and free its space; scavenging grants no
+pearls. Names, species, hunger and ages of surviving fish remain unchanged.
+An empty tank stays empty after reload, but oyster gifts still provide pearls
+for adoption (18 pearls when empty).
+
+**Reset tank** is available in the in-game menu and browser shell. An in-game
+confirmation warns that the saved pearls, fish and upgrades will be erased.
+Cancel or tap away preserves the tank. Confirm starts with 30 pearls, three
+new fish, one crab, no purchased florals/cosmetics/care levels, no fractional
+income remainder, and the original tank/reef/lighting configuration.
+
+Bottom-left **flower** and **critter** quick buttons open themed in-game
+variety pickers, also available from the browser shell. Choose a Sunburst bloom
+(35 pearls), Violet sea fan (55), or Moon lily (75); up to 12 are planted in
+automatically selected clear floor spots. Floral decorations stay rooted;
+expanding the tank scales their placement. Critter choices are Sunset crab (45),
+Hermit crab (65), Cherry shrimp (55), and Moon snail (40), with 12 total spaces
+including the starter crab. Existing saved critter collections are preserved.
+Unaffordable/full purchases are disabled;
+failed landing/planting requests explain the lack of clear sand and spend nothing.
+Successful purchases close the picker. Tap away or use Close to cancel;
+Up/Down and Enter (or controller navigation) select a variety.
+
+Crabs and shrimp scurry in eight cardinal/diagonal directions at constant
+per-species speed, pause between bursts, and steer around reef plants,
+purchased florals, the chest, tank walls, and other critters. Opposite foot
+groups swing and lift alternately only while moving. Snails glide more slowly
+without feet. Reef upgrades move any newly obstructed critter to clear sand;
+decorations themselves never move to avoid animals.
+Purchased varieties and floral planting slots survive reload, but critter
+positions and walking phases restart. The reusable example logic is
+[`critters.rune`](../../examples/games/idle_aquarium/critters.rune).
+
+Tap a living critter for its connected in-game profile, with editable name,
+age, hunger and lifespan; Rename uses the same canvas keyboard as fish.
+Critter hunger fills after 1,200 running seconds; starvation occurs at 1,800.
+Lifespans are 90/120/150/180 running minutes for crab/hermit/shrimp/snail.
+The shared Feed action (or profile Feed) scatters two sinking algae portions
+per living critter. Critters reserve portions, approach using obstacle-aware
+eight-way movement, and munch for four seconds; each finished portion removes
+600 hunger seconds, without pearl rewards. Portions expire with the feeding
+window. Death stops movement, feeding and foot animation; the body stays on
+the sand until tapped for net retrieval, occupying a critter slot meanwhile.
+Dead critters do not decay or become food. Names, ages, hunger, lifespan,
+death and cause persist, without offline aging; existing saves gain care fields.
+Retrieving the last critter leaves an empty bottom until a pearl-funded purchase
+or confirmed reset. Fish and critters share the declared `residents` scene
+array for visible-model picking; indices below `fish.length` are fish, followed
+by critters and cosmetic pieces mapped to their owning fish.
+
+The scene binds a voxel world and four gently pulsing point lights, with
+emissive bubbles, tiny rim lamps and a pearl. Enhanced lighting is selected
+by default; the shell also offers Standard and three color moods. Use the
+Left/Right buttons, arrows or A/D to orbit the tank. Space feeds, 1 adopts,
+2 grows coral, 3 expands the tank, C collects treasure, L changes the lighting mood,
+P pauses, and F opens fullscreen. Tap/click the top-right hamburger
+button or press Tab to open a right-side menu rendered in the game engine.
+Care, upgrades, lighting, camera changes, and entering/exiting fullscreen
+remain available inside the fullscreen surface, including on touchscreens.
+Activating a menu action closes the menu; focus navigation does not.
+Bottom-left snack and fish icon buttons provide quick feeding/adoption.
+Unavailable quick actions are disabled. The hamburger, sound and quick-care
+icons are drawn in the game HUD, not DOM overlays; external shell controls
+remain available for accessible browser interaction.
+The simulation keeps earning while the menu is open. The shell's buttons
+remain available outside fullscreen.
+The sea-glass menu uses the core HUD theme and sidebar sizing options:
+large labels, rounded cards, a soft focus ring and quieter secondary text.
+Tap outside it or use its close button to dismiss it. Up/Down moves focus
+past unavailable actions, Enter/Space activates, and Backspace closes.
+These keyboard mappings are suitable for browser-based remote prototypes;
+this is not yet a packaged TV app.
+
+The original **Moonlit Drift** soundtrack loops a 16-bar, 64-BPM score:
+warm seventh/ninth string-pad chords, a gentle sine bass and sparse bells.
+A low-pass bus, slow chorus, damped echoes and soft reverb keep it atmospheric
+rather than beat-driven; it contains no drums. Browser music waits for the
+first interaction. Sound buttons (including a speaker inside fullscreen)
+or M mute without stopping idle earnings; pause quiets and parks the music.
+Menus and feeding do not restart the loop.
+Browser `data-pixel-mute` buttons expose the mute state through `aria-pressed`
+and return focus to the canvas so keyboard shortcuts continue working.
+The score is [music.rune](../../examples/games/idle_aquarium/music.rune);
+`python3 tests/browser/idle_aquarium_audio.py` checks real Web Audio output.
+
+Tap/click a visible fish to open its top-left in-game profile bubble with species,
+saved name, age, hunger and lifespan in the lagoon. Names accept 1-24 characters after trimming
+edge whitespace. Starter fish have distinct default names; adopting a
+new fish preserves existing names and ages. Age counts running simulation
+seconds, stops when paused and survives reload; it is not a real-world birth
+date and does not grow offline. Profiles continue the idle simulation and
+can be dismissed by Close or tapping outside. A line connects the fixed
+top-left bubble to the selected fish's current projected position and follows
+its movement and camera orbit. Rename opens a canvas-rendered keyboard; there
+are no DOM text fields inside the fullscreen game surface. The fish profile's
+UPGRADES button opens its cosmetic picker; critter care upgrades are tank-wide.
+
+Pearls, occupied fish count, per-fish names/species/ages/hunger/lifespans/death/decay,
+tank size, reef level, floral slots, critter varieties/names/care, cosmetic ownership
+and active patterns, base lifespans, food/longevity levels, fractional income,
+lifetime earnings and lighting mood save
+locally to the browser/origin under `glowtide-aquarium-v1`. Timers and
+feeding bonuses restart on reload, but hunger and decay do not. Existing saves
+gain the new care fields without replacing fish. There are no offline earnings or cloud
+saves. This is a local example, not a published teaching-site game.
+
+```sh
+vectrune examples/games/idle_aquarium/idle_aquarium.rune
+# Open http://localhost:3036, or export a self-contained HTML file:
+vectrune examples/games/idle_aquarium/idle_aquarium.rune -o html > aquarium.html
+vectrune test examples/games/idle_aquarium --type logic
+python3 tests/browser/idle_aquarium.py
+```
+
 ## Neon Circuit
 
 Available on the teaching site in v0.3.12 at
@@ -837,9 +1089,9 @@ compare accelerated and ordinary hits exactly across 12,000 rays, non-aligned
 volumes, both directions, tied boundaries and very small direction components.
 Geometry-read tests verify that empty regions are skipped without unstable
 wall-clock assertions. These remain CPU renderers in browser and QuickJS.
-A future GPU backend should explicitly retain CPU fallback for unavailable
-adapters, initialization failures and device/context loss; GPU fallback is not
-implemented by this CPU optimization pass.
+This CPU optimization pass introduces no GPU dependency. The optional browser
+GPU lighting path described under browser presentation retains explicit CPU
+fallback for unavailable adapters, setup/frame failures and context loss.
 
 ### Shared camera rays and exact voxel crossings
 
@@ -1183,8 +1435,144 @@ Panels replace notices but never the objective or prompt. At the example's
 or two during active play; notices show two. Titles, choices, footer, objective, and prompt use
 single clipped lines, so keep them concise. Pausing replaces the bottom prompt
 with a resume instruction unless the HUD supplies a heading and its own prompt.
-HUD panels are display-only and do not automatically
-pause the simulation.
+HUD panels do not automatically pause the simulation. In browser hosts,
+floating HUD grids, slots and panel `choiceActions` can invoke game actions
+through canvas clicks or touch taps. Disabled grid items cannot be activated.
+Use `"grid":{"layout":"sidebar","columns":1,"items":[...]}` for a right-side
+menu with up to ten items; omit `layout` for the existing full-width grid.
+Items accept `label`, `sub`, `color`, `disabled`, `action` and optional `args`.
+For example, `{"label":"FEED","action":"feed"}` invokes the game's `feed`
+action, while `{"label":"FULLSCREEN","action":"host.fullscreen"}` toggles
+browser fullscreen. Render a floating HUD slot with an action such as
+`toggle_menu` to open the sidebar, as in Glowtide Aquarium. These interactive
+HUD controls use shared JavaScript rendering; the legacy Rust HUD does not
+implement sidebars or pointer hit regions.
+
+### HUD themes and customizable sidebars
+
+Floating HUDs accept an optional `theme` object. Colors are RGB integers
+from 0 to 16777215: `background` (panel and text outline), `surface` (cards
+and slots), `selected` (focused card fill), `border`, `text`, `muted`,
+`accent` and `focus` (focus ring). `radius` is an integer corner radius
+from 0 to 12. Theme colors apply to sidebars, slots and floating HUD
+detail/objective/prompt text; they do not recolor authored sprites, meters,
+legacy panels, radial wheels or standard grids. Omitted values retain the
+renderer defaults. Theme and sidebar rendering select the shared desktop
+renderer; the legacy Rust HUD does not implement these options.
+
+Sidebar grids accept `width` (120-640), `rowHeight` (18-64),
+`padding` (4-24), `gap` (0-24), and `textScale` (1 or 2) in logical HUD
+pixels, independently of the world's render scale. Width and row heights
+are fitted to the viewport; label scale falls back to one if a fitted
+row is too short. Use a sufficiently tall viewport, such as 640x400, for
+eight comfortable 32-pixel rows with double-size labels. `subtitle` adds
+a secondary header line. `selected` on an item draws the focus ring.
+
+`dismissAction` names an idempotent game action that closes the menu. It
+adds a close button and tap/click-outside dismissal. Taps inside the panel,
+including on disabled rows or blank spacing, never dismiss it or activate
+the game underneath. `moveAction` receives `-1`/`1` for Up/Down while the
+canvas is focused; game logic updates item `selected` flags and should skip
+disabled rows. Enter/Space activates the selected enabled item; Escape or
+Backspace invokes `dismissAction`. Native browser fullscreen handles Escape
+first to leave fullscreen. Game rules and idle earnings continue unless
+the game deliberately pauses them. These input behaviors are browser-host
+features, not automatic native remote/controller navigation.
+
+Set sidebar `closeOnActivate = true` alongside `dismissAction` to invoke
+dismissal before an enabled item action, including `host.fullscreen`.
+Navigation and dismissal itself do not trigger a second dismissal. The
+default is false; games can keep transactional menus open.
+
+Browser canvases can opt into model selection with
+`data-pixel-pick=fish data-pixel-pick-action=inspect_fish`. The first attribute
+names an array already declared in `@Scene things`; the second names a game
+action receiving the zero-based array index. Selection uses the rendered
+model shapes, current camera and scene depth, with an eight-render-pixel
+near-miss allowance; invisible or occluded model pixels do not select.
+Sprites are not selectable with this binding. HUD menu hits take precedence,
+including inert sidebar spacing. Glowtide uses an in-game callout and keyboard
+for editable profiles.
+
+### In-game buttons, callouts and on-screen keyboard
+
+These options require `ui.style = "floating"` and use the shared JavaScript
+renderer, including desktop rendering. The legacy Rust HUD does not draw
+them. Browser mouse/touch activates their canvas hit regions. Desktop keyboard
+and standard gamepad input can navigate the keyboard and callout actions;
+browser `data-pixel-pick` fish selection is not native pointer picking.
+
+`ui.buttons` accepts up to eight records with `icon` (`menu`, `feed`, `fish`,
+`sound`, `flower`, `critter`), `label`, `action`, `anchor` (`top-right` or `bottom-left`),
+optional `offset` (0-640 horizontal logical pixels), `size` (24-64, default 30),
+`disabled` and `selected`. `host.mute` toggles sound; the sound icon reflects
+the engine's mute state. Theme colors and radius style these buttons.
+For example, `{"icon":"flower","label":"Floral decorations","action":"open_flower_shop",
+"anchor":"bottom-left","offset":76,"size":30}` adds a floral quick button.
+
+`ui.callout` contains `title`, up to six string `lines`, a world-coordinate
+`target = {"x":...,"y":...,"z":...}`, optional `width` (140-400, default 240),
+up to three `actions = [{"label":"RENAME","action":"open_name_keyboard"}]`,
+and optional `dismissAction`. It sits at the upper left below resource labels.
+The engine projects its target using the current camera every rendered frame;
+keep that target current or bind it directly to a moving fish object.
+The connector is hidden behind the camera and clamped at screen edges.
+Callout actions support arrows plus Enter/Space; standard controller D-pad
+and A select, B dismisses. `dismissAction` also supports Escape/Backspace and
+tap-away. Dismissal does not pause the simulation.
+
+The reusable utility lives in
+[`on_screen_keyboard.ts`](../../runtime/rune-web/src/pixel3d/on_screen_keyboard.ts).
+Add `ui.keyboard` while editing and remove it when finished:
+
+```rune
+ui.keyboard = {
+    "title":"Name your little friend","value":name_draft,"maxLength":24,
+    "submitAction":"rename_fish","cancelAction":"cancel_name_keyboard",
+    "width":480,"keyHeight":28,"gap":4,"textScale":2
+}
+```
+
+`title` and `value` are strings; `maxLength` is 1-128 (UTF-16 code units).
+`submitAction` receives `{"name":"edited text"}`; `cancelAction` receives no
+arguments. Optional `changeAction` receives the same object after each edit.
+The game validates and saves names; the utility never silently commits them.
+Drafts survive repeated HUD refreshes with the same `value`; changing the
+authored value replaces the draft, and closing/reopening starts a new edit.
+`width` accepts 240-640, `keyHeight` 18-48, `gap` 1-12, `textScale` 1 or 2.
+Defaults are 480, 28, 4 and 1 respectively. Layout fits the viewport; use
+at least 240x180, preferably 640x400 for comfortable labels. The utility
+inherits `ui.theme` background, surface, border, selected, text, accent,
+focus, muted and rounded-corner radius.
+
+The current layout is English QWERTY, digits, hyphen/apostrophe (APOS, or AP in small layouts), Shift, Space, Delete, Cancel
+and Save. Touch/click selects keys; standard gamepads use D-pad or left-stick
+direction edges, A selects and B cancels. Release a direction before the next
+move. Physical letters/digits/space/apostrophe/hyphen append text and highlight
+their matching visible keys while held. Backspace deletes, Enter saves and
+Escape cancels. Arrows move virtual focus. It is an append/backspace editor,
+not an IME, clipboard or movable-caret text field. Input while editing is
+consumed before game shortcuts, so typing M does not mute or Space feed.
+The aquarium stays animated and keeps earning unless deliberately paused.
+
+For example, refresh this object from game logic and supply `close_menu`
+and `menu_move` actions, as in
+[Glowtide's logic](../../examples/games/idle_aquarium/logic.rune):
+
+```rune
+ui = {
+    "style":"floating","meters":[],"objective":"","detail":"","prompt":"",
+    "notice":"","panel":null,
+    "theme":{"background":860723,"surface":1587530,"text":15858679,
+        "accent":8185036,"focus":12845032,"radius":7},
+    "grid":{"layout":"sidebar","columns":1,"title":"Your lagoon",
+        "subtitle":"A little ocean of happy","width":302,"rowHeight":32,
+        "padding":12,"gap":5,"textScale":2,
+        "dismissAction":"close_menu","moveAction":"menu_move",
+        "items":[{"label":"Snack time","sub":"4 pearls / One per living friend",
+            "action":"feed","selected":true}]}
+}
+```
 
 Browser shells can invoke parameterized actions with
 `button data-pixel-action=select_choice data-pixel-args="[1]" "Rune"`.
@@ -1272,6 +1660,56 @@ the browser status line reports it. Malformed saves restore declared defaults.
 A shell button with `data-pixel-action=train` invokes the game's `train` action.
 A shell form with `data-pixel-action` passes one record of named text values
 to the action on submit. Neon Circuit uses it for the Super Code field.
+
+### Opt-in batched and dirty-state saves
+
+Source builds support the same optional scheduling fields for Pixel and Pixel-3D
+browser/native hosts:
+
+```rune
+@Scene/game
+persistence = {"key":"my-game","state":"progress","interval_ticks":150,"revision":"save_revision"}
+
+@Logic/game
+state:
+    progress = {"pearls":0}
+    save_revision = 0
+    ticks = 0
+action tick(input):
+    ticks += 1
+    if ticks%30==0:
+        progress.pearls += 1
+        save_revision += 1
+action reward(amount):
+    progress.pearls += amount
+    save_revision += 1
+```
+
+`interval_ticks` is an integer from 1 to 3600 and defaults to 1. Only running
+simulation ticks count. Without `revision`, snapshots are serialized on every
+scheduled flush, with duplicate writes still skipped. With `revision`, the engine
+also skips serialization when both the revision and saved root reference are
+unchanged. The marker must name a declared top-level state field initialized to
+a nonnegative safe integer literal. **Increment it for every saved mutation,
+including nested record/array changes.** Markers are explicit, not automatic
+mutation detection; JavaScript host edits must increment them too. Keep the marker
+outside the saved record so loading or resetting progression does not reuse it.
+
+Initialization/start and explicit host actions flush immediately, independent of
+the interval. Pause, browser blur/hidden/page disposal and normal desktop shutdown
+also flush. Hosts can call `game.flushSave()` before their own disposal. Invalid
+intervals/markers fail explicitly. Existing two-field persistence declarations
+keep their every-tick behavior; saves still use the version-1 format and same keys.
+Abrupt termination can lose at most one interval of correctly marked idle changes.
+
+### CPU model geometry reuse
+
+The analytic CPU model renderer caches each shared block's local bounds and
+center instead of allocating them for every instance/frame. Changes to any
+`from`/`size` component invalidate that entry; pose, shape, color, haze and lighting
+remain live. Picking uses the same renderer, so depths and hit behavior stay
+consistent. This is automatic across CPU browser/native hosts and does not
+introduce a GPU dependency or change lighting quality.
 
 ## Rune Crypt: tactical dungeon roguelite
 
@@ -1609,7 +2047,8 @@ silhouettes in its darkest color. Marble Run uses it for the Pocket palette.
 A browser shell can provide `select data-pixel-lighting=true` with
 `standard` and `enhanced` options. The shell's selected option is the
 default. Player choices persist per game when browser storage is available.
-Enhanced lighting uses the CPU renderer.
+Enhanced lighting uses CPU rendering by default, with optional browser GPU
+lighting when the shell exposes and the player enables `data-pixel-gpu`.
 It blurs visible emissive samples at one quarter width and height, then
 composites the glow, glass tint, and distance haze before outlines and HUD.
 Models opt in with `emissive = "cw"` for opaque palette symbols,
@@ -1620,16 +2059,52 @@ tiles. The effects preserve scene depth and collision.
 Marble Run also opts into an experimental WebGL 2 backend with
 `input data-pixel-gpu=true`. It draws model geometry and the procedural sky
 using cached meshes and shaders, with the shared HUD layered on top. The
-experiment supports scenes built entirely from models over a sky with
-`below` set. A browser that lacks accelerated WebGL 2 keeps the CPU renderer.
+geometry path supports scenes built entirely from models over a sky with
+`below` set, using Standard lighting without point lights, sprites or weapons.
+Other scenes, including Glowtide, use a hybrid path: the CPU still renders
+geometry/depth and resolves picking, while WebGL applies point lights, the
+two-pass quarter-resolution emissive bloom, contact shadows, glass tint,
+distance haze, outlines and final palette. CPU-rendered titles/weapons and
+pixel-font HUD are composited at their original resolution and order; the HUD
+is not blurred. The GPU lighting path does not interpolate simulation poses.
+Side-camera backdrop rendering and its bloom remain CPU work.
+
+Enable **GPU lighting** in
+[Glowtide's toolbar](../../examples/games/idle_aquarium/shell.rune) to try it.
+Custom browser shells can use:
+
+```rune
+label:
+    input type=checkbox data-pixel-gpu=true
+    span "GPU lighting"
+```
+
+A browser that lacks accelerated WebGL 2 keeps the unchanged CPU renderer.
+Setup/frame failures and context loss disable/uncheck the control with a CPU
+fallback explanation; the game continues with the selected lighting quality.
+Hybrid frames currently support up to 32 eligible contact-shadow planes;
+larger scenes fall back rather than drop shadows. GPU mode is opt-in, not a
+requirement for any game or for native desktop hosts. No framebuffer readback
+is needed during GPU presentation. Geometry remains CPU work, uploads have a
+cost, and hardware/browser/load determine whether this path is faster.
+`python3 tests/browser/pixel3d_gpu_lighting.py` compares real CPU/GPU frames,
+including crowded Glowtide, occluded glow, glass, shadows, palettes, HUD and
+resize, and exercises unavailable/context-loss fallbacks. Its software
+WebGL fixture is visual/correctness evidence, not a hardware speed claim.
+
 The `data-pixel-fps` readout measures frames drawn by the active backend.
 A `select data-pixel-frame-rate=true` can offer `simulation`, `60`, and
 `display`. These draw at the simulation rate, cap rendering at 60 FPS, or
 draw on every browser animation frame, respectively. The browser and display
 still limit the last mode. Simulation always uses the authored tick rate.
-At higher render rates WebGL interpolates camera and model poses between
+At higher render rates the model-only WebGL geometry path interpolates camera and model poses between
 simulation ticks, batches copies of each model, and retains the HUD until
 it changes.
+
+Sources: `runtime/rune-web/src/pixel3d/gpu_lighting.ts`,
+`runtime/rune-web/src/pixel3d/enhanced_lighting.ts`,
+`runtime/rune-web/src/pixel3d/raycaster.ts`,
+`runtime/rune-web/src/pixel3d/index.ts`.
 
 A Pixel 3D shell can opt a canvas into `data-pixel-fit=viewport`. In fullscreen,
 the browser host resizes the render target to the available aspect ratio while

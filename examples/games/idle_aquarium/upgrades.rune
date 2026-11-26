@@ -1,0 +1,169 @@
+@Logic/aquarium
+state:
+    feeding_duration = 900
+    fish_style = []
+    styled_species = ["aqua/clown-style","aqua/tang-style","aqua/royal-style","aqua/puffer-style","aqua/angel-style","aqua/butterfly-style","aqua/neon-style","aqua/lion-style"]
+    pattern_names = ["Original colors","Candy stripes","Moon stripes"]
+    food_prices = [150,350,700]
+    life_prices = [200,500,1000]
+
+action award_pearls(amount):
+    progress.pearls = min(100000,progress.pearls+amount)
+
+action prepare_fish_upgrades(buddy):
+    buddy.style = buddy.style ? true : false
+    buddy.candy = buddy.candy ? true : false
+    buddy.moon = buddy.moon ? true : false
+    buddy.pattern = buddy.pattern==1 && buddy.candy ? 1 : buddy.pattern==2 && buddy.moon ? 2 : 0
+    buddy.base_lifespan = buddy.base_lifespan ? buddy.base_lifespan : buddy.lifespan
+    if !buddy.dead:
+        buddy.lifespan = floor(buddy.base_lifespan*(1+progress.life_level*0.1))
+
+action build_fish_style:
+    residents_dirty = true
+    fish_style = []
+    for f, index in fish:
+        local buddy = progress.buddies[index]
+        if buddy.style:
+            for part in range(0,4):
+                fish_style.push({"x":f.x,"y":f.y,"z":f.z,"model":part==0 ? "aqua/style-tail" : part==3 ? "aqua/candy-stripes" : "aqua/style-fin","owner":index,"part":part,"visible":false,"scale":f.base_scale})
+    call animate_fish_style
+
+action animate_fish_style:
+    for f, index in fish:
+        local buddy = progress.buddies[index]
+        if !buddy.dead:
+            f.model = buddy.style ? styled_species[buddy.kind] : species[buddy.kind]
+    for piece in fish_style:
+        local f = fish[piece.owner]
+        local buddy = progress.buddies[piece.owner]
+        piece.visible = buddy.style && !buddy.dead && (piece.part!=3 || buddy.pattern>0)
+        local side = piece.part==1 ? -0.25 : piece.part==2 ? 0.25 : 0
+        local back = piece.part==0 ? -0.55 : 0
+        piece.x = f.x+(cos(f.angle)*back-sin(f.angle)*side)*f.scale
+        piece.y = f.y+(sin(f.angle)*back+cos(f.angle)*side)*f.scale
+        piece.z = f.z
+        piece.scale = f.scale
+        piece.angle = f.angle+(piece.part==0 ? sin(ticks*12+f.phase)*22 : piece.part==3 ? 0 : sin(ticks*10+f.phase)*18)
+        if piece.part==3:
+            piece.model = buddy.pattern==1 ? "aqua/candy-stripes" : "aqua/moon-stripes"
+
+action open_fish_upgrades:
+    if selected_fish<0 || selected_fish>=fish.length || selected_critter>=0:
+        notice = "Tap a living fish to choose its upgrades."
+        call update_labels
+        stop when true
+    if progress.buddies[selected_fish].dead:
+        notice = "Retrieve this friend with the net; dead fish cannot be upgraded."
+        call update_labels
+        stop when true
+    profile_open = false
+    keyboard_open = false
+    menu_open = false
+    shop = "fish"
+    shop_index = 0
+    shop_error = ""
+    call update_labels
+
+action open_care_upgrades:
+    profile_open = false
+    keyboard_open = false
+    menu_open = false
+    shop = "care"
+    shop_index = 0
+    shop_error = ""
+    call update_labels
+
+action buy_fish_upgrade(kind):
+    if selected_fish<0 || selected_fish>=fish.length || selected_critter>=0 || kind<0 || kind>3 || floor(kind)!=kind:
+        notice = "Choose a living fish and an upgrade from its picker."
+        shop_error = notice
+        call update_labels
+        stop when true
+    local buddy = progress.buddies[selected_fish]
+    if buddy.dead || (kind>0 && !buddy.style):
+        notice = buddy.dead ? "Dead fish cannot be upgraded." : "Buy the Style Kit before choosing a color pattern."
+        shop_error = notice
+        call update_labels
+        stop when true
+    if kind==0 && buddy.style:
+        notice = "This fish already owns the Style Kit."
+        shop_error = notice
+        call update_labels
+        stop when true
+    local price = kind==0 ? 120 : kind==1 && !buddy.candy ? 80 : kind==2 && !buddy.moon ? 80 : 0
+    if progress.pearls<price:
+        notice = "Save "+price+" pearls for this fish's upgrade."
+        shop_error = notice
+        call update_labels
+        stop when true
+    progress.pearls -= price
+    if kind==0:
+        buddy.style = true
+    if kind==1:
+        buddy.candy = true
+        buddy.pattern = 1
+    if kind==2:
+        buddy.moon = true
+        buddy.pattern = 2
+    if kind==3:
+        buddy.pattern = 0
+    shop_index = kind
+    save_revision += 1
+    shop_error = ""
+    notice = buddy.name+" / "+(kind==0 ? "Rounded body and animated fins!" : pattern_names[buddy.pattern])
+    call build_fish_style
+    call animate
+    call update_labels
+
+action buy_care_upgrade(kind):
+    if kind!=0 && kind!=1:
+        notice = "Choose food or longevity from the tank care picker."
+        shop_error = notice
+        call update_labels
+        stop when true
+    local level = kind==0 ? progress.food_level : progress.life_level
+    if level>=3:
+        notice = "This tank care upgrade is already at level 3."
+        shop_error = notice
+        call update_labels
+        stop when true
+    local price = kind==0 ? food_prices[level] : life_prices[level]
+    if progress.pearls<price:
+        notice = "Save "+price+" pearls for the next tank care level."
+        shop_error = notice
+        call update_labels
+        stop when true
+    progress.pearls -= price
+    if kind==0:
+        progress.food_level += 1
+    if kind==1:
+        progress.life_level += 1
+        for buddy in progress.buddies:
+            call prepare_fish_upgrades buddy
+            buddy.care.lifespan = buddy.lifespan
+        for critter in progress.critters:
+            if !critter.dead:
+                critter.lifespan = floor(critter.base_lifespan*(1+progress.life_level*0.1))
+                critter.care.lifespan = critter.lifespan
+    save_revision += 1
+    shop_error = ""
+    notice = kind==0 ? "Next feeding lasts 10 seconds longer. Cooldown also grows by 10 seconds." : "Living friends gain 10% base lifespan. No revival or hunger protection."
+    call update_labels
+
+action upgrade_labels:
+    ui.grid.title = shop=="care" ? "Tank care upgrades" : progress.buddies[selected_fish].name+" / Upgrades"
+    ui.grid.footer = shop_error ? shop_error : "PURCHASE OR SWITCH / TAP AWAY CLOSE"
+    if shop=="fish":
+        local buddy = progress.buddies[selected_fish]
+        ui.grid.items = [
+            {"label":"Style Kit","sub":buddy.style ? "Owned / Rounded body and moving fins" : "120 pearls / Rounded body and moving fins","action":"buy_fish_upgrade","args":[0],"disabled":buddy.dead || buddy.style || progress.pearls<120,"selected":shop_index==0},
+            {"label":"Candy stripes","sub":buddy.pattern==1 ? "Active on this fish / Owned" : buddy.candy ? "Owned by this fish / Switch free" : "80 pearls for this fish / Requires Style Kit","action":"buy_fish_upgrade","args":[1],"disabled":buddy.dead || !buddy.style || (!buddy.candy && progress.pearls<80),"selected":shop_index==1},
+            {"label":"Moon stripes","sub":buddy.pattern==2 ? "Active on this fish / Owned" : buddy.moon ? "Owned by this fish / Switch free" : "80 pearls for this fish / Requires Style Kit","action":"buy_fish_upgrade","args":[2],"disabled":buddy.dead || !buddy.style || (!buddy.moon && progress.pearls<80),"selected":shop_index==2},
+            {"label":"Original colors","sub":buddy.style && buddy.pattern==0 ? "Active on this fish / Free" : "Free / Keep your Style Kit","action":"buy_fish_upgrade","args":[3],"disabled":buddy.dead || !buddy.style,"selected":shop_index==3}
+        ]
+    if shop=="care":
+        ui.grid.items = [
+            {"label":"Long-lasting food","sub":progress.food_level>=3 ? "Level 3 / Maximum 60-second shower" : food_prices[progress.food_level]+" pearls / Next shower "+(40+progress.food_level*10)+"s","action":"buy_care_upgrade","args":[0],"disabled":progress.food_level>=3 || progress.pearls<food_prices[progress.food_level],"selected":shop_index==0},
+            {"label":"Longevity","sub":progress.life_level>=3 ? "Level 3 / Maximum +30% lifespan" : life_prices[progress.life_level]+" pearls / Next +"+((progress.life_level+1)*10)+"% base lifespan","action":"buy_care_upgrade","args":[1],"disabled":progress.life_level>=3 || progress.pearls<life_prices[progress.life_level],"selected":shop_index==1}
+        ]

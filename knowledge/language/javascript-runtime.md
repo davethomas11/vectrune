@@ -189,6 +189,13 @@ const app = {
 
 ## Helper Functions
 
+For explicit subsystem boundaries and per-instance behavior, source builds also
+support [logic modules and composable entity types](logic-modules.md).
+`modules = {"wallet":"Wallet"}` exposes exported actions/helpers such as
+`wallet.earn` and `wallet.balance()`. `types = ["Pet"]` provides plain-data
+constructors and receiver actions such as `call pet.feed`. Module scopes are
+isolated; existing `@Logic` helpers below retain their caller-scope behavior.
+
 `@Logic` blocks can define scoped helpers with `func name(args):`.
 
 These helpers are carried into the generated browser runtime and are only available to the page that references that logic block.
@@ -587,4 +594,3 @@ Server-side handlers receive these messages and can respond with state updates v
 - **AST Types**: `src/apps/rune_web/ast.rs` - `LogicDefinition`, `ActionDefinition`
 - **Example**: `examples/games/tic_tac_toe/parts/logic.rune`
 - **Integration Tests**: `tests/integration_app.rs`
-

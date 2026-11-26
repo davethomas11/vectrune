@@ -285,8 +285,7 @@ fn html_output_requires_supported_frontend_type() {
 
     let stderr = String::from_utf8_lossy(&assert.get_output().stderr);
     assert!(
-        stderr.contains("-o html requires @Frontend type = rune-web or @Frontend type = static")
+        stderr.contains("-o html requires @Frontend type = rune-web, rune-mobile-web or static")
     );
 }
-
 

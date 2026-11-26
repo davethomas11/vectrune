@@ -4,6 +4,28 @@ purpose:
   - shared knowledge source for AI and docs
   - stable reference layer between runtime behavior and rendered docs
 pages:
+  - id: runtime.mobile-web
+    path: runtime/mobile-web.md
+    kind: page
+    title: Rune Mobile Web
+    audience: [ai, human]
+    sources:
+      - src/cli/mobile_web.rs
+      - runtime/rune-mobile-web/README.md
+      - tests/mobile_web_cli.rs
+      - tests/browser/rune_mobile_web.py
+  - id: language.logic-modules
+    path: language/logic-modules.md
+    kind: page
+    title: Logic Modules and Composable Entities
+    audience: [ai, human]
+    sources:
+      - src/apps/rune_web/modular.rs
+      - runtime/rune-web/src/modular.ts
+      - runtime/rune-web/tests/modular.test.ts
+      - examples/rune-web/modules/modules.rune
+      - examples/games/idle_aquarium/care.rune
+      - tests/browser/logic_modules.py
   - id: example.clockwork-forest
     path: examples/clockwork-forest.md
     kind: page
@@ -104,9 +126,13 @@ pages:
     sources:
       - src/apps/pixel3d/
       - runtime/rune-web/src/pixel3d/
+      - runtime/rune-web/src/pixel/persistence.ts
       - examples/games/rune_crypt/
       - tests/pixel3d_app.rs
       - tests/browser/rune_crypt.py
+      - tests/game_save_schedule.rs
+      - tests/browser/idle_aquarium_saving.py
+      - tests/browser/idle_aquarium_performance.py
   - id: runtime.model-shapes
     path: runtime/model-shapes.md
     kind: page

@@ -669,9 +669,9 @@ var __RunePixel3DRuntime = (() => {
             this.doEncode(item, depth + 1);
           }
         }
-        countWithoutUndefined(object, keys) {
+        countWithoutUndefined(object, keys2) {
           let count = 0;
-          for (const key2 of keys) {
+          for (const key2 of keys2) {
             if (object[key2] !== void 0) {
               count++;
             }
@@ -679,11 +679,11 @@ var __RunePixel3DRuntime = (() => {
           return count;
         }
         encodeMap(object, depth) {
-          const keys = Object.keys(object);
+          const keys2 = Object.keys(object);
           if (this.sortKeys) {
-            keys.sort();
+            keys2.sort();
           }
-          const size = this.ignoreUndefined ? this.countWithoutUndefined(object, keys) : keys.length;
+          const size = this.ignoreUndefined ? this.countWithoutUndefined(object, keys2) : keys2.length;
           if (size < 16) {
             this.writeU8(128 + size);
           } else if (size < 65536) {
@@ -695,7 +695,7 @@ var __RunePixel3DRuntime = (() => {
           } else {
             throw new Error(`Too large map object: ${size}`);
           }
-          for (const key2 of keys) {
+          for (const key2 of keys2) {
             const value = object[key2];
             if (!(this.ignoreUndefined && value === void 0)) {
               this.encodeString(key2);
@@ -2280,6 +2280,13 @@ var __RunePixel3DRuntime = (() => {
       this.config = config;
       this.status = "session";
       this.previous = "";
+      this.elapsed = 0;
+      if (config.interval_ticks !== void 0 && (!Number.isInteger(config.interval_ticks) || config.interval_ticks < 1 || config.interval_ticks > 3600)) {
+        throw new Error("Persistence interval_ticks must be an integer from 1 to 3600");
+      }
+      if (config.revision !== void 0 && !/^[A-Za-z_]\w*$/.test(config.revision)) {
+        throw new Error("Persistence revision must name a state field");
+      }
     }
     load(defaults) {
       const raw = getStorageItem("rune-pixel-" + this.config.key);
@@ -2294,8 +2301,26 @@ var __RunePixel3DRuntime = (() => {
         return defaults;
       }
     }
-    flush(value) {
+    tick(value, revision) {
+      this.checkRevision(revision);
+      if (++this.elapsed >= (this.config.interval_ticks ?? 1)) this.flush(value, revision);
+    }
+    persist(state, immediate = true) {
+      const revision = this.config.revision ? state[this.config.revision] : void 0;
+      if (revision !== void 0 && typeof revision !== "number") throw new Error("Persistence revision must be a number");
+      if (immediate) this.flush(state[this.config.state], revision);
+      else this.tick(state[this.config.state], revision);
+    }
+    checkRevision(revision) {
+      if (this.config.revision !== void 0 && (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0)) throw new Error("Persistence revision must be a nonnegative safe integer");
+    }
+    flush(value, revision) {
+      this.checkRevision(revision);
+      this.elapsed = 0;
+      if (this.config.revision !== void 0 && value === this.previousValue && revision === this.previousRevision) return;
       const json = JSON.stringify({ version: 1, data: value });
+      this.previousValue = value;
+      this.previousRevision = revision;
       if (json === this.previous) return;
       setStorageItem("rune-pixel-" + this.config.key, json);
       this.previous = json;
@@ -2305,6 +2330,9 @@ var __RunePixel3DRuntime = (() => {
 
   // src/context.ts
   var _ctx = null;
+  function currentContext() {
+    return _ctx;
+  }
   function ctx() {
     if (!_ctx) throw new Error("RuneWeb context not initialized \u2014 call boot() first");
     return _ctx;
@@ -2685,7 +2713,7 @@ var __RunePixel3DRuntime = (() => {
       } else if (t.value === "grid" && !["", ".", "["].includes(peek())) {
         const cols = expression(8);
         expect("x");
-        const rows = expression(8);
+        const rows2 = expression(8);
         if (!["at", "from"].includes(take().value)) throw new Error("Expected at or from");
         expect("(");
         const x = expression();
@@ -2703,7 +2731,7 @@ var __RunePixel3DRuntime = (() => {
           take();
           overrides = expression(8);
         }
-        left = { kind: "grid", items: [cols, rows, x, y, dx, dy, overrides] };
+        left = { kind: "grid", items: [cols, rows2, x, y, dx, dy, overrides] };
       } else if (t.value === "[") {
         const items = [];
         while (peek() !== "]") {
@@ -2866,8 +2894,8 @@ var __RunePixel3DRuntime = (() => {
         });
       }
       case "grid": {
-        const [cols, rows] = e.items.slice(0, 2).map((item) => collectionCount(ev(item)));
-        const count = collectionCount(cols * rows);
+        const [cols, rows2] = e.items.slice(0, 2).map((item) => collectionCount(ev(item)));
+        const count = collectionCount(cols * rows2);
         const [x, y, dx, dy] = e.items.slice(2, 6).map((item) => finiteNumber(ev(item)));
         return Array.from({ length: count }, (_, i) => {
           const col = i % cols, row = Math.floor(i / cols);
@@ -3162,6 +3190,78 @@ var __RunePixel3DRuntime = (() => {
     }).replace(new RegExp(OPEN, "g"), "{").replace(new RegExp(CLOSE, "g"), "}");
   }
 
+  // src/modular.ts
+  function callableName(name2, kind) {
+    const c = ctx();
+    if (!c.logicOwner) return name2;
+    const definitions2 = kind === "action" ? c.actionDefinitions : c.helperDefinitions;
+    const qualified = `${c.logicOwner.replace(/^@/, "")}.${name2}`;
+    return Object.prototype.hasOwnProperty.call(definitions2, qualified) ? qualified : name2;
+  }
+  function inLogicScope(name2, definition, receiver, run) {
+    const c = ctx(), owner = definition.scope;
+    if (c.logicOwner && !owner) throw new Error(`Scoped logic cannot call unscoped member: ${name2}`);
+    if (definition.private && c.logicOwner !== owner) throw new Error(`Private Rune-Web member: ${name2}`);
+    if (!owner && !c.logicState) return run();
+    if (!owner) return withContext({ ...c, logicState: void 0, logicOwner: void 0 }, run);
+    const state = owner.startsWith("@") ? receiver : c.app.state[owner];
+    if (!state || typeof state !== "object" || Array.isArray(state)) {
+      throw new Error(`Rune-Web ${name2} requires ${owner.startsWith("@") ? "an entity receiver" : "module state"}`);
+    }
+    return withContext({ ...c, logicState: state, logicOwner: owner }, run);
+  }
+  var moduleNames = /* @__PURE__ */ new WeakMap();
+  var readonlyValues = /* @__PURE__ */ new WeakMap();
+  function readonlyModuleValue(value, owner) {
+    if (!value || typeof value !== "object") return value;
+    let owners = readonlyValues.get(value);
+    if (!owners) {
+      owners = /* @__PURE__ */ new Map();
+      readonlyValues.set(value, owners);
+    }
+    let wrapped = owners.get(owner);
+    if (!wrapped) {
+      const app = ctx().app;
+      const guard = () => {
+        const context = currentContext();
+        if (context?.app !== app || context.logicOwner !== owner) throw new Error("Module state is read-only outside its actions");
+      };
+      wrapped = new Proxy(value, {
+        get: (target, key2) => readonlyModuleValue(Reflect.get(target, key2), owner),
+        set: (target, key2, next2) => {
+          guard();
+          return Reflect.set(target, key2, next2);
+        },
+        deleteProperty: (target, key2) => {
+          guard();
+          return Reflect.deleteProperty(target, key2);
+        },
+        defineProperty: (target, key2, property) => {
+          guard();
+          return Reflect.defineProperty(target, key2, property);
+        },
+        setPrototypeOf: (target, prototype) => {
+          guard();
+          return Reflect.setPrototypeOf(target, prototype);
+        }
+      });
+      owners.set(owner, wrapped);
+    }
+    return wrapped;
+  }
+  function moduleStateNames() {
+    const c = ctx();
+    let names = moduleNames.get(c.actionDefinitions);
+    if (!names) {
+      names = new Set([...Object.values(c.actionDefinitions), ...Object.values(c.helperDefinitions)].map((def) => def.scope).filter((owner) => Boolean(owner && !owner.startsWith("@"))));
+      moduleNames.set(c.actionDefinitions, names);
+    }
+    return names;
+  }
+  function moduleState(name2) {
+    return moduleStateNames().has(name2);
+  }
+
   // src/scope.ts
   function splitPathSegments(expr) {
     const str = String(expr || "").replace(/\[\]([a-zA-Z_$][\w$]*)/g, "[].(it.$1 == $1)");
@@ -3210,9 +3310,16 @@ var __RunePixel3DRuntime = (() => {
     return segments;
   }
   var expressionNames = /* @__PURE__ */ new Map();
+  var isolatedHelpers = /* @__PURE__ */ new WeakMap();
   function buildScope(locals, expression) {
     const c = ctx();
-    if (c.compactScopes && expression !== void 0 && Object.keys(c.helperDefinitions).length === 0) {
+    if (c.logicState) return Object.assign({}, c.logicState, locals);
+    let isolated = isolatedHelpers.get(c.helperDefinitions);
+    if (isolated === void 0) {
+      isolated = Object.values(c.helperDefinitions).every((def) => Boolean(def.scope || def.entity));
+      isolatedHelpers.set(c.helperDefinitions, isolated);
+    }
+    if (c.compactScopes && expression !== void 0 && isolated) {
       let names = expressionNames.get(expression);
       if (!names) {
         const bindings = new Set(expression.match(/[A-Za-z_$][\w$]*/g) || []);
@@ -3223,18 +3330,22 @@ var __RunePixel3DRuntime = (() => {
         if (expressionNames.size >= 4096) expressionNames.clear();
         expressionNames.set(expression, names);
       }
-      const scope = {};
+      const scope2 = {};
       for (const name2 of names) {
         for (const source of [locals, c.app.derived, c.app.state]) {
           if (source && Object.prototype.propertyIsEnumerable.call(source, name2)) {
-            scope[name2] = source[name2];
+            scope2[name2] = source === c.app.state && moduleState(name2) ? readonlyModuleValue(source[name2], name2) : source[name2];
             break;
           }
         }
       }
-      return scope;
+      return scope2;
     }
-    return Object.assign({}, c.app.state, c.app.derived, locals || {});
+    const scope = Object.assign({}, c.app.state, c.app.derived, locals || {});
+    for (const name2 of moduleStateNames()) {
+      if (scope[name2] === c.app.state[name2]) scope[name2] = readonlyModuleValue(scope[name2], name2);
+    }
+    return scope;
   }
 
   // src/pixel3d/math.ts
@@ -4037,6 +4148,7 @@ var __RunePixel3DRuntime = (() => {
     return hit;
   }
   function terrainEntry(origin, direction, end) {
+    if (origin === 0 && direction < 0) return Infinity;
     if (origin <= 0 && direction > 0) return -origin / direction;
     if (origin >= end && direction < 0) return (end - origin) / direction;
     return origin < 0 || origin >= end ? Infinity : -Infinity;
@@ -4173,7 +4285,7 @@ var __RunePixel3DRuntime = (() => {
     const a = angle * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
     const scale = Math.tan(fov * Math.PI / 360);
     const columns = cached?.columns.length === width * 4 ? cached.columns : new Float64Array(width * 4);
-    const rows = cached?.rows.length === height * 2 ? cached.rows : new Float64Array(height * 2);
+    const rows2 = cached?.rows.length === height * 2 ? cached.rows : new Float64Array(height * 2);
     const longitudes = cached?.longitudes.length === width ? cached.longitudes : new Float64Array(width);
     for (let x = 0; x < width; x++) {
       const u = (2 * x / width - 1) * scale, i = x * 4;
@@ -4186,10 +4298,10 @@ var __RunePixel3DRuntime = (() => {
     }
     for (let y = 0; y < height; y++) {
       const rz = (height / 2 - y - 0.5) / height;
-      rows[y * 2] = rz;
-      rows[y * 2 + 1] = Math.abs(1 / rz);
+      rows2[y * 2] = rz;
+      rows2[y * 2 + 1] = Math.abs(1 / rz);
     }
-    cached = { width, height, angle, fov, columns, rows, longitudes };
+    cached = { width, height, angle, fov, columns, rows: rows2, longitudes };
     cameraRayScratch.set(depth, cached);
     return cached;
   }
@@ -4268,8 +4380,8 @@ var __RunePixel3DRuntime = (() => {
     const eye = (camera.z ?? 0) + 1.25, a = camera.angle * Math.PI / 180, p = (camera.pitch ?? 0) * Math.PI / 180;
     const ca = Math.cos(a), sa = Math.sin(a), cp = Math.cos(p), sp = Math.sin(p);
     const scale = Math.tan(fov * Math.PI / 360);
-    if (![camera.x, camera.y, eye, camera.angle, camera.pitch ?? 0].every(Number.isFinite) || camera.x < 0 || camera.y < 0 || camera.x >= world.width || camera.y >= world.height || eye < 0 || eye >= world.depth || Math.abs(camera.pitch ?? 0) > 85) {
-      throw new Error("Voxel camera must be finite, inside the world, with pitch between -85 and 85 degrees");
+    if (![camera.x, camera.y, eye, camera.angle, camera.pitch ?? 0].every(Number.isFinite) || Math.abs(camera.pitch ?? 0) > 85) {
+      throw new Error("Voxel camera must be finite, with pitch between -85 and 85 degrees");
     }
     if (pose) {
       if (!Array.isArray(pose.pivot) || pose.pivot.length !== 2 || !Array.isArray(pose.position) || pose.position.length !== 2 || ![...pose.pivot, ...pose.position, pose.angle].every(Number.isFinite)) {
@@ -4295,12 +4407,12 @@ var __RunePixel3DRuntime = (() => {
       origin.z = pose.pivot[1] - s * y + c * z;
     }
     const rays = cameraRays(camera, fov, width, height, depth);
-    const needsTerrainEntry = pose && (origin.x <= 0 || origin.x >= world.width || origin.y <= 0 || origin.y >= world.height || origin.z <= 0 || origin.z >= world.depth);
+    const needsTerrainEntry = origin.x <= 0 || origin.x >= world.width || origin.y <= 0 || origin.y >= world.height || origin.z <= 0 || origin.z >= world.depth;
     const hitOutput = { x: 0, y: 0, z: 0, block: 0, distance: 0, face: 0 };
     const maxDistance = Math.min(Math.hypot(world.width, world.height, world.depth), world.renderDistance ?? Infinity);
     const occupancy = preparedChunks ?? prepareVoxelChunks(world);
     const chunks = (!pose || Math.min(world.width, world.height, world.depth) > 8) && occupancy.count < occupancy.width * occupancy.height * occupancy.depth * 0.6 ? occupancy : void 0;
-    const crossings = !pose && rays && chunks && world.width <= 256 && world.height <= 256 ? rayCrossings(world, origin, rays, depth) : void 0;
+    const crossings = !pose && !needsTerrainEntry && rays && chunks && world.width <= 256 && world.height <= 256 ? rayCrossings(world, origin, rays, depth) : void 0;
     const visibleTiles = sourceStore && sourceStore.raw.size <= 1024 ? visibleVoxelTiles(sourceStore, origin, ca, sa, cp, sp, c, s, scale, width, height, depth) : void 0;
     const tileWidth = Math.ceil(width / 8);
     const horizon = sky ? (4278190080 | sky.horizon) >>> 0 : 4281608224;
@@ -4658,11 +4770,11 @@ var __RunePixel3DRuntime = (() => {
     }
     if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
       try {
-        const keys = scope ? Object.keys(scope).filter(
+        const keys2 = scope ? Object.keys(scope).filter(
           (k) => k !== "this" && /^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(k)
         ) : [];
-        const vals = keys.map((k) => scope[k]);
-        return new Function(...keys, `return (${trimmed});`)(...vals);
+        const vals = keys2.map((k) => scope[k]);
+        return new Function(...keys2, `return (${trimmed});`)(...vals);
       } catch (_err) {
         return void 0;
       }
@@ -4705,29 +4817,32 @@ var __RunePixel3DRuntime = (() => {
     if (expr.includes(".") || expr.includes("[")) return void 0;
     return normalizeLiteral(expr);
   }
+  var entityConstructionDepth = 0;
   function parseHelperCall(expr) {
     const trimmed = String(expr || "").trim();
     if (!trimmed) return null;
-    const { helperDefinitions } = ctx();
-    const parenMatch = trimmed.match(/^([A-Za-z_][\w-]*)\((.*)?\)$/);
-    if (parenMatch && helperDefinitions[parenMatch[1]]) {
+    const context = currentContext();
+    if (!context) return null;
+    const { helperDefinitions } = context;
+    const parenMatch = trimmed.match(/^([A-Za-z_][\w.-]*)\((.*)?\)$/);
+    if (parenMatch && helperDefinitions[callableName(parenMatch[1], "helper")]) {
       return {
-        name: parenMatch[1],
+        name: callableName(parenMatch[1], "helper"),
         args: parenMatch[2] ? splitTopLevel(parenMatch[2], ",") : []
       };
     }
     const firstSpace = trimmed.indexOf(" ");
     if (firstSpace > 0) {
       const name2 = trimmed.slice(0, firstSpace);
-      if (helperDefinitions[name2]) {
+      if (helperDefinitions[callableName(name2, "helper")]) {
         return {
-          name: name2,
+          name: callableName(name2, "helper"),
           args: trimmed.slice(firstSpace + 1).split(/\s+/).filter(Boolean)
         };
       }
     }
-    if (helperDefinitions[trimmed]) {
-      return { name: trimmed, args: [] };
+    if (helperDefinitions[callableName(trimmed, "helper")]) {
+      return { name: callableName(trimmed, "helper"), args: [] };
     }
     return null;
   }
@@ -4735,23 +4850,48 @@ var __RunePixel3DRuntime = (() => {
     const { helperDefinitions } = ctx();
     const helper = helperDefinitions[name2];
     if (!helper) return void 0;
-    const helperLocals = Object.assign({}, scope || {});
+    if (helper.entity) {
+      if (args.length > 2) throw new Error(`${name2} accepts id and optional fields`);
+      if (typeof args[0] !== "string" || !args[0]) throw new Error(`${name2} requires a nonempty stable string id`);
+      const fields = args[1] === void 0 ? {} : args[1];
+      if (!fields || typeof fields !== "object" || Array.isArray(fields)) throw new Error(`${name2} fields must be a record`);
+      for (const key2 of Object.keys(fields)) {
+        if (!Object.prototype.hasOwnProperty.call(helper.entity, key2)) throw new Error(`Unknown ${name2} field: ${key2}`);
+      }
+      if (entityConstructionDepth >= MAX_DEPTH) throw new Error(`Entity composition is too deep or cyclic: ${name2}`);
+      entityConstructionDepth++;
+      try {
+        const value = { id: args[0], __type: name2 };
+        for (const [key2, expression] of Object.entries(helper.entity)) {
+          value[key2] = Object.prototype.hasOwnProperty.call(fields, key2) ? Reflect.get(fields, key2) : evaluateExpression(expression, { id: args[0] }, depth + 1);
+        }
+        return value;
+      } finally {
+        entityConstructionDepth--;
+      }
+    }
+    const helperLocals = helper.scope ? {} : Object.assign({}, scope);
     (helper.params || []).forEach((param, index2) => {
       helperLocals[param] = args[index2];
     });
-    for (const line of helper.body || []) {
-      const trimmed = String(line || "").trim();
-      if (trimmed.startsWith("return ")) {
-        return evaluateExpression(
-          trimmed.slice(7),
-          buildScope(helperLocals),
-          depth
-        );
+    const result = inLogicScope(name2, helper, void 0, () => {
+      for (const line of helper.body || []) {
+        const trimmed = String(line || "").trim();
+        if (trimmed.startsWith("return ")) {
+          return evaluateExpression(
+            trimmed.slice(7),
+            buildScope(helperLocals),
+            depth
+          );
+        }
       }
-    }
-    return void 0;
+      return void 0;
+    });
+    return helper.scope && ctx().logicOwner !== helper.scope ? readonlyModuleValue(result, helper.scope) : result;
   }
   var exprCache = /* @__PURE__ */ new Map();
+  var helperContextIds = /* @__PURE__ */ new WeakMap();
+  var nextHelperContextId = 1;
   var MAX_CACHE_SIZE = 8192;
   function compilePath(expr) {
     const segments = splitPathSegments(expr);
@@ -5399,13 +5539,23 @@ var __RunePixel3DRuntime = (() => {
     if ((depth || 0) > MAX_DEPTH) return void 0;
     const trimmed = String(expr || "").trim();
     if (!trimmed) return void 0;
-    let compiled = exprCache.get(trimmed);
+    const context = currentContext();
+    let contextId = 0;
+    if (context) {
+      contextId = helperContextIds.get(context.helperDefinitions) ?? 0;
+      if (!contextId) {
+        contextId = nextHelperContextId++;
+        helperContextIds.set(context.helperDefinitions, contextId);
+      }
+    }
+    const cacheKey = `${contextId}:${context?.logicOwner ?? ""}\0${trimmed}`;
+    let compiled = exprCache.get(cacheKey);
     if (!compiled) {
       compiled = compileExpression(trimmed, depth || 0);
       if (exprCache.size >= MAX_CACHE_SIZE) {
         exprCache.clear();
       }
-      exprCache.set(trimmed, compiled);
+      exprCache.set(cacheKey, compiled);
     }
     return compiled(scope);
   }
@@ -6362,8 +6512,8 @@ var __RunePixel3DRuntime = (() => {
         case "headers": {
           if (!isObject(item)) throw new FetchError("fetch: headers must be an object");
           const headers = new Headers();
-          for (const [header2, value2] of Object.entries(item)) {
-            const name2 = header2.toLowerCase();
+          for (const [header3, value2] of Object.entries(item)) {
+            const name2 = header3.toLowerCase();
             if (!/^[!#$%&'*+.^_`|~0-9a-z-]+$/.test(name2)) throw new FetchError("fetch: invalid header name");
             if (forbiddenHeaders.has(name2) || name2.startsWith("proxy-") || name2.startsWith("sec-")) {
               throw new FetchError(`fetch: request header ${name2} is not supported`);
@@ -6488,7 +6638,8 @@ var __RunePixel3DRuntime = (() => {
     return { target: match[1], kind: match[2], urlExpr: match[3], onError: match[4] };
   }
   function runFetchAssignment(pending, locals) {
-    return Promise.resolve().then(() => runRequest(pending.kind, pending.urlExpr, locals));
+    const context = ctx();
+    return Promise.resolve().then(() => withContext(context, () => runRequest(pending.kind, pending.urlExpr, locals)));
   }
   function runRequest(kind, request2, locals) {
     const options = request2.match(/\s+options\s+([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)$/);
@@ -6512,9 +6663,10 @@ var __RunePixel3DRuntime = (() => {
       const match = statement.trim().match(new RegExp(`^${name2}\\s+(.+?)\\s+then\\s+(\\S+)(?:\\s+catch\\s+(\\S+))?$`));
       if (!match) return void 0;
       const [, urlExpr, onSuccess, onError] = match;
-      Promise.resolve().then(() => runRequest(name2, urlExpr, locals)).then(
-        (value) => deliver(onSuccess, value),
-        (error) => reportFetchFailure(error, onError)
+      const context = ctx();
+      Promise.resolve().then(() => withContext(context, () => runRequest(name2, urlExpr, locals))).then(
+        (value) => withContext(context, () => deliver(onSuccess, value)),
+        (error) => withContext(context, () => reportFetchFailure(error, onError))
       );
       return true;
     };
@@ -8286,6 +8438,7 @@ var __RunePixel3DRuntime = (() => {
     const segments = splitPathSegments(pathExpr);
     if (!segments.length) return;
     const baseKey = segments[0];
+    if (!ctx().logicState && moduleState(baseKey)) throw new Error(`Module state is read-only outside its actions: ${baseKey}`);
     let current;
     if (locals && Object.prototype.hasOwnProperty.call(locals, baseKey)) {
       current = locals[baseKey];
@@ -8295,9 +8448,14 @@ var __RunePixel3DRuntime = (() => {
         return;
       }
     } else {
-      current = ctx().app.state[baseKey];
+      const state = ctx().logicState ?? ctx().app.state;
+      if (ctx().logicOwner?.startsWith("@") && (baseKey === "id" || baseKey === "__type")) {
+        throw new Error(`Entity identity is immutable: ${baseKey}`);
+      }
+      if (ctx().logicState && !Object.prototype.hasOwnProperty.call(state, baseKey)) throw new Error(`Undeclared scoped state: ${baseKey}`);
+      current = state[baseKey];
       if (segments.length === 1) {
-        ctx().app.state[baseKey] = value;
+        state[baseKey] = value;
         entitiesChanged(value);
         return;
       }
@@ -8332,6 +8490,7 @@ var __RunePixel3DRuntime = (() => {
       }
     }
     const finalRawKey = segments[segments.length - 1];
+    if (current && typeof current === "object" && "__type" in current && (finalRawKey === "id" || finalRawKey === "__type")) throw new Error(`Entity identity is immutable: ${finalRawKey}`);
     const scopeValue = buildScope(locals, pathExpr);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
@@ -8348,6 +8507,7 @@ var __RunePixel3DRuntime = (() => {
       const innerExpr = finalRawKey.slice(1, -1);
       const lookup = evaluateExpression(innerExpr, scopeValue, 0);
       const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+      if (current && typeof current === "object" && "__type" in current && (finalKey === "id" || finalKey === "__type")) throw new Error(`Entity identity is immutable: ${finalKey}`);
       current[finalKey] = value;
       entitiesChanged(current);
       entityMoved(current);
@@ -8360,6 +8520,7 @@ var __RunePixel3DRuntime = (() => {
     const segments = splitPathSegments(pathExpr);
     if (!segments.length) return;
     const baseKey = segments[0];
+    if (!ctx().logicState && moduleState(baseKey)) throw new Error(`Module state is read-only outside its actions: ${baseKey}`);
     let current;
     if (locals && Object.prototype.hasOwnProperty.call(locals, baseKey)) {
       current = locals[baseKey];
@@ -8368,9 +8529,12 @@ var __RunePixel3DRuntime = (() => {
         return;
       }
     } else {
-      current = ctx().app.state[baseKey];
+      if (ctx().logicOwner?.startsWith("@") && (baseKey === "id" || baseKey === "__type")) {
+        throw new Error(`Entity identity is immutable: ${baseKey}`);
+      }
+      current = (ctx().logicState ?? ctx().app.state)[baseKey];
       if (segments.length === 1) {
-        delete ctx().app.state[baseKey];
+        delete (ctx().logicState ?? ctx().app.state)[baseKey];
         return;
       }
     }
@@ -8400,6 +8564,7 @@ var __RunePixel3DRuntime = (() => {
       }
     }
     const finalRawKey = segments[segments.length - 1];
+    if (current && typeof current === "object" && "__type" in current && (finalRawKey === "id" || finalRawKey === "__type")) throw new Error(`Entity identity is immutable: ${finalRawKey}`);
     const scopeValue = buildScope(locals);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
@@ -8415,6 +8580,7 @@ var __RunePixel3DRuntime = (() => {
       const innerExpr = finalRawKey.slice(1, -1);
       const lookup = evaluateExpression(innerExpr, scopeValue, 0);
       const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+      if (current && typeof current === "object" && "__type" in current && (finalKey === "id" || finalKey === "__type")) throw new Error(`Entity identity is immutable: ${finalKey}`);
       if (Array.isArray(current) && typeof finalKey === "number") {
         current.splice(finalKey, 1);
         entitiesChanged(current);
@@ -8440,8 +8606,11 @@ var __RunePixel3DRuntime = (() => {
     }
     if (trimmed.startsWith("call ")) {
       const rest = trimmed.slice(5).trim();
-      const match = rest.match(/^([a-zA-Z_][\w]*)(?:\s+(.*))?$/);
-      if (!match || !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, match[1])) {
+      const match = rest.match(/^([a-zA-Z_][\w]*(?:\.[a-zA-Z_][\w]*)*)(?:\s+(.*))?$/);
+      if (!match) {
+        throw new Error(`Unknown Rune-Web action: ${rest}`);
+      }
+      if (!match[1].includes(".") && !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, callableName(match[1], "action"))) {
         throw new Error(`Unknown Rune-Web action: ${rest}`);
       }
       const args = match[2] ? splitTopLevel(match[2], ",").map((arg) => evaluateExpression(arg, buildScope(locals, trimmed))) : [];
@@ -9112,17 +9281,18 @@ var __RunePixel3DRuntime = (() => {
     return true;
   }
   function suspendForFetch(pending, locals, rest) {
+    const context = ctx();
     runFetchAssignment(pending, locals).then(
-      (value) => {
+      (value) => withContext(context, () => {
         try {
           assignPath(pending.target, value, locals);
           executeSteps(rest, locals);
         } catch (error) {
           console.error(error);
         }
-        ctx().app.render();
-      },
-      (error) => reportFetchFailure(error, pending.onError)
+        context.app.render();
+      }),
+      (error) => withContext(context, () => reportFetchFailure(error, pending.onError))
     );
   }
   function executeSteps(steps, locals, nested = false) {
@@ -9664,21 +9834,32 @@ var __RunePixel3DRuntime = (() => {
       render,
       invokeAction(name2, args, locals) {
         const context = ctx();
-        const def = context.actionDefinitions[name2];
+        name2 = callableName(name2, "action");
+        let def = context.actionDefinitions[name2];
+        let receiver;
+        if (def?.scope?.startsWith("@") && def.scope === context.logicOwner) receiver = context.logicState;
+        if (!def && name2.includes(".")) {
+          const dot = name2.lastIndexOf(".");
+          const value = evaluateExpression(name2.slice(0, dot), buildScope(locals || {}));
+          if (value && typeof value === "object" && !Array.isArray(value)) {
+            receiver = value;
+            const type = receiver.__type;
+            if (typeof type === "string") def = context.actionDefinitions[`${type}.${name2.slice(dot + 1)}`];
+          }
+        }
         if (!def) {
+          if (name2.includes(".") || context.logicOwner) throw new Error(`Unknown Rune-Web action: ${name2}`);
           if (typeof window !== "undefined" && typeof window[name2] === "function") {
             window[name2](...args);
           }
           return;
         }
-        const scopedLocals = Object.assign(
-          {},
-          locals || {}
-        );
+        const scopedLocals = def.scope ? {} : Object.assign({}, locals);
+        if (receiver) scopedLocals.self = receiver;
         (def.params || []).forEach((param, index2) => {
           scopedLocals[param] = args[index2];
         });
-        executeSteps(def.steps || [], scopedLocals);
+        inLogicScope(name2, def, receiver, () => executeSteps(def.steps || [], scopedLocals));
       }
     };
   }
@@ -9854,6 +10035,8 @@ var __RunePixel3DRuntime = (() => {
       this.paneDepth = new Float64Array(0);
       this.paneAlpha = new Uint8Array(0);
       this.panes = [];
+      this.shadowCache = [];
+      this.shadowList = [];
       this.emission = { width: 0, pixels: new Int32Array(0), depths: new Float64Array(0), colors: new Uint32Array(0) };
     }
     begin(width, height) {
@@ -9908,6 +10091,24 @@ var __RunePixel3DRuntime = (() => {
       const haze = world ? Math.max(0, Math.min(1, (Math.abs(dirX) - 0.35) / 0.4)) * Math.max(0, Math.min(1, (0.8 - Math.abs(view.sp)) / 0.25)) : 0;
       this.combine(buffer, depth, this.buildGlow(depth), haze, horizon);
     }
+    prepareDeferred(depth, camera, dirX, dirY, fov, rowOrigin, world, things, models, horizon) {
+      const view = viewOf(camera, dirX, dirY, fov, rowOrigin);
+      for (const pane of this.panes) this.tintPane(view, pane);
+      const { colors, pixels, depths } = this.emission;
+      for (let i = 0; i < colors.length; i++) {
+        if (colors[i] && depth[pixels[i]] !== depths[i]) colors[i] = 0;
+      }
+      return {
+        emission: this.emission,
+        tileWidth: this.tileWidth,
+        tileHeight: this.tileHeight,
+        paneDepth: this.paneDepth,
+        paneAlpha: this.paneAlpha,
+        shadows: world ? this.shadowPlanes(world, things, models) : [],
+        haze: world ? Math.max(0, Math.min(1, (Math.abs(dirX) - 0.35) / 0.4)) * Math.max(0, Math.min(1, (0.8 - Math.abs(view.sp)) / 0.25)) : 0,
+        horizon: horizon ?? FALLBACK_HAZE
+      };
+    }
     combine(buffer, depth, bloom, haze, horizon) {
       const width = this.width, height = this.height;
       const hazeTint = horizon ?? FALLBACK_HAZE;
@@ -9935,7 +10136,7 @@ var __RunePixel3DRuntime = (() => {
             if (haze && distance > 22 && distance < Infinity) {
               pixel = blendColor(pixel, hazeTint, haze * Math.min(0.3, (distance - 22) * 8e-3));
             }
-            if (distance > paneDepth) pixel = blendColor(pixel, GLASS_TINT, tint / 255);
+            if (distance > paneDepth + 1e-5) pixel = blendColor(pixel, GLASS_TINT, tint / 255);
             const glow = startGlow || farGlow ? mixGlow(startGlow, farGlow, i - row - left) : 0;
             buffer[i] = glow ? addColor(pixel, glow) : pixel;
           }
@@ -10012,7 +10213,10 @@ var __RunePixel3DRuntime = (() => {
         }
       }
     }
-    shadows(buffer, depth, view, world, things, models) {
+    shadowPlanes(world, things, models) {
+      var _a;
+      const shadows = this.shadowList;
+      shadows.length = 0;
       for (const thing of things) {
         const radius = thing.model && models[thing.model]?.contactShadow;
         if (!radius || thing.visible === false || (thing.dissolve ?? 0) >= 1 || thing.z === void 0) continue;
@@ -10026,7 +10230,7 @@ var __RunePixel3DRuntime = (() => {
             break;
           }
         }
-        if (floor === void 0 && !this.panes.length) {
+        if (floor === void 0) {
           const below = Math.floor(thing.z - 0.05);
           for (let z = below; z >= Math.max(0, below - 2); z--) {
             if (voxelGet(world, Math.floor(thing.x), Math.floor(thing.y), z)) {
@@ -10037,9 +10241,26 @@ var __RunePixel3DRuntime = (() => {
         }
         if (floor === void 0) continue;
         const scale = thing.scale ?? 1, halfA = radius * scale, halfB = halfA * 0.77;
+        const strength = 0.33 * Math.max(0, 1 - (thing.z - floor) * 0.6) * (1 - (thing.dissolve ?? 0));
+        const index2 = shadows.length;
+        const shadow = (_a = this.shadowCache)[index2] ?? (_a[index2] = { x: 0, y: 0, z: 0, halfA: 0, halfB: 0, strength: 0, onGlass: false });
+        shadow.x = thing.x;
+        shadow.y = thing.y;
+        shadow.z = floor;
+        shadow.halfA = halfA;
+        shadow.halfB = halfB;
+        shadow.strength = strength;
+        shadow.onGlass = onGlass;
+        shadows.push(shadow);
+      }
+      return shadows;
+    }
+    shadows(buffer, depth, view, world, things, models) {
+      for (const shadow of this.shadowPlanes(world, things, models)) {
+        const { x: shadowX, y: shadowY, z: floor, halfA, halfB, strength, onGlass } = shadow;
         const bounds = this.bounds(view, {
-          x: thing.x,
-          y: thing.y,
+          x: shadowX,
+          y: shadowY,
           z: floor,
           ax: 1,
           ay: 0,
@@ -10048,11 +10269,10 @@ var __RunePixel3DRuntime = (() => {
           by: 1,
           halfA,
           halfB,
-          scale
+          scale: 1
         }, 1);
         if (!bounds) continue;
         const [left, top, right, bottom] = bounds;
-        const strength = 0.33 * Math.max(0, 1 - (thing.z - floor) * 0.6) * (1 - (thing.dissolve ?? 0));
         for (let y = top; y < bottom; y++) {
           const up = (view.rowOrigin - y - 0.5) / this.height;
           const rz = view.sp + view.cp * up;
@@ -10063,8 +10283,8 @@ var __RunePixel3DRuntime = (() => {
             const i = y * this.width + x;
             if (onGlass ? depth[i] < distance - 0.02 : Math.abs(depth[i] - distance) > 0.055) continue;
             const side = (2 * x / this.width - 1) * view.fov;
-            const dx = (view.x - thing.x + distance * (view.dirX * heading - view.dirY * side)) / halfA;
-            const dy = (view.y - thing.y + distance * (view.dirY * heading + view.dirX * side)) / halfB;
+            const dx = (view.x - shadowX + distance * (view.dirX * heading - view.dirY * side)) / halfA;
+            const dy = (view.y - shadowY + distance * (view.dirY * heading + view.dirX * side)) / halfB;
             const fade = 1 - dx * dx - dy * dy;
             if (fade > 0) buffer[i] = blendColor(buffer[i], 1050891, fade * strength);
           }
@@ -10080,6 +10300,21 @@ var __RunePixel3DRuntime = (() => {
   function fragmentNoise(x, y) {
     const hash = Math.imul(Math.floor(x / 2), 73856093) ^ Math.imul(Math.floor(y / 2), 19349663);
     return (Math.imul(hash ^ hash >>> 13, 1274126177) >>> 0) / 4294967296;
+  }
+  var geometryCache = /* @__PURE__ */ new WeakMap();
+  function geometry(block) {
+    let cached = geometryCache.get(block);
+    if (!cached || block.from[0] !== cached.from[0] || block.from[1] !== cached.from[1] || block.from[2] !== cached.from[2] || block.size[0] !== cached.size[0] || block.size[1] !== cached.size[1] || block.size[2] !== cached.size[2]) {
+      const [x, y, z] = block.from, [w, h, d] = block.size;
+      cached = {
+        from: [x, y, z],
+        size: [w, h, d],
+        max: [x + w, y + h, z + d],
+        center: [x + w / 2, y + h / 2, z + d / 2]
+      };
+      geometryCache.set(block, cached);
+    }
+    return cached;
   }
   function renderModel(model, instance, camera, dirX, dirY, fovScale, width, height, buffer, depth, emission, haze = 0, hazeColor = 0) {
     const scale = instance.scale ?? 1;
@@ -10105,8 +10340,7 @@ var __RunePixel3DRuntime = (() => {
       origin[2] = (x * ts + z * tc) / axialScale;
     }
     for (const block of model.blocks) {
-      const max = block.from.map((v, i) => v + block.size[i]);
-      const center = block.from.map((v, i) => v + block.size[i] / 2);
+      const { max, center } = geometry(block);
       let left = width, right = 0, top = height, bottom = 0, clipped = false, frontCorners = 0;
       let outsideLeft = 0, outsideRight = 0, outsideTop = 0, outsideBottom = 0;
       for (let corner = 0; corner < 8; corner++) {
@@ -10242,10 +10476,210 @@ var __RunePixel3DRuntime = (() => {
     }
   }
 
+  // src/pixel3d/on_screen_keyboard.ts
+  var rows = [
+    [..."QWERTYUIOP"],
+    [..."ASDFGHJKL"],
+    [..."ZXCVBNM"],
+    [..."1234567890", "-", "'"],
+    ["SHIFT", "SPACE", "DELETE", "CANCEL", "SAVE"]
+  ];
+  var keys = rows.flat();
+  function validateKeyboard(value) {
+    if (!value || typeof value.title !== "string" || typeof value.value !== "string" || !Number.isInteger(value.maxLength) || value.maxLength < 1 || value.maxLength > 128 || value.value.length > value.maxLength || !["submitAction", "cancelAction"].every((k) => typeof Reflect.get(value, k) === "string" && Reflect.get(value, k).length > 0) || value.changeAction !== void 0 && (typeof value.changeAction !== "string" || !value.changeAction) || value.width !== void 0 && (!Number.isInteger(value.width) || value.width < 240 || value.width > 640) || value.keyHeight !== void 0 && (!Number.isInteger(value.keyHeight) || value.keyHeight < 18 || value.keyHeight > 48) || value.gap !== void 0 && (!Number.isInteger(value.gap) || value.gap < 1 || value.gap > 12) || value.textScale !== void 0 && value.textScale !== 1 && value.textScale !== 2) {
+      throw new Error("Pixel-3d keyboard needs text, bounded sizing, maxLength (1-128), and submit/cancel actions");
+    }
+  }
+  var OnScreenKeyboard = class {
+    constructor() {
+      this.value = "";
+      this.focus = 0;
+      this.uppercase = false;
+      this.pressed = /* @__PURE__ */ new Set();
+      this.pads = /* @__PURE__ */ new Set();
+    }
+    seedController(held) {
+      this.pads = new Set(held);
+    }
+    sync(config) {
+      if (!config) {
+        this.config = void 0;
+        this.previousValue = void 0;
+        this.pressed.clear();
+        this.pads.clear();
+        return;
+      }
+      if (!this.config || this.previousValue !== config.value) {
+        this.value = config.value;
+        if (!this.config) {
+          this.focus = 0;
+          this.uppercase = false;
+          this.pressed.clear();
+        }
+      }
+      this.config = config;
+      this.previousValue = config.value;
+    }
+    move(dx, dy) {
+      let start = 0, row = 0;
+      while (this.focus >= start + rows[row].length) {
+        start += rows[row].length;
+        row++;
+      }
+      const col = this.focus - start;
+      if (dx) this.focus = start + (col + dx + rows[row].length) % rows[row].length;
+      if (dy) {
+        const next2 = (row + dy + rows.length) % rows.length;
+        this.focus = rows.slice(0, next2).reduce((n, r) => n + r.length, 0) + Math.min(rows[next2].length - 1, Math.round(col * (rows[next2].length - 1) / Math.max(1, rows[row].length - 1)));
+      }
+    }
+    activate(key2, invoke) {
+      const config = this.config;
+      if (!config) return;
+      if (!keys.includes(key2)) throw new Error(`Unknown on-screen keyboard key: ${key2}`);
+      if (key2 === "SAVE") {
+        invoke(config.submitAction, [{ name: this.value }]);
+        return;
+      }
+      if (key2 === "CANCEL") {
+        invoke(config.cancelAction, []);
+        return;
+      }
+      if (key2 === "SHIFT") {
+        this.uppercase = !this.uppercase;
+        return;
+      }
+      if (key2 === "DELETE") this.value = Array.from(this.value).slice(0, -1).join("");
+      else {
+        const text = key2 === "SPACE" ? " " : this.uppercase ? key2.toUpperCase() : key2.toLowerCase();
+        if (this.value.length + text.length <= config.maxLength) this.value += text;
+      }
+      if (config.changeAction) invoke(config.changeAction, [{ name: this.value }]);
+    }
+    physical(key2, down, repeat, invoke) {
+      if (!this.config) return false;
+      const label = key2 === " " ? "SPACE" : key2 === "Backspace" || key2 === "Delete" ? "DELETE" : key2 === "Enter" ? "SAVE" : key2 === "Escape" ? "CANCEL" : key2 === "Shift" ? "SHIFT" : key2.toUpperCase();
+      if (!down) {
+        this.pressed.delete(label);
+        return true;
+      }
+      this.pressed.add(label);
+      if (key2.startsWith("Arrow")) {
+        this.move(key2 === "ArrowLeft" ? -1 : key2 === "ArrowRight" ? 1 : 0, key2 === "ArrowUp" ? -1 : key2 === "ArrowDown" ? 1 : 0);
+      } else if (key2 === "Enter") {
+        if (!repeat) this.activate("SAVE", invoke);
+      } else if (key2 === "Escape") {
+        if (!repeat) this.activate("CANCEL", invoke);
+      } else if (key2 === "Backspace" || key2 === "Delete") this.activate("DELETE", invoke);
+      else if (key2.length === 1 && /^[a-zA-Z0-9 '\-]$/.test(key2)) {
+        if (this.value.length < this.config.maxLength) {
+          this.value += key2;
+          if (this.config.changeAction) invoke(this.config.changeAction, [{ name: this.value }]);
+        }
+      }
+      return true;
+    }
+    controller(pads, invoke) {
+      const held = /* @__PURE__ */ new Set();
+      for (const pad of pads) {
+        if (!pad) continue;
+        const buttons = [12, 13, 14, 15, 0, 1];
+        for (const button of buttons) {
+          if ((pad.buttons[button]?.value ?? 0) <= 0.5) continue;
+          const id = `${pad.index}:${button}`;
+          held.add(id);
+          if (this.pads.has(id)) continue;
+          if (button === 0) this.activate(keys[this.focus], invoke);
+          else if (button === 1) this.activate("CANCEL", invoke);
+          else this.move(button === 14 ? -1 : button === 15 ? 1 : 0, button === 12 ? -1 : button === 13 ? 1 : 0);
+        }
+        for (const [axis, negative, positive] of [[0, "left", "right"], [1, "up", "down"]]) {
+          const value = pad.axes[axis] ?? 0;
+          if (Math.abs(value) < 0.6) continue;
+          const id = `${pad.index}:${value < 0 ? negative : positive}`;
+          held.add(id);
+          if (!this.pads.has(id)) this.move(axis === 0 ? Math.sign(value) : 0, axis === 1 ? Math.sign(value) : 0);
+        }
+      }
+      this.pads = held;
+    }
+    render(canvas, theme) {
+      if (!this.config) return;
+      const c = this.config, layout = keyboardLayout(c, canvas.width, canvas.height);
+      const bg = theme?.background ?? 860723, ink = theme?.text ?? 15858679;
+      roundedRect(canvas, layout.x, layout.y, layout.width, layout.height, theme?.radius ?? 6, bg);
+      canvas.rect(layout.x, layout.y, layout.width, 2, theme?.accent ?? 8185036);
+      canvas.text(c.title.slice(0, Math.floor((layout.width - 72) / 8)), layout.x + 10, layout.y + 10, ink, 2);
+      canvas.text(`${this.value.length}/${c.maxLength}`, layout.x + layout.width - 48, layout.y + 12, theme?.muted ?? 10665415);
+      canvas.rect(layout.x + 10, layout.y + 28, layout.width - 20, 21, theme?.surface ?? 1587530);
+      canvas.text((this.value || "_").slice(-Math.floor((layout.width - 32) / 8)), layout.x + 16, layout.y + 35, ink, 2);
+      layout.cells.forEach((cell) => {
+        const focused = cell.index === this.focus, pressed = this.pressed.has(cell.key);
+        roundedRect(canvas, cell.x, cell.y, cell.w, cell.h, theme?.radius ?? 6, focused ? theme?.focus ?? 12845032 : theme?.border ?? 3560808);
+        roundedRect(
+          canvas,
+          cell.x + 2,
+          cell.y + 2,
+          cell.w - 4,
+          cell.h - 4,
+          Math.max(0, (theme?.radius ?? 6) - 2),
+          pressed ? theme?.accent ?? 8185036 : focused ? theme?.selected ?? 2512741 : theme?.surface ?? 1587530
+        );
+        const label = cell.key === "'" ? cell.w >= 20 ? "APOS" : "AP" : cell.key.length === 1 && !this.uppercase && !this.pressed.has("SHIFT") ? cell.key.toLowerCase() : cell.key;
+        const scale = Math.min(c.textScale ?? 1, Math.floor((cell.w - 4) / (label.length * 4)) >= 2 ? 2 : 1);
+        canvas.text(
+          label,
+          cell.x + Math.floor((cell.w - label.length * 4 * scale) / 2),
+          cell.y + Math.floor((cell.h - 5 * scale) / 2),
+          pressed ? bg : ink,
+          scale
+        );
+      });
+      canvas.text("D-PAD MOVE / A SELECT / B CANCEL", layout.x + 10, layout.y + layout.height - 12, theme?.muted ?? 10665415);
+    }
+    hits(width, height) {
+      return this.config ? keyboardLayout(this.config, width, height).cells.map((cell) => ({
+        x: cell.x,
+        y: cell.y,
+        w: cell.w,
+        h: cell.h,
+        action: "host.keyboard",
+        args: [cell.key]
+      })) : [];
+    }
+  };
+  function keyboardLayout(config, W, H) {
+    const width = Math.min(config.width ?? 480, W - 16), gap = config.gap ?? 4;
+    const keyHeight = Math.max(12, Math.min(config.keyHeight ?? 28, Math.floor((H - 90 - gap * 4) / 5)));
+    const height = 76 + keyHeight * 5 + gap * 4;
+    const x = Math.floor((W - width) / 2), y = Math.max(8, H - height - 8);
+    let index2 = 0;
+    const cells = rows.flatMap((row, r) => {
+      const w = Math.floor((width - 20 - gap * (row.length - 1)) / row.length);
+      return row.map((key2) => ({ key: key2, index: index2++, x: x + 10 + row.indexOf(key2) * (w + gap), y: y + 56 + r * (keyHeight + gap), w, h: keyHeight }));
+    });
+    return { x, y, width, height, cells };
+  }
+
   // src/pixel3d/hud.ts
   function validateHud(value, sprites = {}) {
     if (!value || typeof value !== "object") throw new Error("Pixel-3d ui must be a HUD object");
     const hud = value;
+    if ((hud.keyboard || hud.buttons || hud.callout) && hud.style !== "floating") throw new Error("Pixel-3d keyboard, buttons and callouts require a floating HUD");
+    if (hud.keyboard !== void 0) validateKeyboard(hud.keyboard);
+    if (hud.buttons !== void 0 && (!Array.isArray(hud.buttons) || hud.buttons.length > 8 || hud.buttons.some((b) => !b || !["menu", "feed", "fish", "sound", "flower", "critter"].includes(b.icon) || !["top-right", "bottom-left"].includes(b.anchor) || typeof b.label !== "string" || !b.label || typeof b.action !== "string" || !b.action || b.offset !== void 0 && (!Number.isInteger(b.offset) || b.offset < 0 || b.offset > 640) || b.size !== void 0 && (!Number.isInteger(b.size) || b.size < 24 || b.size > 64) || b.disabled !== void 0 && typeof b.disabled !== "boolean" || b.selected !== void 0 && typeof b.selected !== "boolean"))) throw new Error("Pixel-3d HUD buttons need valid icons, anchors, actions and bounded sizes");
+    if (hud.callout !== void 0) {
+      const c = hud.callout;
+      if (!c || typeof c.title !== "string" || !Array.isArray(c.lines) || c.lines.length > 6 || !c.lines.every((line) => typeof line === "string") || !c.target || ![c.target.x, c.target.y, c.target.z].every(Number.isFinite) || c.screen !== void 0 && (!c.screen || ![c.screen.x, c.screen.y].every(Number.isFinite)) || c.dismissAction !== void 0 && (typeof c.dismissAction !== "string" || !c.dismissAction) || c.width !== void 0 && (!Number.isInteger(c.width) || c.width < 140 || c.width > 400) || !Array.isArray(c.actions) || c.actions.length > 3 || !c.actions.every((a) => a && typeof a.label === "string" && typeof a.action === "string" && a.action)) {
+        throw new Error("Pixel-3d HUD callout needs a world target, text and up to three actions");
+      }
+    }
+    if (hud.theme !== void 0) {
+      const theme = hud.theme;
+      if (!theme || typeof theme !== "object" || Array.isArray(theme) || Object.entries(theme).some(([key2, color]) => key2 === "radius" ? !Number.isInteger(color) || color < 0 || color > 12 : !["background", "surface", "selected", "border", "text", "muted", "accent", "focus"].includes(key2) || !Number.isInteger(color) || color < 0 || color > 16777215)) {
+        throw new Error("HUD theme needs RGB integer colors and an optional radius from 0 to 12");
+      }
+    }
     if (hud.cinema) {
       const c = hud.cinema;
       if (!Array.isArray(c.lines) || c.lines.length > 64 || !c.lines.every((line) => typeof line === "string" && line.length <= 80) || !Number.isFinite(c.offset) || Math.abs(c.offset) > 1e4 || ![1, 2].includes(c.scale ?? 2) || !Number.isFinite(c.top ?? 0.55) || !Number.isFinite(c.bottom ?? 0.94) || (c.top ?? 0.55) < 0 || (c.bottom ?? 0.94) > 1 || (c.top ?? 0.55) >= (c.bottom ?? 0.94) || !Number.isFinite(c.spacing ?? 18) || (c.spacing ?? 18) < 12 || (c.spacing ?? 18) > 48 || !Number.isFinite(c.fade ?? 0) || (c.fade ?? 0) < 0 || (c.fade ?? 0) > 1) throw new Error("HUD cinema needs bounded text, scroll offset, viewport, scale and fade");
@@ -10281,7 +10715,10 @@ var __RunePixel3DRuntime = (() => {
     }
     if (hud.grid !== void 0) {
       const g = hud.grid;
-      if (!g || !Number.isInteger(g.columns) || g.columns < 1 || g.columns > 8 || !Array.isArray(g.items) || g.items.length > 24 || !g.items.every((it) => it && typeof it.label === "string")) {
+      if (!g || g.layout !== void 0 && g.layout !== "sidebar" || !Number.isInteger(g.columns) || g.columns < 1 || g.columns > 8 || !Array.isArray(g.items) || g.items.length > 24 || g.layout === "sidebar" && (g.columns !== 1 || g.items.length > 10) || g.textScale !== void 0 && g.textScale !== 1 && g.textScale !== 2 || g.closeOnActivate !== void 0 && (typeof g.closeOnActivate !== "boolean" || g.layout !== "sidebar" || g.closeOnActivate && !g.dismissAction) || Object.entries({ width: g.width, rowHeight: g.rowHeight, gap: g.gap, padding: g.padding }).some(([key2, n]) => n !== void 0 && (!Number.isInteger(n) || n < (key2 === "gap" ? 0 : key2 === "padding" ? 4 : key2 === "width" ? 120 : 18) || n > (key2 === "width" ? 640 : key2 === "rowHeight" ? 64 : 24))) || ["subtitle", "dismissAction", "moveAction"].some((key2) => {
+        const entry = Reflect.get(g, key2);
+        return entry !== void 0 && (typeof entry !== "string" || key2 !== "subtitle" && !entry);
+      }) || (g.dismissAction !== void 0 || g.moveAction !== void 0) && g.layout !== "sidebar" || !g.items.every((it) => it && typeof it.label === "string")) {
         throw new Error("Pixel-3d ui grid needs columns (1-8) and up to 24 labeled items");
       }
     }
@@ -10335,8 +10772,8 @@ var __RunePixel3DRuntime = (() => {
     return { panelColumns, body, bh, bw, bx, y };
   }
   function renderFloatingHud(canvas, ui, status, paused, sprites) {
-    const W = canvas.width, H = canvas.height, ink = 1518397, gold = 16767621;
-    const text = (value, x, y, color = 16777215, scale = 1) => {
+    const W = canvas.width, H = canvas.height, ink = ui.theme?.background ?? 1518397, gold = ui.theme?.accent ?? 16767621;
+    const text = (value, x, y, color = ui.theme?.text ?? 16777215, scale = 1) => {
       for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) canvas.text(value, x + dx, y + dy, ink, scale);
       canvas.text(value, x, y, color, scale);
     };
@@ -10408,7 +10845,7 @@ var __RunePixel3DRuntime = (() => {
     });
     const columns = Math.max(1, Math.floor((W - 16) / 4));
     const top = ui.meters.length ? Math.max(39, metersBottom + 5) : 8;
-    if (ui.detail) text(ui.detail.slice(0, columns), 8, top, 12381148);
+    if (ui.detail) text(ui.detail.slice(0, columns), 8, top, ui.theme?.muted ?? 12381148);
     if (ui.objective) text(ui.objective.slice(0, columns), 8, top + 10, gold);
     if (ui.heading && (status !== "playing" || paused)) {
       const heading = ui.heading.slice(0, Math.max(1, Math.floor((W - 32) / 8)));
@@ -10431,7 +10868,7 @@ var __RunePixel3DRuntime = (() => {
       });
       if (p.footer) text(p.footer.slice(0, panelColumns), bx + 10, y + bh - 11, 9105871);
     } else if (ui.grid) {
-      renderHudGrid(canvas, ui.grid, W, H, top, text);
+      renderHudGrid(canvas, ui.grid, W, H, top, text, ui.theme);
     } else if (ui.notice) {
       const lines = wrapText(ui.notice, columns - 5).slice(0, 2);
       const y = top + 25;
@@ -10442,29 +10879,218 @@ var __RunePixel3DRuntime = (() => {
     if (ui.wheel && ui.wheel.active !== false && ui.wheel.items && ui.wheel.items.length > 0 && !ui.panel && !ui.grid) {
       renderHudWheel(canvas, ui.wheel, W, H, text);
     } else if (ui.slots && ui.slots.length > 0 && !ui.panel && !ui.grid) {
-      renderHudSlots(canvas, ui.slots, W, H, text);
+      renderHudSlots(canvas, ui.slots, W, H, text, ui.theme);
     }
-    if (ui.prompt) text(ui.prompt.slice(0, columns), 8, H - 12, 14937833);
+    if (ui.prompt) text(ui.prompt.slice(0, columns), 8, H - 12, ui.theme?.muted ?? 14937833);
   }
   function gridLayout(grid, W, H) {
     const cols = Math.max(1, grid.columns);
-    const rows = Math.max(1, Math.ceil(grid.items.length / cols));
+    const rows2 = Math.max(1, Math.ceil(grid.items.length / cols));
+    const sidebar = grid.layout === "sidebar";
+    if (sidebar) {
+      const padding = grid.padding ?? 10, margin = 10, gap2 = grid.gap ?? 4;
+      const panelW2 = Math.min(grid.width ?? 220, W - margin * 2);
+      const panelX = W - margin - panelW2, padX2 = panelX + padding;
+      const headerH2 = (grid.title ? (grid.textScale ?? 1) * 5 + 12 : 4) + (grid.subtitle ? 13 : 0);
+      const footerH2 = grid.footer ? 18 : 4;
+      const available = H - margin * 2 - padding * 2 - headerH2 - footerH2 - (rows2 - 1) * gap2;
+      const cellH2 = Math.max(1, Math.min(grid.rowHeight ?? 24, Math.floor(available / rows2)));
+      const totalH2 = padding * 2 + headerH2 + rows2 * cellH2 + (rows2 - 1) * gap2 + footerH2;
+      const y02 = Math.max(margin, Math.floor((H - totalH2) / 2));
+      return {
+        cols,
+        rows: rows2,
+        padX: padX2,
+        gap: gap2,
+        cellW: panelW2 - padding * 2,
+        cellH: cellH2,
+        headerH: headerH2 + padding,
+        footerH: footerH2,
+        totalH: totalH2,
+        y0: y02,
+        panelW: panelW2,
+        panelX,
+        padding
+      };
+    }
+    const panelW = W - 16;
     const padX = 12, gap = 4;
     const cellW = Math.floor((W - padX * 2 - gap * (cols - 1)) / cols);
-    const cellH = rows <= 2 ? 22 : 18;
+    const cellH = rows2 <= 2 ? 22 : 18;
     const headerH = grid.title ? 12 : 4;
     const footerH = grid.footer ? 11 : 4;
-    const totalH = headerH + rows * cellH + (rows - 1) * gap + footerH + 6;
+    const totalH = headerH + rows2 * cellH + (rows2 - 1) * gap + footerH + 6;
     const y0 = Math.max(44, H - totalH - 16);
-    return { cols, rows, padX, gap, cellW, cellH, headerH, footerH, totalH, y0 };
+    return { cols, rows: rows2, padX, gap, cellW, cellH, headerH, footerH, totalH, y0, panelW, panelX: padX - 4, padding: 4 };
   }
-  function renderHudGrid(canvas, grid, W, H, _top, text) {
-    const { cols, padX, gap, cellW, cellH, headerH, totalH, y0 } = gridLayout(grid, W, H);
-    canvas.rect(padX - 4, y0, W - (padX - 4) * 2, totalH, 590872);
-    canvas.rect(padX - 4, y0, W - (padX - 4) * 2, 1, 62975);
-    canvas.rect(padX - 4, y0 + totalH - 1, W - (padX - 4) * 2, 1, 16719515);
+  function roundedRect(canvas, x, y, w, h, radius, color) {
+    const r = Math.max(0, Math.min(radius, Math.floor(w / 2), Math.floor(h / 2)));
+    canvas.rect(x + r, y, w - r * 2, h, color);
+    canvas.rect(x, y + r, w, h - r * 2, color);
+    for (let row = 0; row < r; row++) {
+      const inset = Math.ceil(r - Math.sqrt(r * r - (r - row - 0.5) ** 2));
+      canvas.rect(x + inset, y + row, w - inset * 2, 1, color);
+      canvas.rect(x + inset, y + h - row - 1, w - inset * 2, 1, color);
+    }
+  }
+  function buttonLayout(button, W, H) {
+    const size = button.size ?? 30, offset = button.offset ?? 0;
+    return {
+      x: button.anchor === "top-right" ? W - 10 - size - offset : 10 + offset,
+      y: button.anchor === "top-right" ? 10 : H - 10 - size,
+      w: size,
+      h: size
+    };
+  }
+  function hudButtonAt(ui, width, height, x, y) {
+    return (ui?.buttons ?? []).some((button) => {
+      const box = buttonLayout(button, width, height);
+      return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
+    });
+  }
+  function calloutLayout(callout, W) {
+    return {
+      x: 10,
+      y: 44,
+      w: Math.min(callout.width ?? 240, W - 20),
+      h: 42 + callout.lines.length * 12 + (callout.actions.length ? 30 : 0)
+    };
+  }
+  function renderWidgets(canvas, ui) {
+    const theme = ui.theme;
+    const ink = theme?.text ?? 15858679, accent = theme?.accent ?? 8185036;
+    for (const button of ui.buttons ?? []) {
+      const { x: x2, y: y2, w: w2, h: h2 } = buttonLayout(button, canvas.width, canvas.height);
+      const color = button.disabled ? theme?.muted ?? 10665415 : accent;
+      roundedRect(canvas, x2, y2, w2, h2, theme?.radius ?? 6, color);
+      roundedRect(canvas, x2 + 1, y2 + 1, w2 - 2, h2 - 2, theme?.radius ?? 6, theme?.surface ?? 1587530);
+      const cx = Math.floor(x2 + w2 / 2), cy = Math.floor(y2 + h2 / 2);
+      if (button.icon === "menu") {
+        for (const dy of [-5, 0, 5]) canvas.rect(cx - 7, cy + dy, 14, 2, color);
+      } else if (button.icon === "feed") {
+        canvas.rect(cx - 7, cy + 2, 14, 3, color);
+        canvas.rect(cx - 5, cy + 5, 10, 3, color);
+        for (const [dx, dy] of [[-4, -6], [3, -4], [-1, -1]]) canvas.rect(cx + dx, cy + dy, 2, 2, 16769142);
+      } else if (button.icon === "fish") {
+        roundedRect(canvas, cx - 8, cy - 4, 13, 9, 4, color);
+        canvas.rect(cx + 5, cy - 5, 3, 11, color);
+        canvas.rect(cx - 5, cy - 1, 2, 2, theme?.background ?? 860723);
+      } else if (button.icon === "flower") {
+        canvas.rect(cx - 1, cy, 2, 9, color);
+        canvas.rect(cx + 1, cy + 4, 5, 2, color);
+        for (const [dx, dy] of [[-5, -4], [2, -4], [-2, -8], [-2, -1]]) {
+          roundedRect(canvas, cx + dx, cy + dy, 5, 5, 2, color);
+        }
+        canvas.rect(cx - 1, cy - 4, 3, 3, 16769142);
+      } else if (button.icon === "critter") {
+        roundedRect(canvas, cx - 5, cy - 3, 10, 7, 3, color);
+        for (const dx of [-7, 5]) {
+          canvas.rect(cx + dx, cy - 6, 2, 5, color);
+          for (const dy of [0, 4, 7]) canvas.rect(cx + dx, cy + dy, 3, 1, color);
+        }
+        canvas.rect(cx - 3, cy - 2, 1, 1, ink);
+        canvas.rect(cx + 2, cy - 2, 1, 1, ink);
+      } else {
+        canvas.rect(cx - 7, cy - 3, 4, 6, color);
+        canvas.rect(cx - 3, cy - 6, 4, 12, color);
+        canvas.rect(cx + 5, cy - 4, 2, 8, color);
+        if (button.selected) canvas.rect(cx - 8, cy, 17, 2, ink);
+      }
+    }
+    const callout = ui.callout;
+    if (!callout) return;
+    const { x, y, w, h } = calloutLayout(callout, canvas.width);
+    if (callout.screen) {
+      const tx = Math.max(0, Math.min(canvas.width - 1, Math.round(callout.screen.x)));
+      const ty = Math.max(0, Math.min(canvas.height - 1, Math.round(callout.screen.y)));
+      const sx = x + w, sy = y + h / 2, count = Math.ceil(Math.max(Math.abs(tx - sx), Math.abs(ty - sy)));
+      for (let i = 0; i <= count; i++) canvas.rect(
+        Math.round(sx + (tx - sx) * i / Math.max(1, count)),
+        Math.round(sy + (ty - sy) * i / Math.max(1, count)),
+        1,
+        1,
+        accent
+      );
+      canvas.rect(tx - 2, ty - 2, 5, 5, accent);
+    }
+    roundedRect(canvas, x, y, w, h, theme?.radius ?? 6, accent);
+    roundedRect(canvas, x + 1, y + 1, w - 2, h - 2, theme?.radius ?? 6, theme?.background ?? 860723);
+    canvas.text(callout.title.slice(0, Math.floor((w - 20) / 8)), x + 10, y + 10, ink, 2);
+    callout.lines.forEach((line, i) => canvas.text(line.slice(0, Math.floor((w - 20) / 4)), x + 10, y + 29 + i * 12, theme?.muted ?? 10665415));
+    const buttonW = Math.floor((w - 20) / Math.max(1, callout.actions.length));
+    callout.actions.forEach((a, i) => {
+      canvas.rect(
+        x + 10 + i * buttonW,
+        y + h - 28,
+        buttonW - 4,
+        20,
+        callout.selected === i ? theme?.selected ?? 2512741 : theme?.surface ?? 1587530
+      );
+      canvas.text(a.label.slice(0, Math.floor((buttonW - 10) / 4)), x + 14 + i * buttonW, y + h - 21, accent);
+    });
+  }
+  function renderHudGrid(canvas, grid, W, H, _top, text, theme) {
+    const { cols, padX, gap, cellW, cellH, headerH, totalH, y0, panelW, panelX, padding } = gridLayout(grid, W, H);
+    if (grid.layout === "sidebar") {
+      const colors = {
+        background: 860723,
+        surface: 1587530,
+        selected: 2512741,
+        border: 3560808,
+        text: 15858679,
+        muted: 10665415,
+        accent: 8185036,
+        focus: 12845032,
+        ...theme
+      };
+      const radius = theme?.radius ?? 5;
+      roundedRect(canvas, panelX - 3, y0 + 4, panelW + 6, totalH, radius + 1, 463390);
+      roundedRect(canvas, panelX, y0, panelW, totalH, radius, colors.border);
+      roundedRect(canvas, panelX + 1, y0 + 1, panelW - 2, totalH - 2, radius, colors.background);
+      const labelScale = Math.min(grid.textScale ?? 1, cellH >= 28 ? 2 : 1);
+      const closeW = grid.dismissAction ? 26 : 0;
+      if (grid.title) text(
+        grid.title.slice(0, Math.max(1, Math.floor((cellW - closeW) / (4 * labelScale)))),
+        padX,
+        y0 + padding + 2,
+        colors.text,
+        labelScale
+      );
+      if (grid.subtitle) text(
+        grid.subtitle.slice(0, Math.floor(cellW / 4)),
+        padX,
+        y0 + padding + labelScale * 5 + 9,
+        colors.accent
+      );
+      if (grid.dismissAction) {
+        roundedRect(canvas, panelX + panelW - padding - 22, y0 + padding - 2, 22, 22, 4, colors.surface);
+        text("X", panelX + panelW - padding - 14, y0 + padding + 5, colors.muted, 2);
+      }
+      grid.items.forEach((item, i) => {
+        const x = padX, y = y0 + headerH + i * (cellH + gap);
+        const focus = item.selected === true;
+        roundedRect(canvas, x, y, cellW, cellH, radius, focus ? colors.focus : colors.surface);
+        if (focus) roundedRect(canvas, x + 2, y + 2, cellW - 4, cellH - 4, Math.max(0, radius - 1), colors.selected);
+        const accent = item.disabled ? colors.muted : item.color ?? colors.accent;
+        canvas.rect(x + 7, y + 7, 2, Math.max(1, cellH - 14), accent);
+        const left = x + 17, maxChars2 = Math.max(1, Math.floor((cellW - 27) / (4 * labelScale)));
+        text(item.label.slice(0, maxChars2), left, y + 6, item.disabled ? colors.muted : colors.text, labelScale);
+        const sub = item.sub || item.badge;
+        if (sub && cellH >= 22) text(
+          sub.slice(0, Math.floor((cellW - 27) / 4)),
+          left,
+          y + 6 + labelScale * 5 + 5,
+          item.disabled ? colors.muted : colors.accent
+        );
+      });
+      if (grid.footer) text(grid.footer.slice(0, Math.floor(cellW / 4)), padX, y0 + totalH - padding - 7, colors.muted);
+      return;
+    }
+    canvas.rect(padX - 4, y0, panelW, totalH, 590872);
+    canvas.rect(padX - 4, y0, panelW, 1, 62975);
+    canvas.rect(padX - 4, y0 + totalH - 1, panelW, 1, 16719515);
     if (grid.title) {
-      text(grid.title.slice(0, Math.floor((W - padX * 2) / 4)), padX, y0 + 4, 62975);
+      text(grid.title.slice(0, Math.floor((panelW - 8) / 4)), padX, y0 + 4, 62975);
     }
     const maxChars = Math.max(1, Math.floor((cellW - 6) / 4));
     grid.items.forEach((item, i) => {
@@ -10489,7 +11115,7 @@ var __RunePixel3DRuntime = (() => {
       }
     });
     if (grid.footer) {
-      text(grid.footer.slice(0, Math.floor((W - padX * 2) / 4)), padX, y0 + totalH - 9, 16770560);
+      text(grid.footer.slice(0, Math.floor((panelW - 8) / 4)), padX, y0 + totalH - 9, 16770560);
     }
   }
   function slotsLayout(slots, W, H) {
@@ -10500,19 +11126,19 @@ var __RunePixel3DRuntime = (() => {
     const y = H - 27;
     return { gap, margin, slotW, slotH, y };
   }
-  function renderHudSlots(canvas, slots, W, H, text) {
+  function renderHudSlots(canvas, slots, W, H, text, theme) {
     const { gap, margin, slotW, slotH, y } = slotsLayout(slots, W, H);
     const maxChars = Math.max(1, Math.floor((slotW - 4) / 4));
     slots.forEach((slot, i) => {
       const x = margin + i * (slotW + gap);
-      const bg = slot.selected ? 2495053 : slot.locked ? 590872 : 1247785;
-      const border = slot.selected ? 16770560 : slot.locked ? 2891853 : slot.color;
+      const bg = slot.selected ? theme?.selected ?? 2495053 : slot.locked ? theme?.background ?? 590872 : theme?.surface ?? 1247785;
+      const border = slot.selected ? theme?.focus ?? 16770560 : slot.locked ? theme?.border ?? 2891853 : theme?.border ?? slot.color;
       canvas.rect(x, y, slotW, slotH, bg);
       canvas.rect(x, y, slotW, 1, border);
       canvas.rect(x, y + slotH - 1, slotW, 1, border);
       canvas.rect(x, y, 1, slotH, border);
       canvas.rect(x + slotW - 1, y, 1, slotH, border);
-      const labelColor = slot.selected ? 16770560 : slot.locked ? 5390970 : slot.color;
+      const labelColor = slot.selected ? theme?.focus ?? 16770560 : slot.locked ? theme?.muted ?? 5390970 : theme?.text ?? slot.color;
       const label = slot.label.slice(0, maxChars);
       const tx = x + Math.max(2, Math.floor((slotW - label.length * 4) / 2));
       text(label, tx, y + 4, labelColor);
@@ -10602,6 +11228,25 @@ var __RunePixel3DRuntime = (() => {
   function collectHudHitRegions(width, height, ui, status, paused) {
     if (!ui) return [];
     const regions = [];
+    for (const button of ui.buttons ?? []) {
+      if (!button.disabled) regions.push({ ...buttonLayout(button, width, height), action: button.action, args: [] });
+    }
+    if (ui.callout) {
+      const c = ui.callout, { x, y, w, h } = calloutLayout(c, width);
+      const bw = Math.floor((w - 20) / Math.max(1, c.actions.length));
+      c.actions.forEach((a, i) => regions.push({ x: x + 10 + i * bw, y: y + h - 28, w: bw - 4, h: 20, action: a.action, args: [] }));
+      if (c.dismissAction) {
+        for (const [rx, ry, rw, rh] of [
+          [0, 0, x, height],
+          [x + w, 0, width - x - w, height],
+          [x, 0, w, y],
+          [x, y + h, w, height - y - h]
+        ]) {
+          if (rw > 0 && rh > 0) regions.push({ x: rx, y: ry, w: rw, h: rh, action: c.dismissAction, args: [] });
+        }
+      }
+      return regions;
+    }
     if (ui.panel && ui.panel.choiceActions?.length) {
       const p = ui.panel;
       const top = ui.meters.length ? 44 : 8;
@@ -10613,9 +11258,9 @@ var __RunePixel3DRuntime = (() => {
         regions.push({ x: bx + 8, y: cy - 3, w: bw - 16, h: 12, action: ca.action, args: ca.args ?? [] });
       });
     } else if (ui.grid) {
-      const { cols, padX, gap, cellW, cellH, headerH, y0 } = gridLayout(ui.grid, width, height);
+      const { cols, padX, gap, cellW, cellH, headerH, y0, panelW, panelX, totalH, padding } = gridLayout(ui.grid, width, height);
       ui.grid.items.forEach((item, i) => {
-        if (!item.action) return;
+        if (!item.action || item.disabled) return;
         const col = i % cols, row = Math.floor(i / cols);
         regions.push({
           x: padX + col * (cellW + gap),
@@ -10626,6 +11271,19 @@ var __RunePixel3DRuntime = (() => {
           args: item.args ?? []
         });
       });
+      if (ui.grid.layout === "sidebar") {
+        const action = ui.grid.dismissAction;
+        if (action) {
+          regions.push({ x: panelX + panelW - padding - 22, y: y0 + padding - 2, w: 22, h: 22, action, args: [] });
+          for (const [x, y, w, h] of [
+            [0, 0, panelX, height],
+            [panelX + panelW, 0, width - panelX - panelW, height],
+            [panelX, 0, panelW, y0],
+            [panelX, y0 + totalH, panelW, height - y0 - totalH]
+          ]) if (w > 0 && h > 0) regions.push({ x, y, w, h, action, args: [] });
+        }
+        return regions;
+      }
     }
     if (ui.wheel && ui.wheel.active !== false && ui.wheel.items && ui.wheel.items.length > 0 && status === "playing" && !paused) {
       const { items, cx, cy, radius, itemW, itemH } = wheelLayout(ui.wheel, width, height);
@@ -10693,6 +11351,7 @@ var __RunePixel3DRuntime = (() => {
     if (ui.map) renderMap(canvas, ui.map);
     if (ui.style === "floating") {
       renderFloatingHud(canvas, ui, status, paused, sprites);
+      renderWidgets(canvas, ui);
       return;
     }
     if (ui.textScale === 2) {
@@ -10755,12 +11414,12 @@ var __RunePixel3DRuntime = (() => {
       const bottom = H2 - promptLines.length * 12 - 6;
       if (ui2.panel) {
         const panel = ui2.panel;
-        const rows = Math.max(0, Math.floor((bottom - top - 8) / 12));
+        const rows2 = Math.max(0, Math.floor((bottom - top - 8) / 12));
         const title = wrapText(panel.title, columns2).slice(0, 1);
         const footer = wrapText(panel.footer, columns2).slice(0, 1);
         const choices = panel.choices.map((choice, i) => `${i === panel.selected ? ">" : " "} ${i + 1} ${choice}`.slice(0, columns2));
-        const bodyRows = Math.max(0, rows - title.length - footer.length - choices.length);
-        const lines = [...title, ...wrapText(panel.body, columns2).slice(0, bodyRows), ...choices, ...footer].slice(0, rows);
+        const bodyRows = Math.max(0, rows2 - title.length - footer.length - choices.length);
+        const lines = [...title, ...wrapText(panel.body, columns2).slice(0, bodyRows), ...choices, ...footer].slice(0, rows2);
         canvas2.rect(0, top, W2, lines.length * 12 + 8, 725275);
         lines.forEach((line, i) => text(line, 6, top + 4 + i * 12, i === 0 ? 15914378 : 11913694));
       } else {
@@ -11026,6 +11685,8 @@ var __RunePixel3DRuntime = (() => {
       this.drawScale = 1;
       this.silhouettes = false;
       this.outlineColor = 4278190080;
+      this.deferredColor = new Uint32Array(0);
+      this.deferredOverlay = new Uint32Array(0);
       this.width = config.width;
       this.height = config.height;
       this.fov = config.fov || 66;
@@ -11078,7 +11739,49 @@ var __RunePixel3DRuntime = (() => {
       this.palette = Uint32Array.from({ length: 256 }, (_, light) => packed(colors[Math.floor(light * colors.length / 256)]));
       this.silhouettes = silhouettes || Boolean(this.config.outline);
     }
-    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks, tethers = [], lights = []) {
+    /** Pick visible model pixels, with a small near-miss allowance for touch. */
+    projectPoint(camera, point) {
+      const dx = point.x - camera.x, dy = point.y - camera.y;
+      const z = point.z - (this.config.world ? (camera.z ?? 0) + 1.25 : camera.height ?? 0.5);
+      const forward = dx * fastCos(camera.angle) + dy * fastSin(camera.angle);
+      const pitch = (camera.pitch ?? 0) * Math.PI / 180;
+      const d = forward * Math.cos(pitch) + z * Math.sin(pitch);
+      if (d <= 1e-3) return void 0;
+      return {
+        x: this.width / 2 * (1 + (-dx * fastSin(camera.angle) + dy * fastCos(camera.angle)) / (d * Math.tan(this.fov * Math.PI / 360))),
+        y: (this.height >> 1) - (z * Math.cos(pitch) - forward * Math.sin(pitch)) * this.height / d
+      };
+    }
+    pickModels(camera, things, x, y) {
+      if (![x, y].every(Number.isFinite)) throw new Error("Pixel-3d pick coordinates must be finite");
+      if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
+      const W = this.width, H = this.height;
+      const buffer = new Uint32Array(W * H), depth = new Float64Array(W * H);
+      const eye = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
+      const fov = Math.tan(this.fov * Math.PI / 360);
+      let selected = -1, bestDistance = Infinity, bestDepth = Infinity;
+      const radius = 8;
+      things.forEach((thing, index2) => {
+        if (!thing || thing.visible === false || !thing.model) return;
+        const model = this.config.models?.[thing.model];
+        if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
+        depth.fill(Infinity);
+        renderModel(model, thing, eye, fastCos(camera.angle), fastSin(camera.angle), fov, W, H, buffer, depth);
+        for (let py = Math.max(0, Math.floor(y - radius)); py <= Math.min(H - 1, Math.ceil(y + radius)); py++) {
+          for (let px = Math.max(0, Math.floor(x - radius)); px <= Math.min(W - 1, Math.ceil(x + radius)); px++) {
+            const d = depth[py * W + px], distance = Math.hypot(px + 0.5 - x, py + 0.5 - y);
+            if (distance > radius || !Number.isFinite(d) || d > this.pixelDepth[py * W + px] + 1e-6) continue;
+            if (distance < bestDistance || distance === bestDistance && d < bestDepth) {
+              selected = index2;
+              bestDistance = distance;
+              bestDepth = d;
+            }
+          }
+        }
+      });
+      return selected;
+    }
+    render(camera, things = [], weapon, flash = 0, stats, wallOverrides = [], time = 0, preparedChunks, tethers = [], lights = [], deferredLighting) {
       const W = this.width;
       const H = this.height;
       const halfH = H >> 1;
@@ -11178,6 +11881,53 @@ var __RunePixel3DRuntime = (() => {
       if (!this.config.world && !pitched && things && things.length > 0) {
         this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
       }
+      if (deferredLighting) {
+        if (this.deferredColor.length !== this.buffer.length) {
+          this.deferredColor = new Uint32Array(this.buffer.length);
+          this.deferredOverlay = new Uint32Array(this.buffer.length);
+        }
+        this.deferredColor.set(this.buffer);
+        const rowOrigin = this.config.world ? H / 2 : halfH;
+        const enhancement = this.enhanced?.prepareDeferred(
+          this.pixelDepth,
+          modelCamera,
+          dirX,
+          dirY,
+          fovScale,
+          rowOrigin,
+          this.config.world,
+          things,
+          this.config.models ?? {},
+          map.sky?.horizon
+        );
+        this.buffer.fill(0);
+        this.renderWorldTitles(camera, things, dirX, dirY, fovScale);
+        if (weapon?.sprite) this.renderWeapon(weapon);
+        this.deferredOverlay.set(this.buffer);
+        this.buffer.fill(0);
+        if (stats) this.drawHud(stats);
+        deferredLighting({
+          width: W,
+          height: H,
+          color: this.deferredColor,
+          depth: this.pixelDepth,
+          sceneOverlay: this.deferredOverlay,
+          hud: this.buffer,
+          camera: modelCamera,
+          dirX,
+          dirY,
+          fov: fovScale,
+          rowOrigin,
+          lights,
+          enhancement,
+          outlineRadius: this.outlineRadius,
+          outlineColor: this.outlineColor,
+          flash,
+          fade: stats?.ui?.cinema?.fade ?? 0,
+          palette: this.palette
+        });
+        return this.buffer;
+      }
       if (lights.length) {
         lightFrame(
           lights,
@@ -11234,8 +11984,8 @@ var __RunePixel3DRuntime = (() => {
       buffer.fill(sky ? (4278190080 | sky.horizon) >>> 0 : 4281608224);
       if (sky) {
         const longitudes = Float64Array.from({ length: width }, (_, col) => Math.atan2(-1, (2 * col / width - 1) * fovScale));
-        const rows = sky.below === void 0 ? height >> 1 : height;
-        for (let row = 0; row < rows; row++) {
+        const rows2 = sky.below === void 0 ? height >> 1 : height;
+        for (let row = 0; row < rows2; row++) {
           const altitude = (height / 2 - row - 0.5) / height;
           for (let col = 0; col < width; col++) {
             buffer[row * width + col] = skyPixel(sky, longitudes[col], altitude, time);
@@ -11264,6 +12014,12 @@ var __RunePixel3DRuntime = (() => {
       this.drawScale = this.hudScale;
       try {
         this.renderHUD(stats);
+        stats.keyboard?.render({
+          width: Math.floor(this.width / this.drawScale),
+          height: Math.floor(this.height / this.drawScale),
+          rect: this.rect.bind(this),
+          text: this.text.bind(this)
+        }, stats.ui?.theme);
       } finally {
         this.drawScale = 1;
       }
@@ -11806,6 +12562,10 @@ var __RunePixel3DRuntime = (() => {
   var Pixel3DEngine = class {
     constructor(config, options) {
       this.config = config;
+      this.keyboard = new OnScreenKeyboard();
+      this.hudPadHeld = /* @__PURE__ */ new Set();
+      this.calloutFocus = 0;
+      this.uiFullscreen = false;
       this._paused = false;
       this._muted = false;
       this.frameRevision = 0;
@@ -11881,6 +12641,121 @@ var __RunePixel3DRuntime = (() => {
       this.syncScene();
       this.persist();
     }
+    consumeUiFullscreen() {
+      const requested = this.uiFullscreen;
+      this.uiFullscreen = false;
+      return requested;
+    }
+    keyboardHud() {
+      const state = this.app.state;
+      const field = this.paused && this.config.pauseUi && state.status === "playing" ? this.config.pauseUi : this.config.ui;
+      return field ? validateHud(state[field], this.config.sprites) : void 0;
+    }
+    keyboardKey(key2, down, repeat = false) {
+      this.keyboard.sync(this.keyboardHud()?.keyboard);
+      const handled = this.keyboard.physical(key2, down, repeat, (a, args) => this.activate(a, args));
+      if (handled) {
+        this.controls?.clear(true);
+        this.invalidateFrame();
+      }
+      return handled;
+    }
+    keyboardControlEvent(event) {
+      const hud = this.keyboardHud();
+      if (!hud?.keyboard) {
+        if (event.device === "gamepad" && (hud?.callout || hud?.grid?.layout === "sidebar")) return true;
+        return event.device === "keyboard" ? this.hudKey(event.code, Boolean(event.value), event.repeat) : false;
+      }
+      if (event.device !== "keyboard") return true;
+      const key2 = event.code.startsWith("Key") ? this.keyboard.pressed.has("SHIFT") ? event.code.slice(3) : event.code.slice(3).toLowerCase() : event.code.startsWith("Digit") ? event.code.slice(5) : event.code === "Space" ? " " : event.code.startsWith("Shift") ? "Shift" : event.code;
+      return this.keyboardKey(key2, Boolean(event.value), event.repeat);
+    }
+    hudKey(code, down, repeat = false) {
+      const hud = this.keyboardHud();
+      if (hud?.callout && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", "Space", "Escape", "Backspace"].includes(code)) {
+        const count = hud.callout.actions.length;
+        if (down) {
+          if (code.startsWith("Arrow") && count) this.calloutFocus = (this.calloutFocus + (code === "ArrowLeft" || code === "ArrowUp" ? -1 : 1) + count) % count;
+          else if (!repeat && ["Enter", "Space"].includes(code) && count) this.activate(hud.callout.actions[this.calloutFocus % count].action);
+          else if (!repeat && hud.callout.dismissAction) this.activate(hud.callout.dismissAction);
+        }
+        this.controls?.clear(true);
+        this.invalidateFrame();
+        return true;
+      }
+      if (hud?.grid?.layout === "sidebar") {
+        const grid = hud.grid;
+        if (down && ["ArrowUp", "ArrowDown"].includes(code) && grid.moveAction) this.activate(grid.moveAction, [code === "ArrowUp" ? -1 : 1]);
+        else if (down && !repeat && ["Enter", "Space"].includes(code) && grid.moveAction) {
+          const item = grid.items.find((i) => i.selected && !i.disabled);
+          if (item?.action) {
+            if (grid.closeOnActivate && grid.dismissAction) this.activate(grid.dismissAction);
+            if (item.action === "host.fullscreen") this.uiFullscreen = true;
+            else if (item.action === "host.mute") this.muted = !this.muted;
+            else this.activate(item.action, item.args ?? []);
+          }
+        } else if (down && !repeat && ["Escape", "Backspace"].includes(code) && grid.dismissAction) this.activate(grid.dismissAction);
+        else return false;
+        this.controls?.clear(true);
+        return true;
+      }
+      return false;
+    }
+    keyboardPads(pads) {
+      const hud = this.keyboardHud();
+      this.keyboard.sync(hud?.keyboard);
+      if (!hud?.keyboard) return false;
+      this.keyboard.controller(pads, (a, args) => this.activate(a, args));
+      if (!this.keyboardHud()?.keyboard) {
+        this.hudPadHeld = new Set(pads.flatMap((p) => p ? p.buttons.flatMap((b, i) => b.value > 0.5 ? [`${p.index}:${i}`] : []) : []));
+      }
+      this.invalidateFrame();
+      return true;
+    }
+    hudPads(pads) {
+      if (this.keyboardPads(pads)) return true;
+      const hud = this.keyboardHud();
+      if (!hud?.callout && hud?.grid?.layout !== "sidebar") {
+        this.hudPadHeld.clear();
+        return false;
+      }
+      this.controls?.clear(true);
+      const held = /* @__PURE__ */ new Set();
+      for (const pad of pads) {
+        if (!pad) continue;
+        for (const button of [12, 13, 14, 15, 0, 1]) {
+          if ((pad.buttons[button]?.value ?? 0) <= 0.5) continue;
+          const id = `${pad.index}:${button}`;
+          held.add(id);
+          if (this.hudPadHeld.has(id)) continue;
+          if (hud.callout) {
+            const count = hud.callout.actions.length;
+            if (button >= 12 && count) this.calloutFocus = (this.calloutFocus + (button === 12 || button === 14 ? -1 : 1) + count) % count;
+            if (button === 0 && count) this.activate(hud.callout.actions[this.calloutFocus % count].action);
+            if (button === 1 && count) this.activate(hud.callout.actions[count - 1].action);
+          } else if (hud.grid) {
+            if (button >= 12 && hud.grid.moveAction) this.activate(hud.grid.moveAction, [button === 12 || button === 14 ? -1 : 1]);
+            if (button === 0) {
+              const item = hud.grid.items.find((i) => i.selected && !i.disabled);
+              if (item?.action) {
+                if (hud.grid.closeOnActivate && hud.grid.dismissAction) this.activate(hud.grid.dismissAction);
+                if (item.action === "host.fullscreen") this.uiFullscreen = true;
+                else if (item.action === "host.mute") this.muted = !this.muted;
+                else this.activate(item.action, item.args ?? []);
+              }
+            }
+            if (button === 1 && hud.grid.dismissAction) this.activate(hud.grid.dismissAction);
+          }
+        }
+      }
+      this.hudPadHeld = held;
+      if (this.keyboardHud()?.keyboard) {
+        this.keyboard.sync(this.keyboardHud()?.keyboard);
+        this.keyboard.seedController(held);
+      }
+      this.invalidateFrame();
+      return true;
+    }
     /** Hosts can reuse the last pixels between simulation ticks. */
     invalidateFrame() {
       this.frameRevision++;
@@ -11905,6 +12780,7 @@ var __RunePixel3DRuntime = (() => {
     }
     set paused(value) {
       if (value === this._paused) return;
+      if (value) this.flushSave();
       this._paused = value;
       this.invalidateFrame();
       if (value) pauseMusic();
@@ -11925,8 +12801,9 @@ var __RunePixel3DRuntime = (() => {
     get usesSharedRenderer() {
       if (this.config.tethers?.length) return true;
       const hud = this.config.ui ? this.app.state[this.config.ui] : void 0;
-      if (hud?.map || hud?.countdown !== void 0) return true;
-      if (this.config.pauseUi && this.app.state[this.config.pauseUi]?.map) return true;
+      if (hud?.map || hud?.countdown !== void 0 || hud?.theme || hud?.keyboard || hud?.buttons || hud?.callout || hud?.grid?.layout === "sidebar") return true;
+      const pauseHud = this.config.pauseUi ? this.app.state[this.config.pauseUi] : void 0;
+      if (pauseHud?.map || pauseHud?.theme || pauseHud?.keyboard || pauseHud?.buttons || pauseHud?.callout || pauseHud?.grid?.layout === "sidebar") return true;
       const map = this.config.maps?.[this.currentMapName] ?? this.config.map;
       if (map.sky?.below !== void 0) return true;
       if (this.config.world || this.config.cameraTrack || this.config.titleScene && this.app.state.status === "title" || this.config.fov !== void 0 && this.config.fov !== 66) return true;
@@ -11964,7 +12841,7 @@ var __RunePixel3DRuntime = (() => {
       this.ticks++;
       this.syncScene();
       if (this.wasTitle) this.presentationTicks++;
-      this.persist();
+      this.persist(false);
     }
     syncScene() {
       const state = this.app.state;
@@ -11982,8 +12859,11 @@ var __RunePixel3DRuntime = (() => {
         });
       }
     }
-    persist() {
-      if (this.save) this.save.flush(this.app.state[this.save.config.state]);
+    flushSave() {
+      this.persist();
+    }
+    persist(immediate = true) {
+      this.save?.persist(this.app.state, immediate);
     }
     hasAction(action) {
       return Boolean(this.context.actionDefinitions[action]);
@@ -12026,6 +12906,14 @@ var __RunePixel3DRuntime = (() => {
         playSound(this.config.menuSounds.confirm);
       }
       this.invoke(action, args);
+    }
+    pickThing(path, x, y) {
+      if (!this.config.things?.includes(path)) throw new Error("data-pixel-pick must name a declared Scene things array");
+      const value = path.split(".").reduce((v, key2) => v && typeof v === "object" ? Reflect.get(v, key2) : void 0, this.app.state);
+      if (!Array.isArray(value)) throw new Error("data-pixel-pick must reference an array");
+      const stats = this.renderState();
+      this.frame();
+      return this.raycaster.pickModels(stats.camera, value, x, y);
     }
     renderState() {
       const state = this.app.state;
@@ -12127,7 +13015,20 @@ var __RunePixel3DRuntime = (() => {
       };
     }
     frameHud(stats) {
+      let ui = stats.ui;
+      if (ui?.callout) {
+        const point = this.raycaster.projectPoint(stats.camera, ui.callout.target);
+        const scale = this.raycaster.hudScale;
+        ui = { ...ui, callout: {
+          ...ui.callout,
+          selected: this.calloutFocus % Math.max(1, ui.callout.actions.length),
+          screen: point ? { x: point.x / scale, y: point.y / scale } : void 0
+        } };
+      }
+      if (ui?.buttons) ui = { ...ui, buttons: ui.buttons.map((b) => b.icon === "sound" ? { ...b, selected: this.muted } : b) };
+      this.keyboard.sync(ui?.keyboard);
       return {
+        keyboard: ui?.keyboard ? this.keyboard : void 0,
         titleScene: stats.title_scene,
         presentationTime: stats.presentation_time,
         status: stats.status,
@@ -12142,13 +13043,13 @@ var __RunePixel3DRuntime = (() => {
         storyBody: stats.story_body,
         message: stats.message,
         switchActivated: stats.switch_activated,
-        ui: stats.ui,
+        ui,
         paused: stats.paused,
         presentation: stats.presentation,
         hudText: stats.hud_text
       };
     }
-    frame() {
+    frame(deferredLighting) {
       this.invalidateFrame();
       const stats = this.renderState();
       const world = this.raycaster.config.world;
@@ -12162,7 +13063,8 @@ var __RunePixel3DRuntime = (() => {
         stats.title_scene ? stats.presentation_time : stats.time,
         world && !stats.camera.terrainPose ? validatedVoxelChunks(world) : void 0,
         stats.tethers,
-        stats.lights
+        stats.lights,
+        deferredLighting
       );
       return this.raycaster.buffer;
     }
@@ -12502,7 +13404,7 @@ var __RunePixel3DRuntime = (() => {
     const data = [];
     for (const { from, size, color, shape } of model.blocks) {
       const [r, g, b] = rgb(color);
-      const vertex = (p, shade3, normal = [0, 0, 0]) => {
+      const vertex2 = (p, shade3, normal = [0, 0, 0]) => {
         data.push(
           from[0] + p[0] * size[0],
           from[1] + p[1] * size[1],
@@ -12515,7 +13417,7 @@ var __RunePixel3DRuntime = (() => {
         );
       };
       const quad = (a, b2, c, d, shade3) => {
-        for (const p of [a, b2, c, a, c, d]) vertex(p, shade3);
+        for (const p of [a, b2, c, a, c, d]) vertex2(p, shade3);
       };
       if (shape === "sphere") {
         const point = (row, col) => {
@@ -12525,7 +13427,7 @@ var __RunePixel3DRuntime = (() => {
         for (let row = 0; row < 16; row++) for (let col = 0; col < 24; col++) {
           const a = point(row, col), b2 = point(row + 1, col);
           const c = point(row + 1, col + 1), d = point(row, col + 1);
-          for (const n of [a, b2, c, a, c, d]) vertex([0.5 + n[0] / 2, 0.5 + n[1] / 2, 0.5 + n[2] / 2], 0, n);
+          for (const n of [a, b2, c, a, c, d]) vertex2([0.5 + n[0] / 2, 0.5 + n[1] / 2, 0.5 + n[2] / 2], 0, n);
         }
       } else if (shape === "cylinder") {
         for (let col = 0; col < 24; col++) {
@@ -12533,14 +13435,14 @@ var __RunePixel3DRuntime = (() => {
           const n = [Math.cos(a), Math.sin(a), 0], m = [Math.cos(b2), Math.sin(b2), 0];
           const p = (v, z) => [0.5 + v[0] / 2, 0.5 + v[1] / 2, z];
           const a0 = p(n, 0), a1 = p(n, 1), b0 = p(m, 0), b1 = p(m, 1);
-          vertex(a0, 0, n);
-          vertex(b0, 0, m);
-          vertex(b1, 0, m);
-          vertex(a0, 0, n);
-          vertex(b1, 0, m);
-          vertex(a1, 0, n);
-          for (const v of [a0, b0, [0.5, 0.5, 0]]) vertex(v, 0.55);
-          for (const v of [a1, b1, [0.5, 0.5, 1]]) vertex(v, 0.8875);
+          vertex2(a0, 0, n);
+          vertex2(b0, 0, m);
+          vertex2(b1, 0, m);
+          vertex2(a0, 0, n);
+          vertex2(b1, 0, m);
+          vertex2(a1, 0, n);
+          for (const v of [a0, b0, [0.5, 0.5, 0]]) vertex2(v, 0.55);
+          for (const v of [a1, b1, [0.5, 0.5, 1]]) vertex2(v, 0.8875);
         }
       } else {
         const a = [0, 0, 0], b2 = [1, 0, 0], c = [1, 1, 0], d = [0, 1, 0];
@@ -12715,11 +13617,11 @@ void main() {
       for (const p of programs) gl.deleteProgram(p);
       for (const s of shaders) gl.deleteShader(s);
     };
-    const program = (vertex, fragment, names) => {
+    const program = (vertex2, fragment, names) => {
       const handle = gl.createProgram();
       if (!handle) throw new Error("Could not allocate a WebGL program");
       programs.push(handle);
-      for (const [type, source] of [[gl.VERTEX_SHADER, header + vertex], [gl.FRAGMENT_SHADER, header + colorPass + fragment]]) {
+      for (const [type, source] of [[gl.VERTEX_SHADER, header + vertex2], [gl.FRAGMENT_SHADER, header + colorPass + fragment]]) {
         const shader = gl.createShader(type);
         if (!shader) throw new Error("Could not allocate a WebGL shader");
         shaders.push(shader);
@@ -12973,6 +13875,324 @@ void main() {
     }
   }
 
+  // src/pixel3d/gpu_lighting.ts
+  var vertex = `#version 300 es
+void main() {
+  vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));
+  gl_Position=vec4(p*2.0-1.0,0,1);
+}`;
+  var header2 = `#version 300 es
+precision highp float;
+precision highp int;
+out vec4 painted;
+`;
+  var blur2 = `${header2}
+uniform sampler2D source;
+uniform ivec2 direction;
+vec3 sampleAt(ivec2 p) {
+  ivec2 size=textureSize(source,0);
+  if(any(lessThan(p,ivec2(0))) || any(greaterThanEqual(p,size))) return vec3(0);
+  return floor(texelFetch(source,p,0).rgb*255.0+0.5);
+}
+void main() {
+  ivec2 p=ivec2(gl_FragCoord.xy);
+  vec3 sum=sampleAt(p-direction*2)+sampleAt(p-direction)*2.0+
+    sampleAt(p)*4.0+sampleAt(p+direction)*2.0+sampleAt(p+direction*2);
+  painted=vec4(floor(sum/10.0)/255.0,1);
+}`;
+  var compose = `${header2}
+uniform sampler2D scene, depths, glow, panes, sceneOverlay, hud, palette;
+uniform vec2 viewport, heading, tilt;
+uniform vec3 eye;
+uniform float fov, rowOrigin, haze, flash, fade;
+uniform vec3 horizon, outlineColor;
+uniform int lightCount, shadowCount, outlineRadius, paletteEnabled, bloomEnabled;
+uniform vec4 lightPose[8], lightColor[8], shadowPose[32], shadowSize[32];
+vec3 rgbAt(sampler2D image,ivec2 p) {
+  return floor(texelFetch(image,p,0).rgb*255.0+0.5);
+}
+float depthAt(ivec2 p) {
+  p=clamp(p,ivec2(0),ivec2(viewport)-1);
+  float d=texelFetch(depths,p,0).r;
+  return d==0.0 ? 1e30 : d;
+}
+vec3 glowAt(ivec2 p) {
+  return rgbAt(glow,clamp(p,ivec2(0),textureSize(glow,0)-1));
+}
+vec3 mixGlow(vec3 a,vec3 b,float weight) {
+  return floor((a*(4.0-weight)+b*weight)/4.0);
+}
+void main() {
+  ivec2 p=ivec2(int(gl_FragCoord.x),int(viewport.y)-1-int(gl_FragCoord.y));
+  float d=depthAt(p), up=(rowOrigin-float(p.y)-0.5)/viewport.y;
+  float side=(float(p.x)*2.0/viewport.x-1.0)*fov;
+  vec3 color=rgbAt(scene,p);
+  for(int i=0;i<8;i++) {
+    if(i>=lightCount) break;
+    vec4 pose=lightPose[i];
+    if(d<pose.z-pose.w || d>pose.z+pose.w) continue;
+    vec3 delta=vec3(d*side-pose.x,d*up-pose.y,d-pose.z);
+    float edge=1.0-dot(delta,delta)/(pose.w*pose.w);
+    if(edge>0.0) color=floor(min(vec3(255),color+lightColor[i].rgb*edge*edge));
+  }
+  for(int i=0;i<32;i++) {
+    if(i>=shadowCount) break;
+    vec4 pose=shadowPose[i], size=shadowSize[i];
+    float distance=(pose.z-eye.z)/(tilt.y+tilt.x*up);
+    if(distance<=0.10) continue;
+    if(size.z>0.0 ? d<distance-0.02 : abs(d-distance)>0.055) continue;
+    float forward=tilt.x-tilt.y*up;
+    vec2 offset=(eye.xy-pose.xy+distance*(heading*forward+vec2(-heading.y,heading.x)*side))/size.xy;
+    float strength=(1.0-dot(offset,offset))*pose.w;
+    if(strength>0.0) color=floor(color+(vec3(11,9,16)-color)*strength);
+  }
+  ivec2 tile=p/4;
+  vec2 pane=texelFetch(panes,tile,0).rg;
+  if(haze>0.0 && d>22.0 && d<1e29)
+    color=floor(color+(horizon-color)*haze*min(0.30,(d-22.0)*0.008));
+  if(d>pane.x+0.00001 && pane.y>0.0)
+    color=floor(color+(vec3(129,201,240)-color)*(pane.y/255.0));
+  if(bloomEnabled>0) {
+    float wx=float(p.x%4), wy=float(p.y%4);
+    vec3 a=mixGlow(glowAt(tile),glowAt(tile+ivec2(0,1)),wy);
+    vec3 b=mixGlow(glowAt(tile+ivec2(1,0)),glowAt(tile+ivec2(1,1)),wy);
+    color=min(vec3(255),color+mixGlow(a,b,wx));
+  }
+  if(outlineRadius>0) {
+    ivec2 x=ivec2(outlineRadius,0), y=ivec2(0,outlineRadius);
+    float near=min(min(depthAt(p-x),depthAt(p+x)),min(depthAt(p-y),depthAt(p+y)));
+    int diagonal=int(float(outlineRadius)/sqrt(2.0));
+    if(diagonal>0) {
+      ivec2 a=ivec2(diagonal,diagonal),b=ivec2(diagonal,-diagonal);
+      near=min(near,min(min(depthAt(p-a),depthAt(p+a)),min(depthAt(p-b),depthAt(p+b))));
+    }
+    if(d-near>max(0.12,near*0.025)) color=outlineColor;
+  }
+  vec4 overlay=texelFetch(sceneOverlay,p,0);
+  if(overlay.a>0.0) color=floor(overlay.rgb*255.0+0.5);
+  if(flash>0.0) {
+    float amount=min(1.0,flash*0.12);
+    color=clamp(color+vec3(floor(180.0*amount),-floor(50.0*amount),-floor(50.0*amount)),0.0,255.0);
+  }
+  color=floor(color*(1.0-min(1.0,fade)));
+  overlay=texelFetch(hud,p,0);
+  if(overlay.a>0.0) color=floor(overlay.rgb*255.0+0.5);
+  if(paletteEnabled>0) {
+    int luma=int(dot(color,vec3(54,183,19))/256.0);
+    color=rgbAt(palette,ivec2(luma,0));
+  }
+  painted=vec4(color/255.0,1);
+}`;
+  function createGpuLighting(canvas) {
+    const gl = canvas.getContext("webgl2", { alpha: false, antialias: false, depth: false, failIfMajorPerformanceCaveat: true });
+    if (!gl) return void 0;
+    const programs = [], shaders = [];
+    const textures = [], framebuffers = [];
+    const vao = gl.createVertexArray();
+    let disposed = false;
+    const dispose = () => {
+      if (disposed) return;
+      disposed = true;
+      gl.deleteVertexArray(vao);
+      textures.forEach((t) => gl.deleteTexture(t));
+      framebuffers.forEach((f) => gl.deleteFramebuffer(f));
+      programs.forEach((p) => gl.deleteProgram(p));
+      shaders.forEach((s) => gl.deleteShader(s));
+    };
+    const program = (fragment, names) => {
+      const handle = gl.createProgram();
+      if (!handle) throw new Error("GPU lighting program allocation failed");
+      programs.push(handle);
+      for (const [type, source] of [[gl.VERTEX_SHADER, vertex], [gl.FRAGMENT_SHADER, fragment]]) {
+        const shader = gl.createShader(type);
+        if (!shader) throw new Error("GPU lighting shader allocation failed");
+        shaders.push(shader);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) ?? "GPU lighting shader failed");
+        gl.attachShader(handle, shader);
+      }
+      gl.linkProgram(handle);
+      if (!gl.getProgramParameter(handle, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(handle) ?? "GPU lighting link failed");
+      return { handle, loc: Object.fromEntries(names.map((name2) => [name2, gl.getUniformLocation(handle, name2)])) };
+    };
+    const texture = () => {
+      const t = gl.createTexture();
+      if (!t) throw new Error("GPU lighting texture allocation failed");
+      textures.push(t);
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return t;
+    };
+    try {
+      if (!vao) throw new Error("GPU lighting vertex array allocation failed");
+      gl.disable(gl.DITHER);
+      gl.disable(gl.BLEND);
+      gl.disable(gl.DEPTH_TEST);
+      gl.bindVertexArray(vao);
+      const blurProgram = program(blur2, ["source", "direction"]);
+      const finalProgram = program(compose, [
+        "scene",
+        "depths",
+        "glow",
+        "panes",
+        "sceneOverlay",
+        "hud",
+        "palette",
+        "viewport",
+        "heading",
+        "tilt",
+        "eye",
+        "fov",
+        "rowOrigin",
+        "haze",
+        "flash",
+        "fade",
+        "horizon",
+        "outlineColor",
+        "lightCount",
+        "shadowCount",
+        "outlineRadius",
+        "paletteEnabled",
+        "bloomEnabled",
+        "lightPose[0]",
+        "lightColor[0]",
+        "shadowPose[0]",
+        "shadowSize[0]"
+      ]);
+      const scene = texture(), depths = texture(), emission = texture(), pane = texture(), overlay2 = texture(), hud = texture(), palette = texture(), horizontal = texture(), vertical = texture();
+      const targets = [horizontal, vertical].map((t) => {
+        const framebuffer = gl.createFramebuffer();
+        if (!framebuffer) throw new Error("GPU bloom framebuffer allocation failed");
+        framebuffers.push(framebuffer);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+        return framebuffer;
+      });
+      const sizes = /* @__PURE__ */ new Map();
+      const upload = (t, w, h, internal, format, type, data) => {
+        gl.bindTexture(gl.TEXTURE_2D, t);
+        const key2 = `${w}:${h}:${internal}`;
+        if (sizes.get(t) !== key2) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, format, type, data);
+          sizes.set(t, key2);
+        } else if (data) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, format, type, data);
+      };
+      let depthData = new Float32Array(0), paneData = new Float32Array(0), emissionData = new Uint32Array(0);
+      const lightPose = new Float32Array(32), lightColor = new Float32Array(32), shadowPose = new Float32Array(128), shadowSize = new Float32Array(128);
+      const bytes = (data) => new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+      const packedRgb = (color) => [color & 255, color >>> 8 & 255, color >>> 16 & 255];
+      const draw = (frame) => {
+        if (disposed || gl.isContextLost()) throw new Error("GPU lighting context unavailable");
+        gl.disable(gl.DITHER);
+        gl.disable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        const { width: w, height: h, enhancement: e } = frame;
+        if ((e?.shadows.length ?? 0) > 32) throw new Error("GPU lighting supports up to 32 contact shadows; using CPU");
+        const tw = e?.tileWidth ?? Math.ceil(w / 4), th = e?.tileHeight ?? Math.ceil(h / 4);
+        if (depthData.length !== w * h) depthData = new Float32Array(w * h);
+        if (paneData.length !== tw * th * 2) {
+          paneData = new Float32Array(tw * th * 2);
+          emissionData = new Uint32Array(tw * th);
+        }
+        for (let i = 0; i < depthData.length; i++) depthData[i] = Number.isFinite(frame.depth[i]) ? frame.depth[i] : 0;
+        let bloomEnabled = false;
+        for (let i = 0; i < emissionData.length; i++) {
+          paneData[i * 2] = Number.isFinite(e?.paneDepth[i]) ? e.paneDepth[i] : 1e30;
+          paneData[i * 2 + 1] = e?.paneAlpha[i] ?? 0;
+          emissionData[i] = (4278190080 | (e?.emission.colors[i] ?? 0)) >>> 0;
+          if (e?.emission.colors[i]) bloomEnabled = true;
+        }
+        gl.activeTexture(gl.TEXTURE0);
+        upload(scene, w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bytes(frame.color));
+        upload(depths, w, h, gl.R32F, gl.RED, gl.FLOAT, depthData);
+        upload(overlay2, w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bytes(frame.sceneOverlay));
+        upload(hud, w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bytes(frame.hud));
+        upload(pane, tw, th, gl.RG32F, gl.RG, gl.FLOAT, paneData);
+        upload(emission, tw, th, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bytes(emissionData));
+        if (frame.palette) upload(palette, 256, 1, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bytes(frame.palette));
+        else upload(palette, 1, 1, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+        upload(horizontal, tw, th, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        upload(vertical, tw, th, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindVertexArray(vao);
+        gl.useProgram(blurProgram.handle);
+        gl.viewport(0, 0, tw, th);
+        gl.uniform1i(blurProgram.loc.source, 0);
+        for (let i = 0; i < (bloomEnabled ? 2 : 0); i++) {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, targets[i]);
+          if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error("GPU bloom target incomplete");
+          gl.bindTexture(gl.TEXTURE_2D, i ? horizontal : emission);
+          gl.uniform2i(blurProgram.loc.direction, i ? 0 : 1, i ? 1 : 0);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, w, h);
+        gl.useProgram(finalProgram.handle);
+        const l = finalProgram.loc;
+        for (const [unit, name2, t] of [
+          [0, "scene", scene],
+          [1, "depths", depths],
+          [2, "glow", bloomEnabled ? vertical : emission],
+          [3, "panes", pane],
+          [4, "sceneOverlay", overlay2],
+          [5, "hud", hud],
+          [6, "palette", palette]
+        ]) {
+          gl.activeTexture(gl.TEXTURE0 + unit);
+          gl.bindTexture(gl.TEXTURE_2D, t);
+          gl.uniform1i(l[name2], unit);
+        }
+        const pitch = (frame.camera.pitch ?? 0) * Math.PI / 180, cp = Math.cos(pitch), sp = Math.sin(pitch);
+        const eye = frame.camera.height ?? 0.5;
+        frame.lights.forEach((light, i) => {
+          const dx = light.x - frame.camera.x, dy = light.y - frame.camera.y, dz = light.z - eye;
+          const forward = dx * frame.dirX + dy * frame.dirY;
+          lightPose.set([-dx * frame.dirY + dy * frame.dirX, dz * cp - forward * sp, forward * cp + dz * sp, light.radius], i * 4);
+          lightColor.set([
+            (light.color >>> 16) * light.intensity,
+            (light.color >>> 8 & 255) * light.intensity,
+            (light.color & 255) * light.intensity,
+            0
+          ], i * 4);
+        });
+        e?.shadows.forEach((s, i) => {
+          shadowPose.set([s.x, s.y, s.z, s.strength], i * 4);
+          shadowSize.set([s.halfA, s.halfB, s.onGlass ? 1 : 0, 0], i * 4);
+        });
+        gl.uniform4fv(l["lightPose[0]"], lightPose);
+        gl.uniform4fv(l["lightColor[0]"], lightColor);
+        gl.uniform4fv(l["shadowPose[0]"], shadowPose);
+        gl.uniform4fv(l["shadowSize[0]"], shadowSize);
+        gl.uniform1i(l.lightCount, frame.lights.length);
+        gl.uniform1i(l.shadowCount, e?.shadows.length ?? 0);
+        gl.uniform2f(l.viewport, w, h);
+        gl.uniform2f(l.heading, frame.dirX, frame.dirY);
+        gl.uniform2f(l.tilt, cp, sp);
+        gl.uniform3f(l.eye, frame.camera.x, frame.camera.y, eye);
+        gl.uniform1f(l.fov, frame.fov);
+        gl.uniform1f(l.rowOrigin, frame.rowOrigin);
+        gl.uniform1f(l.haze, e?.haze ?? 0);
+        gl.uniform3f(l.horizon, ...packedRgb(e?.horizon ?? 0));
+        gl.uniform1f(l.flash, frame.flash);
+        gl.uniform1f(l.fade, frame.fade);
+        gl.uniform1i(l.outlineRadius, frame.outlineRadius);
+        gl.uniform3f(l.outlineColor, ...packedRgb(frame.outlineColor));
+        gl.uniform1i(l.paletteEnabled, frame.palette ? 1 : 0);
+        gl.uniform1i(l.bloomEnabled, bloomEnabled ? 1 : 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        const error = gl.getError();
+        if (error !== gl.NO_ERROR) throw new Error(`GPU lighting failed (WebGL ${error})`);
+      };
+      return { draw, dispose };
+    } catch (error) {
+      dispose();
+      throw error;
+    }
+  }
+
   // src/pixel3d/index.ts
   var settings;
   function configure(config) {
@@ -13013,7 +14233,7 @@ void main() {
   }
   function mount(game, canvas) {
     const { width, height, tickRate } = game.config;
-    const keys = game.config.keys || {
+    const keys2 = game.config.keys || {
       KeyW: "forward",
       KeyS: "back",
       KeyA: "strafe_left",
@@ -13055,6 +14275,8 @@ void main() {
     let menuOpen = false;
     let fpsStart = 0, drawnFrames = 0;
     let gpu;
+    let gpuLighting;
+    let modelOnlyFrame = false;
     let gpuCanvas;
     let paletteColors;
     const tickMs = 1e3 / tickRate;
@@ -13131,7 +14353,10 @@ void main() {
     }
     for (const button of Array.from(document.querySelectorAll("[data-pixel-mute]"))) {
       listen(button, "click", () => {
+        unlockAudio();
+        clear(true);
         game.muted = !game.muted;
+        canvas.focus({ preventScroll: true });
       });
     }
     const surface = canvas.parentElement || canvas;
@@ -13233,6 +14458,8 @@ void main() {
         gpuToggle.title = reason;
       }
       gpu?.dispose();
+      gpuLighting?.dispose();
+      gpuLighting = void 0;
       gpu = void 0;
       gpuCanvas?.remove();
       gpuCanvas = void 0;
@@ -13248,10 +14475,11 @@ void main() {
         layer.hidden = true;
         try {
           gpu = createWebGlRenderer(layer, game.config.models);
+          if (gpu) gpuLighting = createGpuLighting(layer);
         } catch (error) {
           console.warn("Pixel 3D WebGL setup failed", error);
         }
-        if (!gpu) {
+        if (!gpu || !gpuLighting) {
           cpuFallback("Accelerated WebGL 2 is unavailable. Using the CPU renderer.");
           return;
         }
@@ -13272,25 +14500,30 @@ void main() {
       toggleGpu();
     }
     function drawFrame(extraFrames) {
-      if (gpu && gpuCanvas && gpuToggle?.checked && !game.raycaster.enhancedLighting) {
+      if (gpu && gpuLighting && gpuCanvas && gpuToggle?.checked) {
         try {
           const changed = game.presentIfChanged(() => {
             const stats = game.renderState();
             const { map, world } = game.raycaster.config;
-            if (!map.sky || map.sky.below === void 0 || world || stats.lights.length || map.grid.some(Boolean) || stats.weapon || stats.things.some((thing) => thing.sprite || thing.title)) {
-              throw new Error("This scene needs the CPU renderer");
+            modelOnlyFrame = !game.raycaster.enhancedLighting && !!map.sky && map.sky.below !== void 0 && !world && !stats.lights.length && !map.grid.some(Boolean) && !stats.weapon && !stats.things.some((thing) => thing.sprite || thing.title);
+            if (!modelOnlyFrame) {
+              game.frame((frame2) => gpuLighting.draw(frame2));
+              context.clearRect(0, 0, canvas.width, canvas.height);
+              overlayKey = void 0;
+              return;
             }
+            if (!map.sky) throw new Error("Model rendering needs a sky");
             gpu.capture(stats, map.sky, game.raycaster.fov, extraFrames);
             const hud = game.frameHud(stats);
-            const key2 = JSON.stringify(hud);
+            const key2 = JSON.stringify([hud, Array.from(game.keyboard.pressed)]);
             if (overlayKey !== key2) {
               game.raycaster.renderOverlay(hud);
               context.putImageData(image, 0, 0);
               overlayKey = key2;
             }
           });
-          if (!changed && !extraFrames) return false;
-          gpu.draw(extraFrames ? accumulator / tickMs : 1, game.raycaster.outlineRadius);
+          if (!changed && (!extraFrames || !modelOnlyFrame)) return false;
+          if (modelOnlyFrame) gpu.draw(extraFrames ? accumulator / tickMs : 1, game.raycaster.outlineRadius);
           gpuCanvas.hidden = false;
           return true;
         } catch (error) {
@@ -13316,6 +14549,72 @@ void main() {
     }
     let pointerLockUnavailable = false;
     const activeHud = () => game.paused && game.config.pauseUi && game.app.state.status === "playing" ? game.app.state[game.config.pauseUi] : game.config.ui ? game.app.state[game.config.ui] : void 0;
+    const activateHudAction = (action, args = []) => {
+      unlockAudio();
+      clear(true);
+      if (action === "host.keyboard") {
+        game.keyboard.sync(activeHud()?.keyboard);
+        game.keyboard.activate(String(args[0]), (a, values) => game.activate(a, values));
+        game.invalidateFrame();
+        canvas.focus({ preventScroll: true });
+        return;
+      }
+      const grid = activeHud()?.grid;
+      if (grid?.closeOnActivate && grid.dismissAction && action !== grid.moveAction && action !== grid.dismissAction) {
+        game.activate(grid.dismissAction);
+      }
+      if (action === "host.mute") {
+        game.muted = !game.muted;
+      } else if (action === "host.fullscreen") {
+        void fullscreen.toggle().catch((error) => console.error("Pixel 3D fullscreen failed", error));
+      } else {
+        game.activate(action, args);
+      }
+      canvas.focus({ preventScroll: true });
+    };
+    canvas.addEventListener("keydown", (event) => {
+      if (activeHud()?.keyboard) {
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        game.keyboardKey(event.key, true, event.repeat);
+        unlockAudio();
+        clear(true);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (game.hudKey(event.code, true, event.repeat)) {
+        unlockAudio();
+        clear(true);
+        if (game.consumeUiFullscreen()) void fullscreen.toggle().catch((error) => console.error("Pixel 3D fullscreen failed", error));
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      const grid = activeHud()?.grid;
+      if (grid?.layout !== "sidebar") return;
+      let action, args = [];
+      if (grid.moveAction && ["ArrowUp", "ArrowDown"].includes(event.code)) {
+        action = grid.moveAction;
+        args = [event.code === "ArrowUp" ? -1 : 1];
+      } else if (grid.moveAction && ["Enter", "Space"].includes(event.code)) {
+        const item = grid.items.find((item2) => item2.selected);
+        if (item && !item.disabled) {
+          action = item.action;
+          args = item.args ?? [];
+        }
+      } else if (grid.dismissAction && ["Escape", "Backspace"].includes(event.code)) {
+        action = grid.dismissAction;
+      } else return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (action && (!event.repeat || ["ArrowUp", "ArrowDown"].includes(event.code))) activateHudAction(action, args);
+    }, { capture: true, signal: abort.signal });
+    document.addEventListener("keyup", (event) => {
+      if (activeHud()?.keyboard) {
+        game.keyboardKey(event.key, false);
+        event.stopImmediatePropagation();
+      }
+    }, { capture: true, signal: abort.signal });
     const handleMenuKey = (code) => {
       const p = activeHud()?.panel;
       if (!p?.choiceActions?.length) return false;
@@ -13435,22 +14734,118 @@ void main() {
         lookAccumY = 0;
       }
     });
-    listen(canvas, "click", ((event) => {
-      if (Date.now() - lastTouchAt < 700 || mapped?.recentTouch()) return;
-      unlockAudio();
-      canvas.focus();
+    const activateHudAt = (clientX, clientY) => {
       const rect = canvas.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        const cx = (event.clientX - rect.left) * (width / rect.width);
-        const cy = (event.clientY - rect.top) * (height / rect.height);
-        const regions = collectHudHitRegions(width, height, activeHud(), String(game.app.state.status ?? "playing"), game.paused);
-        const hit = regions.find((r) => cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
-        if (hit) {
-          clear(true);
-          game.activate(hit.action, hit.args);
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const scale = resolution ? Number(resolution.value.split("x")[0]) / width : 1;
+      const hudWidth = Math.floor(canvas.width / scale), hudHeight = Math.floor(canvas.height / scale);
+      const cx = (clientX - rect.left) * hudWidth / rect.width;
+      const cy = (clientY - rect.top) * hudHeight / rect.height;
+      game.keyboard.sync(activeHud()?.keyboard);
+      const regions = activeHud()?.keyboard ? game.keyboard.hits(hudWidth, hudHeight) : collectHudHitRegions(hudWidth, hudHeight, activeHud(), String(game.app.state.status ?? "playing"), game.paused);
+      const hit = regions.find((r) => cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
+      if (!hit) {
+        if (activeHud()?.keyboard || activeHud()?.callout || activeHud()?.grid?.layout === "sidebar") return true;
+        const path = canvas.dataset.pixelPick;
+        if (path) {
+          const index2 = game.pickThing(
+            path,
+            (clientX - rect.left) * canvas.width / rect.width,
+            (clientY - rect.top) * canvas.height / rect.height
+          );
+          if (index2 >= 0) {
+            activateHudAction(canvas.dataset.pixelPickAction, [index2]);
+            return true;
+          }
+        }
+        return false;
+      }
+      activateHudAction(hit.action, hit.args);
+      return true;
+    };
+    if (canvas.dataset.pixelPick && (!canvas.dataset.pixelPickAction || !game.hasAction(canvas.dataset.pixelPickAction))) {
+      throw new Error("data-pixel-pick requires a valid data-pixel-pick-action");
+    }
+    const dragAction = canvas.dataset.pixelDragAction;
+    if (dragAction && !game.hasAction(dragAction)) throw new Error("data-pixel-drag-action requires a valid action");
+    let drag;
+    let suppressDragClick = false;
+    let hudTouch;
+    const consumesHudPointer = (clientX, clientY) => {
+      const hud = activeHud();
+      if (hud?.keyboard || hud?.callout || hud?.grid?.layout === "sidebar") return true;
+      const rect = canvas.getBoundingClientRect(), scale = game.raycaster.hudScale;
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      return hudButtonAt(
+        hud,
+        Math.floor(canvas.width / scale),
+        Math.floor(canvas.height / scale),
+        (clientX - rect.left) * canvas.width / scale / rect.width,
+        (clientY - rect.top) * canvas.height / scale / rect.height
+      );
+    };
+    canvas.addEventListener("mousedown", (event) => {
+      if (consumesHudPointer(event.clientX, event.clientY)) event.stopImmediatePropagation();
+    }, { capture: true, signal: abort.signal });
+    canvas.addEventListener("pointerdown", (event) => {
+      const sidebar = consumesHudPointer(event.clientX, event.clientY);
+      if (dragAction && !sidebar && !game.paused && event.button === 0 && !drag) {
+        drag = { id: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: event.clientX, moved: false };
+        suppressDragClick = false;
+        canvas.setPointerCapture(event.pointerId);
+      }
+      if (event.pointerType === "touch") hudTouch = { id: event.pointerId, x: event.clientX, y: event.clientY, sidebar };
+      if (sidebar) {
+        unlockAudio();
+        clear(true);
+        canvas.focus({ preventScroll: true });
+        event.stopImmediatePropagation();
+      }
+    }, { capture: true, signal: abort.signal });
+    listen(canvas, "pointermove", ((event) => {
+      if (!drag || drag.id !== event.pointerId) return;
+      if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 8) drag.moved = true;
+      if (!drag.moved) return;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && !game.paused && !consumesHudPointer(event.clientX, event.clientY)) {
+        game.invoke(dragAction, [(event.clientX - drag.lastX) * 180 / rect.width]);
+      }
+      drag.lastX = event.clientX;
+      event.preventDefault();
+    }));
+    listen(canvas, "pointercancel", () => {
+      hudTouch = void 0;
+      drag = void 0;
+      suppressDragClick = false;
+    });
+    canvas.addEventListener("pointerup", (event) => {
+      if (drag?.id === event.pointerId) {
+        suppressDragClick = drag.moved;
+        drag = void 0;
+        if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+        if (suppressDragClick) {
+          hudTouch = void 0;
+          if (event.pointerType === "touch") lastTouchAt = Date.now();
+          event.stopImmediatePropagation();
           return;
         }
       }
+      const touch2 = hudTouch;
+      hudTouch = void 0;
+      if (touch2?.sidebar) event.stopImmediatePropagation();
+      if (event.pointerType !== "touch" || touch2?.id !== event.pointerId || Math.hypot(event.clientX - touch2.x, event.clientY - touch2.y) > 12) return;
+      lastTouchAt = Date.now();
+      activateHudAt(event.clientX, event.clientY);
+    }, { capture: true, signal: abort.signal });
+    listen(canvas, "click", ((event) => {
+      if (suppressDragClick) {
+        suppressDragClick = false;
+        return;
+      }
+      if (Date.now() - lastTouchAt < 700 || mapped?.recentTouch()) return;
+      unlockAudio();
+      canvas.focus();
+      if (activateHudAt(event.clientX, event.clientY)) return;
       if (game.app.state.status !== "playing") {
         if (game.config.clickToStart === false) return;
         if (game.app.state.status === "title" || game.app.state.status === "story" || game.app.state.status === "select" || game.app.state.status === "stage_clear" || game.app.state.status === "boss_victory") {
@@ -13521,18 +14916,18 @@ void main() {
         }
       }
       unlockAudio();
-      if (keys[event.code] || ["Enter", "KeyP", "KeyM", "Space"].includes(event.code)) {
+      if (keys2[event.code] || ["Enter", "KeyP", "KeyM", "Space"].includes(event.code)) {
         event.preventDefault();
       }
-      if (game.app.state.status !== "playing" && (event.code === "Enter" || keys[event.code] === "fire" || keys[event.code] === "use")) {
+      if (game.app.state.status !== "playing" && (event.code === "Enter" || keys2[event.code] === "fire" || keys2[event.code] === "use")) {
         if (!event.repeat) {
           clear();
           game.invoke("advance");
         }
         return;
       }
-      if (keys[event.code]) input[keys[event.code]] = true;
-      if (keys[event.code] === "use" && !event.repeat) pendingUse = true;
+      if (keys2[event.code]) input[keys2[event.code]] = true;
+      if (keys2[event.code] === "use" && !event.repeat) pendingUse = true;
       if (!event.repeat && event.code === "Escape" && document.pointerLockElement === canvas) {
         document.exitPointerLock?.();
         clear();
@@ -13546,16 +14941,18 @@ void main() {
     }));
     listen(document, "keyup", ((event) => {
       if (mapped) return;
-      if (keys[event.code]) {
-        input[keys[event.code]] = false;
+      if (keys2[event.code]) {
+        input[keys2[event.code]] = false;
       }
     }));
     listen(window, "blur", () => {
+      game.flushSave();
       clear();
       game.paused = true;
     });
     listen(document, "visibilitychange", () => {
       if (document.hidden) {
+        game.flushSave();
         clear();
         game.paused = true;
       }
@@ -13567,6 +14964,14 @@ void main() {
       if (stopped) return;
       if (previous) accumulator += Math.min(now - previous, tickMs * 5);
       previous = now;
+      const keyboardOpen = Boolean(activeHud()?.keyboard || activeHud()?.callout || activeHud()?.grid?.layout === "sidebar");
+      if (keyboardOpen) {
+        clear(true);
+        if (document.hasFocus() && document.activeElement === canvas && navigator.getGamepads) {
+          game.hudPads(Array.from(navigator.getGamepads()));
+          if (game.consumeUiFullscreen()) void fullscreen.toggle().catch((error) => console.error("Pixel 3D fullscreen failed", error));
+        }
+      }
       while (accumulator >= tickMs) {
         const controls = {
           ...input,
@@ -13581,7 +14986,7 @@ void main() {
         controls.look_y = lookAccumY;
         lookAccumX = 0;
         lookAccumY = 0;
-        game.step(mapped ? mapped.sample(1 / tickRate) : controls);
+        game.step(keyboardOpen ? {} : mapped ? mapped.sample(1 / tickRate) : controls);
         if (game.app.state.status !== "playing") clear(true);
         accumulator -= tickMs;
       }
@@ -13613,6 +15018,9 @@ void main() {
         }
       }
       const state = game.app.state;
+      for (const button of Array.from(document.querySelectorAll("[data-pixel-mute]"))) {
+        button.setAttribute("aria-pressed", String(game.muted));
+      }
       for (const element of Array.from(document.querySelectorAll("[data-pixel-paused]"))) {
         element.hidden = !game.paused || !isPausableStatus(state.status);
       }
@@ -13664,11 +15072,13 @@ void main() {
     if (canvas.dataset.pixelAppFullscreen === "true" && isStandaloneApp()) fullscreen.startStandalone();
     frame(performance.now());
     const dispose = () => {
+      game.flushSave();
       stopped = true;
       game.paused = true;
       cancelAnimationFrame(frameId);
       fullscreen.dispose();
       gpu?.dispose();
+      gpuLighting?.dispose();
       gpuCanvas?.remove();
       viewportResize.disconnect();
       touch?.dispose();

@@ -3,7 +3,7 @@ import { compileCoreExpression } from './core_expression';
 // Expression evaluation engine
 // ============================================================================
 
-import { ctx } from './context';
+import { ctx, currentContext } from './context';
 import { randomInt, shuffled } from './random';
 import { splitPathSegments, buildScope } from './scope';
 import {
@@ -138,18 +138,23 @@ export function resolveValue(expr: string, scope: Scope): unknown {
 // parseHelperCall / callHelper
 // ---------------------------------------------------------------------------
 
+import { callableName, inLogicScope, readonlyModuleValue } from './modular';
+let entityConstructionDepth = 0;
+
 export function parseHelperCall(
   expr: string,
 ): { name: string; args: string[] } | null {
   const trimmed = String(expr || '').trim();
   if (!trimmed) return null;
 
-  const { helperDefinitions } = ctx();
+  const context = currentContext();
+  if (!context) return null;
+  const { helperDefinitions } = context;
 
-  const parenMatch = trimmed.match(/^([A-Za-z_][\w-]*)\((.*)?\)$/);
-  if (parenMatch && helperDefinitions[parenMatch[1]]) {
+  const parenMatch = trimmed.match(/^([A-Za-z_][\w.-]*)\((.*)?\)$/);
+  if (parenMatch && helperDefinitions[callableName(parenMatch[1], 'helper')]) {
     return {
-      name: parenMatch[1],
+      name: callableName(parenMatch[1], 'helper'),
       args: parenMatch[2] ? splitTopLevel(parenMatch[2], ',') : [],
     };
   }
@@ -157,9 +162,9 @@ export function parseHelperCall(
   const firstSpace = trimmed.indexOf(' ');
   if (firstSpace > 0) {
     const name = trimmed.slice(0, firstSpace);
-    if (helperDefinitions[name]) {
+    if (helperDefinitions[callableName(name, 'helper')]) {
       return {
-        name,
+        name: callableName(name, 'helper'),
         args: trimmed
           .slice(firstSpace + 1)
           .split(/\s+/)
@@ -168,8 +173,8 @@ export function parseHelperCall(
     }
   }
 
-  if (helperDefinitions[trimmed]) {
-    return { name: trimmed, args: [] };
+  if (helperDefinitions[callableName(trimmed, 'helper')]) {
+    return { name: callableName(trimmed, 'helper'), args: [] };
   }
 
   return null;
@@ -185,11 +190,32 @@ export function callHelper(
   const helper = helperDefinitions[name];
   if (!helper) return undefined;
 
-  const helperLocals: Record<string, unknown> = Object.assign({}, scope || {});
+  if (helper.entity) {
+    if (args.length > 2) throw new Error(`${name} accepts id and optional fields`);
+    if (typeof args[0] !== 'string' || !args[0]) throw new Error(`${name} requires a nonempty stable string id`);
+    const fields = args[1] === undefined ? {} : args[1];
+    if (!fields || typeof fields !== 'object' || Array.isArray(fields)) throw new Error(`${name} fields must be a record`);
+    for (const key of Object.keys(fields)) {
+      if (!Object.prototype.hasOwnProperty.call(helper.entity, key)) throw new Error(`Unknown ${name} field: ${key}`);
+    }
+    if (entityConstructionDepth >= MAX_DEPTH) throw new Error(`Entity composition is too deep or cyclic: ${name}`);
+    entityConstructionDepth++;
+    try {
+      const value: Record<string, unknown> = { id: args[0], __type: name };
+      for (const [key, expression] of Object.entries(helper.entity)) {
+        value[key] = Object.prototype.hasOwnProperty.call(fields, key) ? Reflect.get(fields, key) : evaluateExpression(expression, { id: args[0] }, depth + 1);
+      }
+      return value;
+    } finally {
+      entityConstructionDepth--;
+    }
+  }
+  const helperLocals: Record<string, unknown> = helper.scope ? {} : Object.assign({}, scope);
   (helper.params || []).forEach((param, index) => {
     helperLocals[param] = args[index];
   });
 
+  const result = inLogicScope(name, helper, undefined, () => {
   for (const line of helper.body || []) {
     const trimmed = String(line || '').trim();
     if (trimmed.startsWith('return ')) {
@@ -202,6 +228,8 @@ export function callHelper(
   }
 
   return undefined;
+  });
+  return helper.scope && ctx().logicOwner !== helper.scope ? readonlyModuleValue(result, helper.scope) : result;
 }
 
 // ---------------------------------------------------------------------------
@@ -211,6 +239,8 @@ export function callHelper(
 export type CompiledExpr = (scope: Scope) => unknown;
 
 const exprCache = new Map<string, CompiledExpr>();
+const helperContextIds = new WeakMap<object, number>();
+let nextHelperContextId = 1;
 const MAX_CACHE_SIZE = 8192;
 
 export function clearExpressionCache(): void {
@@ -970,13 +1000,23 @@ export function evaluateExpression(
   const trimmed = String(expr || '').trim();
   if (!trimmed) return undefined;
 
-  let compiled = exprCache.get(trimmed);
+  const context = currentContext();
+  let contextId = 0;
+  if (context) {
+    contextId = helperContextIds.get(context.helperDefinitions) ?? 0;
+    if (!contextId) {
+      contextId = nextHelperContextId++;
+      helperContextIds.set(context.helperDefinitions, contextId);
+    }
+  }
+  const cacheKey = `${contextId}:${context?.logicOwner ?? ''}\0${trimmed}`;
+  let compiled = exprCache.get(cacheKey);
   if (!compiled) {
     compiled = compileExpression(trimmed, depth || 0);
     if (exprCache.size >= MAX_CACHE_SIZE) {
       exprCache.clear();
     }
-    exprCache.set(trimmed, compiled);
+    exprCache.set(cacheKey, compiled);
   }
 
   return compiled(scope);

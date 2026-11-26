@@ -39,6 +39,26 @@ function fragmentNoise(x: number, y: number): number {
   return (Math.imul(hash ^ (hash >>> 13), 1274126177) >>> 0) / 4294967296;
 }
 
+interface BlockGeometry {
+  from: [number, number, number];
+  size: [number, number, number];
+  max: [number, number, number];
+  center: [number, number, number];
+}
+const geometryCache = new WeakMap<Block, BlockGeometry>();
+
+function geometry(block: Block): BlockGeometry {
+  let cached = geometryCache.get(block);
+  if (!cached || block.from[0] !== cached.from[0] || block.from[1] !== cached.from[1] || block.from[2] !== cached.from[2] ||
+      block.size[0] !== cached.size[0] || block.size[1] !== cached.size[1] || block.size[2] !== cached.size[2]) {
+    const [x, y, z] = block.from, [w, h, d] = block.size;
+    cached = { from: [x, y, z], size: [w, h, d],
+      max: [x + w, y + h, z + d], center: [x + w / 2, y + h / 2, z + d / 2] };
+    geometryCache.set(block, cached);
+  }
+  return cached;
+}
+
 /** Analytic box, sphere, cylinder and wedge hits share the raycaster's depth convention. */
 export function renderModel(
   model: BlockModel, instance: ModelInstance,
@@ -69,8 +89,7 @@ export function renderModel(
     origin[2] = (x * ts + z * tc) / axialScale;
   }
   for (const block of model.blocks) {
-    const max = block.from.map((v, i) => v + block.size[i]);
-    const center = block.from.map((v, i) => v + block.size[i] / 2);
+    const { max, center } = geometry(block);
     let left = width, right = 0, top = height, bottom = 0, clipped = false, frontCorners = 0;
     let outsideLeft = 0, outsideRight = 0, outsideTop = 0, outsideBottom = 0;
     for (let corner = 0; corner < 8; corner++) {

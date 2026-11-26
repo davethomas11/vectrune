@@ -1,0 +1,376 @@
+@Logic/aquarium
+state:
+    garden = []
+    feet = []
+    obstacles = []
+    floral_models = ["aqua/blossom","aqua/fan","aqua/lily"]
+    floral_names = ["Sunburst bloom","Violet sea fan","Moon lily"]
+    floral_prices = [35,55,75]
+    critter_models = ["aqua/crab","aqua/hermit","aqua/shrimp","aqua/snail"]
+    critter_names = ["Sunset crab","Hermit crab","Cherry shrimp","Moon snail"]
+    critter_prices = [45,65,55,40]
+    walking = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]]
+    floor_clear = false
+    floor_slot = -1
+    floor_x = 0
+    floor_y = 0
+    shop_error = ""
+    critter_food = []
+    critter_dead_count = 0
+    critter_hungry_count = 0
+    remaining_critters = []
+
+action prepare_critter(critter,index):
+    critter.name = critter.name ? critter.name : ["Pebble","Shelly","Cherry","Moonbeam"][critter.kind]+(index>0 ? " "+(index+1) : "")
+    critter.age = critter.age ? critter.age : 0
+    critter.hunger = critter.hunger ? critter.hunger : 0
+    critter.lifespan = critter.lifespan ? critter.lifespan : 5400+critter.kind*1800
+    critter.base_lifespan = critter.base_lifespan ? critter.base_lifespan : critter.lifespan
+    if !critter.dead:
+        critter.lifespan = floor(critter.base_lifespan*(1+progress.life_level*0.1))
+    critter.dead = critter.dead ? true : false
+    critter.cause = critter.cause ? critter.cause : ""
+    local care_id = critter.care ? critter.care.id : "critter-"+progress.next_id
+    if !critter.care:
+        progress.next_id += 1
+    call care.restore critter, care_id, 1800
+
+action update_critter_life:
+    for critter, index in progress.critters:
+        if !critter.dead:
+            call care.advance critter
+            if critter.dead:
+                local crab = crabs[index]
+                crab.moving = false
+                if crab.target>=0:
+                    local pellet = critter_food[crab.target]
+                    pellet.owner = -1
+                    pellet.chewing = false
+                crab.target = -1
+                if selected_critter==index:
+                    keyboard_open = false
+                notice = critter.name+" has passed on. Tap to retrieve from the sand."
+
+action inspect_resident(index):
+    if index<fish.length:
+        call inspect_fish index
+        stop when true
+    if index>=fish.length && index<fish.length+crabs.length:
+        call inspect_critter index-fish.length
+        stop when true
+    if index>=fish.length+crabs.length:
+        call inspect_fish fish_style[index-fish.length-crabs.length].owner
+
+action inspect_critter(index):
+    stop when reset_open || shop!=""
+    if index<0 || index>=crabs.length || floor(index)!=index:
+        notice = "That critter is no longer in this lagoon."
+        call update_labels
+        stop when true
+    if progress.critters[index].dead:
+        nets = [{"x":crabs[index].x,"y":crabs[index].y,"z":crabs[index].z,"model":"aqua/net","visible":true}]
+        net_ticks = 30
+        notice = progress.critters[index].name+" retrieved with the net."
+        remaining_critters = []
+        for critter, ci in progress.critters:
+            if ci!=index:
+                remaining_critters.push(critter)
+        progress.critters = remaining_critters
+        profile_open = false
+        keyboard_open = false
+        selected_critter = -1
+        call build_critters
+        call animate
+        call update_labels
+        stop when true
+    selected_critter = index
+    selected_fish = -1
+    profile_open = true
+    menu_open = false
+    keyboard_open = false
+    name_error = ""
+    call update_labels
+
+action scatter_critter_food:
+    critter_food = []
+    for crab, index in crabs:
+        crab.target = -1
+        crab.munch = 0
+        if !progress.critters[index].dead:
+            for serving in range(0,2):
+                local x = crab.x+cos(crab.angle)*0.4
+                local y = crab.y+sin(crab.angle)*0.4
+                call check_floor x, y, 0
+                if !floor_clear:
+                    x = crab.x
+                    y = crab.y
+                critter_food.push({"x":x,"y":y,"z":3.5+serving*0.4,"model":"aqua/algae","visible":true,"scale":1.8,"owner":-1,"chewing":false})
+
+action eat_critter_food:
+    for pellet in critter_food:
+        if fed_ticks==0:
+            pellet.visible = false
+            pellet.owner = -1
+        if pellet.visible && !pellet.chewing:
+            pellet.z = max(2.2,pellet.z-0.012)
+    for crab, index in crabs:
+        if crab.target>=0:
+            local pellet = critter_food[crab.target]
+            if !pellet.visible || progress.critters[index].dead:
+                crab.target = -1
+                crab.munch = 0
+            if pellet.visible && !progress.critters[index].dead && pellet.z<=2.25 && (pellet.x-crab.x)*(pellet.x-crab.x)+(pellet.y-crab.y)*(pellet.y-crab.y)<0.36:
+                pellet.chewing = true
+                crab.munch += 1
+                pellet.scale = 1.8*(1-crab.munch/240)
+                if crab.munch>=120:
+                    pellet.visible = false
+                    pellet.owner = -1
+                    pellet.chewing = false
+                    local critter = progress.critters[index]
+                    save_revision += 1
+                    call care.nourish critter, 600
+                    crab.target = -1
+                    crab.munch = 0
+
+action build_garden:
+    progress.florals = progress.florals ? progress.florals : [{"kind":0,"slot":-1}]
+    garden = []
+    for floral in progress.florals:
+        if floral.slot>=0:
+            garden.push({"x":20+(12+(floral.slot%9)*2-20)*tank_scale,"y":30+(26.5+floor(floral.slot/9)*1.7-30)*tank_scale,"z":2,"model":floral_models[floral.kind],"scale":tank_scale})
+    call build_obstacles
+
+action build_obstacles:
+    obstacles = []
+    for plant in reef:
+        obstacles.push({"x":plant.x,"y":plant.y,"radius":0.65*(plant.scale ? plant.scale : 1)+0.5})
+    for plant in garden:
+        obstacles.push({"x":plant.x,"y":plant.y,"radius":0.9*tank_scale})
+    obstacles.push({"x":24,"y":28.4,"radius":1.45})
+
+action check_floor(x,y,clearance):
+    floor_clear = abs(x-20)<=7.8*tank_scale && abs(y-30)<=3.7*tank_scale
+    for obstacle in obstacles:
+        if (x-obstacle.x)*(x-obstacle.x)+(y-obstacle.y)*(y-obstacle.y)<(obstacle.radius+clearance)*(obstacle.radius+clearance):
+            floor_clear = false
+
+action find_floor(clearance):
+    floor_slot = -1
+    local landing = clearance<0.4
+    for slot in range(0,landing ? 91 : 45):
+        local x = 20+((landing ? 12.5+(slot%13)*1.25 : 12+(slot%9)*2)-20)*tank_scale
+        local y = 30+((landing ? 26.7+floor(slot/13)*1.05 : 26.5+floor(slot/9)*1.7)-30)*tank_scale
+        call check_floor x, y, clearance
+        for crab in crabs:
+            if (x-crab.x)*(x-crab.x)+(y-crab.y)*(y-crab.y)<1.4:
+                floor_clear = false
+        if floor_clear:
+            floor_slot = slot
+            floor_x = x
+            floor_y = y
+            stop when true
+
+action build_critters:
+    save_revision += 1
+    residents_dirty = true
+    progress.critters = progress.critters ? progress.critters : [{"kind":0}]
+    crabs = []
+    feet = []
+    critter_food = []
+    for critter, index in progress.critters:
+        call prepare_critter critter, index
+        call find_floor 0.15
+        if floor_slot>=0:
+            call spawn_critter critter.kind, index
+        if floor_slot<0:
+            notice = "Some critters need more clear sand. Expand your lagoon."
+
+action clear_critter_paths:
+    for crab in crabs:
+        call check_floor crab.x, crab.y, 0.12
+        if !floor_clear:
+            call find_floor 0.15
+            if floor_slot>=0:
+                crab.x = floor_x
+                crab.y = floor_y
+            if floor_slot<0:
+                notice = "Some critters need more clear sand. Expand your lagoon."
+
+action spawn_critter(kind,index):
+    residents_dirty = true
+    local speed = kind==3 ? 0.009 : kind==2 ? 0.045 : 0.028
+    crabs.push({"x":floor_x,"y":floor_y,"z":2.12,"model":critter_models[kind],"kind":kind,"angle":0,"scale":0.8,"direction":index%8,"stride":0,"moving":false,"rest":index*11,"burst":90+index*13,"speed":speed,"target":-1,"munch":0})
+    for side in range(0,2):
+        feet.push({"x":floor_x,"y":floor_y,"z":2.12,"model":kind==2 ? "aqua/shrimp_feet" : "aqua/crab_feet","scale":0.8,"angle":0,"visible":kind!=3})
+
+action move_critters:
+    for crab, index in crabs:
+        crab.moving = false
+        if crab.target>=0 && !critter_food[crab.target].visible:
+            crab.target = -1
+        if crab.target<0 && !progress.critters[index].dead:
+            local nearest = 10000
+            for pellet, pi in critter_food:
+                if pellet.visible && pellet.owner<0 && pellet.z<=2.25:
+                    local distance = (pellet.x-crab.x)*(pellet.x-crab.x)+(pellet.y-crab.y)*(pellet.y-crab.y)
+                    if distance<nearest:
+                        nearest = distance
+                        crab.target = pi
+            if crab.target>=0:
+                local pellet = critter_food[crab.target]
+                pellet.owner = index
+        crab.rest = max(0,crab.rest-1)
+        if !progress.critters[index].dead && (crab.rest==0 || crab.target>=0):
+            crab.burst -= 1
+            if crab.burst<=0 && crab.target<0:
+                crab.rest = 30+(index*17+ticks)%90
+                crab.burst = 60+(index*23+ticks)%120
+                crab.direction = (crab.direction+1+index%3)%8
+            if crab.target>=0:
+                local pellet = critter_food[crab.target]
+                local dx = pellet.x-crab.x
+                local dy = pellet.y-crab.y
+                crab.direction = dx>0.15 ? (dy>0.15 ? 1 : dy< -0.15 ? 7 : 0) : dx< -0.15 ? (dy>0.15 ? 3 : dy< -0.15 ? 5 : 4) : (dy>0 ? 2 : 6)
+            if (crab.rest==0 || crab.target>=0) && crab.munch==0:
+                for attempt in range(0,8):
+                    local direction = walking[crab.direction]
+                    local step = crab.speed/(direction[0]!=0 && direction[1]!=0 ? sqrt(2) : 1)
+                    local x = crab.x+direction[0]*step
+                    local y = crab.y+direction[1]*step
+                    call check_floor x, y, 0.12
+                    for other, oi in crabs:
+                        if oi!=index && (x-other.x)*(x-other.x)+(y-other.y)*(y-other.y)<0.45:
+                            floor_clear = false
+                    if floor_clear:
+                        crab.x = x
+                        crab.y = y
+                        crab.angle = crab.direction*45
+                        crab.stride += crab.speed*150
+                        crab.moving = true
+                        stop when true
+                    crab.direction = (crab.direction+1)%8
+                if !crab.moving:
+                    crab.rest = 15
+
+action count_critters:
+    critter_dead_count = 0
+    critter_hungry_count = 0
+    for critter in progress.critters:
+        if critter.dead:
+            critter_dead_count += 1
+        if !critter.dead && critter.hunger>=840:
+            critter_hungry_count += 1
+
+action animate_feet:
+    for crab, index in crabs:
+        local critter = progress.critters[index]
+        crab.model = critter.dead ? "aqua/dead_critter" : critter_models[crab.kind]
+        crab.scale = 0.8*(crab.munch>0 ? 1+sin(crab.munch*18)*0.03 : 1)
+        crab.z = 2.12+(crab.moving && crab.kind!=3 ? abs(sin(crab.stride*2))*0.025 : 0)
+        for side in range(0,2):
+            local leg = feet[index*2+side]
+            leg.visible = !critter.dead && crab.kind!=3
+            local swing = crab.moving ? sin(crab.stride+(side==0 ? 0 : 180)) : 0
+            local offset = side==0 ? -0.12 : 0.12
+            leg.x = crab.x-cos(crab.angle)*swing*0.065-sin(crab.angle)*offset
+            leg.y = crab.y-sin(crab.angle)*swing*0.065+cos(crab.angle)*offset
+            leg.z = 2.1+max(0,swing)*0.07
+            leg.angle = crab.angle+(side==0 ? 0 : 180)
+
+action open_flower_shop:
+    shop = "flowers"
+    call open_shop
+
+action open_critter_shop:
+    shop = "critters"
+    call open_shop
+
+action open_shop:
+    menu_open = false
+    profile_open = false
+    keyboard_open = false
+    reset_open = false
+    shop_index = 0
+    shop_error = ""
+    call update_labels
+    call shop_move 0
+
+action close_shop:
+    shop = ""
+    call update_labels
+
+action shop_move(direction):
+    stop when shop==""
+    local count = ui.grid.items.length
+    shop_index = (shop_index+direction+count)%count
+    for i in range(0,count):
+        stop when !ui.grid.items[shop_index].disabled
+        shop_index = (shop_index+(direction<0 ? count-1 : 1))%count
+    call update_labels
+
+action buy_floral(kind):
+    if kind<0 || kind>=3 || floor(kind)!=kind:
+        notice = "Choose a floral variety from the picker."
+        shop_error = notice
+        call update_labels
+        stop when true
+    if garden.length>=12 || progress.pearls<floral_prices[kind]:
+        notice = garden.length>=12 ? "Your floral garden has all 12 blossoms." : "Save a few more pearls for this bloom."
+        shop_error = notice
+        call update_labels
+        stop when true
+    call find_floor 0.4
+    if floor_slot<0:
+        notice = "No clear planting spot. Expand the tank for more room."
+        shop_error = notice
+        call update_labels
+        stop when true
+    progress.pearls -= floral_prices[kind]
+    save_revision += 1
+    progress.florals.push({"kind":kind,"slot":floor_slot})
+    call build_garden
+    shop = ""
+    notice = floral_names[kind]+" planted! Your garden stays rooted in place."
+    call update_labels
+
+action buy_critter(kind):
+    if kind<0 || kind>=4 || floor(kind)!=kind:
+        notice = "Choose a critter variety from the picker."
+        shop_error = notice
+        call update_labels
+        stop when true
+    if progress.critters.length>=12 || progress.pearls<critter_prices[kind]:
+        notice = progress.critters.length>=12 ? "All 12 bottom critter spaces are filled." : "Save a few more pearls for this critter."
+        shop_error = notice
+        call update_labels
+        stop when true
+    call find_floor 0.15
+    if floor_slot<0:
+        notice = "No clear landing spot. Expand the tank for more room."
+        shop_error = notice
+        call update_labels
+        stop when true
+    progress.pearls -= critter_prices[kind]
+    save_revision += 1
+    progress.critters.push({"kind":kind})
+    call prepare_critter progress.critters[progress.critters.length-1], progress.critters.length-1
+    call spawn_critter kind, crabs.length
+    call animate
+    shop = ""
+    notice = critter_names[kind]+" joined your sandy neighborhood!"
+    call update_labels
+
+action shop_labels:
+    ui.buttons = []
+    ui.grid = {"layout":"sidebar","columns":1,"title":shop=="flowers" ? "Floral garden" : "Sandy neighbors",
+        "subtitle":pearl_label,"footer":shop_error ? shop_error : "CHOOSE A VARIETY / TAP AWAY TO CLOSE","width":302,"rowHeight":40,"padding":12,"gap":8,"textScale":2,
+        "dismissAction":"close_shop","moveAction":"shop_move","closeOnActivate":false,"items":[]}
+    if shop=="flowers":
+        for kind in range(0,3):
+            ui.grid.items.push({"label":floral_names[kind],"sub":floral_prices[kind]+" pearls / "+garden.length+" of 12 planted","action":"buy_floral","args":[kind],"selected":shop_index==kind,"disabled":garden.length>=12 || progress.pearls<floral_prices[kind]})
+    if shop=="critters":
+        for kind in range(0,4):
+            ui.grid.items.push({"label":critter_names[kind],"sub":critter_prices[kind]+" pearls / "+progress.critters.length+" of 12 neighbors","action":"buy_critter","args":[kind],"selected":shop_index==kind,"disabled":progress.critters.length>=12 || progress.pearls<critter_prices[kind]})
+    if shop=="fish" || shop=="care":
+        call upgrade_labels

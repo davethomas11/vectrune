@@ -1,0 +1,41 @@
+#!RUNE
+import "idle_aquarium.rune"
+
+@Test/Aquarium/ComposedCareAndPersistentResidentIdentity
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    assert state.progress.buddies[0].care.__type == "AquariumLife"
+    assert state.progress.critters[0].care.__type == "AquariumLife"
+    assert state.progress.next_id == 5
+    invoke remember_care_ids
+    invoke starve_module_fish
+    invoke tick {}
+    assert state.progress.buddies[0].care.dead == true
+    assert state.progress.buddies[0].care.cause == "Hunger"
+    invoke inspect_fish 0
+    assert state.progress.buddies[0].care.id == state.survivor_care_id
+    invoke fund_module_adoption
+    invoke buy_fish
+    assert state.progress.buddies[2].care.id != state.removed_care_id
+    assert state.progress.next_id == 6
+    invoke initialize
+    assert state.progress.buddies[0].care.id == state.survivor_care_id
+    assert state.progress.critters[0].care.id == state.critter_care_id
+    assert state.progress.next_id == 6
+
+@Logic/aquarium
+state:
+    survivor_care_id = ""
+    removed_care_id = ""
+    critter_care_id = ""
+action remember_care_ids:
+    survivor_care_id = progress.buddies[1].care.id
+    removed_care_id = progress.buddies[0].care.id
+    critter_care_id = progress.critters[0].care.id
+action starve_module_fish:
+    ticks = 29
+    progress.buddies[0].hunger = 899
+action fund_module_adoption:
+    progress.pearls = 2000

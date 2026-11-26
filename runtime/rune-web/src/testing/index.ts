@@ -31,7 +31,7 @@ export function boot(options: RuneWebConfig): void {
 }
 
 export function invoke(name: string, args: unknown[]): void {
-  if (!Object.prototype.hasOwnProperty.call(config.actionDefinitions, name)) {
+  if (!name.includes('.') && !Object.prototype.hasOwnProperty.call(config.actionDefinitions, name)) {
     throw new Error(`Unknown Rune-Web action: ${name}`);
   }
   app.invokeAction(name, args);

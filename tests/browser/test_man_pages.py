@@ -83,7 +83,9 @@ class ManPageTests(unittest.TestCase):
             self.assertIn('\\-\\-rune', cli)
             for declaration in ['@AsciiAnimator', '@Ascii3D', '@AsciiSprite', '@AsciiTone']:
                 self.assertIn(declaration, language)
-            self.assertNotIn('Unreleased', language.split('\\&@AsciiAnimator', 1)[1].split('.SS', 1)[0])
+            animator = language.split('\\&@AsciiAnimator', 1)[1].split('.SS', 1)[0]
+            self.assertIn('Terminal\\-only ASCII canvas (v0.3.12)', animator)
+            self.assertIn('Unreleased \\-\\-desktop', animator)
             self.assertIn('memory.set', language)
             self.assertIn('Runtime: Native / server', language)
             self.assertIn('Runtime: Rune\\-Web', language)

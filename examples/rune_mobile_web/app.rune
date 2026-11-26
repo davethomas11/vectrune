@@ -1,0 +1,61 @@
+#!RUNE
+# Offline mobile prototype. Compile with runtime/rune-mobile-web; no HTTP server needed.
+import "style.rune"
+@App
+name = Rune Mobile Web
+type = REST
+@Frontend
+type = rune-mobile-web
+path = /
+page = mobile
+@Logic/mobile
+state:
+    count = 0
+    screen = "counter"
+action increment():
+    count += 1
+action decrement():
+    count = max(0, count - 1)
+action reset():
+    count = 0
+action save():
+    storage.set("rune-mobile-web.count", count)
+action restore():
+    count = storage.get("rune-mobile-web.count", 0)
+action navigate(value):
+    screen = value
+@Page/mobile
+title = Rune Mobile Web
+style = mobile
+logic = mobile
+view:
+    main:
+        header:
+            p .eyebrow "VECTRUNE / MOBILE WEB"
+            h1 "Small source. Real app."
+            p .intro "One Rune file, ready for your pocket."
+        nav aria-label="Demo screens":
+            button .{screen == 'counter' ? 'active' : ''} click="navigate('counter')" "Counter"
+            button .{screen == 'about' ? 'active' : ''} click="navigate('about')" "About"
+        if screen == "counter":
+            section .card aria-label=Counter:
+                p .eyebrow "MAKE SOMETHING MOVE"
+                p #count aria-live=polite "{count}"
+                div .controls:
+                    button aria-label="Decrease count" click=decrement() "−"
+                    button .primary aria-label="Increase count" click=increment() "+"
+                button .text-button click=reset() "Reset counter"
+            section .card:
+                h2 "Keep your place"
+                p "Save on this device, then restore after reopening the app."
+                div .controls:
+                    button click=save() "Save count"
+                    button click=restore() "Restore count"
+        if screen == "about":
+            section .card:
+                h2 "Built from Rune"
+                p "State, actions, navigation and styles come from a bundled Rune document."
+                p "This prototype runs locally on Android and iOS using the same Rune-Web engine."
+                p "Try it in airplane mode. No server or account needed."
+        footer:
+            p "Android + iOS · Runs offline"

@@ -1,0 +1,45 @@
+@Type/AquariumLife
+state:
+    age = 0
+    hunger = 0
+    dead = false
+    lifespan = 2700
+    starvation = 900
+    cause = ""
+
+action advance(seconds):
+    stop when dead
+    age += seconds
+    hunger = min(starvation,hunger+seconds)
+    if age>=lifespan || hunger>=starvation:
+        dead = true
+        cause = hunger>=starvation ? "Hunger" : "Old age"
+
+action nourish(amount):
+    stop when dead
+    hunger = max(0,hunger-amount)
+
+@Module/AquariumCare
+exports = ["restore","advance","nourish"]
+
+action restore(buddy,id,starvation):
+    buddy.care = AquariumLife(id,{"age":buddy.age,"hunger":buddy.hunger,"dead":buddy.dead,"lifespan":buddy.lifespan,"starvation":starvation,"cause":buddy.cause})
+
+action advance(buddy):
+    buddy.care.age = buddy.age
+    buddy.care.hunger = buddy.hunger
+    buddy.care.dead = buddy.dead
+    buddy.care.lifespan = buddy.lifespan
+    call buddy.care.advance 1
+    call sync buddy
+
+action nourish(buddy,amount):
+    buddy.care.hunger = buddy.hunger
+    call buddy.care.nourish amount
+    call sync buddy
+
+action sync(buddy):
+    buddy.age = buddy.care.age
+    buddy.hunger = buddy.care.hunger
+    buddy.dead = buddy.care.dead
+    buddy.cause = buddy.care.cause

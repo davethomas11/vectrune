@@ -1,6 +1,17 @@
 version: 1
 status: starter
 app_types:
+  - name: rune-mobile-web
+    summary: Source-build frontend target packaged into Android/iOS WebViews with Capacitor.
+    behavior:
+      - "@Frontend type = rune-mobile-web uses the shared Rune-Web compiler and runtime, not a native Rune interpreter."
+      - "--build android creates a debug APK; --build ios creates an unsigned Simulator app on macOS."
+      - "--export android|ios generates an editable IDE project without SDKs; existing editable projects are protected."
+      - "Offline bundled UI does not include a server/backend. rune-mobile remains reserved for future native support."
+    sources:
+      - src/cli/mobile_web.rs
+      - runtime/rune-mobile-web/README.md
+      - knowledge/runtime/mobile-web.md
   - name: ascii-animator
     summary: Native terminal ASCII animation, simulated dashboards and keyboard-controlled games.
     behavior:

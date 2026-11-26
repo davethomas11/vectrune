@@ -3,6 +3,10 @@
   "status": "starter",
   "app_types": [
     {
+      "name": "rune-mobile-web",
+      "summary": "Source-build frontend target packaged into Android/iOS WebViews with Capacitor."
+    },
+    {
       "name": "ascii-animator",
       "summary": "Native terminal ASCII animation, simulated dashboards and keyboard-controlled games."
     },

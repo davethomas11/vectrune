@@ -49,6 +49,21 @@ it('reuses presented pixels until a tick, action, pause or explicit invalidation
 });
 
 describe('structured pixel3d HUD', () => {
+  it('picks visible model pixels, not hidden fish or empty space', () => {
+    const ray = new Raycaster3D({
+      width: 64, height: 48, textures: {}, sprites: {},
+      models: { fish: { blocks: [{ from: [-.5, -.5, 0], size: [1, 1, 1], color: 0xffffff }] } },
+      map: { width: 8, height: 8, grid: Array(64).fill(0), floor: 0, ceiling: 0 },
+    });
+    const camera = { x: 1, y: 2, angle: 0 };
+    const front = { x: 3, y: 2, model: 'fish' }, back = { ...front, x: 5 };
+    ray.render(camera, [front, back]);
+    expect(ray.pickModels(camera, [back, front], 32, 24)).toBe(1);
+    expect(ray.pickModels(camera, [back], 32, 24)).toBe(-1);
+    expect(ray.pickModels(camera, [{ ...front, visible: false }], 32, 24)).toBe(-1);
+    expect(ray.pickModels(camera, [front], 0, 0)).toBe(-1);
+    expect(() => ray.pickModels(camera, [front], NaN, 24)).toThrow('coordinates');
+  });
   const ui: GameHud = {
     meters: [{ label: 'HEALTH', value: 25, max: 100, color: 0x7ed6ac }],
     objective: 'CLEAR THE DEPTH', detail: 'KNIGHT', prompt: 'E: CLAIM', notice: 'REWARD',

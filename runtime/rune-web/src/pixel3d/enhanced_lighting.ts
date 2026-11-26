@@ -27,6 +27,21 @@ interface View {
   fov: number; rowOrigin: number;
 }
 
+export interface LightingShadow {
+  x: number; y: number; z: number; halfA: number; halfB: number; strength: number; onGlass: boolean;
+}
+
+export interface DeferredEnhancement {
+  emission: EmissionBuffer;
+  tileWidth: number;
+  tileHeight: number;
+  paneDepth: Float64Array;
+  paneAlpha: Uint8Array;
+  shadows: LightingShadow[];
+  haze: number;
+  horizon: number;
+}
+
 function viewOf(camera: Camera3D, dirX: number, dirY: number, fov: number, rowOrigin: number): View {
   const pitch = (camera.pitch ?? 0) * Math.PI / 180;
   return { x: camera.x, y: camera.y, z: camera.height ?? 0.5, dirX, dirY,
@@ -93,6 +108,8 @@ export class EnhancedLighting {
   private paneDepth = new Float64Array(0);
   private paneAlpha = new Uint8Array(0);
   private readonly panes: Plane[] = [];
+  private readonly shadowCache: LightingShadow[] = [];
+  private readonly shadowList: LightingShadow[] = [];
   private emission: EmissionBuffer = { width: 0, pixels: new Int32Array(0), depths: new Float64Array(0), colors: new Uint32Array(0) };
 
   begin(width: number, height: number): EmissionBuffer {
@@ -153,6 +170,25 @@ export class EnhancedLighting {
     this.combine(buffer, depth, this.buildGlow(depth), haze, horizon);
   }
 
+  prepareDeferred(depth: Float64Array, camera: Camera3D, dirX: number, dirY: number,
+    fov: number, rowOrigin: number, world: VoxelWorld | undefined, things: readonly Thing3D[],
+    models: Record<string, BlockModel>, horizon?: number): DeferredEnhancement {
+    const view = viewOf(camera, dirX, dirY, fov, rowOrigin);
+    for (const pane of this.panes) this.tintPane(view, pane);
+    const { colors, pixels, depths } = this.emission;
+    for (let i = 0; i < colors.length; i++) {
+      if (colors[i] && depth[pixels[i]] !== depths[i]) colors[i] = 0;
+    }
+    return {
+      emission: this.emission, tileWidth: this.tileWidth, tileHeight: this.tileHeight,
+      paneDepth: this.paneDepth, paneAlpha: this.paneAlpha,
+      shadows: world ? this.shadowPlanes(world, things, models) : [],
+      haze: world ? Math.max(0, Math.min(1, (Math.abs(dirX) - .35) / .4)) *
+        Math.max(0, Math.min(1, (0.8 - Math.abs(view.sp)) / .25)) : 0,
+      horizon: horizon ?? FALLBACK_HAZE,
+    };
+  }
+
   private combine(buffer: Uint32Array, depth: Float64Array, bloom: boolean, haze: number, horizon?: number): void {
     const width = this.width, height = this.height;
     const hazeTint = horizon ?? FALLBACK_HAZE;
@@ -180,7 +216,7 @@ export class EnhancedLighting {
           if (haze && distance > 22 && distance < Infinity) {
             pixel = blendColor(pixel, hazeTint, haze * Math.min(.30, (distance - 22) * .008));
           }
-          if (distance > paneDepth) pixel = blendColor(pixel, GLASS_TINT, tint / 255);
+          if (distance > paneDepth + 1e-5) pixel = blendColor(pixel, GLASS_TINT, tint / 255);
           const glow = startGlow || farGlow ? mixGlow(startGlow, farGlow, i - row - left) : 0;
           buffer[i] = glow ? addColor(pixel, glow) : pixel;
         }
@@ -260,8 +296,9 @@ export class EnhancedLighting {
     }
   }
 
-  private shadows(buffer: Uint32Array, depth: Float64Array, view: View, world: VoxelWorld,
-    things: readonly Thing3D[], models: Record<string, BlockModel>): void {
+  private shadowPlanes(world: VoxelWorld, things: readonly Thing3D[], models: Record<string, BlockModel>): LightingShadow[] {
+    const shadows = this.shadowList;
+    shadows.length = 0;
     for (const thing of things) {
       const radius = thing.model && models[thing.model]?.contactShadow;
       if (!radius || thing.visible === false || (thing.dissolve ?? 0) >= 1 || thing.z === undefined) continue;
@@ -276,7 +313,7 @@ export class EnhancedLighting {
           break;
         }
       }
-      if (floor === undefined && !this.panes.length) {
+      if (floor === undefined) {
         const below = Math.floor(thing.z - .05);
         for (let z = below; z >= Math.max(0, below - 2); z--) {
           if (voxelGet(world, Math.floor(thing.x), Math.floor(thing.y), z)) {
@@ -287,11 +324,24 @@ export class EnhancedLighting {
       }
       if (floor === undefined) continue;
       const scale = thing.scale ?? 1, halfA = radius * scale, halfB = halfA * .77;
-      const bounds = this.bounds(view, {x:thing.x, y:thing.y, z:floor, ax:1, ay:0, az:0, bx:0, by:1,
-        halfA, halfB, scale}, 1);
+      const strength = .33 * Math.max(0, 1 - (thing.z - floor) * .6) * (1 - (thing.dissolve ?? 0));
+      const index = shadows.length;
+      const shadow = this.shadowCache[index] ??= {x:0,y:0,z:0,halfA:0,halfB:0,strength:0,onGlass:false};
+      shadow.x = thing.x; shadow.y = thing.y; shadow.z = floor;
+      shadow.halfA = halfA; shadow.halfB = halfB; shadow.strength = strength; shadow.onGlass = onGlass;
+      shadows.push(shadow);
+    }
+    return shadows;
+  }
+
+  private shadows(buffer: Uint32Array, depth: Float64Array, view: View, world: VoxelWorld,
+    things: readonly Thing3D[], models: Record<string, BlockModel>): void {
+    for (const shadow of this.shadowPlanes(world, things, models)) {
+      const {x:shadowX,y:shadowY,z:floor,halfA,halfB,strength,onGlass} = shadow;
+      const bounds = this.bounds(view, {x:shadowX, y:shadowY, z:floor, ax:1, ay:0, az:0, bx:0, by:1,
+        halfA, halfB, scale:1}, 1);
       if (!bounds) continue;
       const [left, top, right, bottom] = bounds;
-      const strength = .33 * Math.max(0, 1 - (thing.z - floor) * .6) * (1 - (thing.dissolve ?? 0));
       for (let y = top; y < bottom; y++) {
         const up = (view.rowOrigin - y - .5) / this.height;
         const rz = view.sp + view.cp * up;
@@ -302,8 +352,8 @@ export class EnhancedLighting {
           const i = y * this.width + x;
           if (onGlass ? depth[i] < distance - .02 : Math.abs(depth[i] - distance) > .055) continue;
           const side = (2 * x / this.width - 1) * view.fov;
-          const dx = (view.x - thing.x + distance * (view.dirX * heading - view.dirY * side)) / halfA;
-          const dy = (view.y - thing.y + distance * (view.dirY * heading + view.dirX * side)) / halfB;
+          const dx = (view.x - shadowX + distance * (view.dirX * heading - view.dirY * side)) / halfA;
+          const dy = (view.y - shadowY + distance * (view.dirY * heading + view.dirX * side)) / halfB;
           const fade = 1 - dx * dx - dy * dy;
           if (fade > 0) buffer[i] = blendColor(buffer[i], 0x10090b, fade * strength);
         }

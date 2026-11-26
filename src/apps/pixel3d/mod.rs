@@ -770,6 +770,7 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         let state = save["state"].as_str().context("Scene persistence needs state")?;
         ensure!(!key.is_empty() && key.len() <= 64 && key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'), "Persistence key must contain 1-64 letters, digits, hyphens or underscores");
         ensure!(logic.state.contains_key(state), "Scene persistence references unknown state {state}");
+        crate::apps::pixel::validate_save_schedule(&save, &logic)?;
         config["persistence"] = save;
     }
     if let Some(value) = scene.kv.get("presentation") {

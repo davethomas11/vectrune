@@ -1,0 +1,73 @@
+#!RUNE
+import "models.rune"
+import "music.rune"
+import "logic.rune"
+import "care.rune"
+import "critters.rune"
+import "upgrades.rune"
+import "shell.rune"
+
+@App
+name = Glowtide Aquarium
+type = pixel-3d
+runtime = hybrid
+scene = aquarium
+resolution = [640,400]
+tick_rate = 30
+port = 3036
+shell = aquarium_cabinet
+
+@Perspective/aquarium
+fov = 58
+
+@Scene/aquarium
+logic = aquarium
+map = lagoon
+world = world
+camera = camera
+perspective = aquarium
+lights = lights
+things = ["tank","reef","garden","residents","feet","critter_food","nets","bubbles","food","treasure","visitor"]
+controls = aquarium
+persistence = {"key":"glowtide-aquarium-v1","state":"progress","interval_ticks":150,"revision":"save_revision"}
+click_to_start = false
+mouse_look = false
+ui = ui
+
+@Map/lagoon
+sky = {"seed":73,"zenith":"#080d2c","horizon":"#123c65","below":"#071b31","cloud":"#245075","speed":0.025}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Page/aquarium
+logic = aquarium
+view:
+    canvas data-rune-pixel-3d=true
+
+@Controls/aquarium
+keys:
+    ArrowLeft -> left
+    ArrowRight -> right
+    KeyA -> left
+    KeyD -> right
+commands:
+    Space -> feed
+    Digit1 -> buy_fish
+    Digit2 -> grow_reef
+    Digit3 -> grow_tank
+    Tab -> toggle_menu
+    KeyC -> collect_treasure
+    KeyL -> cycle_lights
+    KeyP -> host.pause
+    KeyF -> host.fullscreen
+    KeyM -> host.mute
+gamepad:
+    Button0 -> {"command":"feed"}
+    Button2 -> {"command":"collect_treasure"}
+    Button4 -> left
+    Button5 -> right
+    Button9 -> {"command":"host.pause"}
+    Button3 -> {"command":"toggle_menu"}

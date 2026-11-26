@@ -7,6 +7,50 @@ const dark = 0xff242020;
 const map = { width: 4, height: 4, grid: Array(16).fill(0), floor: dark, ceiling: dark };
 
 describe('Enhanced Pixel 3D lighting', () => {
+  it('prepares deferred geometry, occlusion and independent overlays without CPU light compositing', () => {
+    const ray = new Raycaster3D({width:65,height:49,map,textures:{},sprites:{},models:{
+      lamp:{blocks:[{from:[-.18,-.1,-.18],size:[.36,.2,.36],color:0xfff4a015,emissive:true}]},
+      cover:{blocks:[{from:[-1,-.1,-1],size:[2,.2,2],color:dark}]},
+    }});
+    const camera = {x:2,y:3,angle:270,height:1};
+    const lamp = {x:2,y:1,z:1,model:'lamp'};
+    const lights = [{x:2,y:1,z:1,color:0xff8020,intensity:.5,radius:3}];
+    const standard = ray.render(camera,[lamp]).slice();
+    const depth = ray.pixelDepth.slice();
+    let calls = 0;
+    ray.render(camera,[lamp],undefined,0,undefined,undefined,0,undefined,[],lights,frame=>{
+      calls++;
+      expect(frame.color).toEqual(standard);
+      expect(frame.depth).toEqual(depth);
+      expect(frame.lights).toBe(lights);
+      expect(frame.enhancement).toBeUndefined();
+      expect(frame.hud.every(c=>c===0)).toBe(true);
+      expect(frame.sceneOverlay.every(c=>c===0)).toBe(true);
+    });
+    expect(calls).toBe(1);
+    ray.setEnhancedLighting(true);
+    ray.render(camera,[lamp],undefined,0,undefined,undefined,0,undefined,[],lights,frame=>{
+      expect(frame.enhancement?.emission.colors.some(c=>c!==0)).toBe(true);
+      expect(frame.enhancement?.tileWidth).toBe(17);
+      expect(frame.enhancement?.tileHeight).toBe(13);
+      expect(frame.depth).toEqual(depth);
+    });
+    const cover = {x:2,y:2,z:1,model:'cover'};
+    ray.render(camera,[lamp,cover],undefined,0,undefined,undefined,0,undefined,[],[],frame=>{
+      expect(frame.enhancement?.emission.colors.every(c=>c===0)).toBe(true);
+    });
+    ray.setEnhancedLighting(false);
+    expect(ray.render(camera,[lamp])).toEqual(standard);
+  });
+
+  it('propagates deferred-render failures so the host can explicitly fall back', () => {
+    const ray = new Raycaster3D({width:16,height:16,map,textures:{},sprites:{}});
+    const failure = new Error('GPU lost');
+    expect(()=>ray.render({x:2,y:2,angle:0},[],undefined,0,undefined,undefined,0,undefined,[],[],
+      ()=>{throw failure;})).toThrow(failure);
+    expect(ray.render({x:2,y:2,angle:0},[]).every(c=>c>>>24===255)).toBe(true);
+  });
+
   it('blooms only visible marked model surfaces and restores Standard pixels', () => {
     const light = { from: [-.18, -.1, -.18] as [number,number,number],
       size: [.36, .2, .36] as [number,number,number], color: 0xfff4a015 };
@@ -71,5 +115,19 @@ describe('Enhanced Pixel 3D lighting', () => {
     expect(buffer[0]).toBe(dark);
     expect(buffer[1]).not.toBe(dark);
     expect(buffer[2]).toBe(dark);
+  });
+
+  it('keeps floor shadows when unrelated vertical glass sides are present', () => {
+    const world = voxelWorld(8,8,8,['floor']);
+    voxelFill(world,[0,0,0],[8,8,1],1);
+    const effects = new EnhancedLighting();
+    effects.begin(72,52);
+    effects.rememberGlass({x:0,y:4,z:3,pitch:90,angle:90},{blocks:[],glass:[8,4]});
+    const depth = new Float64Array(72*52).fill(Infinity);
+    const frame = effects.prepareDeferred(depth,{x:4,y:6,height:4,angle:270,pitch:-50},0,-1,.7,26,
+      world,[{x:4,y:4,z:1,model:'actor'}],{actor:{blocks:[],contactShadow:.8}});
+    expect(frame.shadows).toHaveLength(1);
+    expect(frame.shadows[0].onGlass).toBe(false);
+    expect(frame.shadows[0].z).toBe(1);
   });
 });

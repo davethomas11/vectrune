@@ -19,7 +19,7 @@ export function parseHandlerSpec(
 ): { name: string; args: string[]; raw: string } | null {
   const trimmed = String(spec || '').trim();
   if (!trimmed) return null;
-  const match = trimmed.match(/^([A-Za-z_][\w-]*)(?:\((.*)\))?$/);
+  const match = trimmed.match(/^([A-Za-z_][\w.-]*)(?:\((.*)\))?$/);
   if (match) {
     const args = match[2] ? splitTopLevel(match[2], ',') : [];
     return { name: match[1], args, raw: trimmed };

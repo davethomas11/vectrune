@@ -124,6 +124,13 @@ Continue with the [REST tutorial](https://vectrune.com/docs/getting-started/), [
 
 ## What you can build
 
+Source builds also support an offline Android/iOS WebView prototype:
+`vectrune examples/rune_mobile_web --build android` creates a debug APK;
+`--build ios` creates an unsigned Simulator app on macOS/Xcode.
+Use `--export android|ios --build-dir ./mobile-project` for an editable
+Gradle/Xcode project without requiring SDKs at export time. See
+[Rune Mobile Web](knowledge/runtime/mobile-web.md) for prerequisites and limitations.
+
 | Area | Implemented capabilities | Explore |
 | --- | --- | --- |
 | **HTTP APIs** | REST routes, schemas, validation, path parameters, generated OpenAPI, and GraphQL resolvers | [API guides](https://vectrune.com/docs/getting-started/) |

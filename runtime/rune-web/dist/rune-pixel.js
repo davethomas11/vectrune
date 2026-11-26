@@ -2504,6 +2504,13 @@ var __RunePixelRuntime = (() => {
       this.config = config;
       this.status = "session";
       this.previous = "";
+      this.elapsed = 0;
+      if (config.interval_ticks !== void 0 && (!Number.isInteger(config.interval_ticks) || config.interval_ticks < 1 || config.interval_ticks > 3600)) {
+        throw new Error("Persistence interval_ticks must be an integer from 1 to 3600");
+      }
+      if (config.revision !== void 0 && !/^[A-Za-z_]\w*$/.test(config.revision)) {
+        throw new Error("Persistence revision must name a state field");
+      }
     }
     load(defaults) {
       const raw = getStorageItem("rune-pixel-" + this.config.key);
@@ -2518,8 +2525,26 @@ var __RunePixelRuntime = (() => {
         return defaults;
       }
     }
-    flush(value) {
+    tick(value, revision) {
+      this.checkRevision(revision);
+      if (++this.elapsed >= (this.config.interval_ticks ?? 1)) this.flush(value, revision);
+    }
+    persist(state, immediate = true) {
+      const revision = this.config.revision ? state[this.config.revision] : void 0;
+      if (revision !== void 0 && typeof revision !== "number") throw new Error("Persistence revision must be a number");
+      if (immediate) this.flush(state[this.config.state], revision);
+      else this.tick(state[this.config.state], revision);
+    }
+    checkRevision(revision) {
+      if (this.config.revision !== void 0 && (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0)) throw new Error("Persistence revision must be a nonnegative safe integer");
+    }
+    flush(value, revision) {
+      this.checkRevision(revision);
+      this.elapsed = 0;
+      if (this.config.revision !== void 0 && value === this.previousValue && revision === this.previousRevision) return;
       const json = JSON.stringify({ version: 1, data: value });
+      this.previousValue = value;
+      this.previousRevision = revision;
       if (json === this.previous) return;
       setStorageItem("rune-pixel-" + this.config.key, json);
       this.previous = json;
@@ -2529,6 +2554,9 @@ var __RunePixelRuntime = (() => {
 
   // src/context.ts
   var _ctx = null;
+  function currentContext() {
+    return _ctx;
+  }
   function ctx() {
     if (!_ctx) throw new Error("RuneWeb context not initialized \u2014 call boot() first");
     return _ctx;
@@ -3159,6 +3187,78 @@ var __RunePixelRuntime = (() => {
     }).replace(new RegExp(OPEN, "g"), "{").replace(new RegExp(CLOSE, "g"), "}");
   }
 
+  // src/modular.ts
+  function callableName(name2, kind) {
+    const c = ctx();
+    if (!c.logicOwner) return name2;
+    const definitions2 = kind === "action" ? c.actionDefinitions : c.helperDefinitions;
+    const qualified = `${c.logicOwner.replace(/^@/, "")}.${name2}`;
+    return Object.prototype.hasOwnProperty.call(definitions2, qualified) ? qualified : name2;
+  }
+  function inLogicScope(name2, definition, receiver, run) {
+    const c = ctx(), owner = definition.scope;
+    if (c.logicOwner && !owner) throw new Error(`Scoped logic cannot call unscoped member: ${name2}`);
+    if (definition.private && c.logicOwner !== owner) throw new Error(`Private Rune-Web member: ${name2}`);
+    if (!owner && !c.logicState) return run();
+    if (!owner) return withContext({ ...c, logicState: void 0, logicOwner: void 0 }, run);
+    const state = owner.startsWith("@") ? receiver : c.app.state[owner];
+    if (!state || typeof state !== "object" || Array.isArray(state)) {
+      throw new Error(`Rune-Web ${name2} requires ${owner.startsWith("@") ? "an entity receiver" : "module state"}`);
+    }
+    return withContext({ ...c, logicState: state, logicOwner: owner }, run);
+  }
+  var moduleNames = /* @__PURE__ */ new WeakMap();
+  var readonlyValues = /* @__PURE__ */ new WeakMap();
+  function readonlyModuleValue(value, owner) {
+    if (!value || typeof value !== "object") return value;
+    let owners = readonlyValues.get(value);
+    if (!owners) {
+      owners = /* @__PURE__ */ new Map();
+      readonlyValues.set(value, owners);
+    }
+    let wrapped = owners.get(owner);
+    if (!wrapped) {
+      const app = ctx().app;
+      const guard = () => {
+        const context = currentContext();
+        if (context?.app !== app || context.logicOwner !== owner) throw new Error("Module state is read-only outside its actions");
+      };
+      wrapped = new Proxy(value, {
+        get: (target, key2) => readonlyModuleValue(Reflect.get(target, key2), owner),
+        set: (target, key2, next2) => {
+          guard();
+          return Reflect.set(target, key2, next2);
+        },
+        deleteProperty: (target, key2) => {
+          guard();
+          return Reflect.deleteProperty(target, key2);
+        },
+        defineProperty: (target, key2, property) => {
+          guard();
+          return Reflect.defineProperty(target, key2, property);
+        },
+        setPrototypeOf: (target, prototype) => {
+          guard();
+          return Reflect.setPrototypeOf(target, prototype);
+        }
+      });
+      owners.set(owner, wrapped);
+    }
+    return wrapped;
+  }
+  function moduleStateNames() {
+    const c = ctx();
+    let names = moduleNames.get(c.actionDefinitions);
+    if (!names) {
+      names = new Set([...Object.values(c.actionDefinitions), ...Object.values(c.helperDefinitions)].map((def) => def.scope).filter((owner) => Boolean(owner && !owner.startsWith("@"))));
+      moduleNames.set(c.actionDefinitions, names);
+    }
+    return names;
+  }
+  function moduleState(name2) {
+    return moduleStateNames().has(name2);
+  }
+
   // src/scope.ts
   function splitPathSegments(expr) {
     const str = String(expr || "").replace(/\[\]([a-zA-Z_$][\w$]*)/g, "[].(it.$1 == $1)");
@@ -3207,9 +3307,16 @@ var __RunePixelRuntime = (() => {
     return segments;
   }
   var expressionNames = /* @__PURE__ */ new Map();
+  var isolatedHelpers = /* @__PURE__ */ new WeakMap();
   function buildScope(locals, expression) {
     const c = ctx();
-    if (c.compactScopes && expression !== void 0 && Object.keys(c.helperDefinitions).length === 0) {
+    if (c.logicState) return Object.assign({}, c.logicState, locals);
+    let isolated = isolatedHelpers.get(c.helperDefinitions);
+    if (isolated === void 0) {
+      isolated = Object.values(c.helperDefinitions).every((def) => Boolean(def.scope || def.entity));
+      isolatedHelpers.set(c.helperDefinitions, isolated);
+    }
+    if (c.compactScopes && expression !== void 0 && isolated) {
       let names = expressionNames.get(expression);
       if (!names) {
         const bindings = new Set(expression.match(/[A-Za-z_$][\w$]*/g) || []);
@@ -3220,18 +3327,22 @@ var __RunePixelRuntime = (() => {
         if (expressionNames.size >= 4096) expressionNames.clear();
         expressionNames.set(expression, names);
       }
-      const scope = {};
+      const scope2 = {};
       for (const name2 of names) {
         for (const source of [locals, c.app.derived, c.app.state]) {
           if (source && Object.prototype.propertyIsEnumerable.call(source, name2)) {
-            scope[name2] = source[name2];
+            scope2[name2] = source === c.app.state && moduleState(name2) ? readonlyModuleValue(source[name2], name2) : source[name2];
             break;
           }
         }
       }
-      return scope;
+      return scope2;
     }
-    return Object.assign({}, c.app.state, c.app.derived, locals || {});
+    const scope = Object.assign({}, c.app.state, c.app.derived, locals || {});
+    for (const name2 of moduleStateNames()) {
+      if (scope[name2] === c.app.state[name2]) scope[name2] = readonlyModuleValue(scope[name2], name2);
+    }
+    return scope;
   }
 
   // src/pixel3d/math.ts
@@ -4322,29 +4433,32 @@ var __RunePixelRuntime = (() => {
     if (expr.includes(".") || expr.includes("[")) return void 0;
     return normalizeLiteral(expr);
   }
+  var entityConstructionDepth = 0;
   function parseHelperCall(expr) {
     const trimmed = String(expr || "").trim();
     if (!trimmed) return null;
-    const { helperDefinitions } = ctx();
-    const parenMatch = trimmed.match(/^([A-Za-z_][\w-]*)\((.*)?\)$/);
-    if (parenMatch && helperDefinitions[parenMatch[1]]) {
+    const context = currentContext();
+    if (!context) return null;
+    const { helperDefinitions } = context;
+    const parenMatch = trimmed.match(/^([A-Za-z_][\w.-]*)\((.*)?\)$/);
+    if (parenMatch && helperDefinitions[callableName(parenMatch[1], "helper")]) {
       return {
-        name: parenMatch[1],
+        name: callableName(parenMatch[1], "helper"),
         args: parenMatch[2] ? splitTopLevel(parenMatch[2], ",") : []
       };
     }
     const firstSpace = trimmed.indexOf(" ");
     if (firstSpace > 0) {
       const name2 = trimmed.slice(0, firstSpace);
-      if (helperDefinitions[name2]) {
+      if (helperDefinitions[callableName(name2, "helper")]) {
         return {
-          name: name2,
+          name: callableName(name2, "helper"),
           args: trimmed.slice(firstSpace + 1).split(/\s+/).filter(Boolean)
         };
       }
     }
-    if (helperDefinitions[trimmed]) {
-      return { name: trimmed, args: [] };
+    if (helperDefinitions[callableName(trimmed, "helper")]) {
+      return { name: callableName(trimmed, "helper"), args: [] };
     }
     return null;
   }
@@ -4352,23 +4466,48 @@ var __RunePixelRuntime = (() => {
     const { helperDefinitions } = ctx();
     const helper = helperDefinitions[name2];
     if (!helper) return void 0;
-    const helperLocals = Object.assign({}, scope || {});
+    if (helper.entity) {
+      if (args.length > 2) throw new Error(`${name2} accepts id and optional fields`);
+      if (typeof args[0] !== "string" || !args[0]) throw new Error(`${name2} requires a nonempty stable string id`);
+      const fields = args[1] === void 0 ? {} : args[1];
+      if (!fields || typeof fields !== "object" || Array.isArray(fields)) throw new Error(`${name2} fields must be a record`);
+      for (const key2 of Object.keys(fields)) {
+        if (!Object.prototype.hasOwnProperty.call(helper.entity, key2)) throw new Error(`Unknown ${name2} field: ${key2}`);
+      }
+      if (entityConstructionDepth >= MAX_DEPTH) throw new Error(`Entity composition is too deep or cyclic: ${name2}`);
+      entityConstructionDepth++;
+      try {
+        const value = { id: args[0], __type: name2 };
+        for (const [key2, expression] of Object.entries(helper.entity)) {
+          value[key2] = Object.prototype.hasOwnProperty.call(fields, key2) ? Reflect.get(fields, key2) : evaluateExpression(expression, { id: args[0] }, depth + 1);
+        }
+        return value;
+      } finally {
+        entityConstructionDepth--;
+      }
+    }
+    const helperLocals = helper.scope ? {} : Object.assign({}, scope);
     (helper.params || []).forEach((param, index2) => {
       helperLocals[param] = args[index2];
     });
-    for (const line of helper.body || []) {
-      const trimmed = String(line || "").trim();
-      if (trimmed.startsWith("return ")) {
-        return evaluateExpression(
-          trimmed.slice(7),
-          buildScope(helperLocals),
-          depth
-        );
+    const result = inLogicScope(name2, helper, void 0, () => {
+      for (const line of helper.body || []) {
+        const trimmed = String(line || "").trim();
+        if (trimmed.startsWith("return ")) {
+          return evaluateExpression(
+            trimmed.slice(7),
+            buildScope(helperLocals),
+            depth
+          );
+        }
       }
-    }
-    return void 0;
+      return void 0;
+    });
+    return helper.scope && ctx().logicOwner !== helper.scope ? readonlyModuleValue(result, helper.scope) : result;
   }
   var exprCache = /* @__PURE__ */ new Map();
+  var helperContextIds = /* @__PURE__ */ new WeakMap();
+  var nextHelperContextId = 1;
   var MAX_CACHE_SIZE = 8192;
   function compilePath(expr) {
     const segments = splitPathSegments(expr);
@@ -5016,13 +5155,23 @@ var __RunePixelRuntime = (() => {
     if ((depth || 0) > MAX_DEPTH) return void 0;
     const trimmed = String(expr || "").trim();
     if (!trimmed) return void 0;
-    let compiled = exprCache.get(trimmed);
+    const context = currentContext();
+    let contextId = 0;
+    if (context) {
+      contextId = helperContextIds.get(context.helperDefinitions) ?? 0;
+      if (!contextId) {
+        contextId = nextHelperContextId++;
+        helperContextIds.set(context.helperDefinitions, contextId);
+      }
+    }
+    const cacheKey = `${contextId}:${context?.logicOwner ?? ""}\0${trimmed}`;
+    let compiled = exprCache.get(cacheKey);
     if (!compiled) {
       compiled = compileExpression(trimmed, depth || 0);
       if (exprCache.size >= MAX_CACHE_SIZE) {
         exprCache.clear();
       }
-      exprCache.set(trimmed, compiled);
+      exprCache.set(cacheKey, compiled);
     }
     return compiled(scope);
   }
@@ -6105,7 +6254,8 @@ var __RunePixelRuntime = (() => {
     return { target: match[1], kind: match[2], urlExpr: match[3], onError: match[4] };
   }
   function runFetchAssignment(pending, locals) {
-    return Promise.resolve().then(() => runRequest(pending.kind, pending.urlExpr, locals));
+    const context = ctx();
+    return Promise.resolve().then(() => withContext(context, () => runRequest(pending.kind, pending.urlExpr, locals)));
   }
   function runRequest(kind, request2, locals) {
     const options = request2.match(/\s+options\s+([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)$/);
@@ -6129,9 +6279,10 @@ var __RunePixelRuntime = (() => {
       const match = statement.trim().match(new RegExp(`^${name2}\\s+(.+?)\\s+then\\s+(\\S+)(?:\\s+catch\\s+(\\S+))?$`));
       if (!match) return void 0;
       const [, urlExpr, onSuccess, onError] = match;
-      Promise.resolve().then(() => runRequest(name2, urlExpr, locals)).then(
-        (value) => deliver(onSuccess, value),
-        (error) => reportFetchFailure(error, onError)
+      const context = ctx();
+      Promise.resolve().then(() => withContext(context, () => runRequest(name2, urlExpr, locals))).then(
+        (value) => withContext(context, () => deliver(onSuccess, value)),
+        (error) => withContext(context, () => reportFetchFailure(error, onError))
       );
       return true;
     };
@@ -7903,6 +8054,7 @@ var __RunePixelRuntime = (() => {
     const segments = splitPathSegments(pathExpr);
     if (!segments.length) return;
     const baseKey = segments[0];
+    if (!ctx().logicState && moduleState(baseKey)) throw new Error(`Module state is read-only outside its actions: ${baseKey}`);
     let current;
     if (locals && Object.prototype.hasOwnProperty.call(locals, baseKey)) {
       current = locals[baseKey];
@@ -7912,9 +8064,14 @@ var __RunePixelRuntime = (() => {
         return;
       }
     } else {
-      current = ctx().app.state[baseKey];
+      const state = ctx().logicState ?? ctx().app.state;
+      if (ctx().logicOwner?.startsWith("@") && (baseKey === "id" || baseKey === "__type")) {
+        throw new Error(`Entity identity is immutable: ${baseKey}`);
+      }
+      if (ctx().logicState && !Object.prototype.hasOwnProperty.call(state, baseKey)) throw new Error(`Undeclared scoped state: ${baseKey}`);
+      current = state[baseKey];
       if (segments.length === 1) {
-        ctx().app.state[baseKey] = value;
+        state[baseKey] = value;
         entitiesChanged(value);
         return;
       }
@@ -7949,6 +8106,7 @@ var __RunePixelRuntime = (() => {
       }
     }
     const finalRawKey = segments[segments.length - 1];
+    if (current && typeof current === "object" && "__type" in current && (finalRawKey === "id" || finalRawKey === "__type")) throw new Error(`Entity identity is immutable: ${finalRawKey}`);
     const scopeValue = buildScope(locals, pathExpr);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
@@ -7965,6 +8123,7 @@ var __RunePixelRuntime = (() => {
       const innerExpr = finalRawKey.slice(1, -1);
       const lookup = evaluateExpression(innerExpr, scopeValue, 0);
       const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+      if (current && typeof current === "object" && "__type" in current && (finalKey === "id" || finalKey === "__type")) throw new Error(`Entity identity is immutable: ${finalKey}`);
       current[finalKey] = value;
       entitiesChanged(current);
       entityMoved(current);
@@ -7977,6 +8136,7 @@ var __RunePixelRuntime = (() => {
     const segments = splitPathSegments(pathExpr);
     if (!segments.length) return;
     const baseKey = segments[0];
+    if (!ctx().logicState && moduleState(baseKey)) throw new Error(`Module state is read-only outside its actions: ${baseKey}`);
     let current;
     if (locals && Object.prototype.hasOwnProperty.call(locals, baseKey)) {
       current = locals[baseKey];
@@ -7985,9 +8145,12 @@ var __RunePixelRuntime = (() => {
         return;
       }
     } else {
-      current = ctx().app.state[baseKey];
+      if (ctx().logicOwner?.startsWith("@") && (baseKey === "id" || baseKey === "__type")) {
+        throw new Error(`Entity identity is immutable: ${baseKey}`);
+      }
+      current = (ctx().logicState ?? ctx().app.state)[baseKey];
       if (segments.length === 1) {
-        delete ctx().app.state[baseKey];
+        delete (ctx().logicState ?? ctx().app.state)[baseKey];
         return;
       }
     }
@@ -8017,6 +8180,7 @@ var __RunePixelRuntime = (() => {
       }
     }
     const finalRawKey = segments[segments.length - 1];
+    if (current && typeof current === "object" && "__type" in current && (finalRawKey === "id" || finalRawKey === "__type")) throw new Error(`Entity identity is immutable: ${finalRawKey}`);
     const scopeValue = buildScope(locals);
     if (Array.isArray(current) && finalRawKey.startsWith("[].(") && finalRawKey.endsWith(")")) {
       const condition = finalRawKey.slice(4, -1);
@@ -8032,6 +8196,7 @@ var __RunePixelRuntime = (() => {
       const innerExpr = finalRawKey.slice(1, -1);
       const lookup = evaluateExpression(innerExpr, scopeValue, 0);
       const finalKey = Array.isArray(current) ? Number(lookup) : valueToString(lookup);
+      if (current && typeof current === "object" && "__type" in current && (finalKey === "id" || finalKey === "__type")) throw new Error(`Entity identity is immutable: ${finalKey}`);
       if (Array.isArray(current) && typeof finalKey === "number") {
         current.splice(finalKey, 1);
         entitiesChanged(current);
@@ -8057,8 +8222,11 @@ var __RunePixelRuntime = (() => {
     }
     if (trimmed.startsWith("call ")) {
       const rest = trimmed.slice(5).trim();
-      const match = rest.match(/^([a-zA-Z_][\w]*)(?:\s+(.*))?$/);
-      if (!match || !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, match[1])) {
+      const match = rest.match(/^([a-zA-Z_][\w]*(?:\.[a-zA-Z_][\w]*)*)(?:\s+(.*))?$/);
+      if (!match) {
+        throw new Error(`Unknown Rune-Web action: ${rest}`);
+      }
+      if (!match[1].includes(".") && !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, callableName(match[1], "action"))) {
         throw new Error(`Unknown Rune-Web action: ${rest}`);
       }
       const args = match[2] ? splitTopLevel(match[2], ",").map((arg) => evaluateExpression(arg, buildScope(locals, trimmed))) : [];
@@ -8729,17 +8897,18 @@ var __RunePixelRuntime = (() => {
     return true;
   }
   function suspendForFetch(pending, locals, rest) {
+    const context = ctx();
     runFetchAssignment(pending, locals).then(
-      (value) => {
+      (value) => withContext(context, () => {
         try {
           assignPath(pending.target, value, locals);
           executeSteps(rest, locals);
         } catch (error) {
           console.error(error);
         }
-        ctx().app.render();
-      },
-      (error) => reportFetchFailure(error, pending.onError)
+        context.app.render();
+      }),
+      (error) => withContext(context, () => reportFetchFailure(error, pending.onError))
     );
   }
   function executeSteps(steps, locals, nested = false) {
@@ -9281,21 +9450,32 @@ var __RunePixelRuntime = (() => {
       render,
       invokeAction(name2, args, locals) {
         const context = ctx();
-        const def = context.actionDefinitions[name2];
+        name2 = callableName(name2, "action");
+        let def = context.actionDefinitions[name2];
+        let receiver;
+        if (def?.scope?.startsWith("@") && def.scope === context.logicOwner) receiver = context.logicState;
+        if (!def && name2.includes(".")) {
+          const dot = name2.lastIndexOf(".");
+          const value = evaluateExpression(name2.slice(0, dot), buildScope(locals || {}));
+          if (value && typeof value === "object" && !Array.isArray(value)) {
+            receiver = value;
+            const type = receiver.__type;
+            if (typeof type === "string") def = context.actionDefinitions[`${type}.${name2.slice(dot + 1)}`];
+          }
+        }
         if (!def) {
+          if (name2.includes(".") || context.logicOwner) throw new Error(`Unknown Rune-Web action: ${name2}`);
           if (typeof window !== "undefined" && typeof window[name2] === "function") {
             window[name2](...args);
           }
           return;
         }
-        const scopedLocals = Object.assign(
-          {},
-          locals || {}
-        );
+        const scopedLocals = def.scope ? {} : Object.assign({}, locals);
+        if (receiver) scopedLocals.self = receiver;
         (def.params || []).forEach((param, index2) => {
           scopedLocals[param] = args[index2];
         });
-        executeSteps(def.steps || [], scopedLocals);
+        inLogicScope(name2, def, receiver, () => executeSteps(def.steps || [], scopedLocals));
       }
     };
   }
@@ -9390,6 +9570,7 @@ var __RunePixelRuntime = (() => {
     }
     set paused(value) {
       if (value === this._paused) return;
+      if (value) this.flushSave();
       this._paused = value;
       if (value) pauseMusic();
       setAudioMuted(this._muted || value);
@@ -9430,10 +9611,13 @@ var __RunePixelRuntime = (() => {
         this.app.computeDerived();
       }));
       this.ticks++;
+      this.persist(false);
+    }
+    flushSave() {
       this.persist();
     }
-    persist() {
-      if (this.save) this.save.flush(this.app.state[this.save.config.state]);
+    persist(immediate = true) {
+      this.save?.persist(this.app.state, immediate);
     }
     invoke(action, args = []) {
       if (action === "start") {
@@ -9753,6 +9937,7 @@ var __RunePixelRuntime = (() => {
       if (game.app.state.status === "playing") game.paused = true;
     }));
     listen(window, "blur", () => {
+      game.flushSave();
       clear();
       game.paused = true;
     });
@@ -9761,6 +9946,7 @@ var __RunePixelRuntime = (() => {
     });
     listen(document, "visibilitychange", () => {
       if (document.hidden) {
+        game.flushSave();
         clear();
         game.paused = true;
       }
@@ -9902,6 +10088,7 @@ var __RunePixelRuntime = (() => {
     };
     frame(performance.now());
     const dispose = () => {
+      game.flushSave();
       stopped = true;
       game.paused = true;
       cancelAnimationFrame(frameId);

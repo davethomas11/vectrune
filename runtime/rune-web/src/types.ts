@@ -85,6 +85,9 @@ export interface DerivedDefinition {
 export interface HelperDefinition {
   params: string[];
   body: string[];
+  scope?: string;
+  private?: boolean;
+  entity?: Record<string, string>;
 }
 
 export interface ActionMatchCase {
@@ -113,6 +116,8 @@ export interface ActionStep {
 export interface ActionDefinition {
   params: string[];
   steps: ActionStep[];
+  scope?: string;
+  private?: boolean;
 }
 
 /** Navigator configuration for URL state synchronization. */

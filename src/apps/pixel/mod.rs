@@ -10,6 +10,31 @@ pub mod native_audio;
 #[cfg(any(feature = "pixel-desktop", test))]
 pub mod persistence;
 
+pub(crate) fn validate_save_schedule(
+    save: &Json,
+    logic: &crate::apps::rune_web::ast::LogicDefinition,
+) -> Result<()> {
+    if let Some(interval) = save.get("interval_ticks") {
+        ensure!(
+            interval.as_f64().is_some_and(|n| n.fract() == 0.0 && (1.0..=3600.0).contains(&n)),
+            "Persistence interval_ticks must be an integer from 1 to 3600"
+        );
+    }
+    if let Some(revision) = save.get("revision") {
+        let field = revision.as_str().context("Persistence revision must name a state field")?;
+        ensure!(
+            !field.is_empty() && field.bytes().enumerate().all(|(i, b)| b == b'_' || b.is_ascii_alphabetic() || (i > 0 && b.is_ascii_digit())),
+            "Persistence revision must name a state field"
+        );
+        let initial = logic.state.get(field).context("Persistence revision state field is missing")?;
+        ensure!(
+            initial.parse::<f64>().is_ok_and(|n| n.fract() == 0.0 && (0.0..=9007199254740991.0).contains(&n)),
+            "Persistence revision must initially be a nonnegative safe integer"
+        );
+    }
+    Ok(())
+}
+
 fn text<'a>(section: &'a crate::rune_ast::Section, key: &str) -> Option<&'a str> {
     section.kv.get(key).and_then(Value::as_str)
 }
@@ -295,6 +320,7 @@ pub fn compile(doc: &RuneDocument) -> Result<Game> {
             logic.state.contains_key(field),
             "Persistence state field is missing"
         );
+        validate_save_schedule(save, &logic)?;
     }
     config["hud"] = scene.kv.get("hud").map(json_value).unwrap_or(Json::Null);
     config["overlays"] = scene

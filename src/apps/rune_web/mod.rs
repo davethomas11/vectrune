@@ -20,6 +20,7 @@ pub mod parser;
 pub mod css;
 pub mod jscodegen;
 pub mod optimizer;
+mod modular;
 
 use crate::core::AppState;
 use crate::util::{log, LogLevel};
@@ -217,9 +218,9 @@ pub async fn render_html_for_path(
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("@Frontend type is required for -o html"))?;
 
-    if frontend_type != "rune-web" {
+    if !matches!(frontend_type, "rune-web" | "rune-mobile-web") {
         return Err(anyhow::anyhow!(
-            "-o html expected @Frontend type = rune-web but found '{}'",
+            "-o html expected @Frontend type = rune-web or rune-mobile-web but found '{}'",
             frontend_type
         ));
     }
@@ -1289,6 +1290,7 @@ fn create_websocket_logic_block(_ws_endpoint: &str) -> ast::LogicDefinition {
                 // This will be handled in the JavaScript runtime
                 ast::ActionStep::Statement("window.__runeWebEmit(event_name, payload)".to_string()),
             ],
+            ..Default::default()
         },
     );
 
