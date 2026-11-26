@@ -35,8 +35,8 @@ prefix="$root/install"
   make -C include install
 )
 
-# alsa-sys asks pkg-config for dynamic flags. The directory contains only .a;
-# include its private dependencies explicitly so that musl remains self-contained.
+# alsa-sys forces statik(false), ignoring ALSA_STATIC. This Rust-only .pc uses
+# Cargo's explicit static library syntax, with private system dependencies.
 mkdir -p "$prefix/lib/pkgconfig"
 cat > "$prefix/lib/pkgconfig/alsa.pc" <<EOF
 prefix=$prefix
@@ -45,7 +45,7 @@ includedir=\${prefix}/include
 Name: alsa
 Description: ALSA release audio backend
 Version: 1.2.14
-Libs: -L\${libdir} -lasound -lm -lpthread -ldl
+Libs: -L\${libdir} -lstatic=asound -lm -lpthread -ldl
 Cflags: -I\${includedir}
 EOF
 

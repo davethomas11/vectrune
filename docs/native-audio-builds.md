@@ -46,7 +46,6 @@ cd ../..
 bash .github/scripts/build-linux-audio.sh x86_64-unknown-linux-musl
 export PKG_CONFIG_ALLOW_CROSS=1
 export PKG_CONFIG_LIBDIR="$PWD/target/linux-audio/x86_64-unknown-linux-musl/install/lib/pkgconfig"
-export ALSA_STATIC=1
 cargo zigbuild --release --locked --target x86_64-unknown-linux-musl
 ```
 
@@ -58,9 +57,13 @@ an existing binary). Do not rerun the dependency script after modifying its
 source: it downloads and extracts the original release again.
 
 Alternatively, build a modified ALSA library into your own prefix and point
-`PKG_CONFIG_LIBDIR` at its `alsa.pc`. For a static library, include its private
-`-lm -lpthread -ldl` dependencies in `Libs`, as the release script does.
-Set `ALSA_STATIC=1` so the `alsa-sys` pkg-config probe requests static linkage.
+`PKG_CONFIG_LIBDIR` at its `alsa.pc`. For a static library, use the release
+script's Rust-only metadata: `Libs: -L${libdir} -lstatic=asound -lm -lpthread -ldl`.
+The Rust `pkg-config` crate forwards `static=asound` as an explicit Cargo native
+library directive. `alsa-sys` forces its probe to dynamic mode, so `ALSA_STATIC`
+does not select static linkage. This generated `.pc` is intended only for Cargo;
+ordinary C consumers should link the archive path directly or use a standard
+ALSA `.pc` instead. Private system dependencies remain explicit.
 The archive uses position-independent compiler output (`-fPIC`) because Cargo
 also builds the native `cdylib`; ALSA's libtool `--with-pic` option is intentionally
 not enabled, preserving the static backend's built-in registration.

@@ -271,7 +271,8 @@ array `.push(...)`, postfix `++`/`--`, `increment`, `decrement`, `invert`,
 ordinary conditionals, loops and matches. Unknown statements and I/O commands
 are rejected at compile time instead of being silently ignored.
 
-Linux release builds explicitly select static ALSA linkage with `ALSA_STATIC=1`;
+Linux release builds select static ALSA via Rust-only `alsa.pc` metadata
+(`-lstatic=asound`); `alsa-sys` forces dynamic probing and ignores `ALSA_STATIC`.
 the ALSA archive uses position-independent code for Cargo's native shared library.
 See [native audio builds](../../docs/native-audio-builds.md) for rebuilding.
 
