@@ -6,7 +6,8 @@ import { unlockAudio } from '../audio';
 import { mountTouch, STYLE } from './touch';
 import { createFullscreen, isStandaloneApp } from './fullscreen';
 import { createWebGlRenderer } from './webgl';
-import { collectHudHitRegions } from './hud';
+import { createGpuLighting } from './gpu_lighting';
+import { collectHudHitRegions, hudButtonAt, type GameHud } from './hud';
 import type { RuneWebConfig } from '../types';
 import { getStorageItem, setStorageItem } from '../storage';
 
@@ -100,6 +101,8 @@ export function mount(
   let menuOpen = false;
   let fpsStart = 0, drawnFrames = 0;
   let gpu: ReturnType<typeof createWebGlRenderer>;
+  let gpuLighting: ReturnType<typeof createGpuLighting>;
+  let modelOnlyFrame = false;
   let gpuCanvas: HTMLCanvasElement | undefined;
   let paletteColors: number[] | undefined;
   const tickMs = 1000 / tickRate;
@@ -185,7 +188,10 @@ export function mount(
   }
   for (const button of Array.from(document.querySelectorAll('[data-pixel-mute]'))) {
     listen(button, 'click', () => {
+      unlockAudio();
+      clear(true);
       game.muted = !game.muted;
+      canvas.focus({ preventScroll: true });
     });
   }
   const surface = canvas.parentElement || canvas;
@@ -283,6 +289,8 @@ export function mount(
       gpuToggle.title = reason;
     }
     gpu?.dispose();
+    gpuLighting?.dispose();
+    gpuLighting = undefined;
     gpu = undefined;
     gpuCanvas?.remove();
     gpuCanvas = undefined;
@@ -298,10 +306,11 @@ export function mount(
       layer.hidden = true;
       try {
         gpu = createWebGlRenderer(layer, game.config.models);
+        if (gpu) gpuLighting = createGpuLighting(layer);
       } catch (error) {
         console.warn('Pixel 3D WebGL setup failed', error);
       }
-      if (!gpu) {
+      if (!gpu || !gpuLighting) {
         cpuFallback('Accelerated WebGL 2 is unavailable. Using the CPU renderer.');
         return;
       }
@@ -323,26 +332,32 @@ export function mount(
   }
 
   function drawFrame(extraFrames: boolean): boolean {
-    if (gpu && gpuCanvas && gpuToggle?.checked && !game.raycaster.enhancedLighting) {
+    if (gpu && gpuLighting && gpuCanvas && gpuToggle?.checked) {
       try {
         const changed = game.presentIfChanged(() => {
           const stats = game.renderState();
           const { map, world } = game.raycaster.config;
-          if (!map.sky || map.sky.below === undefined || world || stats.lights.length || map.grid.some(Boolean) ||
-              stats.weapon || stats.things.some(thing => thing.sprite || thing.title)) {
-            throw new Error('This scene needs the CPU renderer');
+          modelOnlyFrame = !game.raycaster.enhancedLighting && !!map.sky && map.sky.below !== undefined &&
+            !world && !stats.lights.length && !map.grid.some(Boolean) && !stats.weapon &&
+            !stats.things.some(thing => thing.sprite || thing.title);
+          if (!modelOnlyFrame) {
+            game.frame(frame => gpuLighting!.draw(frame));
+            context!.clearRect(0, 0, canvas.width, canvas.height);
+            overlayKey = undefined;
+            return;
           }
+          if (!map.sky) throw new Error('Model rendering needs a sky');
           gpu!.capture(stats, map.sky, game.raycaster.fov, extraFrames);
           const hud = game.frameHud(stats);
-          const key = JSON.stringify(hud);
+          const key = JSON.stringify([hud, Array.from(game.keyboard.pressed)]);
           if (overlayKey !== key) {
             game.raycaster.renderOverlay(hud);
             context!.putImageData(image, 0, 0);
             overlayKey = key;
           }
         });
-        if (!changed && !extraFrames) return false;
-        gpu.draw(extraFrames ? accumulator / tickMs : 1, game.raycaster.outlineRadius);
+        if (!changed && (!extraFrames || !modelOnlyFrame)) return false;
+        if (modelOnlyFrame) gpu.draw(extraFrames ? accumulator / tickMs : 1, game.raycaster.outlineRadius);
         gpuCanvas.hidden = false;
         return true;
       } catch (error) {
@@ -364,9 +379,68 @@ export function mount(
     listen(button, 'click', () => { void fullscreen.toggle().catch(() => {}); });
   }
   let pointerLockUnavailable = false;
-  const activeHud = () => game.paused && game.config.pauseUi && game.app.state.status === 'playing'
+  const activeHud = (): GameHud | undefined => game.paused && game.config.pauseUi && game.app.state.status === 'playing'
     ? (game.app.state as any)[game.config.pauseUi]
     : game.config.ui ? (game.app.state as any)[game.config.ui] : undefined;
+  const activateHudAction = (action: string, args: unknown[] = []) => {
+    unlockAudio();
+    clear(true);
+    if (action === 'host.keyboard') {
+      game.keyboard.sync(activeHud()?.keyboard);
+      game.keyboard.activate(String(args[0]), (a, values) => game.activate(a, values));
+      game.invalidateFrame();
+      canvas.focus({ preventScroll: true });
+      return;
+    }
+    const grid = activeHud()?.grid;
+    if (grid?.closeOnActivate && grid.dismissAction && action !== grid.moveAction && action !== grid.dismissAction) {
+      game.activate(grid.dismissAction);
+    }
+    if (action === 'host.mute') {
+      game.muted = !game.muted;
+    } else if (action === 'host.fullscreen') {
+      void fullscreen.toggle().catch(error => console.error('Pixel 3D fullscreen failed', error));
+    } else {
+      game.activate(action, args);
+    }
+    canvas.focus({ preventScroll: true });
+  };
+  canvas.addEventListener('keydown', event => {
+    if (activeHud()?.keyboard) {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      game.keyboardKey(event.key, true, event.repeat);
+      unlockAudio(); clear(true);
+      event.preventDefault(); event.stopImmediatePropagation();
+      return;
+    }
+    if (game.hudKey(event.code, true, event.repeat)) {
+      unlockAudio(); clear(true);
+      if (game.consumeUiFullscreen()) void fullscreen.toggle().catch(error => console.error('Pixel 3D fullscreen failed', error));
+      event.preventDefault(); event.stopImmediatePropagation();
+      return;
+    }
+    const grid = activeHud()?.grid;
+    if (grid?.layout !== 'sidebar') return;
+    let action: string | undefined, args: unknown[] = [];
+    if (grid.moveAction && ['ArrowUp', 'ArrowDown'].includes(event.code)) {
+      action = grid.moveAction;
+      args = [event.code === 'ArrowUp' ? -1 : 1];
+    } else if (grid.moveAction && ['Enter', 'Space'].includes(event.code)) {
+      const item = grid.items.find(item => item.selected);
+      if (item && !item.disabled) { action = item.action; args = item.args ?? []; }
+    } else if (grid.dismissAction && ['Escape', 'Backspace'].includes(event.code)) {
+      action = grid.dismissAction;
+    } else return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (action && (!event.repeat || ['ArrowUp', 'ArrowDown'].includes(event.code))) activateHudAction(action, args);
+  }, { capture: true, signal: abort.signal });
+  document.addEventListener('keyup', event => {
+    if (activeHud()?.keyboard) {
+      game.keyboardKey(event.key, false);
+      event.stopImmediatePropagation();
+    }
+  }, { capture: true, signal: abort.signal });
   const handleMenuKey = (code: string): boolean => {
     const p = activeHud()?.panel;
     if (!p?.choiceActions?.length) return false;
@@ -447,23 +521,109 @@ export function mount(
     }
   });
 
-  // Pointer lock for FPS mouse look & in-engine HUD clicks
-  listen(canvas, 'click', ((event: MouseEvent) => {
-    if (Date.now() - lastTouchAt < 700 || mapped?.recentTouch()) return;
-    unlockAudio();
-    canvas.focus();
+  const activateHudAt = (clientX: number, clientY: number): boolean => {
     const rect = canvas.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      const cx = (event.clientX - rect.left) * (width / rect.width);
-      const cy = (event.clientY - rect.top) * (height / rect.height);
-      const regions = collectHudHitRegions(width, height, activeHud(), String(game.app.state.status ?? 'playing'), game.paused);
-      const hit = regions.find(r => cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
-      if (hit) {
-        clear(true);
-        game.activate(hit.action, hit.args);
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    const scale = resolution ? Number(resolution.value.split('x')[0]) / width : 1;
+    const hudWidth = Math.floor(canvas.width / scale), hudHeight = Math.floor(canvas.height / scale);
+    const cx = (clientX - rect.left) * hudWidth / rect.width;
+    const cy = (clientY - rect.top) * hudHeight / rect.height;
+    game.keyboard.sync(activeHud()?.keyboard);
+    const regions = activeHud()?.keyboard ? game.keyboard.hits(hudWidth, hudHeight) :
+      collectHudHitRegions(hudWidth, hudHeight, activeHud(), String(game.app.state.status ?? 'playing'), game.paused);
+    const hit = regions
+      .find(r => cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
+    if (!hit) {
+      if (activeHud()?.keyboard || activeHud()?.callout || activeHud()?.grid?.layout === 'sidebar') return true;
+      const path = canvas.dataset.pixelPick;
+      if (path) {
+        const index = game.pickThing(path, (clientX - rect.left) * canvas.width / rect.width,
+          (clientY - rect.top) * canvas.height / rect.height);
+        if (index >= 0) {
+          activateHudAction(canvas.dataset.pixelPickAction!, [index]);
+          return true;
+        }
+      }
+      return false;
+    }
+    activateHudAction(hit.action, hit.args);
+    return true;
+  };
+  if (canvas.dataset.pixelPick && (!canvas.dataset.pixelPickAction || !game.hasAction(canvas.dataset.pixelPickAction))) {
+    throw new Error('data-pixel-pick requires a valid data-pixel-pick-action');
+  }
+  const dragAction = canvas.dataset.pixelDragAction;
+  if (dragAction && !game.hasAction(dragAction)) throw new Error('data-pixel-drag-action requires a valid action');
+  let drag: {id:number;startX:number;startY:number;lastX:number;moved:boolean} | undefined;
+  let suppressDragClick = false;
+  let hudTouch: { id: number; x: number; y: number; sidebar: boolean } | undefined;
+  const consumesHudPointer = (clientX: number, clientY: number): boolean => {
+    const hud = activeHud();
+    if (hud?.keyboard || hud?.callout || hud?.grid?.layout === 'sidebar') return true;
+    const rect = canvas.getBoundingClientRect(), scale = game.raycaster.hudScale;
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    return hudButtonAt(hud, Math.floor(canvas.width / scale), Math.floor(canvas.height / scale),
+      (clientX - rect.left) * canvas.width / scale / rect.width,
+      (clientY - rect.top) * canvas.height / scale / rect.height);
+  };
+  canvas.addEventListener('mousedown', event => {
+    if (consumesHudPointer(event.clientX, event.clientY)) event.stopImmediatePropagation();
+  }, { capture: true, signal: abort.signal });
+  canvas.addEventListener('pointerdown', event => {
+    const sidebar = consumesHudPointer(event.clientX, event.clientY);
+    if (dragAction && !sidebar && !game.paused && event.button === 0 && !drag) {
+      drag = {id:event.pointerId,startX:event.clientX,startY:event.clientY,lastX:event.clientX,moved:false};
+      suppressDragClick = false;
+      canvas.setPointerCapture(event.pointerId);
+    }
+    if (event.pointerType === 'touch') hudTouch = { id: event.pointerId, x: event.clientX, y: event.clientY, sidebar };
+    if (sidebar) {
+      unlockAudio();
+      clear(true);
+      canvas.focus({ preventScroll: true });
+      event.stopImmediatePropagation();
+    }
+  }, { capture: true, signal: abort.signal });
+  listen(canvas, 'pointermove', ((event: PointerEvent) => {
+    if (!drag || drag.id !== event.pointerId) return;
+    if (!drag.moved && Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>8) drag.moved = true;
+    if (!drag.moved) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width > 0 && !game.paused && !consumesHudPointer(event.clientX,event.clientY)) {
+      game.invoke(dragAction!, [(event.clientX-drag.lastX)*180/rect.width]);
+    }
+    drag.lastX = event.clientX;
+    event.preventDefault();
+  }) as EventListener);
+  listen(canvas, 'pointercancel', () => { hudTouch = undefined; drag = undefined; suppressDragClick = false; });
+  canvas.addEventListener('pointerup', event => {
+    if (drag?.id === event.pointerId) {
+      suppressDragClick = drag.moved;
+      drag = undefined;
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      if (suppressDragClick) {
+        hudTouch = undefined;
+        if (event.pointerType === 'touch') lastTouchAt = Date.now();
+        event.stopImmediatePropagation();
         return;
       }
     }
+    const touch = hudTouch;
+    hudTouch = undefined;
+    if (touch?.sidebar) event.stopImmediatePropagation();
+    if (event.pointerType !== 'touch' || touch?.id !== event.pointerId ||
+        Math.hypot(event.clientX - touch.x, event.clientY - touch.y) > 12) return;
+    lastTouchAt = Date.now();
+    activateHudAt(event.clientX, event.clientY);
+  }, { capture: true, signal: abort.signal });
+
+  // Pointer lock for FPS mouse look & in-engine HUD clicks
+  listen(canvas, 'click', ((event: MouseEvent) => {
+    if (suppressDragClick) { suppressDragClick = false; return; }
+    if (Date.now() - lastTouchAt < 700 || mapped?.recentTouch()) return;
+    unlockAudio();
+    canvas.focus();
+    if (activateHudAt(event.clientX, event.clientY)) return;
     if (game.app.state.status !== 'playing') {
       if (game.config.clickToStart === false) return;
       if (game.app.state.status === 'title' || game.app.state.status === 'story' || game.app.state.status === 'select' || game.app.state.status === 'stage_clear' || game.app.state.status === 'boss_victory') {
@@ -567,12 +727,13 @@ export function mount(
   }) as EventListener);
 
   listen(window, 'blur', () => {
+    game.flushSave();
     clear();
     game.paused = true;
   });
 
   listen(document, 'visibilitychange', () => {
-    if (document.hidden) { clear(); game.paused = true; }
+    if (document.hidden) { game.flushSave(); clear(); game.paused = true; }
   });
 
   listen(window, 'focus', () => {
@@ -583,6 +744,14 @@ export function mount(
     if (stopped) return;
     if (previous) accumulator += Math.min(now - previous, tickMs * 5);
     previous = now;
+    const keyboardOpen = Boolean(activeHud()?.keyboard || activeHud()?.callout || activeHud()?.grid?.layout === 'sidebar');
+    if (keyboardOpen) {
+      clear(true);
+      if (document.hasFocus() && document.activeElement === canvas && navigator.getGamepads) {
+        game.hudPads(Array.from(navigator.getGamepads()));
+        if (game.consumeUiFullscreen()) void fullscreen.toggle().catch(error => console.error('Pixel 3D fullscreen failed', error));
+      }
+    }
 
     while (accumulator >= tickMs) {
       const controls: Input3D = {
@@ -599,7 +768,7 @@ export function mount(
       lookAccumX = 0;
       lookAccumY = 0;
 
-      game.step(mapped ? mapped.sample(1 / tickRate) : controls);
+      game.step(keyboardOpen ? {} : mapped ? mapped.sample(1 / tickRate) : controls);
       if (game.app.state.status !== 'playing') clear(true);
       accumulator -= tickMs;
     }
@@ -631,6 +800,9 @@ export function mount(
     }
 
     const state = game.app.state as Record<string, any>;
+    for (const button of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-mute]'))) {
+      button.setAttribute('aria-pressed', String(game.muted));
+    }
     for (const element of Array.from(document.querySelectorAll<HTMLElement>('[data-pixel-paused]'))) {
       element.hidden = !game.paused || !isPausableStatus(state.status);
     }
@@ -704,11 +876,13 @@ export function mount(
   frame(performance.now());
 
   const dispose = () => {
+    game.flushSave();
     stopped = true;
     game.paused = true;
     cancelAnimationFrame(frameId);
     fullscreen.dispose();
     gpu?.dispose();
+    gpuLighting?.dispose();
     gpuCanvas?.remove();
     viewportResize.disconnect();
     touch?.dispose();

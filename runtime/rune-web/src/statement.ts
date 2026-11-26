@@ -19,6 +19,7 @@ import type { ActionStep, Scope } from './types';
 import { NO_ACTION, STOP } from './builtins/command';
 import { editStudioTrack, placeStudioNote, STUDIO_STEP_IDS_PER_VOICE, STUDIO_STRIP_TICK_WIDTH, STUDIO_TICK_WIDTH, studioBarTicks, studioScoreLanes, studioStretchTicks, studioTokenTicks, studioTrackPatterns } from './studio_sequencer';
 import { entityMoved, entitiesChanged } from './pixel3d/entities';
+import { callableName, moduleState } from './modular';
 
 // ---------------------------------------------------------------------------
 // assignPath — set a value at a dotted/bracketed path
@@ -32,6 +33,7 @@ export function assignPath(
   const segments = splitPathSegments(pathExpr);
   if (!segments.length) return;
   const baseKey = segments[0];
+  if (!ctx().logicState && moduleState(baseKey)) throw new Error(`Module state is read-only outside its actions: ${baseKey}`);
 
   let current: unknown;
   if (
@@ -45,9 +47,14 @@ export function assignPath(
       return;
     }
   } else {
-    current = ctx().app.state[baseKey];
+    const state = ctx().logicState ?? ctx().app.state;
+    if (ctx().logicOwner?.startsWith('@') && (baseKey === 'id' || baseKey === '__type')) {
+      throw new Error(`Entity identity is immutable: ${baseKey}`);
+    }
+    if (ctx().logicState && !Object.prototype.hasOwnProperty.call(state, baseKey)) throw new Error(`Undeclared scoped state: ${baseKey}`);
+    current = state[baseKey];
     if (segments.length === 1) {
-      ctx().app.state[baseKey] = value;
+      state[baseKey] = value;
       entitiesChanged(value);
       return;
     }
@@ -91,6 +98,8 @@ export function assignPath(
   }
 
   const finalRawKey = segments[segments.length - 1];
+  if (current && typeof current === 'object' && '__type' in current &&
+      (finalRawKey === 'id' || finalRawKey === '__type')) throw new Error(`Entity identity is immutable: ${finalRawKey}`);
   const scopeValue = buildScope(locals, pathExpr);
 
   if (
@@ -114,6 +123,8 @@ export function assignPath(
     const finalKey = Array.isArray(current)
       ? Number(lookup)
       : valueToString(lookup);
+    if (current && typeof current === 'object' && '__type' in current &&
+        (finalKey === 'id' || finalKey === '__type')) throw new Error(`Entity identity is immutable: ${finalKey}`);
     (current as Record<string, unknown>)[finalKey as string] = value;
     entitiesChanged(current);
     entityMoved(current);
@@ -134,6 +145,7 @@ export function deletePath(
   const segments = splitPathSegments(pathExpr);
   if (!segments.length) return;
   const baseKey = segments[0];
+  if (!ctx().logicState && moduleState(baseKey)) throw new Error(`Module state is read-only outside its actions: ${baseKey}`);
 
   let current: unknown;
   if (
@@ -146,9 +158,12 @@ export function deletePath(
       return;
     }
   } else {
-    current = ctx().app.state[baseKey];
+    if (ctx().logicOwner?.startsWith('@') && (baseKey === 'id' || baseKey === '__type')) {
+      throw new Error(`Entity identity is immutable: ${baseKey}`);
+    }
+    current = (ctx().logicState ?? ctx().app.state)[baseKey];
     if (segments.length === 1) {
-      delete ctx().app.state[baseKey];
+      delete (ctx().logicState ?? ctx().app.state)[baseKey];
       return;
     }
   }
@@ -187,6 +202,8 @@ export function deletePath(
   }
 
   const finalRawKey = segments[segments.length - 1];
+  if (current && typeof current === 'object' && '__type' in current &&
+      (finalRawKey === 'id' || finalRawKey === '__type')) throw new Error(`Entity identity is immutable: ${finalRawKey}`);
   const scopeValue = buildScope(locals);
 
   if (
@@ -209,6 +226,8 @@ export function deletePath(
     const finalKey = Array.isArray(current)
       ? Number(lookup)
       : valueToString(lookup);
+    if (current && typeof current === 'object' && '__type' in current &&
+        (finalKey === 'id' || finalKey === '__type')) throw new Error(`Entity identity is immutable: ${finalKey}`);
     if (Array.isArray(current) && typeof finalKey === 'number') {
       (current as unknown[]).splice(finalKey, 1);
       entitiesChanged(current);
@@ -245,8 +264,11 @@ export function executeStatement(
   // Shared Rune action calls, including from fixed game ticks.
   if (trimmed.startsWith('call ')) {
     const rest = trimmed.slice(5).trim();
-    const match = rest.match(/^([a-zA-Z_][\w]*)(?:\s+(.*))?$/);
-    if (!match || !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, match[1])) {
+    const match = rest.match(/^([a-zA-Z_][\w]*(?:\.[a-zA-Z_][\w]*)*)(?:\s+(.*))?$/);
+    if (!match) {
+      throw new Error(`Unknown Rune-Web action: ${rest}`);
+    }
+    if (!match[1].includes('.') && !Object.prototype.hasOwnProperty.call(ctx().actionDefinitions, callableName(match[1], 'action'))) {
       throw new Error(`Unknown Rune-Web action: ${rest}`);
     }
     const args = match[2] ? splitTopLevel(match[2], ',').map(arg => evaluateExpression(arg, buildScope(locals, trimmed))) : [];
@@ -1018,17 +1040,18 @@ function suspendForFetch(
   locals: Record<string, unknown>,
   rest: ActionStep[],
 ): void {
+  const context = ctx();
   runFetchAssignment(pending, locals).then(
-    (value) => {
+    (value) => withContext(context, () => {
       try {
         assignPath(pending.target, value, locals);
         executeSteps(rest, locals);
       } catch (error) {
         console.error(error);
       }
-      ctx().app.render();
-    },
-    (error) => reportFetchFailure(error, pending.onError),
+      context.app.render();
+    }),
+    (error) => withContext(context, () => reportFetchFailure(error, pending.onError)),
   );
 }
 

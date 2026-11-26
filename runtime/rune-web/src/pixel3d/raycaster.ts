@@ -4,10 +4,24 @@ import type { Sprite } from '../pixel/engine';
 import { skyPixel, type Sky } from './sky';
 import { renderModel, type BlockModel } from './model';
 import { renderHud, type GameHud } from './hud';
+import type { OnScreenKeyboard } from './on_screen_keyboard';
 import { tetherModel, tetherPieces, type Tether3D } from './tether';
 import { renderVoxels, type VoxelWorld, type VoxelChunks, type VoxelTerrainPose } from './voxel';
 import { lightFrame, type PointLight3D } from './lighting';
-import { EnhancedLighting, type EmissionBuffer } from './enhanced_lighting';
+import { EnhancedLighting, type EmissionBuffer, type DeferredEnhancement } from './enhanced_lighting';
+
+export interface DeferredLightingFrame {
+  width: number; height: number;
+  color: Uint32Array; depth: Float64Array;
+  sceneOverlay: Uint32Array; hud: Uint32Array;
+  camera: {x:number;y:number;height?:number;pitch?:number};
+  dirX: number; dirY: number; fov: number; rowOrigin: number;
+  lights: readonly PointLight3D[];
+  enhancement?: DeferredEnhancement;
+  outlineRadius: number; outlineColor: number;
+  flash: number; fade: number;
+  palette?: Uint32Array;
+}
 
 export interface Texture {
   width: number;
@@ -74,6 +88,7 @@ export interface ViewmodelWeapon {
 }
 
 export interface Stats3D {
+  keyboard?: OnScreenKeyboard;
   titleScene?: { heading: string; subtitle: string; prompt: string };
   presentationTime?: number;
   ui?: GameHud;
@@ -147,12 +162,14 @@ export class Raycaster3D {
   zBuffer: Float64Array;
   pixelDepth: Float64Array;
   fov: number;
-  private hudScale = 1;
+  hudScale = 1;
   private drawScale = 1;
   private palette?: Uint32Array;
   private silhouettes = false;
   private outlineColor = 0xff000000;
   private enhanced?: EnhancedLighting;
+  private deferredColor = new Uint32Array(0);
+  private deferredOverlay = new Uint32Array(0);
 
   get enhancedLighting(): boolean { return this.enhanced !== undefined; }
 
@@ -215,6 +232,46 @@ export class Raycaster3D {
     this.silhouettes = silhouettes || Boolean(this.config.outline);
   }
 
+  /** Pick visible model pixels, with a small near-miss allowance for touch. */
+  projectPoint(camera: Camera3D, point: { x: number; y: number; z: number }): { x: number; y: number } | undefined {
+    const dx = point.x - camera.x, dy = point.y - camera.y;
+    const z = point.z - (this.config.world ? (camera.z ?? 0) + 1.25 : camera.height ?? .5);
+    const forward = dx * fastCos(camera.angle) + dy * fastSin(camera.angle);
+    const pitch = (camera.pitch ?? 0) * Math.PI / 180;
+    const d = forward * Math.cos(pitch) + z * Math.sin(pitch);
+    if (d <= .001) return undefined;
+    return { x: this.width / 2 * (1 + (-dx * fastSin(camera.angle) + dy * fastCos(camera.angle)) / (d * Math.tan(this.fov * Math.PI / 360))),
+      y: (this.height >> 1) - (z * Math.cos(pitch) - forward * Math.sin(pitch)) * this.height / d };
+  }
+
+  pickModels(camera: Camera3D, things: Thing3D[], x: number, y: number): number {
+    if (![x, y].every(Number.isFinite)) throw new Error('Pixel-3d pick coordinates must be finite');
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
+    const W = this.width, H = this.height;
+    const buffer = new Uint32Array(W * H), depth = new Float64Array(W * H);
+    const eye = this.config.world ? { ...camera, height: (camera.z ?? 0) + 1.25 } : camera;
+    const fov = Math.tan(this.fov * Math.PI / 360);
+    let selected = -1, bestDistance = Infinity, bestDepth = Infinity;
+    const radius = 8;
+    things.forEach((thing, index) => {
+      if (!thing || thing.visible === false || !thing.model) return;
+      const model = this.config.models?.[thing.model];
+      if (!model) throw new Error(`Unknown pixel-3d model: ${thing.model}`);
+      depth.fill(Infinity);
+      renderModel(model, thing, eye, fastCos(camera.angle), fastSin(camera.angle), fov, W, H, buffer, depth);
+      for (let py = Math.max(0, Math.floor(y - radius)); py <= Math.min(H - 1, Math.ceil(y + radius)); py++) {
+        for (let px = Math.max(0, Math.floor(x - radius)); px <= Math.min(W - 1, Math.ceil(x + radius)); px++) {
+          const d = depth[py * W + px], distance = Math.hypot(px + .5 - x, py + .5 - y);
+          if (distance > radius || !Number.isFinite(d) || d > this.pixelDepth[py * W + px] + 1e-6) continue;
+          if (distance < bestDistance || (distance === bestDistance && d < bestDepth)) {
+            selected = index; bestDistance = distance; bestDepth = d;
+          }
+        }
+      }
+    });
+    return selected;
+  }
+
   render(
     camera: Camera3D,
     things: Thing3D[] = [],
@@ -225,7 +282,8 @@ export class Raycaster3D {
     time: number = 0,
     preparedChunks?: VoxelChunks,
     tethers: Tether3D[] = [],
-    lights: readonly PointLight3D[] = []
+    lights: readonly PointLight3D[] = [],
+    deferredLighting?: (frame: DeferredLightingFrame) => void
   ): Uint32Array {
     const W = this.width;
     const H = this.height;
@@ -296,6 +354,30 @@ export class Raycaster3D {
       this.renderThings(px, py, dirX, dirY, planeX, planeY, things);
     }
 
+    if (deferredLighting) {
+      if (this.deferredColor.length !== this.buffer.length) {
+        this.deferredColor = new Uint32Array(this.buffer.length);
+        this.deferredOverlay = new Uint32Array(this.buffer.length);
+      }
+      this.deferredColor.set(this.buffer);
+      const rowOrigin = this.config.world ? H / 2 : halfH;
+      const enhancement = this.enhanced?.prepareDeferred(this.pixelDepth, modelCamera, dirX, dirY,
+        fovScale, rowOrigin, this.config.world, things, this.config.models ?? {}, map.sky?.horizon);
+      this.buffer.fill(0);
+      this.renderWorldTitles(camera, things, dirX, dirY, fovScale);
+      if (weapon?.sprite) this.renderWeapon(weapon);
+      this.deferredOverlay.set(this.buffer);
+      this.buffer.fill(0);
+      if (stats) this.drawHud(stats);
+      deferredLighting({
+        width:W,height:H,color:this.deferredColor,depth:this.pixelDepth,
+        sceneOverlay:this.deferredOverlay,hud:this.buffer,camera:modelCamera,
+        dirX,dirY,fov:fovScale,rowOrigin,lights,enhancement,
+        outlineRadius:this.outlineRadius,outlineColor:this.outlineColor,
+        flash,fade:stats?.ui?.cinema?.fade??0,palette:this.palette,
+      });
+      return this.buffer;
+    }
     if (lights.length) {
       lightFrame(lights, this.buffer, this.pixelDepth, W, H, modelCamera, dirX, dirY, fovScale,
         this.config.world ? H / 2 : halfH);
@@ -372,6 +454,8 @@ export class Raycaster3D {
     this.drawScale = this.hudScale;
     try {
       this.renderHUD(stats);
+      stats.keyboard?.render({ width: Math.floor(this.width / this.drawScale), height: Math.floor(this.height / this.drawScale),
+        rect: this.rect.bind(this), text: this.text.bind(this) }, stats.ui?.theme);
     } finally {
       this.drawScale = 1;
     }

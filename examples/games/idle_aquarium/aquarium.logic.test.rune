@@ -1,0 +1,801 @@
+#!RUNE
+import "idle_aquarium.rune"
+
+@Test/Aquarium/WelcomeAndIdleIncome
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    assert state.progress.pearls == 30
+    assert state.fish.length == 3
+    assert state.lights.length == 4
+    assert state.bubbles.length == 24
+    assert state.visitor[0].visible == false
+    invoke age 30
+    assert state.progress.pearls == 31
+    assert state.progress.earned == 1
+    assert state.progress.income_remainder == 1
+
+@Test/Aquarium/AtmosphericMusicKeepsDrifting
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    assert mock.audio[0].operation == "music.stop"
+    assert mock.audio[1].operation == "music.play"
+    assert mock.audio[1].args[0] == "glowtide_drift"
+    invoke toggle_menu
+    invoke feed
+    invoke age 30
+    assert mock.audio.length == 2
+
+@Test/Aquarium/AdoptionAndSpendingGuards
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke buy_fish
+    assert state.progress.pearls == 30
+    assert state.progress.fish == 3
+    invoke collect_treasure
+    assert state.progress.pearls == 70
+    invoke buy_fish
+    assert state.progress.pearls == 25
+    assert state.progress.fish == 4
+    assert state.fish.length == 4
+    assert state.fish_cost == 66
+    assert state.fish[3].model == "aqua/puffer"
+    invoke buy_fish
+    assert state.progress.pearls == 25
+    invoke collect_treasure
+    assert state.progress.pearls == 25
+
+@Test/Aquarium/ReefBoostAndJellyUnlock
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke grow_reef
+    assert state.progress.pearls == 0
+    assert state.progress.reef == 1
+    assert state.reef.length == 9
+    assert state.income == 3
+    invoke grow_reef
+    assert state.progress.reef == 1
+    invoke grant_pearls
+    invoke grow_reef
+    assert state.reef_cost == 270
+    invoke grow_reef
+    assert state.progress.reef == 3
+    assert state.visitor[0].visible == true
+    assert state.income == 6
+
+@Test/Aquarium/FeedCostsLivingFriendsAndCannotStack
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke feed
+    assert state.progress.pearls == 26
+    assert state.income == 3
+    assert state.food.length == 18
+    invoke age 30
+    assert state.progress.pearls >= 29
+    assert state.progress.pearls <= 72
+    assert state.eaten == 0
+    assert state.fed_ticks == 870
+    invoke feed
+    assert state.fed_ticks == 870
+    assert state.feed_cooldown == 1170
+    invoke age 870
+    assert state.fed_ticks == 0
+    assert state.income == 1.5
+    assert state.feed_locked == true
+    invoke age 300
+    assert state.feed_locked == false
+
+@Test/Aquarium/TreasureRechargesAndFestivalMultiplies
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke collect_treasure
+    assert state.treasure[1].visible == false
+    invoke age 599
+    invoke collect_treasure
+    assert state.treasure_ticks == 599
+    invoke age 1
+    assert state.treasure[1].visible == true
+    invoke collect_treasure
+    assert state.treasure_ticks == 0
+    invoke before_festival
+    invoke tick {}
+    assert state.party == true
+    assert state.income == 4.5
+    invoke feed
+    assert state.income == 9
+    invoke end_festival
+    invoke tick {}
+    assert state.party == false
+    assert state.income == 3
+
+@Test/Aquarium/CapacityAndLighting
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke grant_pearls
+    invoke fill_tank
+    assert state.progress.fish == 18
+    assert state.fish.length == 18
+    assert state.progress.reef == 5
+    assert state.fish_full == true
+    assert state.reef_full == true
+    assert state.progress.pearls >= 0
+    invoke buy_fish
+    invoke grow_reef
+    assert state.progress.fish == 18
+    assert state.progress.reef == 5
+    invoke cycle_lights
+    assert state.progress.palette == 1
+    assert state.lights[0].color == "#ff5db5"
+    invoke cycle_lights
+    invoke cycle_lights
+    assert state.progress.palette == 0
+
+@Test/Aquarium/SavedProgressRebuildsTheTank
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke saved_reef
+    invoke initialize
+    assert state.progress.pearls == 1234
+    assert state.fish.length == 8
+    assert state.reef.length == 11
+    assert state.visitor[0].visible == true
+    assert state.lights[0].color == "#a77cff"
+    assert state.income == 16
+    invoke tick {"right":true}
+    assert state.orbit_target == 0.5
+    assert state.orbit > 0
+    assert state.orbit < 0.5
+    assert state.camera.x > 20
+
+@Test/Aquarium/TankGrowthCostsAndCapacity
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    assert state.tank_scale == 0.75
+    invoke grow_tank
+    assert state.progress.tank == 0
+    assert state.progress.pearls == 30
+    invoke grant_pearls
+    invoke grow_tank
+    assert state.progress.pearls == 99400
+    assert state.tank_capacity == 24
+    assert state.tank_scale == 1
+    assert state.tank[0].scale == 1
+    assert state.camera.y > 0
+    invoke grow_tank
+    assert state.progress.pearls == 97000
+    assert state.tank_capacity == 30
+    assert state.tank_scale == 1.25
+    invoke grow_tank
+    assert state.progress.pearls == 97000
+    invoke fill_tank
+    invoke fill_tank
+    assert state.fish.length == 30
+    assert state.fish_full == true
+    invoke initialize
+    assert state.progress.tank == 2
+    assert state.fish.length == 30
+    assert state.tank[0].scale == 1.25
+
+@Test/Aquarium/SmoothFullOrbit
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke drag_orbit 90
+    assert state.orbit_target == 90
+    assert state.orbit == 0
+    invoke tick {}
+    assert state.orbit > 0
+    assert state.orbit < 90
+    invoke drag_orbit 360
+    assert state.orbit_target == 450
+    invoke toggle_menu
+    invoke drag_orbit 30
+    assert state.orbit_target == 450
+
+@Test/Aquarium/FishChaseAndConsumeOnce
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke feed
+    invoke tick {}
+    assert state.fish[0].snacking == false
+    assert state.food[0].visible == true
+    assert state.eaten == 0
+    invoke one_snack
+    invoke age 10
+    assert state.fish[0].snacking == true
+    assert state.fish[0].x > 20
+    assert state.fish[0].x < 20.5
+    assert state.fish[0].munch_ticks == 0
+    assert state.food[0].visible == true
+    invoke age 60
+    assert state.fish[0].munch_ticks > 0
+    assert state.food[0].chewing == true
+    assert state.food[0].visible == true
+    assert state.food[0].scale < 1.3
+    assert state.eaten == 0
+    invoke age 60
+    assert state.eaten == 1
+    assert state.food[0].visible == false
+    assert state.fish[0].snack_wait > 0
+    invoke age 30
+    assert state.eaten == 1
+    assert state.fish[0].snacking == false
+
+@Test/Aquarium/ScatteredFoodAndLeisurelyPacing
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke feed
+    assert state.food[0].x == 20
+    assert state.food[0].y == 31.8
+    assert state.food[0].z == 6.875
+    assert state.food[0].owner == -1
+    assert state.food[1].model == "aqua/flake"
+    assert state.food[2].model == "aqua/algae"
+    invoke age 90
+    assert state.eaten == 0
+    assert state.fish[0].snacking == true
+    assert state.fish[1].swim_speed > 0.035
+    invoke age 210
+    assert state.eaten > 0
+    assert state.eaten < 9
+    invoke age 600
+    assert state.fed_ticks == 0
+    assert state.food[0].visible == false
+    assert state.food[17].visible == false
+    assert state.fish[0].target == -1
+
+@Test/Aquarium/AdoptingDuringFeedingReleasesReservations
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke feed
+    invoke age 90
+    assert state.fish[0].target >= 0
+    invoke grant_pearls
+    invoke buy_fish
+    assert state.fish.length == 4
+    assert state.fish[0].target == -1
+    invoke age 360
+    assert state.eaten > 0
+    assert state.fish[3].munch_duration >= 102
+
+@Test/Aquarium/MenuDoesNotStopIdleIncome
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke toggle_menu
+    assert state.menu_open == true
+    assert state.ui.grid.layout == "sidebar"
+    assert state.ui.grid.items.length == 10
+    assert state.ui.grid.dismissAction == "close_menu"
+    assert state.ui.grid.textScale == 2
+    assert state.menu_index == 0
+    invoke menu_move 1
+    assert state.menu_index == 2
+    assert state.ui.grid.items[2].selected == true
+    invoke menu_move -1
+    assert state.menu_index == 0
+    assert state.ui.grid.items[1].disabled == true
+    invoke age 30
+    assert state.progress.pearls == 31
+    invoke toggle_menu
+    assert state.menu_open == false
+    assert state.quick_hidden == false
+    invoke close_menu
+    assert state.menu_open == false
+
+@Test/Aquarium/FishNamesAgeAndProfiles
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    assert state.progress.buddies.length == 3
+    assert state.progress.buddies[0].name == "Sunny"
+    invoke inspect_fish 0
+    assert state.profile_open == true
+    assert state.profile_species == "Clownfish"
+    assert state.ui.callout.dismissAction == "close_profile"
+    invoke open_name_keyboard
+    assert state.keyboard_open == true
+    assert state.ui.keyboard.value == "Sunny"
+    invoke cancel_name_keyboard
+    assert state.keyboard_open == false
+    assert state.profile_open == true
+    invoke rename_fish {"name":"  Captain Bubbles  "}
+    assert state.profile_name == "Captain Bubbles"
+    invoke rename_fish {"name":" "}
+    assert state.profile_name == "Captain Bubbles"
+    assert state.name_error == "Choose a name from 1 to 24 characters."
+    invoke rename_fish {"name":"This fish name is much too long"}
+    assert state.profile_name == "Captain Bubbles"
+    assert state.name_error == "Choose a name from 1 to 24 characters."
+    invoke age 60
+    assert state.progress.buddies[0].age == 2
+    invoke grant_pearls
+    invoke buy_fish
+    assert state.progress.buddies.length == 4
+    assert state.progress.buddies[3].age == 0
+    assert state.progress.buddies[0].name == "Captain Bubbles"
+    invoke initialize
+    assert state.progress.buddies[0].age == 2
+    assert state.progress.buddies[0].name == "Captain Bubbles"
+    assert state.profile_open == false
+    invoke inspect_fish 100
+    assert state.profile_open == false
+    invoke toggle_menu
+    invoke feed
+    assert state.menu_open == false
+    invoke toggle_menu
+    invoke grow_reef
+    assert state.menu_open == false
+
+@Test/Aquarium/HungerThresholdsAndStarvation
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke nearly_hungry
+    invoke age 1
+    assert state.progress.buddies[0].hunger == 600
+    assert state.progress.buddies[0].dead == false
+    assert state.hungry_count == 1
+    invoke nearly_starved
+    invoke age 1
+    assert state.progress.buddies[0].hunger == 900
+    assert state.progress.buddies[0].dead == true
+    assert state.progress.buddies[0].cause == "Hunger"
+    assert state.fish[0].model == "aqua/dead"
+    assert state.income == 1
+    assert state.dead_count == 1
+    assert state.progress.buddies[0].age == 2
+    invoke age 30
+    assert state.progress.buddies[0].age == 2
+    assert state.progress.buddies[0].death_age == 1
+    assert state.fish[0].z > state.progress.buddies[0].death_z
+
+@Test/Aquarium/DeathReleasesFoodAndClosesNaming
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke feed
+    invoke inspect_fish 0
+    invoke open_name_keyboard
+    invoke dying_eater
+    invoke age 1
+    assert state.progress.buddies[0].dead == true
+    assert state.keyboard_open == false
+    assert state.fish[0].target == -1
+    assert state.food[0].owner == -1
+    assert state.food[0].chewing == false
+    assert state.eaten == 0
+    assert state.ui.callout.actions[0].action == "retrieve_selected"
+    invoke retrieve_selected
+    assert state.progress.fish == 2
+    assert state.profile_open == false
+
+@Test/Aquarium/OldAgeAndNetRetrievalPreserveSurvivors
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke nearly_old
+    invoke age 1
+    assert state.progress.buddies[0].dead == true
+    assert state.progress.buddies[0].cause == "Old age"
+    assert state.progress.buddies[0].hunger == 1
+    invoke initialize
+    assert state.progress.buddies[0].dead == true
+    assert state.fish[0].model == "aqua/dead"
+    assert state.income == 1
+    invoke inspect_fish 0
+    assert state.profile_open == false
+    assert state.progress.fish == 2
+    assert state.progress.buddies.length == 2
+    assert state.progress.buddies[0].name == "Bubbles"
+    assert state.fish[0].model == "aqua/tang"
+    assert state.nets[0].visible == true
+    invoke age 30
+    assert state.nets[0].visible == false
+    invoke initialize
+    assert state.progress.fish == 2
+    assert state.progress.buddies[0].age == 2
+
+@Test/Aquarium/FinishedSnacksRelieveHunger
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke feed
+    invoke one_snack
+    invoke hungry_eater
+    invoke age 10
+    assert state.progress.buddies[0].hunger == 600
+    invoke age 120
+    assert state.eaten == 1
+    assert state.progress.buddies[0].hunger == 304
+    assert state.progress.buddies[0].dead == false
+
+@Test/Aquarium/DecaySinksAndScavengingDoesNotAwardPearls
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke fresh_corpse
+    invoke age 1
+    assert state.progress.buddies[2].death_age == 120
+    assert state.fish[2].model == "aqua/decay"
+    assert state.fish[2].z == 8
+    invoke age 30
+    assert state.fish[2].z < 8
+    invoke scavenging_setup
+    invoke age 30
+    assert state.fish[0].carrion == 2
+    assert state.fish[0].carrion_ticks > 0
+    assert state.progress.buddies[2].bites == 0
+    invoke age 60
+    assert state.progress.buddies[2].bites == 1
+    assert state.progress.buddies[0].hunger == 523
+    assert state.eaten == 0
+    assert state.progress.pearls == 35
+    assert state.fish[2].scale < state.fish[2].base_scale
+    invoke final_bite
+    invoke age 90
+    assert state.progress.fish == 2
+    assert state.dead_count == 0
+    assert state.progress.buddies[1].name == "Bubbles"
+    assert state.fish[1].model == "aqua/tang"
+
+@Test/Aquarium/EmptyTankPersistsAndCanRecoverWithPearls
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke all_dead
+    invoke inspect_fish 2
+    invoke inspect_fish 1
+    invoke inspect_fish 0
+    assert state.progress.fish == 0
+    assert state.progress.buddies.length == 0
+    assert state.income == 0
+    invoke initialize
+    assert state.fish.length == 0
+    assert state.crabs.length == 1
+    assert state.fish_cost == 18
+    invoke buy_fish
+    assert state.progress.fish == 0
+    invoke collect_treasure
+    assert state.progress.pearls == 25
+    invoke buy_fish
+    assert state.progress.pearls == 7
+    assert state.alive_count == 1
+    assert state.progress.buddies[0].age == 0
+    assert state.progress.buddies[0].hunger == 0
+
+@Test/Aquarium/ResetRequiresConfirmationAndErasesProgress
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke grant_pearls
+    invoke grow_tank
+    invoke grow_reef
+    invoke reset_tank
+    assert state.progress.tank == 1
+    invoke request_reset
+    assert state.reset_open == true
+    assert state.ui.callout.dismissAction == "cancel_reset"
+    assert state.ui.callout.actions[0].action == "reset_tank"
+    invoke cancel_reset
+    assert state.progress.tank == 1
+    assert state.progress.reef == 1
+    invoke request_reset
+    invoke inspect_fish 0
+    assert state.reset_open == true
+    assert state.profile_open == false
+    invoke reset_tank
+    assert state.reset_open == false
+    assert state.progress.pearls == 30
+    assert state.progress.earned == 0
+    assert state.progress.reef == 0
+    assert state.progress.tank == 0
+    assert state.progress.palette == 0
+    assert state.fish.length == 3
+    assert state.crabs.length == 1
+    assert state.progress.buddies[0].age == 0
+    assert state.progress.buddies[0].hunger == 0
+    assert state.progress.buddies[0].dead == false
+    assert state.tank_capacity == 18
+    assert state.food.length == 0
+
+@Test/Aquarium/FloralPickerPurchasesAndRootedGarden
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    assert state.crabs.length == 1
+    assert state.garden.length == 0
+    invoke open_flower_shop
+    assert state.shop == "flowers"
+    assert state.ui.grid.items.length == 3
+    assert state.ui.grid.items[0].disabled == true
+    invoke buy_floral 0
+    assert state.progress.pearls == 30
+    assert state.garden.length == 0
+    invoke grant_pearls
+    invoke buy_floral 0
+    assert state.progress.pearls == 99965
+    assert state.garden.length == 1
+    assert state.garden[0].model == "aqua/blossom"
+    assert state.shop == ""
+    invoke buy_floral 1
+    invoke buy_floral 2
+    assert state.progress.pearls == 99835
+    assert state.garden.length == 3
+    assert state.garden[1].model == "aqua/fan"
+    assert state.garden[2].model == "aqua/lily"
+    invoke remember_garden
+    invoke age 120
+    assert state.garden[0].x == state.planted_x
+    assert state.garden[0].y == state.planted_y
+    invoke initialize
+    assert state.garden.length == 3
+    assert state.garden[0].x == state.planted_x
+    assert state.garden[0].y == state.planted_y
+    invoke request_reset
+    invoke reset_tank
+    assert state.garden.length == 0
+    assert state.progress.critters.length == 1
+
+@Test/Aquarium/CritterVarietiesPurchasesAndPersistence
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke open_critter_shop
+    assert state.ui.grid.items.length == 4
+    assert state.ui.grid.items[0].disabled == true
+    invoke buy_critter 1
+    assert state.progress.pearls == 30
+    assert state.crabs.length == 1
+    invoke grant_pearls
+    invoke buy_critter 1
+    invoke buy_critter 2
+    invoke buy_critter 3
+    assert state.progress.pearls == 99840
+    assert state.crabs.length == 4
+    assert state.feet.length == 8
+    assert state.crabs[1].model == "aqua/hermit"
+    assert state.crabs[2].model == "aqua/shrimp"
+    assert state.crabs[3].model == "aqua/snail"
+    assert state.crabs[3].speed < state.crabs[2].speed
+    assert state.feet[6].visible == false
+    assert state.income == 1.5
+    invoke initialize
+    assert state.crabs.length == 4
+    assert state.crabs[1].model == "aqua/hermit"
+    assert state.crabs[2].model == "aqua/shrimp"
+    assert state.crabs[3].model == "aqua/snail"
+    invoke open_critter_shop
+    invoke shop_move 1
+    assert state.shop_index == 1
+    invoke close_shop
+    assert state.shop == ""
+
+@Test/Aquarium/EightDirectionsFootAnimationAndObstacleSteering
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke clear_walkway
+    invoke move_critters
+    assert state.crabs[0].x > 20
+    assert state.crabs[0].y == 30
+    invoke walk_direction 1
+    invoke move_critters
+    assert state.crabs[0].x > 20
+    assert state.crabs[0].y > 30
+    invoke animate_feet
+    assert state.feet[0].z != state.feet[1].z
+    invoke walk_direction 2
+    invoke move_critters
+    assert state.crabs[0].x == 20
+    assert state.crabs[0].y > 30
+    invoke walk_direction 3
+    invoke move_critters
+    assert state.crabs[0].x < 20
+    assert state.crabs[0].y > 30
+    invoke walk_direction 4
+    invoke move_critters
+    assert state.crabs[0].x < 20
+    assert state.crabs[0].y == 30
+    invoke walk_direction 5
+    invoke move_critters
+    assert state.crabs[0].x < 20
+    assert state.crabs[0].y < 30
+    invoke walk_direction 6
+    invoke move_critters
+    assert state.crabs[0].x == 20
+    assert state.crabs[0].y < 30
+    invoke walk_direction 7
+    invoke move_critters
+    assert state.crabs[0].x > 20
+    assert state.crabs[0].y < 30
+    invoke block_walkway
+    invoke move_critters
+    assert state.crabs[0].direction != 0
+    assert state.crabs[0].moving == true
+    invoke resting_crab
+    invoke move_critters
+    assert state.crabs[0].x == 20
+    assert state.crabs[0].y == 30
+    assert state.crabs[0].moving == false
+
+@Test/Aquarium/BlockedPurchasesExplainFailureWithoutSpending
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke grant_pearls
+    invoke block_all_sand
+    invoke open_flower_shop
+    invoke buy_floral 0
+    assert state.progress.pearls == 100000
+    assert state.garden.length == 0
+    assert state.shop == "flowers"
+    assert state.ui.grid.footer == "No clear planting spot. Expand the tank for more room."
+    invoke open_critter_shop
+    invoke buy_critter 0
+    assert state.progress.pearls == 100000
+    assert state.crabs.length == 1
+    assert state.shop == "critters"
+    assert state.ui.grid.footer == "No clear landing spot. Expand the tank for more room."
+    invoke buy_critter -1
+    assert state.ui.grid.footer == "Choose a critter variety from the picker."
+
+@Logic/aquarium
+state:
+    planted_x = 0
+    planted_y = 0
+
+action remember_garden:
+    planted_x = garden[0].x
+    planted_y = garden[0].y
+
+action clear_walkway:
+    obstacles = []
+    crabs = [crabs[0]]
+    call walk_direction 0
+
+action walk_direction(direction):
+    local crab = crabs[0]
+    crab.x = 20
+    crab.y = 30
+    crab.direction = direction
+    crab.rest = 0
+    crab.burst = 100
+
+action block_walkway:
+    call walk_direction 0
+    obstacles = [{"x":21,"y":30,"radius":0.88}]
+
+action resting_crab:
+    call walk_direction 0
+    local crab = crabs[0]
+    crab.rest = 20
+
+action block_all_sand:
+    obstacles = [{"x":20,"y":30,"radius":100}]
+
+action nearly_hungry:
+    ticks = 29
+    progress.buddies[0].hunger = 599
+
+action nearly_starved:
+    ticks = 59
+    progress.buddies[0].hunger = 899
+
+action nearly_old:
+    ticks = 29
+    progress.buddies[0].age = 2699
+
+action dying_eater:
+    ticks = 29
+    progress.buddies[0].hunger = 899
+    fish[0].target = 0
+    fish[0].munch_ticks = 47
+    fish[0].munch_duration = 48
+    food[0].owner = 0
+    food[0].chewing = true
+
+action hungry_eater:
+    progress.buddies[0].hunger = 600
+
+action fresh_corpse:
+    ticks = 29
+    progress.buddies[2].dead = true
+    progress.buddies[2].death_age = 119
+
+action scavenging_setup:
+    ticks = 0
+    progress.pearls = 32
+    progress.buddies[2].death_age = 200
+    progress.buddies[0].hunger = 700
+    call animate
+    fish[0].x = fish[2].x
+    fish[0].y = fish[2].y
+    fish[0].z = fish[2].z
+    fish[0].snack_wait = 0
+
+action final_bite:
+    progress.buddies[2].bites = 5
+    progress.buddies[0].hunger = 700
+    fish[0].snack_wait = 0
+
+action all_dead:
+    for buddy in progress.buddies:
+        buddy.dead = true
+    progress.pearls = 0
+
+action age(count):
+    for i in range(0,count):
+        call tick {}
+
+action grant_pearls:
+    progress.pearls = 100000
+
+action fill_tank:
+    for i in range(0,20):
+        call buy_fish
+        call grow_reef
+
+action before_festival:
+    ticks = 1349
+
+action end_festival:
+    ticks = 1799
+
+action saved_reef:
+    progress = {"pearls":1234,"fish":8,"reef":3,"earned":2000,"palette":2}
+
+action one_snack:
+    for pellet in food:
+        pellet.visible = false
+        pellet.owner = -1
+    for f in fish:
+        f.target = -1
+        f.snack_wait = 900
+    fish[0].x = 20
+    fish[0].y = 30
+    fish[0].z = 6
+    fish[0].snack_wait = 0
+    food[0].visible = true
+    food[0].x = 22
+    food[0].y = 30
+    food[0].z = 6
+    food[0].home_x = 22
+    food[0].home_y = 30

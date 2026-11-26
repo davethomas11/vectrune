@@ -1,0 +1,20 @@
+#!RUNE
+import "modules.rune"
+
+@Test/Modules/NamespacesAndComposition
+type = logic
+page = home
+run:
+    invoke initialize
+    assert state.wallet.pearls == 30
+    invoke wallet.earn 10
+    invoke wallet.spend 5
+    assert state.wallet.pearls == 35
+    assert state.wallet.purchases == 1
+    invoke age
+    assert state.pet.care.age == 60
+    assert state.pet.care.hunger == 60
+    invoke pet.feed
+    assert state.pet.care.hunger == 0
+    assert state.pet.id == "crab-1"
+    assert state.pet.care.id == "crab-1-care"

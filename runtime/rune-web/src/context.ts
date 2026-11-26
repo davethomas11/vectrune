@@ -22,6 +22,8 @@ export interface RuneContext {
   actionDefinitions: Record<string, ActionDefinition>;
   i18nData: Record<string, string>;
   app: RuneApp;
+  logicState?: Record<string, unknown>;
+  logicOwner?: string;
   isRendering: boolean;
   compactScopes?: boolean;
   memorySubscriptions: Record<string, Set<string>>;
@@ -40,6 +42,10 @@ let _ctx: RuneContext | null = null;
 /** Initialize the global runtime context. Called once during boot(). */
 export function initContext(context: RuneContext): void {
   _ctx = context;
+}
+
+export function currentContext(): RuneContext | null {
+  return _ctx;
 }
 
 /** Get the current runtime context. Throws if boot() hasn't been called. */

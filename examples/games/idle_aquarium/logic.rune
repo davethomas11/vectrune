@@ -1,0 +1,823 @@
+@Logic/aquarium
+modules = {"care":"AquariumCare"}
+types = ["AquariumLife"]
+state:
+    save_revision = 0
+    residents_dirty = true
+    label_second = -1
+    label_revision = -1
+    label_eaten = -1
+    label_feed = -1
+    label_treasure = -1
+    label_fed = false
+    progress = {"pearls":30,"fish":3,"reef":0,"earned":0,"income_remainder":0,"food_level":0,"life_level":0,"palette":0,"tank":0,"next_id":1,"florals":[{"kind":0,"slot":-1}],"critters":[{"kind":0}],"buddies":[{"name":"Sunny","age":0,"kind":0,"hunger":0,"lifespan":2700,"dead":false,"death_age":0,"death_z":6,"bites":0,"cause":""},{"name":"Bubbles","age":0,"kind":1,"hunger":0,"lifespan":3600,"dead":false,"death_age":0,"death_z":6,"bites":0,"cause":""},{"name":"Indigo","age":0,"kind":2,"hunger":0,"lifespan":4500,"dead":false,"death_age":0,"death_z":6,"bites":0,"cause":""}]}
+    reset_open = false
+    shop = ""
+    shop_index = 0
+    surviving_buddies = []
+    cleanup_index = -1
+    alive_count = 3
+    dead_count = 0
+    hungry_count = 0
+    nets = []
+    net_ticks = 0
+    menu_open = false
+    menu_index = 0
+    profile_open = false
+    profile_hidden = true
+    quick_hidden = false
+    selected_fish = -1
+    selected_critter = -1
+    residents = []
+    profile_name = ""
+    profile_species = ""
+    profile_age = ""
+    name_error = ""
+    name_draft = ""
+    if selected_critter<0 && selected_fish==index:
+        keyboard_open = false
+    friend_names = ["Sunny","Bubbles","Indigo","Mochi","Peaches","Ripple","Coral","Sprout"]
+    species_names = ["Clownfish","Blue tang","Royal gramma","Pufferfish","Angelfish","Butterflyfish","Neon tetra","Lionfish"]
+    tank_scale = 0.75
+    tank_capacity = 18
+    tank_cost = 600
+    tank_locked = true
+    tank_label = ""
+    eaten = 0
+    snack_label = ""
+    status = "playing"
+    ticks = 0
+    fed_ticks = 0
+    feed_cooldown = 0
+    treasure_ticks = 600
+    party = false
+    orbit = 0
+    orbit_target = 0
+    world = null
+    camera = {"x":20,"y":3,"z":12.75,"angle":90,"pitch":-20}
+    tank = [{"x":20,"y":30,"z":2,"model":"aqua/tank"}]
+    fish = []
+    crabs = []
+    reef = []
+    bubbles = []
+    food = []
+    treasure = []
+    visitor = []
+    lights = []
+    species = ["aqua/clown","aqua/tang","aqua/royal","aqua/puffer","aqua/angel","aqua/butterfly","aqua/neon","aqua/lion"]
+    food_models = ["aqua/food","aqua/flake","aqua/algae"]
+    light_colors = ["#36e9ee","#ff5db5","#a77cff"]
+    light_names = ["LAGOON GLOW","CANDY SUNSET","MOON JELLY"]
+    fish_cost = 45
+    reef_cost = 30
+    income = 1.5
+    fish_full = false
+    reef_full = false
+    fish_locked = false
+    reef_locked = false
+    feed_locked = false
+    feed_cost = 4
+    treasure_locked = false
+    pearl_label = ""
+    income_label = ""
+    fish_label = ""
+    reef_label = ""
+    feed_label = ""
+    treasure_label = ""
+    lighting_label = ""
+    collection_label = ""
+    event_label = ""
+    notice = "Welcome home! Your fish earn pearls just by swimming."
+    ui = {"meters":[],"objective":"","detail":"","prompt":"","notice":"","panel":null}
+
+action initialize:
+    music.stop
+    music.play "glowtide_drift"
+    world = voxel_world(40,40,24,["aqua/sand"],{"renderDistance":48})
+    progress.pearls = clamp(floor(progress.pearls),0,100000)
+    # Save restoration accepts integers; the remainder is stored in half-pearl units.
+    progress.income_remainder = progress.income_remainder==1 ? 1 : 0
+    progress.food_level = progress.food_level ? clamp(floor(progress.food_level),0,3) : 0
+    progress.life_level = progress.life_level ? clamp(floor(progress.life_level),0,3) : 0
+    progress.next_id = progress.next_id ? progress.next_id : 1
+    progress.tank = progress.tank ? clamp(floor(progress.tank),0,2) : 0
+    tank_capacity = 18+progress.tank*6
+    tank_scale = 0.75+progress.tank*0.25
+    progress.fish = clamp(floor(progress.fish),0,tank_capacity)
+    progress.buddies = progress.buddies ? progress.buddies : []
+    progress.reef = clamp(floor(progress.reef),0,5)
+    progress.palette = clamp(floor(progress.palette),0,2)
+    progress.earned = max(0,floor(progress.earned))
+    ticks = 0
+    fed_ticks = 0
+    feed_cooldown = 0
+    treasure_ticks = 600
+    party = false
+    orbit = 0
+    orbit_target = 0
+    menu_open = false
+    profile_open = false
+    keyboard_open = false
+    reset_open = false
+    shop = ""
+    selected_fish = -1
+    selected_critter = -1
+    eaten = 0
+    food = []
+    nets = []
+    net_ticks = 0
+    call build_tank
+    call build_reef
+    call build_fish
+    call build_garden
+    call build_critters
+    bubbles = []
+    for i in range(0,24):
+        bubbles.push({"x":20+(-7+(i%3)*7)*tank_scale,"y":30+(1.5+(i%2))*tank_scale,"z":2+(i%8)*0.95*tank_scale,"model":"aqua/bubble","scale":0.7+(i%3)*0.3,"phase":i*47})
+    treasure = [
+        {"x":24,"y":28.4,"z":2,"model":"aqua/chest"},
+        {"x":24,"y":28.4,"z":3.3,"model":"aqua/pearl","visible":true}
+    ]
+    visitor = [{"x":20,"y":31.7,"z":7.5,"model":"aqua/jelly","visible":progress.reef>=3}]
+    call set_lights
+    call animate
+    call update_labels
+
+action build_tank:
+    tank = [{"x":20,"y":30,"z":2,"model":"aqua/tank"}]
+    tank.push({"x":20,"y":25.5,"z":6,"model":"aqua/glass-wide","pitch":90,"angle":90})
+    tank.push({"x":20,"y":34.5,"z":6,"model":"aqua/glass-wide","pitch":90,"angle":90})
+    tank.push({"x":11,"y":30,"z":6,"model":"aqua/glass-side","pitch":90})
+    tank.push({"x":29,"y":30,"z":6,"model":"aqua/glass-side","pitch":90})
+    for i in range(0,6):
+        tank.push({"x":11+i*3,"y":25.5,"z":10,"model":"aqua/rail"})
+        tank.push({"x":11+i*3,"y":34.5,"z":10,"model":"aqua/rail"})
+        tank.push({"x":12.5+i*3,"y":34.3,"z":9.8,"model":"aqua/lamp"})
+    for i in range(0,3):
+        tank.push({"x":11,"y":25.5+i*3,"z":10,"model":"aqua/rail","angle":90})
+        tank.push({"x":29,"y":25.5+i*3,"z":10,"model":"aqua/rail","angle":90})
+    for part in tank:
+        part.x = 20+(part.x-20)*tank_scale
+        part.y = 30+(part.y-30)*tank_scale
+        part.z = 2+(part.z-2)*tank_scale
+        part.scale = tank_scale
+
+action start:
+    status = "playing"
+    call update_labels
+
+action build_fish:
+    save_revision += 1
+    residents_dirty = true
+    for pellet in food:
+        pellet.owner = -1
+        pellet.chewing = false
+    fish = []
+    for i in range(0,progress.fish):
+        if i>=progress.buddies.length:
+            progress.buddies.push({"name":friend_names[i%8]+(i>=8 ? " "+(floor(i/8)+1) : ""),"age":0,"kind":i%8,"hunger":0,"lifespan":2700+(i%4)*900,"dead":false,"death_age":0,"death_z":6,"bites":0,"cause":""})
+        local buddy = progress.buddies[i]
+        buddy.kind = buddy.lifespan ? buddy.kind : i%8
+        buddy.hunger = buddy.hunger ? clamp(buddy.hunger,0,900) : 0
+        buddy.lifespan = buddy.lifespan ? buddy.lifespan : 2700+(buddy.kind%4)*900
+        call prepare_fish_upgrades buddy
+        buddy.dead = buddy.dead ? true : false
+        buddy.death_age = buddy.death_age ? buddy.death_age : 0
+        buddy.death_z = buddy.death_z ? buddy.death_z : 6
+        buddy.bites = buddy.bites ? buddy.bites : 0
+        buddy.cause = buddy.cause ? buddy.cause : ""
+        local care_id = buddy.care ? buddy.care.id : "fish-"+progress.next_id
+        if !buddy.care:
+            progress.next_id += 1
+        call care.restore buddy, care_id, 900
+        local a = ticks*(0.65+(i%4)*0.14)+i*137
+        fish.push({"x":20+sin(a)*6.8*tank_scale,"y":30+(-1.5+(i%4)*1.25)*tank_scale,"z":2+(2+(i%3)*1.65)*tank_scale,"angle":0,"model":species[buddy.kind],"phase":i*137,"speed":0.65+(i%4)*0.14,"lane":28.5+(i%4)*1.25,"height":4+(i%3)*1.65,"scale":0.9+(i%3)*0.12,"base_scale":0.9+(i%3)*0.12,"target":-1,"carrion":-1,"carrion_ticks":0,"snacking":false,"munch_ticks":0,"munch_duration":0,"snack_wait":24+(i*29)%90,"swim_speed":0.035+(i%4)*0.009})
+    call build_fish_style
+
+action build_reef:
+    reef = [
+        {"x":13.5,"y":32.4,"z":2,"model":"aqua/kelp","scale":1.25},
+        {"x":26.5,"y":32.7,"z":2,"model":"aqua/kelp","scale":1.5},
+        {"x":14.2,"y":31.2,"z":2,"model":"aqua/coral"},
+        {"x":25.5,"y":32.2,"z":2,"model":"aqua/coral","scale":1.2},
+        {"x":13,"y":30.5,"z":2,"model":"aqua/rock"},
+        {"x":26.7,"y":31.5,"z":2,"model":"aqua/rock","scale":1.2},
+        {"x":17.2,"y":28.7,"z":2,"model":"aqua/anemone"},
+        {"x":21.8,"y":32.8,"z":2,"model":"aqua/kelp","scale":0.7}
+    ]
+    for i in range(0,progress.reef):
+        reef.push({"x":15+i*2.35,"y":29.7+(i%2)*2,"z":2,"model":i%2==0 ? "aqua/coral" : "aqua/anemone","scale":1.25+i*0.1})
+    for plant in reef:
+        plant.x = 20+(plant.x-20)*tank_scale
+        plant.y = 30+(plant.y-30)*tank_scale
+        plant.scale = (plant.scale ? plant.scale : 1)*tank_scale
+    call build_obstacles
+
+action set_lights:
+    lights = [
+        {"x":15,"y":29,"z":6,"color":light_colors[progress.palette],"radius":10,"intensity":0.3},
+        {"x":25,"y":30,"z":7,"color":light_colors[(progress.palette+1)%3],"radius":10,"intensity":0.35},
+        {"x":20,"y":32,"z":9,"color":"#5af5b0","radius":11,"intensity":0.22},
+        {"x":24,"y":28,"z":3.4,"color":"#ffe076","radius":4,"intensity":0.35}
+    ]
+    for light in lights:
+        light.x = 20+(light.x-20)*tank_scale
+        light.y = 30+(light.y-30)*tank_scale
+        light.z = 2+(light.z-2)*tank_scale
+        light.radius *= tank_scale
+
+action tick(input):
+    ticks += 1
+    net_ticks = max(0,net_ticks-1)
+    fed_ticks = max(0,fed_ticks-1)
+    feed_cooldown = max(0,feed_cooldown-1)
+    treasure_ticks = min(600,treasure_ticks+1)
+    party = ticks%1800 >= 1350
+    local turn = (input.right ? 1 : 0)-(input.left ? 1 : 0)
+    orbit_target += turn*0.5
+    orbit += (orbit_target-orbit)*0.22
+    if abs(orbit_target-orbit)<0.01:
+        orbit = orbit_target
+    if ticks%30 == 0:
+        save_revision += 1
+        call update_life
+        call update_critter_life
+        call count_living
+        income = alive_count*(1+progress.reef)*(fed_ticks>0 ? 2 : 1)*(party ? 3 : 1)/2
+        local total_income = income+progress.income_remainder/2
+        local payment = floor(total_income)
+        progress.income_remainder = (total_income-payment)*2
+        call award_pearls payment
+        progress.earned += payment
+    call update_feeding
+    call update_carrion
+    call move_critters
+    call eat_critter_food
+    if cleanup_index>=0:
+        call remove_fish cleanup_index
+    call animate
+    if ticks%15 == 0:
+        if label_second!=floor(ticks/30) || label_revision!=save_revision || label_eaten!=eaten || label_feed!=ceil(feed_cooldown/30) || label_treasure!=ceil((600-treasure_ticks)/30) || label_fed!=(fed_ticks>0):
+            call update_labels
+
+action count_living:
+    alive_count = 0
+    dead_count = 0
+    hungry_count = 0
+    for buddy in progress.buddies:
+        if buddy.dead:
+            dead_count += 1
+        if !buddy.dead:
+            alive_count += 1
+            if buddy.hunger>=420:
+                hungry_count += 1
+
+action update_life:
+    for buddy, index in progress.buddies:
+        if buddy.dead:
+            buddy.death_age += 1
+        if !buddy.dead:
+            call care.advance buddy
+            if buddy.dead:
+                buddy.death_age = 0
+                buddy.death_z = fish[index].z
+                local dying = fish[index]
+                dying.snacking = false
+                dying.carrion = -1
+                if dying.target>=0:
+                    local pellet = food[dying.target]
+                    pellet.owner = -1
+                    pellet.chewing = false
+                dying.target = -1
+                dying.munch_ticks = 0
+                keyboard_open = false
+                if selected_fish==index && shop=="fish":
+                    shop = ""
+                notice = buddy.name+" has passed on. Tap the floating fish to retrieve with your net."
+
+action animate:
+    if camera.angle!=90+orbit || camera.z!=12.75 || camera.x!=20+sin(orbit)*27 || camera.y!=30-cos(orbit)*27:
+        camera.x = 20+sin(orbit)*27
+        camera.y = 30-cos(orbit)*27
+        camera.z = 12.75
+        camera.angle = 90+orbit
+    for net in nets:
+        net.visible = net_ticks>0
+    for f, index in fish:
+        local buddy = progress.buddies[index]
+        local a = ticks*f.speed+f.phase
+        if buddy.dead:
+            f.model = buddy.death_age>=120 ? "aqua/decay" : "aqua/dead"
+            local surface = 2+8*tank_scale
+            f.z = buddy.death_age<120 ? min(surface,buddy.death_z+buddy.death_age*0.12) : max(2.35,surface-(buddy.death_age-120)*0.045)
+            f.angle = sin(a*0.15)*12
+            f.scale = f.base_scale*(1-buddy.bites/8)
+        if !buddy.dead && !f.snacking:
+            local next_x = 20+sin(a)*6.8*tank_scale
+            local next_y = 30+(f.lane-30+cos(a)*0.5)*tank_scale
+            local next_z = 2+(f.height-2+sin(a*1.7)*0.32)*tank_scale
+            f.x += clamp(next_x-f.x,-0.1,0.1)
+            f.y += clamp(next_y-f.y,-0.08,0.08)
+            f.z += clamp(next_z-f.z,-0.08,0.08)
+            f.angle = cos(a)>=0 ? 0 : 180
+    call animate_feet
+    call animate_fish_style
+    if residents_dirty:
+        residents = []
+        for f in fish:
+            residents.push(f)
+        for crab in crabs:
+            residents.push(crab)
+        for piece in fish_style:
+            residents.push(piece)
+        residents_dirty = false
+    for bubble in bubbles:
+        bubble.z = 2+(((ticks*0.035+bubble.phase*0.04)%7.3)+0.2)*tank_scale
+        bubble.x = 20+(-7+(bubble.phase/47%3)*7+sin(ticks*1.2+bubble.phase)*0.22)*tank_scale
+        bubble.y = 30+(1.5+(bubble.phase/47%2))*tank_scale
+    visitor[0].visible = progress.reef>=3
+    visitor[0].x = 20+sin(ticks*0.35)*4*tank_scale
+    visitor[0].y = 30+1.7*tank_scale
+    visitor[0].z = 2+(5.7+sin(ticks*0.8)*0.45)*tank_scale
+    for gift in treasure:
+        gift.x = 20+4*tank_scale
+        gift.y = 30-1.6*tank_scale
+        gift.scale = tank_scale
+    treasure[1].visible = treasure_ticks>=600
+    treasure[1].z = 2+(1.35+sin(ticks*2)*0.18)*tank_scale
+    lights[0].intensity = 0.26+sin(ticks*0.7)*0.06
+    lights[1].intensity = 0.29+sin(ticks*0.7+120)*0.06
+    lights[2].intensity = party ? 0.4 : 0.22
+    lights[3].intensity = treasure_ticks>=600 ? 0.35 : 0.08
+    if party:
+        lights[2].color = light_colors[floor(ticks/150)%3]
+    if !party:
+        lights[2].color = "#5af5b0"
+
+action update_feeding:
+    for pellet in food:
+        if pellet.visible:
+            pellet.age += 1
+            if !pellet.chewing:
+                pellet.z = max(2.35,pellet.z-pellet.sink_speed)
+                pellet.x = pellet.home_x+sin(pellet.age*(0.6+pellet.kind*0.25)+pellet.phase)*0.24
+                pellet.y = pellet.home_y+sin(pellet.age*0.7+pellet.phase)*0.16
+            if pellet.age>=feeding_duration || fed_ticks==0:
+                pellet.visible = false
+                pellet.owner = -1
+                pellet.chewing = false
+    for f, index in fish:
+        f.snacking = false
+        f.scale = f.base_scale
+        f.snack_wait = max(0,f.snack_wait-1)
+        if f.target>=0 && !food[f.target].visible:
+            f.target = -1
+            f.munch_ticks = 0
+        if !progress.buddies[index].dead && f.carrion<0 && f.target<0 && f.snack_wait==0:
+            local nearest = 10000
+            for pellet, pi in food:
+                if pellet.visible && pellet.owner<0:
+                    local distance = (pellet.x-f.x)*(pellet.x-f.x)+(pellet.y-f.y)*(pellet.y-f.y)+(pellet.z-f.z)*(pellet.z-f.z)
+                    if distance<nearest:
+                        nearest = distance
+                        f.target = pi
+            if f.target>=0:
+                food[f.target].owner = index
+                f.munch_ticks = 0
+                f.munch_duration = 48+(index%4)*18+food[f.target].kind*12
+        if f.target>=0:
+            local pellet = food[f.target]
+            local dx = pellet.x-f.x
+            local dy = pellet.y-f.y
+            local dz = pellet.z-f.z
+            local distance = sqrt(dx*dx+dy*dy+dz*dz)
+            f.snacking = true
+            if f.munch_ticks==0:
+                f.angle = dx>=0 ? 0 : 180
+            if distance>0.65 && f.munch_ticks==0:
+                local step = min(f.swim_speed,distance)
+                f.x += dx/distance*step
+                f.y += dy/distance*step
+                f.z += dz/distance*step
+            if distance<=0.65 || f.munch_ticks>0:
+                pellet.chewing = true
+                f.munch_ticks += 1
+                local facing = f.angle==0 ? 1 : -1
+                f.x += clamp(pellet.x-facing*0.48*f.base_scale-f.x,-0.025,0.025)
+                f.y += clamp(pellet.y-f.y,-0.025,0.025)
+                f.z += clamp(pellet.z+sin(f.munch_ticks*15)*0.045-f.z,-0.025,0.025)
+                f.scale = f.base_scale*(1+sin(f.munch_ticks*18)*0.035)
+                pellet.scale = pellet.base_scale*(1-0.65*f.munch_ticks/f.munch_duration)
+                if f.munch_ticks>=f.munch_duration:
+                    pellet.visible = false
+                    pellet.owner = -1
+                    pellet.chewing = false
+                    f.target = -1
+                    f.munch_ticks = 0
+                    f.snack_wait = 60+(index*37+ticks)%120
+                    eaten += 1
+                    save_revision += 1
+                    call award_pearls 2
+                    progress.earned += 2
+                    call care.nourish progress.buddies[index], 300
+
+action update_carrion:
+    cleanup_index = -1
+    for f, index in fish:
+        local buddy = progress.buddies[index]
+        if !buddy.dead && f.target<0:
+            if f.carrion>=0 && (!progress.buddies[f.carrion].dead || progress.buddies[f.carrion].bites>=6):
+                f.carrion = -1
+                f.carrion_ticks = 0
+            if dead_count>0 && f.carrion<0 && buddy.hunger>=120 && f.snack_wait==0:
+                local nearest = 10000
+                for corpse, ci in fish:
+                    if progress.buddies[ci].dead && progress.buddies[ci].death_age>=120 && progress.buddies[ci].bites<6:
+                        local distance = (corpse.x-f.x)*(corpse.x-f.x)+(corpse.y-f.y)*(corpse.y-f.y)+(corpse.z-f.z)*(corpse.z-f.z)
+                        if distance<nearest:
+                            nearest = distance
+                            f.carrion = ci
+            if f.carrion>=0:
+                local corpse = fish[f.carrion]
+                local dx = corpse.x-f.x
+                local dy = corpse.y-f.y
+                local dz = corpse.z-f.z
+                local distance = sqrt(dx*dx+dy*dy+dz*dz)
+                f.snacking = true
+                f.angle = dx>=0 ? 0 : 180
+                if distance>0.7:
+                    local step = min(f.swim_speed,distance)
+                    f.x += dx/distance*step
+                    f.y += dy/distance*step
+                    f.z += dz/distance*step
+                    f.carrion_ticks = 0
+                if distance<=0.7:
+                    f.carrion_ticks += 1
+                    f.scale = f.base_scale*(1+sin(f.carrion_ticks*18)*0.035)
+                    if f.carrion_ticks>=90+(index%3)*15:
+                        progress.buddies[f.carrion].bites += 1
+                        save_revision += 1
+                        call care.nourish buddy, 180
+                        f.carrion = -1
+                        f.carrion_ticks = 0
+                        f.snack_wait = 90
+    for buddy, index in progress.buddies:
+        if buddy.dead && buddy.bites>=6 && cleanup_index<0:
+            cleanup_index = index
+
+action remove_fish(index):
+    surviving_buddies = []
+    for buddy, bi in progress.buddies:
+        if bi!=index:
+            surviving_buddies.push(buddy)
+    progress.buddies = surviving_buddies
+    progress.fish = progress.buddies.length
+    profile_open = false
+    keyboard_open = false
+    selected_fish = -1
+    if shop=="fish":
+        shop = ""
+    call build_fish
+    call animate
+    call update_labels
+
+action feed:
+    menu_open = false
+    if feed_cooldown>0:
+        notice = "Snack time is recharging. Check hunger in each fish's profile."
+        call update_labels
+        stop when true
+    call count_living
+    call count_critters
+    feed_cost = max(1,alive_count+progress.critters.length-critter_dead_count)
+    if progress.pearls<feed_cost:
+        notice = "Snack time costs "+feed_cost+" pearls, one per living friend. Save a few more pearls."
+        call update_labels
+        stop when true
+    progress.pearls -= feed_cost
+    save_revision += 1
+    feeding_duration = 900+progress.food_level*300
+    fed_ticks = feeding_duration
+    feed_cooldown = feeding_duration+300
+    call scatter_critter_food
+    eaten = 0
+    food = []
+    for f, index in fish:
+        f.target = -1
+        f.carrion = -1
+        f.carrion_ticks = 0
+        f.munch_ticks = 0
+        f.snack_wait = 24+(index*29+ticks)%90
+    for i in range(0,max(18,progress.fish)):
+        local phase = i*137.5+ticks*0.7
+        local x = 20+sin(phase)*6.2*tank_scale
+        local y = 30+cos(phase*1.7)*2.4*tank_scale
+        local size = 1.3+(i%3)*0.3
+        food.push({"x":x,"y":y,"home_x":x,"home_y":y,"z":2+(6.5+(i%4)*0.2)*tank_scale,"model":food_models[i%3],"visible":true,"owner":-1,"age":0,"phase":phase,"kind":i%3,"sink_speed":0.004+(i%3)*0.002,"scale":size,"base_scale":size,"chewing":false})
+    notice = "Snack shower / "+feed_cost+" pearls! Fish nibble slowly. +2 pearls per finished snack."
+    call update_labels
+
+action buy_fish:
+    menu_open = false
+    call update_labels
+    if fish_full:
+        notice = progress.tank<2 ? "Full house! Expand the tank for six more friends." : "All 30 swimming buddies are home!"
+        call update_labels
+        stop when true
+    if progress.pearls<fish_cost:
+        notice = "Keep relaxing! Your fish are earning the next adoption."
+        call update_labels
+        stop when true
+    progress.pearls -= fish_cost
+    progress.fish += 1
+    call build_fish
+    notice = "New friend adopted! More fins, more pearls."
+    call animate
+    call update_labels
+
+action grow_tank:
+    menu_open = false
+    call update_labels
+    if tank_locked:
+        notice = progress.tank>=2 ? "Your grand lagoon is fully expanded!" : "Save a few more pearls to expand your lagoon."
+        call update_labels
+        stop when true
+    progress.pearls -= tank_cost
+    save_revision += 1
+    progress.tank += 1
+    tank_capacity = 18+progress.tank*6
+    tank_scale = 0.75+progress.tank*0.25
+    call build_tank
+    call build_reef
+    call build_garden
+    call set_lights
+    for crab in crabs:
+        crab.x = 20+(crab.x-20)/(tank_scale-0.25)*tank_scale
+        crab.y = 30+(crab.y-30)/(tank_scale-0.25)*tank_scale
+    call build_obstacles
+    call clear_critter_paths
+    notice = "Bigger ocean, bigger dreams! Six new fish spaces and more room to swim."
+    call animate
+    call update_labels
+
+action toggle_menu:
+    shop = ""
+    profile_open = false
+    keyboard_open = false
+    menu_open = !menu_open
+    call update_labels
+    if menu_open:
+        call menu_move 0
+
+action close_menu:
+    menu_open = false
+    call update_labels
+
+action menu_move(direction):
+    stop when !menu_open
+    menu_index = (menu_index+direction+10)%10
+    for i in range(0,10):
+        stop when !ui.grid.items[menu_index].disabled
+        menu_index = (menu_index+(direction<0 ? 9 : 1))%10
+    call update_labels
+
+action grow_reef:
+    menu_open = false
+    call update_labels
+    if reef_full:
+        notice = "Your rainbow reef is fully grown. Absolutely fin-tastic!"
+        call update_labels
+        stop when true
+    if progress.pearls<reef_cost:
+        notice = "The reef needs a few more pearls. No rush!"
+        call update_labels
+        stop when true
+    progress.pearls -= reef_cost
+    save_revision += 1
+    progress.reef += 1
+    call build_reef
+    call clear_critter_paths
+    notice = progress.reef==3 ? "A moon jelly moved in! Your reef has a glowing VIP." : "Reef upgraded! Every fish earns one extra pearl per second."
+    call animate
+    call update_labels
+
+action collect_treasure:
+    menu_open = false
+    if treasure_ticks<600:
+        notice = "The oyster is making another gift. Check back in a moment!"
+        call update_labels
+        stop when true
+    local reward = 25+progress.fish*5
+    call award_pearls reward
+    save_revision += 1
+    progress.earned += reward
+    treasure_ticks = 0
+    treasure[1].visible = false
+    notice = "Oyster treasure! +"+reward+" pearls. Another gift in 20 seconds."
+    call update_labels
+
+action cycle_lights:
+    menu_open = false
+    progress.palette = (progress.palette+1)%3
+    save_revision += 1
+    call set_lights
+    notice = "Lighting changed. Same happy fish, brand-new mood."
+    call update_labels
+
+action orbit_view(direction):
+    menu_open = false
+    orbit_target += direction*15
+    call update_labels
+
+action drag_orbit(degrees):
+    stop when menu_open || keyboard_open || shop!="" || reset_open
+    orbit_target += degrees
+
+action next_view:
+    menu_open = false
+    orbit_target += 90
+    call update_labels
+
+action inspect_fish(index):
+    stop when reset_open || shop!=""
+    if index<0 || index>=fish.length || floor(index)!=index:
+        notice = "That fish is no longer in this lagoon."
+        call update_labels
+        stop when true
+    if progress.buddies[index].dead:
+        nets = [{"x":fish[index].x,"y":fish[index].y,"z":fish[index].z,"model":"aqua/net","visible":true}]
+        net_ticks = 30
+        notice = progress.buddies[index].name+" retrieved with the net. A space is ready for a new friend."
+        call remove_fish index
+        stop when true
+    selected_fish = index
+    selected_critter = -1
+    profile_open = true
+    keyboard_open = false
+    menu_open = false
+    name_error = ""
+    call update_labels
+
+action close_profile:
+    profile_open = false
+    keyboard_open = false
+    name_error = ""
+    call update_labels
+
+action retrieve_selected:
+    stop when !profile_open
+    if selected_critter>=0:
+        call inspect_critter selected_critter
+        stop when true
+    stop when selected_fish<0
+    call inspect_fish selected_fish
+
+action rename_fish(fields):
+    stop when !profile_open
+    name_draft = fields.name ? fields.name : ""
+    for i in range(0,name_draft.length):
+        stop when !" \t\r\n".includes(name_draft.slice(0,1))
+        name_draft = name_draft.slice(1)
+    for i in range(0,name_draft.length):
+        stop when !" \t\r\n".includes(name_draft.slice(name_draft.length-1))
+        name_draft = name_draft.slice(0,name_draft.length-1)
+    if name_draft.length==0 || name_draft.length>24:
+        name_error = "Choose a name from 1 to 24 characters."
+        call update_labels
+        stop when true
+    if selected_critter>=0:
+        progress.critters[selected_critter].name = name_draft
+    if selected_critter<0:
+        progress.buddies[selected_fish].name = name_draft
+    name_error = ""
+    notice = "Meet "+name_draft+"! Your friend's name is saved."
+    save_revision += 1
+    keyboard_open = false
+    call update_labels
+
+action open_name_keyboard:
+    stop when !profile_open
+    local buddy = selected_critter>=0 ? progress.critters[selected_critter] : progress.buddies[selected_fish]
+    stop when buddy.dead
+    keyboard_open = true
+    name_draft = buddy.name
+    name_error = ""
+    call update_labels
+
+action cancel_name_keyboard:
+    keyboard_open = false
+    name_error = ""
+    call update_labels
+
+action request_reset:
+    shop = ""
+    menu_open = false
+    profile_open = false
+    keyboard_open = false
+    reset_open = true
+    call update_labels
+
+action cancel_reset:
+    reset_open = false
+    call update_labels
+
+action reset_tank:
+    stop when !reset_open
+    progress = {"pearls":30,"fish":3,"reef":0,"earned":0,"income_remainder":0,"food_level":0,"life_level":0,"palette":0,"tank":0,"next_id":1,"florals":[{"kind":0,"slot":-1}],"critters":[{"kind":0}],"buddies":[]}
+    call initialize
+    notice = "A fresh lagoon! Three new fish, one crab and 30 pearls."
+    call update_labels
+
+action update_labels:
+    label_second = floor(ticks/30)
+    label_revision = save_revision
+    label_eaten = eaten
+    label_feed = ceil(feed_cooldown/30)
+    label_treasure = ceil((600-treasure_ticks)/30)
+    label_fed = fed_ticks>0
+    call count_living
+    call count_critters
+    profile_hidden = !profile_open
+    quick_hidden = menu_open || profile_open || reset_open || shop!=""
+    if profile_open:
+        local buddy = selected_critter>=0 ? progress.critters[selected_critter] : progress.buddies[selected_fish]
+        profile_name = buddy.name
+        profile_species = selected_critter>=0 ? critter_names[buddy.kind] : species_names[buddy.kind]
+        profile_age = buddy.age<60 ? buddy.age+" seconds" : buddy.age<3600 ? floor(buddy.age/60)+" minutes" : buddy.age<86400 ? floor(buddy.age/3600)+" hours" : floor(buddy.age/86400)+" days"
+    fish_cost = 18+progress.fish*progress.fish*3
+    reef_cost = 30*(progress.reef+1)*(progress.reef+1)
+    tank_cost = 600*(progress.tank+1)*(progress.tank+1)
+    tank_locked = progress.tank>=2 || progress.pearls<tank_cost
+    tank_label = progress.tank>=2 ? "Grand lagoon complete" : "Expand tank / "+tank_cost+" pearls"
+    income = alive_count*(1+progress.reef)*(fed_ticks>0 ? 2 : 1)*(party ? 3 : 1)/2
+    fish_full = progress.fish>=tank_capacity
+    reef_full = progress.reef>=5
+    fish_locked = fish_full || progress.pearls<fish_cost
+    reef_locked = reef_full || progress.pearls<reef_cost
+    feed_cost = max(1,alive_count+progress.critters.length-critter_dead_count)
+    feed_locked = feed_cooldown>0 || progress.pearls<feed_cost
+    treasure_locked = treasure_ticks<600
+    pearl_label = progress.pearls+" / 100000 pearls"
+    income_label = "+"+income+" pearls / sec"
+    fish_label = fish_full ? "Tank full / "+tank_capacity+" friends" : "Adopt a fish / "+fish_cost+" pearls"
+    reef_label = reef_full ? "Rainbow reef complete" : "Grow reef / "+reef_cost+" pearls"
+    feed_label = feed_cooldown>0 ? "Snacks ready in "+ceil(feed_cooldown/30)+"s" : "Feed fish and critters / "+feed_cost+" pearls"
+    treasure_label = treasure_locked ? "Oyster gift in "+ceil((600-treasure_ticks)/30)+"s" : "Collect oyster / +"+(25+progress.fish*5)
+    lighting_label = light_names[progress.palette]+" / L"
+    collection_label = alive_count+" living / "+dead_count+" to net / "+progress.fish+"/"+tank_capacity+" spaces / Reef "+progress.reef+"/5"
+    snack_label = eaten+" snacks eaten / +"+(eaten*2)+" bite pearls"
+    event_label = party ? "GLOW FESTIVAL! Triple pearls until the minute ends." : "Glow festival in "+ceil((1350-ticks%1800)/30)+"s / triple pearls!"
+    ui = {
+        "style":"floating","meters":[],"objective":pearl_label+" / "+income_label,
+        "detail":collection_label,"prompt":party ? "GLOW FESTIVAL // 3X PEARLS" : "",
+        "notice":dead_count>0 ? dead_count+" fish to retrieve / TAP FISH TO NET" : hungry_count>0 ? hungry_count+" hungry fish / FEED SOON" : fed_ticks>0 ? snack_label : "","panel":null,
+        "theme":{"background":860723,"surface":1587530,"selected":2512741,"border":3560808,"text":15858679,"muted":10665415,"accent":8185036,"focus":12845032,"radius":7}
+    }
+    if !menu_open && !profile_open && !reset_open && shop=="":
+        ui.buttons = [
+            {"icon":"menu","label":"Aquarium menu","anchor":"top-right","action":"toggle_menu","size":30},
+            {"icon":"sound","label":"Sound / M","anchor":"top-right","offset":38,"action":"host.mute","size":30},
+            {"icon":"feed","label":"Feed fish and critters","anchor":"bottom-left","action":"feed","disabled":feed_locked,"size":30},
+            {"icon":"fish","label":"Adopt fish","anchor":"bottom-left","offset":38,"action":"buy_fish","disabled":fish_locked,"size":30},
+            {"icon":"flower","label":"Floral decorations","anchor":"bottom-left","offset":76,"action":"open_flower_shop","size":30},
+            {"icon":"critter","label":"Bottom critters","anchor":"bottom-left","offset":114,"action":"open_critter_shop","size":30}
+        ]
+    if profile_open:
+        local buddy = selected_critter>=0 ? progress.critters[selected_critter] : progress.buddies[selected_fish]
+        local full = selected_critter>=0 ? 1200 : 600
+        ui.callout = {"title":profile_name,"target":selected_critter>=0 ? crabs[selected_critter] : fish[selected_fish],"width":238,"dismissAction":"close_profile",
+            "lines":[profile_species,"AGE "+profile_age+" / LIFE "+floor(buddy.lifespan/60)+"m","HUNGER "+floor(min(full,buddy.hunger)*100/full)+"% / "+(buddy.dead ? buddy.cause+" / TAP TO NET" : buddy.hunger>=full ? "STARVING "+ceil((full*1.5-buddy.hunger)/60)+"m LEFT" : buddy.hunger>=full*0.7 ? "HUNGRY" : "CONTENT"),name_error ? name_error : selected_critter>=0 ? "Tank care upgrades in the menu" : buddy.style ? "Style Kit / "+pattern_names[buddy.pattern] : "Style Kit available / 120 pearls"],
+            "actions":buddy.dead ? [{"label":"NET FRIEND","action":"retrieve_selected"},{"label":"CLOSE","action":"close_profile"}] : selected_critter>=0 ? [{"label":"RENAME","action":"open_name_keyboard"},{"label":"FEED","action":"feed"},{"label":"CLOSE","action":"close_profile"}] : [{"label":"RENAME","action":"open_name_keyboard"},{"label":"UPGRADES","action":"open_fish_upgrades"},{"label":"CLOSE","action":"close_profile"}]}
+    if reset_open:
+        ui.callout = {"title":"Reset your lagoon?","target":{"x":20,"y":30,"z":2},"width":278,"dismissAction":"cancel_reset",
+            "lines":["Erase pearls, fish and all upgrades.","Start with three fish and one crab.","Your saved tank will be replaced.","This cannot be undone."],
+            "actions":[{"label":"RESET TANK","action":"reset_tank"},{"label":"CANCEL","action":"cancel_reset"}]}
+    if keyboard_open:
+        ui.keyboard = {"title":"Name your little friend","value":name_draft,"maxLength":24,
+            "submitAction":"rename_fish","cancelAction":"cancel_name_keyboard",
+            "width":480,"keyHeight":28,"gap":4,"textScale":2}
+    if menu_open:
+        ui.grid = {
+            "layout":"sidebar","columns":1,"title":"Your lagoon","subtitle":pearl_label+"  /  "+income_label,
+            "footer":"UP/DOWN SELECT  /  OK ENTER  /  TAP AWAY CLOSE",
+            "dismissAction":"close_menu","moveAction":"menu_move","closeOnActivate":true,
+            "width":302,"rowHeight":28,"gap":2,"padding":10,"textScale":2,
+            "items":[
+                {"label":"Snack time","sub":feed_cooldown>0 ? "Ready in "+ceil(feed_cooldown/30)+"s  /  Check fish hunger" : feed_cost+" pearls  /  One per living friend","action":"feed","disabled":feed_locked,"selected":menu_index==0},
+                {"label":"Invite a friend","sub":fish_full ? "All spaces filled  /  "+tank_capacity+" friends" : fish_cost+" pearls  /  "+progress.fish+" of "+tank_capacity+" friends","action":"buy_fish","disabled":fish_locked,"selected":menu_index==1},
+                {"label":"Plant a rainbow","sub":reef_full ? "Your rainbow reef is complete" : reef_cost+" pearls  /  Reef "+progress.reef+" of 5","action":"grow_reef","disabled":reef_locked,"selected":menu_index==2},
+                {"label":"A bigger ocean","sub":progress.tank>=2 ? "Grand lagoon  /  Fully expanded" : tank_cost+" pearls  /  Room for six more friends","action":"grow_tank","disabled":tank_locked,"selected":menu_index==3},
+                {"label":"Oyster surprise","sub":treasure_locked ? "Your next gift in "+ceil((600-treasure_ticks)/30)+"s" : "Collect "+(25+progress.fish*5)+" pearls  /  A little gift for you","action":"collect_treasure","disabled":treasure_locked,"selected":menu_index==4},
+                {"label":"Set the mood","sub":light_names[progress.palette]+"  /  Change lighting","action":"cycle_lights","selected":menu_index==5},
+                {"label":"A fresh perspective","sub":"Take a slow look around your reef","action":"next_view","selected":menu_index==6},
+                {"label":"Fullscreen","sub":"Let your little ocean fill the room","action":"host.fullscreen","selected":menu_index==7},
+                {"label":"Reset tank","sub":"Start fresh  /  Confirmation required","action":"request_reset","selected":menu_index==8},
+                {"label":"Tank care upgrades","sub":"Long-lasting food and longevity / 3 levels","action":"open_care_upgrades","selected":menu_index==9}
+            ]
+        }
+    if shop!="":
+        call shop_labels
+    if critter_dead_count>0 && !menu_open && shop=="":
+        ui.notice = critter_dead_count+" critters to retrieve / TAP TO NET"
+    if critter_hungry_count>0 && dead_count==0 && critter_dead_count==0 && !menu_open && shop=="":
+        ui.notice = critter_hungry_count+" hungry critters / FEED SOON"

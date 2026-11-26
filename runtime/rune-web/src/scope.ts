@@ -7,6 +7,7 @@ import { ctx } from './context';
 import { getWindowProp, setWindowProp } from './globals';
 import { handleNavigatorStateChange } from './navigator';
 import type { Scope } from './types';
+import { moduleState, moduleStateNames, readonlyModuleValue } from './modular';
 
 /**
  * Split a dotted/bracketed path expression into segments.
@@ -71,12 +72,19 @@ export function splitPathSegments(expr: string): string[] {
 
 /** Build a combined scope from app state, derived values, and local bindings. */
 const expressionNames = new Map<string, string[]>();
+const isolatedHelpers = new WeakMap<object, boolean>();
 export function buildScope(locals: Record<string, unknown>, expression?: string): Scope {
   const c = ctx();
+  if (c.logicState) return Object.assign({}, c.logicState, locals);
   // Game actions are synchronous. Copy only potentially referenced bindings,
   // retaining snapshot values and the usual local > derived > state precedence.
   // Helpers can implicitly consume caller locals, so keep their complete scope.
-  if (c.compactScopes && expression !== undefined && Object.keys(c.helperDefinitions).length === 0) {
+  let isolated = isolatedHelpers.get(c.helperDefinitions);
+  if (isolated === undefined) {
+    isolated = Object.values(c.helperDefinitions).every(def => Boolean(def.scope || def.entity));
+    isolatedHelpers.set(c.helperDefinitions, isolated);
+  }
+  if (c.compactScopes && expression !== undefined && isolated) {
     let names = expressionNames.get(expression);
     if (!names) {
       const bindings = new Set(expression.match(/[A-Za-z_$][\w$]*/g) || []);
@@ -91,14 +99,18 @@ export function buildScope(locals: Record<string, unknown>, expression?: string)
     for (const name of names) {
       for (const source of [locals, c.app.derived, c.app.state]) {
         if (source && Object.prototype.propertyIsEnumerable.call(source, name)) {
-          scope[name] = source[name];
+          scope[name] = source === c.app.state && moduleState(name) ? readonlyModuleValue(source[name], name) : source[name];
           break;
         }
       }
     }
     return scope;
   }
-  return Object.assign({}, c.app.state, c.app.derived, locals || {});
+  const scope = Object.assign({}, c.app.state, c.app.derived, locals || {});
+  for (const name of moduleStateNames()) {
+    if (scope[name] === c.app.state[name]) scope[name] = readonlyModuleValue(scope[name], name);
+  }
+  return scope;
 }
 
 const proxyCache = new WeakMap<object, Record<string, unknown>>();

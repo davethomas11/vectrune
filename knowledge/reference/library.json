@@ -59,6 +59,129 @@
   ],
   "entries": [
     {
+      "id": "glowtide-fish-feeding",
+      "category": "games",
+      "name": "Glowtide fish and feeding",
+      "signature": "Aquarium actions: buy_fish; feed",
+      "summary": "Eight fish species with persisted care and feeding priced per living resident.",
+      "runtime": "Glowtide Aquarium example, shared Pixel-3D logic",
+      "sources": ["examples/games/idle_aquarium/models.rune", "examples/games/idle_aquarium/logic.rune", "tests/browser/idle_aquarium_variety.py", "knowledge/runtime/pixel3d.md"],
+      "returns": "Adoptions cycle through eight fish kinds. Feeding costs max(1, living fish + living critters) pearls and starts the existing snack shower.",
+      "errors": "Insufficient pearls or an active cooldown shows a notice and does not charge or restart feeding.",
+      "example": "invoke feed",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Species: clownfish, blue tang, royal gramma, pufferfish, angelfish, butterflyfish, neon tetra and lionfish. Original saved kind IDs, names and care remain unchanged.", "Dead residents do not increase feeding price. Minimum cost remains one pearl even in an empty/dead tank. Successful feeding increments the persistence revision.", "Base fish lifespans remain 45-90 minutes. Hunger relief and snack rewards are unchanged; food and longevity upgrades extend feeding windows and living-resident lifespans."],
+      "fields": []
+    },
+    {
+      "id": "glowtide-upgrades-economy",
+      "category": "games",
+      "name": "Glowtide purchasable upgrades and economy",
+      "signature": "Aquarium actions: open_fish_upgrades; buy_fish_upgrade kind; open_care_upgrades; buy_care_upgrade kind",
+      "summary": "Per-fish animated cosmetics, bounded tank care and half-rate income with a 100,000-pearl wallet cap.",
+      "runtime": "Glowtide Aquarium example, shared Pixel-3D logic",
+      "sources": ["examples/games/idle_aquarium/upgrades.rune", "examples/games/idle_aquarium/logic.rune", "examples/games/idle_aquarium/upgrades.logic.test.rune", "tests/browser/idle_aquarium_upgrades.py", "knowledge/runtime/pixel3d.md"],
+      "returns": "Persists cosmetic ownership, selected pattern, food/longevity levels, base lifespans and fractional income.",
+      "errors": "Unaffordable, invalid, already-owned or maximum-level purchases explain the failure and spend nothing. Dead fish cannot be upgraded.",
+      "example": "Tap fish -> UPGRADES -> Style Kit; menu -> Tank care upgrades",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Style Kit costs 120 pearls per fish; Candy and Moon patterns cost 80 each and require the kit. Owned patterns and original colors switch free. Animated accessories pick their owner and hide on death.", "Food levels cost 150/350/700 pearls, adding ten seconds to future feeding windows and cooldowns per level, max 60/70 seconds. Active feeding and hunger relief are unchanged.", "Longevity levels cost 200/500/1000 pearls, adding 10% base lifespan per level to living and future residents, max 30%. No compounding, revival or starvation protection.", "Passive income is living fish * (1+reef) * feeding * festival / 2 per second; saved half-pearl remainders carry forward. All reward paths cap the wallet at 100000; lifetime earnings stay uncapped. Old larger balances clamp on restore."],
+      "fields": []
+    },
+    {
+      "id": "pixel3d-drag-action",
+      "category": "games",
+      "name": "Canvas drag action",
+      "signature": "canvas data-rune-pixel-3d=true data-pixel-drag-action=drag_orbit",
+      "summary": "Opt-in mouse and touch horizontal drag commands without replacing tap picking.",
+      "runtime": "Pixel-3D browser host",
+      "sources": ["runtime/rune-web/src/pixel3d/index.ts", "examples/games/idle_aquarium/logic.rune", "tests/browser/idle_aquarium_rotation.py"],
+      "returns": "Action receives signed degrees: 180 per canvas width dragged horizontally.",
+      "errors": "Unknown drag action fails at mount time.",
+      "example": "canvas data-rune-pixel-3d=true data-pixel-drag-action=drag_orbit",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Use touch-action: none on the canvas to prevent browser panning. Movement above 8 CSS pixels captures a drag and suppresses the subsequent pick/click; small taps keep existing behavior.", "HUD pointers have priority; paused games do not drag. The application owns camera easing and limits. Glowtide eases a full orbit and starts at tank scale 0.75, expanding to 1.0 and 1.25."],
+      "fields": []
+    },
+    {
+      "id": "pixel3d-gpu-lighting",
+      "category": "games",
+      "name": "Optional GPU lighting",
+      "signature": "input type=checkbox data-pixel-gpu=true",
+      "summary": "Opt-in browser WebGL 2 lighting and bloom, with CPU geometry/picking and automatic CPU fallback.",
+      "runtime": "Pixel-3D browser hosts; source builds. Native desktop remains CPU.",
+      "sources": ["runtime/rune-web/src/pixel3d/gpu_lighting.ts", "runtime/rune-web/src/pixel3d/index.ts", "runtime/rune-web/src/pixel3d/raycaster.ts", "knowledge/runtime/pixel3d.md", "examples/games/idle_aquarium/shell.rune", "tests/browser/pixel3d_gpu_lighting.py"],
+      "returns": "GPU-composited scene with crisp, unblurred pixel HUD and unchanged CPU picking/simulation.",
+      "errors": "Unavailable accelerated WebGL, setup/frame failures, context loss or more than 32 eligible contact shadows disable the control with a CPU fallback explanation.",
+      "example": "label:\n    input type=checkbox data-pixel-gpu=true\n    span \"GPU lighting\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Standard model-only sky scenes retain the cached WebGL geometry/interpolation path. Other scenes use CPU geometry plus GPU point lights, enhanced bloom, shadows, glass, haze, outlines and palette.", "GPU mode does not reduce HUD resolution or affect saves, collision, picking or simulation ticks. Side-camera backdrop rendering/bloom remain CPU work; hybrid poses are not interpolated.", "CPU is the default and retains selected Standard/Enhanced quality after fallback. GPU lighting does not imply a measured frame-rate improvement; software WebGL comparisons validate appearance, not hardware performance."],
+      "fields": []
+    },
+    {
+      "id": "game-save-batching",
+      "category": "games",
+      "name": "Batched game persistence",
+      "signature": "persistence = {\"key\":\"my-game\",\"state\":\"progress\",\"interval_ticks\":150,\"revision\":\"save_revision\"}",
+      "summary": "Opt-in tick-batched Pixel/Pixel-3D saves with an explicit dirty revision and immediate action/lifecycle flushes.",
+      "runtime": "Shared Pixel/Pixel-3D browser and native game hosts; source builds",
+      "sources": ["src/apps/pixel/mod.rs", "runtime/rune-web/src/pixel/persistence.ts", "runtime/rune-web/src/pixel3d/engine.ts", "knowledge/runtime/pixel3d.md", "tests/game_save_schedule.rs", "tests/browser/idle_aquarium_saving.py"],
+      "returns": "Version-1 save snapshots use the existing keys and browser/native storage; clean revisions can skip serialization entirely.",
+      "errors": "Invalid interval_ticks, missing revision state and nonnegative-safe-integer violations fail explicitly.",
+      "example": "@Scene/game\npersistence = {\"key\":\"my-game\",\"state\":\"progress\",\"interval_ticks\":150,\"revision\":\"save_revision\"}\n@Logic/game\nstate:\n    progress = {\"pearls\":0}\n    save_revision = 0\naction reward(amount):\n    progress.pearls += amount\n    save_revision += 1",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Default interval is 1 running tick, preserving existing declarations. Without revision, batching still serializes scheduled snapshots and skips duplicate writes.", "With revision, increment the named top-level state field on EVERY saved mutation, including nested records/arrays and JavaScript host edits. Keep it outside the saved record.", "Initialization/start and host actions flush immediately. Pause, browser blur/hidden/disposal and normal native shutdown flush pending changes; game.flushSave() is available to custom hosts.", "Abrupt termination may lose up to one interval of idle progression. No wall-clock/offline aging is introduced."],
+      "fields": [
+        {"name": "interval_ticks", "type": "integer 1-3600", "default": "1", "description": "Running simulation ticks between scheduled flushes."},
+        {"name": "revision", "type": "state field name", "default": "unset", "description": "Explicit dirty marker initialized to a nonnegative safe integer literal; unchanged revision/root skips serialization."}
+      ]
+    },
+    {
+      "id": "logic-module",
+      "category": "declarations",
+      "name": "@Module",
+      "signature": "@Module/<name>; @Logic modules = {\"alias\":\"name\"}",
+      "summary": "Namespaced subsystem state with explicit action/helper exports and isolated execution scope.",
+      "runtime": "Shared Rune-Web: browser pages, Pixel/Pixel-3D and embedded logic tests; source builds",
+      "sources": ["src/apps/rune_web/modular.rs", "runtime/rune-web/src/modular.ts", "knowledge/language/logic-modules.md", "examples/rune-web/modules/modules.rune"],
+      "returns": "An independent nested state record per alias; exported func helpers return expression values.",
+      "errors": "Unknown definitions/exports, conflicting names and aliases, private calls, undeclared scoped assignments and outside module mutations raise errors.",
+      "example": "@Module/Wallet\nexports = [\"earn\"]\nstate:\n    pearls = 30\naction earn(amount):\n    pearls += amount\n@Logic/game\nmodules = {\"wallet\":\"Wallet\"}\naction reward:\n    call wallet.earn 10",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Read state in views via {wallet.pearls}; mutate through exported actions. Object/array reads and helper results are read-only outside the module, including aliases.", "Scoped members see module state and explicit parameters, not caller locals/root state. Internal calls may use private members.", "Use imports for source organization. Modules need at least one action/func; timers, keys, derive, local state and nested declarations belong outside modules. Existing flat @Logic is unchanged."],
+      "fields": [
+        {"name": "exports", "type": "array of member names", "default": "[]", "description": "Public action/func names; unlisted members are private."},
+        {"name": "modules", "type": "object on @Logic", "default": "{}", "description": "Alias to @Module name; each alias owns separate state."}
+      ]
+    },
+    {
+      "id": "logic-entity-type",
+      "category": "declarations",
+      "name": "@Type",
+      "signature": "@Type/<name>; @Logic types = [\"name\"]; name(\"stable-id\", {fields})",
+      "summary": "Composable plain-data entity constructors and receiver actions, without inheritance or serialized functions.",
+      "runtime": "Shared Rune-Web: browser pages, Pixel/Pixel-3D and embedded logic tests; source builds",
+      "sources": ["src/apps/rune_web/modular.rs", "runtime/rune-web/src/expression.ts", "runtime/rune-web/src/logic.ts", "knowledge/language/logic-modules.md", "examples/games/idle_aquarium/care.rune"],
+      "returns": "JSON-serializable {id, __type, ...declaredFields}; method dispatch survives JSON restore.",
+      "errors": "Empty/non-string IDs, non-record overrides, unknown fields, identity mutation, missing receivers and unsupported initial-state constructors raise errors.",
+      "example": "@Type/Life\nstate:\n    age = 0\naction advance(seconds):\n    age += seconds\n@Logic/game\ntypes = [\"Life\"]\nstate:\n    life = null\naction initialize:\n    life = Life(\"fish-1\")\naction age:\n    call life.advance 60",
+      "parameters": [
+        {"name": "id", "type": "string", "required": true, "description": "Nonempty stable ID; application ensures uniqueness."},
+        {"name": "fields", "type": "object", "required": false, "description": "Overrides of declared fields; object/array overrides retain supplied references."}
+      ],
+      "aliases": [],
+      "notes": ["Construct in actions, not initial state/locals. Defaults are independently evaluated using id and other listed constructors, supporting composition.", "List every composed type in @Logic types. Actions see receiver fields and self; internal method calls retain the receiver.", "Types support state/actions, not funcs, derive, timers, keys, local state or inheritance. Field/member names are distinct; id, __type and self are reserved.", "Call arguments use commas; qualified DOM handlers such as click=pet.feed are supported. Use a local receiver alias for array elements."],
+      "fields": [
+        {"name": "types", "type": "array of @Type names on @Logic", "default": "[]", "description": "Constructor and method availability, including composed dependencies."}
+      ]
+    },
+    {
       "id": "ascii-generators",
       "category": "cli",
       "name": "ASCII generators",
@@ -3302,7 +3425,7 @@
           "name": "things",
           "type": "list of strings",
           "default": "[]",
-          "description": "State collection names rendered as scene objects."
+          "description": "State collection names rendered as scene objects. Browser canvases may use data-pixel-pick=<collection> and data-pixel-pick-action=<action> to select visible model pixels, receiving the zero-based collection index. Scene depth rejects occluded models; invisible models and sprites are not selected. HUD/sidebar hits take precedence."
         },
         {
           "name": "tethers",
@@ -3356,7 +3479,7 @@
           "name": "ui",
           "type": "string",
           "default": "—",
-          "description": "Structured HUD state field. Floating HUDs can include a countdown in fractional seconds from 0 to 3599. Set reticle to true to draw a centered aiming mark during play."
+          "description": "Structured HUD state field. Floating HUD theme colors are background, surface, selected, border, text, muted, accent, focus (RGB integers), plus radius 0-12. Sidebar grids require one column and at most ten items; width 120-640, rowHeight 18-64, padding 4-24, gap 0-24, textScale 1/2, subtitle, dismissAction, moveAction, closeOnActivate are optional. closeOnActivate=true requires dismissAction. Floating buttons (up to eight) use menu/feed/fish/sound/flower/critter icons, label, action, top-right/bottom-left anchor, offset 0-640 and size 24-64. callout contains title, lines (up to six), world-coordinate target, width 140-400, actions (up to three) and dismissAction; its upper-left connector tracks the target. keyboard contains title, value, maxLength 1-128, submitAction/cancelAction and optional changeAction, width 240-640, keyHeight 18-48, gap 1-12, textScale 1/2. It inherits the HUD theme, supports browser touch/click, physical-key highlights and standard controller navigation, and submits {name:text}. Input editing consumes game shortcuts. These widgets select shared JavaScript rendering; native pointer picking is not supplied. Floating HUD countdown accepts 0-3599 seconds; reticle true adds an aiming mark."
         },
         {
           "name": "pause_ui",
@@ -3380,7 +3503,7 @@
           "name": "persistence",
           "type": "object",
           "default": "—",
-          "description": "key and state; key is 1–64 ASCII letters, digits, hyphens, or underscores."
+          "description": "key and state; key is 1–64 ASCII letters, digits, hyphens, or underscores. Source builds optionally accept interval_ticks (1–3600, default 1) and revision (explicit nonnegative-safe-integer state marker); see Batched game persistence."
         },
         {
           "name": "presentation",
@@ -3837,7 +3960,7 @@
       "category": "games",
       "name": "voxel camera state",
       "signature": "camera = <state path>",
-      "summary": "Animate voxel terrain and a side-on backdrop through a live camera record.",
+      "summary": "Animate voxel terrain and a side-on backdrop through a live camera record; finite render cameras may orbit outside the world.",
       "sources": [
         "runtime/rune-web/src/pixel3d/voxel.ts",
         "runtime/rune-web/src/pixel3d/raycaster.ts"
@@ -3848,7 +3971,8 @@
       "parameters": [],
       "aliases": [],
       "notes": [
-        "Available in browser and shared-JavaScript desktop voxel scenes. These fields belong to live camera state."
+        "Available in browser and shared-JavaScript desktop voxel scenes. These fields belong to live camera state.",
+        "Finite rendering cameras may be outside voxel bounds: rays enter the volume before traversal or miss into the sky. Gameplay movement and targeting bounds are unchanged."
       ],
       "fields": [
         {

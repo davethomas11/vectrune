@@ -20,6 +20,7 @@ pub mod parser;
 pub mod css;
 pub mod jscodegen;
 pub mod optimizer;
+mod modular;
 
 use crate::core::AppState;
 use crate::util::{log, LogLevel};
@@ -1289,6 +1290,7 @@ fn create_websocket_logic_block(_ws_endpoint: &str) -> ast::LogicDefinition {
                 // This will be handled in the JavaScript runtime
                 ast::ActionStep::Statement("window.__runeWebEmit(event_name, payload)".to_string()),
             ],
+            ..Default::default()
         },
     );
 

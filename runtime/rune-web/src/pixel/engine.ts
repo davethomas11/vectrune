@@ -52,6 +52,7 @@ export class PixelEngine {
   get paused(): boolean { return this._paused; }
   set paused(value: boolean) {
     if (value === this._paused) return;
+    if (value) this.flushSave();
     this._paused = value;
     if (value) pauseMusic();
     setAudioMuted(this._muted || value);
@@ -99,9 +100,12 @@ export class PixelEngine {
     if (this.paused) return;
     withEntityQueries(() => withContext(this.context, () => { this.app.invokeAction('tick', [input]); this.app.computeDerived(); }));
     this.ticks++;
-    this.persist();
+    this.persist(false);
   }
-  private persist(): void { if (this.save) this.save.flush(this.app.state[this.save.config.state]); }
+  flushSave(): void { this.persist(); }
+  private persist(immediate = true): void {
+    this.save?.persist(this.app.state, immediate);
+  }
   invoke(action: string, args: unknown[] = []): void {
     if (action === 'start') { this.start(); return; }
     this.paused = false; setAudioMuted(this._muted);

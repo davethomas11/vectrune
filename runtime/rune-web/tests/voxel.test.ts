@@ -5,6 +5,24 @@ import { Raycaster3D, type Texture } from '../src/pixel3d/raycaster';
 import { renderModel } from '../src/pixel3d/model';
 
 describe('voxel worlds', () => {
+  it('renders entry faces from outside each side of an unposed world and misses outward rays', () => {
+    const world = voxelWorld(8,8,8,['wall']);
+    voxelFill(world,[0,0,0],[8,8,8],1);
+    const textures = {wall:{width:1,height:1,pixels:new Uint32Array([0xff4040ff])}};
+    const buffer = new Uint32Array(41*41),depth = new Float64Array(buffer.length);
+    const center = 20*41+20;
+    for (const camera of [
+      {x:-2,y:4,z:2.75,angle:0},{x:10,y:4,z:2.75,angle:180},
+      {x:4,y:-2,z:2.75,angle:90},{x:4,y:10,z:2.75,angle:270},
+      {x:0,y:4,z:2.75,angle:0},{x:8,y:4,z:2.75,angle:180},
+    ]) {
+      renderVoxels(world,camera,textures,null,66,41,41,buffer,depth,0);
+      expect(depth[center]).toBeCloseTo(camera.x===0 || camera.x===8 ? 0 : 2);
+      renderVoxels(world,{...camera,angle:camera.angle+180},textures,null,66,41,41,buffer,depth,0);
+      expect(depth[center]).toBe(Infinity);
+    }
+  });
+
   it('casts against hinged terrain even when the camera is outside the posed volume', () => {
     const world = voxelWorld(8, 8, 8, ['wall']);
     const terrain = voxelWorld(8, 2, 4, ['wall']);
@@ -381,6 +399,6 @@ describe('voxel worlds', () => {
       1, 0, Math.tan(Math.PI / 6), 80, 50, buffer, depth);
     expect(buffer.every(v => v === 0)).toBe(true);
     expect(() => renderer.render({ ...camera, pitch: NaN })).toThrow('camera');
-    expect(() => renderer.render({ ...camera, x: -1 })).toThrow('camera');
+    expect(() => renderer.render({ ...camera, x: -1 })).not.toThrow();
   });
 });

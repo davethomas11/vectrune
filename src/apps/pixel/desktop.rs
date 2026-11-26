@@ -399,5 +399,6 @@ pub fn run(game: &Game, fullscreen: bool, frame_limit: Option<u64>) -> Result<()
     if let Some(error) = host.error {
         return Err(error);
     }
+    host.js("__RunePixel.flushSave()")?;
     Ok(())
 }

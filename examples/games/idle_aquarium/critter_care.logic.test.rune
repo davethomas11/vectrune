@@ -1,0 +1,162 @@
+#!RUNE
+import "idle_aquarium.rune"
+
+@Test/Aquarium/CritterNamesHungerAndLifespan
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    assert state.progress.critters[0].name == "Pebble"
+    assert state.progress.critters[0].lifespan == 5400
+    invoke inspect_critter 0
+    assert state.profile_open == true
+    assert state.profile_species == "Sunset crab"
+    invoke open_name_keyboard
+    assert state.ui.keyboard.value == "Pebble"
+    invoke rename_fish {"name":"  Captain Claws  "}
+    assert state.progress.critters[0].name == "Captain Claws"
+    assert state.progress.buddies[0].name == "Sunny"
+    invoke rename_fish {"name":" "}
+    assert state.name_error == "Choose a name from 1 to 24 characters."
+    invoke critter_hunger_edge
+    invoke tick {}
+    assert state.progress.critters[0].hunger == 1200
+    assert state.progress.critters[0].dead == false
+    assert state.critter_hungry_count == 1
+    invoke initialize
+    assert state.progress.critters[0].name == "Captain Claws"
+    assert state.progress.critters[0].hunger == 1200
+
+@Test/Aquarium/CritterFoodRequiresMunching
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke feed
+    assert state.critter_food.length == 2
+    invoke critter_ready_to_eat
+    invoke age_critter 60
+    assert state.progress.critters[0].hunger >= 1200
+    assert state.critter_food[0].visible == true
+    assert state.critter_food[0].chewing == true
+    assert state.critter_food[0].scale < 1.8
+    invoke age_critter 61
+    assert state.progress.critters[0].hunger < 610
+    assert state.critter_food[0].visible == false
+    assert state.progress.critters[0].dead == false
+
+@Test/Aquarium/CritterDeathRetrievalAndEmptySave
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke inspect_critter 0
+    invoke open_name_keyboard
+    invoke critter_starvation_edge
+    invoke tick {}
+    assert state.progress.critters[0].dead == true
+    assert state.progress.critters[0].cause == "Hunger"
+    assert state.keyboard_open == false
+    assert state.crabs[0].moving == false
+    assert state.crabs[0].model == "aqua/dead_critter"
+    assert state.feet[0].visible == false
+    assert state.crabs[0].z == 2.12
+    invoke initialize
+    assert state.progress.critters[0].dead == true
+    invoke inspect_critter 0
+    assert state.progress.critters.length == 0
+    assert state.crabs.length == 0
+    assert state.nets[0].visible == true
+    invoke initialize
+    assert state.crabs.length == 0
+    invoke request_reset
+    invoke reset_tank
+    assert state.progress.critters[0].dead == false
+    assert state.progress.critters[0].hunger == 0
+    assert state.progress.critters[0].age == 0
+
+@Test/Aquarium/CritterOldAge
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke critter_old_edge
+    invoke tick {}
+    assert state.progress.critters[0].cause == "Old age"
+    assert state.progress.critters[0].dead == true
+    invoke age_critter 60
+    assert state.progress.critters[0].age == 5400
+    assert state.crabs[0].z == 2.12
+
+@Test/Aquarium/CritterRemovalKeepsOtherNamesAndCare
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke rich_critter_tank
+    invoke buy_critter 3
+    invoke inspect_critter 1
+    invoke rename_fish {"name":"Starlight"}
+    invoke critter_starvation_edge
+    invoke tick {}
+    invoke inspect_critter 0
+    assert state.progress.critters.length == 1
+    assert state.progress.critters[0].name == "Starlight"
+    assert state.progress.critters[0].kind == 3
+    assert state.progress.critters[0].lifespan == 10800
+    assert state.crabs[0].model == "aqua/snail"
+    invoke initialize
+    assert state.progress.critters[0].name == "Starlight"
+    assert state.progress.critters[0].age == 1
+
+@Test/Aquarium/CritterFoodExpiresAndDeadCrittersDoNotEat
+type = logic
+page = aquarium
+run:
+    invoke initialize
+    invoke feed
+    invoke critter_ready_to_eat
+    invoke age_critter 1
+    assert state.crabs[0].target == 0
+    invoke critter_starvation_edge
+    invoke tick {}
+    assert state.crabs[0].target == -1
+    assert state.critter_food[0].owner == -1
+    assert state.progress.critters[0].dead == true
+    invoke expire_critter_food
+    invoke tick {}
+    assert state.critter_food[0].visible == false
+    assert state.progress.critters[0].hunger == 1800
+    assert state.crabs[0].moving == false
+
+@Logic/aquarium
+action rich_critter_tank:
+    progress.pearls = 10000
+
+action expire_critter_food:
+    fed_ticks = 1
+
+action critter_hunger_edge:
+    ticks = 29
+    progress.critters[0].hunger = 1199
+
+action critter_starvation_edge:
+    ticks = 29
+    progress.critters[0].hunger = 1799
+
+action critter_old_edge:
+    ticks = 29
+    progress.critters[0].age = 5399
+
+action critter_ready_to_eat:
+    progress.critters[0].hunger = 1200
+    local pellet = critter_food[0]
+    pellet.x = crabs[0].x
+    pellet.y = crabs[0].y
+    pellet.z = 2.2
+    local spare = critter_food[1]
+    spare.visible = false
+
+action age_critter(count):
+    for i in range(0,count):
+        call tick {}

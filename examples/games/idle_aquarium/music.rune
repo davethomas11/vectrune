@@ -1,0 +1,33 @@
+@Music/glowtide_drift
+type = synth
+tempo = 64
+time_signature = 4/4
+loop = true
+volume = 0.055
+instruments = {"harmony":"strings","bass":"sine","sparkle":"bell"}
+effects = {
+    "reverb":{"decay":3.6,"wet":0.38,"pre_delay":0.035,"filter":2400},
+    "delay":{"time":0.9375,"feedback":0.22,"wet":0.12,"damping":1800},
+    "filter":{"type":"lowpass","cutoff":2200,"q":0.5},
+    "chorus":{"rate":0.18,"depth":0.003,"wet":0.22}
+}
+track_effects = {
+    "harmony":{"reverb":0.8,"delay":0.1,"chorus":0.65},
+    "bass":{"reverb":0.12,"delay":0,"chorus":0},
+    "sparkle":{"reverb":0.7,"delay":0.55,"chorus":0.1}
+}
+sections = {
+    "lagoon":{
+        "bars":8,
+        "harmony":"[C3,E3,G3,B3]:1 | [C3,E3,G3,D4]:1 | [A2,C3,E3,G3]:1 | [A2,C3,E3,B3]:1 | [F2,A2,C3,E3]:1 | [F2,A2,C3,G3]:1 | [G2,B2,D3,A3]:1 | [G2,B2,E3,A3]:1",
+        "bass":"C2:1 | C2:1 | A1:1 | A1:1 | F2:1 | F2:1 | G1:1 | G1:1",
+        "sparkle":"-:2 G4:4 -:4 | -:2 E4:2 | -:1 | -:2 B4:4 -:4 | -:2 A4:2 | -:1 | -:2 D4:4 -:4 | -:2 E4:2"
+    },
+    "moonlight":{
+        "bars":8,
+        "harmony":"[C3,E3,G3,D4]:1 | [C3,E3,A3,B3]:1 | [E3,G3,B3,D4]:1 | [E3,G3,A3,D4]:1 | [F2,A2,C3,G3]:1 | [F2,A2,D3,E3]:1 | [G2,B2,D3,A3]:1 | [G2,C3,D3,E3]:1",
+        "bass":"C2:1 | C2:1 | E2:1 | E2:1 | F2:1 | F2:1 | G1:1 | G1:1",
+        "sparkle":"-:1 | -:2 G4:2 | -:2 B4:4 -:4 | -:1 | -:2 E4:2 | -:2 D4:4 -:4 | -:1 | -:2 G4:2"
+    }
+}
+arrangement = ["lagoon","moonlight"]

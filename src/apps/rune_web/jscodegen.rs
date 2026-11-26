@@ -793,6 +793,7 @@ mod tests {
                 HelperDefinition {
                     params: vec!["value".to_string()],
                     body: vec!["return value == 0".to_string()],
+                    ..Default::default()
                 },
             )]),
             actions: HashMap::from([(
@@ -800,6 +801,7 @@ mod tests {
                 ActionDefinition {
                     params: vec![],
                     steps: vec![ActionStep::Statement("count = count + 1".to_string())],
+                    ..Default::default()
                 },
             )]),
             timer: None,

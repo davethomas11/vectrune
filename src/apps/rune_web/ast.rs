@@ -386,7 +386,7 @@ pub struct LogicDefinition {
 }
 
 /// A single action handler.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[allow(dead_code)]
 pub struct ActionDefinition {
     /// Parameters (e.g., from `action play(index):`)
@@ -394,6 +394,10 @@ pub struct ActionDefinition {
 
     /// Body steps (raw Rune-like code for now)
     pub steps: Vec<ActionStep>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub private: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -415,10 +419,16 @@ pub struct DerivedCase {
     pub value: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HelperDefinition {
     pub params: Vec<String>,
     pub body: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub private: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

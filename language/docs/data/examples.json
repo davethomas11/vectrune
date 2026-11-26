@@ -3,6 +3,112 @@
   "status": "starter",
   "examples": [
     {
+      "id": "example.web.logic-modules",
+      "title": "Composable Companions",
+      "summary": "Ordinary Rune-Web page demonstrating namespaced wallet exports, independent composed entity care and qualified browser actions.",
+      "source_path": "examples/rune-web/modules/modules.rune",
+      "companion_files": [
+        "examples/rune-web/modules/modules.logic.test.rune"
+      ],
+      "app_type": "REST",
+      "concepts": [
+        "namespaced module state and explicit private/public actions",
+        "plain-data entity constructors with stable IDs",
+        "composed per-instance care and JSON-restored methods",
+        "qualified Rune-Web DOM event handlers"
+      ],
+      "builtins": [],
+      "runtime_context": [],
+      "cli_workflows": [
+        "vectrune examples/rune-web/modules/modules.rune",
+        "vectrune test examples/rune-web/modules --type logic"
+      ],
+      "test_refs": [
+        "examples/rune-web/modules/modules.logic.test.rune",
+        "tests/browser/logic_modules.py",
+        "runtime/rune-web/tests/modular.test.ts"
+      ],
+      "related_knowledge": [
+        "language.logic-modules"
+      ],
+      "status": "recommended",
+      "notes": [
+        "Source builds; press Create Pebble before advancing or feeding."
+      ]
+    },
+    {
+      "id": "example.game.idle-aquarium",
+      "title": "Glowtide Aquarium",
+      "summary": "Vibrant idle aquarium with eight fish varieties, purchasable animated cosmetics and tank care, capped pearl income, named resident lifecycles and enhanced lighting.",
+      "source_path": "examples/games/idle_aquarium/idle_aquarium.rune",
+      "companion_files": [
+        "examples/games/idle_aquarium/models.rune",
+        "examples/games/idle_aquarium/music.rune",
+        "examples/games/idle_aquarium/logic.rune",
+        "examples/games/idle_aquarium/care.rune",
+        "examples/games/idle_aquarium/critters.rune",
+        "examples/games/idle_aquarium/upgrades.rune",
+        "examples/games/idle_aquarium/shell.rune",
+        "examples/games/idle_aquarium/aquarium.logic.test.rune",
+        "examples/games/idle_aquarium/critter_care.logic.test.rune",
+        "examples/games/idle_aquarium/care_modules.logic.test.rune",
+        "examples/games/idle_aquarium/upgrades.logic.test.rune"
+      ],
+      "app_type": "pixel-3d",
+      "concepts": [
+        "model-based aquarium with point lights and emissive bloom",
+        "idle income, guarded purchases and timed multipliers",
+        "half-rate passive income with saved fractional remainder and a 100000-pearl wallet cap",
+        "per-fish Style Kits and owned color patterns plus bounded food and longevity upgrades",
+        "purchasable tank expansions and varied drifting snacks with slow fish approaches, munching and breaks",
+        "themed sidebar with large labels, focus styling, keyboard navigation and tap-away dismissal",
+        "canvas-rendered fullscreen mouse and touch actions",
+        "keyboard, gamepad and accessible touch-friendly shell controls",
+        "browser-local progression and lighting preferences",
+        "saved fish names and simulation ages with top-left in-game profile bubbles and moving connectors",
+        "persisted hunger, varied lifespans, floating dead fish, tap-to-net retrieval and slow scavenging",
+        "pearl-priced floral and bottom critter pickers with rooted decorations, eight-way obstacle steering and animated feet",
+        "saved critter names, slow algae feeding, hunger, lifespans and sand-level death retrieval",
+        "shared namespaced care module and composed life records with persisted stable resident IDs",
+        "in-game confirmed fresh-start reset",
+        "themed canvas keyboard with touch, physical-key highlights and controller navigation",
+        "original quiet lo-fi pad score with damped reverb, chorus and fullscreen mute"
+      ],
+      "builtins": [],
+      "runtime_context": [],
+      "cli_workflows": [
+        "vectrune examples/games/idle_aquarium/idle_aquarium.rune",
+        "vectrune examples/games/idle_aquarium/idle_aquarium.rune -o html > aquarium.html",
+        "vectrune test examples/games/idle_aquarium --type logic"
+      ],
+      "test_refs": [
+        "examples/games/idle_aquarium/aquarium.logic.test.rune",
+        "examples/games/idle_aquarium/critter_care.logic.test.rune",
+        "examples/games/idle_aquarium/care_modules.logic.test.rune",
+        "examples/games/idle_aquarium/upgrades.logic.test.rune",
+        "tests/browser/idle_aquarium.py",
+        "tests/browser/idle_aquarium_audio.py",
+        "tests/browser/idle_aquarium_saving.py",
+        "tests/browser/idle_aquarium_performance.py",
+        "tests/browser/idle_aquarium_variety.py",
+        "tests/browser/idle_aquarium_upgrades.py"
+      ],
+      "related_knowledge": [
+        "runtime.pixel3d",
+        "language.logic-modules"
+      ],
+      "status": "recommended",
+      "notes": [
+        "Local example; not published on the teaching site.",
+        "Progress is local to the browser origin. No offline earnings; session timers reset on reload.",
+        "Enhanced lighting is the default, with Standard and three light color moods available.",
+        "Fish profile care/upgrades are a future placeholder, not active purchases.",
+        "Feeding costs one pearl per living fish or critter, minimum one pearl; unavailable funds leave food and cooldown unchanged.",
+        "Adoptions cycle through eight species; saved original species IDs and care remain compatible.",
+        "Source builds batch dirty idle saves every five running seconds; important actions and lifecycle events flush immediately. Abrupt termination can lose one interval."
+      ]
+    },
+    {
       "id": "example.borrowed-morning",
       "title": "The Kingdom of Borrowed Mornings",
       "summary": "Original fairy-tale text adventure with nine animated locations, typed commands, inventory puzzles, journal, hints, a synth title theme and a complete sunrise ending.",

@@ -7,7 +7,7 @@
 //                                                       (handled by executeSteps; see parseFetchAssignment)
 // A failure calls the catch action with { status, message }, or logs a warning without one.
 // The browser enforces CORS; see knowledge/runtime/fetch.md.
-import { ctx } from "../context";
+import { ctx, withContext } from "../context";
 import { evaluateExpression } from "../expression";
 import { buildScope } from "../scope";
 import type { BuiltinCommand, CommandResult } from "./command";
@@ -218,7 +218,8 @@ export function parseFetchAssignment(statement: string): FetchAssignment | null 
 
 /** Runs the request for an assignment form. Rejects with a FetchError. */
 export function runFetchAssignment(pending: FetchAssignment, locals: any): Promise<unknown> {
-  return Promise.resolve().then(() => runRequest(pending.kind, pending.urlExpr, locals));
+  const context = ctx();
+  return Promise.resolve().then(() => withContext(context, () => runRequest(pending.kind, pending.urlExpr, locals)));
 }
 
 function runRequest(kind: FetchAssignment["kind"], request: string, locals: Record<string, unknown>): Promise<unknown> {
@@ -249,12 +250,13 @@ function makeHandler(name: "fetch" | "fetch-json") {
       .match(new RegExp(`^${name}\\s+(.+?)\\s+then\\s+(\\S+)(?:\\s+catch\\s+(\\S+))?$`));
     if (!match) return undefined;
     const [, urlExpr, onSuccess, onError] = match;
+    const context = ctx();
 
     Promise.resolve()
-      .then(() => runRequest(name, urlExpr, locals))
+      .then(() => withContext(context, () => runRequest(name, urlExpr, locals)))
       .then(
-        (value) => deliver(onSuccess, value),
-        (error) => reportFetchFailure(error, onError),
+        (value) => withContext(context, () => deliver(onSuccess, value)),
+        (error) => withContext(context, () => reportFetchFailure(error, onError)),
       );
     return true;
   };

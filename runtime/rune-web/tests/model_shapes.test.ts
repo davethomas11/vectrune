@@ -11,6 +11,24 @@ function draw(shape: Block['shape'], camera: {x: number; y: number; height: numb
 }
 
 describe('analytic model shapes', () => {
+  it('reuses block geometry without retaining stale dimensions, colors or frame buffers', () => {
+    const block: Block = {from:[-.5,-.5,0],size:[1,1,1],color:0xff80a0ff,shape:'sphere'};
+    const model = {blocks:[block]};
+    const buffer = new Uint32Array(64*48), depth = new Float64Array(64*48);
+    const render = (fresh: boolean) => {
+      buffer.fill(0xff112233);depth.fill(Infinity);
+      renderModel(fresh ? {blocks:[{...block,from:[...block.from],size:[...block.size]}]} : model,
+        {x:3,y:0}, {x:0,y:0,height:.5}, 1,0,Math.tan(Math.PI/6),64,48,buffer,depth);
+      return {buffer:buffer.slice(),depth:depth.slice()};
+    };
+    expect(render(false)).toEqual(render(true));
+    block.from[0] = -.75;
+    block.size[0] = 1.5;
+    block.color = 0xff1122ee;
+    block.shape = 'box';
+    expect(render(false)).toEqual(render(true));
+    expect(render(false)).toEqual(render(false));
+  });
   for (const shape of ['sphere', 'cylinder', 'ramp'] as const) {
     it(`${shape} has finite front and inside exit hits and honors dissolve`, () => {
       const image = draw(shape);

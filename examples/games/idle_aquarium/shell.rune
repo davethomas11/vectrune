@@ -1,0 +1,254 @@
+@Page/aquarium_cabinet
+title = Glowtide Aquarium - A Little Ocean of Happy
+logic = aquarium_cabinet
+style = aquarium_cabinet
+view:
+    main .aquarium-app:
+        header .masthead:
+            div:
+                p .eyebrow "A LITTLE OCEAN OF HAPPY"
+                h1 "Glowtide Aquarium"
+                p .subtitle "Small fish. Big feelings. A little care goes a long way."
+            div .wallet:
+                strong data-pixel-text=pearl_label "30 / 100000 pearls"
+                span data-pixel-text=income_label "+1.5 pearls / sec"
+        section .tank-card:
+            div .toolbar:
+                span .collection data-pixel-text=collection_label "3/18 friends / Reef 0/5"
+                div .tools:
+                    button data-pixel-action=toggle_menu "Aquarium menu / TAB"
+                    button data-pixel-action=orbit_view data-pixel-args="[-1]" aria-label="View tank from the left" "Left"
+                    button data-pixel-action=orbit_view data-pixel-args="[1]" aria-label="View tank from the right" "Right"
+                    button data-pixel-action=cycle_lights data-pixel-text=lighting_label "LAGOON GLOW / L"
+                    select data-pixel-lighting=true aria-label="Lighting quality":
+                        option value=enhanced selected=true "Enhanced glow"
+                        option value=standard "Standard glow"
+                    label .gpu-option:
+                        input type=checkbox data-pixel-gpu=true
+                        span "GPU lighting"
+                    button data-pixel-pause=true "Pause / P"
+                    button data-pixel-mute=true aria-label="Toggle aquarium sound" "Sound / M"
+                    button data-pixel-fullscreen=true "Fullscreen / F"
+            div .game-surface:
+                canvas data-rune-pixel-3d=true data-pixel-drag-action=drag_orbit data-pixel-pick=residents data-pixel-pick-action=inspect_resident tabindex=0 aria-label="A glowing 3D aquarium. Drag to smoothly rotate. Tap a fish or critter to meet it, or a dead friend to retrieve with your net. Left and right arrows orbit the tank. Space feeds fish and critters."
+            p .festival data-pixel-text=event_label "A glow festival is on its way!"
+        section .actions aria-label="Aquarium care and upgrades":
+            button .snack data-pixel-action=feed data-pixel-disabled=feed_locked:
+                span .action-title "SNACK PARTY"
+                span data-pixel-text=feed_label "Feed fish and critters / 4 pearls"
+                small "Double income during feeding / SPACE"
+            button .adopt data-pixel-action=buy_fish data-pixel-disabled=fish_locked:
+                span .action-title "MAKE A FRIEND"
+                span data-pixel-text=fish_label "Adopt a fish / 45 pearls"
+                small "Eight varieties, from clownfish to glowing neon tetras / 1"
+            button .grow data-pixel-action=grow_reef data-pixel-disabled=reef_locked:
+                span .action-title "BUILD A RAINBOW"
+                span data-pixel-text=reef_label "Grow reef / 30 pearls"
+                small "+0.5 pearl per fish per second / 2"
+            button .gift data-pixel-action=collect_treasure data-pixel-disabled=treasure_locked:
+                span .action-title "OYSTER SURPRISE"
+                span data-pixel-text=treasure_label "Collect oyster / +40"
+                small "A little gift every 20 seconds / C"
+            button .expand data-pixel-action=grow_tank data-pixel-disabled=tank_locked:
+                span .action-title "A BIGGER LITTLE OCEAN"
+                span data-pixel-text=tank_label "Expand tank / 600 pearls"
+                small "More swimming room and six extra fish spaces / 3"
+            button data-pixel-action=request_reset:
+                span .action-title "FRESH START"
+                span "Reset tank"
+                small "Erase pearls and upgrades / Confirmation required"
+            button data-pixel-action=open_flower_shop:
+                span .action-title "FLORAL GARDEN"
+                span "Choose a bloom"
+                small "Sunburst, violet sea fan and moon lily / From 35 pearls"
+            button data-pixel-action=open_critter_shop:
+                span .action-title "SANDY NEIGHBORS"
+                span "Choose a critter"
+                small "Crabs, hermits, shrimp and snails / From 40 pearls"
+            button data-pixel-action=open_care_upgrades:
+                span .action-title "TANK CARE"
+                span "Food and longevity upgrades"
+                small "Three levels each / From 150 pearls"
+        p .notice data-pixel-text=notice role=status aria-live=polite "Welcome home! Your fish earn pearls just by swimming."
+        p .notice data-pixel-text=snack_label "0 snacks eaten / +0 bite pearls"
+        footer:
+            p "Drag with a finger or mouse to smoothly rotate all around the glass tank. Taps still select friends. LEFT / RIGHT or A / D also rotate. The compact starter tank grows visibly with each expansion."
+            p "Grow reef level 3 to welcome a moon jelly. Every minute ends with a 15-second glow festival!"
+            p "The lagoon menu stays inside the game in fullscreen. Tap away or X to close; Up/Down selects and Enter confirms, ready for experimenting with browser-based TV remotes."
+            p "Use the in-game hamburger for care and upgrades, or the bottom-left snack and fish icons for quick care. Tap a fish for its top-left profile, linked to your swimming friend. Rename with the themed on-screen keyboard, physical keys, or a controller: D-pad moves, A selects, B cancels."
+            p "Scatter pellets, flakes and algae: fish swim over, munch slowly and take breaks. Each finished snack earns +2 pearls. Expand twice to welcome up to 30 friends."
+            p "Feeding costs one pearl per living fish or critter, minimum one pearl. Dead friends do not add to the price. If you cannot afford it, no food or cooldown is spent."
+            p "Adoptions cycle through clownfish, blue tangs, royal grammas, puffers, angelfish, butterflyfish, glowing neon tetras and lionfish. Existing friends keep their species and care history."
+            p "Tap a fish, then UPGRADES: buy a 120-pearl Style Kit for a rounded body, expressive eyes and moving fins. Candy and Moon stripes cost 80 pearls each; owned patterns switch free. Cosmetics belong to that fish."
+            p "Tank care offers long-lasting food (150 / 350 / 700 pearls) and longevity (200 / 500 / 1000 pearls). Food levels add 10 seconds to future showers and cooldowns, up to 60 / 70 seconds. Longevity adds 10% base lifespan per level to living and future fish and critters, up to 30%; it does not revive or protect from hunger."
+            p "Passive earnings are now half-speed: 0.5 pearl per living fish per second before reef and event bonuses. Half-pearl fractions carry forward; your wallet stays whole pearls. The balance cap is 100,000 pearls, including snacks and oyster rewards. Spend pearls to make room; lifetime earnings are not capped."
+            p "Hunger fills in 10 running minutes, with 5 more minutes before starvation. Finished snacks reduce hunger. Fish live 45-90 running minutes; only living fish earn pearls. Pause or close the tank to stop aging and hunger."
+            p "Tap dead fish to retrieve with a net and free a space for a pearl-funded adoption. After 2 minutes, unretrieved fish decay and sink; hungry fish swim over and slowly eat them."
+            p "Bottom-left flower and critter icons open in-game variety pickers. Plant up to 12 floral decorations and welcome up to 12 bottom neighbors. Crabs and shrimp scurry in eight directions with animated feet, avoiding plants and each other; snails glide slowly."
+            p "Tap a critter to name it and see its age, hunger and lifespan. Feed scatters sinking algae portions that critters approach and munch for 4 seconds. Critter hunger fills in 20 running minutes; starvation follows 10 minutes later. Lifespans vary from 90-180 running minutes. Dead critters remain on the sand until tapped for net retrieval. Names and care save; nothing ages while paused or closed."
+            p "Progress, hunger, lifespan and decay save automatically in this browser. No offline earnings or aging. New and reset tanks start with 30 pearls, three fish and one crab. Reset requires confirmation."
+            p "Moonlit Drift: an original quiet lo-fi pad loop with warm chords and distant bells. Music starts with your first interaction. Sound / M mutes; Pause quiets the aquarium."
+            p "GPU lighting is optional: WebGL handles colored lights and enhanced glow while CPU geometry keeps the same picking and care behavior. Unavailable GPUs or a lost context fall back to CPU lighting. Hardware and browser determine whether it is faster."
+
+@Logic/aquarium_cabinet
+state:
+    name = "Glowtide Aquarium"
+
+@Style/aquarium_cabinet
+rules:
+    :root:
+        color-scheme = dark
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = radial-gradient(ellipse at top, #153d57, #080f24 75%)
+        color = #eafffa
+        font-family = system-ui, -apple-system, sans-serif
+    .aquarium-app:
+        max-width = 1160px
+        margin = auto
+        padding = clamp(12px, 3vw, 32px)
+    .masthead:
+        display = flex
+        justify-content = space-between
+        align-items = center
+        flex-wrap = wrap
+        gap = 16px
+        margin-bottom = 20px
+    .eyebrow:
+        color = #6cf3cf
+        letter-spacing = 3px
+        font-size = 11px
+        font-weight = 800
+    h1:
+        margin = 0
+        font-size = clamp(26px, 5vw, 44px)
+        letter-spacing = -1px
+        color = #eafffa
+    .subtitle:
+        color = #a2c6d6
+        margin-bottom = 0
+    .wallet:
+        display = grid
+        gap = 4px
+        background = #183948
+        border = 1px solid #47766d
+        border-radius = 18px
+        padding = 14px 24px
+        color = #ffe59c
+        min-width = 190px
+    .wallet strong:
+        font-size = 26px
+        font-variant-numeric = tabular-nums
+    .wallet span:
+        color = #6cf3cf
+        font-size = 13px
+    .tank-card:
+        overflow = hidden
+        border = 1px solid #39718c
+        border-radius = 20px
+        background = #0d243c
+        box-shadow = 0 0 60px #28c6d51a
+    .toolbar:
+        display = flex
+        flex-wrap = wrap
+        justify-content = space-between
+        align-items = center
+        gap = 10px
+        padding = 10px 14px
+    .collection:
+        color = #a4e7e2
+        font-size = 13px
+        font-weight = 700
+    .tools:
+        display = flex
+        flex-wrap = wrap
+        gap = 6px
+    .gpu-option:
+        display = flex
+        align-items = center
+        gap = 6px
+        padding = 8px
+        font-size = 12px
+    button, select:
+        font = inherit
+        color = #eafffa
+        background = #183c54
+        border = 1px solid #3e7188
+        border-radius = 10px
+        padding = 10px
+        min-height = 44px
+        cursor = pointer
+        font-size = 12px
+    button:hover:not(:disabled):
+        background = #26536b
+        border-color = #6cf3cf
+    button:focus-visible, select:focus-visible, canvas:focus-visible:
+        outline = 3px solid #ffe076
+        outline-offset = 3px
+    button:disabled:
+        cursor = default
+        opacity = 0.58
+    .game-surface:
+        position = relative
+        background = #08182d
+    [hidden]:
+        display = none !important
+    canvas:
+        display = block
+        width = 100%
+        height = auto
+        aspect-ratio = 8 / 5
+        image-rendering = pixelated
+        touch-action = none
+    .festival:
+        margin = 0
+        padding = 12px
+        text-align = center
+        color = #ffd587
+        font-size = 13px
+        background = #1d2849
+    .actions:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(230px, 1fr))
+        gap = 10px
+        margin-top = 16px
+    .actions button:
+        display = grid
+        gap = 10px
+        text-align = left
+        padding = 18px
+        background = #142c42
+        border-top = 3px solid #6cf3aa
+    .actions .adopt:
+        border-top-color = #ff9348
+    .actions .grow:
+        border-top-color = #ff5db5
+    .actions .gift:
+        border-top-color = #ffe076
+    .action-title:
+        letter-spacing = 2px
+        font-size = 11px
+        font-weight = 800
+        color = #a4e7e2
+    .actions button > span:nth-child(2):
+        font-size = 16px
+        font-weight = 700
+    small:
+        color = #b2c4d9
+        font-size = 11px
+        line-height = 1.5
+    .notice:
+        min-height = 48px
+        padding = 14px
+        border-radius = 12px
+        background = #16374a
+        color = #f8dfaf
+        text-align = center
+        font-size = 14px
+    footer:
+        color = #9db5ca
+        font-size = 12px
+        text-align = center
+        line-height = 1.7

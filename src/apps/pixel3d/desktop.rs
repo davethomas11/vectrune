@@ -64,7 +64,7 @@ impl Host {
         *self.deadline.lock().unwrap() = Instant::now() + Duration::from_secs(2);
         let fullscreen: bool = self.context.with(|ctx| {
             ctx.eval(format!(
-                "__RunePixel.controls.event({event}) === 'host.fullscreen'"
+                "!__RunePixel.keyboardControlEvent({event}) && __RunePixel.controls.event({event}) === 'host.fullscreen'"
             ))
         })?;
         if fullscreen {
@@ -122,7 +122,7 @@ impl Host {
                 // Host fullscreen commands returned by gamepads must run on the window thread.
                 let fullscreen: bool = self.context.with(|ctx| {
                     ctx.eval(format!(
-                        "__RunePixel.controls.gamepads({pads}).includes('host.fullscreen')"
+                        "(!__RunePixel.hudPads({pads}) && __RunePixel.controls.gamepads({pads}).includes('host.fullscreen')) || __RunePixel.consumeUiFullscreen()"
                     ))
                 })?;
                 if fullscreen {
@@ -273,6 +273,24 @@ impl ApplicationHandler for Host {
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let result = (|| -> Result<()> {
+            if let WindowEvent::KeyboardInput { event, .. } = &event {
+                if let PhysicalKey::Code(key) = event.physical_key {
+                    *self.deadline.lock().unwrap() = Instant::now() + Duration::from_secs(2);
+                    let input = serde_json::json!({
+                        "device":"keyboard",
+                        "code":format!("{key:?}"),
+                        "value":event.state == ElementState::Pressed,
+                        "repeat":event.repeat
+                    });
+                    let handled: bool = self.context.with(|ctx| {
+                        ctx.eval(format!("__RunePixel.keyboardControlEvent({input})"))
+                    })?;
+                    if handled {
+                        self.clear_input();
+                        return Ok(());
+                    }
+                }
+            }
             if self.controls {
                 *self.deadline.lock().unwrap() = Instant::now() + Duration::from_secs(2);
                 match &event {
@@ -348,6 +366,7 @@ impl ApplicationHandler for Host {
                 }
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::Focused(false) => {
+                    self.js("__RunePixel3D.flushSave()")?;
                     self.clear_input();
                     if self.mouse_locked {
                         if let Some(window) = &self.window {
@@ -363,6 +382,7 @@ impl ApplicationHandler for Host {
                     self.accumulator = Duration::ZERO;
                 }
                 WindowEvent::Occluded(true) => {
+                    self.js("__RunePixel3D.flushSave()")?;
                     self.clear_input();
                 }
                 WindowEvent::Occluded(false) => {
@@ -561,5 +581,6 @@ pub fn run(game: &Game3D, fullscreen: bool, frame_limit: Option<u64>) -> Result<
     if let Some(error) = host.error {
         return Err(error);
     }
+    host.js("__RunePixel3D.flushSave()")?;
     Ok(())
 }

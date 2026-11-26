@@ -26,6 +26,7 @@ import {
   type WallOverride,
   type Presentation,
   type Stats3D,
+  type DeferredLightingFrame,
 } from './raycaster';
 import { setActiveMap, type SpatialMap } from './spatial';
 import { validatePointLights, type PointLight3D } from './lighting';
@@ -36,6 +37,7 @@ import { sampleCamera, type CameraTrack } from './camera';
 import { nearbyForRender, withEntityQueries } from './entities';
 import { validateTether, type Tether3D } from './tether';
 import type { SideMapData } from './sidemap';
+import { OnScreenKeyboard } from './on_screen_keyboard';
 
 export interface TitleScene {
   lights?: string;
@@ -102,6 +104,123 @@ export interface Input3D {
 }
 
 export class Pixel3DEngine {
+  readonly keyboard = new OnScreenKeyboard();
+  private hudPadHeld = new Set<string>();
+  private calloutFocus = 0;
+  private uiFullscreen = false;
+  consumeUiFullscreen(): boolean {
+    const requested = this.uiFullscreen;
+    this.uiFullscreen = false;
+    return requested;
+  }
+
+  keyboardHud(): GameHud | undefined {
+    const state = this.app.state;
+    const field = this.paused && this.config.pauseUi && state.status === 'playing' ? this.config.pauseUi : this.config.ui;
+    return field ? validateHud(state[field], this.config.sprites) : undefined;
+  }
+
+  keyboardKey(key: string, down: boolean, repeat = false): boolean {
+    this.keyboard.sync(this.keyboardHud()?.keyboard);
+    const handled = this.keyboard.physical(key, down, repeat, (a, args) => this.activate(a, args));
+    if (handled) { this.controls?.clear(true); this.invalidateFrame(); }
+    return handled;
+  }
+
+  keyboardControlEvent(event: { device: string; code: string; value: number | boolean; repeat?: boolean }): boolean {
+    const hud = this.keyboardHud();
+    if (!hud?.keyboard) {
+      if (event.device === 'gamepad' && (hud?.callout || hud?.grid?.layout === 'sidebar')) return true;
+      return event.device === 'keyboard' ? this.hudKey(event.code, Boolean(event.value), event.repeat) : false;
+    }
+    if (event.device !== 'keyboard') return true;
+    const key = event.code.startsWith('Key') ? (this.keyboard.pressed.has('SHIFT') ? event.code.slice(3) : event.code.slice(3).toLowerCase()) :
+      event.code.startsWith('Digit') ? event.code.slice(5) : event.code === 'Space' ? ' ' :
+      event.code.startsWith('Shift') ? 'Shift' : event.code;
+    return this.keyboardKey(key, Boolean(event.value), event.repeat);
+  }
+
+  hudKey(code: string, down: boolean, repeat = false): boolean {
+    const hud = this.keyboardHud();
+    if (hud?.callout && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Space', 'Escape', 'Backspace'].includes(code)) {
+      const count = hud.callout.actions.length;
+      if (down) {
+        if (code.startsWith('Arrow') && count) this.calloutFocus = (this.calloutFocus + (code === 'ArrowLeft' || code === 'ArrowUp' ? -1 : 1) + count) % count;
+        else if (!repeat && ['Enter', 'Space'].includes(code) && count) this.activate(hud.callout.actions[this.calloutFocus % count].action);
+        else if (!repeat && hud.callout.dismissAction) this.activate(hud.callout.dismissAction);
+      }
+      this.controls?.clear(true); this.invalidateFrame(); return true;
+    }
+    if (hud?.grid?.layout === 'sidebar') {
+      const grid = hud.grid;
+      if (down && ['ArrowUp', 'ArrowDown'].includes(code) && grid.moveAction) this.activate(grid.moveAction, [code === 'ArrowUp' ? -1 : 1]);
+      else if (down && !repeat && ['Enter', 'Space'].includes(code) && grid.moveAction) {
+        const item = grid.items.find(i => i.selected && !i.disabled);
+        if (item?.action) {
+          if (grid.closeOnActivate && grid.dismissAction) this.activate(grid.dismissAction);
+          if (item.action === 'host.fullscreen') this.uiFullscreen = true;
+          else if (item.action === 'host.mute') this.muted = !this.muted;
+          else this.activate(item.action, item.args ?? []);
+        }
+      } else if (down && !repeat && ['Escape', 'Backspace'].includes(code) && grid.dismissAction) this.activate(grid.dismissAction);
+      else return false;
+      this.controls?.clear(true); return true;
+    }
+    return false;
+  }
+
+  keyboardPads(pads: Parameters<OnScreenKeyboard['controller']>[0]): boolean {
+    const hud = this.keyboardHud();
+    this.keyboard.sync(hud?.keyboard);
+    if (!hud?.keyboard) return false;
+    this.keyboard.controller(pads, (a, args) => this.activate(a, args));
+    if (!this.keyboardHud()?.keyboard) {
+      this.hudPadHeld = new Set(pads.flatMap(p => p ? p.buttons.flatMap((b, i) => b.value > .5 ? [`${p.index}:${i}`] : []) : []));
+    }
+    this.invalidateFrame();
+    return true;
+  }
+
+  hudPads(pads: Parameters<OnScreenKeyboard['controller']>[0]): boolean {
+    if (this.keyboardPads(pads)) return true;
+    const hud = this.keyboardHud();
+    if (!hud?.callout && hud?.grid?.layout !== 'sidebar') { this.hudPadHeld.clear(); return false; }
+    this.controls?.clear(true);
+    const held = new Set<string>();
+    for (const pad of pads) {
+      if (!pad) continue;
+      for (const button of [12, 13, 14, 15, 0, 1]) {
+        if ((pad.buttons[button]?.value ?? 0) <= .5) continue;
+        const id = `${pad.index}:${button}`; held.add(id);
+        if (this.hudPadHeld.has(id)) continue;
+        if (hud.callout) {
+          const count = hud.callout.actions.length;
+          if (button >= 12 && count) this.calloutFocus = (this.calloutFocus + (button === 12 || button === 14 ? -1 : 1) + count) % count;
+          if (button === 0 && count) this.activate(hud.callout.actions[this.calloutFocus % count].action);
+          if (button === 1 && count) this.activate(hud.callout.actions[count - 1].action);
+        } else if (hud.grid) {
+          if (button >= 12 && hud.grid.moveAction) this.activate(hud.grid.moveAction, [button === 12 || button === 14 ? -1 : 1]);
+          if (button === 0) {
+            const item = hud.grid.items.find(i => i.selected && !i.disabled);
+            if (item?.action) {
+              if (hud.grid.closeOnActivate && hud.grid.dismissAction) this.activate(hud.grid.dismissAction);
+              if (item.action === 'host.fullscreen') this.uiFullscreen = true;
+              else if (item.action === 'host.mute') this.muted = !this.muted;
+              else this.activate(item.action, item.args ?? []);
+            }
+          }
+          if (button === 1 && hud.grid.dismissAction) this.activate(hud.grid.dismissAction);
+        }
+      }
+    }
+    this.hudPadHeld = held;
+    if (this.keyboardHud()?.keyboard) {
+      this.keyboard.sync(this.keyboardHud()?.keyboard);
+      this.keyboard.seedController(held);
+    }
+    this.invalidateFrame();
+    return true;
+  }
   readonly controls?: GameControls;
   readonly app: RuneApp;
   readonly raycaster: Raycaster3D;
@@ -132,6 +251,7 @@ export class Pixel3DEngine {
   }
   set paused(value: boolean) {
     if (value === this._paused) return;
+    if (value) this.flushSave();
     this._paused = value;
     this.invalidateFrame();
     if (value) pauseMusic();
@@ -155,8 +275,9 @@ export class Pixel3DEngine {
   get usesSharedRenderer(): boolean {
     if (this.config.tethers?.length) return true;
     const hud = this.config.ui ? this.app.state[this.config.ui] as GameHud | undefined : undefined;
-    if (hud?.map || hud?.countdown !== undefined) return true;
-    if (this.config.pauseUi && (this.app.state[this.config.pauseUi] as any)?.map) return true;
+    if (hud?.map || hud?.countdown !== undefined || hud?.theme || hud?.keyboard || hud?.buttons || hud?.callout || hud?.grid?.layout === 'sidebar') return true;
+    const pauseHud = this.config.pauseUi ? this.app.state[this.config.pauseUi] as GameHud | undefined : undefined;
+    if (pauseHud?.map || pauseHud?.theme || pauseHud?.keyboard || pauseHud?.buttons || pauseHud?.callout || pauseHud?.grid?.layout === 'sidebar') return true;
     const map = this.config.maps?.[this.currentMapName] ?? this.config.map;
     if (map.sky?.below !== undefined) return true;
     if (this.config.world || this.config.cameraTrack ||
@@ -282,7 +403,7 @@ export class Pixel3DEngine {
     this.ticks++;
     this.syncScene();
     if (this.wasTitle) this.presentationTicks++;
-    this.persist();
+    this.persist(false);
   }
 
   private syncScene(): void {
@@ -302,8 +423,12 @@ export class Pixel3DEngine {
     }
   }
 
-  private persist(): void {
-    if (this.save) this.save.flush(this.app.state[this.save.config.state]);
+  flushSave(): void {
+    this.persist();
+  }
+
+  private persist(immediate = true): void {
+    this.save?.persist(this.app.state, immediate);
   }
 
   hasAction(action: string): boolean {
@@ -349,6 +474,16 @@ export class Pixel3DEngine {
       playSound(this.config.menuSounds.confirm);
     }
     this.invoke(action, args);
+  }
+
+  pickThing(path: string, x: number, y: number): number {
+    if (!this.config.things?.includes(path)) throw new Error('data-pixel-pick must name a declared Scene things array');
+    const value: unknown = path.split('.').reduce<unknown>((v, key) =>
+      v && typeof v === 'object' ? Reflect.get(v, key) : undefined, this.app.state);
+    if (!Array.isArray(value)) throw new Error('data-pixel-pick must reference an array');
+    const stats = this.renderState();
+    this.frame();
+    return this.raycaster.pickModels(stats.camera, value, x, y);
   }
 
   renderState(): {
@@ -504,7 +639,17 @@ export class Pixel3DEngine {
   }
 
   frameHud(stats: ReturnType<Pixel3DEngine['renderState']>): Stats3D {
+    let ui = stats.ui;
+    if (ui?.callout) {
+      const point = this.raycaster.projectPoint(stats.camera, ui.callout.target);
+      const scale = this.raycaster.hudScale;
+      ui = { ...ui, callout: { ...ui.callout, selected: this.calloutFocus % Math.max(1, ui.callout.actions.length),
+        screen: point ? { x: point.x / scale, y: point.y / scale } : undefined } };
+    }
+    if (ui?.buttons) ui = { ...ui, buttons: ui.buttons.map(b => b.icon === 'sound' ? { ...b, selected: this.muted } : b) };
+    this.keyboard.sync(ui?.keyboard);
     return {
+      keyboard: ui?.keyboard ? this.keyboard : undefined,
       titleScene: stats.title_scene,
       presentationTime: stats.presentation_time,
       status: stats.status,
@@ -519,20 +664,21 @@ export class Pixel3DEngine {
       storyBody: stats.story_body,
       message: stats.message,
       switchActivated: stats.switch_activated,
-      ui: stats.ui,
+      ui,
       paused: stats.paused,
       presentation: stats.presentation,
       hudText: stats.hud_text,
     };
   }
 
-  frame(): Uint32Array {
+  frame(deferredLighting?: (frame: DeferredLightingFrame) => void): Uint32Array {
     this.invalidateFrame();
     const stats = this.renderState();
     const world = this.raycaster.config.world;
     this.raycaster.render(stats.camera, stats.things, stats.weapon, stats.flash, this.frameHud(stats),
       stats.wall_overrides, stats.title_scene ? stats.presentation_time : stats.time,
-      world && !stats.camera.terrainPose ? validatedVoxelChunks(world) : undefined, stats.tethers, stats.lights);
+      world && !stats.camera.terrainPose ? validatedVoxelChunks(world) : undefined, stats.tethers, stats.lights,
+      deferredLighting);
     return this.raycaster.buffer;
   }
 }

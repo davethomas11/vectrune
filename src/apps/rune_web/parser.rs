@@ -251,6 +251,8 @@ pub fn parse_rune_web_frontend(
         }
     }
 
+    super::modular::attach(doc, &mut logic_definitions)?;
+
     // Extract @Navigator sections
     let mut navigator = None;
     for section in &doc.sections {
@@ -2044,7 +2046,7 @@ pub(crate) fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<
                     })
                     .collect();
 
-                helpers.insert(helper_name, HelperDefinition { params, body });
+                helpers.insert(helper_name, HelperDefinition { params, body, ..Default::default() });
             }
         }
     }
@@ -2057,7 +2059,7 @@ pub(crate) fn parse_logic_section(section: &crate::rune_ast::Section) -> Result<
 
                 actions.insert(
                     action_name,
-                    ActionDefinition { params, steps },
+                    ActionDefinition { params, steps, ..Default::default() },
                 );
             }
         }
