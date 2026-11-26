@@ -26,7 +26,7 @@ tar -xjf "$archive" -C "$root"
 prefix="$root/install"
 (
   cd "$root/alsa-lib-1.2.14"
-  CC="zig cc -target $zig_target" AR="zig ar" RANLIB="zig ranlib" CFLAGS="-Os -fPIE" \
+  CC="zig cc -target $zig_target" AR="zig ar" RANLIB="zig ranlib" CFLAGS="-Os -fPIC" \
     ./configure --host="$host" --prefix="$prefix" --libdir="$prefix/lib" \
     --disable-shared --enable-static --disable-python \
     --with-configdir=/usr/share/alsa --with-plugindir="$plugindir"

@@ -92,6 +92,7 @@ jobs:
           if [[ "${{ matrix.platform.target }}" == *"linux"* ]]; then
             export PKG_CONFIG_ALLOW_CROSS=1
             export PKG_CONFIG_LIBDIR="$PWD/target/linux-audio/${{ matrix.platform.target }}/install/lib/pkgconfig"
+            export ALSA_STATIC=1
             cargo zigbuild --release --target ${{ matrix.platform.target }}
           else
             cargo build --release --target ${{ matrix.platform.target }}

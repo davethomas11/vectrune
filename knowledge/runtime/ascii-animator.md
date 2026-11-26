@@ -271,6 +271,10 @@ array `.push(...)`, postfix `++`/`--`, `increment`, `decrement`, `invert`,
 ordinary conditionals, loops and matches. Unknown statements and I/O commands
 are rejected at compile time instead of being silently ignored.
 
+Linux release builds explicitly select static ALSA linkage with `ALSA_STATIC=1`;
+the ALSA archive uses position-independent code for Cargo's native shared library.
+See [native audio builds](../../docs/native-audio-builds.md) for rebuilding.
+
 Logic runs with a 64 MiB VM limit and a one-second wall-clock safety limit per
 VM operation. This bounds runaway scripts, not frame timing; slow ticks do not
 change the configured simulation rate. The limit allows scheduling delays on

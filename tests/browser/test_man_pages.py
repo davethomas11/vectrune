@@ -108,6 +108,9 @@ class ManPageTests(unittest.TestCase):
     @unittest.skipIf(os.name == 'nt', 'Release archive assembly runs on Linux')
     def test_release_packaging_preserves_binaries_and_bundles_both_manuals(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        self.assertIn('export ALSA_STATIC=1', workflow)
+        audio_build = (ROOT / '.github/scripts/build-linux-audio.sh').read_text(encoding='utf-8')
+        self.assertIn('CFLAGS="-Os -fPIC"', audio_build)
         step = workflow.split('      - name: Bundle offline manuals with every platform\n', 1)[1]
         script = textwrap.dedent(step.split('        run: |\n', 1)[1].split('\n      - name:', 1)[0])
         with tempfile.TemporaryDirectory() as folder:
