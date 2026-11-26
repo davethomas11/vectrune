@@ -80,6 +80,7 @@ async fn main() -> anyhow::Result<()> {
                 .value_parser(["text", "json", "rune", "xml", "yaml", "curl", "html"]),
         )
         .arg(Arg::new("target").long("target").conflicts_with("output").value_parser(["web", "desktop"]).help("Pixel presentation host (default: web)"))
+        .arg(Arg::new("desktop").long("desktop").requires("SCRIPT").conflicts_with_all(["target", "output", "watch", "secondary-app"]).action(clap::ArgAction::SetTrue).help("Render an ASCII Animator app with original GIF sprites in a window"))
         .arg(Arg::new("pixel-frames").long("pixel-frames").hide(true).value_parser(clap::value_parser!(u64).range(1..)).requires("target"))
         .arg(Arg::new("fullscreen").long("fullscreen").action(clap::ArgAction::SetTrue).requires("target").help("Start the desktop pixel window in fullscreen"))
         .arg(
@@ -596,10 +597,18 @@ async fn main() -> anyhow::Result<()> {
                 || app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("ascii-animator")),
             "--mute is only supported for ASCII Animator apps"
         );
+        anyhow::ensure!(!matches.get_flag("desktop") || app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("ascii-animator")), "--desktop is only supported for ASCII Animator apps");
 
         if app_type.as_deref().is_some_and(|t| t.eq_ignore_ascii_case("ascii-animator")) && output_format.is_none() {
             anyhow::ensure!(!matches.get_flag("watch") && matches.get_one::<String>("target").is_none(), "ASCII Animator does not support --watch or --target");
-            apps::ascii_animator::run(apps::ascii_animator::compile(&doc)?, None, false, &[], matches.get_flag("mute"), &[])?;
+            if matches.get_flag("desktop") {
+                #[cfg(feature = "pixel-desktop")]
+                apps::ascii_animator::desktop::run(apps::ascii_animator::compile(&doc)?, matches.get_flag("mute"), None)?;
+                #[cfg(not(feature = "pixel-desktop"))]
+                anyhow::bail!("ASCII desktop requires cargo run --features pixel-desktop -- <file.rune> --desktop");
+            } else {
+                apps::ascii_animator::run(apps::ascii_animator::compile(&doc)?, None, false, &[], matches.get_flag("mute"), &[])?;
+            }
             break;
         }
 

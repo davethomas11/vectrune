@@ -41,6 +41,7 @@ pub fn command() -> Command {
         .subcommand(Command::new("run")
             .about("Run an @App type = ascii-animator Rune file or directory")
             .arg(Arg::new("path").required(true).value_name("RUNE_PATH"))
+            .arg(Arg::new("desktop").long("desktop").action(ArgAction::SetTrue).conflicts_with("plain").help("Render original GIF sprites in a window (requires a pixel-desktop build)"))
             .arg(Arg::new("frames").long("frames").value_parser(clap::value_parser!(u64).range(1..)).help("Stop after N simulation frames"))
             .arg(Arg::new("plain").long("plain").action(ArgAction::SetTrue).help("Print only the final ASCII frame, without sound, ANSI codes or delays (default: 1 frame)"))
             .arg(Arg::new("mute").long("mute").action(ArgAction::SetTrue).help("Disable synthesized tones without opening an audio device"))
@@ -358,6 +359,16 @@ pub fn run(args: &ArgMatches) -> Result<()> {
                 .get_many::<String>("keys")
                 .map(|v| v.cloned().collect::<Vec<_>>())
                 .unwrap_or_default();
+            if args.get_flag("desktop") {
+                #[cfg(feature = "pixel-desktop")]
+                return ascii_animator::desktop::run(
+                    ascii_animator::compile(&doc)?,
+                    args.get_flag("mute"),
+                    args.get_one::<u64>("frames").copied(),
+                );
+                #[cfg(not(feature = "pixel-desktop"))]
+                anyhow::bail!("ASCII desktop requires cargo run --features pixel-desktop -- ascii run <file.rune> --desktop; terminal playback works in all builds");
+            }
             ascii_animator::run(
                 ascii_animator::compile(&doc)?,
                 args.get_one::<u64>("frames").copied(),

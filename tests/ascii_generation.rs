@@ -10,6 +10,24 @@ fn cli() -> Command {
 }
 
 #[test]
+fn desktop_flag_cannot_be_combined_with_plain_terminal_capture() {
+    let output = cli()
+        .args([
+            "ascii",
+            "run",
+            "examples/ascii/games/clockwork/forest.rune",
+            "--desktop",
+            "--plain",
+        ])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8(output.stderr)
+        .unwrap()
+        .contains("cannot be used"));
+}
+
+#[test]
 fn starter_generation_works_without_a_checkout_and_is_runnable() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("animation.rune");

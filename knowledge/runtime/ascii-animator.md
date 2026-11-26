@@ -31,6 +31,32 @@ host when `@App type = ascii-animator`; document export remains available with
 
 ## CLI generators
 
+### Desktop GIF presentation (unreleased)
+
+`vectrune ascii run <file> --desktop` opens a resizable native window.
+Build with `cargo build --release --features pixel-desktop --bin vectrune`; ordinary builds
+report an explicit rebuild instruction. Direct `<file> --desktop` also works.
+Terminal playback stays the default. Desktop conflicts with `--plain`, supports
+`--mute` and `--frames N`, and rejects typed-command/Ascii3D apps.
+
+GIF-backed sprites use cached RGBA rasters with the same frame selection, delays,
+positions and draw order, alpha blending and canvas color tint. White preserves
+source color. Each canvas cell maps to 6x12 pixels; inline sprites, text, plots,
+lines and boxes use bitmap ASCII glyphs, not replacement image artwork.
+Graphical raster/decode memory is capped at 64 MiB per sprite in desktop builds.
+Audio, actions and simulation still use the existing Engine.
+Use `target/release/vectrune` for smooth playback; debug rendering is slower.
+Desktop advances logic once per scheduled tick, reads and validates one canvas
+snapshot, and draws directly into the window framebuffer. Offscreen GIF pixels
+are clipped before blending; consecutive ASCII commands share a scratch canvas
+without changing layer order. Frame deadlines preserve the declared FPS cadence;
+resize/expose redraws do not advance gameplay, and long stalls do not cause
+catch-up bursts.
+Held arrows/A/D refresh bound actions every tick; other keys dispatch once per
+press. Focus loss clears held input and freezes simulation, not music.
+Q/Esc/window close exits; resizing preserves the logical framebuffer.
+See [Clockwork](../examples/clockwork-forest.md) for the complete workflow.
+
 ### GIF-backed sprites (unreleased prototype)
 
 ```rune

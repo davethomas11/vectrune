@@ -20,6 +20,75 @@ fn state(game: &Engine) -> Value {
     game.snapshot().unwrap()["state"].clone()
 }
 
+#[cfg(feature = "pixel-desktop")]
+#[test]
+fn clockwork_desktop_frame_uses_native_gif_pixels_and_tracks_pose_changes() {
+    use rune_runtime::apps::ascii_animator::desktop;
+    let mut game = game();
+    let title = desktop::frame(&game).unwrap();
+    assert_eq!(title.len(), 960 * 564 * 4);
+    assert!(title.chunks_exact(4).all(|pixel| pixel[3] == 255));
+    game.key("Enter").unwrap();
+    game.key("ArrowRight").unwrap();
+    game.key("Space").unwrap();
+    for _ in 0..4 {
+        game.step().unwrap();
+    }
+    let jumping = desktop::frame(&game).unwrap();
+    assert_ne!(jumping, title);
+}
+
+#[cfg(feature = "pixel-desktop")]
+#[test]
+fn desktop_ticks_match_terminal_physics_and_rendered_layers() {
+    use rune_runtime::apps::ascii_animator::desktop;
+    let mut terminal = game();
+    let mut window = game();
+    let mut output = desktop::frame(&window).unwrap();
+    for tick in 0..24 {
+        let keys: &[&str] = match tick {
+            0 => &["Enter"],
+            1..=5 => &["ArrowRight"],
+            6 => &["Space"],
+            12 | 18 => &["KeyP"],
+            _ => &[],
+        };
+        for key in keys {
+            terminal.key(key).unwrap();
+            window.key(key).unwrap();
+        }
+        terminal.step().unwrap();
+        desktop::step(&mut window, &mut output).unwrap();
+        assert_eq!(state(&terminal), state(&window));
+        assert_eq!(output, desktop::frame(&terminal).unwrap());
+    }
+}
+
+#[cfg(feature = "pixel-desktop")]
+#[test]
+#[ignore = "manual desktop frame-time benchmark"]
+fn clockwork_desktop_frame_time() {
+    use rune_runtime::apps::ascii_animator::desktop;
+    use std::time::Instant;
+    let mut game = game();
+    game.key("Enter").unwrap();
+    let mut output = desktop::frame(&game).unwrap();
+    let start = Instant::now();
+    for _ in 0..60 {
+        game.key("ArrowRight").unwrap();
+        desktop::step(&mut game, &mut output).unwrap();
+        std::hint::black_box(&output);
+    }
+    let milliseconds = start.elapsed().as_secs_f64() * 1000.0 / 60.0;
+    eprintln!("Clockwork simulation + desktop render: {milliseconds:.2} ms/frame");
+    if !cfg!(debug_assertions) {
+        assert!(
+            milliseconds < 1000.0 / 30.0,
+            "Desktop CPU work exceeds the 30 FPS frame budget"
+        );
+    }
+}
+
 fn courier_pose(game: &Engine) -> Value {
     state(game)["canvas"]
         .as_array()

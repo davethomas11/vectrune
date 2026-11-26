@@ -66,6 +66,11 @@
           "links": [{"route": "docs/library/declarations", "label": "AsciiMusic field reference"}]
         },
         {
+          "title": "Desktop GIF mode (unreleased)",
+          "paragraphs": ["Build with pixel-desktop and use ascii run <file> --desktop to render original GIF sprites in a resizable window, retaining Rune logic, layers and music. Clockwork uses a 960x564 logical framebuffer. GIF color is tinted by the canvas sprite color; white preserves it. Inline sprites, text, boxes, lines and graphs remain bitmap ASCII. Held direction keys refresh per tick; jumps dispatch on press. Focus loss clears held keys and freezes simulation, not music. Q/Esc/window close exits.", "Terminal playback remains default. --desktop conflicts with --plain, supports --mute and --frames N, and rejects typed-command and Ascii3D apps. Direct <file> --desktop also works. Standard builds report an explicit feature-build instruction; v0.3.12 binaries do not include this addition."],
+          "command": "cargo build --release --features pixel-desktop --bin vectrune\ntarget/release/vectrune ascii run examples/ascii/games/clockwork/forest.rune --desktop"
+        },
+        {
           "title": "Simple native sound cues",
           "paragraphs": ["Sentinel uses short synth cues for shots, hits, drone destruction, damage and win/loss. Declare @AsciiTone/name with frequency (20-8000 Hz), optional end_frequency, duration (0.01-1 seconds, default 0.1), volume (0-0.5, default 0.15), and wave (sine, square, triangle, sawtooth or noise; default sine). Play it with sound \"name\" inside a Logic action. No sound files or WebAudio setup are required.", "Cues reuse the native game mixer and are consumed once per action. --mute skips the audio device, including direct file launches; --plain is always silent. Missing devices produce an explicit error with mute guidance. Static musl Linux builds cannot load external ALSA plugins; plugin-only configurations may need the GNU build."],
           "command": "vectrune ascii run examples/ascii/sentinel.rune --mute\nvectrune examples/ascii/sentinel.rune --mute"

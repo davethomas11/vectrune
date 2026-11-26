@@ -26,6 +26,8 @@ use std::{
     time::{Duration, Instant},
 };
 pub mod ascii3d;
+#[cfg(feature = "pixel-desktop")]
+pub mod desktop;
 pub(crate) mod image;
 mod music;
 
@@ -125,12 +127,16 @@ pub struct Frame {
     pub width: usize,
     pub height: usize,
     pub cells: Vec<Cell>,
+    #[cfg(feature = "pixel-desktop")]
+    painted: Vec<bool>,
 }
 impl Frame {
     fn new(width: usize, height: usize) -> Self {
         Self {
             width,
             height,
+            #[cfg(feature = "pixel-desktop")]
+            painted: vec![false; width * height],
             cells: vec![
                 Cell {
                     glyph: b' ',
@@ -143,6 +149,10 @@ impl Frame {
     fn put(&mut self, x: i32, y: i32, glyph: u8, color: Ink) {
         if x >= 0 && y >= 0 && x < self.width as i32 && y < self.height as i32 {
             self.cells[y as usize * self.width + x as usize] = Cell { glyph, color };
+            #[cfg(feature = "pixel-desktop")]
+            {
+                self.painted[y as usize * self.width + x as usize] = true;
+            }
         }
     }
     fn line(&mut self, mut x: i32, mut y: i32, x2: i32, y2: i32, glyph: u8, color: Ink) {
@@ -291,6 +301,8 @@ pub(super) struct Sprite {
     fps: u64,
     masks: Option<Vec<Vec<Vec<bool>>>>,
     delays: Option<Vec<u64>>,
+    #[cfg(feature = "pixel-desktop")]
+    pixels: Option<Vec<::image::RgbaImage>>,
 }
 impl Sprite {
     fn index(&self, ticks: u64, fps: u64, index: Option<usize>) -> usize {
@@ -556,7 +568,9 @@ pub fn compile(doc: &RuneDocument) -> Result<Animation> {
                         frames,
                         fps: rate,
                         masks: None,
-                        delays: None
+                        delays: None,
+                        #[cfg(feature = "pixel-desktop")]
+                        pixels: None
                     }
                 )
                 .is_none(),
@@ -759,10 +773,14 @@ impl Engine {
         Ok(())
     }
     pub fn step(&mut self) -> Result<Frame> {
+        self.advance()?;
+        self.frame()
+    }
+    fn advance(&mut self) -> Result<()> {
         self.invoke("tick")?;
         self.pump_audio()?;
         self.ticks += 1;
-        self.frame()
+        Ok(())
     }
     fn pump_audio(&self) -> Result<()> {
         if !self.animation.music.is_empty() {
@@ -775,6 +793,10 @@ impl Engine {
         Ok(serde_json::from_str(&snapshot)?)
     }
     pub fn frame(&self) -> Result<Frame> {
+        let (snapshot, commands) = self.drawing_commands()?;
+        self.render_commands(&snapshot, commands)
+    }
+    fn drawing_commands(&self) -> Result<(Json, Vec<Draw>)> {
         let snapshot = self.snapshot()?;
         let mock = &snapshot["mock"];
         ensure!(
@@ -791,7 +813,14 @@ impl Engine {
             commands.len() <= 1024,
             "Canvas cannot exceed 1024 drawing commands"
         );
+        Ok((snapshot, commands))
+    }
+    fn render_commands(&self, snapshot: &Json, commands: Vec<Draw>) -> Result<Frame> {
         let mut frame = Frame::new(self.animation.width, self.animation.height);
+        self.render_into(snapshot, commands, &mut frame)?;
+        Ok(frame)
+    }
+    fn render_into(&self, snapshot: &Json, commands: Vec<Draw>, frame: &mut Frame) -> Result<()> {
         let mut views = 0;
         for command in commands {
             match command {
@@ -811,7 +840,7 @@ impl Engine {
                         .get(&scene)
                         .with_context(|| format!("Unknown @Ascii3D/{scene}"))?;
                     scene.render(
-                        &mut frame,
+                        frame,
                         &snapshot["state"],
                         &self.animation.sprites,
                         self.ticks,
@@ -946,7 +975,7 @@ impl Engine {
                 }
             }
         }
-        Ok(frame)
+        Ok(())
     }
 }
 

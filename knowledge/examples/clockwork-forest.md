@@ -30,6 +30,10 @@ Wick has a distance-driven grounded walk cycle, fixed idle frame and separate
 rising/falling GIF poses. Explicit frame selection freezes his animation on
 pause. The redesigned hood/face/eyes, boots and lantern keep the same dimensions
 and collision bounds.
+Optional `ascii run ... --desktop` (a `pixel-desktop` build) renders original
+GIFs in a resizable 960x564 window with the same logic, poses and music. Ordinary
+canvas objects remain bitmap ASCII; held direction keys refresh per tick.
+See the example README for build/run commands and focus behavior.
 
 Requires the unreleased GIF sprite/music runtime and a 160x48 terminal.
 The canvas is 160x47 at 30 FPS with larger sprites. Scene positions scale by 4/3

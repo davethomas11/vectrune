@@ -59,16 +59,52 @@ pub(super) fn sprite(path: &Path, width: u16, invert: bool) -> Result<super::Spr
     let mut masks = Vec::new();
     let mut delays = Vec::new();
     let mut total = 0usize;
+    #[cfg(feature = "pixel-desktop")]
+    let mut originals = Vec::new();
+    #[cfg(feature = "pixel-desktop")]
+    let mut original_bytes = 0usize;
     for frame in decoder.into_frames() {
         ensure!(frames.len() < 120, "GIF sprite exceeds 120 frames");
         let frame = frame.context("Decode GIF sprite frame")?;
         let (numerator, denominator) = frame.delay().numer_denom_ms();
         delays.push((u64::from(numerator).div_ceil(u64::from(denominator))).max(1));
-        let pixels = pixels(&DynamicImage::ImageRgba8(frame.into_buffer()), width)?;
+        let original = frame.into_buffer();
+        #[cfg(feature = "pixel-desktop")]
+        {
+            original_bytes += original.len();
+            ensure!(
+                original_bytes <= 64 * 1024 * 1024,
+                "GIF desktop pixels exceed 64 MiB per sprite"
+            );
+        }
+        let original = DynamicImage::ImageRgba8(original);
+        let pixels = pixels(&original, width)?;
         ensure!(
             pixels.height() <= 80,
             "GIF sprite exceeds 80 rows; reduce width"
         );
+        #[cfg(feature = "pixel-desktop")]
+        {
+            // Cache the graphical raster once too; repeated scene instances reuse it.
+            let raster_bytes = usize::from(width) * 6 * pixels.height() as usize * 12 * 4;
+            ensure!(
+                original_bytes + raster_bytes <= 64 * 1024 * 1024,
+                "GIF desktop raster exceeds 64 MiB per sprite"
+            );
+            let raster = original
+                .resize_exact(
+                    u32::from(width) * 6,
+                    pixels.height() * 12,
+                    FilterType::Triangle,
+                )
+                .to_rgba8();
+            original_bytes += raster.len();
+            ensure!(
+                original_bytes <= 64 * 1024 * 1024,
+                "GIF desktop raster exceeds 64 MiB per sprite"
+            );
+            originals.push(raster);
+        }
         total += pixels.len() / 4 * 2;
         ensure!(
             total <= 8 * 1024 * 1024,
@@ -93,5 +129,7 @@ pub(super) fn sprite(path: &Path, width: u16, invert: bool) -> Result<super::Spr
         fps: 8,
         masks: Some(masks),
         delays: Some(delays),
+        #[cfg(feature = "pixel-desktop")]
+        pixels: Some(originals),
     })
 }

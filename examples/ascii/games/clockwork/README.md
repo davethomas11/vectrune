@@ -12,6 +12,30 @@ cargo build --bin vectrune
 target/debug/vectrune ascii run examples/ascii/games/clockwork/forest.rune
 ```
 
+## Desktop GIF mode
+
+```sh
+cargo build --release --features pixel-desktop --bin vectrune
+target/release/vectrune ascii run examples/ascii/games/clockwork/forest.rune --desktop
+```
+
+This opens a resizable 960x564 graphical window, rendering the original GIFs
+instead of converting them to ASCII glyphs. The same Rune logic, music, layering,
+idle/walk/jump poses and physics run underneath. GIF colors are tinted by each
+canvas sprite color; text/HUD remain bitmap glyphs. Direction keys are refreshed
+while held; Space remains a press-only jump. Focus loss clears held input and
+freezes simulation; music continues unless paused with P. Close the window or
+press Q/Esc to exit. `--mute` skips audio; `--frames N` allows a bounded launch.
+Direct launch also works: `vectrune forest.rune --desktop`.
+
+Desktop mode requires the optional `pixel-desktop` build; published v0.3.12
+binaries do not contain it. Terminal playback remains the default. `--desktop`
+cannot combine with `--plain`; typed-command apps and Ascii3D are unsupported.
+Non-GIF sprites and other canvas objects still render as bitmap ASCII.
+Use the optimized release build for smooth playback; debug builds have additional
+CPU rendering overhead. Desktop targets the declared 30 FPS, clips offscreen GIFs,
+and renders directly into the window framebuffer without duplicate terminal renders.
+
 Requires a 160x48 terminal (160x47 canvas plus the playback footer), running at
 30 FPS. Artwork is larger and the room scrolls horizontally. Arrows/A/D move;
 Space/W/Up jumps; Down/S brakes; P pauses gameplay and music; M toggles the haunted
