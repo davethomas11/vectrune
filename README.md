@@ -30,32 +30,6 @@ Vectrune combines a Rust runtime with Rune-Web's JavaScript runtime for interact
 
 **On this page:** [Quickstart](#quickstart) · [Capabilities](#what-you-can-build) · [Live apps](#built-with-vectrune) · [Examples](#example-library) · [Testing](#test-what-you-build) · [Installation](#installation-options) · [Contributing](#contributing)
 
-## Terminal fun: ASCII Animator (v0.3.12)
-
-Generate your own art and animations from the CLI:
-
-```sh
-vectrune ascii generate --text "Hello!" -o animation.rune
-vectrune ascii run animation.rune
-vectrune ascii image photo.png --width 80
-vectrune ascii text "VECTRUNE"
-```
-
-Q, Esc or Ctrl-C exits animation playback cleanly. Customize
-[`@AsciiAnimator` and `@Logic`](knowledge/runtime/ascii-animator.md).
-Nine example files in `examples/ascii/` include screensavers, a simulated
-live-graph dashboard and games; they are not embedded in the binary.
-The optional [Ascii3D augmentation](knowledge/runtime/ascii3d.md) adds textured
-raycast walls and depth-tested sprites. With a checkout, run
-`vectrune ascii run examples/ascii/sentinel.rune` for a first-person shooter,
-`halls.rune` for endless corridors, or `descent.rune` for downhill tunnel attack.
-Sentinel adds short native synth cues; `--mute` disables audio, and plain
-captures are always silent.
-For an original fairy-tale text adventure, run
-`vectrune ascii run examples/ascii/borrowed_morning.rune` and type `begin`.
-[Borrowed Mornings](examples/ascii/borrowed_morning/README.md) has animated
-locations, inventory puzzles, hints, a title melody and a complete ending.
-
 ## Quickstart
 
 ### 1. Install the CLI
@@ -190,6 +164,34 @@ Explore the running apps, then read the Rune source behind them.
 The [Pixel 3D model guide](knowledge/runtime/model-shapes.md) covers radius-based spheres, cylinders, and ramps.
 
 The [Rune Miners experiment](examples/games/rune_miners/) explores seeded voxel worlds, mining, inventory, and shared browser/native game logic on `main`. Authored worlds can use [sparse terrain chunks](knowledge/runtime/voxel-worlds.md) up to 4,096 tiles wide, while shared nearby-entity queries let real-time games sleep distant actors.
+
+## Terminal fun: ASCII Animator (v0.3.12)
+
+Generate your own art and animations from the CLI:
+
+```sh
+vectrune ascii generate --text "Hello!" -o animation.rune
+vectrune ascii run animation.rune
+vectrune ascii image photo.png --width 80
+vectrune ascii image animation.gif --play
+vectrune ascii image animation.gif --rune -o animation.rune
+vectrune ascii text "VECTRUNE"
+```
+
+Q, Esc or Ctrl-C exits animation playback cleanly. Customize
+[`@AsciiAnimator` and `@Logic`](knowledge/runtime/ascii-animator.md).
+Nine example files in `examples/ascii/` include screensavers, a simulated
+live-graph dashboard and games; they are not embedded in the binary.
+The optional [Ascii3D augmentation](knowledge/runtime/ascii3d.md) adds textured
+raycast walls and depth-tested sprites. With a checkout, run
+`vectrune ascii run examples/ascii/sentinel.rune` for a first-person shooter,
+`halls.rune` for endless corridors, or `descent.rune` for downhill tunnel attack.
+Sentinel adds short native synth cues; `--mute` disables audio, and plain
+captures are always silent.
+For an original fairy-tale text adventure, run
+`vectrune ascii run examples/ascii/borrowed_morning.rune` and type `begin`.
+[Borrowed Mornings](examples/ascii/borrowed_morning/README.md) has animated
+locations, inventory puzzles, hints, a title melody and a complete ending.
 
 ## Example library
 
