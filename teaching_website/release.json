@@ -17,9 +17,9 @@
   "releases": [
     {
       "tag": "v0.3.12",
-      "tagged_on": null,
-      "github_tag": false,
-      "published_on": null,
+      "tagged_on": "2026-11-26",
+      "github_tag": true,
+      "published_on": "2026-11-26",
       "summary": "Introduces ASCII Animator, Ascii3D, CLI art generators, terminal GIF playback, self-contained GIF-to-Rune animation export and the Borrowed Mornings text adventure. Adds Neon Circuit to the website with enhanced Pixel 3D lighting, perspective-changing returns and a finale. Improves Rune Studio editing, navigation fragments and audio effects."
     },
     {
