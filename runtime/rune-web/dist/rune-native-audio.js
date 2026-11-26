@@ -58,6 +58,11 @@ var __RuneNativeAudio = (() => {
     exponentialRampToValueAtTime(value, time) {
       return this.add(value, time, "exponential");
     }
+    cancelScheduledValues(time) {
+      this.events = this.events.filter((event) => event.time < time);
+      this.changed();
+      return this;
+    }
     snapshot() {
       return { initial: this.initial, events: this.events };
     }

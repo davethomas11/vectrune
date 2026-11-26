@@ -88,7 +88,7 @@ def build_docs(destination, binary, base='/', site_url='https://vectrune.com', s
     with zipfile.ZipFile(downloads / 'ascii-animator.zip', 'w') as archive:
         examples = ROOT / 'examples/ascii'
         for source in sorted(examples.rglob('*')):
-            if source.is_file() and (source.suffix == '.rune' or source.name == 'README.md'):
+            if source.is_file() and (source.suffix in {'.rune', '.gif'} or source.name in {'README.md', 'build_assets.py'}):
                 entry = zipfile.ZipInfo('ascii/' + source.relative_to(examples).as_posix())
                 entry.compress_type = zipfile.ZIP_DEFLATED
                 archive.writestr(entry, source.read_bytes())

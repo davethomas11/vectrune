@@ -26,6 +26,8 @@ use std::{
     time::{Duration, Instant},
 };
 pub mod ascii3d;
+pub(crate) mod image;
+mod music;
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -223,6 +225,7 @@ fn validate_steps(
     steps: &[ActionStep],
     logic: &LogicDefinition,
     tones: &HashMap<String, Tone>,
+    music: &HashMap<String, crate::apps::rune_web::ast::MusicDefinition>,
 ) -> Result<()> {
     let mutation = regex::Regex::new(r#"^[\w$.\[\]'"]+(?:\.push\s*\(|\s*(?:\+\+|--)$)"#)?;
     for step in steps {
@@ -236,6 +239,18 @@ fn validate_steps(
                     let name: String = serde_json::from_str(rest)
                         .context("ASCII sound syntax is sound \"declared-tone-name\"")?;
                     ensure!(tones.contains_key(&name), "Unknown @AsciiTone/{name}");
+                } else if let Some(rest) = source.strip_prefix("music ") {
+                    let name: String = serde_json::from_str(rest)
+                        .context("ASCII music syntax is music \"declared-score-name\"")?;
+                    ensure!(
+                        music.contains_key(&name.to_lowercase()),
+                        "Unknown @AsciiMusic/{name}"
+                    );
+                } else if matches!(source, "music.stop" | "music.pause" | "music.resume") {
+                    ensure!(!music.is_empty(), "Music commands require @AsciiMusic");
+                    continue;
+                } else if source.starts_with("music.") {
+                    anyhow::bail!("Unsupported ASCII music command {source}");
                 } else if let Some(rest) = source.strip_prefix("call ") {
                     let name = rest.split(['(', ' ', '\t']).next().unwrap_or("");
                     ensure!(
@@ -259,11 +274,11 @@ fn validate_steps(
                 }
             }
             ActionStep::Conditional { steps, .. } | ActionStep::ForLoop { steps, .. } => {
-                validate_steps(steps, logic, tones)?
+                validate_steps(steps, logic, tones, music)?
             }
             ActionStep::Match { cases, .. } => {
                 for case in cases {
-                    validate_steps(&case.steps, logic, tones)?;
+                    validate_steps(&case.steps, logic, tones, music)?;
                 }
             }
         }
@@ -274,12 +289,33 @@ fn validate_steps(
 pub(super) struct Sprite {
     frames: Vec<Vec<String>>,
     fps: u64,
+    masks: Option<Vec<Vec<Vec<bool>>>>,
+    delays: Option<Vec<u64>>,
 }
 impl Sprite {
+    fn index(&self, ticks: u64, fps: u64, index: Option<usize>) -> usize {
+        if let Some(index) = index {
+            return index;
+        }
+        if let Some(delays) = &self.delays {
+            let mut elapsed = (ticks as u128 * 1000 / fps as u128)
+                % delays.iter().map(|n| *n as u128).sum::<u128>();
+            for (index, delay) in delays.iter().enumerate() {
+                if elapsed < *delay as u128 {
+                    return index;
+                }
+                elapsed -= *delay as u128;
+            }
+        }
+        ((ticks as u128 * self.fps as u128 / fps as u128) % self.frames.len() as u128) as usize
+    }
+    fn opaque(&self, index: usize, row: usize, col: usize, glyph: u8) -> bool {
+        self.masks
+            .as_ref()
+            .map_or(glyph != b' ', |masks| masks[index][row][col])
+    }
     fn frame(&self, ticks: u64, fps: u64, index: Option<usize>) -> Result<&[String]> {
-        let index = index.unwrap_or(
-            ((ticks as u128 * self.fps as u128 / fps as u128) % self.frames.len() as u128) as usize,
-        );
+        let index = self.index(ticks, fps, index);
         Ok(self
             .frames
             .get(index)
@@ -296,6 +332,7 @@ pub struct Animation {
     sprites: HashMap<String, Sprite>,
     scenes: HashMap<String, ascii3d::Scene>,
     tones: HashMap<String, Tone>,
+    music: HashMap<String, crate::apps::rune_web::ast::MusicDefinition>,
     command: Option<String>,
 }
 
@@ -387,8 +424,9 @@ pub fn compile(doc: &RuneDocument) -> Result<Animation> {
         );
         ensure!(tones.len() <= 64, "At most 64 ASCII tones may be declared");
     }
+    let music = music::compile(doc)?;
     for (name, action) in &logic.actions {
-        validate_steps(&action.steps, &logic, &tones)
+        validate_steps(&action.steps, &logic, &tones, &music)
             .with_context(|| format!("Invalid ASCII action {name}"))?;
     }
     ensure!(
@@ -438,10 +476,52 @@ pub fn compile(doc: &RuneDocument) -> Result<Animation> {
         ensure!(section.path.len() == 2, "Expected @AsciiSprite/<name>");
         for key in section.kv.keys() {
             ensure!(
-                ["fps", "frames"].contains(&key.as_str()),
+                ["fps", "frames", "source", "width", "invert"].contains(&key.as_str()),
                 "Unknown @AsciiSprite field {key}"
             );
         }
+        if section.kv.contains_key("source") {
+            ensure!(
+                !section.kv.contains_key("frames") && !section.kv.contains_key("fps"),
+                "GIF source cannot be combined with frames or fps; GIF delays own timing"
+            );
+            let origin = section
+                .source_file
+                .as_ref()
+                .context("GIF sprites require a Rune source file path")?;
+            let path = std::path::Path::new(origin)
+                .parent()
+                .context("Rune source needs a parent directory")?
+                .join(text(section, "source")?);
+            let width = section
+                .kv
+                .get("width")
+                .map(value_json)
+                .unwrap_or(Json::from(16));
+            let width = width.as_f64().context("GIF sprite width must be numeric")?;
+            ensure!(
+                width.fract() == 0.0 && (1.0..=240.0).contains(&width),
+                "GIF sprite width must be an integer from 1 to 240"
+            );
+            let invert: bool = serde_json::from_value(
+                section
+                    .kv
+                    .get("invert")
+                    .map(value_json)
+                    .unwrap_or(Json::Bool(false)),
+            )?;
+            let sprite = image::sprite(&path, width as u16, invert)
+                .with_context(|| format!("Load @AsciiSprite/{}", section.path[1]))?;
+            ensure!(
+                sprites.insert(section.path[1].clone(), sprite).is_none(),
+                "Duplicate ASCII sprite"
+            );
+            continue;
+        }
+        ensure!(
+            !section.kv.contains_key("width") && !section.kv.contains_key("invert"),
+            "AsciiSprite width/invert require a GIF source"
+        );
         let frames: Vec<Vec<String>> = serde_json::from_value(value_json(
             section
                 .kv
@@ -470,7 +550,15 @@ pub fn compile(doc: &RuneDocument) -> Result<Animation> {
         let rate = frame_rate(rate)?;
         ensure!(
             sprites
-                .insert(section.path[1].clone(), Sprite { frames, fps: rate })
+                .insert(
+                    section.path[1].clone(),
+                    Sprite {
+                        frames,
+                        fps: rate,
+                        masks: None,
+                        delays: None
+                    }
+                )
                 .is_none(),
             "Duplicate ASCII sprite"
         );
@@ -497,6 +585,7 @@ pub fn compile(doc: &RuneDocument) -> Result<Animation> {
         canvas,
         sprites,
         tones,
+        music,
         command,
         scenes,
     })
@@ -548,6 +637,16 @@ impl Engine {
             audio,
         };
         engine.eval::<()>(&engine.animation.source)?;
+        if !engine.animation.music.is_empty() {
+            engine.audio.install(&engine.context)?;
+            engine.eval::<()>(include_str!(
+                "../../runtime/rune-web/dist/rune-ascii-audio.js"
+            ))?;
+            engine.eval::<()>(&format!(
+                "__RuneAsciiAudio.register({})",
+                serde_json::to_string(&engine.animation.music)?
+            ))?;
+        }
         engine.eval::<()>("console.warn = console.error = function(message) { throw new Error(String(message)); };")?;
         engine.invoke("initialize")?;
         engine.frame()?;
@@ -579,6 +678,37 @@ impl Engine {
             "An ASCII action may emit at most 32 tones"
         );
         for event in events {
+            if let Some(operation) = event["operation"]
+                .as_str()
+                .and_then(|s| s.strip_prefix("music."))
+            {
+                ensure!(
+                    !self.animation.music.is_empty(),
+                    "Music commands require @AsciiMusic"
+                );
+                ensure!(
+                    matches!(operation, "play" | "stop" | "pause" | "resume"),
+                    "Unsupported ASCII music operation {operation}"
+                );
+                let args = event["args"]
+                    .as_array()
+                    .context("Invalid ASCII music arguments")?;
+                if operation == "play" {
+                    let name = args
+                        .first()
+                        .and_then(Json::as_str)
+                        .context("ASCII music needs a score name")?;
+                    ensure!(
+                        self.animation.music.contains_key(&name.to_lowercase()),
+                        "Unknown @AsciiMusic/{name}"
+                    );
+                }
+                self.eval::<()>(&format!(
+                    "__RuneAsciiAudio.{operation}.apply(null, {})",
+                    serde_json::to_string(args)?
+                ))?;
+                continue;
+            }
             ensure!(
                 event["operation"] == "sound.play",
                 "Unsupported ASCII audio operation"
@@ -630,8 +760,15 @@ impl Engine {
     }
     pub fn step(&mut self) -> Result<Frame> {
         self.invoke("tick")?;
+        self.pump_audio()?;
         self.ticks += 1;
         self.frame()
+    }
+    fn pump_audio(&self) -> Result<()> {
+        if !self.animation.music.is_empty() {
+            self.eval::<()>("__RuneNativeAudio.pump()")?;
+        }
+        Ok(())
     }
     pub fn snapshot(&self) -> Result<Json> {
         let snapshot: String = self.eval("__RuneWeb.snapshot()")?;
@@ -757,10 +894,11 @@ impl Engine {
                         .get(&name)
                         .with_context(|| format!("Unknown ASCII sprite {name}"))?;
                     let rows = sprite.frame(self.ticks, self.animation.fps, index)?;
+                    let index = sprite.index(self.ticks, self.animation.fps, index);
                     let (x, y) = (coordinate(x)?, coordinate(y)?);
                     for (row, text) in rows.iter().enumerate() {
                         for (col, glyph) in text.bytes().enumerate() {
-                            if glyph != b' ' {
+                            if sprite.opaque(index, row, col, glyph) {
                                 frame.put(x + col as i32, y + row as i32, glyph, color);
                             }
                         }
@@ -893,7 +1031,7 @@ pub fn run(
     if !plain {
         ensure!(io::stdin().is_terminal() && io::stdout().is_terminal(), "ASCII Animator needs an interactive terminal; use ascii run <file> --plain --frames N for redirected output");
     }
-    let audible = !plain && !mute && !animation.tones.is_empty();
+    let audible = !plain && !mute && (!animation.tones.is_empty() || !animation.music.is_empty());
     let output = if audible {
         Output::open().context("Could not open ASCII sound output; rerun with --mute")?
     } else {
@@ -926,6 +1064,7 @@ pub fn run(
         let mut next = Instant::now();
         let mut rendered = 0;
         loop {
+            engine.pump_audio()?;
             let now = Instant::now();
             if now >= next {
                 let (cols, rows) = terminal::size()?;
@@ -972,7 +1111,13 @@ pub fn run(
                 }
                 next = Instant::now() + duration;
             }
-            if event::poll(next.saturating_duration_since(Instant::now()))? {
+            let wait = next.saturating_duration_since(Instant::now());
+            let wait = if engine.animation.music.is_empty() {
+                wait
+            } else {
+                wait.min(Duration::from_millis(20))
+            };
+            if event::poll(wait)? {
                 match event::read()? {
                     Event::Key(key) if key.kind != KeyEventKind::Release => {
                         if key.code == KeyCode::Esc

@@ -27,6 +27,10 @@ class Param {
   setValueAtTime(value: number,time: number): this { return this.add(value,time,'set'); }
   linearRampToValueAtTime(value: number,time: number): this { return this.add(value,time,'linear'); }
   exponentialRampToValueAtTime(value: number,time: number): this { return this.add(value,time,'exponential'); }
+  cancelScheduledValues(time: number): this {
+    this.events = this.events.filter(event => event.time < time);
+    this.changed(); return this;
+  }
   snapshot() { return { initial:this.initial, events:this.events }; }
 }
 class Node {

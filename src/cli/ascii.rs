@@ -1,10 +1,9 @@
+use crate::apps::ascii_animator::image::{glyph, limits as image_limits, pixels};
 use crate::{apps::ascii_animator, rune_parser::load_rune_document_from_path};
 use anyhow::{ensure, Context, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use font8x8::{UnicodeFonts, BASIC_FONTS};
-use image::{
-    imageops::FilterType, AnimationDecoder, DynamicImage, ImageDecoder, ImageReader, Limits,
-};
+use image::{AnimationDecoder, DynamicImage, ImageDecoder, ImageReader};
 use std::io::Write;
 
 pub fn command() -> Command {
@@ -173,14 +172,6 @@ fn banner(text: &str, font: &str, ink: char, background: char) -> Result<String>
     Ok(rows.join("\n") + "\n")
 }
 
-fn image_limits() -> Limits {
-    let mut limits = Limits::default();
-    limits.max_image_width = Some(8192);
-    limits.max_image_height = Some(8192);
-    limits.max_alloc = Some(64 * 1024 * 1024);
-    limits
-}
-
 fn image_art(path: &str, width: u16, invert: bool) -> Result<String> {
     let mut reader = ImageReader::open(path)
         .with_context(|| format!("Open image {path}"))?
@@ -193,37 +184,11 @@ fn image_art(path: &str, width: u16, invert: bool) -> Result<String> {
 }
 
 fn pixels_art(image: &DynamicImage, width: u16, invert: bool) -> Result<String> {
-    ensure!(
-        image.width() > 0 && image.height() > 0,
-        "Image must have nonzero dimensions"
-    );
-    let height = (f64::from(image.height()) / f64::from(image.width()) * f64::from(width) * 0.5)
-        .round()
-        .max(1.0) as u32;
-    ensure!(
-        height <= 1000,
-        "ASCII image would exceed 1000 rows; use a smaller --width"
-    );
-    let pixels = image
-        .resize_exact(u32::from(width), height, FilterType::Triangle)
-        .to_rgba8();
-    let ramp = b" .:-=+*#%@";
-    let mut output = String::with_capacity((usize::from(width) + 1) * height as usize);
+    let pixels = pixels(image, width)?;
+    let mut output = String::with_capacity((usize::from(width) + 1) * pixels.height() as usize);
     for row in pixels.rows() {
         for pixel in row {
-            let [r, g, b, a] = pixel.0;
-            // Composite transparent pixels onto black before mapping brightness.
-            let light = (0.2126 * f64::from(r) + 0.7152 * f64::from(g) + 0.0722 * f64::from(b))
-                * f64::from(a)
-                / 255.0;
-            let index = (light / 255.0 * (ramp.len() - 1) as f64).round() as usize;
-            output.push(
-                ramp[if invert {
-                    ramp.len() - 1 - index
-                } else {
-                    index
-                }] as char,
-            );
+            output.push(glyph(*pixel, invert) as char);
         }
         output.push('\n');
     }

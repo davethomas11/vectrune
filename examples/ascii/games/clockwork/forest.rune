@@ -1,0 +1,275 @@
+#!RUNE
+@App
+name = The Thirteenth Bell
+type = ascii-animator
+scene = forest
+
+@AsciiAnimator/forest
+size = [120, 35]
+fps = 30
+logic = forest
+
+@AsciiSprite/courier
+source = assets/courier.gif
+width = 8
+@AsciiSprite/tree
+source = assets/tree.gif
+width = 16
+@AsciiSprite/gear
+source = assets/gear.gif
+width = 20
+@AsciiSprite/ghost
+source = assets/ghost.gif
+width = 10
+@AsciiSprite/seed
+source = assets/seed.gif
+width = 9
+@AsciiSprite/moon
+source = assets/moon.gif
+width = 16
+@AsciiSprite/floor
+source = assets/floor.gif
+width = 15
+@AsciiSprite/mist
+source = assets/mist.gif
+width = 32
+@AsciiSprite/gate
+source = assets/gate.gif
+width = 20
+
+@AsciiMusic/forest_theme
+tempo = 100
+time_signature = 4/4
+bars = 2
+loop = true
+volume = 0.07
+instruments = {"lead": "triangle", "bass": "sine"}
+lead:
+    D4:4 F4:4 A4:4 D4:4 |
+    Eb4:4 F4:4 A4:4 C4:4
+bass:
+    D2:2 -:2 |
+    D2:2 -:2
+@AsciiTone/jump
+frequency = 240
+end_frequency = 620
+duration = 0.09
+volume = 0.06
+wave = triangle
+@AsciiTone/chime
+frequency = 880
+end_frequency = 1320
+duration = 0.3
+volume = 0.1
+wave = sine
+@AsciiTone/ghost_touch
+frequency = 180
+end_frequency = 55
+duration = 0.3
+volume = 0.08
+wave = triangle
+
+@Logic/forest
+state:
+    ticks = 0
+    status = "title"
+    melody = true
+    player = {"x": 5, "y": 21, "vx": 0, "vy": 0, "grounded": true}
+    checkpoint = 5
+    camera = 0
+    direction = 0
+    stride = 0
+    grace = 0
+    jump_buffer = 0
+    invulnerable = 0
+    collected = 0
+    platforms = [{"x": 0, "y": 28, "w": 30}, {"x": 33, "y": 25, "w": 20}, {"x": 55, "y": 22, "w": 20}, {"x": 78, "y": 28, "w": 35}, {"x": 95, "y": 21, "w": 20}, {"x": 123, "y": 25, "w": 20}, {"x": 148, "y": 28, "w": 35}, {"x": 170, "y": 22, "w": 20}, {"x": 195, "y": 26, "w": 20}, {"x": 218, "y": 28, "w": 35}]
+    seeds = [{"x": 39, "y": 20, "taken": false}, {"x": 98, "y": 16, "taken": false}, {"x": 174, "y": 17, "taken": false}]
+    ghosts = [{"x": 108, "y": 20}, {"x": 204, "y": 2}]
+    notice = "The forest's clock has stopped. Bring three clockseeds to its heart."
+    canvas = []
+keys:
+    Enter -> begin
+    ArrowLeft -> left
+    KeyA -> left
+    ArrowRight -> right
+    KeyD -> right
+    Space -> jump
+    ArrowUp -> jump
+    KeyW -> jump
+    ArrowDown -> brake
+    KeyS -> brake
+    KeyP -> pause
+    KeyR -> restart
+    KeyM -> music_toggle
+action initialize:
+    music "forest_theme"
+    call paint
+action begin:
+    if status == "title":
+        status = "playing"
+        call paint
+action left:
+    if status == "playing":
+        direction = -1
+        stride = 18
+action right:
+    if status == "playing":
+        direction = 1
+        stride = 18
+action jump:
+    if status == "playing":
+        jump_buffer = 4
+action brake:
+    player.vx = 0
+    stride = 0
+action pause:
+    if status == "paused":
+        status = "playing"
+        if melody:
+            music.resume
+        stop
+    if status == "playing":
+        status = "paused"
+        music.pause
+action music_toggle:
+    melody = not melody
+    if not melody:
+        music.pause
+        stop
+    if status != "paused":
+        music.resume
+action restart:
+    ticks = 0
+    status = "playing"
+    player = {"x": 5, "y": 21, "vx": 0, "vy": 0, "grounded": true}
+    checkpoint = 5
+    camera = 0
+    direction = 0
+    stride = 0
+    grace = 0
+    jump_buffer = 0
+    collected = 0
+    invulnerable = 0
+    for seed in seeds:
+        seed.taken = false
+    notice = "Three clockseeds. One sleeping forest. No hurry, little lamplighter."
+    music "forest_theme"
+    if not melody:
+        music.pause
+    call paint
+action respawn:
+    player.x = checkpoint
+    player.y = 21
+    player.vx = 0
+    player.vy = 0
+    player.grounded = true
+    stride = 0
+    jump_buffer = 0
+    grace = 0
+    invulnerable = 45
+    notice = "A kindly ghost returns you to the last lantern. Your seeds are safe."
+    if melody:
+        sound "ghost_touch"
+action tick:
+    if status == "paused":
+        call paint
+        stop
+    ticks += 1
+    if status == "playing":
+        dt = 20 / 30
+        oldfeet = player.y + 7
+        if player.grounded:
+            grace = 4
+        if jump_buffer > 0 and (player.grounded or grace > 0):
+            player.vy = -1.6
+            player.grounded = false
+            jump_buffer = 0
+            grace = 0
+            if melody:
+                sound "jump"
+        if jump_buffer > 0:
+            jump_buffer -= 1
+        if stride > 0:
+            player.vx += (direction * 1.12 - player.vx) * 0.48
+            stride -= 1
+        if stride == 0 and player.grounded:
+            player.vx *= 0.6
+        player.x = max(0, min(244, player.x + player.vx * dt))
+        gravity = player.vy < 0 ? 0.16 : 0.19
+        player.vy = min(1.8, player.vy + gravity * dt)
+        player.y += player.vy * dt
+        if grace > 0:
+            grace -= 1
+        player.grounded = false
+        for ledge in platforms:
+            if player.vy >= 0 and oldfeet <= ledge.y + 0.01 and player.y + 7 >= ledge.y and player.x + 8 > ledge.x and player.x < ledge.x + ledge.w:
+                player.y = ledge.y - 7
+                player.vy = 0
+                player.grounded = true
+        if player.grounded and player.x >= 80 and player.x <= 105:
+            checkpoint = 82
+        if player.grounded and player.x >= 150 and player.x <= 175:
+            checkpoint = 152
+        if invulnerable > 0:
+            invulnerable -= 1
+        if player.y > 33:
+            call respawn
+        for ghost in ghosts:
+            ghost_x = floor(ghost.x)
+            ghost_y = floor(ghost.y + sin(ticks * 0.08) * 2)
+            if invulnerable == 0 and floor(player.x) + 7 > ghost_x + 2 and floor(player.x) + 1 < ghost_x + 8 and floor(player.y) + 6 > ghost_y + 1 and floor(player.y) + 1 < ghost_y + 5:
+                call respawn
+        for seed in seeds:
+            if not seed.taken and abs(player.x - seed.x) < 8 and abs(player.y - seed.y) < 6:
+                seed.taken = true
+                collected += 1
+                notice = "A clockseed warms your lantern. The trees remember a little more."
+                if melody:
+                    sound "chime"
+        if player.x >= 229 and collected == 3:
+            status = "won"
+            notice = "The thirteenth bell rings. Even the ghosts have somewhere to go."
+            if melody:
+                sound "chime"
+        if player.x >= 229 and collected < 3:
+            notice = "The heart needs all three clockseeds. R starts a fresh journey."
+    camera = max(0, min(133, player.x - 42))
+    call paint
+action paint:
+    canvas = [{"type": "sprite", "name": "moon", "x": 94 - camera * 0.08, "y": 2, "color": "yellow"}]
+    for i in range(0, 12):
+        canvas.push({"type": "sprite", "name": "tree", "x": i * 25 - camera * 0.35, "y": 6, "color": "gray"})
+    for ledge in platforms:
+        if ledge.x - camera < 120 and ledge.x + ledge.w - camera > -20:
+            canvas.push({"type": "sprite", "name": "gear", "x": ledge.x - camera, "y": ledge.y, "color": "blue"})
+    for x in [0, 15, 78, 93, 98, 148, 163, 168, 218, 233, 238]:
+        canvas.push({"type": "sprite", "name": "floor", "x": x - camera, "y": 28, "color": "cyan"})
+    canvas.push({"type": "sprite", "name": "gate", "x": 230 - camera, "y": 16, "color": collected == 3 ? "yellow" : "magenta"})
+    for seed in seeds:
+        if not seed.taken:
+            canvas.push({"type": "sprite", "name": "seed", "x": seed.x - camera, "y": seed.y, "color": "yellow"})
+    for ghost in ghosts:
+        canvas.push({"type": "sprite", "name": "ghost", "x": ghost.x - camera, "y": ghost.y + sin(ticks * 0.08) * 2, "color": "magenta"})
+    if invulnerable == 0 or ticks % 4 < 2:
+        canvas.push({"type": "sprite", "name": "courier", "x": player.x - camera, "y": player.y, "color": "white"})
+    for i in range(0, 5):
+        canvas.push({"type": "sprite", "name": "mist", "x": (i * 32 + ticks * 0.1) % 160 - 32, "y": 29, "color": "gray"})
+    for row in [0, 33, 34]:
+        canvas.push({"type": "text", "x": 0, "y": row, "text": "                                                                                                                        "})
+    canvas.push({"type": "text", "x": 1, "y": 0, "text": "THE THIRTEENTH BELL   |   CLOCKSEEDS " + collected + "/3   |   MUSIC " + (melody ? "ON" : "OFF"), "color": "cyan"})
+    canvas.push({"type": "text", "x": 1, "y": 33, "text": notice, "color": "yellow"})
+    canvas.push({"type": "text", "x": 1, "y": 34, "text": "A/D or arrows: move  Space: jump  Down/S: brake  P: pause  M: music  R: restart  Q: quit", "color": "cyan"})
+    if status == "title":
+        canvas.push({"type": "box", "x": 29, "y": 10, "width": 61, "height": 11, "fill": true, "color": "blue"})
+        canvas.push({"type": "text", "x": 36, "y": 12, "text": "T H E   T H I R T E E N T H   B E L L", "color": "yellow"})
+        canvas.push({"type": "text", "x": 33, "y": 15, "text": "You are Wick, the forest's last little lamplighter.", "color": "white"})
+        canvas.push({"type": "text", "x": 33, "y": 16, "text": "Climb the gears. Gather three seeds. Wake its heart.", "color": "white"})
+        canvas.push({"type": "text", "x": 43, "y": 18, "text": "ENTER TO LIGHT YOUR LANTERN", "color": "cyan"})
+    if status == "paused":
+        canvas.push({"type": "text", "x": 47, "y": 13, "text": "THE FOREST HOLDS ITS BREATH", "color": "yellow"})
+    if status == "won":
+        canvas.push({"type": "box", "x": 32, "y": 10, "width": 56, "height": 10, "fill": true, "color": "blue"})
+        canvas.push({"type": "text", "x": 41, "y": 12, "text": "THE FOREST TICKS AGAIN", "color": "yellow"})
+        canvas.push({"type": "text", "x": 36, "y": 15, "text": "Thank you, Wick. Tomorrow belongs to everyone.", "color": "white"})
+        canvas.push({"type": "text", "x": 46, "y": 17, "text": "R: ONE MORE MIDNIGHT", "color": "cyan"})

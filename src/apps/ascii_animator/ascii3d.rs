@@ -431,6 +431,7 @@ impl Scene {
                 .get(&entity.sprite)
                 .with_context(|| format!("Unknown Ascii3D entity sprite {}", entity.sprite))?;
             let rows = sprite.frame(ticks, fps, entity.frame)?;
+            let index = sprite.index(ticks, fps, entity.frame);
             let sw = rows.iter().map(String::len).max().unwrap_or(0);
             ensure!(sw > 0, "Ascii3D entity sprite needs nonempty rows");
             if !entity.visible {
@@ -466,7 +467,7 @@ impl Scene {
                     let sy = (v * rows.len() as f64) as usize;
                     let sx = (u * sw as f64) as usize;
                     if let Some(&glyph) = rows[sy].as_bytes().get(sx) {
-                        if glyph != b' ' {
+                        if sprite.opaque(index, sy, sx, glyph) {
                             frame.put(x + col as i32, y + row as i32, glyph, entity.color);
                             depth[row * width + col] = forward;
                         }

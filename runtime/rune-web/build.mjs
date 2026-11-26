@@ -52,6 +52,12 @@ await build({
 console.log('Built dist/rune-native-audio.js');
 
 await build({
+  entryPoints: ['src/ascii_audio.ts'], bundle: true, minify: false,
+  format: 'iife', globalName: '__RuneAsciiAudio', outfile: 'dist/rune-ascii-audio.js', target: ['es2020'],
+});
+console.log('Built dist/rune-ascii-audio.js');
+
+await build({
   entryPoints: ['src/vect.ts'], bundle: true, minify: false,
   format: 'iife', globalName: '__RuneVect', outfile: 'dist/rune-vect.js', target: ['es2020'],
 });

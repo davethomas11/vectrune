@@ -1,6 +1,5 @@
 //! Shared-synth voice bridge and bounded native PCM mixer.
 //! QuickJS runs on the window thread. The audio callback only consumes voice data.
-#[cfg(any(feature = "pixel-desktop", test))]
 use anyhow::Context as _;
 use anyhow::{ensure, Result};
 use crossbeam_queue::ArrayQueue;
@@ -56,7 +55,6 @@ impl Envelope {
         }
         value
     }
-    #[cfg(any(feature = "pixel-desktop", test))]
     fn valid(&self) -> bool {
         self.initial.is_finite()
             && self.events.len() <= 64
@@ -114,7 +112,6 @@ enum Command {
     Gain { gain: Gain },
 }
 impl Command {
-    #[cfg(any(feature = "pixel-desktop", test))]
     fn valid(&self) -> bool {
         match self {
             Self::Gain { gain } => gain.envelope.valid(),
@@ -277,7 +274,6 @@ impl Bridge {
         }
         Ok(())
     }
-    #[cfg(any(feature = "pixel-desktop", test))]
     pub fn install(&self, context: &rquickjs::Context) -> Result<()> {
         context
             .with(|ctx| -> Result<()> {
@@ -319,6 +315,11 @@ impl Bridge {
                             }
                             if sender.push(command).is_err() {
                                 bridge.stats.dropped.fetch_add(1, Ordering::Relaxed);
+                                return Err(rquickjs::Error::new_from_js_message(
+                                    "audio command",
+                                    "native audio",
+                                    "Native audio queue is full",
+                                ));
                             }
                             Ok(())
                         },

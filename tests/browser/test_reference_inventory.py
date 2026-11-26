@@ -112,11 +112,15 @@ class ReferenceInventoryTests(unittest.TestCase):
             self.assertIn('vectrune ascii image', page)
             self.assertIn('vectrune ascii text', page)
             self.assertIn('The Kingdom of Borrowed Mornings', page)
+            self.assertIn('AsciiMusic scores (unreleased prototype)', page)
+            self.assertIn('@AsciiMusic/haunted', page)
+            self.assertIn('120x36 terminal', page)
             self.assertIn('--commands', page)
             self.assertNotIn('vectrune ascii demo', page)
             library = Path(folder, 'docs/library/declarations/index.html').read_text(encoding='utf-8')
             self.assertIn('id="ascii3d--repeat-y"', library)
             self.assertIn('id="ascii-tone--end-frequency"', library)
+            self.assertIn('id="ascii-music--tempo"', library)
             search = json.loads(Path(folder, 'docs/search-index.json').read_text(encoding='utf-8'))
             entry = next(item for item in search if item['name'] == '@Ascii3D')
             self.assertEqual(entry['runtime'], 'ASCII Animator native CLI only')
@@ -128,13 +132,23 @@ class ReferenceInventoryTests(unittest.TestCase):
                                      (ROOT / 'examples/ascii' / (name + '.rune')).read_bytes())
                 for name in ['borrowed_morning.rune', 'borrowed_morning/scenes.rune', 'borrowed_morning/README.md']:
                     self.assertEqual(archive.read('ascii/' + name), (ROOT / 'examples/ascii' / name).read_bytes())
-                self.assertEqual(len(archive.namelist()), 12)
+                clockwork = ROOT / 'examples/ascii/games/clockwork'
+                for source in [clockwork / 'forest.rune', clockwork / 'README.md',
+                               clockwork / 'build_assets.py', *sorted((clockwork / 'assets').glob('*.gif'))]:
+                    self.assertEqual(archive.read('ascii/games/clockwork/' + source.relative_to(clockwork).as_posix()),
+                                     source.read_bytes())
+                self.assertEqual(len(archive.namelist()), 24)
                 archive.extractall(Path(folder, 'extracted'))
             output = subprocess.run(
                 [str(BINARY), 'ascii', 'run', 'ascii/borrowed_morning.rune',
                  '--plain', '--commands', 'begin'],
                 cwd=Path(folder, 'extracted'), capture_output=True, text=True, check=True)
             self.assertIn("Royal Sock-Mender", output.stdout)
+            output = subprocess.run(
+                [str(BINARY), 'ascii', 'run', 'ascii/games/clockwork/forest.rune',
+                 '--plain', '--frames', '2', '--keys', 'Enter'],
+                cwd=Path(folder, 'extracted'), capture_output=True, text=True, check=True)
+            self.assertIn('THE THIRTEENTH BELL', output.stdout)
             self.assertEqual(output.stderr, '')
 
 

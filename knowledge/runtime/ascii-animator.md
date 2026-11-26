@@ -31,6 +31,35 @@ host when `@App type = ascii-animator`; document export remains available with
 
 ## CLI generators
 
+### GIF-backed sprites (unreleased prototype)
+
+```rune
+@AsciiSprite/courier
+source = "assets/courier.gif"
+width = 6
+```
+
+GIF sprites decode once at compile/startup, relative to the declaring Rune
+file (including imported files), not the process working directory. A document
+without source-path metadata cannot load disk sprites. The file must be a GIF;
+missing/corrupt inputs fail explicitly. `width` is an integer 1-240 (default 16);
+height uses the same terminal-cell aspect correction as `ascii image`.
+`invert` is optional, boolean and defaults to false.
+
+`source` replaces inline `frames` and cannot combine with `fps`: composited GIF
+delays own automatic timing, using the animator's deterministic tick clock and
+continuous loops. Zero delays become 1 ms. Explicit canvas `frame` still selects
+a frame. Limits: 120 frames, 80 rows, 8192x8192 decode dimensions, 64 MiB decoder
+allocation and 8 MiB converted characters/masks per sprite.
+
+Alpha is kept separately from brightness: cells with resized alpha below 128
+are transparent; opaque black becomes a space that covers previous layers.
+Inline sprite spaces keep their existing transparent behavior. Ascii3D billboard
+entities also use the alpha mask; wall textures remain opaque.
+The brightness ramp, resize filter and aspect correction are shared with CLI
+image conversion. See [The Thirteenth Bell](../examples/clockwork-forest.md) for
+an original GIF-asset platformer and haunted synth theme.
+
 `ascii generate` produces an editable, runnable `.rune` animation: text bounces
 inside a bordered canvas, and Space pauses/resumes. `--text` defaults to
 `Hello, ASCII!`, `--width` to 60 (3-240), and `--height` to 12 (3-80).
@@ -240,12 +269,12 @@ range and linearly sweeps from the starting frequency. `duration` is seconds
 from 0.01-1 (default 0.1); `volume` is 0-0.5 (default 0.15); `wave` is
 `sine` (default), `square`, `triangle`, `sawtooth`, or `noise`. A short attack
 and release soften clicks. Up to 64 tones may be declared. Only the literal
-`sound "name"` form is supported: unknown names, parameters, music commands,
+`sound "name"` form is supported: unknown names, parameters,
 and browser sound aliases are rejected. At most 32 cues may be emitted per
 top-level action invocation, including nested calls.
 
 Interactive playback reuses the desktop game's native PCM mixer and opens the
-default audio device only when tones are declared. `--mute` skips the device,
+default audio device only when tones or music are declared. `--mute` skips the device,
 including direct execution (`vectrune sentinel.rune --mute`). `--plain` and
 headless engines are always silent, while still validating and consuming cues.
 Cues are consumed once after each action and can overlap; they do not block
@@ -255,6 +284,61 @@ if no usable device exists, rerun with `--mute`.
 Sentinel provides shot, hit, destroyed-drone, hurt, win and loss cues. Its shot
 cooldown also limits repeated sound; pause/title screens do not emit cues.
 No sound files, music sequencer, or WebAudio setup are needed.
+
+## Score-based music (unreleased prototype)
+
+`@AsciiMusic` reuses Rune-Web's `@Music` parser, note scheduler and synth through
+the native PCM adapter; it does not require individual `@AsciiTone` notes.
+
+```rune
+@AsciiMusic/haunted
+tempo = 100
+time_signature = 4/4
+bars = 2
+loop = true
+volume = 0.07
+instruments = {"lead": "triangle", "bass": "sine"}
+lead:
+    D4:4 F4:4 A4:4 D4:4 |
+    Eb4:4 F4:4 A4:4 C4:4
+bass:
+    D2:2 -:2 |
+    D2:2 -:2
+
+# Inside @Logic actions:
+music "haunted"
+music.pause
+music.resume
+music.stop
+```
+
+Fields follow the shared music vocabulary: `type`/`style` (8bit default,
+chiptune or synth), `tempo`/`bpm` (21-399, default 128), `time_signature`/`meter`
+(4/4 default or 3/4), optional integer `bars`/`measures` (1-64),
+`loop`/`loop_track` (boolean, default true), `volume` (0-0.5, default 0.2),
+`lead`/`melody`, `bass`, `drums`/`percussion`, custom named note tracks and
+`instruments` (shared instrument names). Scores may use multiline tracks or
+quoted inline strings. Quote inline chords so Rune does not parse them as arrays.
+
+Notes A-G with optional sharp/flat and octave 0-8 use `:1`, `:2`, `:4`, `:8`,
+`:16` or `:32` duration (default :8). `-`, `R` and `_` are rests; `|` separates
+bars. Chords use `[D4,F4,A4]:4` or `D4+F4+A4:4`; at most eight pitches per chord.
+Drums are kick, snare, hihat, crash or tom. Invalid notes fail at engine startup
+even in muted/plain mode; no unknown-note A4 fallback is exposed.
+
+Limits: 32 scores, eight channels (three standard plus five custom), 4096
+note/rest events and 64 KiB serialized data per score. Effects, arrangements,
+runtime composition and other browser music aliases are explicitly unsupported.
+Score names are case-insensitive; play starts/restarts a score, pause parks its
+beat, resume continues it, stop clears it. Declare a score before using controls.
+At most 32 combined tone/music operations are allowed per top-level action.
+
+Music uses the audio sample clock, independent of simulation ticks; interactive
+playback pumps scheduling at least every 20 ms even at low canvas FPS.
+`--mute`/`--plain` never open a device. Exiting drops the mixer and pending voices.
+Pause music explicitly when pausing a game's logic; scene pause is not automatic.
+Short sweep effects can remain `@AsciiTone`. See
+[The Thirteenth Bell](../examples/clockwork-forest.md).
 
 Linux source builds require ALSA development headers (`libasound2-dev` on
 Debian/Ubuntu, `alsa-lib-devel` on Fedora). Release builds compile a pinned
@@ -267,7 +351,8 @@ source kit. See [native audio builds](../../docs/native-audio-builds.md).
 
 Supported action statements are assignments (including compound assignments),
 array `.push(...)`, postfix `++`/`--`, `increment`, `decrement`, `invert`,
-`delete`, `push`, `swap`, `stop`, `sound "declared-tone"`, and `call <declared action>`, nested inside
+`delete`, `push`, `swap`, `stop`, `sound "declared-tone"`, score music commands,
+and `call <declared action>`, nested inside
 ordinary conditionals, loops and matches. Unknown statements and I/O commands
 are rejected at compile time instead of being silently ignored.
 

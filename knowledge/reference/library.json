@@ -145,7 +145,7 @@
       "example": "@AsciiTone/shot\nfrequency = 1000\nend_frequency = 160\nduration = 0.07\nwave = square\nvolume = 0.12",
       "parameters": [],
       "aliases": [],
-      "notes": ["Available in v0.3.12. Only sound \"literal-name\" is accepted in ASCII actions; no music, sound.play aliases or parameters.", "--mute skips the audio device; --plain and headless engines are always silent. Cues are consumed once per action; closing the app stops sound.", "Linux source builds need ALSA development headers. Static musl playback cannot load external ALSA plugins; use a GNU build or --mute for plugin-only configurations."],
+      "notes": ["Available in v0.3.12. Only sound \"literal-name\" is accepted for ASCII tone cues; no sound.play aliases or parameters. Unreleased score music uses @AsciiMusic separately.", "--mute skips the audio device; --plain and headless engines are always silent. Cues are consumed once per action; closing the app stops sound.", "Linux source builds need ALSA development headers. Static musl playback cannot load external ALSA plugins; use a GNU build or --mute for plugin-only configurations."],
       "fields": [
         {"name": "frequency", "type": "number", "default": "required", "description": "Starting frequency, 20-8000 Hz."},
         {"name": "end_frequency", "type": "number", "default": "frequency", "description": "Optional linear sweep endpoint, 20-8000 Hz."},
@@ -171,6 +171,33 @@
       "fields": []
     },
     {
+      "id": "ascii-music",
+      "category": "declarations",
+      "name": "@AsciiMusic",
+      "signature": "@AsciiMusic/<name>",
+      "summary": "Define a native terminal synth score using Rune-Web music notation.",
+      "runtime": "ASCII Animator native CLI only; unreleased prototype",
+      "sources": ["src/apps/ascii_animator/music.rs", "runtime/rune-web/src/ascii_audio.ts", "examples/ascii/games/clockwork/forest.rune"],
+      "returns": "Named score controlled with music \"name\", music.pause, music.resume and music.stop.",
+      "errors": "Invalid metadata, notes and names fail explicitly. Effects and arrangements are unsupported. Limits: 32 scores, eight channels, 4096 events and 64 KiB per score.",
+      "example": "@AsciiMusic/haunted\ntempo = 100\nvolume = 0.07\nlead:\n    D4:4 F4:4 A4:4 D4:4\nbass:\n    D2:2 -:2",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Unreleased; not part of v0.3.12. Reuses Rune-Web's parser, scheduler and synth.", "Native audio sample clock; --mute and --plain never open a device. Music does not automatically pause with game state.", "Notes use octave 0-8, optional sharp/flat, durations :1/:2/:4/:8/:16/:32, rests -/R/_, | bars and chords. Quote inline chord strings."],
+      "fields": [
+        {"name": "type", "type": "string", "default": "8bit", "description": "8bit, chiptune or synth; style alias."},
+        {"name": "tempo", "type": "number", "default": "128", "description": "BPM 21-399; bpm alias."},
+        {"name": "time_signature", "type": "string", "default": "4/4", "description": "4/4 or 3/4; meter alias."},
+        {"name": "bars", "type": "integer", "default": "inferred", "description": "Optional 1-64 bars; measures alias."},
+        {"name": "loop", "type": "boolean", "default": "true", "description": "Repeat the score; loop_track alias."},
+        {"name": "volume", "type": "number", "default": "0.2", "description": "Score volume 0-0.5."},
+        {"name": "lead", "type": "note string or series", "default": "none", "description": "Lead score; melody alias."},
+        {"name": "bass", "type": "note string or series", "default": "none", "description": "Bass score."},
+        {"name": "drums", "type": "note string or series", "default": "none", "description": "Drum score; percussion alias."},
+        {"name": "instruments", "type": "object", "default": "channel defaults", "description": "Map standard/custom channels to shared synth instrument names. Other named string/series fields define up to five custom tracks."}
+      ]
+    },
+    {
       "id": "ascii-sprite",
       "category": "declarations",
       "name": "@AsciiSprite",
@@ -178,15 +205,18 @@
       "summary": "Define reusable animated printable-ASCII sprite frames for ASCII Animator.",
       "runtime": "ASCII Animator native CLI only",
       "sources": ["src/apps/ascii_animator.rs", "examples/ascii/aquarium.rune"],
-      "returns": "Named sprite frames, with transparent spaces; canvas sprite objects select color and position.",
-      "errors": "Frames require 1-120 arrays, each with 1-80 printable ASCII rows of at most 240 characters.",
+      "returns": "Named sprite frames; inline spaces and GIF alpha cells are transparent. Canvas sprite objects select color and position.",
+      "errors": "Frames require 1-120 arrays, each with 1-80 printable ASCII rows of at most 240 characters. GIF source errors include missing/corrupt files, size limits and incompatible frames/fps fields.",
       "example": "@AsciiSprite/fish\nfps = 3\nframes = [[\"><(((o>\"], [\"><((o>\"]]",
       "parameters": [],
       "aliases": [],
-      "notes": ["Available in v0.3.12. Automatic playback is deterministic from simulation ticks; frame zero is shown during initialization."],
+      "notes": ["Inline frames available in v0.3.12. Automatic playback is deterministic from simulation ticks; frame zero is shown during initialization.", "Unreleased prototype: source loads a GIF once relative to the declaring file. GIF delays replace fps; alpha below 128 is transparent, but opaque black spaces cover previous layers."],
       "fields": [
-        {"name": "frames", "type": "array of row arrays", "default": "required", "description": "Required array of frames; each frame is an array of quoted ASCII rows."},
-        {"name": "fps", "type": "integer", "default": "8", "description": "Integer sprite frame rate 1-60; default 8."}
+        {"name": "frames", "type": "array of row arrays", "default": "required unless source", "description": "Array of frames; each frame is an array of quoted ASCII rows. Cannot combine with source."},
+        {"name": "fps", "type": "integer", "default": "8", "description": "Integer inline sprite frame rate 1-60; cannot combine with source."},
+        {"name": "source", "type": "string", "default": "none", "description": "Unreleased: file-relative GIF asset decoded once at startup; cannot combine with frames/fps."},
+        {"name": "width", "type": "integer", "default": "16", "description": "Unreleased: GIF source terminal width 1-240; requires source."},
+        {"name": "invert", "type": "boolean", "default": "false", "description": "Unreleased: reverse the GIF brightness ramp; requires source."}
       ]
     },
     {

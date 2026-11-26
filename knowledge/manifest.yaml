@@ -4,6 +4,19 @@ purpose:
   - shared knowledge source for AI and docs
   - stable reference layer between runtime behavior and rendered docs
 pages:
+  - id: example.clockwork-forest
+    path: examples/clockwork-forest.md
+    kind: page
+    title: The Thirteenth Bell
+    audience: [ai, human]
+    sources:
+      - examples/ascii/games/clockwork/forest.rune
+      - src/apps/ascii_animator/image.rs
+      - src/apps/ascii_animator/music.rs
+      - runtime/rune-web/src/ascii_audio.ts
+      - tests/ascii_music.rs
+      - tests/clockwork_forest.rs
+      - tests/ascii_gif_sprites.rs
   - id: example.borrowed-morning
     path: examples/borrowed-morning.md
     kind: page

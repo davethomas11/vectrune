@@ -650,7 +650,7 @@ fn parse_sound_section(section: &crate::rune_ast::Section) -> SoundDefinition {
     }
 }
 
-fn parse_music_section(section: &crate::rune_ast::Section) -> Result<MusicDefinition, ParseError> {
+pub(crate) fn parse_music_section(section: &crate::rune_ast::Section) -> Result<MusicDefinition, ParseError> {
     let music_type = section.kv.get("type")
         .or_else(|| section.kv.get("style"))
         .and_then(|v| v.as_str())

@@ -21,7 +21,7 @@ class AsciiTerminalTests(unittest.TestCase):
     def play(self, args, key=None, resize=False, exit_after=None):
         master, slave = pty.openpty()
         original = termios.tcgetattr(slave)
-        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 90, 0, 0))
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 36, 120, 0, 0))
         process = subprocess.Popen(
             [str(BINARY), *args], stdin=slave, stdout=slave, stderr=slave, cwd=ROOT
         )
@@ -98,6 +98,16 @@ class AsciiTerminalTests(unittest.TestCase):
     def test_direct_ascii_launch_can_skip_audio_device(self):
         code, output = self.play(["examples/ascii/sentinel.rune", "--mute"], key=b"q")
         self.assertEqual(code, 0, output)
+
+    def test_clockwork_gif_platformer_moves_jumps_pauses_and_restores_terminal(self):
+        code, output = self.play(
+            ["ascii", "run", "examples/ascii/games/clockwork/forest.rune", "--mute"],
+            key=b"\rd p",
+            exit_after=b"THE FOREST HOLDS ITS BREATH",
+        )
+        self.assertEqual(code, 0, output)
+        self.assertIn(b"THE THIRTEENTH BELL", output)
+        self.assertIn(b"THE FOREST HOLDS ITS BREATH", output)
 
     def test_adventure_prompt_edits_input_and_does_not_reserve_q(self):
         code, output = self.play(
