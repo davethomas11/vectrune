@@ -23,7 +23,7 @@ gate stays clear of the final jump.
 Ghosts have bright solid bodies, large dark eyes and a small mouth. The GIF
 palette reserves transparency separately so the body remains visible.
 
-Nine original GIFs are loaded once from disk: courier, trees, moon, gears,
+Ten original GIFs are loaded once from disk: courier, jump poses, trees, moon, gears,
 floor, clockseeds, ghosts, mist and the heart gate. The scene layers parallax
 trees, platforms, actors, mist and HUD in draw order. GIF delays drive sprite
 animation; collision uses separate rectangles. The gears rotate visually
@@ -36,6 +36,11 @@ grace period and decelerates; Down/S stops immediately, including in the air.
 Quicker acceleration and a slightly faster jump/descent keep the earlier jump
 height while reducing hang time. Pausing freezes gameplay and music, not the
 host's GIF animation clock.
+
+Wick's hood, dark face, bright eyes, boots and lantern use a clearer silhouette.
+His walk frame advances with distance traveled only while grounded; idle uses
+a still pose. A separate `courier_jump.gif` provides rising/falling poses.
+Explicit frames keep his pose still while paused without freezing scenery.
 
 The theme uses `@AsciiMusic/forest_theme` with two bars of `lead:` and `bass:`
 notation, not individual frequency declarations. `music "forest_theme"` starts

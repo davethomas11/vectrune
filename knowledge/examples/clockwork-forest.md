@@ -19,13 +19,17 @@ details, not nearest-neighbor enlarged. Runtime widths and collision rectangles
 remain in world coordinates (courier 48x80 source -> 11x9 terminal cells).
 
 All scenery and actor artwork is loaded from original on-disk GIFs at compile/
-startup time. Nine reusable sprites layer parallax trees, moon, gears, terrain,
+startup time. Ten reusable sprites layer parallax trees, moon, gears, terrain,
 seeds, ghosts, courier and foreground mist. Text-only HUD/title overlays remain
 normal canvas objects. An original two-bar D-minor `@AsciiMusic` score uses
 triangle lead and sine bass, reusing Rune-Web's score parser, scheduler and synth.
 M pauses/resumes music and disables/enables new sound effects;
 `--mute` avoids opening a device. P freezes gameplay/music; sprite animations
 continue on the host clock.
+Wick has a distance-driven grounded walk cycle, fixed idle frame and separate
+rising/falling GIF poses. Explicit frame selection freezes his animation on
+pause. The redesigned hood/face/eyes, boots and lantern keep the same dimensions
+and collision bounds.
 
 Requires the unreleased GIF sprite/music runtime and a 160x48 terminal.
 The canvas is 160x47 at 30 FPS with larger sprites. Scene positions scale by 4/3

@@ -59,22 +59,41 @@ def asset(name, size, paint, count=8):
                    optimize=False)
 
 
+def lamplighter(draw, stride=0, airborne=None):
+    draw.polygon([(2, 5), (3, 2), (6, 0.5), (9, 3), (9, 7), (2, 7)],
+                 fill=(215, 215, 215))
+    draw.ellipse((3, 3, 8, 8), fill=(45, 45, 45))
+    draw.rectangle((4, 4.5, 5, 5.5), fill="white")
+    draw.rectangle((6.5, 4.5, 7.5, 5.5), fill="white")
+    draw.line([(3, 2.5), (6, 1), (8, 3)], fill="white", width=0.5)
+    tail = 1 if airborne is not None else stride * 0.6
+    draw.polygon([(3, 8), (8, 8), (9.5, 15), (2 + tail, 16), (1, 13)],
+                 fill=(180, 180, 180))
+    draw.line([(3, 8), (7.5, 8)], fill="white", width=1)
+    draw.line([(5, 9), (4, 14)], fill=(70, 70, 70), width=0.7)
+    draw.line([(7, 9), (8, 14)], fill=(230, 230, 230), width=0.6)
+    boots = [(3 + stride, 19), (7 - stride, 19)]
+    if airborne == 0:
+        boots = [(3, 17), (8, 18)]
+    if airborne == 1:
+        boots = [(4, 19), (7, 18)]
+    for hip, (x, y) in zip([4, 7], boots):
+        draw.line([(hip, 15), (x, y - 1)], fill=(150, 150, 150), width=1.3)
+        draw.rectangle((x - 0.7, y - 1, x + 1.2, y), fill="white")
+    lantern_y = 9 if airborne == 0 else 10
+    draw.line([(8, 9), (10, lantern_y)], fill="white", width=1)
+    draw.arc((9, lantern_y - 1, 11, lantern_y + 1), 180, 360, fill="white", width=0.5)
+    draw.rectangle((9, lantern_y, 11, lantern_y + 3), fill="white")
+    draw.rectangle((9.4, lantern_y + 0.5, 10.6, lantern_y + 2.5), fill=(50, 50, 50))
+    draw.ellipse((9.6, lantern_y + 0.8, 10.4, lantern_y + 2.2), fill="white")
+
+
 def courier(draw, frame):
-    sway = math.sin(frame * math.pi / 4) * 0.7
-    draw.polygon([(2, 4), (6, 0), (10, 4)], fill=(185, 185, 185))
-    draw.rectangle((3, 4, 8, 8), fill="white")
-    draw.rectangle((4, 6, 7, 6), fill="black")
-    draw.polygon([(3, 9), (8, 9), (11, 16), (0, 16)], fill=(190, 190, 190))
-    draw.line([(3 + sway, 16), (2 + sway, 19)], fill="white", width=2)
-    draw.line([(8 - sway, 16), (9 - sway, 19)], fill="white", width=2)
-    draw.rectangle((9, 9, 11, 12), fill="white")
-    draw.line([(3, 4), (6, 1), (8, 3)], fill="white", width=0.4)
-    draw.line([(5, 10), (3, 15)], fill=(100, 100, 100), width=0.6)
-    draw.line([(7, 10), (9, 15)], fill=(120, 120, 120), width=0.5)
-    draw.line([(3, 9), (8, 9)], fill="white", width=0.4)
-    draw.rectangle((9.4, 9.5, 10.6, 11.5), fill=(80, 80, 80))
-    glow = 190 + round(60 * (1 + math.sin(frame * math.pi / 4)) / 2)
-    draw.ellipse((9.6, 10, 10.4, 11.2), fill=(glow, glow, glow))
+    lamplighter(draw, math.sin(frame * math.pi / 4) * 1.2)
+
+
+def courier_jump(draw, frame):
+    lamplighter(draw, airborne=frame)
 
 
 def tree(draw, frame):
@@ -181,6 +200,7 @@ def gate(draw, frame):
 
 
 asset("courier", (12, 20), courier)
+asset("courier_jump", (12, 20), courier_jump, 2)
 asset("tree", (24, 64), tree)
 asset("gear", (32, 32), gear)
 asset("ghost", (16, 20), ghost)
@@ -189,4 +209,4 @@ asset("moon", (24, 24), moon, 2)
 asset("floor", (24, 12), floor)
 asset("mist", (48, 16), mist)
 asset("gate", (32, 40), gate)
-print(f"Rebuilt {', '.join(sys.argv[1:]) if len(sys.argv) > 1 else '9 GIF assets'} in {ROOT}")
+print(f"Rebuilt {', '.join(sys.argv[1:]) if len(sys.argv) > 1 else '10 GIF assets'} in {ROOT}")

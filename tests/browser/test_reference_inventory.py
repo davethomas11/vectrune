@@ -137,7 +137,7 @@ class ReferenceInventoryTests(unittest.TestCase):
                                clockwork / 'build_assets.py', *sorted((clockwork / 'assets').glob('*.gif'))]:
                     self.assertEqual(archive.read('ascii/games/clockwork/' + source.relative_to(clockwork).as_posix()),
                                      source.read_bytes())
-                self.assertEqual(len(archive.namelist()), 24)
+                self.assertEqual(len(archive.namelist()), 25)
                 archive.extractall(Path(folder, 'extracted'))
             output = subprocess.run(
                 [str(BINARY), 'ascii', 'run', 'ascii/borrowed_morning.rune',

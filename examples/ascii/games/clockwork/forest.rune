@@ -12,6 +12,9 @@ logic = forest
 @AsciiSprite/courier
 source = assets/courier.gif
 width = 11
+@AsciiSprite/courier_jump
+source = assets/courier_jump.gif
+width = 11
 @AsciiSprite/tree
 source = assets/tree.gif
 width = 21
@@ -81,6 +84,7 @@ state:
     stride = 0
     grace = 0
     jump_buffer = 0
+    walk_cycle = 0
     invulnerable = 0
     collected = 0
     platforms = [{"x": 0, "y": 28, "w": 30}, {"x": 33, "y": 25, "w": 20}, {"x": 55, "y": 22, "w": 20}, {"x": 78, "y": 28, "w": 35}, {"x": 95, "y": 21, "w": 20}, {"x": 123, "y": 25, "w": 20}, {"x": 148, "y": 28, "w": 35}, {"x": 170, "y": 22, "w": 20}, {"x": 195, "y": 26, "w": 20}, {"x": 218, "y": 28, "w": 35}]
@@ -149,6 +153,7 @@ action restart:
     stride = 0
     grace = 0
     jump_buffer = 0
+    walk_cycle = 0
     collected = 0
     invulnerable = 0
     for seed in seeds:
@@ -166,6 +171,7 @@ action respawn:
     player.grounded = true
     stride = 0
     jump_buffer = 0
+    walk_cycle = 0
     grace = 0
     invulnerable = 45
     notice = "A kindly ghost returns you to the last lantern. Your seeds are safe."
@@ -178,6 +184,7 @@ action tick:
     ticks += 1
     if status == "playing":
         dt = 20 / 30
+        oldx = player.x
         oldfeet = player.y + 7
         if player.grounded:
             grace = 4
@@ -207,6 +214,10 @@ action tick:
                 player.y = ledge.y - 7
                 player.vy = 0
                 player.grounded = true
+        if player.grounded and abs(player.x - oldx) > 0.02:
+            walk_cycle += abs(player.x - oldx) * 0.55
+        if player.grounded and abs(player.vx) < 0.05:
+            walk_cycle = 0
         if player.grounded and player.x >= 80 and player.x <= 105:
             checkpoint = 82
         if player.grounded and player.x >= 150 and player.x <= 175:
@@ -252,7 +263,9 @@ action paint:
     for ghost in ghosts:
         canvas.push({"type": "sprite", "name": "ghost", "x": ghost.x - camera, "y": ghost.y + sin(ticks * 0.08) * 2, "color": "magenta"})
     if invulnerable == 0 or ticks % 4 < 2:
-        canvas.push({"type": "sprite", "name": "courier", "x": player.x - camera, "y": player.y, "color": "white"})
+        courier_name = player.grounded ? "courier" : "courier_jump"
+        courier_frame = player.grounded ? floor(walk_cycle) % 8 : (player.vy < 0 ? 0 : 1)
+        canvas.push({"type": "sprite", "name": courier_name, "frame": courier_frame, "x": player.x - camera, "y": player.y, "color": "white"})
     for i in range(0, 5):
         canvas.push({"type": "sprite", "name": "mist", "x": (i * 32 + ticks * 0.1) % 160 - 32, "y": 29, "color": "gray"})
     for object in canvas:

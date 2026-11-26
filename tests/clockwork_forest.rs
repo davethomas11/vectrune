@@ -20,6 +20,49 @@ fn state(game: &Engine) -> Value {
     game.snapshot().unwrap()["state"].clone()
 }
 
+fn courier_pose(game: &Engine) -> Value {
+    state(game)["canvas"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|object| object["name"] == "courier" || object["name"] == "courier_jump")
+        .unwrap()
+        .clone()
+}
+
+#[test]
+fn courier_is_still_at_rest_walks_with_motion_and_poses_in_the_air() {
+    let mut game = game();
+    game.key("Enter").unwrap();
+    for _ in 0..12 {
+        game.step().unwrap();
+        assert_eq!(courier_pose(&game)["frame"], 0);
+        assert_eq!(courier_pose(&game)["name"], "courier");
+    }
+    game.key("ArrowRight").unwrap();
+    for _ in 0..6 {
+        game.step().unwrap();
+    }
+    assert_ne!(courier_pose(&game)["frame"], 0);
+    game.key("KeyS").unwrap();
+    game.step().unwrap();
+    assert_eq!(courier_pose(&game)["frame"], 0);
+    game.key("Space").unwrap();
+    game.step().unwrap();
+    assert_eq!(courier_pose(&game)["name"], "courier_jump");
+    assert_eq!(courier_pose(&game)["frame"], 0);
+    for _ in 0..16 {
+        game.step().unwrap();
+    }
+    assert_eq!(courier_pose(&game)["frame"], 1);
+    game.key("KeyP").unwrap();
+    let paused = courier_pose(&game);
+    for _ in 0..6 {
+        game.step().unwrap();
+    }
+    assert_eq!(courier_pose(&game), paused);
+}
+
 #[test]
 fn larger_view_scales_scene_positions_without_changing_world_physics() {
     let mut game = game();
@@ -47,6 +90,7 @@ fn larger_view_scales_scene_positions_without_changing_world_physics() {
 fn detailed_source_assets_keep_their_terminal_dimensions() {
     for (name, source, width, rows) in [
         ("courier", (48, 80), 11, 9),
+        ("courier_jump", (48, 80), 11, 9),
         ("tree", (96, 256), 21, 28),
         ("gear", (128, 128), 27, 14),
         ("ghost", (64, 80), 13, 8),
