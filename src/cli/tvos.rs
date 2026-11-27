@@ -448,13 +448,22 @@ fn build_runtime(source: &Path, output: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Writes only when the content differs, so unchanged files keep their modification time for Xcode.
+fn write_if_changed(path: &Path, contents: impl AsRef<[u8]>) -> Result<()> {
+    let contents = contents.as_ref();
+    if std::fs::read(path).map(|old| old == contents).unwrap_or(false) {
+        return Ok(());
+    }
+    std::fs::write(path, contents).with_context(|| format!("Cannot write {}", path.display()))
+}
+
 fn copy_runtime(libs: &Path, output: &Path) -> Result<()> {
     for (_, slice) in RUNTIME_SLICES {
         let from = libs.join(slice).join(RUNTIME_LIBRARY);
         ensure!(from.is_file(), "Missing runtime library {}", from.display());
         let destination = output.join(slice);
         std::fs::create_dir_all(&destination)?;
-        std::fs::copy(&from, destination.join(RUNTIME_LIBRARY))?;
+        write_if_changed(&destination.join(RUNTIME_LIBRARY), std::fs::read(&from)?)?;
     }
     Ok(())
 }
@@ -501,12 +510,12 @@ fn write_project(spec: &ProjectSpec, output: &Path, runtime: RuntimeSource) -> R
     for directory in [output.join("Sources"), output.join("Resources"), project.clone()] {
         std::fs::create_dir_all(&directory)?;
     }
-    std::fs::write(output.join("Sources/RuneTVHost.swift"), HOST_SOURCE)?;
-    std::fs::write(output.join("Resources/game.js"), &game.script)?;
-    std::fs::write(output.join("Info.plist"), INFO_PLIST.replace("{{NAME}}", spec.name))?;
+    write_if_changed(&output.join("Sources/RuneTVHost.swift"), HOST_SOURCE)?;
+    write_if_changed(&output.join("Resources/game.js"), &game.script)?;
+    write_if_changed(&output.join("Info.plist"), INFO_PLIST.replace("{{NAME}}", spec.name))?;
     tvos_icon::write_assets(spec.icon, &output.join("Assets.xcassets"))?;
-    std::fs::write(
-        project.join("project.pbxproj"),
+    write_if_changed(
+        &project.join("project.pbxproj"),
         PROJECT_TEMPLATE
             .replace("{{NAME}}", spec.name)
             .replace("{{BUNDLE_ID}}", spec.bundle_id)

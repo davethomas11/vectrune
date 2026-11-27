@@ -90,6 +90,22 @@ fn imagestack(dir: &Path, art: &RgbaImage, back: Rgba<u8>, width: u32, height: u
 
 /// Writes `Assets.xcassets` into `output`, replacing any previous generated catalog.
 pub fn write_assets(source: Option<&Path>, output: &Path) -> Result<()> {
+    let stamp = output.join(".source-stamp");
+    let fingerprint = match source {
+        Some(path) => {
+            use std::hash::{Hash, Hasher};
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            std::fs::read(path)
+                .with_context(|| format!("Cannot read icon image {}", path.display()))?
+                .hash(&mut hasher);
+            format!("image-{:x}", hasher.finish())
+        }
+        None => "placeholder".to_string(),
+    };
+    // Skipping an unchanged catalog keeps file times stable so Xcode does not recompile assets.
+    if std::fs::read_to_string(&stamp).map(|old| old == fingerprint).unwrap_or(false) {
+        return Ok(());
+    }
     let art = match source {
         Some(path) => image::open(path)
             .with_context(|| format!("Cannot read icon image {}", path.display()))?
@@ -112,6 +128,7 @@ pub fn write_assets(source: Option<&Path>, output: &Path) -> Result<()> {
     imagestack(&brand.join("App Icon.imagestack"), &art, back, 400, 240, &[1, 2])?;
     imageset(&brand.join("Top Shelf Image Wide.imageset"), "top-shelf-wide", &art, 2320, 720, &[1, 2])?;
     imageset(&brand.join("Top Shelf Image.imageset"), "top-shelf", &art, 1920, 720, &[1, 2])?;
+    write(&stamp, &fingerprint)?;
     Ok(())
 }
 
