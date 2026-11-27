@@ -347,7 +347,9 @@ action smash:
         if tank.hp > 0 && abs((tank.x + 16) - (monster.x + monster.scale * 8)) < 52:
             call damageTank tank, 1
     for flyer in aircraft:
-        if flyer.hp > 0 && abs((flyer.x + 16) - (monster.x + monster.scale * 8)) < 52 && flyer.y > 70:
+        if flyer.hp > 0
+            && abs((flyer.x + 16) - (monster.x + monster.scale * 8)) < 52
+            && flyer.y > 70:
             call damageFlyer flyer, 1
     if destroyed == buildings.length:
         call completeLevel
@@ -445,7 +447,11 @@ action tick(input):
         if shot.vy > 0:
             shot.y += shot.vy
         shot.life -= 1
-        if shot.life > 0 && shot.x > monster.x + 8 && shot.x < monster.x + monster.scale * 16 - 6 && shot.y > monster.y && shot.y < monster.y + monster.scale * stance_height:
+        if shot.life > 0
+            && shot.x > monster.x + 8
+            && shot.x < monster.x + monster.scale * 16 - 6
+            && shot.y > monster.y
+            && shot.y < monster.y + monster.scale * stance_height:
             incoming = shot.damage
             if power == "shield":
                 incoming = 0

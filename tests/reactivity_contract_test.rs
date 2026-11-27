@@ -33,28 +33,18 @@ mod reactivity_contract_test {
 
         let run_items = &event_section.series["run"];
 
-        // Find the ws.broadcast line - it should be a string item, not a map
+        // Broadcast the evaluated message binding, rather than an inline template.
         let ws_broadcast_line = run_items.iter().find(|item| {
             if let Value::String(s) = item {
-                s.contains("ws.broadcast") && s.contains("memory_update")
+                s == "ws.broadcast /ws update"
             } else {
                 false
             }
         });
 
-        assert!(ws_broadcast_line.is_some(),
-            "Should find ws.broadcast line as a single string item in run series");
-
-        if let Some(Value::String(line)) = ws_broadcast_line {
-            println!("✓ Successfully parsed ws.broadcast line:");
-            println!("  {}", line);
-            assert!(line.contains("type"), "Should contain 'type' key");
-            assert!(line.contains("memory_update"), "Should contain 'memory_update' value");
-            assert!(line.contains("global_score"), "Should contain 'global_score' key and value");
-        }
+        assert!(ws_broadcast_line.is_some(), "Should broadcast the evaluated update");
     }
 }
-
 
 
 

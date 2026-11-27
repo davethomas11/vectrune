@@ -231,9 +231,14 @@ function runRequest(kind: FetchAssignment["kind"], request: string, locals: Reco
 }
 
 /** Calls the catch action with { status, message }, or logs a warning when there is none. */
-export function reportFetchFailure(error: unknown, onError?: string): void {
+export function reportFetchFailure(error: unknown, onError?: string, locals?: Record<string, unknown>): void {
   const message = error instanceof Error ? error.message : String(error);
-  if (onError) deliver(onError, { status: error instanceof FetchError ? error.status : 0, message });
+  if (onError) {
+    if (locals && Object.keys(locals).length) {
+      ctx().app.invokeAction(onError, [{ status: error instanceof FetchError ? error.status : 0, message }], locals);
+      ctx().app.render();
+    } else deliver(onError, { status: error instanceof FetchError ? error.status : 0, message });
+  }
   else console.warn(message);
 }
 

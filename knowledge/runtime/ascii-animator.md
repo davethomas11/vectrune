@@ -401,7 +401,8 @@ checked and rejected, except declared tones routed to native audio.
 `aquarium` combines animated sprites, bubbles and swaying plants.
 `observatory` is **simulated** telemetry: two live graphs, radar and counters,
 with Space to freeze/resume. It does not read real machine metrics.
-`paddle` has ball/paddle collisions, score, pause, loss and restart.
+`paddle` has ball/paddle collisions, score, pause, loss and restart. A ball
+landing in any visible paddle column bounces; missing the paddle ends the game.
 `meteors` has a title screen, increasing falling-rock speed, dodge collisions,
 score and restart. Both games use arrows/A/D; see the example README for controls.
 The [Ascii3D augmentation](ascii3d.md) adds `sentinel` (maze shooter),

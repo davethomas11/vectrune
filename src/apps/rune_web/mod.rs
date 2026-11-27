@@ -91,27 +91,16 @@ pub async fn build_rune_web_router(state: AppState) -> Router {
                 ),
             );
 
-            // Auto-inject logic for websocket reactivity if not already present
             if reactivity_mode.as_deref() == Some("websocket") {
-                if let Some(page_def) = frontend.page_views.get(page_name) {
-                    if page_def.logic_ref.is_none() {
-                        // Create a default logic block for websocket support
-                        let resolved_endpoint = ws_endpoint.as_ref().map(|s| s.as_str()).unwrap_or("/ws");
-                        let auto_logic = create_websocket_logic_block(resolved_endpoint);
-                        frontend.logic_definitions.insert("_auto_websocket".to_string(), auto_logic);
-
-                        // Update page reference to point to auto-generated logic
-                        if let Some(page_def) = frontend.page_views.get_mut(page_name) {
-                            page_def.logic_ref = Some("_auto_websocket".to_string());
-                        }
-                    }
-                }
+                add_websocket_emit(&mut frontend, page_name);
             }
 
             let frontend = Arc::new(frontend.clone());
             let page_name = page_name.to_string();
             let default_locale = active_locale.clone();
-            let ws_endpoint = ws_endpoint.clone();
+            let ws_endpoint = ws_endpoint.clone().or_else(|| {
+                (reactivity_mode.as_deref() == Some("websocket")).then(|| "/ws".to_string())
+            });
 
             let mut mounts = vec![(mount_path.to_string(), default_locale)];
             if let Some(crate::rune_ast::Value::Map(paths)) = frontend_section.and_then(|s| s.kv.get("locale_paths")) {
@@ -288,20 +277,11 @@ pub async fn render_html_for_path(
     }
 
     if reactivity_mode.as_deref() == Some("websocket") {
-        if let Some(page_def) = frontend.page_views.get(page_name) {
-            if page_def.logic_ref.is_none() {
-                let resolved_endpoint = ws_endpoint.as_deref().unwrap_or("/ws");
-                let auto_logic = create_websocket_logic_block(resolved_endpoint);
-                frontend
-                    .logic_definitions
-                    .insert("_auto_websocket".to_string(), auto_logic);
-
-                if let Some(page_def) = frontend.page_views.get_mut(page_name) {
-                    page_def.logic_ref = Some("_auto_websocket".to_string());
-                }
-            }
-        }
+        add_websocket_emit(&mut frontend, page_name);
     }
+    let ws_endpoint = ws_endpoint.or_else(|| {
+        (reactivity_mode.as_deref() == Some("websocket")).then(|| "/ws".to_string())
+    });
 
     let target_route = {
         let prefix = locale_mount.as_ref().map(|(_, prefix)| prefix.as_str())
@@ -508,6 +488,7 @@ fn render_frontend_shell(
         frontend.sounds.clone(),
         frontend.music.clone(),
         frontend.data_sources.clone(),
+        page.and_then(|p| p.on_mount.clone()),
     );
 
     format!(
@@ -1186,7 +1167,7 @@ fn value_to_string(value: &JsonValue) -> String {
     }
 }
 
-fn html_escape(s: &str) -> String {
+pub(crate) fn html_escape(s: &str) -> String {
     s.replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
@@ -1222,6 +1203,7 @@ fn render_logic(
     sounds: std::collections::HashMap<String, ast::SoundDefinition>,
     music: std::collections::HashMap<String, ast::MusicDefinition>,
     data_sources: serde_json::Value,
+    on_mount: Option<String>,
 ) -> String {
     match (view_tree, logic) {
         (Some(tree), Some(logic)) => {
@@ -1239,7 +1221,7 @@ fn render_logic(
                 sounds,
                 music,
             );
-            let js_code = codegen.with_data_sources(data_sources).generate();
+            let js_code = codegen.with_data_sources(data_sources).with_on_mount(on_mount).generate();
             format!("<script>\n{}</script>", js_code)
         }
         _ => String::new(),
@@ -1275,32 +1257,15 @@ pub fn export_optimizer_chunks(
     Ok(count)
 }
 
-fn create_websocket_logic_block(_ws_endpoint: &str) -> ast::LogicDefinition {
-    use std::collections::HashMap;
-
-    // Create a minimal logic block with emit action support
-    let mut actions = HashMap::new();
-
-    // Add a built-in emit action
-    actions.insert(
-        "emit".to_string(),
-        ast::ActionDefinition {
+fn add_websocket_emit(frontend: &mut ast::RuneWebFrontend, page_name: &str) {
+    let logic_name = frontend.page_views.get(page_name).and_then(|page| page.logic_ref.as_ref());
+    if let Some(logic) = logic_name.and_then(|name| frontend.logic_definitions.get_mut(name)) {
+        logic.actions.entry("emit".to_string()).or_insert_with(|| ast::ActionDefinition {
             params: vec!["event_name".to_string(), "payload".to_string()],
             steps: vec![
-                // This will be handled in the JavaScript runtime
                 ast::ActionStep::Statement("window.__runeWebEmit(event_name, payload)".to_string()),
             ],
             ..Default::default()
-        },
-    );
-
-    ast::LogicDefinition {
-        state: HashMap::new(),
-        locals: HashMap::new(),
-        derived: HashMap::new(),
-        helpers: HashMap::new(),
-        actions,
-        timer: None,
-        keys: HashMap::new(),
+        });
     }
 }

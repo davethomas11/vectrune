@@ -7,11 +7,11 @@ WebView or iOS WKWebView; the device contains no Rust compiler or HTTP backend.
 
 ```sh
 cargo build --bin vectrune
-target/debug/vectrune examples/rune_mobile_web --build android
+target/debug/vectrune examples/rune-mobile-web --build android
 # macOS with Xcode:
-target/debug/vectrune examples/rune_mobile_web --build ios
+target/debug/vectrune examples/rune-mobile-web --build ios
 # Export without Node, SDKs or signing credentials:
-target/debug/vectrune examples/rune_mobile_web --export ios --build-dir ./mobile-project
+target/debug/vectrune examples/rune-mobile-web --export ios --build-dir ./mobile-project
 ```
 
 Builds require Node.js 22+/npm plus JDK 21 and Android SDK 36 for Android,

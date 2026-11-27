@@ -5,6 +5,8 @@ from pathlib import Path
 from playwright.sync_api import expect, sync_playwright
 from site_menu import menu_link
 from teaching_ux import preview
+from release_metadata import SOURCE
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--site-dir", required=True)
@@ -46,8 +48,10 @@ with preview(Path(args.site_dir)) as base, sync_playwright() as pw:
     expect(page.locator(".example-preview")).to_have_attribute("src", "/assets/games/neon-circuit/index.html")
     for locale in ["", "es/", "fr/"]:
         page.goto(f"{base}/{locale}releases/")
-        assert "0.3.12" in page.locator("body").inner_text()
-        assert page.locator('a[href$="/releases/tag/v0.3.12"]').count() == 0
+        candidate = json.loads(SOURCE.read_text())["releases"][0]
+        assert candidate["tag"] in page.locator("body").inner_text()
+        if not candidate["github_tag"]:
+            assert page.locator(f'a[href$="/releases/tag/{candidate["tag"]}"]').count() == 0
     assert not errors, errors
     browser.close()
 print("Neon Circuit: localized showcase, source, cover, lazy navigation and shared save origin passed")

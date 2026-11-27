@@ -14,7 +14,13 @@ sources:
 
 ## Overview
 
-Reactive memory automatically broadcasts server-side memory updates to all connected clients via WebSocket. When a component renders and reads a memory key, it subscribes to that key. If the key changes, only subscribed components re-render — no manual refresh or polling needed.
+The current Rune-Web WebSocket example explicitly broadcasts a `memory_update`
+message after `set-memory`; ordinary `set-memory` does not automatically
+broadcast. The browser updates its state and rerenders the page when it
+receives that message. See
+[`reactivity-contract-rune-web.rune`](../../examples/rune-web/reactivity-contract-rune-web.rune).
+The `ReactiveMemoryBackend` and component-subscription design described below
+is separate from that example and is not the default memory builtin path.
 
 ## Architecture
 
@@ -251,4 +257,3 @@ Browser's native batching. Multiple re-renders in one frame are coalesced into o
 - **JavaScript Runtime** (`language/javascript-runtime.md`) — More on generated code
 - **Rune-Web Architecture** (`language/rune-web-architecture.md`) — Component rendering
 - **Builtins** (`reference/builtins.yaml`) — `set-memory`, `get-memory`, `del-memory`
-

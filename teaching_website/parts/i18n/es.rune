@@ -1,4 +1,18 @@
 @I18N/es
+GlowtideAquarium {
+    title = "Glowtide Aquarium"
+    description = "Crea un pequeño océano feliz: alimenta peces y criaturas, recoge perlas y amplía un hogar submarino luminoso."
+    play = "Explorar Glowtide Aquarium"
+    try_it = "Recoge la ostra para empezar; después alimenta a tus amigos y ahorra perlas para nuevos habitantes y mejoras."
+    standalone = "Abrir el acuario en otra pestaña"
+    care_title = "Cuida tu pequeño océano"
+    care = "Tus amigos ganan perlas mientras el acuario está activo. Aliméntalos, amplía el arrecife, añade decoraciones y adopta peces y criaturas del fondo."
+    controls = "Arrastra el acuario o usa las flechas para girarlo. Toca un habitante para verlo. Usa los controles en pantalla o Espacio para alimentar, C para recoger la ostra y Tab para abrir el menú."
+    save = "El progreso se guarda en este navegador; la vista integrada y la independiente comparten la partida. Los habitantes no envejecen ni ganan perlas mientras el acuario está cerrado o en pausa."
+    language = "La interfaz del acuario está actualmente en inglés."
+    source_title = "Explorar el código Rune"
+    source_text = "Consulta los archivos Rune del acuario arriba, o ejecútalo y pruébalo localmente con Vectrune 0.3.13 o posterior."
+}
 MarbleRun {
     title = "Marble Run"
     description = "Recorre seis pistas sobre una fábrica flotante. Toma curvas peraltadas, salta huecos y pinchos y usa celdas de carga contra los guardianes."
@@ -320,6 +334,7 @@ Sandbox {
     reset_ready = "Ejemplo restablecido. Aplica el código para prepararlo de nuevo."
 }
 Footer {
+    translations = "Traducciones"
     copyright = "© 2026 Proyecto Vectrune"
 }
 
@@ -657,7 +672,7 @@ Developer {
     ci = "Integración continua"
     release = "Novedades"
     release_heading = "Novedades de"
-    badge = "Herramientas de desarrollo · 0.3.4"
+    badge = "Herramientas de desarrollo"
     start_intro = "Pasa de instalar la CLI a ejecutar cinco pruebas Rune correctas. El proyecto descargable incluye una API real, fixtures reutilizables y un flujo de GitHub Actions."
     install_title = "1. Instala o actualiza"
     install_text = "Instala Vectrune 0.3.4 o posterior. En macOS o Linux con Homebrew, usa los comandos siguientes. En Windows y otras plataformas, descarga el binario desde GitHub Releases, extráelo y añade su carpeta a PATH. Reinicia la terminal tras cambiar PATH."

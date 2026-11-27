@@ -1,5 +1,7 @@
 #!RUNE
 
+# Run: vectrune examples/rune-web/weather_web.rune
+# Open-Meteo and OpenStreetMap receive requests directly from the browser.
 @App
 name = Weather Web
 type = REST
@@ -9,25 +11,342 @@ type = rune-web
 path = %ROOT%
 page = weather
 
-# Browser fetch is subject to CORS; Open-Meteo sends Access-Control-Allow-Origin: *.
+@Style/weather
+tokens:
+    ink = #173047
+    muted = #526c7c
+    accent = #126a78
+rules:
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        font-family = system-ui, sans-serif
+        color = {ink}
+        background = #eef5f5
+    .shell:
+        max-width = 1050px
+        margin = 0 auto
+        padding = 0 clamp(1rem, 5vw, 2.5rem)
+    .header:
+        display = flex
+        align-items = center
+        justify-content = space-between
+        flex-wrap = wrap
+        gap = 1rem
+        padding = 1.5rem 0
+        border-bottom = 1px solid #d5e5e5
+    .brand:
+        font-weight = 750
+        letter-spacing = -0.02em
+    .brand-mark:
+        display = inline-block
+        background = {accent}
+        color = white
+        border-radius = 8px
+        padding = 0.35rem 0.65rem
+        margin-right = 0.5rem
+    .header-note:
+        color = {muted}
+        font-size = 0.85rem
+    .layout:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(min(100%, 310px), 1fr))
+        gap = clamp(1.5rem, 5vw, 4rem)
+        align-items = center
+        padding = clamp(3rem, 8vw, 6rem) 0
+    .eyebrow:
+        color = {accent}
+        font-size = 0.75rem
+        font-weight = 750
+        letter-spacing = 0.13em
+    h1:
+        font-size = clamp(2.5rem, 7vw, 4.5rem)
+        letter-spacing = -0.04em
+        line-height = 1.05
+        margin = 0.8rem 0 1.2rem
+    .intro:
+        color = {muted}
+        line-height = 1.7
+        max-width = 32rem
+        font-size = 1.05rem
+    .weather-card:
+        border = 1px solid #cde2e2
+        border-radius = 24px
+        background = #ffffff
+        padding = clamp(1.5rem, 5vw, 2.5rem)
+        box-shadow = 0 18px 50px rgba(23, 48, 71, 0.08)
+    .card-label:
+        color = {muted}
+        font-weight = 650
+        font-size = 0.9rem
+        margin = 0
+    .temperature:
+        font-size = clamp(3.5rem, 9vw, 5.5rem)
+        line-height = 1.1
+        font-weight = 750
+        letter-spacing = -0.05em
+        margin = 1rem 0
+    .reading-note:
+        color = {muted}
+        line-height = 1.5
+        min-height = 1.5rem
+    .button:
+        background = {accent}
+        color = white
+        border = 0
+        border-radius = 10px
+        padding = 0.9rem 1.2rem
+        font = inherit
+        font-weight = 700
+        cursor = pointer
+        margin-top = 0.5rem
+    .button:disabled:
+        opacity = 0.65
+        cursor = wait
+    .button:focus-visible, a:focus-visible:
+        outline = 3px solid #d77749
+        outline-offset = 3px
+    .error:
+        color = #9c2f23
+        line-height = 1.5
+        overflow-wrap = anywhere
+    .details:
+        border-top = 1px solid #d5e5e5
+        padding = 2rem 0 3rem
+        color = {muted}
+        line-height = 1.7
+    .details h2:
+        color = {ink}
+        font-size = 1.2rem
+    a:
+        color = #075c6b
+    .location-panel:
+        border-top = 1px solid #d5e5e5
+        padding = 2rem 0
+    .location-controls:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.75rem
+        align-items = end
+    .search-label:
+        display = block
+        font-weight = 700
+        margin-bottom = 0.35rem
+    .search-input:
+        width = min(100%, 22rem)
+        border = 1px solid #9bb9bd
+        border-radius = 10px
+        padding = 0.85rem
+        font = inherit
+    .secondary:
+        background = #e2f0ef
+        color = #173047
+    .results:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.5rem
+        padding = 0
+        list-style = none
+    .result:
+        background = white
+        color = #173047
+        border = 1px solid #9bb9bd
+    .map:
+        height = 340px
+        width = 100%
+        border-radius = 16px
+        border = 1px solid #9bb9bd
+        z-index = 0
+    .map-note:
+        color = {muted}
+        line-height = 1.6
+
 @Page/weather
 logic = weather
-title = Vancouver Weather
+style = weather
+title = Weather Web
+on_mount = startup
 state:
-    url = "https://api.open-meteo.com/v1/forecast?latitude=49.28&longitude=-123.12&current=temperature_2m"
+    latitude = 49.28
+    longitude = -123.12
+    place = "Vancouver, British Columbia"
+    location_version = 0
+    search_version = 0
+    weather_version = 0
+    locating = false
+    searching = false
+    search_results = []
+    search_message = ""
+    location_message = "Vancouver is the fallback until you choose another location."
     temperature = "?"
+    observed = ""
+    timezone = ""
+    has_reading = false
+    loading = false
     error = ""
 view:
-    main:
-        h1 "Vancouver: {temperature}°C"
-        p "{error}"
-        button click="loadWeather()" "Refresh"
+    div .shell:
+        header .header:
+            div .brand:
+                span .brand-mark "W"
+                span "Weather Web"
+            span .header-note "A Rune-Web example"
+        main:
+            section .layout:
+                div:
+                    p .eyebrow "A LITTLE WEATHER CHECK"
+                    h1 "Weather, wherever you are."
+                    p .intro "Find a place or choose a point on the map, then get a current temperature from Open-Meteo."
+                section .weather-card aria-label="Current temperature":
+                    p .card-label "{place}"
+                    div aria-live=polite:
+                        if has_reading:
+                            p .temperature "{temperature}°C"
+                            p .reading-note "Observed: {observed} ({timezone})"
+                        if !has_reading:
+                            p .temperature "—"
+                            p .reading-note "No reading yet. Select the button to check."
+                        if loading:
+                            p .reading-note "Checking the latest temperature…"
+                        if error != "":
+                            p .error role=alert "{error}"
+                            if has_reading:
+                                p .reading-note "Showing the last successful reading."
+                    button .button type=button disabled="{loading}" click="loadWeather()" "Check weather"
+            section .location-panel:
+                h2 "Choose a location"
+                p .map-note "Search for a place, use your device location, or select a point on the map."
+                div .location-controls:
+                    div:
+                        label .search-label for=place-search "Place name"
+                        input #place-search .search-input type=search placeholder="e.g. Paris" maxlength=100
+                    button .button type=button click="searchPlace(@search-input.value)" "Search"
+                    button .button .secondary type=button disabled="{locating}" click="useLocation()" "Use my location"
+                p aria-live=polite "{location_message}"
+                p aria-live=polite "{search_message}"
+                ul .results:
+                    for result in search_results:
+                        li:
+                            button .button .result type=button click="chooseSearch(result)":
+                                span "{result.name}"
+                                if result.admin1:
+                                    span ", {result.admin1}"
+                                if result.country:
+                                    span ", {result.country}"
+                div .map data-rune-map=weather data-latitude="{latitude}" data-longitude="{longitude}" data-map-select=chooseMap tabindex=0 aria-label="Interactive map. Use arrow keys to pan and Enter to select the map center."
+                p .map-note "Click the map to select a point. Keyboard: focus the map, use arrow keys to pan, then press Enter to select its center. If the map cannot load, use search or your device location."
+                p .map-note "Map tiles: OpenStreetMap. Search and weather: Open-Meteo. These services receive your IP address; Open-Meteo receives your search or chosen coordinates. Device location is only accessed with browser permission."
+            section .details:
+                h2 "About this reading"
+                p "The current temperature is provided by Open-Meteo in the selected location's timezone. Select Check weather whenever you want a fresh reading; this page does not update automatically."
+                a href="https://open-meteo.com/" "About Open-Meteo"
 
 @Logic/weather
-action loadWeather():
-    weather = fetch-json url catch weatherFailed
-    temperature = weather.current.temperature_2m
+action startup():
+    call locateIfGranted location_version
+
+action locateIfGranted(location_token):
+    location.if-granted then locationFound catch locationUnavailable
+
+action useLocation():
+    location_version = location_version + 1
+    locating = true
+    location_message = "Finding your location…"
+    call locateCurrent location_version
+
+action locateCurrent(location_token):
+    location.current then locationFound catch locationUnavailable
+
+action locationFound(position):
+    if location_token == location_version:
+        locating = false
+        call selectLocation position.latitude, position.longitude, "Your location"
+
+action locationUnavailable(failure):
+    if location_token == location_version:
+        locating = false
+        if failure.code == "prompt":
+            location_message =
+                "Vancouver is the fallback. Select Use my location to ask for permission."
+        if failure.code != "prompt":
+            location_message = "Location unavailable. Choose a place or use the map."
+
+action searchPlace(query):
+    location_version = location_version + 1
+    locating = false
+    search_version = search_version + 1
+    search_results = []
+    search_message = ""
+    if query == "":
+        searching = false
+        search_message = "Enter a place name to search."
+    if query != "":
+        searching = true
+        search_message = "Searching…"
+        call runSearch search_version, query
+
+action runSearch(search_token, query):
+    search_url = "https://geocoding-api.open-meteo.com/v1/search?name=" + url_encode(query) + "&count=8&language=en&format=json"
+    found = fetch-json search_url catch searchFailed
+    if search_token == search_version:
+        searching = false
+        if found.results.length > 0:
+            search_results = found.results
+            search_message = "Choose a matching place."
+        if !(found.results.length > 0):
+            search_message = "No matching places found."
+
+action searchFailed(failure):
+    if search_token == search_version:
+        searching = false
+        search_message = "Could not search for places. Please try again."
+
+action chooseSearch(result):
+    if result.country:
+        call selectLocation result.latitude, result.longitude, result.name + ", " + result.country
+    if !result.country:
+        call selectLocation result.latitude, result.longitude, result.name
+
+action chooseMap(point):
+    call selectLocation point.latitude, point.longitude, "Map point"
+
+action selectLocation(lat, lon, name):
+    location_version = location_version + 1
+    search_version = search_version + 1
+    weather_version = weather_version + 1
+    locating = false
+    searching = false
+    loading = false
+    search_results = []
+    search_message = ""
+    latitude = lat
+    longitude = lon
+    place = name
+    location_message = "Selected: " + lat + ", " + lon
+    has_reading = false
     error = ""
 
+action loadWeather():
+    weather_version = weather_version + 1
+    loading = true
+    error = ""
+    call fetchWeather weather_version, latitude, longitude
+
+action fetchWeather(weather_token, lat, lon):
+    url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m&timezone=auto"
+    weather = fetch-json url catch weatherFailed
+    if weather_token == weather_version:
+        if weather.current.temperature_2m >= -100 and weather.current.temperature_2m <= 100 and weather.current.time and weather.timezone:
+            temperature = weather.current.temperature_2m
+            observed = weather.current.time
+            timezone = weather.timezone
+            has_reading = true
+        if !(weather.current.temperature_2m >= -100 and weather.current.temperature_2m <= 100 and weather.current.time and weather.timezone):
+            error = "The weather service returned an incomplete reading. Please try again."
+        loading = false
+
 action weatherFailed(failure):
-    error = failure.message
+    if weather_token == weather_version:
+        loading = false
+        error = "Could not load the latest reading. Please try again."

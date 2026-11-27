@@ -1,0 +1,16 @@
+#!RUNE
+
+@App
+name = Example API
+type = REST
+port = 3000
+
+@Route/GET/health
+run:
+    respond 200 "OK"
+
+# Remove this section to use the built-in HTML page for browser requests.
+@NotFound
+content_type = text/html; charset=utf-8
+run:
+    respond 404 "<h1>Sorry, this page does not exist.</h1>"

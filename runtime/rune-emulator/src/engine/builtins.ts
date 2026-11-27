@@ -5,7 +5,7 @@
 import { summarize, SUMMARIZE_USAGE } from './summarize';
 import type { RequestContext } from './context';
 import { buildScopeFromContext } from './context';
-import { evaluateExpression, resolvePath, splitPathSegments, valueToString } from './evaluate';
+import { evaluateExpression, resolvePath, splitPathSegments, tryParseLiteral, valueToString } from './evaluate';
 
 // Sentinel returned when a builtin calls respond (halts execution)
 export const RESPONDED = Symbol('RESPONDED');
@@ -18,6 +18,19 @@ function expandPlaceholders(template: string, scope: Record<string, unknown>): s
   return template.replace(/\{([^}]+)\}/g, (_match, expr) => {
     const val = evaluateExpression(expr.trim(), scope);
     return val !== undefined ? valueToString(val) : `{${expr}}`;
+  });
+}
+
+function interpolateResponse(template: string, scope: Record<string, unknown>): string {
+  return template.replace(/\\[{}]|\{([^{}]+)\}/g, (whole, expression: string | undefined) => {
+    if (expression === undefined) return whole.slice(1);
+    const expr = expression.trim();
+    const pretty = /^pretty (.+)$/.exec(expr);
+    const path = pretty ? pretty[1].trim() : expr;
+    const value = path === 'null' ? null : tryParseLiteral(path) ?? resolvePath(path, scope);
+    if (value === undefined) return whole;
+    if (pretty) return JSON.stringify(value, null, 2);
+    return value === null ? 'null' : valueToString(value);
   });
 }
 
@@ -136,7 +149,12 @@ export function executeBuiltin(
       bodyExpr = args.join(' ');
     }
 
-    const body = evaluateExpression(bodyExpr, scope);
+    const evaluated = evaluateExpression(bodyExpr, scope);
+    const quoted = bodyExpr.startsWith('"') && bodyExpr.endsWith('"');
+    const isMessage = quoted || resolvePath(bodyExpr, scope) === undefined;
+    const body = name === 'respond' && isMessage && typeof evaluated === 'string'
+      ? interpolateResponse(evaluated, scope)
+      : evaluated;
     ctx.response = { status, body, logs: ctx.logs };
     return RESPONDED;
   }

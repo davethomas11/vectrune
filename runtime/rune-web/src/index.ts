@@ -14,6 +14,7 @@ import { getWindowProp, setWindowProp } from './globals';
 import { makeReactive } from './scope';
 import { hostedUrl } from './utils';
 import { renderNode } from './rendering';
+import { createMapManager } from './map';
 import { syncSequencerState } from './statement';
 import { bindStudioNoteDrag } from './studio_drag';
 import { bindStudioNoteTools } from './studio_note_tools';
@@ -54,6 +55,7 @@ export {
  * (page tree, state, actions, derived definitions, etc).
  */
 export function boot(config: RuneWebConfig): RuneApp {
+  const maps = createMapManager();
   configureDataSources(config.dataSources);
   beginGameLoading();
   // Register programmable audio definitions from @Sound and @Music
@@ -75,7 +77,23 @@ export function boot(config: RuneWebConfig): RuneApp {
       const title = studio ? root.querySelector<HTMLInputElement>('[data-studio-song-title]:focus') : null;
       const start = title?.selectionStart ?? 0;
       const end = title?.selectionEnd ?? start;
+      const focusedInput = root.querySelector<HTMLInputElement>('input[id]:focus:not([value])');
+      const inputValue = focusedInput?.value;
+      const inputStart = focusedInput?.selectionStart;
+      const inputEnd = focusedInput?.selectionEnd;
+      const savedMaps = maps.detach(root);
       root.innerHTML = renderNode(context.pageTree, {});
+      maps.restore(root, savedMaps, this);
+      if (focusedInput && inputValue !== undefined) {
+        const nextInput = document.getElementById(focusedInput.id);
+        if (nextInput instanceof HTMLInputElement && root.contains(nextInput) && !nextInput.hasAttribute('value')) {
+          nextInput.value = inputValue;
+          nextInput.focus({ preventScroll: true });
+          if (inputStart !== null && inputStart !== undefined && inputEnd !== null && inputEnd !== undefined) {
+            nextInput.setSelectionRange(inputStart, inputEnd);
+          }
+        }
+      }
       if (studio) {
         paintStudioPlayhead(root, this.state);
         const timeline = root.querySelector<HTMLElement>('[data-studio-scroll]');
@@ -131,7 +149,7 @@ export function boot(config: RuneWebConfig): RuneApp {
       .then((data: import('./types').ViewNode[] | import('./types').ViewNode) => {
         loadedChunks[cleanRoute] = data;
         delete loadingChunks[cleanRoute];
-        app.render();
+              app.render();
         return data;
       })
       .catch((err) => {
@@ -337,6 +355,7 @@ export function boot(config: RuneWebConfig): RuneApp {
   }
 
   app.render();
+  if (config.onMount) app.invokeAction(config.onMount, []);
 
   // DOM games are usable after render; pixel shells signal after drawing their canvas.
   if (typeof document !== 'undefined' &&

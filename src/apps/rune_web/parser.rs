@@ -253,6 +253,17 @@ pub fn parse_rune_web_frontend(
 
     super::modular::attach(doc, &mut logic_definitions)?;
 
+    for (page_name, page) in &page_views {
+        if let Some(action) = &page.on_mount {
+            let exists = page.logic_ref.as_ref()
+                .and_then(|name| logic_definitions.get(name))
+                .is_some_and(|logic| logic.actions.contains_key(action));
+            if !exists {
+                return Err(ParseError(format!("@Page/{page_name}: on_mount action '{action}' is not defined")));
+            }
+        }
+    }
+
     // Extract @Navigator sections
     let mut navigator = None;
     for section in &doc.sections {
@@ -957,6 +968,7 @@ fn parse_page_section(section: &crate::rune_ast::Section) -> Result<PageDefiniti
         description,
         style_ref,
         logic_ref,
+        on_mount: section.kv.get("on_mount").and_then(|v| v.as_str()).map(|s| s.to_string()),
         state: parse_state_block(section),
         view_tree,
     })
@@ -2401,6 +2413,16 @@ mod tests {
         let frontend = parse_rune_web_frontend(&doc, "demo").unwrap();
         let html = super::super::render_frontend_shell(&frontend, "demo", None, None, &serde_json::Map::new(), None);
         assert!(html.contains(&super::super::html_escape(source)));
+    }
+
+    #[test]
+    fn validates_page_on_mount_action() {
+        let valid = parse_rune("@Page/demo\nlogic = demo\non_mount = ready\nview:\n    p \"Hi\"\n@Logic/demo\naction ready():\n    log \"ready\"\n").unwrap();
+        let frontend = parse_rune_web_frontend(&valid, "demo").unwrap();
+        assert_eq!(frontend.page_views["demo"].on_mount.as_deref(), Some("ready"));
+        let invalid = parse_rune("@Page/demo\non_mount = missing\nview:\n    p \"Hi\"\n").unwrap();
+        let error = parse_rune_web_frontend(&invalid, "demo").unwrap_err();
+        assert!(error.to_string().contains("on_mount action 'missing' is not defined"));
     }
 
     #[test]

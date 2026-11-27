@@ -61,16 +61,44 @@ action tick:
 action paint:
     canvas = [
         {"type": "box", "x": 0, "y": 1, "width": 64, "height": 20, "color": "blue"},
-        {"type": "text", "x": 2, "y": 0, "text": "METEOR COURIER   |   SCORE " + score, "color": "cyan"},
+        {
+            "type": "text",
+            "x": 2,
+            "y": 0,
+            "text": "METEOR COURIER   |   SCORE " + score,
+            "color": "cyan"
+        },
         {"type": "sprite", "x": player, "y": 17, "name": "ship", "color": "cyan"},
-        {"type": "text", "x": 2, "y": 21, "text": "Arrows/A/D: dodge  Enter/R: start/restart  Q: quit", "color": "cyan"}
+        {
+            "type": "text",
+            "x": 2,
+            "y": 21,
+            "text": "Arrows/A/D: dodge  Enter/R: start/restart  Q: quit",
+            "color": "cyan"
+        }
     ]
     for i in range(0, 24):
-        canvas.push({"type": "text", "x": 2 + (i * 19) % 59, "y": 3 + (i * 7 + floor(ticks / 3)) % 13, "text": ".", "color": "gray"})
+        canvas.push(
+            {
+                "type": "text",
+                "x": 2 + (i * 19) % 59,
+                "y": 3 + (i * 7 + floor(ticks / 3)) % 13,
+                "text": ".",
+                "color": "gray"
+            }
+        )
     for rock in rocks:
         canvas.push({"type": "sprite", "x": rock.x, "y": rock.y, "name": "meteor", "color": "yellow"})
     if status == "title":
-        canvas.push({"type": "text", "x": 17, "y": 8, "text": "DELIVER THE LAST STARLETTER", "color": "yellow"})
+        canvas.push(
+            {
+                "type": "text",
+                "x": 17,
+                "y": 8,
+                "text": "DELIVER THE LAST STARLETTER",
+                "color": "yellow"
+            }
+        )
         canvas.push({"type": "text", "x": 21, "y": 10, "text": "PRESS ENTER TO FLY", "color": "magenta"})
     if status == "gameover":
         canvas.push({"type": "text", "x": 19, "y": 10, "text": "SHIP LOST! R TO RETRY", "color": "red"})

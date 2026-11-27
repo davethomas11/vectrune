@@ -1,5 +1,7 @@
 #!RUNE
 
+# Run: vectrune examples/rune-web/i18n_demo.rune
+# The same page is served at /, /es/ and /fr/ using different bundles.
 @App
 name = I18N Demo
 version = 1.0
@@ -10,100 +12,281 @@ type = rune-web
 path = %ROOT%
 page = home
 locale = en_us
+locale_paths = { "es": "/es/", "fr": "/fr/" }
 
 @I18N/en_us
 Common {
     app-title = "Vectrune Quick Start"
-    welcome = "Welcome to Vectrune"
-}
-Nav {
-    home = "Home"
-    docs = "Documentation"
-    examples = "Examples"
+    language-label = "Choose a language"
+    en-current = "page"
+    es-current = "false"
+    fr-current = "false"
 }
 Hero {
-    headline = "Build APIs and Frontends in One File"
-    subheading = "Define routes, pages, and logic with declarative sections"
+    eyebrow = "ONE PAGE, THREE LANGUAGES"
+    headline = "A little more local, wherever you are."
+    subheading = "The same Rune-Web page, translated for different readers. Choose a language above and see the whole page change."
+    primary = "See how it works"
+    note = "No JavaScript required to choose a language."
 }
-CTA {
-    primary = "Get Started"
-    secondary = "Learn More"
+Guide {
+    eyebrow = "A SIMPLE PATTERN"
+    title = "Write once. Welcome everyone."
+    intro = "Keep your page structure in one place and give each language its own set of words."
+    first-title = "1. Add a bundle"
+    first-body = "Group translated text under an I18N section for each locale."
+    second-title = "2. Use a key"
+    second-body = "Reference the same translation key in your page and components."
+    third-title = "3. Map a path"
+    third-body = "Connect each locale to a URL so visitors can share and revisit it."
+    footer = "Built with Rune-Web and a little help from translation."
 }
 
 @I18N/es
 Common {
     app-title = "Inicio Rápido Vectrune"
-    welcome = "Bienvenido a Vectrune"
-}
-Nav {
-    home = "Inicio"
-    docs = "Documentación"
-    examples = "Ejemplos"
+    language-label = "Elige un idioma"
+    en-current = "false"
+    es-current = "page"
+    fr-current = "false"
 }
 Hero {
-    headline = "Construye APIs y Frontends en Un Archivo"
-    subheading = "Define rutas, páginas y lógica con secciones declarativas"
+    eyebrow = "UNA PÁGINA, TRES IDIOMAS"
+    headline = "Un poco más cerca, estés donde estés."
+    subheading = "La misma página de Rune-Web, traducida para diferentes lectores. Elige un idioma arriba y observa cómo cambia toda la página."
+    primary = "Descubre cómo funciona"
+    note = "No necesitas JavaScript para elegir un idioma."
 }
-CTA {
-    primary = "Comenzar"
-    secondary = "Más Información"
+Guide {
+    eyebrow = "UN PATRÓN SENCILLO"
+    title = "Escribe una vez. Da la bienvenida a todos."
+    intro = "Mantén la estructura de tu página en un solo lugar y dale a cada idioma sus propias palabras."
+    first-title = "1. Añade un paquete"
+    first-body = "Agrupa los textos traducidos en una sección I18N para cada idioma."
+    second-title = "2. Usa una clave"
+    second-body = "Usa la misma clave de traducción en tu página y componentes."
+    third-title = "3. Asigna una ruta"
+    third-body = "Conecta cada idioma a una URL para que se pueda compartir y visitar de nuevo."
+    footer = "Creado con Rune-Web y un poco de ayuda de la traducción."
 }
 
 @I18N/fr
 Common {
     app-title = "Démarrage Rapide Vectrune"
-    welcome = "Bienvenue sur Vectrune"
-}
-Nav {
-    home = "Accueil"
-    docs = "Documentation"
-    examples = "Exemples"
+    language-label = "Choisir une langue"
+    en-current = "false"
+    es-current = "false"
+    fr-current = "page"
 }
 Hero {
-    headline = "Créez des API et des Frontends en Un Fichier"
-    subheading = "Définissez des routes, des pages et de la logique avec des sections déclaratives"
+    eyebrow = "UNE PAGE, TROIS LANGUES"
+    headline = "Un peu plus près, où que vous soyez."
+    subheading = "La même page Rune-Web, traduite pour différents lecteurs. Choisissez une langue ci-dessus et voyez toute la page changer."
+    primary = "Découvrir comment ça marche"
+    note = "JavaScript n'est pas nécessaire pour choisir une langue."
 }
-CTA {
-    primary = "Commencer"
-    secondary = "En Savoir Plus"
+Guide {
+    eyebrow = "UN MODÈLE SIMPLE"
+    title = "Écrivez une fois. Accueillez tout le monde."
+    intro = "Gardez la structure de votre page au même endroit et donnez à chaque langue ses propres mots."
+    first-title = "1. Ajoutez un ensemble"
+    first-body = "Regroupez les textes traduits dans une section I18N pour chaque langue."
+    second-title = "2. Utilisez une clé"
+    second-body = "Utilisez la même clé de traduction dans votre page et vos composants."
+    third-title = "3. Associez une route"
+    third-body = "Associez chaque langue à une URL pour pouvoir la partager et y revenir."
+    footer = "Créé avec Rune-Web et un peu d'aide de la traduction."
 }
 
-@Component/NavBar
+@Style/demo
+tokens:
+    ink = #172b35
+    muted = #506770
+    accent = #12685d
+rules:
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        font-family = system-ui, sans-serif
+        color = {ink}
+        background = #f7f8f2
+    .shell:
+        max-width = 1100px
+        margin = 0 auto
+        padding = 0 clamp(1rem, 5vw, 2.5rem)
+    .header:
+        display = flex
+        flex-wrap = wrap
+        align-items = center
+        justify-content = space-between
+        gap = 1rem
+        padding = 1.5rem 0
+        border-bottom = 1px solid #dce5dc
+    .brand:
+        margin = 0
+        font-weight = 750
+        letter-spacing = -0.02em
+    .brand-mark:
+        display = inline-block
+        color = white
+        background = {accent}
+        padding = 0.35rem 0.65rem
+        margin-right = 0.55rem
+        border-radius = 8px
+    .languages:
+        display = flex
+        flex-wrap = wrap
+        gap = 0.3rem
+        align-items = center
+    .language:
+        color = {muted}
+        padding = 0.5rem 0.7rem
+        border-radius = 8px
+        font-size = 0.9rem
+        font-weight = 650
+        text-decoration = none
+    .language[aria-current=page]:
+        background = #dceee4
+        color = #07594c
+    a:focus-visible:
+        outline = 3px solid #c16a42
+        outline-offset = 3px
+    .hero:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(min(100%, 320px), 1fr))
+        gap = clamp(2rem, 6vw, 5rem)
+        align-items = center
+        padding = clamp(3rem, 8vw, 6rem) 0
+    .eyebrow:
+        color = {accent}
+        font-size = 0.75rem
+        letter-spacing = 0.13em
+        font-weight = 750
+    h1:
+        font-size = clamp(2.4rem, 6vw, 4.5rem)
+        line-height = 1.07
+        letter-spacing = -0.04em
+        margin = 1rem 0
+    .lead:
+        color = {muted}
+        font-size = 1.1rem
+        line-height = 1.7
+        max-width = 35rem
+    .button:
+        display = inline-block
+        background = {accent}
+        color = white
+        text-decoration = none
+        font-weight = 700
+        border-radius = 10px
+        padding = 0.9rem 1.2rem
+        margin-top = 1rem
+    .note:
+        color = {muted}
+        font-size = 0.85rem
+        margin-top = 1rem
+    .preview:
+        background = #dceee4
+        border = 1px solid #bed9cb
+        border-radius = 24px
+        padding = clamp(1.5rem, 5vw, 3rem)
+    .preview-card:
+        background = #ffffff
+        border-radius = 16px
+        padding = 1.5rem
+        box-shadow = 0 16px 40px rgba(23, 43, 53, 0.08)
+    .preview-label:
+        color = {accent}
+        font-size = 0.8rem
+        font-weight = 700
+    .preview-title:
+        font-size = 1.4rem
+        font-weight = 700
+        line-height = 1.35
+    .guide:
+        padding = 2rem 0 4rem
+    .guide h2:
+        font-size = clamp(1.8rem, 4vw, 2.6rem)
+        letter-spacing = -0.03em
+        margin = 0.6rem 0
+    .guide-intro:
+        color = {muted}
+        line-height = 1.6
+        max-width = 40rem
+    .cards:
+        display = grid
+        grid-template-columns = repeat(auto-fit, minmax(min(100%, 230px), 1fr))
+        gap = 1rem
+        margin-top = 2rem
+    .card:
+        background = white
+        border = 1px solid #dce5dc
+        border-radius = 16px
+        padding = 1.5rem
+    .card h3:
+        margin = 0 0 0.5rem
+        font-size = 1.1rem
+    .card p:
+        color = {muted}
+        line-height = 1.6
+        margin = 0
+    footer:
+        border-top = 1px solid #dce5dc
+        color = {muted}
+        padding = 1.5rem 0 2rem
+        font-size = 0.9rem
+
+@Component/Header
 view:
-    nav .navbar .container-fluid:
-        div .nav-brand:
-            p "%i18n.Common.app-title%"
-        ul .nav-menu:
-            li:
-                a href="#" "%i18n.Nav.home%"
-            li:
-                a href="#" "%i18n.Nav.docs%"
-            li:
-                a href="#" "%i18n.Nav.examples%"
+    header .header:
+        p .brand:
+            span .brand-mark "V"
+            span "%i18n.Common.app-title%"
+        nav .languages aria-label="%i18n.Common.language-label%":
+            a .language href="/" hreflang=en lang=en aria-current="%i18n.Common.en-current%" "English"
+            a .language href="/es/" hreflang=es lang=es aria-current="%i18n.Common.es-current%" "Español"
+            a .language href="/fr/" hreflang=fr lang=fr aria-current="%i18n.Common.fr-current%" "Français"
 
 @Component/HeroSection
 view:
-    section .hero .py-5:
-        div .container:
-            h1 .display-4 "%i18n.Hero.headline%"
+    section .hero:
+        div:
+            p .eyebrow "%i18n.Hero.eyebrow%"
+            h1 "%i18n.Hero.headline%"
             p .lead "%i18n.Hero.subheading%"
-            div .cta-buttons .mt-4:
-                a .btn .btn-primary href="#" "%i18n.CTA.primary%"
-                a .btn .btn-secondary href="#" "%i18n.CTA.secondary%"
+            a .button href="#how" "%i18n.Hero.primary%"
+            p .note "%i18n.Hero.note%"
+        div .preview:
+            div .preview-card:
+                p .preview-label "%i18n.Common.app-title%"
+                p .preview-title "%i18n.Guide.title%"
+                p .guide-intro "%i18n.Guide.intro%"
 
-@Component/Welcome
+@Component/Guide
 view:
-    div .alert .alert-info:
-        p:
-            strong "%i18n.Common.welcome%"
-            span " to the Vectrune i18n demo!"
+    section .guide id=how:
+        p .eyebrow "%i18n.Guide.eyebrow%"
+        h2 "%i18n.Guide.title%"
+        p .guide-intro "%i18n.Guide.intro%"
+        div .cards:
+            article .card:
+                h3 "%i18n.Guide.first-title%"
+                p "%i18n.Guide.first-body%"
+            article .card:
+                h3 "%i18n.Guide.second-title%"
+                p "%i18n.Guide.second-body%"
+            article .card:
+                h3 "%i18n.Guide.third-title%"
+                p "%i18n.Guide.third-body%"
 
 @Page/home
 title = Vectrune i18n Demo
+style = demo
 view:
-    div:
-        NavBar
-        main .main-content:
+    div .shell:
+        Header
+        main:
             HeroSection
-            Welcome
-
+            Guide
+        footer "%i18n.Guide.footer%"

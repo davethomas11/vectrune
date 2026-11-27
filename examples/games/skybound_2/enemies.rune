@@ -43,7 +43,10 @@ action tick_enemies(previous_z):
             hop = enemy.clock % 84
             enemy.z = enemy.floor + (enemy.kind == "hopper" && hop < 36 ? sin(hop * 5) * 0.8 : 0)
             enemy_distance = distance(player, enemy)
-            if phase == "playing" && enemy_distance < 0.82 && player.z >= enemy.z - 0.25 && player.z < enemy.z + 0.85:
+            if phase == "playing"
+                && enemy_distance < 0.82
+                && player.z >= enemy.z - 0.25
+                && player.z < enemy.z + 0.85:
                 if player.vz <= 0 && previous_z > player.z + 0.001 && previous_z >= enemy.z + 0.25:
                     enemy.model = "beyond/squashed"
                     enemy.z = enemy.floor + 0.02

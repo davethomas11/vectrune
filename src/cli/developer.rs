@@ -22,7 +22,7 @@ pub fn commands() -> Vec<Command> {
           .arg(Arg::new("json").long("json").action(ArgAction::SetTrue).help("Emit a JSON report"));
         if name == "fmt" {
             command.arg(Arg::new("check").long("check").action(ArgAction::SetTrue).help("Fail if formatting changes are needed; do not write files"))
-                .arg(Arg::new("line-width").long("line-width").default_value("100").value_parser(clap::value_parser!(u64).range(20..)).help("Target line width for JSON objects and logic collections (minimum 20); opaque code and indivisible values are preserved"))
+                .arg(Arg::new("line-width").long("line-width").default_value("100").value_parser(clap::value_parser!(u64).range(20..)).help("Target line width for JSON collections and supported logic expressions (minimum 20); opaque code and indivisible values are preserved"))
         } else if name == "check" {
             command.arg(Arg::new("deny-warnings").long("deny-warnings").action(ArgAction::SetTrue).help("Treat linter warnings as failures"))
         } else if name == "test" {
@@ -423,7 +423,7 @@ pub async fn run_once(name: &str, args: &ArgMatches, path: &Path) -> Result<bool
                 section: String::new(),
                 message: error.to_string(),
                 location: None,
-                suggestion: Some("Check the import path relative to the importing file".into()),
+                suggestion: Some("Check source syntax and import paths relative to the importing file".into()),
             }];
             print_check(name, &path, &diagnostics, json, false)?;
             return Ok(false);

@@ -169,7 +169,9 @@ action surface_at(x,y):
         if x >= deck.min_x && x <= deck.max_x && y >= deck.min_y && y <= deck.max_y:
             along = (x-deck.x)*deck.dx+(y-deck.y)*deck.dy
             across = -(x-deck.x)*deck.dy+(y-deck.y)*deck.dx
-            if along >= -0.000001 && along <= deck.length+0.000001 && abs(across) <= deck.half+0.000001:
+            if along >= - 0.000001
+                && along <= deck.length + 0.000001
+                && abs(across) <= deck.half + 0.000001:
                 candidate = deck.z+along*deck.slope
                 bank_slope = 0
                 if deck.pipe && abs(across) > 0.5:
@@ -217,14 +219,20 @@ action tick(input):
     call surface_at player.x, player.y
     grounded = floor_z > -50 && abs(player.z-floor_z) < 0.04 && player.vz <= 0
     forward = clamp((input.forward ? 1 : 0)-(input.back ? 1 : 0)+(input.move_y ? input.move_y : 0),-1,1)
-    side = clamp((input.right ? 1 : 0)-(input.left ? 1 : 0)+(input.move_x ? input.move_x : 0),-1,1)
+    side =
+        clamp((input.right ? 1: 0) - (input.left ? 1: 0) + (input.move_x ? input.move_x: 0), -1, 1)
     magnitude = max(1,sqrt(forward*forward+side*side))
     # Camera-relative steering with diagonal normalization and downhill gravity.
     ax = (cos(31)*forward-sin(31)*side)/magnitude
     ay = (sin(31)*forward+cos(31)*side)/magnitude
     # A press commits one cell to the entire wind-up. Early release cannot fire,
     # and holding the button after discharge cannot queue another charge.
-    if !!input.charge && !charge_held && grounded && !charging && charges_left > 0 && charge_cooldown == 0:
+    if !!input.charge
+        && !charge_held
+        && grounded
+        && !charging
+        && charges_left > 0
+        && charge_cooldown == 0:
         charging = true
         charge = 0
         charges_left -= 1
@@ -275,7 +283,10 @@ action tick(input):
                     player.vz = clamp(launch_vz,-0.4,0.5)
                 grounded = false
                 player.z += player.vz/4
-                if player.vz <= 0 && floor_z > -50 && player.z <= floor_z && old_z >= floor_z-0.15:
+                if player.vz <= 0
+                    && floor_z > - 50
+                    && player.z <= floor_z
+                    && old_z >= floor_z - 0.15:
                     player.z = floor_z
                     player.vz = 0
                     grounded = true
@@ -307,19 +318,29 @@ action tick(input):
             enemy.z = enemy.home_z
             if enemy.pipe && abs(offset) > 0.5:
                 bank = min(3,floor((abs(offset)-0.5)/0.625))
-                enemy.z += bank*bank*0.125+(abs(offset)-0.5-bank*0.625)*(2*bank+1)*0.2
-            if abs(player.x-enemy.x) < 0.9 && abs(player.y-enemy.y) < 0.9 && abs(player.z-enemy.z) < 1 && invulnerable == 0:
+                enemy.z+=
+                    bank * bank * 0.125 + (abs(offset) - 0.5 - bank * 0.625) * (2 * bank + 1) * 0.2
+            if abs(player.x - enemy.x) < 0.9
+                && abs(player.y - enemy.y) < 0.9
+                && abs(player.z - enemy.z) < 1
+                && invulnerable == 0:
                 call lose_life
     for spike in spikes:
         dx = player.x-spike.x
         dy = player.y-spike.y
-        if dx*dx+dy*dy < 0.85*0.85 && player.z < spike.z+0.7 && player.z+1.1 > spike.z && invulnerable == 0:
+        if dx * dx + dy * dy < 0.85 * 0.85
+            && player.z < spike.z + 0.7
+            && player.z + 1.1 > spike.z
+            && invulnerable == 0:
             call lose_life
     if death_timer > 0:
         call update_view
         stop when true
     call locate_route
-    if course_s > checkpoint_x-0.5 && course_s < checkpoint_x+5 && grounded && !checkpoint_active:
+    if course_s > checkpoint_x - 0.5
+        && course_s < checkpoint_x + 5
+        && grounded
+        && !checkpoint_active:
         checkpoint = {"x": checkpoint_world_x, "y": checkpoint_y, "z": checkpoint_z}
         checkpoint_active = true
         announcement = "Checkpoint saved"
@@ -329,7 +350,8 @@ action tick(input):
     if death_timer > 0:
         call update_view
         stop when true
-    goal_distance = (player.x-goal.x)*(player.x-goal.x)+(player.y-goal.y)*(player.y-goal.y)
+    goal_distance =
+        (player.x - goal.x) * (player.x - goal.x) + (player.y - goal.y) * (player.y - goal.y)
     if status == "playing" && goal_distance < 1.5*1.5 && abs(player.z-goal.z) < 0.1 && grounded:
         completed_levels = level
         progress.cleared = max(progress.cleared,level)
@@ -439,7 +461,9 @@ action update_effects:
         orb = charge_orbs[i]
         orb.visible = charging || blast_ticks > 0
         angle = ticks*6+i*30
-        radius = charging ? 0.7+charge/charge_duration*0.6 : (18-blast_ticks)*blast_radius/18
+        radius = charging
+            ? 0.7 + charge / charge_duration * 0.6
+            : (18 - blast_ticks) * blast_radius / 18
         orb.x = player.x+cos(angle)*radius
         orb.y = player.y+sin(angle)*radius
         orb.z = player.z+0.55+sin(angle*2)*0.15
@@ -462,7 +486,9 @@ action update_view:
     avatar.y = player.y
     avatar.z = player.z+0.55
     avatar.angle = roll
-    avatar.visible = death_timer > 0 ? death_age < 24 : (lives > 0 && (invulnerable == 0 || ticks % 6 < 3))
+    avatar.visible = death_timer > 0
+        ? death_age < 24
+        : (lives > 0 && (invulnerable == 0 || ticks % 6 < 3))
     avatar.dissolve = death_timer > 0 ? min(1,death_age/20) : 0
     avatar.scale = death_timer > 0 ? 1+min(death_age,8)*0.025 : 1
     stripe.x = player.x+sin(roll)*0.53
@@ -485,7 +511,9 @@ action update_view:
     selector_hidden = status != "level_select"
     selector_unavailable = status == "playing"
     launch_hidden = status == "title" || status == "level_select" || status == "playing"
-    launch_label = status == "level_complete" ? "Next course" : (status == "gameover" ? "Retry" : "Play again")
+    launch_label = status == "level_complete"
+        ? "Next course"
+        : (status == "gameover" ? "Retry": "Play again")
     ui = {
         "style": "floating",
         "meters": [

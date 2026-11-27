@@ -223,7 +223,7 @@ describe('fetch assignment form', () => {
     executeSteps(steps('w = fetch-json "https://example.com/w" catch failed', 'reached = true'), locals);
     await settle();
     expect(locals.reached).toBe(false);
-    expect(app.invokeAction).toHaveBeenCalledWith('failed', [expect.objectContaining({ status: 503 })]);
+    expect(app.invokeAction).toHaveBeenCalledWith('failed', [expect.objectContaining({ status: 503 })], locals);
   });
 
   it('rejects the assignment form inside nested blocks', () => {

@@ -3,7 +3,9 @@ action awaken_boss:
     boss_active = true
     if !checkpoint_active:
         call save_checkpoint
-    notice = selected == 1 ? "KILNBACK WAKES! Dodge the charge, then jump on the blue core." : "THE TEMPEST REGENT! Jump its red wave. Stomp when the crown lowers."
+    notice = selected == 1
+        ? "KILNBACK WAKES! Dodge the charge, then jump on the blue core."
+        : "THE TEMPEST REGENT! Jump its red wave. Stomp when the crown lowers."
     notice_ticks = 150
     call boss_telegraph
     call play_score selected == 1 ? "beyond_kiln_boss" : "beyond_storm_boss"
@@ -62,7 +64,9 @@ action tick_boss(previous_z):
                 }
             ]
             ring_distance = distance(player, boss)
-            if abs(ring_distance - ring_radius) < 0.55 && player.z < boss.z + 0.65 && invulnerable == 0:
+            if abs(ring_distance - ring_radius) < 0.55
+                && player.z < boss.z + 0.65
+                && invulnerable == 0:
                 call lose_heart
             if boss_clock >= 52:
                 boss_phase = "rest"

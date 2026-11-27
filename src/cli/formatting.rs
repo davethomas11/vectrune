@@ -3,7 +3,10 @@ use anyhow::{Context, Result};
 use clap::ArgMatches;
 use std::path::Path;
 
-pub fn format_source(source: &str, line_width: usize) -> String {
+pub fn format_source(
+    source: &str,
+    line_width: usize,
+) -> Result<String, crate::rune_parser::ParseError> {
     let newline = if source
         .find('\n')
         .is_some_and(|index| index > 0 && source.as_bytes()[index - 1] == b'\r')
@@ -17,8 +20,17 @@ pub fn format_source(source: &str, line_width: usize) -> String {
     let mut levels = Vec::new();
     let mut raw = false;
     let mut logic = false;
-    let mut lines = source.lines().peekable();
-    while let Some(line) = lines.next() {
+    let mut lines = source.lines().map(str::to_string).peekable();
+    while let Some(mut line) = lines.next() {
+        if logic && line.starts_with(char::is_whitespace) && !raw {
+            line = crate::rune_parser::collect_logic_continuation(line, &mut lines)?;
+        }
+        let line = line.as_str();
+        let control_expression = if logic && line.starts_with(char::is_whitespace) {
+            format_control_expression(line, line_width, newline)
+        } else {
+            None
+        };
         if line.starts_with('@') {
             logic = line[1..]
                 .split('/')
@@ -87,6 +99,8 @@ pub fn format_source(source: &str, line_width: usize) -> String {
             } else {
                 output.push_str(line);
             }
+        } else if let Some(formatted) = control_expression {
+            output.push_str(&formatted);
         } else if logic
             && !line.trim_start().starts_with('#')
             && !line.trim_start().starts_with("call ")
@@ -129,7 +143,77 @@ pub fn format_source(source: &str, line_width: usize) -> String {
         }
         output.push_str(newline);
     }
-    output
+    Ok(output)
+}
+
+fn format_control_expression(line: &str, width: usize, newline: &str) -> Option<String> {
+    let indent = line.chars().take_while(|c| c.is_whitespace()).count();
+    let text = line.trim();
+    if text.starts_with('#') {
+        return None;
+    }
+    let is_if = text.starts_with("if ") && text.ends_with(':');
+    let mut compact = compact_expression(text);
+    if is_if && !compact.starts_with("if ") {
+        compact.insert(2, ' ');
+    }
+    if indent + compact.chars().count() <= width {
+        return None;
+    }
+    let tokens = crate::rune_parser::expression_tokens(&compact);
+    let assignment = tokens
+        .iter()
+        .position(|token| matches!(*token, "=" | "+=" | "-=" | "*=" | "/="));
+    if !is_if && assignment.is_none() {
+        return None;
+    }
+    let mut depth = 0i32;
+    let mut pending = 0usize;
+    let mut breaks = Vec::new();
+    for (index, token) in tokens.iter().enumerate() {
+        match *token {
+            "(" | "[" | "{" => depth += 1,
+            ")" | "]" | "}" => depth -= 1,
+            "?" if depth == 0 && !is_if && assignment.is_some_and(|eq| index > eq) => {
+                pending += 1;
+                breaks.push(*token);
+            }
+            ":" if depth == 0 && pending > 0 => {
+                pending -= 1;
+                breaks.push(*token);
+            }
+            "||" | "&&" if depth == 0 && is_if => breaks.push(*token),
+            _ => {}
+        }
+    }
+    if breaks.is_empty() {
+        let eq = assignment?;
+        let op = tokens[eq];
+        let end = op.as_ptr() as usize - compact.as_ptr() as usize + op.len();
+        let rhs = compact[end..].trim();
+        if rhs.is_empty() || indent + 4 + rhs.chars().count() > width || is_if {
+            return None;
+        }
+        return Some(format!(
+            "{}{}{}{}{}",
+            " ".repeat(indent),
+            &compact[..end],
+            newline,
+            " ".repeat(indent + 4),
+            rhs
+        ));
+    }
+    let mut result = " ".repeat(indent);
+    let mut start = 0;
+    for token in breaks {
+        let offset = token.as_ptr() as usize - compact.as_ptr() as usize;
+        result.push_str(compact[start..offset].trim());
+        result.push_str(newline);
+        result.push_str(&" ".repeat(indent + 4));
+        start = offset;
+    }
+    result.push_str(compact[start..].trim());
+    Some(result)
 }
 
 fn compact_expression(source: &str) -> String {
@@ -273,7 +357,18 @@ fn normalize_logic_layout(doc: &mut crate::rune_ast::RuneDocument) {
                     serde_json::to_string(&crate::rune_parser::expression_tokens(source)).unwrap()
             }
             Value::List(items) => items.iter_mut().for_each(normalize),
-            Value::Map(items) => items.values_mut().for_each(normalize),
+            Value::Map(items) => {
+                let old = std::mem::take(items);
+                for (key, mut value) in old {
+                    normalize(&mut value);
+                    let normalized_key = if key.starts_with("if ") {
+                        serde_json::to_string(&crate::rune_parser::expression_tokens(&key)).unwrap()
+                    } else {
+                        key
+                    };
+                    items.insert(normalized_key, value);
+                }
+            }
             _ => {}
         }
     }
@@ -466,7 +561,51 @@ fn assignment(line: &str) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
-    use super::format_source;
+    use super::{format_source, normalize_logic_layout};
+
+    #[test]
+    fn example_logic_can_be_formatted_without_changing_its_parse() {
+        for (name, source) in [
+            ("aquarium", include_str!("../../examples/games/idle_aquarium/logic.rune")),
+            ("traffic", include_str!("../../examples/games/dog_walker/traffic.rune")),
+            ("marble", include_str!("../../examples/games/marble_run/logic.rune")),
+            ("neon", include_str!("../../examples/games/neon_circuit/logic.rune")),
+            ("crypt", include_str!("../../examples/games/rune_crypt/ux.rune")),
+            ("starfall", include_str!("../../examples/games/starfall/hydroponics.rune")),
+        ] {
+            let formatted = format_source(source, 100).unwrap();
+            let mut before = crate::rune_parser::parse_rune(source).unwrap();
+            let mut after = crate::rune_parser::parse_rune(&formatted).unwrap();
+            normalize_logic_layout(&mut before);
+            normalize_logic_layout(&mut after);
+            for (original, formatted_section) in before.sections.iter().zip(&after.sections) {
+                for (key, items) in &original.series {
+                    assert_eq!(
+                        serde_json::to_value(items).unwrap(),
+                        serde_json::to_value(&formatted_section.series[key]).unwrap(),
+                        "{name}: series {key}"
+                    );
+                }
+            }
+            assert_eq!(format_source(&formatted, 100).unwrap(), formatted, "{name}");
+        }
+    }
+
+    #[test]
+    fn logic_comments_are_not_formatted_as_assignments() {
+        let source = "@Logic/game\nstate:\n    # a long explanation = this is only a comment\n    x = 1\n";
+        assert_eq!(format_source(source, 35).unwrap(), source);
+    }
+
+    #[test]
+    fn multiline_conditions_preserve_crlf_and_are_idempotent() {
+        let source = "@Logic/game\r\naction update:\r\n    if !ready || waiting || complete:\r\n        value = ready ? 123456 : 654321\r\n";
+        let formatted = format_source(source, 30).unwrap();
+        assert!(formatted.contains("    if !ready\r\n        || waiting"));
+        assert!(formatted.contains("\r\n            ? 123456"));
+        assert!(!formatted.replace("\r\n", "").contains('\n'));
+        assert_eq!(format_source(&formatted, 30).unwrap(), formatted);
+    }
 
     #[test]
     fn logic_layout_preserves_numbers_strings_and_indexing_tokens() {
@@ -474,14 +613,14 @@ mod tests {
             "@Logic/game\nstate:\n",
             "    data = {\"tiny\":1e-3,\"negative\":-0.25,\"index\":items[2],\"literal\":\"braces { and \\\"quotes\\\"\"}\n",
         );
-        let formatted = format_source(source, 45);
+        let formatted = format_source(source, 45).unwrap();
         assert!(formatted.contains("1e-3"));
         assert!(formatted.contains("items[2]"));
         assert_eq!(
             crate::rune_parser::expression_tokens(source),
             crate::rune_parser::expression_tokens(&formatted)
         );
-        assert_eq!(format_source(&formatted, 45), formatted);
+        assert_eq!(format_source(&formatted, 45).unwrap(), formatted);
     }
 
     #[test]
@@ -500,7 +639,7 @@ mod tests {
             "    data = {\"x\":1,\"y\":2,\"label\":\"keep this embedded source intact\"}\n",
             "\n",
         );
-        let formatted = format_source(source, 20);
+        let formatted = format_source(source, 20).unwrap();
         assert!(formatted.starts_with("@Data\nvalue = {\n    \"label\": "));
         assert!(formatted.contains("This single string is deliberately longer than the line width"));
         assert!(formatted.contains("    data = {\n        \"x\": 1,"));
@@ -508,7 +647,7 @@ mod tests {
             "    call update {\"jump\":true,\"notice\":\"keep command argument spacing\"}\n"
         ));
         assert_eq!(formatted.split("@Raw").nth(1), source.split("@Raw").nth(1));
-        assert_eq!(format_source(&formatted, 20), formatted);
+        assert_eq!(format_source(&formatted, 20).unwrap(), formatted);
     }
 
     #[test]
@@ -518,13 +657,13 @@ mod tests {
             "modes = [{\"id\":\"tank\",\"label\":\"TANK\",\"bounds\":{\"origin\":[1,2]}},{\"id\":\"friends\"}]\n",
             "names = [\"alpha\",\"beta\",\"gamma\",\"delta\",\"epsilon\",\"zeta\",\"eta\",\"theta\"]\n",
         );
-        let formatted = format_source(source, 40);
+        let formatted = format_source(source, 40).unwrap();
         assert!(formatted.starts_with(
             "@TV/game\nmodes = [\n    {\n        \"id\": \"tank\",\n        \"label\": \"TANK\","
         ));
         assert!(formatted.contains("    },\n    {\"id\":\"friends\"}\n]\n"));
         assert!(formatted.contains("names = [\"alpha\",\"beta\""));
-        assert_eq!(format_source(&formatted, 40), formatted);
+        assert_eq!(format_source(&formatted, 40).unwrap(), formatted);
         let parse = |text: &str| crate::rune_parser::parse_rune(text).unwrap();
         let section = |text: &str| parse(text).sections[0].kv["modes"].to_json();
         assert_eq!(
@@ -542,10 +681,6 @@ pub fn run(path: &Path, args: &ArgMatches) -> Result<bool> {
     // Prepare and validate every result before writing any file.
     for file in files {
         let source = std::fs::read_to_string(&file)?;
-        let formatted = format_source(&source, line_width);
-        if source == formatted {
-            continue;
-        }
         let base = file.parent().unwrap();
         let loader = if crate::rune_parser::is_test_source(&file) {
             crate::rune_parser::load_rune_test_document_from_str_with_base
@@ -553,6 +688,10 @@ pub fn run(path: &Path, args: &ArgMatches) -> Result<bool> {
             crate::rune_parser::load_rune_document_from_str_with_base
         };
         let mut before = loader(&source, base, &file.to_string_lossy())?;
+        let formatted = format_source(&source, line_width)?;
+        if source == formatted {
+            continue;
+        }
         let mut after = loader(&formatted, base, &file.to_string_lossy())?;
         normalize_logic_layout(&mut before);
         normalize_logic_layout(&mut after);

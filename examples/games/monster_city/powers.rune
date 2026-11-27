@@ -52,7 +52,9 @@ action tickSupplies:
         chance = level >= 15 ? 100 : level >= 5 ? 75 : 50
         roll = random(1, 100, city_seed + drop_number * 79)
         if roll <= chance && crates.length < 2:
-            choices = level < 5 ? ["shield", "speed", "baby"] : ["atomic", "shield", "electric", "giant", "speed", "baby", "aftershock"]
+            choices = level < 5
+                ? ["shield", "speed", "baby"]
+                : ["atomic", "shield", "electric", "giant", "speed", "baby", "aftershock"]
             kind = pick(choices, city_seed + drop_number * 131)
             landing_x = clamp(monster.x + random(-20, 90, city_seed + drop_number * 97), 12, 340)
             crates.push(
@@ -70,7 +72,9 @@ action tickSupplies:
         crate.life -= 1
         if crate.y >= 154:
             crate.sprite = "supply/landed"
-        if crate.life > 0 && crate.y + 32 >= monster.y && abs((crate.x + 16) - (monster.x + monster.scale * 8)) < monster.scale * 8 + 12:
+        if crate.life > 0
+            && crate.y + 32 >= monster.y
+            && abs((crate.x + 16) - (monster.x + monster.scale * 8)) < monster.scale * 8 + 12:
             crate.life = 0
             call grantPower crate.kind
     crates = crates.filter(c => c.life > 0)
@@ -142,7 +146,9 @@ action updatePowers:
             if clock % 12 == 0:
                 sound.play("power_breath")
             for segment in [0, 1, 2]:
-                beam_x = monster.flip ? monster.x - 54 * (segment + 1) : monster.x + 36 + 54 * segment
+                beam_x = monster.flip
+                    ? monster.x - 54 * (segment + 1)
+                    : monster.x + 36 + 54 * segment
                 power_fx.push(
                     {
                         "x": beam_x,

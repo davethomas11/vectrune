@@ -71,6 +71,36 @@ describe('executor — log', () => {
 // ---------------------------------------------------------------------------
 
 describe('executor — respond', () => {
+  it('interpolates context paths and pretty JSON in response text', () => {
+    const app = createApp(parse(`#!RUNE
+@App
+type = REST
+@Route/POST /echo/{id}
+run:
+    data = parse-json
+    respond 200 "Echoed {id}: {data.name} {pretty data} {missing}"
+`));
+    const response = app.request({
+      method: 'POST', path: '/echo/42', body: '{"name":"Ada","scores":[1,2]}',
+    });
+    expect(response.status).toBe(200);
+    expect(response.body).toBe('Echoed 42: Ada {\n  "name": "Ada",\n  "scores": [\n    1,\n    2\n  ]\n} {missing}');
+  });
+
+  it('preserves escaped braces and does not interpolate returned variables', () => {
+    const ctx = makeCtx(undefined, { id: '42' });
+    ctx.state.message = '{id}';
+    executeSteps([{ kind: 'builtin', name: 'respond', args: ['200', '"\\{id\\} {id} {message}"'] }], ctx);
+    expect(ctx.response!.body).toBe('{id} 42 {id}');
+    const unquoted = makeCtx(undefined, { id: '42' });
+    executeSteps([{ kind: 'builtin', name: 'respond', args: ['200', 'Hello', '{id}'] }], unquoted);
+    expect(unquoted.response!.body).toBe('Hello 42');
+    const raw = makeCtx();
+    raw.state.data = { message: '{id}' };
+    executeSteps([{ kind: 'builtin', name: 'respond', args: ['200', 'data'] }], raw);
+    expect(raw.response!.body).toEqual({ message: '{id}' });
+  });
+
   it('sets response with status and body', () => {
     const ctx = makeCtx();
     const steps: RunStep[] = [

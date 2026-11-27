@@ -63,7 +63,9 @@ action update_combat:
             bolt.life -= 1
             next = {"x": bolt.x + bolt.vx, "y": bolt.y + bolt.vy}
             moved = slide(bolt.x, bolt.y, bolt.vx, bolt.vy, 0.08)
-            if sees(bolt, next) == false || abs(moved.x - next.x) > 0.01 || abs(moved.y - next.y) > 0.01:
+            if sees(bolt, next) == false
+                || abs(moved.x - next.x) > 0.01
+                || abs(moved.y - next.y) > 0.01:
                 bolt.visible = false
             if bolt.visible == true:
                 bolt.x = next.x
@@ -119,7 +121,9 @@ action update_combat:
                     )
                 if enemy.windup == 0:
                     if enemy.kind == "skeleton":
-                        if distance(player, enemy.target) < 0.65 && dist < 1.7 && sees(enemy, player):
+                        if distance(player, enemy.target) < 0.65
+                            && dist < 1.7
+                            && sees(enemy, player):
                             call take_damage (6 + level * 2)
                         enemy.cooldown = 36
                     if enemy.kind != "skeleton":

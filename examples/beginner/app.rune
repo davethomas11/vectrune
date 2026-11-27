@@ -12,6 +12,6 @@ run:
 
 @Route/POST /echo
 run:
-    parse-json
-    respond 200 "Echoed"
+    data = parse-json
+    respond 200 "Echoed: {pretty data}"
 

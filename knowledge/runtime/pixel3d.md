@@ -63,6 +63,12 @@ The grid-map semantics below remain unchanged.
 
 ## Glowtide Aquarium
 
+The [Glowtide Aquarium showcase](../../teaching_website/parts/pages/glowtide-aquarium.rune)
+offers a playable embedded game, a standalone view, and its Rune source. Both
+views use the same site URL and browser storage, so saves are shared across
+views and site languages. The game interface is currently English; its
+standalone shell includes a collapsible guide to controls, care and saves.
+
 The aquarium shares fish/critter care through
 [`@Module/AquariumCare` and composed `@Type/AquariumLife`](../../examples/games/idle_aquarium/care.rune).
 These [language features](../language/logic-modules.md) use the shared Rune-Web

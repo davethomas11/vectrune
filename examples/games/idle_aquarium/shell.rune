@@ -71,24 +71,30 @@ view:
                 small "Three levels each / From 150 pearls"
         p .notice data-pixel-text=notice role=status aria-live=polite "Welcome home! Your fish earn pearls just by swimming."
         p .notice data-pixel-text=snack_label "0 snacks eaten / +0 bite pearls"
-        footer:
-            p "Drag with a finger or mouse to smoothly rotate all around the glass tank. Taps still select friends. LEFT / RIGHT or A / D also rotate. The compact starter tank grows visibly with each expansion."
-            p "Grow reef level 3 to welcome a moon jelly. Every minute ends with a 15-second glow festival!"
-            p "The lagoon menu stays inside the game in fullscreen. Tap away or X to close; Up/Down selects and Enter confirms, ready for experimenting with browser-based TV remotes."
-            p "Use the in-game hamburger for care and upgrades, or the bottom-left snack and fish icons for quick care. Tap a fish for its top-left profile, linked to your swimming friend. Rename with the themed on-screen keyboard, physical keys, or a controller: D-pad moves, A selects, B cancels."
-            p "Scatter pellets, flakes and algae: fish swim over, munch slowly and take breaks. Each finished snack earns +2 pearls. Expand twice to welcome up to 30 friends."
-            p "Feeding costs one pearl per living fish or critter, minimum one pearl. Dead friends do not add to the price. If you cannot afford it, no food or cooldown is spent."
-            p "Adoptions cycle through clownfish, blue tangs, royal grammas, puffers, angelfish, butterflyfish, glowing neon tetras and lionfish. Existing friends keep their species and care history."
-            p "Tap a fish, then UPGRADES: buy a 120-pearl Style Kit for a rounded body, expressive eyes and moving fins. Candy and Moon stripes cost 80 pearls each; owned patterns switch free. Cosmetics belong to that fish."
-            p "Tank care offers long-lasting food (150 / 350 / 700 pearls) and longevity (200 / 500 / 1000 pearls). Food levels add 10 seconds to future showers and cooldowns, up to 60 / 70 seconds. Longevity adds 10% base lifespan per level to living and future fish and critters, up to 30%; it does not revive or protect from hunger."
-            p "Passive earnings are now half-speed: 0.5 pearl per living fish per second before reef and event bonuses. Half-pearl fractions carry forward; your wallet stays whole pearls. The balance cap is 100,000 pearls, including snacks and oyster rewards. Spend pearls to make room; lifetime earnings are not capped."
-            p "Hunger fills in 10 running minutes, with 5 more minutes before starvation. Finished snacks reduce hunger. Fish live 45-90 running minutes; only living fish earn pearls. Pause or close the tank to stop aging and hunger."
-            p "Tap dead fish to retrieve with a net and free a space for a pearl-funded adoption. After 2 minutes, unretrieved fish decay and sink; hungry fish swim over and slowly eat them."
-            p "Bottom-left flower and critter icons open in-game variety pickers. Plant up to 12 floral decorations and welcome up to 12 bottom neighbors. Crabs and shrimp scurry in eight directions with animated feet, avoiding plants and each other; snails glide slowly."
-            p "Tap a critter to name it and see its age, hunger and lifespan. Feed scatters sinking algae portions that critters approach and munch for 4 seconds. Critter hunger fills in 20 running minutes; starvation follows 10 minutes later. Lifespans vary from 90-180 running minutes. Dead critters remain on the sand until tapped for net retrieval. Names and care save; nothing ages while paused or closed."
-            p "Progress, hunger, lifespan and decay save automatically in this browser. No offline earnings or aging. New and reset tanks start with 30 pearls, three fish and one crab. Reset requires confirmation."
-            p "Moonlit Drift: an original quiet lo-fi pad loop with warm chords and distant bells. Music starts with your first interaction. Sound / M mutes; Pause quiets the aquarium."
-            p "GPU lighting is optional: WebGL handles colored lights and enhanced glow while CPU geometry keeps the same picking and care behavior. Unavailable GPUs or a lost context fall back to CPU lighting. Hardware and browser determine whether it is faster."
+        section .aquarium-guide aria-label="Aquarium guide":
+            h2 "Your aquarium guide"
+            p "A little help when you need it. Open a topic to learn more."
+            details:
+                summary "Controls and exploring"
+                p "Drag with a finger or mouse to rotate the tank; tap a resident to see its profile. Left and right arrows or A and D also rotate. The tank grows with each expansion."
+                p "Use the in-game menu for care and upgrades, or the snack and fish icons for quick care. The menu works in fullscreen: tap away or X to close, use Up and Down to select, and Enter to confirm. Rename friends with the on-screen keyboard, physical keys, or a controller: D-pad moves, A selects and B cancels."
+            details:
+                summary "Feeding and caring for friends"
+                p "Feed scatters pellets, flakes and algae. Each finished snack earns 2 pearls. Feeding costs one pearl per living fish or critter, with a minimum of one; if you cannot afford it, no food or cooldown is spent."
+                p "Fish hunger fills in 10 running minutes, with 5 more before starvation. Fish live 45-90 running minutes. Critter hunger fills in 20 minutes, with 10 more before starvation; critters live 90-180 running minutes. Snacks reduce hunger."
+                p "Tap a dead friend to retrieve it with a net and free its space. Unretrieved fish decay and sink after 2 minutes and can be eaten by hungry fish; dead critters remain on the sand until retrieved."
+            details:
+                summary "Growing your tank"
+                p "Adopt eight varieties of fish, expand twice for up to 30 friends, and add up to 12 floral decorations and 12 bottom neighbors. Grow reef level 3 to welcome a moon jelly. Every minute ends with a 15-second glow festival."
+                p "Each living fish earns 0.5 pearl per second before reef and event bonuses; fractions carry forward. The wallet holds up to 100,000 pearls, including snacks and oyster rewards. Spend pearls to make room; lifetime earnings are not capped."
+                p "Select a fish and open UPGRADES for its 120-pearl Style Kit or 80-pearl Candy and Moon stripes. Owned patterns switch free. Tank care offers food upgrades (150 / 350 / 700 pearls) and longevity (200 / 500 / 1000). Each food level adds 10 seconds to future showers and cooldowns, up to 60 / 70 seconds. Each longevity level adds 10% base lifespan, up to 30%; it does not revive friends or prevent hunger."
+            details:
+                summary "Saving and starting over"
+                p "Progress and care save automatically in this browser. There are no offline earnings or aging, and pause stops the simulation. New and reset tanks start with 30 pearls, three fish and one crab; reset requires confirmation."
+            details:
+                summary "Music and lighting"
+                p "Moonlit Drift is an original lo-fi loop that starts on your first interaction. Sound / M mutes it; Pause quiets the aquarium."
+                p "GPU lighting is optional. If WebGL is unavailable or its context is lost, lighting falls back to the CPU. Picking and care stay the same; performance depends on the browser and hardware."
 
 @Logic/aquarium_cabinet
 state:
@@ -247,8 +253,31 @@ rules:
         color = #f8dfaf
         text-align = center
         font-size = 14px
-    footer:
+    .aquarium-guide:
+        margin-top = 24px
+        padding = clamp(16px, 3vw, 24px)
+        border = 1px solid #39718c
+        border-radius = 18px
+        background = #10283d
         color = #9db5ca
-        font-size = 12px
-        text-align = center
-        line-height = 1.7
+        font-size = 14px
+        line-height = 1.6
+    .aquarium-guide h2:
+        margin = 0
+        color = #eafffa
+        font-size = 20px
+    .aquarium-guide > p:
+        margin = 6px 0 16px
+    .aquarium-guide details:
+        border-top = 1px solid #31566a
+    .aquarium-guide summary:
+        min-height = 44px
+        padding = 12px 0
+        color = #a4e7e2
+        font-weight = 700
+        cursor = pointer
+    .aquarium-guide summary:focus-visible:
+        outline = 3px solid #ffe076
+        outline-offset = 3px
+    .aquarium-guide details p:
+        margin = 0 0 12px

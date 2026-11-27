@@ -6,12 +6,10 @@
 
 # 1. MEMORY INITIALIZATION
 @Memory
-initial_state = {
-    "global_score": 0
-}
+initial_state = {"global_score":0}
 
 # 2. THE BACKEND DECLARATION
-@Websocket /ws
+@Websocket/ws
 on_connect:
     log "Frontend linked to reactivity engine"
 
@@ -26,7 +24,7 @@ view:
             span .value "{score}"
 
 # 4. THE TRIGGER EVENT
-@Event /ws /update_score
+@Event/ws/update_score
 run:
     event = parse-json body
 
@@ -40,7 +38,8 @@ run:
 
     # RULE: ws.broadcast is the signal to the frontend to find
     # all components using 'get-memory global_score' and re-render them.
-    ws.broadcast /ws { "type": "memory_update", "key": "global_score", "value": new_score }
+    update = { "type": "memory_update", "key": "global_score", "value": new_score }
+    ws.broadcast /ws update
 
 # 5. FRONTEND DECLARATION
 @Frontend
@@ -53,6 +52,7 @@ endpoint = /ws
 # 6. PAGE DEFINITION
 @Page/reactivity-contract-rune-web
 style = reactivity-contract
+logic = reactivity
 view:
     div .page-container:
         div .header:
@@ -62,7 +62,12 @@ view:
             div .stats-section:
                 LiveStat
             div .controls-section:
-                button .update-button on_click="emit('update_score', {'add':1})" "➕ Increase Score"
+                button .update-button click="increaseScore()" "➕ Increase Score"
+
+@Logic/reactivity
+action increaseScore():
+    payload = {"add": 1}
+    call emit "update_score", payload
 
 # 7. APP CONFIGURATION
 @App

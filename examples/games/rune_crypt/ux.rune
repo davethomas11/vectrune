@@ -66,7 +66,8 @@ action select_choice(index):
         if index < 2:
             route_choice = index
     if distance(player, exit_pos) >= 0.8 || level >= 5 || remaining > 0:
-        if (distance(player, shrine_pos) < 1 && shrine_used == false) || (distance(player, chest_pos) < 0.9 && chest_opened == false):
+        if (distance(player, shrine_pos) < 1 && shrine_used == false)
+            || (distance(player, chest_pos) < 0.9 && chest_opened == false):
             reward_choice = index
     call refresh_ui
 

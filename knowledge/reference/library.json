@@ -84,7 +84,7 @@
       "sources": ["src/cli/mobile_web.rs", "src/main.rs", "tests/mobile_web_cli.rs", "knowledge/runtime/mobile-web.md"],
       "returns": "Android debug APK, unsigned iOS Simulator app, or editable native IDE project.",
       "errors": "Rejects unsupported frontends, conflicting CLI modes and overwrite of non-generated or editable export directories. Reports native tool failures.",
-      "example": "vectrune examples/rune_mobile_web --export android --build-dir ./mobile-project",
+      "example": "vectrune examples/rune-mobile-web --export android --build-dir ./mobile-project",
       "parameters": [],
       "aliases": [],
       "notes": ["Builds need Node/npm and platform SDKs. --prepare-only skips native tools; --export requires no SDKs at generation time.", "Signing, device IPAs and store distribution remain manual. rune-mobile is reserved for future native execution.", "Bundled UI can operate offline, but no Rust compiler or HTTP backend ships on the device."],
@@ -423,7 +423,7 @@
       ],
       "returns": "HTTP response. Context objects are serialized as JSON text. The native REST handler uses a text/plain response body; generated OpenAPI documents detected status codes with a string response schema.",
       "errors": "",
-      "example": "respond 201 body",
+      "example": "respond 200 \"Echoed: {pretty data}\"",
       "parameters": [
         {
           "name": "status",
@@ -436,7 +436,9 @@
       ],
       "aliases": [],
       "notes": [
-        "OpenAPI status inference is static: dynamically produced statuses are not discovered, and response values are documented as text strings rather than inferred Rune/JSON schemas."
+        "OpenAPI status inference is static: dynamically produced statuses are not discovered, and response values are documented as text strings rather than inferred Rune/JSON schemas.",
+        "In REST, the presence of ?pretty (including ?pretty=0 or an empty value) indents valid JSON bodies without changing status or content type. Static and frontend responses are unaffected.",
+        "Message text expands {path} and {pretty path}; missing placeholders remain unchanged. Escape literal braces with \\{ and \\}. Direct variable responses retain their existing serialization; interpolated values are not recursively expanded."
       ],
       "fields": []
     },
@@ -460,6 +462,66 @@
       ],
       "aliases": [],
       "notes": [],
+      "fields": []
+    },
+    {
+      "id": "url-encode",
+      "category": "expressions",
+      "name": "url_encode",
+      "signature": "url_encode(value)",
+      "summary": "Encode one string as a URL component in Rune-Web.",
+      "sources": ["runtime/rune-web/src/expression.ts"],
+      "returns": "The percent-encoded component string.",
+      "errors": "",
+      "example": "query_url = base_url + url_encode(place)",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Browser Rune-Web expression; not a native query-parameter builder."],
+      "fields": []
+    },
+    {
+      "id": "rune-web-map",
+      "category": "web",
+      "name": "data-rune-map",
+      "signature": "data-rune-map=<key> data-latitude=<lat> data-longitude=<lon> data-map-select=<action>",
+      "summary": "Render an interactive OpenStreetMap tile map in a Rune-Web element.",
+      "sources": ["runtime/rune-web/src/map.ts"],
+      "returns": "Calls the named action with {latitude, longitude} when a point is selected.",
+      "errors": "Invalid coordinates, duplicate keys or initialization failures are reported in the browser console.",
+      "example": "div .map data-rune-map=weather data-latitude=\"{latitude}\" data-longitude=\"{longitude}\" data-map-select=chooseMap",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Requires a CSS height, visible attribution and compliance with the tile provider's policy.", "The default OpenStreetMap tiles disclose the viewed area and visitor IP. Override with HTTPS data-map-tiles using $z/$x/$y and plain-text data-map-attribution."],
+      "fields": []
+    },
+    {
+      "id": "location-current",
+      "category": "web",
+      "name": "location.current",
+      "signature": "location.current then <action> [catch <action>]",
+      "summary": "Request the browser's current device position.",
+      "sources": ["runtime/rune-web/src/builtins/location.ts"],
+      "returns": "Calls the success action with {latitude, longitude, accuracy, timestamp}.",
+      "errors": "The optional catch action receives {code, message} for denied, unavailable or timed-out location; otherwise a warning is logged.",
+      "example": "location.current then showLocation catch locationFailed",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Requires browser permission and typically HTTPS or localhost. Results are asynchronous."],
+      "fields": []
+    },
+    {
+      "id": "location-if-granted",
+      "category": "web",
+      "name": "location.if-granted",
+      "signature": "location.if-granted then <action> [catch <action>]",
+      "summary": "Request browser location only when permission is already granted.",
+      "sources": ["runtime/rune-web/src/builtins/location.ts"],
+      "returns": "Calls the success action with {latitude, longitude, accuracy, timestamp}.",
+      "errors": "The catch action receives {code, message}, including prompt, denied, unavailable or timeout; otherwise a warning is logged.",
+      "example": "location.if-granted then showLocation catch locationFailed",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Does not prompt for permission. Fails when the browser cannot report permission status."],
       "fields": []
     },
     {
@@ -1585,14 +1647,16 @@
       "signature": "action name(parameters):\n    statement",
       "summary": "Declare an action in a Rune-Web @Logic or component scope.",
       "sources": [
-        "src/apps/rune_web/parser.rs"
+        "src/apps/rune_web/parser.rs",
+        "src/rune_parser.rs",
+        "tests/logic_continuation.rs"
       ],
       "returns": "",
       "errors": "",
       "example": "action add(value):\n    total += value",
       "parameters": [],
       "aliases": [],
-      "notes": [],
+      "notes": ["Inside @Logic, assignments, ternaries, and if conditions can continue on lines indented beyond the original statement. Boolean and ternary operators may start or end a continuation line; see knowledge/language/core-language.md. The API emulator does not execute @Logic."],
       "fields": []
     },
     {
@@ -1746,6 +1810,12 @@
           "description": "REST: serve /openapi.json and /swagger-ui."
         },
         {
+          "name": "not_found_page",
+          "type": "bool",
+          "default": "true",
+          "description": "REST: show the built-in 404 page to clients explicitly accepting HTML. Lists route templates, including authenticated routes. A custom @NotFound overrides this setting."
+        },
+        {
           "name": "scene",
           "type": "string",
           "default": "required for Pixel",
@@ -1808,6 +1878,37 @@
       ]
     },
     {
+      "id": "not-found",
+      "category": "declarations",
+      "name": "@NotFound",
+      "signature": "@NotFound",
+      "summary": "Override unmatched REST requests with native run steps.",
+      "sources": ["src/apps/rest/mod.rs", "src/core/mod.rs"],
+      "returns": "The status and body produced by run; defaults to the standard executor response if no respond is executed.",
+      "errors": "Missing or empty run, or an invalid content_type, yields HTTP 500.",
+      "example": "@NotFound\ncontent_type = text/html; charset=utf-8\nrun:\n    respond 404 \"<h1>Not found</h1>\"",
+      "parameters": [],
+      "aliases": [],
+      "notes": [
+        "Overrides not_found_page for all unmatched requests, regardless of Accept. Body is available; unmatched requests have no route path parameters.",
+        "Root static files take precedence; static method mismatches, /assets, and non-root static mounts keep their own responses."
+      ],
+      "fields": [
+        {
+          "name": "run",
+          "type": "series",
+          "default": "required",
+          "description": "Native request steps; use respond for the desired status and body."
+        },
+        {
+          "name": "content_type",
+          "type": "string",
+          "default": "text/plain; charset=utf-8",
+          "description": "Response Content-Type, for example text/html; charset=utf-8."
+        }
+      ]
+    },
+    {
       "id": "route",
       "category": "declarations",
       "name": "@Route",
@@ -1822,7 +1923,8 @@
       "parameters": [],
       "aliases": [],
       "notes": [
-        "The REST router registers GET, POST, PUT, DELETE, and CRUD expansion. PATCH is not registered here."
+        "The REST router registers GET, POST, PUT, DELETE, and CRUD expansion. PATCH is not registered here.",
+        "Add ?pretty=1 (or any value, including empty) to indent valid JSON response bodies; other bodies and response headers are unchanged."
       ],
       "fields": [
         {
@@ -2180,6 +2282,12 @@
           "description": "Named @Logic."
         },
         {
+          "name": "on_mount",
+          "type": "action name",
+          "default": "—",
+          "description": "Existing action invoked once after initial browser rendering, never during server rendering or export."
+        },
+        {
           "name": "title",
           "type": "string",
           "default": "—",
@@ -2250,14 +2358,16 @@
       "signature": "@Logic/<name>",
       "summary": "Declare reactive state and actions for a frontend or game scene.",
       "sources": [
-        "src/apps/rune_web/parser.rs"
+        "src/apps/rune_web/parser.rs",
+        "src/rune_parser.rs",
+        "tests/logic_continuation.rs"
       ],
       "returns": "",
       "errors": "",
       "example": "",
       "parameters": [],
       "aliases": [],
-      "notes": [],
+      "notes": ["Indented continuation lines support multiline assignments, ternaries, and boolean if conditions; see knowledge/language/core-language.md."],
       "fields": [
         {
           "name": "state",
@@ -2344,7 +2454,7 @@
       "category": "declarations",
       "name": "@I18N",
       "signature": "@I18N/<locale>[/namespace]",
-      "summary": "Declare translation data resolved by %i18n.path% or frontend interpolation.",
+      "summary": "Declare translation data resolved by %i18n.path% or frontend interpolation, including hyphenated key segments.",
       "sources": [
         "src/apps/rune_web/parser.rs"
       ],

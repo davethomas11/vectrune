@@ -554,17 +554,18 @@ derive:
 
 ## Integration with Server
 
-**WebSocket Communication**: When a Rune-Web app is configured with `@Frontend reactivity = websocket` and an `endpoint`, the `emit` function becomes available for sending messages to the server:
+**WebSocket Communication**: When a Rune-Web app is configured with `@Frontend reactivity = websocket`, the runtime adds an `emit` action to the page's logic unless the app already defines one. The endpoint defaults to `/ws`. Send a named payload from an action:
 
 ```rune
 @Page/counter
 logic = counter
 view:
-    button on_click="emit('increment', {'step': 1})" "+1"
+    button click="increment()" "+1"
 
 @Logic/counter
-state:
-    count = 0
+action increment():
+    payload = { "step": 1 }
+    call emit "increment", payload
 
 @Frontend
 type = rune-web
@@ -578,12 +579,19 @@ endpoint = /ws
 ```javascript
 // Browser sends:
 {
-  "event": "increment",
+  "type": "increment",
   "payload": { "step": 1 }
 }
 ```
 
-Server-side handlers receive these messages and can respond with state updates via `ws.broadcast`, which trigger client-side reactivity.
+Server-side `@Event /ws /increment` handlers receive these messages. To
+update `get-memory` views, save the value and broadcast a message object with
+`type = "memory_update"`, `key`, and `value`. Construct the message in a
+binding before `ws.broadcast /ws update`; inline broadcast expressions are
+not evaluated as object templates. See
+[`reactivity-contract-rune-web.rune`](../../examples/rune-web/reactivity-contract-rune-web.rune)
+for a working example and `tests/browser/reactivity_contract.py` for
+cross-client coverage.
 
 **Future**: Phase 3 will extend server communication to include REST API binding and GraphQL subscriptions.
 

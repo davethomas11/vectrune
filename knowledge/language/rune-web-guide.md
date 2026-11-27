@@ -19,11 +19,98 @@ this order across locales and mobile navigation; routes remain unchanged.
 
 State values are declared under `state:` on a page or referenced `@Logic`. Interpolation reads state in text and attributes. A named action updates state and the reactive runtime renders the resulting view.
 
+Translation keys can contain hyphens: `%i18n.Common.app-title%` and
+`{i18n.Common.app-title}` resolve the same key during server and browser
+rendering. Use spaces around subtraction operators in expressions to make the
+intent clear. Run `vectrune examples/rune-web/i18n_demo.rune` and use the
+language links for `/`, `/es/`, and `/fr/`. The demo uses `locale_paths` to
+serve three translated bundles with ordinary links, including without JavaScript.
+Static hosts need an exported HTML file for each locale path.
+
 [Workshop RSVP](../../examples/rune-web/guide/forms.rune) uses `change="setGuest(this.value)"` and `change="setSession(this.value)"`. Event arguments can read the event element through `this`. The action assigns its argument to state. Text `change` commits when the user leaves the field; the preview explains this behavior. This example deliberately uses named actions rather than inline assignment of `this.value`.
 
 `<->` is a selection/class binding in the current compiler, not a general input-value binding. Use explicit form events rather than promising automatic two-way form synchronization. The pass is a browser-local preview, not a persisted booking or backend validation flow.
 
 ## Actions and repeated views
+
+For shared server memory, configure `@Frontend reactivity = websocket` and
+use a `get-memory` view binding. The runtime injects an `emit` action if the
+page does not define one; it preserves other actions and defaults the endpoint
+to `/ws`. [`reactivity-contract-rune-web.rune`](../../examples/rune-web/reactivity-contract-rune-web.rune)
+shows sending a named payload, updating memory, and broadcasting a
+`memory_update` object to connected pages. See
+[WebSocket communication](javascript-runtime.md#integration-with-server).
+
+Browser actions can request a device position using
+`location.current then located catch locationFailed`. The success action
+receives `{ latitude, longitude, accuracy, timestamp }`; `accuracy` is in
+metres and `timestamp` is milliseconds since the Unix epoch. Failure receives
+`{ code, message }`, with `denied`, `unavailable`, or `timeout` as the code.
+`location.if-granted then located catch locationFailed` checks browser
+permission first and never prompts; it also reports `prompt` when permission
+has not yet been requested. Use `location.current` from a user gesture to ask
+for permission. Browser location generally requires HTTPS or localhost. This
+command does not itself send coordinates to another service, but an app that
+uses them in a request must tell users which service receives them. Because
+location is asynchronous, actions should guard against a late result replacing
+a newer user choice. Run
+[`examples/rune-web/location.rune`](../../examples/rune-web/location.rune) for
+a permission-based example that does not transmit the coordinates.
+Callbacks retain a snapshot of the calling action's local bindings, allowing
+the app to compare a request token against current state before accepting a
+result. The `location.if-granted` form requires the Permissions API; when it
+is unavailable, it reports `unavailable` without requesting location.
+
+```rune
+action useMyLocation():
+    location.current then showLocation catch locationFailed
+
+action showLocation(position):
+    latitude = position.latitude
+    longitude = position.longitude
+
+action locationFailed(error):
+    message = error.message
+```
+
+### Startup and interactive maps
+
+Set `on_mount = initialize` on `@Page` to invoke a named `@Logic` action once
+after the browser's initial render. The action must exist; it does not run
+during server rendering or static export. It can use `location.if-granted`
+without prompting, leaving an explicit button to call `location.current`.
+
+The [weather example](../../examples/rune-web/weather_web.rune) uses a
+Leaflet map with OpenStreetMap tiles:
+
+```rune
+div .map data-rune-map=weather data-latitude="{latitude}" data-longitude="{longitude}" data-map-select=chooseMap tabindex=0 aria-label="Map: pan with arrows and press Enter to select"
+
+action chooseMap(point):
+    latitude = point.latitude
+    longitude = point.longitude
+```
+
+Give each map a unique `data-rune-map` key, a CSS height, valid numeric
+coordinates and a named `data-map-select` action. A click supplies
+`{ latitude, longitude }`; keyboard users can pan with arrow keys and press
+Enter to select the center. Map state survives reactive renders, and changing
+the coordinates recenters the marker. Map tiles load on display, including
+before a place is selected. Tile requests disclose the visitor's IP address
+and viewed area to OpenStreetMap, which requires visible attribution and a
+valid browser Referer. Its public tile service is best-effort, capacity-limited,
+and subject to the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/);
+production apps must evaluate an appropriate provider and its terms. For
+another provider, set `data-map-tiles="https://tiles.example/$z/$x/$y.png"`
+and `data-map-attribution="Provider attribution"` on the map. Only HTTPS
+tile URLs without embedded credentials are accepted; attribution is plain
+text and must meet the provider's licensing requirements. Search and weather
+use Open-Meteo and disclose the query or selected coordinates.
+
+Use `url_encode(value)` to encode one query-string component, not a whole
+URL. The example uses request tokens to prevent old searches, location results
+and weather results from overriding a newer choice. If tiles cannot load,
+search and the device-location button remain available.
 
 [Weekend packing list](../../examples/rune-web/guide/packing.rune) demonstrates a complete small app instead of another counter:
 
@@ -196,6 +283,10 @@ The following pass addresses UX07, UX08 and UX11. Standalone games and Studio no
 
 
 ### Start and reopen a Rune Studio song
+
+Rune Studio opens with the VectWorms preset ready to play. Use **Open song**
+to choose a different preset or a saved arrangement; saved songs are not
+overwritten by the default.
 
 Select **New Song** to start a blank four-bar arrangement in 4/4 at 120 BPM. Enter a title above the transport and choose **Save** before switching songs. **Open song** lists saved arrangements and presets and can reload the current song's saved version. **Export .rune** downloads the arrangement for use outside the browser. The track list sits next to the editor on wide screens and directly above it on narrow screens. The piano roll scrolls on both axes and keeps the pitch keys visible when you move through time.
 

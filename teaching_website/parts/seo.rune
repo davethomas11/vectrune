@@ -18,6 +18,11 @@ title = %i18n.NeonCircuit.title% — Vectrune
 description = %i18n.NeonCircuit.description%
 image = /assets/neon-circuit-cover.png
 
+@SEO/glowtide-aquarium
+title = %i18n.GlowtideAquarium.title% — Vectrune
+description = %i18n.GlowtideAquarium.description%
+image = /assets/glowtide-aquarium-cover.png
+
 @SEO/games
 title = VectRaiders Arcade — Built with Vectrune & Rune-Web
 description = Defend the vector grid in pure retro arcade action built entirely with declarative Rune-Web — featuring a 25fps game loop ticker, 2D collisions, real-time sound synthesizer, and touch controls.

@@ -1051,7 +1051,7 @@ function suspendForFetch(
       }
       context.app.render();
     }),
-    (error) => withContext(context, () => reportFetchFailure(error, pending.onError)),
+    (error) => withContext(context, () => reportFetchFailure(error, pending.onError, locals)),
   );
 }
 

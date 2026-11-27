@@ -10,7 +10,7 @@ fn cli() -> Command {
 fn sample() -> &'static Path {
     Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/examples/rune_mobile_web"
+        "/examples/rune-mobile-web"
     ))
 }
 

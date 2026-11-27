@@ -48,12 +48,15 @@ path_resolution:
 placeholder_expansion:
   current_users:
     - log
+    - respond
   syntax: "{expr}"
   behavior:
     - "`expr` is resolved through the runtime path lookup model."
-    - unknown placeholders remain unchanged in log messages.
+    - unknown placeholders remain unchanged in log and respond messages.
+    - "`respond` also supports `{pretty path}` and literal brace escapes `\\{` and `\\}`."
 sources:
   - src/core/mod.rs
   - src/builtins/builtin/logger.rs
+  - src/builtins/builtin/respond.rs
   - tests/logger_parameter_expansion_test.rs
   - tests/worm_game_path_regression.rs

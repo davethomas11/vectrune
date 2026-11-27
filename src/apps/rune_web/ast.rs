@@ -222,6 +222,9 @@ pub struct PageDefinition {
     /// Reference to the logic definition for client behavior
     pub logic_ref: Option<String>,
 
+    /// Optional client-only action to run after the initial render.
+    pub on_mount: Option<String>,
+
     /// Inline state variables
     pub state: HashMap<String, String>,
 

@@ -40,7 +40,10 @@ frames = [["----+---", "    |   ", "+-------", "|       "]]
 
 @AsciiSprite/arch
 fps = 2
-frames = [["/######/", "| [++] |", "| .... |", "/######/"], ["/######/", "| [**] |", "| .... |", "/######/"]]
+frames = [
+    ["/######/","| [++] |","| .... |","/######/"],
+    ["/######/","| [**] |","| .... |","/######/"]
+]
 
 @AsciiSprite/lamp
 fps = 3
@@ -86,6 +89,18 @@ action tick:
 action paint:
     canvas = [
         {"type": "ascii3d", "scene": "corridor", "x": 0, "y": 1, "width": 78, "height": 21},
-        {"type": "text", "x": 2, "y": 0, "text": "E N D L E S S   H A L L S   /   ASCII3D", "color": "cyan"},
-        {"type": "text", "x": 2, "y": 22, "text": paused ? "Drift paused. Space resumes. Q: leave the halls." : "Up/Down: drift speed   Space: pause   Q: leave the halls.", "color": "yellow"}
+        {
+            "type": "text",
+            "x": 2,
+            "y": 0,
+            "text": "E N D L E S S   H A L L S   /   ASCII3D",
+            "color": "cyan"
+        },
+        {
+            "type": "text",
+            "x": 2,
+            "y": 22,
+            "text": paused ? "Drift paused. Space resumes. Q: leave the halls.": "Up/Down: drift speed   Space: pause   Q: leave the halls.",
+            "color": "yellow"
+        }
     ]

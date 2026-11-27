@@ -317,7 +317,9 @@ action clear_stage:
     music_track = ""
     sound.play "beyond_clear"
     outcome_title = selected == 6 ? "DAWN BELONGS TO EVERYONE" : "A LANTERN REKINDLED"
-    outcome_body = selected == 6 ? "Nix returns the stolen dawn to the archipelago. Revisit any island to gather every amber seed." : "Another route opens on the atlas. Your lanterns and best seed counts are saved."
+    outcome_body = selected == 6
+        ? "Nix returns the stolen dawn to the archipelago. Revisit any island to gather every amber seed."
+        : "Another route opens on the atlas. Your lanterns and best seed counts are saved."
     call refresh_ui
 
 action lose_heart:
@@ -330,7 +332,8 @@ action lose_heart:
         music.stop
         music_track = ""
         outcome_title = "EVEN SMALL LIGHTS RETURN"
-        outcome_body = "Try this destination again. Your restored lanterns and best seed counts are safe."
+        outcome_body =
+            "Try this destination again. Your restored lanterns and best seed counts are safe."
     player = {
         "x": checkpoint.x,
         "y": checkpoint.y,

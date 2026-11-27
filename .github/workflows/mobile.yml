@@ -5,7 +5,7 @@ on:
     paths:
       - 'runtime/rune-mobile-web/**'
       - 'runtime/rune-web/**'
-      - 'examples/rune_mobile_web/**'
+      - 'examples/rune-mobile-web/**'
       - 'tests/browser/rune_mobile_web.py'
       - 'tests/mobile_web_cli.rs'
       - 'src/**'
@@ -68,7 +68,7 @@ jobs:
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - run: npm ci && npm run build
         working-directory: runtime/rune-web
-      - run: cargo run -- examples/rune_mobile_web --build android --build-dir "${{ runner.temp }}/rune-mobile-web-android"
+      - run: cargo run -- examples/rune-mobile-web --build android --build-dir "${{ runner.temp }}/rune-mobile-web-android"
       - uses: actions/upload-artifact@v4
         with:
           name: rune-mobile-web-android-debug
@@ -86,7 +86,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: npm ci && npm run build
         working-directory: runtime/rune-web
-      - run: cargo run -- examples/rune_mobile_web --build ios --build-dir "${{ runner.temp }}/rune-mobile-web-ios"
+      - run: cargo run -- examples/rune-mobile-web --build ios --build-dir "${{ runner.temp }}/rune-mobile-web-ios"
       - run: ditto -c -k --sequesterRsrc --keepParent "${{ runner.temp }}/rune-mobile-web-ios/build/ios/Build/Products/Debug-iphonesimulator/App.app" "${{ runner.temp }}/rune-mobile-web-ios-simulator.zip"
       - uses: actions/upload-artifact@v4
         with:

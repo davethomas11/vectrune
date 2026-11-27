@@ -6,9 +6,9 @@
       "id": "example.web.mobile",
       "title": "Rune Mobile Web counter",
       "summary": "Offline WebView prototype with touch controls, navigation and persisted counter state.",
-      "source_path": "examples/rune_mobile_web/app.rune",
+      "source_path": "examples/rune-mobile-web/app.rune",
       "companion_files": [
-        "examples/rune_mobile_web/style.rune"
+        "examples/rune-mobile-web/style.rune"
       ],
       "app_type": "REST",
       "concepts": [
@@ -19,8 +19,8 @@
       "builtins": [],
       "runtime_context": [],
       "cli_workflows": [
-        "vectrune examples/rune_mobile_web --export android --build-dir ./mobile-project",
-        "vectrune examples/rune_mobile_web --build ios --prepare-only"
+        "vectrune examples/rune-mobile-web --export android --build-dir ./mobile-project",
+        "vectrune examples/rune-mobile-web --build ios --prepare-only"
       ],
       "test_refs": [
         "tests/mobile_web_cli.rs",

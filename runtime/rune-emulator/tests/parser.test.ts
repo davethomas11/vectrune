@@ -131,6 +131,24 @@ run:
     }
   });
 
+  it('keeps API ternary assignments and boolean conditions as separate steps', () => {
+    const doc = parse(`
+@Route/GET /choice
+run:
+    result = flag ? 1 : 2
+    if first || second:
+        result = 3
+    respond 200 result
+`);
+    expect(doc.routes[0].run).toMatchObject([
+      { kind: 'assignment', lhs: 'result', rhs: 'flag ? 1 : 2' },
+      { kind: 'if', condition: 'first || second', body: [
+        { kind: 'assignment', lhs: 'result', rhs: '3' },
+      ] },
+      { kind: 'builtin', name: 'respond' },
+    ]);
+  });
+
   it('parses POST route with expect and parse-json', () => {
     const doc = parse(`
 @Route/POST /users

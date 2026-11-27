@@ -1,4 +1,7 @@
 import { build } from 'esbuild';
+import { readFile } from 'node:fs/promises';
+
+const leafletLicense = (await readFile('node_modules/leaflet/LICENSE', 'utf8')).replace(/\r\n/g, '\n');
 
 await build({
   entryPoints: ['src/index.ts'],
@@ -8,6 +11,8 @@ await build({
   globalName: '__RuneWeb',
   outfile: 'dist/rune-runtime.js',
   target: ['es2020'],
+  loader: { '.css': 'text' },
+  banner: { js: `/* Leaflet license:\n${leafletLicense}\n*/` },
 });
 
 console.log('Built dist/rune-runtime.js');

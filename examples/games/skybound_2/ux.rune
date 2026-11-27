@@ -20,7 +20,9 @@ action refresh_ui:
     node_five_selected = selected == 4
     stage_name = stages[selected].name
     stage_subtitle = stages[selected].subtitle
-    selected_status = selected >= saga.unlocked ? "LOCKED / restore the previous lantern": (saga.cleared[selected] ? "LANTERN RESTORED / best " + saga.best[selected] + " seeds": "NEW DESTINATION / awaiting your light")
+    selected_status = selected >= saga.unlocked
+        ? "LOCKED / restore the previous lantern"
+        : (saga.cleared[selected] ? "LANTERN RESTORED / best " + saga.best[selected] + " seeds": "NEW DESTINATION / awaiting your light")
     restored = 0
     for lit in saga.cleared:
         if lit:
@@ -89,7 +91,9 @@ action refresh_ui:
                 "color": 16414311
             }
         ]
-        ui.detail = selected == 1 ? "KILNBACK / THE WALKING FURNACE" : "THE TEMPEST REGENT / KEEPER OF DAWN"
+        ui.detail = selected == 1
+            ? "KILNBACK / THE WALKING FURNACE"
+            : "THE TEMPEST REGENT / KEEPER OF DAWN"
     if phase == "playing" && !boss_active:
         ui.detail = stage_name
     if phase == "map":
@@ -113,7 +117,9 @@ action refresh_ui:
         }
     if phase == "result" || phase == "failed":
         ui.heading = phase == "result" ? "LANTERN RESTORED" : "LIGHT THE WAY"
-        ui.prompt = phase == "result" ? "ENTER TO RETURN TO THE ATLAS" : "ENTER TO TRY THIS DESTINATION AGAIN"
+        ui.prompt = phase == "result"
+            ? "ENTER TO RETURN TO THE ATLAS"
+            : "ENTER TO TRY THIS DESTINATION AGAIN"
         ui.panel = {
             "title": phase == "result" ? "NICELY FLOWN, NIX": "YOUR JOURNEY CONTINUES",
             "body": phase == "result" ? seed_label + ".|" + progress_label + ".": "Restored lanterns are saved.|Retry this destination or return to the atlas.",

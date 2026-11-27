@@ -21,7 +21,7 @@ servers. See [Rune DB and Vect Event](storage.md) and
 
 ## Mobile Web (source builds)
 
-`vectrune examples/rune_mobile_web --build android|ios` packages a
+`vectrune examples/rune-mobile-web --build android|ios` packages a
 `rune-mobile-web` frontend into a debug APK or unsigned iOS Simulator app.
 `--export android|ios --build-dir <directory>` hands off an editable native
 project without installing dependencies or requiring SDKs. `--prepare-only`
@@ -238,6 +238,9 @@ of scalars stay inline. Object keys keep their source order.
 Logic objects, arrays and calls containing collections also wrap, including
 dynamic values such as HUD meters and enemy definitions. Balanced logic
 expressions continue across lines; quoted brackets do not affect continuation.
+Long `@Logic` ternary assignments and `if` conditions may also wrap at
+ternary or boolean operators. When the right-hand side fits, a long assignment
+may wrap after `=`. Continuation lines are indented beyond the original line.
 Formatting checks the parsed document and logic tokens before writing, preserving
 quoted text and executable expressions. Long strings, scalar expressions and
 opaque view/style/source blocks can exceed the target width.
@@ -248,13 +251,14 @@ vectrune fmt examples/games/rune_crypt --line-width 100
 vectrune fmt examples/games/rune_crypt --check
 ```
 
-The limit is a target, not a hard cap: individual strings, comments, expressions,
-views, styles and embedded source are not split. Existing multiline JSON object
-assignments are reformatted to the selected width.
-Indented action/state expressions remain unchanged because they are executable
-source, not top-level JSON data. Line endings are preserved. Every changed file
+The limit is a target, not a hard cap: individual strings, comments, expressions
+without supported break points, views, styles and embedded source are not split.
+Existing multiline JSON assignments and supported logic expressions are
+reformatted to the selected width. Line endings are preserved. Every changed file
 is reparsed and compared before any writes; semantic differences fail explicitly.
 Implementation: [`src/cli/formatting.rs`](../../src/cli/formatting.rs).
+Rust callers of `format_source` must handle its `Result<String, ParseError>`;
+incomplete continuations are reported instead of silently consuming lines.
 
 ## Development mode: hot reloading with `-w` / `--watch`
 

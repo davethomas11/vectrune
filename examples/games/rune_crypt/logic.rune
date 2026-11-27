@@ -305,7 +305,9 @@ action attack(magic):
                 notice_ticks = 90
                 sound.play "blessing"
     if target < 0:
-        notice = magic == true ? "RUNE MISSED - AIM THE CROSSHAIR AT A FOE" : "SWORD MISSED - GET CLOSER TO THE FOE"
+        notice = magic == true
+            ? "RUNE MISSED - AIM THE CROSSHAIR AT A FOE"
+            : "SWORD MISSED - GET CLOSER TO THE FOE"
         notice_ticks = 30
     call refresh_ui
 

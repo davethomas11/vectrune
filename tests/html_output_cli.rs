@@ -30,7 +30,8 @@ fn html_output_renders_root_mounted_rune_web_page() {
     let stdout = String::from_utf8_lossy(&assert.get_output().stdout);
     assert!(stdout.contains("<!DOCTYPE html>"));
     assert!(stdout.contains("Vectrune i18n Demo"));
-    assert!(stdout.contains("Welcome to Vectrune"));
+    assert!(stdout.contains("A little more local, wherever you are."));
+    assert!(stdout.contains("Vectrune Quick Start"));
 }
 
 #[test]
@@ -288,4 +289,3 @@ fn html_output_requires_supported_frontend_type() {
         stderr.contains("-o html requires @Frontend type = rune-web, rune-mobile-web or static")
     );
 }
-

@@ -146,6 +146,12 @@ jobs:
             tar --append --file="$archive" -C audio-notices licenses
             gzip -n "$archive"
           fi
+          mkdir -p leaflet-notices/licenses
+          cp runtime/rune-web/node_modules/leaflet/LICENSE leaflet-notices/licenses/LEAFLET-LICENSE
+          archive="${{ matrix.platform.bin }}-${{ matrix.platform.name }}.tar"
+          gzip -d "$archive.gz"
+          tar --append --file="$archive" -C leaflet-notices licenses/LEAFLET-LICENSE
+          gzip -n "$archive"
 
       - name: Package Linux audio rebuild sources
         if: matrix.platform.name == 'linux-x86_64'
