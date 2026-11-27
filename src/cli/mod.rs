@@ -18,6 +18,7 @@ pub mod vect;
 pub mod vectrune;
 pub mod watch;
 pub mod mobile_web;
+pub mod tvos;
 #[allow(dead_code)]
 pub mod hooks_commands;
 

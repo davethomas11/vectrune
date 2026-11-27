@@ -48,10 +48,12 @@ pub struct Sky {
     pub horizon: u32,
     pub cloud: u32,
     pub speed: f64,
+    #[serde(default)]
+    pub below: Option<u32>,
 }
 
 fn sky_noise(x: i64, y: i64, seed: u32) -> f64 {
-    let n = ((x & 63) as u32).wrapping_mul(374761393)
+    let n = (x as u32).wrapping_mul(374761393)
         .wrapping_add((y as u32).wrapping_mul(668265263)).wrapping_add(seed);
     let n = (n ^ (n >> 13)).wrapping_mul(1274126177);
     (n ^ (n >> 16)) as f64 / 4294967295.0
@@ -67,18 +69,34 @@ fn mix_color(a: u32, b: u32, t: f64) -> u32 {
     color
 }
 
-pub fn sky_pixel(sky: &Sky, longitude: f64, altitude: f64, time: f64) -> u32 {
-    let u = (longitude / std::f64::consts::TAU * 64.0 + time * sky.speed).rem_euclid(64.0);
-    let v = altitude * 12.0;
+fn cloud_density(u: f64, v: f64, seed: u32, wrap: i64) -> f64 {
     let x = u.floor() as i64;
     let y = v.floor() as i64;
     let fx = u - x as f64;
     let fy = v - y as f64;
     let sx = fx * fx * (3.0 - 2.0 * fx);
     let sy = fy * fy * (3.0 - 2.0 * fy);
-    let a = sky_noise(x, y, sky.seed) * (1.0 - sx) + sky_noise(x + 1, y, sky.seed) * sx;
-    let b = sky_noise(x, y + 1, sky.seed) * (1.0 - sx) + sky_noise(x + 1, y + 1, sky.seed) * sx;
-    let density = ((a * (1.0 - sy) + b * sy - 0.5) * 4.0).clamp(0.0, 1.0);
+    let a = sky_noise(x & wrap, y, seed) * (1.0 - sx) + sky_noise((x + 1) & wrap, y, seed) * sx;
+    let b = sky_noise(x & wrap, y + 1, seed) * (1.0 - sx) + sky_noise((x + 1) & wrap, y + 1, seed) * sx;
+    ((a * (1.0 - sy) + b * sy - 0.5) * 4.0).clamp(0.0, 1.0)
+}
+
+pub fn sky_pixel(sky: &Sky, longitude: f64, altitude: f64, time: f64) -> u32 {
+    let u = longitude / (2.0 * std::f64::consts::PI) * 64.0;
+    let drift = time * sky.speed;
+    if altitude < 0.0 {
+        if let Some(below) = sky.below {
+            let depth = -altitude;
+            let gradient = mix_color(sky.horizon, below, (depth.sqrt() * 32.0).floor() / 32.0);
+            let far = cloud_density(u + drift * 0.35, depth * 23.0, sky.seed, 63);
+            let near = cloud_density(u / 2.0 + drift, depth * 14.0 + 13.0, sky.seed.wrapping_add(719), 31);
+            return mix_color(gradient, sky.cloud, (far * 0.18 + near * 0.42) * (depth * 7.0).min(1.0));
+        }
+    }
+    if altitude <= 0.0 {
+        return 0xff000000 | sky.horizon;
+    }
+    let density = cloud_density(((u + drift) % 64.0 + 64.0) % 64.0, altitude * 12.0, sky.seed, 63);
     let band = (altitude * 16.0).floor() / 16.0;
     mix_color(mix_color(sky.horizon, sky.zenith, band), sky.cloud, density * (altitude * 5.0).min(1.0))
 }
@@ -230,7 +248,8 @@ impl Rasterizer3D {
 
         let px = state.camera.x;
         let py = state.camera.y;
-        let ang_rad = state.camera.angle.to_radians();
+        let angle_index = (state.camera.angle * (4096.0 / 360.0) + 0.5).floor().rem_euclid(4096.0);
+        let ang_rad = angle_index * (2.0 * std::f64::consts::PI) / 4096.0;
 
         let dir_x = ang_rad.cos();
         let dir_y = ang_rad.sin();
@@ -331,11 +350,7 @@ impl Rasterizer3D {
             self.z_buffer[x] = perp_wall_dist;
 
             let line_height = ((h as f64) / perp_wall_dist).floor() as i32;
-            let draw_start = if self.map.ceiling_height == 1.0 {
-                (-line_height / 2 + half_h as i32).max(0) as usize
-            } else {
-                (half_h as f64 - line_height as f64 * (self.map.ceiling_height - 0.5)).floor().max(0.0) as usize
-            };
+            let draw_start = (half_h as f64 - line_height as f64 * (self.map.ceiling_height - 0.5)).floor().max(0.0) as usize;
             let draw_end = ((line_height / 2 + half_h as i32).min(h as i32 - 1)) as usize;
 
             if !self.textures.is_empty() {
@@ -362,7 +377,7 @@ impl Rasterizer3D {
                 let tex_x = (tex_x.clamp(0, tex.width as i32 - 1)) as usize;
 
                 let step = tex.height as f64 / line_height as f64;
-                let original_start = (-line_height / 2 + half_h as i32).max(0) as usize;
+                let original_start = (half_h as f64 - line_height as f64 / 2.0).floor().max(0.0) as usize;
                 let mut tex_pos =
                     (draw_start as f64 - half_h as f64 + line_height as f64 / 2.0) * step;
 
@@ -441,14 +456,14 @@ impl Rasterizer3D {
                 continue;
             }
 
-            let draw_start_y = (-sprite_h / 2 + half_h as i32).max(0);
-            let draw_end_y = (sprite_h / 2 + half_h as i32).min(h as i32 - 1);
+            let draw_start_y = (half_h as f64 - sprite_h as f64 / 2.0).floor().max(0.0) as i32;
+            let draw_end_y = (half_h as f64 + sprite_h as f64 / 2.0).floor().min(h as f64 - 1.0) as i32;
             if draw_start_y > draw_end_y || draw_start_y >= h as i32 || draw_end_y < 0 {
                 continue;
             }
 
-            let draw_start_x = (-sprite_w / 2 + sprite_screen_x).max(0);
-            let draw_end_x = (sprite_w / 2 + sprite_screen_x).min(w as i32 - 1);
+            let draw_start_x = (sprite_screen_x as f64 - sprite_w as f64 / 2.0).floor().max(0.0) as i32;
+            let draw_end_x = (sprite_screen_x as f64 + sprite_w as f64 / 2.0).floor().min(w as f64 - 1.0) as i32;
             if draw_start_x > draw_end_x || draw_start_x >= w as i32 || draw_end_x < 0 {
                 continue;
             }
@@ -463,10 +478,9 @@ impl Rasterizer3D {
                     break;
                 }
                 if transform_y < self.z_buffer[stripe] {
-                    let tex_x = (((stripe as i32 - (-sprite_w / 2 + sprite_screen_x))
-                        * sprite.width as i32)
-                        / sprite_w) as usize;
-                    if tex_x >= sprite.width {
+                    let tex_x = (((stripe as f64 - (sprite_screen_x as f64 - sprite_w as f64 / 2.0))
+                        * sprite.width as f64) / sprite_w as f64).floor() as i32;
+                    if tex_x < 0 || tex_x >= sprite.width as i32 {
                         continue;
                     }
 
@@ -474,13 +488,13 @@ impl Rasterizer3D {
                         if y >= h {
                             break;
                         }
-                        let d = y as i32 - half_h as i32 + sprite_h / 2;
-                        let tex_y = ((d * sprite.height as i32) / sprite_h) as usize;
-                        if tex_y >= sprite.height {
+                        let d = y as f64 - half_h as f64 + sprite_h as f64 / 2.0;
+                        let tex_y = (d * sprite.height as f64 / sprite_h as f64).floor() as i32;
+                        if tex_y < 0 || tex_y >= sprite.height as i32 {
                             continue;
                         }
 
-                        let color_idx = sprite.pixels[tex_y * sprite.width + tex_x];
+                        let color_idx = sprite.pixels[tex_y as usize * sprite.width + tex_x as usize];
                         if let Some(Some(rgb)) = sprite.colors.get(color_idx) {
                             if transform_y >= self.pixel_depth[y * w + stripe] { continue; }
                             let packed = 0xff000000
@@ -713,7 +727,7 @@ impl Rasterizer3D {
         }
 
         // 3. Top HUD Bar during gameplay
-        self.draw_rect(0, 0, w, 9, 0xff0a0c0e);
+        self.draw_rect(0, 0, w, 9, 0xff0e0c0a);
         let hp_col = if state.health > 30 { 0x66aa44 } else { 0xdd3322 };
         let lvl = state.level.unwrap_or(1);
         self.draw_text(&format!("SEC 0{lvl}"), 6, 2, 0x8899aa, 1);
@@ -728,7 +742,7 @@ impl Rasterizer3D {
 
         let directions = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"];
         let heading = ((state.camera.angle.rem_euclid(360.0) + 22.5) / 45.0).floor() as usize % 8;
-        self.draw_rect(w - 48, 11, 46, 9, 0xff0a0c0e);
+        self.draw_rect(w - 48, 11, 46, 9, 0xff0e0c0a);
         self.draw_text(&format!("FACING {}", directions[heading]), w - 45, 13, 0xf6cc44, 1);
 
         // 4. In-game Interactive Message Banner
@@ -736,8 +750,8 @@ impl Rasterizer3D {
             if !msg.is_empty() {
                 let msg_w = (msg.len() as i32 * 4 + 16).min(w - 20);
                 let msg_x = (w - msg_w) / 2;
-                self.draw_rect(msg_x, h - 24, msg_w, 12, 0xff0a0c0e);
-                self.draw_rect(msg_x, h - 24, msg_w, 1, 0xffd49922);
+                self.draw_rect(msg_x, h - 24, msg_w, 12, 0xff0e0c0a);
+                self.draw_rect(msg_x, h - 24, msg_w, 1, 0xff2299d4);
                 self.draw_text(msg, msg_x + 8, h - 21, 0xf6cc44, 1);
             }
         }

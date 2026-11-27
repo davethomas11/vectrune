@@ -1753,7 +1753,6 @@ var __RuneWeb = (() => {
     groups.set(proxy, { version: 0, indices: /* @__PURE__ */ new Map() });
     return proxy;
   }
-  var session = () => ({ indices: /* @__PURE__ */ new WeakMap(), members: /* @__PURE__ */ new WeakMap() });
   var EntityIndex = class {
     constructor(source, dimensions, owner) {
       this.source = source;
@@ -1867,7 +1866,9 @@ var __RuneWeb = (() => {
       }
       return indexed.index.query(point, radius, padding);
     }
-    const owner = active ?? session(), indices = owner.indices.get(source) ?? /* @__PURE__ */ new Map();
+    const owner = active;
+    if (!owner) return new EntityIndex(source, dimensions).query(point, radius, padding);
+    const indices = owner.indices.get(source) ?? /* @__PURE__ */ new Map();
     let index2 = indices.get(dimensions);
     if (!index2) {
       index2 = new EntityIndex(source, dimensions, owner);

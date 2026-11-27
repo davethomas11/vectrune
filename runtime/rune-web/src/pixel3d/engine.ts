@@ -38,6 +38,7 @@ import { nearbyForRender, withEntityQueries } from './entities';
 import { validateTether, type Tether3D } from './tether';
 import type { SideMapData } from './sidemap';
 import { OnScreenKeyboard } from './on_screen_keyboard';
+import type { TvProfile } from './tv';
 
 export interface TitleScene {
   lights?: string;
@@ -52,6 +53,7 @@ export interface TitleScene {
 }
 
 export interface Pixel3DConfig {
+  tv?: TvProfile;
   fov?: number;
   outline?: boolean;
   outlineColor?: number;

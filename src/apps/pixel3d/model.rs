@@ -1,4 +1,7 @@
 use super::raster::{Camera3D, Thing3D};
+use super::enhanced_lighting::{blend, EmissionBuffer};
+use super::voxel::VoxelCamera;
+use anyhow::{ensure, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -18,6 +21,8 @@ pub struct Block {
     pub color: u32,
     #[serde(default)]
     pub shape: ModelShape,
+    #[serde(default)]
+    pub emissive: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -43,38 +48,125 @@ pub fn render_model(
     direction: [f64; 2], fov_scale: f64, width: usize, height: usize,
     buffer: &mut [u32], depth: &mut [f64],
 ) {
+    render_model_oriented(model, instance, camera, 0.5, 0.0, 0.0, direction, fov_scale, width, height, buffer, depth);
+}
+
+/// Render a model with a pitched camera and a local-Y instance pitch.
+pub fn render_model_oriented(
+    model: &BlockModel, instance: &Thing3D, camera: &Camera3D,
+    eye: f64, camera_pitch: f64, instance_pitch: f64,
+    direction: [f64; 2], fov_scale: f64, width: usize, height: usize,
+    buffer: &mut [u32], depth: &mut [f64],
+) {
+    render_model_inner(model, instance, camera, eye, camera_pitch, instance_pitch, direction, fov_scale, width, height, buffer, depth, None, None);
+}
+
+/// Render and record visible emissive fragments for later bloom composition.
+#[allow(dead_code)]
+pub fn render_model_with_emission(
+    model: &BlockModel, instance: &Thing3D, camera: &Camera3D,
+    eye: f64, camera_pitch: f64, instance_pitch: f64,
+    direction: [f64; 2], fov_scale: f64, width: usize, height: usize,
+    buffer: &mut [u32], depth: &mut [f64], emission: &mut EmissionBuffer,
+) -> Result<()> {
+    ensure!(width > 0 && height > 0 && width.checked_mul(height) == Some(buffer.len())
+        && buffer.len() == depth.len() && emission.matches(width, height), "Invalid model emission framebuffer");
+    render_model_inner(model, instance, camera, eye, camera_pitch, instance_pitch, direction, fov_scale, width, height, buffer, depth, Some(emission), None);
+    Ok(())
+}
+
+/// Render an enhanced voxel-world model without a side backdrop, including skyline haze.
+#[allow(dead_code)]
+pub fn render_voxel_model_enhanced(
+    model: &BlockModel, instance: &Thing3D, camera: &VoxelCamera, instance_pitch: f64,
+    fov: f64, width: usize, height: usize, buffer: &mut [u32], depth: &mut [f64],
+    emission: &mut EmissionBuffer, horizon: Option<u32>,
+) -> Result<()> {
+    ensure!(width > 0 && height > 0 && width.checked_mul(height) == Some(buffer.len())
+        && buffer.len() == depth.len() && emission.matches(width, height), "Invalid model emission framebuffer");
+    ensure!([camera.x, camera.y, camera.z, camera.angle, camera.pitch, fov, instance_pitch,
+        instance.x, instance.y, instance.z.unwrap_or(0.0), instance.angle.unwrap_or(0.0),
+        instance.scale.unwrap_or(1.0), instance.dissolve.unwrap_or(0.0)].iter().all(|n| n.is_finite())
+        && camera.pitch.abs() <= 85.0 && fov > 0.0 && fov < 180.0
+        && instance.scale.unwrap_or(1.0) > 0.0
+        && [camera.x, camera.y, camera.z, instance.x, instance.y, instance.z.unwrap_or(0.0),
+            instance.scale.unwrap_or(1.0)].iter().all(|n| n.abs() <= 1e12)
+        && (0.0..=1.0).contains(&instance.dissolve.unwrap_or(0.0))
+        && (camera.angle * std::f64::consts::PI).is_finite()
+        && (instance_pitch * std::f64::consts::PI).is_finite()
+        && (instance.angle.unwrap_or(0.0) * std::f64::consts::PI).is_finite(),
+        "Invalid enhanced model camera or instance");
+    let angle = camera.angle * std::f64::consts::PI / 180.0;
+    let (dir_y, dir_x) = angle.sin_cos();
+    let haze = if instance.y < 4.0 {
+        (((instance.x - camera.x) * dir_x + (instance.y - camera.y) * dir_y - 11.0) * 0.025).clamp(0.0, 0.20)
+    } else { 0.0 };
+    let eye_camera = Camera3D { x: camera.x, y: camera.y, angle: camera.angle };
+    render_model_inner(model, instance, &eye_camera, camera.z + 1.25, camera.pitch,
+        instance_pitch, [dir_x, dir_y], (fov * std::f64::consts::PI / 360.0).tan(),
+        width, height, buffer, depth, Some(emission), Some((haze, horizon.unwrap_or(0))));
+    Ok(())
+}
+
+fn render_model_inner(
+    model: &BlockModel, instance: &Thing3D, camera: &Camera3D,
+    eye: f64, camera_pitch: f64, instance_pitch: f64,
+    direction: [f64; 2], fov_scale: f64, width: usize, height: usize,
+    buffer: &mut [u32], depth: &mut [f64], mut emission: Option<&mut EmissionBuffer>,
+    haze: Option<(f64, u32)>,
+) {
     let [dir_x, dir_y] = direction;
     let scale = instance.scale.unwrap_or(1.0);
     let dissolve = instance.dissolve.unwrap_or(0.0);
     assert!(dissolve.is_finite() && (0.0..=1.0).contains(&dissolve), "Model dissolve must be between 0 and 1");
     assert!(scale.is_finite() && scale > 0.0, "Model scale must be finite and positive");
-    assert!([instance.x, instance.y, instance.z.unwrap_or(0.0), instance.angle.unwrap_or(0.0)]
+    assert!([instance.x, instance.y, instance.z.unwrap_or(0.0), instance.angle.unwrap_or(0.0), eye, camera_pitch, instance_pitch]
         .iter().all(|n| n.is_finite()), "Model position and angle must be finite");
     if dissolve == 1.0 { return; }
-    let angle = instance.angle.unwrap_or(0.0).to_radians();
+    let angle = instance.angle.unwrap_or(0.0) * std::f64::consts::PI / 180.0;
     let c = angle.cos();
     let s = angle.sin();
+    let pitch = camera_pitch * std::f64::consts::PI / 180.0;
+    let (sp, cp) = pitch.sin_cos();
+    let tilt = instance_pitch * std::f64::consts::PI / 180.0;
+    let (ts, tc) = tilt.sin_cos();
     let ox = camera.x - instance.x;
     let oy = camera.y - instance.y;
     let z_offset = instance.z.unwrap_or(0.0);
-    let origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (0.5 - z_offset) / scale];
+    let mut origin = [(ox * c + oy * s) / scale, (-ox * s + oy * c) / scale, (eye - z_offset) / scale];
+    if instance_pitch != 0.0 {
+        let [x, _, z] = origin;
+        origin[0] = x * tc - z * ts;
+        origin[2] = x * ts + z * tc;
+    }
     for block in &model.blocks {
+        let color = match haze {
+            Some((amount, tint)) if amount > 0.0 => blend(block.color, tint, amount),
+            _ => block.color,
+        };
         let max = std::array::from_fn::<_, 3, _>(|i| block.from[i] + block.size[i]);
         let (mut left, mut right, mut top, mut bottom) = (width as f64, 0.0_f64, height as f64, 0.0_f64);
         let mut clipped = false;
         for corner in 0..8 {
-            let lx = if corner & 1 != 0 { max[0] } else { block.from[0] } * scale;
+            let mut lx = if corner & 1 != 0 { max[0] } else { block.from[0] } * scale;
             let ly = if corner & 2 != 0 { max[1] } else { block.from[1] } * scale;
-            let z = if corner & 4 != 0 { max[2] } else { block.from[2] } * scale + z_offset;
+            let mut z = if corner & 4 != 0 { max[2] } else { block.from[2] } * scale;
+            if instance_pitch != 0.0 {
+                let old_x = lx;
+                lx = old_x * tc + z * ts;
+                z = -old_x * ts + z * tc;
+            }
+            z += z_offset;
             let x = instance.x + lx * c - ly * s - camera.x;
             let y = instance.y + lx * s + ly * c - camera.y;
-            let d = x * dir_x + y * dir_y;
+            let forward = x * dir_x + y * dir_y;
+            let d = forward * cp + (z - eye) * sp;
             if d <= 0.001 {
                 clipped = true;
                 continue;
             }
             let sx = width as f64 / 2.0 * (1.0 + (-x * dir_y + y * dir_x) / (d * fov_scale));
-            let sy = (height / 2) as f64 - (z - 0.5) * height as f64 / d;
+            let sy = (height / 2) as f64 - ((z - eye) * cp - forward * sp) * height as f64 / d;
             left = left.min(sx);
             right = right.max(sx);
             top = top.min(sy);
@@ -86,14 +178,19 @@ pub fn render_model(
         let y1 = if clipped { height } else { bottom.ceil().max(0.0).min(height as f64) as usize };
         for x in x0..x1 {
             let cx = 2.0 * x as f64 / width as f64 - 1.0;
-            let rx = dir_x - dir_y * fov_scale * cx;
-            let ry = dir_y + dir_x * fov_scale * cx;
             for y in y0..y1 {
                 if dissolve > 0.0 && fragment_noise(x, y) < dissolve {
                     continue;
                 }
-                let ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale,
-                    ((height / 2) as f64 - y as f64 - 0.5) / (height as f64 * scale)];
+                let v = ((height / 2) as f64 - y as f64 - 0.5) / height as f64;
+                let rx = dir_x * cp - dir_y * fov_scale * cx - dir_x * sp * v;
+                let ry = dir_y * cp + dir_x * fov_scale * cx - dir_y * sp * v;
+                let mut ray = [(rx * c + ry * s) / scale, (-rx * s + ry * c) / scale, (sp + cp * v) / scale];
+                if instance_pitch != 0.0 {
+                    let [x, _, z] = ray;
+                    ray[0] = x * tc - z * ts;
+                    ray[2] = x * ts + z * tc;
+                }
                 let (mut near, mut far) = (f64::NEG_INFINITY, f64::INFINITY);
                 let (mut face, mut exit_face) = (0, 0);
                 let mut valid = true;
@@ -146,7 +243,12 @@ pub fn render_model(
                 let hit = if near > 0.001 { near } else { face = exit_face; far };
                 if valid && far >= near && hit > 0.001 && hit < depth[index] {
                     depth[index] = hit;
-                    buffer[index] = shade(block.color, curved_shade.unwrap_or(if face == 3 { 0.9 } else if face == 2 { 1.0 } else if face == 0 { 0.8 } else { 0.65 }));
+                    buffer[index] = shade(color, curved_shade.unwrap_or(if face == 3 { 0.9 } else if face == 2 { 1.0 } else if face == 0 { 0.8 } else { 0.65 }));
+                    if block.emissive {
+                        if let Some(emission) = emission.as_deref_mut() {
+                            emission.record(x, y, index, hit, block.color);
+                        }
+                    }
                 }
             }
         }

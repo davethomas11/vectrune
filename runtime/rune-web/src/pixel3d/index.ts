@@ -10,6 +10,7 @@ import { createGpuLighting } from './gpu_lighting';
 import { collectHudHitRegions, hudButtonAt, type GameHud } from './hud';
 import type { RuneWebConfig } from '../types';
 import { getStorageItem, setStorageItem } from '../storage';
+export { createTvNavigation } from './tv';
 
 let settings: Pixel3DConfig;
 export function configure(config: Pixel3DConfig): void {
@@ -17,6 +18,8 @@ export function configure(config: Pixel3DConfig): void {
 }
 
 export function boot(options: RuneWebConfig): Pixel3DEngine {
+  const host = globalThis as typeof globalThis & { __runeTvMusic?: (music: RuneWebConfig['music']) => void };
+  host.__runeTvMusic?.(options.music);
   beginGameLoading();
   const game = new Pixel3DEngine(settings, options);
   Object.assign(globalThis, { __RunePixel3D: game, __RunePixel: game });

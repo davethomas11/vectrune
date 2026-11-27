@@ -44,6 +44,16 @@ describe('nearby entity buckets',()=>{
    expect(nearby(list,{x:0,y:0},5)).toEqual([]);
   });
  });
+ it('rebuilds indexes after a pass throws without affecting later queries',()=>{
+  const e={x:1,y:0},list=[e];
+  expect(()=>withEntityQueries(()=>{
+   expect(nearby(list,{x:0,y:0},5)).toEqual([e]);
+   throw new Error('test failure');
+  })).toThrow('test failure');
+  e.x=100;
+  expect(nearbyForRender(list,{x:0,y:0,z:0},5,0)).toEqual([]);
+  withEntityQueries(()=>expect(nearby(list,{x:0,y:0},5)).toEqual([]));
+ });
 });
 
 

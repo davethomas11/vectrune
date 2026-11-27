@@ -46,6 +46,7 @@ async fn main() -> anyhow::Result<()> {
         .subcommands(cli::developer::commands())
         .subcommands(cli::storage::commands())
         .subcommand(cli::ascii::command())
+        .subcommand(cli::tvos::command())
         .arg(
             Arg::new("SCRIPT")
                 .help("Path to the .rune, .vect, or .vectrune script, directory, or '-' to read from STDIN")
@@ -349,6 +350,12 @@ async fn main() -> anyhow::Result<()> {
         set_log_level(LogLevel::Error, true);
         crate::util::set_log_stderr();
         return cli::ascii::run(args);
+    }
+
+    if let Some(("tvos", args)) = matches.subcommand() {
+        set_log_level(LogLevel::Error, true);
+        crate::util::set_log_stderr();
+        return cli::tvos::run(args);
     }
 
     if let Some((name @ ("db" | "events"), args)) = matches.subcommand() {

@@ -314,7 +314,7 @@ fn native_tall_rooms_raise_walls_and_model_clipping_without_moving_the_floor() {
     assert_eq!(rc.z_buffer, depth);
     assert_eq!(&rc.buffer[100 * 320..], &low[100 * 320..]);
     rc.models.insert("high".into(), BlockModel { blocks: vec![Block {
-        shape: Default::default(),
+        shape: Default::default(), emissive: false,
         from: [-0.5, -0.5, 1.0], size: [1.0, 1.0, 0.4], color: 0xff804020,
     }] });
     state.things = vec![serde_json::from_value(serde_json::json!({"x":4.5,"y":1.5,"model":"high"})).unwrap()];
@@ -440,7 +440,7 @@ fn compiles_block_models_and_rejects_invalid_geometry() {
 #[test]
 fn native_block_model_depth_rotation_and_inside_camera() {
     use pixel3d::model::{Block, BlockModel, render_model};
-    let model = BlockModel { blocks: vec![Block { shape: Default::default(), from: [-0.5, -0.5, 0.0], size: [1.0, 1.0, 1.0], color: 0xff804020 }] };
+    let model = BlockModel { blocks: vec![Block { shape: Default::default(), emissive: false, from: [-0.5, -0.5, 0.0], size: [1.0, 1.0, 1.0], color: 0xff804020 }] };
     let mut instance = Thing3D {
         dissolve: None,
         x: 2.0, y: 0.0, z: None, angle: None, scale: None,
@@ -505,7 +505,7 @@ fn native_models_occlude_only_the_covered_sprite_pixels() {
     let mut rc = Rasterizer3D::new(64, 48, 66.0,
         vec![Texture { width: 8, height: 8, pixels: vec![0xff222222; 64] }], sprites, map);
     rc.models.insert("step".into(), BlockModel { blocks: vec![Block {
-        shape: Default::default(),
+        shape: Default::default(), emissive: false,
         from: [-0.5, -0.5, 0.0], size: [1.0, 1.0, 0.5], color: 0xff804020,
     }] });
     let mut state: RenderState = serde_json::from_value(serde_json::json!({
@@ -537,7 +537,7 @@ fn native_models_occlude_only_the_covered_sprite_pixels() {
 fn native_models_dissolve_without_occluding_the_background() {
     use rune_runtime::apps::pixel3d::model::{Block, BlockModel, render_model};
     let model = BlockModel { blocks: vec![Block {
-        shape: Default::default(),
+        shape: Default::default(), emissive: false,
         from: [-0.5, -0.5, 0.0], size: [1.0, 1.0, 1.0], color: 0xff804020,
     }] };
     let camera = Camera3D { x: 0.0, y: 0.0, angle: 0.0 };
@@ -666,7 +666,7 @@ fn native_rasterizer_renders_scene() {
 
     // HUD bar covers y=0..9, verify HUD bar background at (x=0, y=0)
     let p0 = u32::from_ne_bytes([frame[0], frame[1], frame[2], frame[3]]);
-    assert_eq!(p0, 0xff0a0c0e);
+    assert_eq!(p0, 0xff0e0c0a);
 
     // Pixel at center of screen is a rendered wall pixel
     let mid_idx = (100 * width + 160) * 4;
@@ -689,7 +689,7 @@ fn native_rasterizer_renders_scene() {
     assert_eq!(rasterizer.buffer[10 * width + 160], 0xff8899aa);
     assert!(rasterizer.buffer.iter().all(|p| p >> 24 == 255));
     rasterizer.map.sky = Some(pixel3d::raster::Sky {
-        seed: 731, zenith: 0xff552c20, horizon: 0xff838bbd, cloud: 0xffcfbdc0, speed: 0.35,
+        seed: 731, zenith: 0xff552c20, horizon: 0xff838bbd, cloud: 0xffcfbdc0, speed: 0.35, below: None,
     });
     rasterizer.render(&surface_state, &mut frame);
     let sky_frame = frame.clone();

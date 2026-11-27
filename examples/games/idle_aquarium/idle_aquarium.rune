@@ -33,6 +33,12 @@ persistence = {"key":"glowtide-aquarium-v1","state":"progress","interval_ticks":
 click_to_start = false
 mouse_look = false
 ui = ui
+tv = aquarium
+
+@TV/aquarium
+initial_focus = toggle_menu
+summary = [{"path":"progress.pearls","label":"PEARLS"},{"path":"alive_count","label":"FRIENDS"}]
+modes = [{"id":"tank","label":"TANK VIEW","kind":"action","action":"orbit_view","bounds":{"origin":[20,30,2],"extent":[9,4.5,8],"scale":"tank_scale"}},{"id":"friends","label":"FRIENDS","kind":"cycle","action":"inspect_resident","groups":["fish","crabs"],"targets":"residents"}]
 
 @Map/lagoon
 sky = {"seed":73,"zenith":"#080d2c","horizon":"#123c65","below":"#071b31","cloud":"#245075","speed":0.025}

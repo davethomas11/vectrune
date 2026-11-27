@@ -3,6 +3,47 @@
 `@App type = pixel-3d` uses shared Rune game logic with a browser raycaster or
 the optional native desktop rasterizer. Vect Breach remains a separate example.
 
+For the fixed-eye desktop rasterizer, camera-angle quantization, odd-sized
+sprite and wall projection, and default gameplay HUD colors follow the shared
+renderer. [`tests/pixel3d_parity.rs`](../../tests/pixel3d_parity.rs) compares
+complete RGBA frames from both paths for a small Vect Breach gameplay fixture
+at several angles. This is not a guarantee of parity for every scene: voxel
+worlds, pitched cameras and other unsupported cases continue to use the shared
+JavaScript renderer on desktop.
+
+Experimental native terrain, sky, pitched model, and standard point-light
+primitives are compared with the shared renderer in the same parity suite.
+The experimental dense terrain renderer builds per-frame chunk occupancy and
+skips empty chunks in sparse worlds; dense worlds use the original fine
+traversal. It also conservatively projects occupied chunk bounds to skip
+screen tiles that cannot contain terrain, falling back when bounds cross the
+camera's near plane. The fine traversal still resolves voxel hits and boundary
+ties.
+The experimental enhanced-lighting tests also compare tiled glass and haze,
+including Glowtide's four panes, and model emission capture with bloom
+compositing in synthetic voxel scenes. The latter covers all four model shapes,
+overlap, dissolve and occlusion. Experimental contact shadows match selected
+voxel-floor and glass-support scenes with point lights, as well as an aquarium
+state whose casters have no supporting surface. A combined lighting entry point
+orders the passes and leaves the input frame unchanged on errors. A parity
+fixture composes the actual aquarium's voxel terrain, sky, visible models,
+point lights, glass and bloom at four viewpoints and two simulation states,
+comparing world color and depth exactly with the shared renderer. The native
+enhanced voxel-model primitive also covers distant skyline model haze when no
+side backdrop is used. An experimental compositor can place the existing shared
+JavaScript HUD overlay over a native frame; tests cover aquarium buttons, menu,
+profile and keyboard layouts, and initial aquarium frames with the menu open
+and closed. It does not implement native HUD drawing, input routing or a host
+bridge, and does not establish full game parity. Callers must supply shadow
+casters and glass panes. The experimental `voxel_scene` API composes the
+supported enhanced world frame from dense terrain and explicitly supplied model
+instances; it is not connected to the desktop or TV runtime. The caller must
+detect unsupported scene features before using this narrow contract.
+They are not yet a complete scene renderer and do not replace the desktop
+voxel fallback or provide Apple TV support. Enhanced lighting, HUD and
+interaction parity remain open; see the
+[Apple TV discovery](../../documents/feature/apple_tv/discovery.md).
+
 The opt-in `@Scene world` in v0.3.6 adds solid voxel terrain, elevation, mining,
 seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](voxel-worlds.md)
 for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.
@@ -1989,6 +2030,8 @@ Euclidean radius, preserving collection order and duplicates. An origin with
 radius must be finite, radius nonnegative. Ordinary arrays also work: they are
 indexed once per synchronous tick and reused for queries in that tick. Managed
 groups retain their index across ticks and are preferred for large populations.
+Temporary indexes are released at the end of a synchronous query pass; render
+queries outside a pass use a transient index for ordinary arrays.
 Their movement journal is bounded and safely rebuilds an index if it falls behind.
 Rendering queries declared collections directly, so managed scenery/enemies do
 not require a full coordinate scan every frame.

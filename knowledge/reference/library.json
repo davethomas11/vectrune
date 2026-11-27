@@ -59,6 +59,22 @@
   ],
   "entries": [
     {
+      "id": "tvos-xcode-tooling",
+      "category": "cli",
+      "name": "Apple TV Xcode tooling",
+      "signature": "vectrune tvos devices | build --project XCODEPROJ --scheme NAME --device ID --derived-data DIR | run --app APP --device ID",
+      "summary": "List Xcode devices, build an existing tvOS Xcode project, and install and launch a signed app.",
+      "runtime": "Experimental macOS CLI; Xcode and a paired Apple TV",
+      "sources": ["src/cli/tvos.rs", "src/main.rs", "tests/tvos_cli.rs", "knowledge/runtime/cli.md"],
+      "returns": "Build output in the chosen Xcode derived-data directory, or installation and launch status.",
+      "errors": "Reports invalid project, app, device or bundle identifier and native tool failures.",
+      "example": "vectrune tvos build --project ./MyGame.xcodeproj --scheme MyGame --device YOUR-DEVICE-ID --derived-data ./build/tvos",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["The project must already exist and supply its runtime libraries and configured signing. Vectrune does not generate tvOS projects or compile Rune for tvOS yet.", "run reads CFBundleIdentifier from the app's Info.plist and launches only after successful installation."],
+      "fields": []
+    },
+    {
       "id": "mobile-web-packaging",
       "category": "cli",
       "name": "Mobile Web build and export",

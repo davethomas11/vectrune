@@ -1,0 +1,15 @@
+[package]
+name = "vectrune-tvos-runtime"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+rquickjs = { version = "0.14.0", features = ["bindgen", "array-buffer"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+crossbeam-queue = "0.3"

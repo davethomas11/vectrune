@@ -28,6 +28,34 @@ project without installing dependencies or requiring SDKs. `--prepare-only`
 with `--build` skips native tooling. See [Rune Mobile Web](mobile-web.md) for
 platform prerequisites, generated-directory protections and signing limitations.
 
+## Apple TV Xcode tooling (experimental)
+
+On macOS with Xcode and a paired Apple TV, Vectrune can invoke native tools for
+an **existing** tvOS Xcode project and signed app:
+
+```sh
+vectrune tvos devices
+vectrune tvos build --project ./MyGame.xcodeproj --scheme MyGame \
+  --device YOUR-DEVICE-ID --derived-data ./build/tvos
+vectrune tvos run --app ./build/tvos/Build/Products/Release-appletvos/MyGame.app \
+  --device YOUR-DEVICE-ID
+```
+
+`build` invokes `xcodebuild` in Release configuration for the specified device.
+`run` reads the app's bundle identifier from `Info.plist`, installs the app,
+then launches it with `xcrun devicectl`. Replace the device ID with one from
+`devices` and use the actual Xcode product path for your app. Build requires
+Xcode signing and provisioning to be configured; run requires an app signed
+for the device. Vectrune does not create or modify signing settings. The
+project is responsible for building or supplying
+its own runtime libraries. `devices` lists all devices known to Xcode.
+Tool failures are reported and installation failure prevents launch.
+
+These commands do **not** export Rune games, generate Xcode projects, build
+the Rune TV runtime, or provide a TV-specific Rune declaration. The current
+aquarium TV host remains a local experiment. See the
+[Apple TV discovery](../../documents/feature/apple_tv/discovery.md).
+
 ## ASCII Animator (v0.3.12)
 
 `vectrune ascii generate --text "Hello!" -o animation.rune` creates a runnable

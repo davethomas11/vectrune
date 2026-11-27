@@ -2,7 +2,13 @@
 pub mod raster;
 pub mod model;
 pub mod hud;
+pub mod voxel;
+pub mod voxel_scene;
+pub mod lighting;
+pub mod enhanced_lighting;
+pub mod overlay;
 mod scenes;
+mod tv;
 #[cfg(feature = "pixel-desktop")]
 pub mod desktop;
 
@@ -772,6 +778,9 @@ pub fn compile(doc: &RuneDocument) -> Result<Game3D> {
         ensure!(logic.state.contains_key(state), "Scene persistence references unknown state {state}");
         crate::apps::pixel::validate_save_schedule(&save, &logic)?;
         config["persistence"] = save;
+    }
+    if let Some(profile) = tv::compile(doc, scene, &logic)? {
+        config["tv"] = profile;
     }
     if let Some(value) = scene.kv.get("presentation") {
         let presentation = json_value(value);

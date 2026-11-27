@@ -1644,6 +1644,7 @@ var __RunePixel3DRuntime = (() => {
   __export(index_exports, {
     boot: () => boot,
     configure: () => configure,
+    createTvNavigation: () => createTvNavigation,
     mount: () => mount
   });
 
@@ -2424,13 +2425,17 @@ var __RunePixel3DRuntime = (() => {
     groups.set(proxy, { version: 0, indices: /* @__PURE__ */ new Map() });
     return proxy;
   }
-  var session = () => ({ indices: /* @__PURE__ */ new WeakMap(), members: /* @__PURE__ */ new WeakMap() });
+  var session = () => ({ indices: /* @__PURE__ */ new Map(), members: /* @__PURE__ */ new Map() });
   function withEntityQueries(run) {
-    const previous = active;
-    active = active ?? session();
+    const previous = active, current = previous ?? session();
+    active = current;
     try {
       return run();
     } finally {
+      if (!previous) {
+        current.indices.clear();
+        current.members.clear();
+      }
       active = previous;
     }
   }
@@ -2550,7 +2555,9 @@ var __RunePixel3DRuntime = (() => {
       }
       return indexed.index.query(point, radius, padding);
     }
-    const owner = active ?? session(), indices = owner.indices.get(source) ?? /* @__PURE__ */ new Map();
+    const owner = active;
+    if (!owner) return new EntityIndex(source, dimensions).query(point, radius, padding);
+    const indices = owner.indices.get(source) ?? /* @__PURE__ */ new Map();
     let index2 = indices.get(dimensions);
     if (!index2) {
       index2 = new EntityIndex(source, dimensions, owner);
@@ -14193,12 +14200,235 @@ void main() {
     }
   }
 
+  // src/pixel3d/tv.ts
+  function stateValue(state, path) {
+    return path.split(".").reduce((value, key2) => value !== null && typeof value === "object" ? Reflect.get(value, key2) : void 0, state);
+  }
+  function createTvNavigation(game) {
+    const profile = game.config.tv ?? { wrap: true, summary: [], modes: [] };
+    let focused = profile.initial_focus ?? "";
+    let active2;
+    let selected = 0;
+    const size = () => ({ width: game.raycaster.width, height: game.raycaster.height });
+    const modal = () => {
+      const ui = game.keyboardHud();
+      return Boolean(ui?.keyboard || ui?.callout || ui?.grid?.layout === "sidebar");
+    };
+    function array(path) {
+      const value = stateValue(game.app.state, path);
+      if (!Array.isArray(value)) throw new Error(`TV state ${path} must be an array`);
+      return value;
+    }
+    const count = (mode) => mode.groups.reduce((total, path) => total + array(path).length, 0);
+    function buttons() {
+      const { width, height } = size(), ui = game.keyboardHud();
+      const hits = collectHudHitRegions(width, height, ui, String(game.app.state.status ?? "playing"), game.paused);
+      const entries = (ui?.buttons ?? []).flatMap((button, index2) => {
+        const region = !button.disabled && hits.find((hit) => hit.action === button.action);
+        return region && button.action !== "host.fullscreen" ? [{ id: `button:${index2}:${button.action}`, label: button.label, action: button.action, region }] : [];
+      });
+      const modes = profile.modes.filter((mode) => mode.kind !== "cycle" || count(mode) > 0);
+      const buttonWidth = Math.min(100, Math.floor((width - 30) / Math.max(1, modes.length)) - 10);
+      const start = Math.floor((width - modes.length * buttonWidth - Math.max(0, modes.length - 1) * 10) / 2);
+      return [...entries, ...modes.map((mode, index2) => ({
+        id: `mode:${mode.id}`,
+        label: mode.label,
+        mode,
+        region: { x: start + index2 * (buttonWidth + 10), y: height - 40, w: buttonWidth, h: 30 }
+      }))];
+    }
+    function current(entries) {
+      const entry = entries.find((item) => item.id === focused) ?? entries.find((item) => item.action === focused) ?? entries[0];
+      focused = entry?.id ?? "";
+      return entry;
+    }
+    function pad(command) {
+      const pressed = { up: 12, down: 13, left: 14, right: 15, select: 0, back: 1 }[command];
+      const buttons2 = Array.from({ length: 16 }, (_, index2) => ({ value: index2 === pressed ? 1 : 0 }));
+      game.hudPads([{ index: 0, buttons: buttons2, axes: [] }]);
+      game.hudPads([{ index: 0, buttons: buttons2.map(() => ({ value: 0 })), axes: [] }]);
+    }
+    function navigate(command) {
+      const entries = buttons(), selectedEntry = current(entries);
+      if (!selectedEntry) return false;
+      const center = (r) => [r.x + r.w / 2, r.y + r.h / 2];
+      const [x, y] = center(selectedEntry.region), horizontal = command === "left" || command === "right";
+      const row = entries.filter((entry) => Math.abs(center(entry.region)[1] - y) < 24);
+      const candidates = horizontal && row.length > 1 ? row : entries;
+      let best, bestScore = Infinity;
+      for (const entry of candidates) {
+        if (entry === selectedEntry) continue;
+        const [ex, ey] = center(entry.region), dx = ex - x, dy = ey - y;
+        const primary = command === "left" ? -dx : command === "right" ? dx : command === "up" ? -dy : dy;
+        const cross = horizontal ? Math.abs(dy) : Math.abs(dx);
+        if (primary > 0 && primary + cross * 2 < bestScore) {
+          best = entry;
+          bestScore = primary + cross * 2;
+        }
+      }
+      if (!best && profile.wrap) {
+        let extreme = -Infinity;
+        for (const entry of candidates) {
+          if (entry === selectedEntry) continue;
+          const [ex, ey] = center(entry.region), dx = ex - x, dy = ey - y;
+          const opposite = command === "left" ? dx : command === "right" ? -dx : command === "up" ? dy : -dy;
+          const score = opposite - (horizontal ? Math.abs(dy) : Math.abs(dx)) * 2;
+          if (score > extreme) {
+            best = entry;
+            extreme = score;
+          }
+        }
+      }
+      if (!best) return false;
+      focused = best.id;
+      return true;
+    }
+    function input(command) {
+      if (modal()) {
+        pad(command);
+        return true;
+      }
+      if (active2) {
+        if (command === "back") {
+          focused = `mode:${active2.id}`;
+          active2 = void 0;
+          return true;
+        }
+        if (active2.kind === "cycle") {
+          const total = count(active2);
+          if (!total) {
+            focused = `mode:${active2.id}`;
+            active2 = void 0;
+            return true;
+          }
+          selected %= total;
+          if (command === "left" || command === "right") {
+            selected = (selected + (command === "left" ? -1 : 1) + total) % total;
+            return true;
+          }
+          if (command === "select") {
+            game.activate(active2.action, [selected]);
+            return true;
+          }
+        } else if (command === "left" || command === "right") {
+          game.activate(active2.action, [command === "left" ? -1 : 1]);
+          return true;
+        }
+        return false;
+      }
+      if (command === "back") {
+        const entry2 = buttons().find((item) => item.action === profile.initial_focus);
+        if (!entry2 || entry2.id === focused) return false;
+        focused = entry2.id;
+        return true;
+      }
+      if (command !== "select") return navigate(command);
+      const entry = current(buttons());
+      if (!entry) return false;
+      if (entry.mode) {
+        active2 = entry.mode;
+        selected = 0;
+      } else if (entry.action === "host.mute") game.muted = !game.muted;
+      else if (entry.action) game.activate(entry.action);
+      return true;
+    }
+    function overlay2(camera, time) {
+      const ray = game.raycaster, { width, height } = size();
+      if (profile.summary.length) {
+        const summary = profile.summary.map((item) => {
+          const value = stateValue(game.app.state, item.path);
+          if (typeof value !== "string" && typeof value !== "number")
+            throw new Error(`TV summary ${item.path} must be text or a number`);
+          return `${value} ${item.label}`;
+        }).join("  ").toUpperCase().slice(0, Math.max(0, Math.floor((width - 30) / 8)));
+        roundedRect(ray, 6, 6, Math.min(width - 12, summary.length * 8 + 16), 20, 5, 860723);
+        ray.text(summary, 14, 11, 12845032, 2);
+      }
+      if (modal()) return;
+      const pulse = (Math.sin(time * 2) + 1) * 0.5;
+      const color = Math.round(100 + pulse * 34) << 16 | Math.round(180 + pulse * 31) << 8 | Math.round(169 + pulse * 30);
+      const bracket = (x, y, w, h, shade3) => {
+        for (const [px, py, dx, dy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1], [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
+          ray.rect(dx > 0 ? px : px - 8, py, 9, 2, shade3);
+          ray.rect(px, dy > 0 ? py : py - 8, 2, 9, shade3);
+        }
+      };
+      const ring = (r) => {
+        bracket(r.x - 5, r.y - 5, r.w + 10, r.h + 10, 1391431);
+        bracket(r.x - 4, r.y - 4, r.w + 8, r.h + 8, color);
+      };
+      if (!active2) {
+        const entries = buttons(), entry = current(entries);
+        for (const item of entries.filter((item2) => item2.mode)) {
+          const { x, y, w, h } = item.region, selected2 = item.id === focused;
+          roundedRect(ray, x, y, w, h, 6, selected2 ? 8185036 : 3560808);
+          roundedRect(ray, x + 2, y + 2, w - 4, h - 4, 5, selected2 ? 2512741 : 1587530);
+          const label = item.label.toUpperCase().slice(0, Math.max(0, Math.floor((w - 8) / 8)));
+          ray.text(label, x + Math.floor((w - label.length * 8) / 2), y + 10, 15858679, 2);
+        }
+        if (entry) {
+          ring(entry.region);
+          const label = entry.label.toUpperCase().slice(0, Math.max(0, Math.floor((width - 30) / 8)));
+          const w = Math.min(width - 12, Math.max(100, label.length * 8 + 20));
+          const x = Math.floor((width - w) / 2);
+          roundedRect(ray, x, height - 67, w, 19, 5, 860723);
+          ray.text(label, x + 10, height - 62, 12845032, 2);
+        }
+      } else {
+        if (active2.kind === "cycle") {
+          const total = count(active2);
+          if (!total) {
+            focused = `mode:${active2.id}`;
+            active2 = void 0;
+            return;
+          }
+          selected %= total;
+          const target = array(active2.targets)[selected];
+          if (!target || typeof target !== "object" || !["x", "y", "z"].every((key2) => {
+            const value = Reflect.get(target, key2);
+            return typeof value === "number" && Number.isFinite(value);
+          })) throw new Error(`TV target ${active2.targets}[${selected}] must have finite x, y, z`);
+          const point = ray.projectPoint(camera, target);
+          if (point && point.x >= 0 && point.x < width && point.y >= 0 && point.y < height)
+            ring({ x: Math.round(point.x) - 19, y: Math.round(point.y) - 19, w: 38, h: 38 });
+        } else if (active2.bounds) {
+          const { origin, extent, scale: scalePath } = active2.bounds;
+          const scale = scalePath ? stateValue(game.app.state, scalePath) : 1;
+          if (typeof scale !== "number" || !Number.isFinite(scale) || scale < 0)
+            throw new Error(`TV bounds scale ${scalePath} must be a nonnegative number`);
+          const points = [-1, 1].flatMap((x2) => [-1, 1].flatMap((y) => [0, 1].map((z) => ray.projectPoint(camera, {
+            x: origin[0] + x2 * extent[0] * scale,
+            y: origin[1] + y * extent[1] * scale,
+            z: origin[2] + z * extent[2] * scale
+          }))));
+          if (points.every((point) => point !== void 0)) {
+            const valid = points.filter((point) => point !== void 0);
+            const left = Math.max(5, Math.floor(Math.min(...valid.map((point) => point.x))) - 8);
+            const top = Math.max(5, Math.floor(Math.min(...valid.map((point) => point.y))) - 8);
+            const right = Math.min(width - 5, Math.ceil(Math.max(...valid.map((point) => point.x))) + 8);
+            const bottom = Math.min(height - 5, Math.ceil(Math.max(...valid.map((point) => point.y))) + 8);
+            if (right - left > 20 && bottom - top > 20) ring({ x: left, y: top, w: right - left, h: bottom - top });
+          }
+        }
+        const text = active2.kind === "cycle" ? "LEFT RIGHT: CYCLE  OK: SELECT  BACK: HUD" : "LEFT RIGHT: MOVE  BACK: HUD";
+        const w = Math.min(width - 12, Math.max(100, text.length * 8 + 20));
+        const x = Math.floor((width - w) / 2);
+        roundedRect(ray, x, height - 46, w, 36, 6, 860723);
+        ray.text(active2.label.toUpperCase().slice(0, Math.floor((w - 20) / 8)), x + 10, height - 41, 12845032, 2);
+        ray.text(text.slice(0, Math.floor((w - 20) / 8)), x + 10, height - 25, 10665415, 2);
+      }
+    }
+    return { input, overlay: overlay2, compactHud: profile.summary.length > 0 };
+  }
+
   // src/pixel3d/index.ts
   var settings;
   function configure(config) {
     settings = config;
   }
   function boot(options) {
+    const host = globalThis;
+    host.__runeTvMusic?.(options.music);
     beginGameLoading();
     const game = new Pixel3DEngine(settings, options);
     Object.assign(globalThis, { __RunePixel3D: game, __RunePixel: game });

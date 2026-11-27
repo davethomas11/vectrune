@@ -3,7 +3,7 @@ import {ownValue,rawValue} from '../ownership';
 // reuse buckets; Rune position writes relocate indexed entries immediately.
 type Entity=Record<string,any>;
 interface Row {entity:Entity;key:string;x:number;y:number;z:number;scale:number}
-interface Session {indices:WeakMap<object,Map<number,EntityIndex>>;members:WeakMap<object,Set<EntityIndex>>}
+interface Session {indices:Map<object,Map<number,EntityIndex>>;members:Map<object,Set<EntityIndex>>}
 let active:Session|undefined;
 const groups=new WeakMap<object,{version:number;indices:Map<number,{version:number;index:EntityIndex}>}>();
 const ownedEntities=new WeakSet<object>();
@@ -41,9 +41,13 @@ export function entityGroup(values:unknown=[]):Entity[] {
   });
   ownValue(proxy);groups.set(proxy,{version:0,indices:new Map()});return proxy;
 }
-const session=():Session=>({indices:new WeakMap(),members:new WeakMap()});
+const session=():Session=>({indices:new Map(),members:new Map()});
 export function withEntityQueries<T>(run:()=>T):T {
-  const previous=active;active=active??session();try{return run();}finally{active=previous;}
+  const previous=active,current=previous??session();active=current;try{return run();}finally{
+    // Break the session/index cycle even on runtimes with limited weak-map cycle collection.
+    if(!previous){current.indices.clear();current.members.clear();}
+    active=previous;
+  }
 }
 class EntityIndex {
   readonly buckets=new Map<string,Set<number>>();
@@ -131,7 +135,9 @@ function query(source:unknown,origin:unknown,radius:unknown,padding=0):Entity[] 
     if(!indexed||indexed.version!==group.version){indexed={version:group.version,index:new EntityIndex(source,dimensions)};group.indices.set(dimensions,indexed);}
     return indexed.index.query(point,radius,padding);
   }
-  const owner=active??session(),indices=owner.indices.get(source)??new Map<number,EntityIndex>();
+  const owner=active;
+  if(!owner)return new EntityIndex(source,dimensions).query(point,radius,padding);
+  const indices=owner.indices.get(source)??new Map<number,EntityIndex>();
   let index=indices.get(dimensions);if(!index){index=new EntityIndex(source,dimensions,owner);indices.set(dimensions,index);owner.indices.set(source,indices);}
   return index.query(point,radius,padding);
 }
