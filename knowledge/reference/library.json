@@ -123,6 +123,22 @@
       "fields": []
     },
     {
+      "id": "pixel3d-tv-profile",
+      "category": "games",
+      "name": "@TV profile",
+      "signature": "@Scene tv = name; @TV/name",
+      "summary": "Declare Apple TV remote navigation, a HUD summary and up to two focus modes for a Pixel-3D scene.",
+      "runtime": "Experimental Apple TV native runtime; compiled and validated for every Pixel-3D scene",
+      "sources": ["src/apps/pixel3d/tv.rs", "runtime/rune-web/src/pixel3d/tv.ts", "native/tvos/runtime/src/tv_input.js", "tests/pixel3d_app.rs", "examples/games/idle_aquarium/idle_aquarium.rune"],
+      "returns": "A tv profile in the compiled scene configuration that drives focus rings, mode buttons and the summary strip.",
+      "errors": "Unknown fields, unknown actions, unknown state paths, bad labels (1-24 ASCII characters), more than three summary items or two modes fail compilation.",
+      "example": "@Scene/aquarium\ntv = aquarium\n\n@TV/aquarium\ninitial_focus = toggle_menu\nsummary = [{\"path\":\"progress.pearls\",\"label\":\"PEARLS\"}]\nmodes = [{\"id\":\"friends\",\"label\":\"FRIENDS\",\"kind\":\"cycle\",\"action\":\"inspect_resident\",\"groups\":[\"fish\"],\"targets\":\"residents\"}]",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["Fields: initial_focus (HUD action name), wrap (default true), summary, modes. A mode is kind action (left/right call the action with -1/+1, optional bounds {origin, extent, scale} highlight) or kind cycle (groups are state arrays of objects with x, y, z; targets names the array that selecting indexes; select calls the action with the index).", "Without @TV the HUD buttons are still remote-navigable; the profile only adds the summary and modes. Browser and desktop hosts ignore it."],
+      "fields": []
+    },
+    {
       "id": "pixel3d-drag-action",
       "category": "games",
       "name": "Canvas drag action",

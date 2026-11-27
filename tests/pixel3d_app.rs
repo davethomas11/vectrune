@@ -843,3 +843,31 @@ fn declarative_camera_and_perspective_reject_invalid_values() {
         assert!(pixel3d::compile(&invalid).is_err(), "accepted invalid {kind} {key}");
     }
 }
+
+#[test]
+fn tv_profile_compiles_from_declaration_and_rejects_invalid_references() {
+    let dir = Path::new("examples/games/idle_aquarium");
+    let source = std::fs::read_to_string(dir.join("idle_aquarium.rune")).unwrap();
+    let compile = |name: &str, text: &str| {
+        let copy = dir.join(name);
+        std::fs::write(&copy, text).unwrap();
+        let result = load_rune_document_from_path(&copy)
+            .map_err(|e| e.to_string())
+            .and_then(|doc| pixel3d::compile(&doc).map(|game| game.script).map_err(|e| e.to_string()));
+        std::fs::remove_file(&copy).ok();
+        result
+    };
+
+    let script = compile("__tv_valid.rune", &source).unwrap();
+    assert!(script.contains("\"initial_focus\":\"toggle_menu\""));
+    assert!(script.contains("\"id\":\"friends\""));
+
+    for (n, (from, to, message)) in [
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nbogus = 1", "Unknown @TV/aquarium field"),
+        ("\"action\":\"orbit_view\"", "\"action\":\"missing_action\"", "unknown action"),
+        ("\"path\":\"progress.pearls\"", "\"path\":\"nope.pearls\"", "unknown state"),
+    ].into_iter().enumerate() {
+        let error = compile(&format!("__tv_invalid_{n}.rune"), &source.replace(from, to)).unwrap_err();
+        assert!(error.contains(message), "{error}");
+    }
+}

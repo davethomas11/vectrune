@@ -11,6 +11,9 @@ func runeTVCreate(_ source: UnsafePointer<CChar>, _ width: UInt32, _ height: UIn
 func runeTVFrame(_ handle: UnsafeMutableRawPointer, _ ticks: UInt32, _ pixels: UnsafeMutablePointer<UInt8>,
                  _ pixelBytes: Int, _ timings: UnsafeMutablePointer<ProbeTimings>,
                  _ error: UnsafeMutablePointer<UInt8>, _ errorBytes: Int) -> Int32
+@_silgen_name("rune_tv_set_storage_directory")
+func runeTVSetStorageDirectory(_ path: UnsafePointer<CChar>) -> Int32
+
 @_silgen_name("rune_tv_input")
 func runeTVInput(_ handle: UnsafeMutableRawPointer, _ command: UInt32,
                  _ error: UnsafeMutablePointer<UInt8>, _ errorBytes: Int) -> Int32
@@ -251,8 +254,9 @@ final class FrameWorker {
     }
     private func run() {
         NSLog("Rune probe worker started")
-        present(nil, "Loading compiled aquarium...")
-        guard let url = Bundle.main.url(forResource: "aquarium", withExtension: "js") else {
+        present(nil, "Loading compiled Rune game...")
+        guard let url = Bundle.main.url(forResource: "game", withExtension: "js")
+            ?? Bundle.main.url(forResource: "aquarium", withExtension: "js") else {
             present(nil, "Compiled Rune bundle is missing.")
             return
         }
@@ -268,6 +272,11 @@ final class FrameWorker {
         catch {
             present(nil, "Audio initialization error: \(error.localizedDescription)")
             return
+        }
+        if let support = try? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent("RuneSaves", isDirectory: true),
+           runeTVSetStorageDirectory(support.path) != 0 {
+            NSLog("Rune saves unavailable; progress will not persist")
         }
         present(nil, "Initializing Rune and scene assets...")
         NSLog("Rune probe initializing runtime")

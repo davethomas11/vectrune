@@ -44,6 +44,18 @@ voxel fallback or provide Apple TV support. Enhanced lighting, HUD and
 interaction parity remain open; see the
 [Apple TV discovery](../../documents/feature/apple_tv/discovery.md).
 
+### `@TV` profile
+
+A scene may opt in to Apple TV remote behavior with `tv = name` and a matching
+`@TV/name` section (see `examples/games/idle_aquarium/idle_aquarium.rune`).
+Fields: `initial_focus` (a HUD action), `wrap`, `summary` (up to three
+`{path, label}` state readouts) and `modes` (up to two). An `action` mode sends
+`-1`/`+1` to its action on left/right and may outline `bounds`; a `cycle` mode
+steps through objects with `x`, `y`, `z` from state arrays named in `groups`
+and calls its action with the chosen index. Actions and state paths are
+validated at compile time. The native TV runtime reads this profile, music
+effects and assets from the compiled game, so no game-specific code is needed.
+
 The opt-in `@Scene world` in v0.3.6 adds solid voxel terrain, elevation, mining,
 seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](voxel-worlds.md)
 for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.

@@ -111,3 +111,50 @@ pub fn compile(doc: &RuneDocument, scene: &Section, logic: &LogicDefinition) -> 
     }
     Ok(Some(profile))
 }
+
+/// Result of checking a compiled game against the Apple TV runtime's supported features.
+#[derive(Debug, Default, PartialEq)]
+pub struct SupportReport {
+    pub unsupported: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+fn present(config: &Json, key: &str) -> bool {
+    match config.get(key) {
+        None | Some(Json::Null) => false,
+        Some(Json::Object(map)) => !map.is_empty(),
+        Some(Json::Array(items)) => !items.is_empty(),
+        Some(_) => true,
+    }
+}
+
+/// Static checks only. The native runtime still rejects dynamic features such as
+/// tethers and camera poses when a scene first uses them.
+pub fn support_report(config: &Json) -> SupportReport {
+    let mut report = SupportReport::default();
+    if !present(config, "world") {
+        report.unsupported.push("needs a voxel world (`world = <name>` on @Scene); flat grid maps are not supported".into());
+    }
+    if present(config, "weapon") {
+        report.unsupported.push("viewmodel weapons are not supported".into());
+    }
+    if present(config, "titleScene") {
+        report.unsupported.push("title scenes are not supported".into());
+    }
+    if present(config, "sprites") {
+        report.unsupported.push("sprites are not supported; use block models".into());
+    }
+    if present(config, "sideMaps") {
+        report.unsupported.push("side-map backdrops are not supported".into());
+    }
+    if !present(config, "tv") {
+        report.warnings.push(
+            "no @TV section: the Siri Remote can only reach HUD buttons; add `tv = <name>` to @Scene to declare focus, summary and modes"
+                .into(),
+        );
+    }
+    if !present(config, "persistence") {
+        report.warnings.push("no `persistence` on @Scene: progress will not be saved between launches".into());
+    }
+    report
+}

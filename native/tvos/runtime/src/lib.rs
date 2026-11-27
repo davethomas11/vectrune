@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use std::cell::UnsafeCell;
 mod native_audio;
 mod effects;
+mod storage;
 
 struct Audio {
     bridge: native_audio::Bridge,
@@ -170,6 +171,16 @@ globalThis.__tvHud = () => {
 };
 "#;
 
+/// Call before `rune_tv_create`; returns 0 on success. Saves persist in this directory.
+#[no_mangle]
+pub unsafe extern "C" fn rune_tv_set_storage_directory(path: *const c_char) -> i32 {
+    if path.is_null() { return 1; }
+    match CStr::from_ptr(path).to_str() {
+        Ok(path) if storage::set_directory(path.into()).is_ok() => 0,
+        _ => 1,
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn rune_tv_create(source: *const c_char, width: u32, height: u32, audio: *mut std::ffi::c_void,
     error: *mut u8, error_bytes: usize) -> *mut std::ffi::c_void {
@@ -179,11 +190,6 @@ pub unsafe extern "C" fn rune_tv_create(source: *const c_char, width: u32, heigh
             return Err("Unsupported probe resolution".into());
         }
         let script = CStr::from_ptr(source).to_str().map_err(|e| e.to_string())?;
-        let instrumented = if !audio.is_null() {
-            let marker = "__RunePixel3DRuntime.boot({";
-            if script.matches(marker).count() != 1 { return Err("Cannot inspect compiled music configuration".into()); }
-            Some(script.replacen(marker, "((options)=>{globalThis.__tvMusic=options.music;return __RunePixel3DRuntime.boot(options);})({", 1))
-        } else { None };
         let runtime = Runtime::new().map_err(|e| e.to_string())?;
         runtime.set_memory_limit(128 * 1024 * 1024);
         runtime.set_max_stack_size(1024 * 1024);
@@ -195,12 +201,19 @@ pub unsafe extern "C" fn rune_tv_create(source: *const c_char, width: u32, heigh
             (*audio.cast::<Audio>()).bridge.install(&context).map_err(|e| format!("Audio setup: {e:#}"))?;
         }
         let assets = context.with(|ctx| -> Result<Assets, String> {
-            ctx.eval::<(), _>(instrumented.as_deref().unwrap_or(script)).map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
+            storage::install(&ctx).map_err(|e| format!("Storage setup: {e}"))?;
             if !audio.is_null() {
-                let json: String = ctx.eval("JSON.stringify(__tvMusic.glowtide_drift.effects)")
+                ctx.eval::<(), _>("globalThis.__runeTvMusic=(music)=>{globalThis.__tvMusic=music;}")
+                    .map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
+            }
+            ctx.eval::<(), _>(script).map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
+            if !audio.is_null() {
+                let json: String = ctx.eval("JSON.stringify(Object.values(globalThis.__tvMusic ?? {}).find(track => track && track.effects)?.effects ?? null)")
                     .map_err(|e| format!("Music effects: {}", CaughtError::from_error(&ctx,e)))?;
-                let config: effects::Settings = serde_json::from_str(&json).map_err(|e| format!("Music effects configuration: {e}"))?;
-                *(*audio.cast::<Audio>()).effects.get() = Some(effects::Effects::new(config, 48000)?);
+                let config: Option<effects::Settings> = serde_json::from_str(&json).map_err(|e| format!("Music effects configuration: {e}"))?;
+                if let Some(config) = config {
+                    *(*audio.cast::<Audio>()).effects.get() = Some(effects::Effects::new(config, 48000)?);
+                }
             }
             ctx.eval::<(), _>(format!("__RunePixel3D.resizeViewport({width},{height},{width}/640);__RunePixel3D.raycaster.setEnhancedLighting(true)"))
                 .map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;

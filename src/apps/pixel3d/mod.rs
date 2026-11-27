@@ -8,7 +8,7 @@ pub mod lighting;
 pub mod enhanced_lighting;
 pub mod overlay;
 mod scenes;
-mod tv;
+pub mod tv;
 #[cfg(feature = "pixel-desktop")]
 pub mod desktop;
 
