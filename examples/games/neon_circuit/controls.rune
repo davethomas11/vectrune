@@ -49,53 +49,95 @@ gamepad:
 touch = {
     "buttons": [
         {
+            "id": "left",
+            "input": "left",
+            "label": "LEFT",
+            "aria_label": "Move left",
+            "anchor": "bottom-left",
+            "offset": [8,64],
+            "size": 44,
+            "visible": "touch_ready"
+        },
+        {
+            "id": "right",
+            "input": "right",
+            "label": "RIGHT",
+            "aria_label": "Move right",
+            "anchor": "bottom-left",
+            "offset": [104,64],
+            "size": 44,
+            "visible": "touch_ready"
+        },
+        {
+            "id": "up",
+            "input": "aim_up",
+            "label": "UP",
+            "aria_label": "Aim or climb up",
+            "anchor": "bottom-left",
+            "offset": [56,112],
+            "size": 44,
+            "visible": "touch_ready"
+        },
+        {
+            "id": "down",
+            "input": "duck",
+            "label": "DOWN",
+            "aria_label": "Duck or climb down",
+            "anchor": "bottom-left",
+            "offset": [56,16],
+            "size": 44,
+            "visible": "touch_ready"
+        },
+        {
             "id": "jump",
             "input": "jump",
             "label": "JUMP",
-            "offset": [82, 14],
-            "size": 56,
+            "offset": [68,16],
+            "size": 52,
             "visible": "touch_ready"
         },
         {
             "id": "fire",
             "input": "fire",
             "label": "FIRE",
-            "offset": [12, 14],
-            "size": 56,
+            "offset": [8,16],
+            "size": 52,
             "visible": "touch_ready"
         },
         {
             "id": "dash",
             "input": "dash",
             "label": "DASH",
-            "offset": [12, 82],
-            "size": 48,
+            "offset": [8,76],
+            "size": 44,
             "visible": "touch_dash_ready"
         },
         {
             "id": "next_weapon",
-            "input": "weapon_wheel",
-            "label": "WHEEL",
-            "offset": [82, 82],
-            "size": 48,
+            "input": "next_weapon",
+            "label": "WPN",
+            "aria_label": "Next weapon",
+            "anchor": "top-right",
+            "offset": [64,12],
+            "size": 44,
             "visible": "touch_ready"
         },
         {
             "id": "turn_left",
             "input": "turn_left",
             "label": "TURN L",
-            "anchor": "bottom-left",
-            "offset": [12, 94],
-            "size": 46,
+            "anchor": "top-left",
+            "offset": [8,8],
+            "size": 44,
             "visible": "touch_turn_ready"
         },
         {
             "id": "turn_right",
             "input": "turn_right",
             "label": "TURN R",
-            "anchor": "bottom-left",
-            "offset": [66, 94],
-            "size": 46,
+            "anchor": "top-left",
+            "offset": [60,8],
+            "size": 44,
             "visible": "touch_turn_ready"
         },
         {
@@ -104,10 +146,9 @@ touch = {
             "command": "host.pause",
             "id": "pause",
             "label": "II",
-            "offset": [12, 12],
+            "offset": [12,12],
             "size": 44
         }
     ],
-    "joystick": {"down":"duck","size":76,"up":"aim_up","visible":"touch_ready","x":"move_x","y":"move_up"},
     "visible": "touch_ready"
 }

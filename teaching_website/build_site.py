@@ -134,6 +134,9 @@ def build_site(destination, binary, base="/", selected_routes=None, site_url="ht
             raise RuntimeError(f"{binary} did not compile {slug}'s @Controls profile. "
                                "Build the compiler from this checkout (omit --binary).")
         html = starfall_web_app(result.stdout, game) if slug == 'starfall' else result.stdout
+        html = html.replace('</head>', '<link rel="stylesheet" href="../../game-controls.css?v=1"></head>', 1)
+        if slug in {'neon-circuit', 'marble-run'}:
+            html = html.replace('</body>', '<script src="../../mobile-game-rotation.js?v=1"></script></body>', 1)
         (game / "index.html").write_text(html, encoding="utf-8")
     from build_developer_starter import archive
     developer = assets / 'content/developer'

@@ -4,45 +4,52 @@ logic = marble_cabinet
 style = marble_cabinet
 view:
     main .cabinet:
+        p .rotate-to-play:
+            span aria-hidden=true "↻"
+            span "Rotate your phone to play in landscape."
         section .game-card:
             div .toolbar:
-                div .display-options:
-                    label:
-                        span "Resolution"
-                        select data-pixel-resolution=true:
-                            option value="384x240" "384 × 240"
-                            option value="576x360" selected=true "576 × 360"
-                            option value="768x480" "768 × 480"
-                    label:
-                        span "Palette"
-                        select data-pixel-palette=true:
-                            option value=original "Original"
-                            option value="09120c,39533a,78944f,b9ce77,e7edaf" data-pixel-outline=true selected=true "Pocket"
-                            option value="26160d,4e2616,784421,a86931,d39745,f0c87a,fff1ba" "Amber"
-                            option value="151325,2f314f,535675,7b8aad,adcbd3,eff5cf" "Moonlight"
-                    label:
-                        span "Frame rate"
-                        select data-pixel-frame-rate=true:
-                            option value=simulation "30 FPS"
-                            option value=60 "60 FPS"
-                            option value=display "Uncapped (display)"
-                    label:
-                        input type=checkbox data-pixel-gpu=true title="Experimental WebGL 2 renderer"
-                        span "GPU"
-                    span .fps data-pixel-fps=true title="Frames drawn per second" "CPU · — FPS"
-                div .buttons:
-                    button data-pixel-pause=true data-pixel-hidden=pause_hidden "Pause / P"
-                    button data-pixel-mute=true "Sound"
-                    button data-pixel-fullscreen=true "Fullscreen"
+                details .toolbar-settings open=true:
+                    summary "Game options"
+                    div .display-options:
+                        label:
+                            span "Resolution"
+                            select data-pixel-resolution=true:
+                                option value="384x240" "384 × 240"
+                                option value="576x360" selected=true "576 × 360"
+                                option value="768x480" "768 × 480"
+                        label:
+                            span "Palette"
+                            select data-pixel-palette=true:
+                                option value=original "Original"
+                                option value="09120c,39533a,78944f,b9ce77,e7edaf" data-pixel-outline=true selected=true "Pocket"
+                                option value="26160d,4e2616,784421,a86931,d39745,f0c87a,fff1ba" "Amber"
+                                option value="151325,2f314f,535675,7b8aad,adcbd3,eff5cf" "Moonlight"
+                        label:
+                            span "Frame rate"
+                            select data-pixel-frame-rate=true:
+                                option value=simulation "30 FPS"
+                                option value=60 "60 FPS"
+                                option value=display "Uncapped (display)"
+                        label:
+                            input type=checkbox data-pixel-gpu=true title="Experimental WebGL 2 renderer"
+                            span "GPU"
+                        span .fps data-pixel-fps=true title="Frames drawn per second" "CPU · — FPS"
+                    div .buttons:
+                        button data-pixel-pause=true data-pixel-hidden=pause_hidden "Pause / P"
+                        button data-pixel-mute=true "Sound"
+                button data-pixel-fullscreen=true "Fullscreen"
             div .game-surface:
                 canvas data-rune-pixel-3d=true tabindex=0 autofocus=true aria-label="Marble Run. Arrows steer, Space jumps, X charges a blast."
                 div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
                     h2 "Paused"
                     button data-pixel-pause=true "Resume / P"
                     button data-pixel-restart=true "Return to title / T"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
                 div .title-actions data-pixel-hidden=title_actions_hidden:
                     button .primary data-pixel-start=true "Start"
                     button data-pixel-action="open_selector" "Levels"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
                 section .level-picker data-pixel-hidden=selector_hidden hidden=true aria-label="Level selector":
                     div .picker-heading:
                         h2 "Choose a course"
@@ -58,6 +65,7 @@ view:
                     div .picker-footer:
                         button data-pixel-action="select_course" data-pixel-args="[1]" "First course"
                         button .primary data-pixel-action="play_selected" data-pixel-disabled=selection_locked "Play selected / Enter"
+                        button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
             div .launch data-pixel-hidden=launch_hidden:
                 button .primary data-pixel-action="advance" data-pixel-text=launch_label "Next course"
             p .announcement data-pixel-text=announcement role=status aria-live=polite "Marble Run"
@@ -65,7 +73,7 @@ view:
             summary "How to play"
             p "Steer with the arrows or WASD. Follow the gold arrows through corners and ride the blue banks. Gold posts mark gaps. Jump over gaps and spikes with Space."
             p "Press X or Shift to spend a cell. The marble stops and blasts automatically when the bolt gauge fills. An hourglass shows the cooldown. You get three cells per course."
-            p "On a controller, use the left stick to steer, the bottom face button to jump, and the left face button or right trigger to blast. On touchscreens, use the on-screen stick and buttons."
+            p "On a controller, use the left stick to steer, the bottom face button to jump, and the left face button or right trigger to blast. On touchscreens, use the on-screen stick and buttons; tap the pause button in the top-right corner. Use the pause menu to leave fullscreen."
 
 @Logic/marble_cabinet
 state:
@@ -103,6 +111,15 @@ rules:
         display = flex
         flex-wrap = wrap
         gap = 8px 14px
+    .toolbar-settings summary:
+        display = none
+        cursor = pointer
+        padding = 12px
+        color = #fff4d6
+        font-size = 12px
+        font-weight = 700
+    .toolbar-settings:not([open]) summary:
+        display = block
     .display-options label:
         display = flex
         align-items = center
@@ -153,6 +170,12 @@ rules:
     .game-surface:
         position = relative
         background = #427cc4
+    .rotate-to-play:
+        display = none
+    .fullscreen-exit:
+        display = none
+    .game-surface:fullscreen .fullscreen-exit, .game-surface.rune-pixel3d-expanded .fullscreen-exit:
+        display = inline-block
     canvas:
         position = relative
         display = block
@@ -272,3 +295,30 @@ rules:
 
     .game-surface:has(.level-picker:not([hidden])):
         min-height = 340px
+
+responsive:
+    (pointer: coarse) and (orientation: portrait):
+        html[data-game-rotation] body:not(.rune-embedded-game) .rotate-to-play:
+            display = flex
+            align-items = center
+            gap = 8px
+            color = #173b46
+            font-size = 13px
+        .rotate-to-play span:first-child:
+            font-size = 24px
+    (max-width: 480px):
+        .course-grid:
+            grid-template-columns = repeat(2, minmax(0, 1fr))
+            gap = 8px
+        .course-card:
+            font-size = 12px
+        .picker-footer:
+            flex-wrap = wrap
+    (pointer: coarse) and (max-width: 480px):
+        .toolbar-settings summary:
+            display = block
+        .game-surface:not(:fullscreen):not(.rune-pixel3d-expanded):has(.rune-control-touch:not([hidden])):
+            padding-bottom = 112px
+        .game-surface:not(:fullscreen):not(.rune-pixel3d-expanded) .rune-control-touch:
+            top = calc(100% - 112px) !important
+            height = 112px !important

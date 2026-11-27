@@ -328,6 +328,34 @@ standalone play use `/assets/games/neon-circuit/index.html` on the same origin,
 so campaign saves survive switching locales or opening a new tab. Progress
 is local to that browser/origin, not synchronized between devices.
 
+On touch devices the title, stage selection and pause screens offer larger
+HTML controls. On narrow screens the stage selector expands in the page,
+highlights the selected stage and shows its status and requirements.
+The directional pad moves, aims and climbs; FIRE and JUMP
+can be held simultaneously with movement, WPN beside pause cycles unlocked
+weapons, and DASH and first-person TURN controls appear when available.
+The translucent button artwork leaves the full touch targets available. On
+narrow touch screens, both games place their controls below the game view
+outside fullscreen; fullscreen keeps them overlaid. Both
+games offer Exit fullscreen in the pause menu and their title and selection
+menus. Marble Run
+retains its analog touch stick and adds an in-game touch pause button; its
+level selector has scrollable course cards. These are game source changes,
+not new engine or CLI APIs.
+
+On the teaching site, rotating a visible Neon Circuit or Marble Run preview
+or site-exported standalone game from portrait to landscape expands the game
+to the available browser area. On iPhone, a swipe prompt precedes expansion
+to give Safari an opportunity to collapse its toolbar; Play now skips the
+swipe. Safari controls may remain visible. Their narrow touch layouts group display and
+other toolbar settings under Game options.
+The fullscreen control remains available, and exiting stays in effect until
+the next rotation. Browser chrome may remain visible, especially on iPhone.
+This rotation behavior applies to the site exports, not all compiled games.
+All game exports on the teaching site disable accidental text selection and
+long-press callouts on game buttons; text inputs and the site's source viewer
+remain selectable. This is site-export styling, not a Rune runtime default.
+
 [Neon Circuit](../../examples/games/neon_circuit/neon_circuit.rune) starts as
 a side-scrolling action platformer. Each sector has its own entrance and
 route colors. Cyan marks checkpoints and warm red marks boss gates.

@@ -19,6 +19,8 @@ MarbleRun {
     play = "Jouer à Marble Run"
     standalone = "Ouvrir le jeu dans un nouvel onglet"
     display_options = "Essayez la palette Pocket ou activez le rendu GPU expérimental. Le jeu affiche la cadence réelle lorsque vous changez la résolution ou le nombre d’images par seconde."
+    mobile_controls = "Sur téléphone, dirigez avec le stick, utilisez JUMP et CHARGE, puis touchez le bouton de pause dans le jeu. Utilisez le menu pause pour quitter le plein écran."
+    rotate = "Tournez votre téléphone pour jouer en paysage."
 }
 DogWalker {
     title = "Dog Walker"
@@ -29,7 +31,8 @@ DogWalker {
 NeonCircuit {
     title = "Neon Circuit"
     description = "Affrontez douze robots rebelles dans un jeu d'action et de plateformes néon. Débloquez armes et compétences, fuyez sur des passerelles de verre pivotantes et combattez le Conductor dans un final de cinq salles."
-    features = "Découvrez les éclairages améliorés, les modèles animés et les transitions entre vue latérale, vue de dessus et première personne de Pixel 3D. La progression est enregistrée dans ce navigateur ; l'aperçu et le jeu autonome partagent la même sauvegarde."
+    features = "Votre progression est enregistrée dans ce navigateur et partagée avec le jeu autonome."
+    rotate = "Tournez votre téléphone pour jouer en paysage."
     play = "Jouer à Neon Circuit"
     standalone = "Ouvrir le jeu dans un nouvel onglet"
 }

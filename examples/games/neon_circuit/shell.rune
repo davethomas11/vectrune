@@ -12,24 +12,67 @@ view:
             div .meta:
                 span .pill data-pixel-text=progress_label "CLEARED 0/12"
                 span .pill .accent data-pixel-text=weapon_label "PULSE BUSTER"
+        p .rotate-to-play:
+            span aria-hidden=true "↻"
+            span "Rotate your phone to play in landscape."
         section .game-card:
             div .toolbar:
                 span .sector data-pixel-text=selected_title "01 VOLT VIPER"
-                div .buttons:
-                    select data-pixel-resolution=true aria-label="Resolution":
-                        option value="432x270" "432x270"
-                        option value="576x360" selected=true "576x360"
-                        option value="768x480" "768x480"
-                    select data-pixel-lighting=true aria-label="Lighting quality":
-                        option value="standard" "Standard lighting"
-                        option value="enhanced" selected=true "Enhanced lighting"
-                    button data-pixel-action="return_to_select" "Stage Select / T"
-                    button data-pixel-action="visit_master_gate" "Master Gate / G"
-                    button data-pixel-pause=true "Pause / P"
-                    button data-pixel-mute=true "Sound / M"
-                    button data-pixel-fullscreen=true "Fullscreen / F"
+                details .toolbar-settings open=true:
+                    summary "Game options"
+                    div .buttons:
+                        select data-pixel-resolution=true aria-label="Resolution":
+                            option value="432x270" "432x270"
+                            option value="576x360" selected=true "576x360"
+                            option value="768x480" "768x480"
+                        select data-pixel-lighting=true aria-label="Lighting quality":
+                            option value="standard" "Standard lighting"
+                            option value="enhanced" selected=true "Enhanced lighting"
+                        button data-pixel-action="return_to_select" "Stage Select / T"
+                        button data-pixel-action="visit_master_gate" "Master Gate / G"
+                        button data-pixel-pause=true "Pause / P"
+                        button data-pixel-mute=true "Sound / M"
+                button data-pixel-fullscreen=true "Fullscreen / F"
             div .game-surface:
                 canvas data-rune-pixel-3d=true data-pixel-fit=viewport data-pixel-app-fullscreen=true tabindex=0 aria-label="Neon Circuit, a Mega Man style cyberpunk pixel-3d platformer."
+                section .mobile-menu .mobile-title-menu data-pixel-hidden=mobile_title_hidden aria-label="Game menu":
+                    button data-pixel-hidden=mobile_continue_hidden data-pixel-action=continue_game "Continue"
+                    button data-pixel-hidden=mobile_new_hidden data-pixel-action=request_new_game "New game"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
+                    div .mobile-confirm data-pixel-hidden=mobile_confirm_hidden:
+                        p "Erase saved progress?"
+                        button data-pixel-action=cancel_new_game "Keep progress"
+                        button data-pixel-action=confirm_new_game "Erase and start"
+                section .mobile-menu .mobile-stage-menu data-pixel-hidden=mobile_select_hidden hidden=true aria-label="Stage selection":
+                    h2 "Choose a stage"
+                    p .mobile-stage-current data-pixel-text=selected_title aria-live=polite "01 VOLT VIPER"
+                    p .mobile-stage-status data-pixel-text=selected_status_label "TIER 1 INTRO"
+                    p .mobile-stage-hint data-pixel-text=selected_hint ""
+                    div .mobile-stage-grid:
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.0 data-pixel-args="[0]" "01 Volt"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.1 data-pixel-args="[1]" "02 Cryo"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.2 data-pixel-args="[2]" "03 Mag"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.3 data-pixel-args="[3]" "04 Pyro"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.4 data-pixel-args="[4]" "05 Phase"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.5 data-pixel-args="[5]" "06 Saw"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.6 data-pixel-args="[6]" "07 Storm"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.7 data-pixel-args="[7]" "08 Glacier"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.8 data-pixel-args="[8]" "09 Ghost"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.9 data-pixel-args="[9]" "10 Hydra"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.10 data-pixel-args="[10]" "11 Prism"
+                        button data-pixel-action=pick_stage data-pixel-selected=mobile_stage_selected.11 data-pixel-args="[11]" "12 Omega"
+                    div .mobile-stage-actions:
+                        button .mobile-stage-play data-pixel-action=advance "Play selected stage"
+                        button data-pixel-action=visit_master_gate "Master Gate"
+                        button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
+                section .mobile-menu data-pixel-paused=true hidden=true aria-label="Pause menu":
+                    h2 "Paused"
+                    button data-pixel-pause=true "Resume"
+                    button data-pixel-action=restart_current_stage "Restart stage"
+                    button data-pixel-action=return_to_select "Stage select"
+                    button data-pixel-mute=true "Sound"
+                    button data-pixel-action=return_to_title "Quit to title"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
             p .status data-pixel-status=true role=status aria-live=polite "NEON CIRCUIT READY."
             details .super-code:
                 summary "Super Code"
@@ -48,6 +91,7 @@ view:
             div:
                 h2 "03 // CONTROLS"
                 p "A/D or Arrows: Move | Space/Z: Jump (press again with Mag Claw) | X/J/Click: Fire | W/Up: Aim Up | S/Down: Duck | Q/E/Tab or 1-7: Select Weapons | Shift/K: Surge Air Dash | T: Stage Select | Esc/P: Pause / Back to Title | M: Sound | F: Fullscreen."
+                p "On a phone, use the directional buttons to move, aim and climb. Hold FIRE or JUMP while moving; WPN beside pause cycles unlocked weapons. TURN L/R appear in first-person sections. Use the pause menu to leave fullscreen."
 
 @Logic/neon_cabinet
 state:
@@ -127,6 +171,15 @@ rules:
         display = flex
         gap = 6px
         flex-wrap = wrap
+    .toolbar-settings summary:
+        display = none
+        cursor = pointer
+        padding = 12px
+        color = #80f8ff
+        font-size = 12px
+        font-weight = 800
+    .toolbar-settings:not([open]) summary:
+        display = block
     button, select, .super-code input:
         cursor = pointer
         min-height = 38px
@@ -145,6 +198,23 @@ rules:
         position = relative
         background = #05020d
         touch-action = none
+    .mobile-menu:
+        display = none
+    .rotate-to-play:
+        display = none
+    .mobile-menu[hidden], .mobile-menu [hidden]:
+        display = none !important
+    .fullscreen-exit:
+        display = none
+    .game-surface:fullscreen .fullscreen-exit, .game-surface.rune-pixel3d-expanded .fullscreen-exit:
+        display = inline-block
+    .game-surface .rune-control-touch button:
+        background = radial-gradient(circle closest-side, #172c4273 80%, #00f5ff88 84%, #00f5ff88 88%, transparent 92%)
+        border = 0
+        border-radius = 0
+        text-shadow = 0 1px 3px #000
+    .game-surface .rune-control-touch .touch-next_weapon:
+        right = calc(max(12px, env(safe-area-inset-right)) + 52px) !important
     canvas:
         display = block
         width = 100%
@@ -192,3 +262,74 @@ rules:
         color = #ff1e9b
         letter-spacing = 1.5px
         margin = 0 0 6px
+responsive:
+    (pointer: coarse) and (orientation: portrait):
+        html[data-game-rotation] body:not(.rune-embedded-game) .rotate-to-play:
+            display = flex
+            align-items = center
+            gap = 8px
+            color = #80f8ff
+            font-size = 13px
+        .rotate-to-play span:first-child:
+            font-size = 24px
+    (pointer: coarse):
+        .mobile-menu:not([hidden]):
+            position = absolute
+            inset = 0
+            z-index = 8
+            display = block
+            overflow-y = auto
+            padding = 12px
+            background = #100a27
+            touch-action = pan-y
+        .mobile-menu h2:
+            margin = 0 0 6px
+            color = #00f5ff
+            font-size = 16px
+        .mobile-menu p:
+            margin = 4px 0
+            font-size = 12px
+        .mobile-menu button:
+            min-height = 44px
+        .mobile-menu.mobile-title-menu:not([hidden]):
+            top = auto
+            max-height = 50%
+        .mobile-stage-grid:
+            display = grid
+            grid-template-columns = repeat(3, minmax(0, 1fr))
+            gap = 4px
+            margin = 8px 0
+        .mobile-stage-grid button[aria-pressed="true"]:
+            background = #3e185c
+            border-color = #ffe600
+            color = #ffe600
+        .mobile-stage-current:
+            color = #ffe600
+            font-weight = 800
+        .mobile-stage-status:
+            color = #00f5ff
+        .mobile-stage-hint:
+            line-height = 1.4
+        .mobile-stage-actions:
+            display = flex
+            flex-wrap = wrap
+            gap = 6px
+        .mobile-stage-play:
+            border-color = #ff1e9b
+    (pointer: coarse) and (max-width: 480px):
+        .toolbar-settings summary:
+            display = block
+        .game-surface:not(:fullscreen):not(.rune-pixel3d-expanded):has(.rune-control-touch:not([hidden])):
+            padding-bottom = 160px
+        .game-surface:not(:fullscreen):not(.rune-pixel3d-expanded) .rune-control-touch:
+            top = calc(100% - 160px) !important
+            height = 160px !important
+        .game-surface:not(:fullscreen):not(.rune-pixel3d-expanded):has(.mobile-stage-menu:not([hidden])) canvas:
+            display = none
+        .game-surface:not(:fullscreen):not(.rune-pixel3d-expanded) .mobile-menu.mobile-stage-menu:not([hidden]):
+            position = relative
+            inset = auto
+            overflow = visible
+        .mobile-stage-grid:
+            grid-template-columns = repeat(2, minmax(0, 1fr))
+            gap = 6px
