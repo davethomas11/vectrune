@@ -17,9 +17,9 @@
   "releases": [
     {
       "tag": "v0.3.13",
-      "tagged_on": null,
-      "github_tag": false,
-      "published_on": null,
+      "tagged_on": "2026-11-27",
+      "github_tag": true,
+      "published_on": "2026-11-27",
       "summary": "Adds Glowtide Aquarium, The Thirteenth Bell, reusable logic modules and entities, Pixel 3D lighting improvements, multiline logic formatting, configurable REST 404 pages and pretty-printed JSON responses, and experimental mobile WebView and Apple TV tooling."
     },
     {
