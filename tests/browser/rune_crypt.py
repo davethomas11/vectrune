@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix="rune-crypt-") as folder, sync_playwrigh
     expect(page.locator(".pause-menu")).to_contain_text("Health 100/100")
     expect(page.locator(".pause-menu")).to_contain_text("RPG level 1")
     assert page.evaluate("__RunePixel3D.renderState().ui.heading") == "PAUSED"
-    page.locator("[data-pixel-fullscreen]").click()
+    page.locator(".toolbar [data-pixel-fullscreen]").click()
     page.wait_for_function("document.fullscreenElement === document.querySelector('.game-surface')")
     expect(page.locator("[data-pixel-restart]")).to_be_visible()
     page.evaluate("document.exitFullscreen()")

@@ -99,7 +99,8 @@ gamepad:
 touch = {
     "buttons": [
         {"id":"use","input":"use","label":"DOG","offset":[12,16],"size":64},
-        {"id":"dash","input":"dash","label":"DASH","offset":[88,16],"size":58}
+        {"id":"dash","input":"dash","label":"DASH","offset":[88,16],"size":58},
+        {"id":"pause","command":"host.pause","label":"II","aria_label":"Pause game","anchor":"top-right","offset":[12,12],"size":44}
     ],
     "joystick": {"size":84,"x":"move_x","y":"move_y"},
     "visible": "touch_ready"

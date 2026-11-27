@@ -19,11 +19,13 @@ view:
                     button data-pixel-fullscreen=true "Fullscreen / F"
             div .game-surface:
                 canvas data-rune-pixel-3d=true tabindex=0 aria-label="Skybound 2. On the atlas use 1 through 7 to select and Enter to explore. WASD moves Nix, Space jumps, hold Space to glide, Q and E orbit the camera."
+                button .fullscreen-exit .atlas-exit data-pixel-hidden=touch_ready data-pixel-fullscreen=true "Exit fullscreen"
                 div .pause-menu data-pixel-paused=true data-pixel-menu=true hidden=true:
                     h2 "WINGS AT REST"
                     p "The archipelago can wait."
                     button data-pixel-pause=true "Resume flight / P"
                     button data-pixel-restart=true "Return to atlas / B"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
             p .status data-pixel-status=true role=status aria-live=polite "A small light. A wider world."
         section .atlas data-pixel-hidden=map_hidden aria-label="World map destinations":
             div .section-title:
@@ -174,6 +176,17 @@ rules:
         outline-offset = 3px
     .game-surface:
         position = relative
+    .fullscreen-exit:
+        display = none
+    .game-surface:fullscreen .fullscreen-exit, .game-surface.rune-pixel3d-expanded .fullscreen-exit:
+        display = inline-block
+    .atlas-exit:
+        position = absolute
+        top = max(12px, env(safe-area-inset-top))
+        right = max(12px, env(safe-area-inset-right))
+        z-index = 8
+    .atlas-exit[hidden]:
+        display = none !important
     canvas:
         display = block
         width = 100%
