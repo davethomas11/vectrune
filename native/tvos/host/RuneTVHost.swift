@@ -2,6 +2,7 @@ import SwiftUI
 import CoreGraphics
 import QuartzCore
 import AVFoundation
+import Darwin
 
 @_silgen_name("rune_tv_create")
 func runeTVCreate(_ source: UnsafePointer<CChar>, _ width: UInt32, _ height: UInt32,
@@ -17,6 +18,8 @@ func runeTVSetStorageDirectory(_ path: UnsafePointer<CChar>) -> Int32
 @_silgen_name("rune_tv_input")
 func runeTVInput(_ handle: UnsafeMutableRawPointer, _ command: UInt32,
                  _ error: UnsafeMutablePointer<UInt8>, _ errorBytes: Int) -> Int32
+@_silgen_name("rune_tv_flush_save")
+func runeTVFlushSave(_ handle: UnsafeMutableRawPointer, _ error: UnsafeMutablePointer<UInt8>, _ errorBytes: Int) -> Int32
 @_silgen_name("rune_tv_destroy")
 func runeTVDestroy(_ handle: UnsafeMutableRawPointer)
 @_silgen_name("rune_tv_audio_create")
@@ -88,6 +91,17 @@ struct ProbeTimings {
     var hudMS: Double = 0
 }
 
+func residentMemoryMB() -> Double {
+    var info = mach_task_basic_info()
+    var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size / MemoryLayout<natural_t>.size)
+    let result = withUnsafeMutablePointer(to: &info) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+            task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+        }
+    }
+    return result == KERN_SUCCESS ? Double(info.resident_size) / 1_048_576 : 0
+}
+
 @main
 struct RuneTVProbeApp: App {
     var body: some Scene {
@@ -146,7 +160,7 @@ struct ProbeView: View {
             model.setActive(scenePhase == .active)
             DispatchQueue.main.asyncAfter(deadline: .now() + 12) { showHint = false }
         }
-        .onChange(of: scenePhase) { phase in model.setActive(phase == .active) }
+        .onChange(of: scenePhase) { _, phase in model.setActive(phase == .active) }
         .onDisappear { model.setActive(false) }
     }
 }
@@ -274,8 +288,14 @@ final class FrameWorker {
             return
         }
         if let support = try? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-            .appendingPathComponent("RuneSaves", isDirectory: true),
-           runeTVSetStorageDirectory(support.path) != 0 {
+            .appendingPathComponent("RuneSaves", isDirectory: true) {
+            if ProcessInfo.processInfo.environment["RUNE_TV_RESET_SAVES"] == "1" {
+                try? FileManager.default.removeItem(at: support)
+            }
+            if runeTVSetStorageDirectory(support.path) != 0 {
+                NSLog("Rune saves unavailable; progress will not persist")
+            }
+        } else {
             NSLog("Rune saves unavailable; progress will not persist")
         }
         present(nil, "Initializing Rune and scene assets...")
@@ -354,6 +374,8 @@ final class FrameWorker {
                     summary = String(format: "Native 640×400 enhanced • %.1f render fps\nSimulation %.0f ms • scene transfer %.0f ms • native %.0f ms\nHUD %.0f ms • image creation %.0f ms / frame",
                                      fps, totals.simulationMS / count, totals.transferMS / count,
                                      totals.nativeMS / count, totals.hudMS / count, imageTotal / count)
+                    NSLog("Rune stats: fps=%.1f sim_ms=%.1f native_ms=%.1f memory_mb=%.0f",
+                          fps, totals.simulationMS / count, totals.nativeMS / count, residentMemoryMB())
                     var audioStats = AudioStats()
                     runeTVAudioStats(audio.handle, &audioStats)
                     summary += String(format: "\nAudio frames %llu • audible %llu • peak %.4f • dropped %llu",
@@ -363,11 +385,12 @@ final class FrameWorker {
                     imageTotal = 0
                     statsTime = finished
                 }
-                present(image, summary + "\nExperimental • remote controls enabled • saves not connected")
+                present(image, summary + "\nExperimental • remote controls enabled")
                 let delay = tickDuration - (CACurrentMediaTime() - now)
                 if delay > 0 { Thread.sleep(forTimeInterval: delay) }
             }
             audio.pause()
+            _ = error.withUnsafeMutableBufferPointer { runeTVFlushSave(handle, $0.baseAddress!, $0.count) }
         }
     }
 }

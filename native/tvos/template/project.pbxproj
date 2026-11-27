@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A10000000000000000000011 /* RuneTVHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* RuneTVHost.swift */; };
 		A10000000000000000000012 /* game.js in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* game.js */; };
+		A10000000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -16,6 +17,7 @@
 		A10000000000000000000002 /* game.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/game.js; sourceTree = "<group>"; };
 		A10000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000004 /* {{NAME}}.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = {{NAME}}.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -35,6 +37,7 @@
 				A10000000000000000000001 /* RuneTVHost.swift */,
 				A10000000000000000000002 /* game.js */,
 				A10000000000000000000003 /* Info.plist */,
+				A10000000000000000000005 /* Assets.xcassets */,
 				A10000000000000000000032 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -100,6 +103,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000012 /* game.js in Resources */,
+				A10000000000000000000013 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,6 +150,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				CODE_SIGN_STYLE = Automatic;{{TEAM_SETTING}}
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -169,6 +174,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				CODE_SIGN_STYLE = Automatic;{{TEAM_SETTING}}
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -366,6 +366,18 @@ pub unsafe extern "C" fn rune_tv_reference(handle: *mut std::ffi::c_void, pixels
     }).map_or(-1, |_| 0)
 }
 
+/// Writes pending progress immediately; call when the app leaves the foreground.
+#[no_mangle]
+pub unsafe extern "C" fn rune_tv_flush_save(handle: *mut std::ffi::c_void, error: *mut u8, error_bytes: usize) -> i32 {
+    guard(error, error_bytes, || {
+        if handle.is_null() { return Err("Missing runtime for save".into()); }
+        let probe = &mut *handle.cast::<Probe>();
+        *probe.deadline.lock().map_err(|e|e.to_string())? = Instant::now()+Duration::from_secs(10);
+        probe.context.with(|ctx| ctx.eval::<(), _>("__RunePixel3D.flushSave()")
+            .map_err(|e| format!("Save: {}", CaughtError::from_error(&ctx,e))))
+    }).map_or(-1, |_| 0)
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn rune_tv_destroy(handle: *mut std::ffi::c_void) {
     if !handle.is_null() { drop(Box::from_raw(handle.cast::<Probe>())); }

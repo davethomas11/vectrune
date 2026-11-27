@@ -14,11 +14,35 @@ fn tvos_help_describes_existing_projects_and_required_arguments() {
         .stdout
         .clone();
     let help = String::from_utf8(output).unwrap();
-    assert!(help.contains("existing tvOS Xcode projects"));
-    assert!(help.contains("devices") && help.contains("build") && help.contains("run"));
+    assert!(help.contains("tvOS Xcode projects"));
+    for command in [
+        "init", "doctor", "check", "bundle", "deploy", "watch", "package", "logs", "stats",
+        "pull-saves", "reset-saves", "icon", "devices", "build", "run",
+    ] {
+        assert!(help.contains(&format!("\n  {command} ")), "missing {command}");
+    }
     for args in [vec!["tvos", "build"], vec!["tvos", "run"], vec!["tvos"]] {
         cli().args(args).assert().failure();
     }
+}
+
+fn aquarium() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/games/idle_aquarium/idle_aquarium.rune")
+}
+
+#[test]
+fn init_writes_settings_and_icon_writes_a_complete_catalog() {
+    let dir = tempfile::tempdir().unwrap();
+    cli().current_dir(dir.path()).args(["tvos", "init"]).arg(aquarium()).assert().success();
+    let settings = std::fs::read_to_string(dir.path().join("tvos.toml")).unwrap();
+    assert!(settings.contains("name = \"idle_aquarium\"") && settings.contains("bundle_id = \"dev.vectrune.games.idleaquarium\""));
+    cli().current_dir(dir.path()).args(["tvos", "init"]).arg(aquarium()).assert().failure();
+    cli().current_dir(dir.path()).args(["tvos", "init", "--force"]).arg(aquarium()).assert().success();
+    cli().current_dir(dir.path()).args(["tvos", "icon", "-o", "Assets.xcassets"]).assert().success();
+    assert!(dir
+        .path()
+        .join("Assets.xcassets/App Icon & Top Shelf Image.brandassets/App Icon.imagestack/Front.imagestacklayer/Content.imageset/front@2x.png")
+        .is_file());
 }
 
 #[cfg(target_os = "macos")]
@@ -82,6 +106,68 @@ mod macos {
             app.canonicalize().unwrap().display()
         )));
         assert!(calls.contains("process\nlaunch\n--device\n1234-ABCD\ncom.example.test\n"));
+    }
+
+    #[test]
+    fn deploy_uses_tvos_toml_and_relaunches_the_installed_app() {
+        let temp = tempdir().unwrap();
+        let tools = temp.path().join("tools");
+        fs::create_dir(&tools).unwrap();
+        let log = temp.path().join("calls");
+        tool(&tools, "xcrun", "printf '%s\\n' \"$@\" '---' >> \"$TV_TEST_LOG\"");
+        tool(
+            &tools,
+            "xcodebuild",
+            "while [ $# -gt 0 ]; do [ \"$1\" = -derivedDataPath ] && d=\"$2\"; shift; done; /bin/mkdir -p \"$d/Build/Products/Release-appletvos/Demo.app\"",
+        );
+        let libs = temp.path().join("libs");
+        for slice in ["appletvos", "appletvsimulator"] {
+            fs::create_dir_all(libs.join(slice)).unwrap();
+            fs::write(libs.join(slice).join("libvectrune_tvos_runtime.a"), "").unwrap();
+        }
+        let config = temp.path().join("tvos.toml");
+        fs::write(
+            &config,
+            format!(
+                "game = {:?}\nname = \"Demo\"\nbundle_id = \"com.example.demo\"\nteam = \"ABCDE12345\"\ndevice = \"1234-ABCD\"\nbuild_dir = \"out\"\nruntime_libs = \"libs\"\n",
+                aquarium()
+            ),
+        )
+        .unwrap();
+        cli()
+            .env("PATH", &tools)
+            .env("TV_TEST_LOG", &log)
+            .args(["tvos", "deploy", "--config"])
+            .arg(&config)
+            .assert()
+            .success();
+        let project = fs::read_to_string(temp.path().join("out/project/Demo.xcodeproj/project.pbxproj")).unwrap();
+        assert!(project.contains("DEVELOPMENT_TEAM = ABCDE12345;") && project.contains("PRODUCT_BUNDLE_IDENTIFIER = com.example.demo;"));
+        assert!(temp.path().join("out/project/Assets.xcassets").is_dir());
+        let calls = fs::read_to_string(&log).unwrap();
+        assert!(calls.contains("install\napp\n--device\n1234-ABCD\n"));
+        assert!(calls.contains("launch\n--terminate-existing\n--device\n1234-ABCD\ncom.example.demo\n"));
+    }
+
+    #[test]
+    fn reset_saves_and_pull_saves_use_the_game_container() {
+        let temp = tempdir().unwrap();
+        let tools = temp.path().join("tools");
+        fs::create_dir(&tools).unwrap();
+        let log = temp.path().join("calls");
+        tool(&tools, "xcrun", "printf '%s\\n' \"$@\" '---' >> \"$TV_TEST_LOG\"");
+        for command in ["reset-saves", "pull-saves"] {
+            let mut run = cli();
+            run.env("PATH", &tools)
+                .env("TV_TEST_LOG", &log)
+                .current_dir(temp.path())
+                .args(["tvos", command, "--name", "Demo", "--bundle-id", "com.example.demo", "--device", "1234-ABCD"])
+                .assert()
+                .success();
+        }
+        let calls = fs::read_to_string(&log).unwrap();
+        assert!(calls.contains("--environment-variables\n{\"RUNE_TV_RESET_SAVES\":\"1\"}\n--device\n1234-ABCD\ncom.example.demo\n"));
+        assert!(calls.contains("--domain-identifier\ncom.example.demo\n--source\nLibrary/Caches/RuneSaves\n"));
     }
 
     #[test]

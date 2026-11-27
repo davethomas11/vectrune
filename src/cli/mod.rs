@@ -19,6 +19,9 @@ pub mod vectrune;
 pub mod watch;
 pub mod mobile_web;
 pub mod tvos;
+mod tvos_config;
+mod tvos_icon;
+mod tvos_tools;
 #[allow(dead_code)]
 pub mod hooks_commands;
 

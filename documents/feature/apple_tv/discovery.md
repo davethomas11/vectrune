@@ -190,13 +190,15 @@ The host must be reusable by other projects, not tailored to one aquarium.
   friends summary. The revised display still needs device feedback.
   This aquarium-specific focus bridge is not a reusable
   Rune TV-controls API, and saves are not connected in the probe.
-- An initial reusable tooling slice adds `vectrune tvos devices`, `build` and
-  `run` for an existing Xcode project on macOS. The new commands built,
-  installed and launched the session-only aquarium project on the paired TV.
-  They do not yet generate a project or build its Rust runtime; signing remains
-  configured in Xcode. The user approved an optional separate Rune TV section
-  with general defaults for future navigation and focus configuration. That
-  declaration and reusable host have not yet been implemented.
+- Status (2026-11-27): a `@TV` declaration, a generic host and the `vectrune
+  tvos` workflow (`doctor`, `init`, `check`, `deploy`, `watch`, `stats`, `logs`,
+  `pull-saves`, `reset-saves`, `package`, `icon`, configured by `tvos.toml`) now
+  exist. Glowtide was deployed to a paired Apple TV 4K (3rd generation) with
+  audio, remote navigation and a persistent save (flushed on leaving the
+  foreground) at about 27 fps and 65 MB. Saves use the purgeable Caches
+  directory. Archive succeeds; export needs an App Store Connect record. Still
+  open: broader game coverage (weapons, sprites, title scenes, side maps),
+  controller mappings and performance beyond QuickJS rendering limits.
 - Apple's [account guidance](https://developer.apple.com/help/account/basics/about-your-developer-account)
   describes free Personal Team testing with seven-day provisioning. App Store
   distribution requires program membership and review.

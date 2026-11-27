@@ -28,33 +28,57 @@ project without installing dependencies or requiring SDKs. `--prepare-only`
 with `--build` skips native tooling. See [Rune Mobile Web](mobile-web.md) for
 platform prerequisites, generated-directory protections and signing limitations.
 
-## Apple TV Xcode tooling (experimental)
+## Apple TV tooling (experimental)
 
-On macOS with Xcode and a paired Apple TV, Vectrune can invoke native tools for
-an **existing** tvOS Xcode project and signed app:
+`vectrune tvos` wraps a Pixel-3D game for Apple TV. `check`, `init` and `icon`
+run on any OS; everything else needs macOS, Xcode, the Rust targets
+`aarch64-apple-tvos` and `aarch64-apple-tvos-sim`, and (to run on hardware) a
+paired Apple TV. Commands run from a Vectrune checkout unless
+`--runtime-source` or `--runtime-libs` points at the TV runtime.
 
 ```sh
-vectrune tvos devices
-vectrune tvos build --project ./MyGame.xcodeproj --scheme MyGame \
-  --device YOUR-DEVICE-ID --derived-data ./build/tvos
-vectrune tvos run --app ./build/tvos/Build/Products/Release-appletvos/MyGame.app \
-  --device YOUR-DEVICE-ID
+vectrune tvos doctor                       # verify Xcode, targets, signing, pairing
+vectrune tvos check game.rune              # can the TV runtime run this game?
+vectrune tvos init game.rune               # write tvos.toml (team and device auto-detected)
+vectrune tvos deploy                       # check, bundle, build, install, launch
+vectrune tvos watch                        # redeploy whenever .rune files change
+vectrune tvos stats --seconds 20           # fps, frame timings and memory from the TV
+vectrune tvos logs                         # stream the game's console output
+vectrune tvos pull-saves -o saves          # copy saved progress from the TV
+vectrune tvos reset-saves                  # delete saved progress and relaunch
+vectrune tvos package                      # archive and export for App Store Connect
+vectrune tvos icon art.png -o Assets.xcassets
 ```
 
-`build` invokes `xcodebuild` in Release configuration for the specified device.
-`run` reads the app's bundle identifier from `Info.plist`, installs the app,
-then launches it with `xcrun devicectl`. Replace the device ID with one from
-`devices` and use the actual Xcode product path for your app. Build requires
-Xcode signing and provisioning to be configured; run requires an app signed
-for the device. Vectrune does not create or modify signing settings. The
-project is responsible for building or supplying
-its own runtime libraries. `devices` lists all devices known to Xcode.
-Tool failures are reported and installation failure prevents launch.
+`tvos.toml` (beside the game or in the working directory, or `--config FILE`)
+holds `game`, `name`, `bundle_id`, `team`, `device` (name or identifier), `icon`,
+`build_dir`, `runtime_source` and `runtime_libs`; unknown keys are rejected,
+relative paths resolve against the file, and command-line flags override it.
+Without `team` the only keychain signing team is used; without `device` the
+only paired Apple TV is used. Generated output lives in `build/tvos`
+(`project/`, `derived/`, and a cached `runtime/` that is built once).
 
-These commands do **not** export Rune games, generate Xcode projects, build
-the Rune TV runtime, or provide a TV-specific Rune declaration. The current
-aquarium TV host remains a local experiment. See the
-[Apple TV discovery](../../documents/feature/apple_tv/discovery.md).
+- `bundle GAME [-o DIR]` writes only the Xcode project (host, `game.js` from the
+  compiled game, asset catalog, runtime libraries) without building it.
+- `icon` produces a tvOS brand-asset catalog (layered app icon, App Store icon,
+  top shelf images) from one image; `bundle`/`deploy` use `icon` from
+  `tvos.toml` or a placeholder tile.
+- `stats` and `logs` relaunch the app attached to the console. The host logs
+  `Rune stats: fps=… sim_ms=… native_ms=… memory_mb=…` every three seconds.
+- Saves live in the app's `Library/Caches/RuneSaves`, which tvOS may purge under
+  storage pressure; they are flushed whenever the app leaves the foreground.
+  `reset-saves` launches with `RUNE_TV_RESET_SAVES=1`.
+- `package` archives, then exports with the `app-store-connect` method; export
+  needs an App Store Connect record and distribution profile for the bundle ID.
+- A sleeping Apple TV refuses launches; wake it and rerun.
+
+The lower-level commands remain for existing projects: `devices`,
+`build --project P --scheme S [--device D] --derived-data DIR` and
+`run --app APP [--device D]` (device defaults to `tvos.toml`, then the only
+paired Apple TV). `build-runtime --source DIR -o DIR` builds the device and
+simulator runtime libraries. See the
+[Apple TV discovery](../../documents/feature/apple_tv/discovery.md); declare TV
+navigation with the [`@TV` profile](pixel3d.md).
 
 ## ASCII Animator (v0.3.12)
 

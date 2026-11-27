@@ -864,7 +864,7 @@ fn tv_profile_compiles_from_declaration_and_rejects_invalid_references() {
 
     for (n, (from, to, message)) in [
         ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nbogus = 1", "Unknown @TV/aquarium field"),
-        ("\"action\":\"orbit_view\"", "\"action\":\"missing_action\"", "unknown action"),
+        ("\"action\": \"orbit_view\"", "\"action\": \"missing_action\"", "unknown action"),
         ("\"path\":\"progress.pearls\"", "\"path\":\"nope.pearls\"", "unknown state"),
     ].into_iter().enumerate() {
         let error = compile(&format!("__tv_invalid_{n}.rune"), &source.replace(from, to)).unwrap_err();

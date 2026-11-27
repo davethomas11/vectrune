@@ -58,3 +58,4 @@ __pycache__/
 /*.html
 examples/**/*.html
 !examples/games/worm_game/assets/index.html
+native/tvos/runtime/target/
