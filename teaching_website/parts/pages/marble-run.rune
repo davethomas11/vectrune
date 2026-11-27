@@ -6,7 +6,11 @@ view:
                 span .tag .tag-advanced "Pixel 3D"
                 h1 "%i18n.MarbleRun.title%"
                 p .lead "%i18n.MarbleRun.description%"
+                p .rotate-to-play:
+                    span aria-hidden=true "↻"
+                    span "%i18n.MarbleRun.rotate%"
             p .showcase-try "%i18n.MarbleRun.display_options%"
+            p "%i18n.MarbleRun.mobile_controls%"
             a .secondary-cta href="/assets/games/marble-run/index.html" target=_blank rel=noopener "%i18n.MarbleRun.standalone%"
 
         WebExample game=true title="{i18n.MarbleRun.title}" preview="/assets/games/marble-run/index.html" files="{sources ../../../examples/games/marble_run/marble_run.rune}" show_heading=false

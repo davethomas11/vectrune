@@ -135,6 +135,8 @@ rules:
 
     .showcase-intro .lead:
         margin = 0.75rem 0
+    .rotate-to-play:
+        display = none
 
     .showcase-try:
         margin = 0.75rem 0 0
@@ -1793,6 +1795,15 @@ rules:
         min-height = 44px
 
 responsive:
+    (pointer: coarse) and (orientation: portrait):
+        .rotate-to-play:
+            display = flex
+            align-items = center
+            gap = 0.5rem
+            color = #17685c
+            font-size = 0.9rem
+        .rotate-to-play span:first-child:
+            font-size = 1.5rem
     (max-width: 1000px):
         .dev-banner-badge:
             display = none

@@ -18,7 +18,9 @@ MarbleRun {
     description = "Recorre seis pistas sobre una fábrica flotante. Toma curvas peraltadas, salta huecos y pinchos y usa celdas de carga contra los guardianes."
     play = "Jugar a Marble Run"
     standalone = "Abrir el juego en otra pestaña"
+    rotate = "Gira el teléfono para jugar en horizontal."
     display_options = "Prueba la paleta Pocket o activa el renderizado experimental por GPU. El juego muestra los FPS reales al cambiar la resolución y la frecuencia de imagen."
+    mobile_controls = "En el móvil, dirige con la palanca, usa JUMP y CHARGE y toca el botón de pausa dentro del juego. Usa el menú de pausa para salir de pantalla completa."
 }
 DogWalker {
     title = "Dog Walker"
@@ -29,7 +31,8 @@ DogWalker {
 NeonCircuit {
     title = "Neon Circuit"
     description = "Enfréntate a doce robots rebeldes en un juego de acción y plataformas de neón. Desbloquea armas y habilidades, escapa por plataformas de cristal giratorias y combate al Conductor en un final de cinco salas."
-    features = "Descubre las luces mejoradas, los modelos animados y las transiciones de vista lateral a cenital y primera persona de Pixel 3D. El progreso se guarda en este navegador; la vista previa y el juego independiente comparten la misma partida."
+    features = "Tu progreso se guarda en este navegador y se comparte con el juego independiente."
+    rotate = "Gira el teléfono para jugar en horizontal."
     play = "Jugar a Neon Circuit"
     standalone = "Abrir el juego en una pestaña nueva"
 }

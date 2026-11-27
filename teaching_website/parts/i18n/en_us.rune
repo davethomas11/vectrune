@@ -18,7 +18,9 @@ MarbleRun {
     description = "Roll through six courses above a floating factory. Bank around corners, jump gaps and spikes, and spend charge cells to blast sentries."
     play = "Play Marble Run"
     standalone = "Open game in a new tab"
+    rotate = "Rotate your phone to play in landscape."
     display_options = "Try the Pocket palette or switch on the experimental GPU renderer. The game shows actual FPS as you change the resolution and frame rate."
+    mobile_controls = "On a phone, steer with the stick, use JUMP and CHARGE, and tap the pause button in the game. Use the pause menu to leave fullscreen."
 }
 DogWalker {
     title = "Dog Walker"
@@ -29,9 +31,10 @@ DogWalker {
 NeonCircuit {
     title = "Neon Circuit"
     description = "Take on twelve rogue robots in a neon action platformer. Unlock weapons and skills, escape across rotating glass decks, and face the Conductor in a five-room finale."
-    features = "See Pixel 3D's enhanced lighting, animated models and transitions from side view to overhead and first person. Campaign progress is saved in this browser; the preview and standalone game share the same save."
+    features = "Your progress is saved in this browser and shared with the standalone game."
     play = "Play Neon Circuit"
     standalone = "Open game in a new tab"
+    rotate = "Rotate your phone to play in landscape."
 }
 
 Starfall {

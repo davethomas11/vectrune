@@ -20,6 +20,7 @@ state:
     }
     stages = []
     selected_stage = 0
+    mobile_stage_selected = [true, false, false, false, false, false, false, false, false, false, false, false]
     current_stage = 0
     selected_title = "01 VOLT VIPER"
     selected_sector = "NEON POWER GRID"
@@ -172,6 +173,11 @@ state:
     touch_ready = false
     touch_dash_ready = false
     touch_turn_ready = false
+    mobile_title_hidden = false
+    mobile_continue_hidden = true
+    mobile_new_hidden = false
+    mobile_confirm_hidden = true
+    mobile_select_hidden = true
     progress_label = "CLEARED 0/12"
     weapon_label = "PULSE BUSTER"
 
@@ -192,6 +198,12 @@ action build_weapon_wheel:
     }
 
 action refresh_ui:
+    mobile_stage_selected = [selected_stage == 0, selected_stage == 1, selected_stage == 2, selected_stage == 3, selected_stage == 4, selected_stage == 5, selected_stage == 6, selected_stage == 7, selected_stage == 8, selected_stage == 9, selected_stage == 10, selected_stage == 11]
+    mobile_title_hidden = status != "title"
+    mobile_continue_hidden = status != "title" || !has_progress || title_confirm
+    mobile_new_hidden = status != "title" || title_confirm
+    mobile_confirm_hidden = status != "title" || !title_confirm
+    mobile_select_hidden = status != "select"
     touch_ready = status == "playing"
     touch_dash_ready = status == "playing" && (campaign.weapons.volt == true || (escape_active && current_stage == 0 && volt_dash_ready))
     touch_turn_ready = status == "playing" && (escape_first_person || (master_active && master_first))

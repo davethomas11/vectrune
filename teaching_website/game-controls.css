@@ -1,0 +1,13 @@
+button, button *, [role="button"], [role="button"] *, canvas {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none;
+}
+
+input, textarea, [contenteditable="true"],
+button input, button textarea, button [contenteditable="true"],
+[role="button"] input, [role="button"] textarea, [role="button"] [contenteditable="true"] {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
