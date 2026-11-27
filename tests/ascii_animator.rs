@@ -335,6 +335,8 @@ fn games_handle_pause_movement_loss_score_and_restart() {
         centered.step().unwrap();
     }
     assert_eq!(centered.snapshot().unwrap()["state"]["score"], 10);
+    assert_eq!(centered.snapshot().unwrap()["state"]["status"], "playing");
+    assert!(centered.snapshot().unwrap()["state"]["ball"]["dy"].as_f64().unwrap() < 0.0);
     let mut meteors = engine(&demo("meteors"));
     meteors.key("Enter").unwrap();
     meteors.key("ArrowLeft").unwrap();
@@ -352,6 +354,30 @@ fn games_handle_pause_movement_loss_score_and_restart() {
         safe.step().unwrap();
     }
     assert!(safe.snapshot().unwrap()["state"]["score"].as_u64().unwrap() > 0);
+}
+
+#[test]
+fn paddle_bounces_on_visible_columns_and_loses_on_misses() {
+    let source = demo("paddle");
+    for (x, hit) in [(26.9, false), (27.0, true), (31.0, true), (35.9, true), (36.0, false)] {
+        let initial = format!(r#"{{"x": {x}, "y": 17.8, "dx": 0, "dy": 0.45}}"#);
+        let mut game = engine(&source.replace(
+            r#"{"x": 32, "y": 9, "dx": 0.6, "dy": 0.45}"#,
+            &initial,
+        ));
+        game.step().unwrap();
+        let state = game.snapshot().unwrap()["state"].clone();
+        assert_eq!(state["status"], if hit { "playing" } else { "gameover" }, "x={x}");
+        assert_eq!(state["score"], if hit { 10 } else { 0 }, "x={x}");
+        if hit {
+            assert!(state["ball"]["dy"].as_f64().unwrap() < 0.0, "x={x}");
+            assert_eq!(state["ball"]["y"], 18);
+            game.step().unwrap();
+            let state = game.snapshot().unwrap()["state"].clone();
+            assert_eq!(state["status"], "playing", "x={x}");
+            assert!(state["ball"]["y"].as_f64().unwrap() < 18.0, "x={x}");
+        }
+    }
 }
 
 #[test]

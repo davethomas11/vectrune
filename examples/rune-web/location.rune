@@ -1,0 +1,44 @@
+#!RUNE
+
+# Run on localhost: vectrune examples/rune-web/location.rune
+@App
+name = Browser Location
+type = REST
+
+@Frontend
+type = rune-web
+path = %ROOT%
+page = location
+
+@Page/location
+title = Browser Location
+logic = location
+state:
+    latitude = ""
+    longitude = ""
+    locating = false
+    message = "Location is only requested when you select the button."
+view:
+    main:
+        h1 "Browser location"
+        p "Your browser will ask permission before sharing your location. This example does not send coordinates to another service."
+        button type=button disabled="{locating}" click="findLocation()" "Use my location"
+        p aria-live=polite "{message}"
+        if latitude != "":
+            p "Latitude: {latitude}, longitude: {longitude}"
+
+@Logic/location
+action findLocation():
+    locating = true
+    message = "Finding your location…"
+    location.current then showLocation catch locationFailed
+
+action showLocation(position):
+    locating = false
+    latitude = position.latitude
+    longitude = position.longitude
+    message = "Location found."
+
+action locationFailed(error):
+    locating = false
+    message = error.message

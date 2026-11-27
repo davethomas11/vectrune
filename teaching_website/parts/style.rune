@@ -476,16 +476,17 @@ rules:
         max-width = 100%
 
     .language-help:
-        display = flex
-        flex-wrap = wrap
-        gap = 0.3rem 0.8rem
-        margin-top = 0.45rem
-        font-size = 0.72rem
+        display = grid
+        gap = 0.4rem
+        font-size = 0.85rem
         line-height = 1.5
 
     .language-help a:
         color = {brand}
         text-underline-offset = 3px
+
+    .language-help strong:
+        color = {brand-dark}
 
     .application-guide li:
         margin-bottom = 0.65rem
@@ -749,10 +750,15 @@ rules:
         font-size = 1rem
         color = {text}
 
-    .content-link:
+    .content-area p a:not([class]), .content-area li a:not([class]), .content-link:
         color = {brand}
-        text-decoration = none
+        text-decoration = underline
+        text-underline-offset = 3px
         font-weight = 600
+
+    .content-area p a:not([class]):hover, .content-area li a:not([class]):hover, .content-link:hover:
+        color = {brand-dark}
+        text-decoration-thickness = 2px
 
     .steps-grid:
         display = grid
@@ -1056,13 +1062,20 @@ rules:
         color = {advanced-text}
 
     .site-footer:
-        text-align = center
+        display = flex
+        flex-wrap = wrap
+        justify-content = space-between
+        align-items = start
+        gap = 1.5rem 3rem
         color = {text-soft}
-        padding = 2rem 1rem 1rem
+        padding = 2rem 1rem
         font-size = 0.85rem
         max-width = 1400px
         margin = 0 auto
         border-top = 1px solid rgba(42, 91, 87, 0.1)
+
+    .footer-identity p:
+        margin = 0.5rem 0 0
 
     .code-block .token.comment:
         color = {syntax-comment}
@@ -1698,7 +1711,6 @@ rules:
     .footer-brand:
         display = flex
         align-items = center
-        justify-content = center
         gap = 0.5rem
         color = {brand-dark}
 
@@ -2008,4 +2020,3 @@ responsive:
 
         .cta:hover, .cta:active, .builtin-card:hover:
             transform = none
-

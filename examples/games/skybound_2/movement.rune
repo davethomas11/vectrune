@@ -13,7 +13,8 @@ action tick(input):
     invulnerable = max(0, invulnerable - 1)
     yaw += ((input.orbit_right ? 1 : 0) - (input.orbit_left ? 1 : 0) + (input.orbit ? input.orbit : 0)) * 3
     forward = clamp((input.forward ? 1 : 0) - (input.back ? 1 : 0) + (input.move_y ? input.move_y : 0), -1, 1)
-    side = clamp((input.right ? 1 : 0) - (input.left ? 1 : 0) + (input.move_x ? input.move_x : 0), -1, 1)
+    side =
+        clamp((input.right ? 1: 0) - (input.left ? 1: 0) + (input.move_x ? input.move_x: 0), -1, 1)
     magnitude = max(1, sqrt(forward * forward + side * side))
     speed = input.run ? 0.23 : 0.18
     target_x = (cos(yaw) * forward - sin(yaw) * side) * speed / magnitude
@@ -57,7 +58,12 @@ action tick(input):
     beacon_distance = distance(player, beacon)
     if !checkpoint_active && beacon_distance < 1.5 && abs(player.z - beacon.z) < 0.3:
         call save_checkpoint
-    if stages[selected].boss && !boss_active && boss_hp > 0 && player.x > arena.gate_x && player.y > arena.gate_y && player.z >= boss.z:
+    if stages[selected].boss
+        && !boss_active
+        && boss_hp > 0
+        && player.x > arena.gate_x
+        && player.y > arena.gate_y
+        && player.z >= boss.z:
         call awaken_boss
     if boss_active:
         call tick_boss previous_z
@@ -98,7 +104,9 @@ action update_view:
     avatar.y = player.y
     avatar.z = player.z
     avatar.angle = player.angle
-    avatar.model = gliding || abs(player.vz) > 0.05 ? "beyond/nix_glide" : (abs(velocity_x) + abs(velocity_y) > 0.02 && ticks % 12 < 6 ? "beyond/nix_step" : "beyond/nix")
+    avatar.model = gliding || abs(player.vz) > 0.05
+        ? "beyond/nix_glide"
+        : (abs(velocity_x) + abs(velocity_y) > 0.02 && ticks % 12 < 6 ? "beyond/nix_step": "beyond/nix")
     avatar.visible = invulnerable == 0 || ticks % 6 < 3
     view_distance = boss_active ? 9 : 7
     camera.x += (clamp(player.x - cos(yaw) * view_distance, 0.3, world.width - 0.3) - camera.x) * 0.3

@@ -37,7 +37,9 @@ action blank_world:
 
 action island(x, y, width, height, top, material):
     # Match the island's exposed lower course to its surface biome.
-    base = material == 1 ? 10 : (material == 3 ? 11 : (material == 4 ? 12 : (material == 7 ? 13 : (material == 8 ? 14 : (material == 9 ? 15 : (material == 5 ? 16 : 2))))))
+    base = material == 1
+        ? 10
+        : (material == 3 ? 11: (material == 4 ? 12: (material == 7 ? 13: (material == 8 ? 14: (material == 9 ? 15: (material == 5 ? 16: 2))))))
     if width >= 5 && height >= 5 && top >= 4:
         world = voxel_fill(world, [x+1, y+1, top-3], [width-2, height-2, 1], base)
     world = voxel_fill(world, [x, y, top-2], [width, height, 1], base)

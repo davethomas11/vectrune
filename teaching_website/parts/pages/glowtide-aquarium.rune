@@ -1,0 +1,25 @@
+@Component/GlowtideAquariumPage
+view:
+    div .page .application-guide .space-invaders-page:
+        section .card .showcase-intro:
+            div .section-heading:
+                span .tag .tag-advanced "Pixel 3D"
+                h1 "%i18n.GlowtideAquarium.title%"
+                p .lead "%i18n.GlowtideAquarium.description%"
+            p .showcase-try "%i18n.GlowtideAquarium.try_it%"
+            a .secondary-cta href="/assets/games/glowtide-aquarium/index.html" target=_blank rel=noopener "%i18n.GlowtideAquarium.standalone%"
+
+        WebExample game=true title="{i18n.GlowtideAquarium.title}" preview="/assets/games/glowtide-aquarium/index.html" files="{sources ../../../examples/games/idle_aquarium/idle_aquarium.rune}" show_heading=false
+
+        section .card:
+            h2 "%i18n.GlowtideAquarium.care_title%"
+            p "%i18n.GlowtideAquarium.care%"
+            p "%i18n.GlowtideAquarium.controls%"
+            p "%i18n.GlowtideAquarium.save%"
+            p "%i18n.GlowtideAquarium.language%"
+
+        details .card .showcase-notes:
+            summary "%i18n.GlowtideAquarium.source_title%"
+            p "%i18n.GlowtideAquarium.source_text%"
+            CommandBlock code="vectrune examples/games/idle_aquarium/idle_aquarium.rune"
+            CommandBlock code="vectrune test examples/games/idle_aquarium --type logic"

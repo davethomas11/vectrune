@@ -53,6 +53,325 @@ run:
 }
 
 #[tokio::test]
+async fn respond_interpolates_context_and_pretty_json() {
+    let app = build_router_from_str(include_str!("../examples/beginner/app.rune")).await;
+    let response = app.oneshot(Request::builder()
+        .method("POST")
+        .uri("/echo")
+        .body(axum::body::Body::from(r#"{"name":"Ada","scores":[1,2]}"#))
+        .unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    assert_eq!(String::from_utf8(body.to_vec()).unwrap(),
+        "Echoed: {\n  \"name\": \"Ada\",\n  \"scores\": [\n    1,\n    2\n  ]\n}");
+
+    let app = build_router_from_str(r#"#!RUNE
+@App
+type = REST
+@Route/POST /users/{id}
+run:
+    data = parse-json
+    respond 201 "User {id}: {data.name} {data.items.[0]} {unknown} \{id\}"
+@Route/POST /raw
+run:
+    parse-json
+    respond 200 body
+"#).await;
+    let response = app.clone().oneshot(Request::builder().method("POST").uri("/users/42")
+        .body(axum::body::Body::from(r#"{"name":"Ada","items":["first"]}"#)).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    assert_eq!(&body[..], b"User 42: Ada first {unknown} {id}");
+    let response = app.oneshot(Request::builder().method("POST").uri("/raw")
+        .body(axum::body::Body::from(r#"{"message":"{id}"}"#)).unwrap()).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    assert_eq!(&body[..], br#"{"message":"{id}"}"#);
+}
+
+#[tokio::test]
+async fn rest_not_found_negotiation_and_route_boundaries() {
+    let app = build_router_from_str(r#"#!RUNE
+@App
+name = Example & Friends
+type = REST
+
+@Route/GET /health
+run:
+    respond 404 "explicit response"
+
+@Route/POST /write
+run:
+    respond 201 "saved"
+
+@Route/GET /users/{id}
+run:
+    respond 200 "user"
+
+@Route/GET /private
+auth = Secret
+run:
+    respond 200 "private"
+
+@Route/CRUD /records
+schema = Record
+data_source = Records
+"#).await;
+
+    for (accept, html) in [
+        (None, false),
+        (Some("*/*"), false),
+        (Some("application/json"), false),
+        (Some("text/html;q=0, */*;q=1"), false),
+        (Some("text/html;q=invalid"), false),
+        (Some("text/html;q=1.5"), false),
+        (Some("application/json, text/html;q=0.5"), true),
+        (Some("TEXT/HTML;Q=1"), true),
+    ] {
+        let mut builder = Request::builder().uri("/missing");
+        if let Some(accept) = accept {
+            builder = builder.header("accept", accept);
+        }
+        let response = app.clone().oneshot(builder.body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(response.headers().get("vary").unwrap(), "Accept");
+        assert_eq!(response.headers().get("content-type").is_some_and(|v| v.to_str().unwrap().starts_with("text/html")), html);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        if html {
+            let body = String::from_utf8(body.to_vec()).unwrap();
+            assert!(body.contains("VECTRUNE"));
+            assert!(body.contains("Example &amp; Friends"));
+            assert!(body.contains("GET /users/{id}"));
+            assert!(body.contains("GET /private"));
+            assert!(body.contains("POST /records"));
+            assert!(body.contains("DELETE /records/{id}"));
+            assert!(body.contains(r#"<a href="/health"><code>GET /health</code></a>"#));
+            assert!(!body.contains(r#"href="/users/{id}""#));
+            assert!(!body.contains(r#"href="/write""#));
+            assert!(!body.contains(r#"href="/records/{id}""#));
+            assert!(body.contains("/missing"));
+        } else {
+            assert!(body.is_empty());
+        }
+    }
+
+    let response = app.clone().oneshot(Request::builder().uri("/health").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(&axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap()[..], b"explicit response");
+    let response = app.clone().oneshot(Request::builder().method("POST").uri("/health").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+    let response = app.oneshot(Request::builder().method("HEAD").uri("/missing").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn rest_pretty_query_formats_json_without_changing_other_responses() {
+    let app = build_router_from_str(r#"#!RUNE
+@App
+type = REST
+swagger = true
+@Route/POST /echo
+run:
+    parse-json
+    respond 201 body
+@Route/GET /text
+run:
+    respond 404 "Not found"
+@Route/PUT /echo
+run:
+    parse-json
+    respond 202 body
+@Route/GET /data
+run:
+    result = { name: "Ada" }
+    respond 200 result
+@Route/DELETE /data
+run:
+    result = { name: "Ada" }
+    respond 200 result
+@NotFound
+run:
+    parse-json
+    respond 404 body
+"#).await;
+    let json = r#"{"nested":[{"name":"Ada"},2],"empty":{}}"#;
+    let mut compact = None;
+    for (query, pretty) in [
+        ("", false), ("?other=1", false), ("?pretty=1", true),
+        ("?pretty=0&other=1", true), ("?pretty=", true), ("?pretty", true),
+        ("?p%72etty=yes", true), ("?pretty=first&pretty=second", true), ("?notpretty=1", false),
+    ] {
+        let response = app.clone().oneshot(Request::builder().method("POST").uri(format!("/echo{query}"))
+            .body(axum::body::Body::from(json)).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        assert_eq!(response.headers()["content-type"], "text/plain; charset=utf-8");
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = String::from_utf8(bytes.to_vec()).unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&body).unwrap(), serde_json::from_str::<serde_json::Value>(json).unwrap());
+        assert_eq!(body.contains('\n'), pretty, "{query}: {body}");
+        if query.is_empty() { compact = Some(body.clone()); }
+        if !pretty { assert_eq!(Some(&body), compact.as_ref()); }
+    }
+    let response = app.clone().oneshot(Request::builder().uri("/text?pretty=1").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(&axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap()[..], b"Not found");
+    for (method, path, status, body) in [
+        ("GET", "/data", StatusCode::OK, ""),
+        ("DELETE", "/data", StatusCode::OK, ""),
+        ("PUT", "/echo", StatusCode::ACCEPTED, json),
+    ] {
+        let response = app.clone().oneshot(Request::builder().method(method).uri(format!("{path}?pretty=1")).body(axum::body::Body::from(body)).unwrap()).await.unwrap();
+        assert_eq!(response.status(), status);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        assert!(body.contains(&b'\n'));
+        assert!(serde_json::from_slice::<serde_json::Value>(&body).is_ok());
+    }
+    let response = app.clone().oneshot(Request::builder().uri("/openapi.json?pretty=1").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    assert!(body.contains(&b'\n'));
+    assert!(serde_json::from_slice::<serde_json::Value>(&body).is_ok());
+    let response = app.oneshot(Request::builder().method("POST").uri("/missing?pretty=1").body(axum::body::Body::from(json)).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    assert!(body.contains(&b'\n'));
+    assert_eq!(serde_json::from_slice::<serde_json::Value>(&body).unwrap(), serde_json::from_str::<serde_json::Value>(json).unwrap());
+
+    let app = build_router_from_str("#!RUNE\n@App\ntype = REST\n@NotFound\ncontent_type = text/html\nrun:\n    respond 404 \"[1,2]\"\n").await;
+    let response = app.oneshot(Request::builder().uri("/missing?pretty=1").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(&axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap()[..], b"[1,2]");
+}
+
+#[tokio::test]
+async fn rest_not_found_escapes_app_and_route_names() {
+    let app = build_router_from_str("#!RUNE\n@App\ntype = REST\nname = <script>alert</script>\n@Route/GET /foo&bar\nrun:\n    respond 200 \"ok\"\n").await;
+    let response = app.oneshot(Request::builder().uri("/missing&value").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+    assert!(html.contains("&lt;script&gt;alert&lt;/script&gt;"), "{html}");
+    assert!(html.contains("GET /foo&amp;bar"));
+    assert!(html.contains("/missing&amp;value"));
+    assert!(!html.contains("<script>"));
+}
+
+#[tokio::test]
+async fn rest_not_found_can_be_disabled_or_overridden() {
+    let disabled = build_router_from_str("#!RUNE\n@App\ntype = REST\nnot_found_page = false\n").await;
+    let response = disabled.oneshot(Request::builder().uri("/missing").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap().is_empty());
+
+    let custom = build_router_from_str(r#"#!RUNE
+@App
+type = REST
+not_found_page = false
+
+@NotFound
+content_type = text/html; charset=utf-8
+run:
+    respond 404 "<h1>Custom</h1>"
+"#).await;
+    for accept in ["application/json", "text/html", "*/*"] {
+        let response = custom.clone().oneshot(Request::builder().uri("/missing").header("accept", accept).body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(response.headers()["content-type"], "text/html; charset=utf-8");
+        assert_eq!(&axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap()[..], b"<h1>Custom</h1>");
+    }
+    let response = custom.oneshot(Request::builder().method("HEAD").uri("/missing").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap().is_empty());
+    let echo = build_router_from_str("#!RUNE\n@App\ntype = REST\n@NotFound\nrun:\n    respond 410 body\n").await;
+    let response = echo.oneshot(Request::builder().method("POST").uri("/missing").body(axum::body::Body::from("request body")).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::GONE);
+    assert_eq!(&axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap()[..], br#""request body""#);
+    let bad_config = build_router_from_str("#!RUNE\n@App\ntype = REST\nnot_found_page = maybe\n").await;
+    let response = bad_config.oneshot(Request::builder().uri("/missing").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    for source in [
+        "#!RUNE\n@App\ntype = REST\n@NotFound\ncontent_type = false\nrun:\n    respond 404 \"missing\"\n",
+        "#!RUNE\n@App\ntype = REST\n@NotFound\ncontent_type = text/html\n",
+    ] {
+        let response = build_router_from_str(source).await.oneshot(Request::builder().uri("/missing").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+}
+
+#[tokio::test]
+async fn rest_not_found_keeps_swagger_and_assets_routes() {
+    let app = build_router_from_str("#!RUNE\n@App\ntype = REST\nswagger = true\n").await;
+    for path in ["/swagger-ui", "/openapi.json"] {
+        let response = app.clone().oneshot(Request::builder().uri(path).header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+    let response = app.oneshot(Request::builder().uri("/assets/missing").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(response.headers().get("content-type").is_none());
+}
+
+#[tokio::test]
+async fn rest_not_found_example_and_rune_web_frontend() {
+    let app = build_router_from_str(include_str!("../examples/beginner/not_found.rune")).await;
+    let response = app.clone().oneshot(Request::builder().uri("/health").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let response = app.oneshot(Request::builder().uri("/missing").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(response.headers()["content-type"].to_str().unwrap().starts_with("text/html"));
+
+    let app = build_router_from_str(r#"#!RUNE
+@App
+type = REST
+@Frontend
+type = rune-web
+path = /
+page = home
+@Page/home
+view:
+    main:
+        h1 "Hello"
+"#).await;
+    let response = app.clone().oneshot(Request::builder().uri("/").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let response = app.oneshot(Request::builder().uri("/missing").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(response.headers()["content-type"].to_str().unwrap().starts_with("text/html"));
+}
+
+#[tokio::test]
+async fn rest_static_frontend_preserves_files_and_uses_fallback_on_missing_files() {
+    let directory = tempfile::tempdir().unwrap();
+    std::fs::write(directory.path().join("index.html"), "static index").unwrap();
+    std::fs::write(directory.path().join("data.json"), r#"{"n":[1,2]}"#).unwrap();
+    let doc = parse_rune("#!RUNE\n@App\ntype = REST\n@Frontend\ntype = static\nsrc = .\n").unwrap();
+    let app = build_app_router(AppState {
+        schemas: Arc::new(extract_schemas(&doc)),
+        data_sources: Arc::new(extract_data_sources(&doc)),
+        doc: Arc::new(doc),
+        path: directory.path().to_path_buf(),
+    }).await;
+    let response = app.clone().oneshot(Request::builder().uri("/").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(&axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap()[..], b"static index");
+    let response = app.clone().oneshot(Request::builder().uri("/data.json?pretty=1").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(&axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap()[..], br#"{"n":[1,2]}"#);
+    let response = app.clone().oneshot(Request::builder().uri("/missing").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(response.headers()["content-type"].to_str().unwrap().starts_with("text/html"));
+    let response = app.oneshot(Request::builder().uri("/assets/missing").header("accept", "text/html").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(response.headers().get("content-type").is_none());
+
+    let doc = parse_rune("#!RUNE\n@App\ntype = REST\n@Frontend\ntype = static\nsrc = .\n@NotFound\nrun:\n    respond 410 \"custom\"\n").unwrap();
+    let app = build_app_router(AppState {
+        schemas: Arc::new(extract_schemas(&doc)),
+        data_sources: Arc::new(extract_data_sources(&doc)),
+        doc: Arc::new(doc),
+        path: directory.path().to_path_buf(),
+    }).await;
+    let response = app.oneshot(Request::builder().uri("/missing").body(axum::body::Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::GONE);
+}
+
+#[tokio::test]
 async fn rest_route_executes_match_and_switch_statements() {
     let app_rune = r#"#!RUNE
 
@@ -518,8 +837,8 @@ view:
         .expect("expected response body bytes");
     let body = String::from_utf8(body_bytes.to_vec()).expect("expected utf-8 body");
 
-    assert!(body.contains("Bonjour"), "Expected French translation to be active");
-    assert!(!body.contains("Hello"), "Expected English translation NOT to be active");
+    assert!(body.contains("<p>Bonjour</p>"), "Expected French translation in page markup");
+    assert!(!body.contains("<p>Hello</p>"), "Expected English translation NOT to be active");
 }
 
 #[tokio::test]

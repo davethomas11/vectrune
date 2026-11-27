@@ -195,8 +195,19 @@
           "paragraphs": [
             "respond 201 body returns status 201 and serializes the context variable body. respond 404 \"Not found\" returns a literal message. A response stops the current request step sequence.",
             "Without an explicit response, the executor can return the last computed result with HTTP 200, falling back to OK when no result is available. A builtin execution error becomes HTTP 500. Use explicit responses and validation for predictable API contracts.",
-            "The native REST handler returns a status and a string body. Object serialization does not automatically select application/json; verify the wire response before building clients that depend on response headers."
-          ]
+            "The native REST handler returns a status and a string body. Object serialization does not automatically select application/json; verify the wire response before building clients that depend on response headers.",
+            "Response message text expands {path} using request context, and {pretty path} inserts indented JSON. Unknown placeholders remain unchanged; escape literal braces with \\{ and \\}. For example, respond 200 \"Echoed: {pretty data}\" returns text rather than a JSON document. Direct variable responses retain their existing serialization.",
+            "Append ?pretty=1 to indent valid JSON from REST routes, CRUD handlers, /openapi.json, or @NotFound responses with text/plain, application/json or +json content types. The parameter is enabled by its presence, including ?pretty=0 or an empty value. Non-JSON bodies, static files, frontends, status codes, and response headers are unchanged."
+          ],
+          "command": "curl 'http://127.0.0.1:3000/greetings/Ada?pretty=1'"
+        },
+        {
+          "title": "Unmatched routes",
+          "paragraphs": [
+            "REST apps return a Vectrune HTML 404 page when Accept explicitly permits text/html. The page lists declared route methods and paths, including authenticated routes. Safe concrete GET paths are links; parameterized and non-GET routes are text. Set not_found_page = false under @App to avoid exposing the list. Requests without explicit HTML acceptance retain the empty 404.",
+            "An @NotFound run block overrides the default for unmatched requests regardless of Accept, even when the page is disabled. Set content_type for HTML or another media type, and use respond to choose the status and body. Matched routes, method mismatches, /assets and non-root static mounts retain their own responses; root static files are served first."
+          ],
+          "source": "examples/beginner/not_found.rune"
         },
         {
           "title": "Branching with match and switch",

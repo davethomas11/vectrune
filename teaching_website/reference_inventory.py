@@ -22,6 +22,7 @@ def web_commands():
     if not registered:
         raise ValueError('Frontend command registry changed; update reference inventory extraction')
     entries = []
+    parsed = set()
     for path in sorted(directory.glob('*.ts')):
         source = path.read_text(encoding='utf-8')
         for symbol, body in re.findall(r'export const (\w+): BuiltinCommand = \{(.*?)^\}', source, re.S | re.M):
@@ -29,24 +30,35 @@ def web_commands():
                 continue
             names = []
             for block in re.findall(r'(?:prefix|postfix|infix):\s*\[([^]]*)\]', body):
-                names.extend(re.findall(r'"([^"\n]+)"', block))
+                names.extend(match[1] for match in re.findall(r"""(['"])([^'"\n]+)\1""", block))
                 if re.search(r'\bSTOP\b', block):
                     names.append('stop')
-            signature = re.search(r'signature:\s*"([^"\n]+)"', body)
-            description = re.search(r'description:\s*"([^"\n]+)"', body)
+            signature = re.search(r"""signature:\s*(['"])([^'"\n]+)\1""", body)
+            description = re.search(r"""description:\s*(['"])([^'"\n]+)\1""", body)
             if not names or not description:
                 raise ValueError(f'Add a reference parser for command {symbol} in {path}')
             name = names[0]
             entries.append(dict(
                 id=name, category='web', name=name,
-                signature=signature[1] if signature else name,
-                summary=description[1] + '.', aliases=names[1:],
+                signature=signature[2] if signature else name,
+                summary=description[2].rstrip('.') + '.', aliases=names[1:],
                 sources=[str(path.relative_to(ROOT))],
                 notes=['Rune-Web command; this registration does not make it a native REST builtin.'],
                 returns=WEB_RESULTS.get(name, 'Command-specific value or state mutation as described by its signature.'),
                 errors=WEB_ERRORS.get(name, 'An unmatched command form is not handled. These commands do not return HTTP status codes.'),
             ))
-    if len(entries) != len(registered):
+            parsed.add(symbol)
+            if symbol == 'locationCommand':
+                current = entries[-1]
+                current['aliases'] = []
+                current['summary'] = 'Request the browser location, prompting for permission if necessary.'
+                current['returns'] = 'Calls the success action with latitude, longitude, accuracy and timestamp.'
+                current['errors'] = 'Calls the optional catch action on failure; otherwise logs a warning.'
+                entries.append({**current, 'id': 'location.if-granted', 'name': 'location.if-granted',
+                                'signature': current['signature'].replace('location.current', 'location.if-granted'),
+                                'summary': 'Request the browser location only when permission is already granted.',
+                                'errors': 'Calls the optional catch action if permission is not granted or location fails; otherwise logs a warning.'})
+    if parsed != registered:
         raise ValueError('Every registered frontend command must have a reference entry')
     return entries
 

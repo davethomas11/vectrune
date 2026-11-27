@@ -14,6 +14,7 @@ use std::collections::HashMap;
 /// JavaScript code generator from a page + logic definition.
 pub struct JsCodegen {
     data_sources: serde_json::Value,
+    on_mount: Option<String>,
     page: ViewNode,
     logic: LogicDefinition,
     i18n_json: String,
@@ -41,10 +42,11 @@ impl JsCodegen {
         sounds: HashMap<String, super::ast::SoundDefinition>,
         music: HashMap<String, super::ast::MusicDefinition>,
     ) -> Self {
-        JsCodegen { data_sources: serde_json::json!({}), page, logic, i18n_json, ws_endpoint, memory_seed, navigator, seo, optimizer, sounds, music }
+        JsCodegen { data_sources: serde_json::json!({}), on_mount: None, page, logic, i18n_json, ws_endpoint, memory_seed, navigator, seo, optimizer, sounds, music }
     }
 
     pub fn with_data_sources(mut self, sources: serde_json::Value) -> Self { self.data_sources = sources; self }
+    pub fn with_on_mount(mut self, action: Option<String>) -> Self { self.on_mount = action; self }
 
     /// Generate complete JavaScript application code.
     pub fn generate(&self) -> String {
@@ -84,6 +86,7 @@ impl JsCodegen {
 
         let state_json = self.generate_state_json();
         let data_sources = self.data_sources.to_string().replace('<', "\\u003c");
+        let on_mount = serde_json::to_string(&self.on_mount).unwrap_or_else(|_| "null".to_string()).replace('<', "\\u003c");
         let ws_endpoint = if let Some(endpoint) = &self.ws_endpoint {
             format!("'{}'", endpoint)
         } else {
@@ -118,6 +121,7 @@ __RuneWeb.boot({{
   i18nData: {i18n_json},
   stateJson: {state_json},
   dataSources: {data_sources},
+  onMount: {on_mount},
   wsEndpoint: {ws_endpoint},
   timer: {timer_json},
   keys: {keys_json},

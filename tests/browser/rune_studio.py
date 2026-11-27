@@ -434,7 +434,14 @@ def check(base):
         })();""")
         page.goto(base)
         expect(page.locator('.studio-title')).to_have_text('RUNE STUDIO')
-        expect(page.locator('.bpm-badge')).to_have_text('144 BPM')
+        expect(page.locator('.bpm-badge')).to_have_text('136 BPM')
+        expect(page.get_by_label('Song title')).to_have_value('VectWorms')
+        fields = ['selected_song', 'song_title', 'tempo', 'time_signature', 'bars',
+                  'lead_instrument', 'bass_instrument', 'chords_instrument',
+                  'lead_track', 'bass_track', 'chords_track', 'drums_track']
+        initial = page.evaluate('(fields) => Object.fromEntries(fields.map(key => [key, runeWebApp.state[key]]))', fields)
+        page.get_by_label('Open song').select_option('vectworms')
+        assert page.evaluate('(fields) => Object.fromEntries(fields.map(key => [key, runeWebApp.state[key]]))', fields) == initial
         check_song_projects(page)
         check_note_drags(page)
         check_polyphony(page)

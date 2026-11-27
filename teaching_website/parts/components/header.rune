@@ -75,6 +75,7 @@ view:
                             a .nav-link href="{i18n.Common.base_path}marble-run" data-route-link=true aria-current="{activePage == 'marble-run' ? 'page' : 'false'}" click="navigate('marble-run')" "%i18n.MarbleRun.title%"
                             a .nav-link href="{i18n.Common.base_path}dog-walker" data-route-link=true aria-current="{activePage == 'dog-walker' ? 'page' : 'false'}" click="navigate('dog-walker')" "%i18n.DogWalker.title%"
                             a .nav-link href="{i18n.Common.base_path}neon-circuit" data-route-link=true aria-current="{activePage == 'neon-circuit' ? 'page' : 'false'}" click="navigate('neon-circuit')" "%i18n.NeonCircuit.title%"
+                            a .nav-link href="{i18n.Common.base_path}glowtide-aquarium" data-route-link=true aria-current="{activePage == 'glowtide-aquarium' ? 'page' : 'false'}" click="navigate('glowtide-aquarium')" "%i18n.GlowtideAquarium.title%"
                         GamePreview
             details .menu-category data-menu-category=tools name=site-sections:
                 summary .menu-category-label "%i18n.SiteMenu.tools%"

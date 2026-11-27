@@ -30,16 +30,16 @@ From the repository root:
 ```sh
 # Build from source; older installed releases may lack mobile flags.
 cargo build
-target/debug/vectrune ./examples/rune_mobile_web --build android
+target/debug/vectrune ./examples/rune-mobile-web --build android
 # On macOS with Xcode, build an unsigned Simulator app:
-target/debug/vectrune ./examples/rune_mobile_web --build ios
+target/debug/vectrune ./examples/rune-mobile-web --build ios
 ```
 
 Once this version is installed, use `vectrune` directly:
 
 ```sh
-vectrune ./examples/rune_mobile_web --build android
-vectrune ./examples/rune_mobile_web/app.rune --build ios
+vectrune ./examples/rune-mobile-web --build android
+vectrune ./examples/rune-mobile-web/app.rune --build ios
 ```
 
 The CLI embeds the platform templates, compiles the supplied Rune file or
@@ -60,9 +60,9 @@ identifiers are not exposed through the CLI yet.
 
 ```sh
 # Choose an output project directory:
-vectrune ./examples/rune_mobile_web --build android --build-dir ./output/android
+vectrune ./examples/rune-mobile-web --build android --build-dir ./output/android
 # Export sources and compiled HTML without Node or native SDKs:
-vectrune ./examples/rune_mobile_web --build ios --prepare-only --build-dir ./output/ios
+vectrune ./examples/rune-mobile-web --build ios --prepare-only --build-dir ./output/ios
 ```
 
 Build directories are generated projects: template files are replaced on each
@@ -72,8 +72,8 @@ protect existing projects. Use a separate directory for manual native edits.
 ## Export for signing in a mobile IDE
 
 ```sh
-vectrune ./examples/rune_mobile_web --export android --build-dir ./mobile-android
-vectrune ./examples/rune_mobile_web --export ios --build-dir ./mobile-ios
+vectrune ./examples/rune-mobile-web --export android --build-dir ./mobile-android
+vectrune ./examples/rune-mobile-web --export ios --build-dir ./mobile-ios
 ```
 
 `--export` generates editable native projects and bundled HTML without running
@@ -140,7 +140,7 @@ xcodebuild -project ios/App/App.xcodeproj -scheme App \
   -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
-Edit [the demo](../../examples/rune_mobile_web/app.rune) and its imported styles,
+Edit [the demo](../../examples/rune-mobile-web/app.rune) and its imported styles,
 then run `npm run sync`. The demo supports touch, counter actions, two views,
 safe areas, and explicit save/restore through Rune's local storage builtins.
 It works offline from first launch. Save/restore demonstrates small local

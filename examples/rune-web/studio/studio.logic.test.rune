@@ -6,12 +6,12 @@ import "rune_studio.rune"
 type = logic
 page = studio
 run:
-    assert state.tempo == 144
+    assert state.tempo == 136
     invoke changeTempo 4
-    assert state.tempo == 148
-    assert state.status_message == "Tempo: 148 BPM"
+    assert state.tempo == 140
+    assert state.status_message == "Tempo: 140 BPM"
     assert mock.audio[0].operation == "music.tempo"
-    assert mock.audio[0].args[0] == 148
+    assert mock.audio[0].args[0] == 140
     invoke changeTempo 1000
     assert state.tempo == 240
     invoke changeTempo -1000
@@ -49,8 +49,12 @@ run:
 type = logic
 page = studio
 run:
-    assert state.tempo == 144
-    assert state.selected_song == "vectraiders"
+    assert state.tempo == 136
+    assert state.selected_song == "vectworms"
+    assert state.song_title == "VectWorms"
+    assert state.lead_instrument == "pulse"
+    assert state.chords_instrument == "sine"
+    assert state.lead_track contains "C4:8 E4:8 G4:8"
     assert mock.storage == {}
     assert mock.downloads == []
     assert mock.clipboard == []
@@ -61,7 +65,7 @@ page = studio
 run:
     invoke playTrack
     assert state.is_playing == true
-    assert state.status_message contains "Playing: VectRaiders"
+    assert state.status_message contains "Playing: VectWorms"
     invoke stopTrack
     assert state.is_playing == false
     assert state.is_paused == false

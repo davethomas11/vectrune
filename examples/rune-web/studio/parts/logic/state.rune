@@ -1,10 +1,10 @@
 @Logic/studio
 
 state:
-    selected_song = "vectraiders"
-    song_title = "VectRaiders"
+    selected_song = "vectworms"
+    song_title = "VectWorms"
     saved_songs = []
-    tempo = 144
+    tempo = 136
     time_signature = "4/4"
     bars = 4
     studio_fixed_bars = true
@@ -33,19 +33,19 @@ state:
     playback_progress = 0
     playback_playing = false
 
-    lead_instrument = "square"
+    lead_instrument = "pulse"
     bass_instrument = "triangle"
-    chords_instrument = "sawtooth"
+    chords_instrument = "sine"
     drums_instrument = "drums"
-    active_instrument = "square"
+    active_instrument = "pulse"
 
     lead_muted = false
     bass_muted = false
     chords_muted = false
     drums_muted = false
 
-    lead_track = "E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | E4:8 D#4:8 E4:8 B3:8 D4:8 C4:8 A3:4 | C4:8 D4:8 E4:8 G4:8 A4:4 G4:4 | E4:8 D4:8 C4:8 B3:8 A3:2"
-    bass_track = "A2:4 E2:4 A2:4 E2:4 | A2:4 E2:4 A2:4 E2:4 | C3:4 G2:4 C3:4 G2:4 | F2:4 C2:4 E2:4 G#2:4"
-    chords_track = "[A3,C4,E4]:2 [A3,C4,E4]:2 | [A3,C4,E4]:2 [A3,C4,E4]:2 | [C4,E4,G4]:2 [C4,E4,G4]:2 | [F3,A3,C4]:2 [E3,G#3,B3]:2"
-    drums_track = "kick:4 snare:4 kick:4 snare:4 | kick:4 snare:4 kick:4 snare:4 | kick:8 hihat:8 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:4 snare:4"
-
+    lead_track = "C4:8 E4:8 G4:8 A4:8 G4:8 E4:8 C4:8 D4:8 | E4:8 G4:8 A4:8 C5:8 B4:4 G4:4 | A4:8 G4:8 E4:8 C4:8 D4:8 E4:8 D4:4 | C4:2 -:2"
+    bass_track =
+        "C2:4 G2:4 C2:4 G2:4 | E2:4 B2:4 E2:4 B2:4 | F2:4 C3:4 G2:4 D3:4 | C2:4 G2:4 C2:2"
+    chords_track = "[C4,E4,G4]:2 [C4,E4,G4]:2 | [E4,G4,B4]:2 [E4,G4,B4]:2 | [F4,A4,C5]:2 [G4,B4,D5]:2 | [C4,E4,G4]:2 -:2"
+    drums_track = "kick:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 kick:8 hihat:8 snare:4 | kick:4 snare:4 kick:8 kick:8 snare:4 | kick:4 snare:4 kick:2"

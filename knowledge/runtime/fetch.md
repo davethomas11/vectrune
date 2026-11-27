@@ -87,11 +87,25 @@ action weatherFailed(failure):
 ```
 
 Full example: `examples/rune-web/weather_web.rune` (`vectrune examples/rune-web/weather_web.rune`).
+The weather page starts with Vancouver, or the user's device location when
+browser permission is already granted. Search uses Open-Meteo's geocoding API;
+the OpenStreetMap tile map also permits choosing a point. Weather is requested
+only when the visitor selects **Check weather**, using `timezone=auto` and
+displaying the returned timezone. A reading is cleared when the selected place
+changes; a failed refresh retains and labels the last reading for that same
+place. Search, geolocation and weather requests use generation tokens so late
+results cannot replace a newer choice. Browser networking and CORS still apply.
+Search text and chosen coordinates are sent to Open-Meteo; map tiles go to
+OpenStreetMap. Both providers receive the browser's IP address. Device
+geolocation requires permission and generally HTTPS or localhost. See the
+[Rune-Web guide](../language/rune-web-guide.md) for map and permission details.
 
 - `x = fetch-json <url> [catch <action>]` is a **top-level action step**. The action pauses there, and the remaining steps run when the response arrives, followed by a re-render. `x` is assigned like any other step (a local if one exists, otherwise page state).
 - `x = fetch ...` followed by `y = parse-json x.body` is the explicit form; `parse-json` is also new in Rune-Web (`x = parse-json <string expr>`, invalid JSON throws).
 - Inside `if` or `for` blocks the assignment form throws a clear error. Use the callback form there: `fetch-json <url> then <action> [catch <action>]` (the `then` action receives the value; `catch` receives `{ status, message }`).
-- On failure the remaining steps are skipped and the `catch` action runs. Without `catch`, a warning is logged.
+- On failure the remaining steps are skipped and the `catch` action runs with
+  the requesting action's local bindings available; without `catch`, a warning
+  is logged. Parameters can carry request tokens for stale-result checks.
 - Overlapping runs are not serialized: a second click while a request is pending starts a second request.
 - `<url>` is an expression: a quoted string or a state/local variable. Relative URLs resolve against the page.
 - `@Values` is **not** supported in Rune-Web; keep URLs in `@State` or literals.
@@ -108,7 +122,7 @@ Full example: `examples/rune-web/weather_web.rune` (`vectrune examples/rune-web/
 
 ## Not implemented yet
 
-Methods other than GET, fetch assignment inside nested Rune-Web blocks, serialized/cancellable requests, request bodies, query-parameter helpers, outbound-host allow lists, environment-backed values, `@Every` scheduling, and `@Values` in Rune-Web.
+Methods other than GET, fetch assignment inside nested Rune-Web blocks, serialized/cancellable requests, request bodies, query-parameter builders, outbound-host allow lists, environment-backed values, `@Every` scheduling, and `@Values` in Rune-Web. Rune-Web provides `url_encode(value)` for an individual URL component.
 
 ## Sources
 

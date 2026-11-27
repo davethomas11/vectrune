@@ -112,6 +112,12 @@ def check(base, directory, screenshots):
         print('Repeated English/Spanish/French switching and refresh preserve home, Studio and lessons', flush=True)
         for locale in ['', 'es/', 'fr/']:
             page.goto(f'{base}/{locale}')
+            homebrew = page.locator('#quickstart a[href="https://brew.sh"]')
+            assert homebrew.evaluate('(e) => getComputedStyle(e).textDecorationLine.includes("underline")')
+            footer = page.locator('.site-footer')
+            expect(footer.locator('.footer-brand')).to_be_visible()
+            expect(footer.locator('.language-help a')).to_have_count(2)
+            assert '%i18n.' not in footer.inner_text()
             expect(page.locator('main h1')).to_have_count(1)
             headline = page.locator('main h1').inner_text()
             assert '/fr/fr' not in page.url and '/es/es' not in page.url
@@ -120,7 +126,7 @@ def check(base, directory, screenshots):
             page.keyboard.press('Enter')
             page.wait_for_function('document.querySelector("main").dataset.section === "content"')
             expect(page.locator('#content')).to_be_focused()
-            expect(page.locator('#site-navigation a.nav-link')).to_have_count(43)
+            expect(page.locator('#site-navigation a.nav-link')).to_have_count(44)
             expect(page.locator('#site-navigation [aria-current="page"]')).to_have_count(1)
             categories = page.locator('#site-navigation .menu-category')
             expect(categories).to_have_count(4)
@@ -270,7 +276,9 @@ def check(base, directory, screenshots):
         expect(page.locator('main')).to_have_attribute('data-route', 'studio')
         expect(page.locator('.source-file')).to_have_count(15)
         studio = page.frame_locator('.example-preview')
+        expect(studio.get_by_label('Song title')).to_have_value('VectWorms')
         tempo = studio.locator('body').evaluate('() => runeWebApp.state.tempo')
+        assert tempo == 136
         studio.get_by_role('button', name='+4', exact=True).click()
         studio.locator('[data-on-click="saveToStorage"]').click()
         studio.get_by_role('button', name='+4', exact=True).click()
@@ -279,7 +287,7 @@ def check(base, directory, screenshots):
         with page.expect_download() as exported:
             studio.locator('[data-on-click="exportRune"]').click()
         song = Path(exported.value.path()).read_text()
-        assert '@Music/vectraiders' in song and f'tempo = {tempo + 4}' in song
+        assert '@Music/vectworms' in song and f'tempo = {tempo + 4}' in song
         print('Studio Save/Load works in the embedded preview and EXPORT .RUNE downloads the song', flush=True)
         # Destination links keep a useful URL for native new-tab navigation.
         with context.expect_page() as event:
@@ -353,7 +361,7 @@ def check_release_archive(base):
 
 
 def check_game_previews(base):
-    games = ['neon-circuit', 'dog-walker', 'games', 'vectworms', 'monster-city', 'vect-breach',
+    games = ['glowtide-aquarium', 'neon-circuit', 'dog-walker', 'games', 'vectworms', 'monster-city', 'vect-breach',
              'rune-crypt', 'skybound-2', 'starfall', 'marble-run']
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
@@ -362,13 +370,13 @@ def check_game_previews(base):
         desktop.locator('[data-menu-category="games"] summary').click()
         preview = desktop.locator('.menu-panel-games .game-preview')
         count = preview.locator('.game-preview-count')
-        expect(count).to_have_text('2 / 10', timeout=9000)
+        expect(count).to_have_text(f'2 / {len(games)}', timeout=9000)
         preview.get_by_role('button', name='Pause slideshow').click()
         expect(preview.get_by_role('button', name='Play slideshow')).to_be_visible()
         preview.get_by_role('button', name='Previous game').click()
-        expect(count).to_have_text('1 / 10')
+        expect(count).to_have_text(f'1 / {len(games)}')
         preview.get_by_role('button', name='Previous game').click()
-        expect(count).to_have_text('10 / 10')
+        expect(count).to_have_text(f'{len(games)} / {len(games)}')
 
         phone = browser.new_page(
             viewport={'width': 390, 'height': 844}, has_touch=True, reduced_motion='reduce',

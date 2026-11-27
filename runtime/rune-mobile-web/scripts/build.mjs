@@ -31,7 +31,7 @@ export function prepareHtml(html) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
-    const source = process.argv[2] || resolve(repoRoot, 'examples/rune_mobile_web/app.rune');
+    const source = process.argv[2] || resolve(repoRoot, 'examples/rune-mobile-web/app.rune');
     const html = compilePage({ source, binary: process.env.VECTRUNE_BIN });
     const destination = resolve(mobileRoot, 'www');
     mkdirSync(destination, { recursive: true });

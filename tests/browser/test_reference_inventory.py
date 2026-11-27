@@ -60,6 +60,9 @@ class ReferenceInventoryTests(unittest.TestCase):
         self.assertIn('by', commands['increment']['signature'])
         self.assertIn('interval', commands['start-timer']['aliases'])
         self.assertEqual(commands['stop']['signature'], 'stop')
+        self.assertIn('location.current then', commands['location.current']['signature'])
+        self.assertIn('location.if-granted then', commands['location.if-granted']['signature'])
+        self.assertNotIn('location.if-granted', commands['location.current']['aliases'])
 
     def test_static_docs_preserve_hosting_prefix_and_canonical_origin(self):
         with tempfile.TemporaryDirectory() as folder:

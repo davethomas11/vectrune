@@ -669,6 +669,11 @@ export function compileExpression(expr: string, depth = 0): CompiledExpr {
     }
   }
 
+  if (trimmed.startsWith('url_encode(') && trimmed.endsWith(')')) {
+    const value = compileExpression(trimmed.slice(11, -1), nextDepth);
+    return (scope: Scope) => encodeURIComponent(String(value(scope) ?? ''));
+  }
+
   if (trimmed.startsWith('min(') && trimmed.endsWith(')')) {
     const cParts = splitTopLevel(trimmed.slice(4, -1), ',').map((p) => compileExpression(p, nextDepth));
     return (scope: Scope) => Math.min(...cParts.map((fn) => Number(fn(scope))));

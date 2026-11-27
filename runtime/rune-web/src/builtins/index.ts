@@ -29,6 +29,7 @@ import { cloneCommand } from "./clone";
 import { parseJsonCommand } from "./parse_json";
 import { fetchCommand, fetchJsonCommand } from "./fetch";
 import { startTimerCommand, stopTimerCommand } from "./timer";
+import { locationCommand } from "./location";
 
 /** Register a builtin command */
 export function registerCommand(cmd: BuiltinCommand): void {
@@ -67,6 +68,7 @@ registerCommand(stopTimerCommand);
 registerCommand(parseJsonCommand);
 registerCommand(fetchCommand);
 registerCommand(fetchJsonCommand);
+registerCommand(locationCommand);
 
 /**
  * Process conditional 'when' suffix.
@@ -125,4 +127,3 @@ function getPostfixCmd(statement: string, locals: any): BuiltinCommand | undefin
   }
   return undefined;
 }
-

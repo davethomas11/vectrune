@@ -32,6 +32,7 @@ view:
                     "marble-run"      -> MarbleRunPage
                     "dog-walker"      -> DogWalkerPage
                     "neon-circuit"    -> NeonCircuitPage
+                    "glowtide-aquarium" -> GlowtideAquariumPage
                     "studio"          -> RuneStudioPage
                     "music"           -> RuneStudioPage
                     "examples"        -> ExampleLab

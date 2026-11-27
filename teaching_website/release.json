@@ -1,20 +1,27 @@
 {
-  "version": "0.3.12",
+  "version": "0.3.13",
   "locales": {
     "en_us": {
-      "intro": "Animate your terminal with ASCII Animator, play GIFs or export them as runnable Rune animations, and explore Neon Circuit's latest Pixel 3D lighting and camera transitions.",
-      "summary": "ASCII Animator brings animated scenes, graphs, synth tones, typed adventures, and CLI art generators with GIF playback and self-contained Rune export. Neon Circuit showcases a twelve-sector Pixel 3D campaign and finale. Rune Studio gains workspace and note-editing improvements."
+      "intro": "Explore Glowtide Aquarium and The Thirteenth Bell, build reusable game logic, and try experimental mobile and Apple TV tooling.",
+      "summary": "Glowtide Aquarium showcases Pixel 3D care and lighting; The Thirteenth Bell brings GIF sprites and music to ASCII Animator. Logic modules, multiline formatting, configurable REST 404 pages, pretty-printed JSON responses, and experimental mobile WebView and Apple TV workflows expand the toolkit."
     },
     "es": {
-      "intro": "Anima tu terminal con ASCII Animator, reproduce GIF o expórtalos como animaciones Rune ejecutables y explora las nuevas luces y transiciones de cámara de Pixel 3D en Neon Circuit.",
-      "summary": "ASCII Animator incorpora escenas animadas, gráficos, tonos, aventuras de texto y generadores de arte para la CLI con reproducción de GIF y exportación Rune independiente. Neon Circuit muestra una campaña Pixel 3D de doce sectores y un nivel final. Rune Studio mejora su espacio de trabajo y la edición de notas."
+      "intro": "Explora Glowtide Aquarium y The Thirteenth Bell, crea lógica de juego reutilizable y prueba herramientas experimentales para móviles y Apple TV.",
+      "summary": "Glowtide Aquarium muestra cuidados e iluminación en Pixel 3D; The Thirteenth Bell incorpora sprites GIF y música a ASCII Animator. Los módulos de lógica, el formato multilínea, las páginas REST 404 configurables, las respuestas JSON formateadas y los flujos experimentales de WebView móvil y Apple TV amplían las herramientas."
     },
     "fr": {
-      "intro": "Animez votre terminal avec ASCII Animator, lisez des GIF ou exportez-les en animations Rune exécutables et découvrez les nouveaux éclairages et transitions de caméra Pixel 3D de Neon Circuit.",
-      "summary": "ASCII Animator apporte des scènes animées, des graphiques, des sons, des aventures textuelles et des générateurs d'art en CLI avec lecture de GIF et export Rune autonome. Neon Circuit présente une campagne Pixel 3D de douze secteurs et un niveau final. Rune Studio améliore son espace de travail et l'édition des notes."
+      "intro": "Explorez Glowtide Aquarium et The Thirteenth Bell, créez une logique de jeu réutilisable et essayez les outils expérimentaux pour mobile et Apple TV.",
+      "summary": "Glowtide Aquarium illustre les soins et l'éclairage Pixel 3D ; The Thirteenth Bell apporte des sprites GIF et de la musique à ASCII Animator. Les modules de logique, le formatage multiligne, les pages REST 404 configurables, les réponses JSON formatées et les outils expérimentaux WebView mobile et Apple TV enrichissent la boîte à outils."
     }
   },
   "releases": [
+    {
+      "tag": "v0.3.13",
+      "tagged_on": null,
+      "github_tag": false,
+      "published_on": null,
+      "summary": "Adds Glowtide Aquarium, The Thirteenth Bell, reusable logic modules and entities, Pixel 3D lighting improvements, multiline logic formatting, configurable REST 404 pages and pretty-printed JSON responses, and experimental mobile WebView and Apple TV tooling."
+    },
     {
       "tag": "v0.3.12",
       "tagged_on": "2026-11-26",

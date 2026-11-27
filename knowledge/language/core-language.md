@@ -25,6 +25,59 @@ Within sections, common constructs are:
 
 Frontend-oriented documents may also use `@Page`, `@Component`, `@Style`, and `@Logic` sections when `@Frontend type = rune-web` is configured. This is currently treated as a frontend mode layered onto app routing, not as a separate `@App type`.
 
+## REST not-found responses
+
+REST apps serve a Vectrune 404 page when an unmatched request explicitly accepts
+`text/html` with a positive quality value. Missing `Accept`, wildcards alone,
+JSON requests and `text/html;q=0` retain the empty 404 response. The page lists
+declared REST route methods and path templates, **including authenticated routes**;
+it does not list every mounted or generated endpoint. To avoid exposing those
+templates, set `not_found_page = false` in `@App`.
+Concrete GET paths using safe URL characters are links; parameterized paths,
+other methods and paths that cannot be linked safely remain text.
+
+An optional `@NotFound` section overrides the default even when disabled and
+executes for unmatched requests regardless of `Accept`:
+
+```rune
+@NotFound
+content_type = text/html; charset=utf-8
+run:
+    respond 404 "<h1>Not found</h1>"
+```
+
+`run:` uses normal native REST execution: set an explicit status with `respond`;
+without it the usual 200 result applies. `content_type` is optional and otherwise
+the response is text/plain. The raw request body is available as `body`, subject
+to Axum's default string-body limit; path parameters are not available because
+no route matched. See `examples/beginner/not_found.rune`.
+
+Matched routes (including their own 404s), method mismatches, `/assets`, and
+non-root static mounts retain their existing handling. A root static frontend
+serves existing files first and applies the fallback to missing GET/HEAD files;
+other static methods retain the static service's 405 behavior. Rune-Web routes
+continue to take precedence. Source: `src/apps/rest/mod.rs`.
+
+## Pretty-print REST JSON
+
+Append `?pretty=1` to a REST route URL to indent a response that is valid JSON:
+
+```sh
+vectrune teaching_website/content/docs/app.rune
+curl 'http://127.0.0.1:3000/greetings/Ada?pretty=1'
+```
+
+The presence of the case-sensitive `pretty` parameter enables formatting:
+`?pretty`, `?pretty=`, and `?pretty=0` also enable it. Other query parameters
+can be combined with it. REST route responses, generated CRUD handlers,
+`/openapi.json`, and `@NotFound` responses with the default text/plain, JSON
+or `+json` content type support it. Valid JSON
+is detected from the response body even when its content type is `text/plain`;
+non-JSON bodies, explicit non-JSON `@NotFound` content types, static files and
+frontend responses are unchanged. Status codes and content types do not change.
+Without `pretty`, output is unchanged. Query parameters are otherwise not made
+available to native REST `run:` steps. Source: `src/apps/rest/mod.rs`.
+
 Source builds support [namespaced logic modules and composable entity types](logic-modules.md)
 in the shared Rune-Web runtime, including ordinary pages and Pixel game hosts.
 Use `modules = {"wallet":"Wallet"}` and `types = ["Pet"]` in `@Logic`.
@@ -297,8 +350,26 @@ After `parse-json`, `body` can become a structured JSON object.
 
 ## Placeholder expansion in strings
 
-Some builtin behavior may interpret placeholders from context.
-Current example: `log` supports placeholder expansion in the form `{expr}` where `expr` resolves through normal context/path lookup.
+Native `log` and `respond` expand `{path}` placeholders in message text using
+the current execution context. For `respond`, `{pretty path}` inserts an
+indented JSON representation of that value; `{path}` inserts strings without
+quotes and other values as compact JSON. This is separate from the `?pretty`
+query parameter, which formats a complete JSON response. A prefixed response
+like `Echoed: ...` is text, not JSON.
+
+```rune
+@Route/POST /echo
+run:
+    data = parse-json
+    respond 200 "Echoed: {pretty data}"
+```
+
+See `examples/beginner/app.rune`. Unknown placeholders remain unchanged.
+Escape literal braces as `\{` and `\}` in `respond` text; inserted values are
+not interpolated again. Direct variable responses such as `respond 200 data`
+retain their existing serialization and are not interpolated. The browser API
+emulator supports message interpolation; its response bodies remain emulator
+values rather than native HTTP strings.
 
 Example:
 
@@ -330,6 +401,41 @@ if condition1:
 
 All statements within an indented block are executed when their `if` condition is true.
 Nested conditionals can go as deep as needed; proper indentation is critical for parsing.
+
+### Multiline `@Logic` expressions
+
+Inside `@Logic` series, assignments and `if` conditions may continue on lines
+indented further than the first line. `=`, ternary `?` and `:`, and boolean
+`||` and `&&` may end a line; ternary and boolean operators may also begin the
+next line:
+
+```rune
+@Logic/demo
+state:
+    score =
+        0
+    label = "normal"
+action update:
+    label = score > 10
+        ? "high"
+        : "normal"
+    if score == 2 ||
+        score == 4:
+        label = "bonus"
+```
+
+The `if` header ends at its block colon; the body remains indented beneath the
+original `if`. Do not put blank lines or comments between continued parts.
+Existing balanced object, array, and call continuations remain supported. This
+operator-continuation syntax is specific to `@Logic`; the separate API emulator
+does not parse or execute `@Logic` actions.
+
+Use `vectrune check path/to/file.rune --json` for load diagnostics, including
+the file and starting line of an incomplete continuation, and
+`vectrune path/to/file.rune -o json` to inspect the parsed document structure.
+The latter shows the document parse, not a trace of execution.
+Implementation: [`src/rune_parser.rs`](../../src/rune_parser.rs);
+examples and execution coverage: [`tests/logic_continuation.rs`](../../tests/logic_continuation.rs).
 
 ## Pattern matching and switch blocks
 

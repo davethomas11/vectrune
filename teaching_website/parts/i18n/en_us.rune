@@ -1,4 +1,18 @@
 @I18N/en_us
+GlowtideAquarium {
+    title = "Glowtide Aquarium"
+    description = "Build a little ocean of happy: feed fish and critters, collect pearls, and grow a glowing underwater home."
+    play = "Explore Glowtide Aquarium"
+    try_it = "Collect the oyster to get started, then feed your friends and save pearls for new residents and upgrades."
+    standalone = "Open the aquarium in a new tab"
+    care_title = "Care for your little ocean"
+    care = "Friends earn pearls while the aquarium is running. Feed them, grow the reef, add decorations, and adopt more fish and bottom-dwelling critters."
+    controls = "Drag the tank or use the arrow keys to rotate it. Tap a resident to inspect it. Use the on-screen controls or Space to feed, C to collect the oyster, and Tab for the aquarium menu."
+    save = "Progress is saved in this browser; the embedded and standalone views share the same save. Friends do not age or earn pearls while the aquarium is closed or paused."
+    language = "The aquarium interface is currently in English."
+    source_title = "Explore the Rune source"
+    source_text = "Browse the aquarium's Rune files above, or run and test it locally with Vectrune 0.3.13 or newer."
+}
 MarbleRun {
     title = "Marble Run"
     description = "Roll through six courses above a floating factory. Bank around corners, jump gaps and spikes, and spend charge cells to blast sentries."
@@ -321,6 +335,7 @@ Sandbox {
 }
 Footer {
     copyright = "© 2026 Vectrune Project"
+    translations = "Translations"
 }
 
 
@@ -657,7 +672,7 @@ Developer {
     ci = "Continuous integration"
     release = "What’s new"
     release_heading = "What’s new in"
-    badge = "Developer tools · 0.3.4"
+    badge = "Developer tools"
     start_intro = "Go from an installed CLI to five passing Rune tests. The downloadable starter includes a real API, reusable fixtures, and a GitHub Actions workflow."
     install_title = "1. Install or upgrade"
     install_text = "Install Vectrune 0.3.4 or newer. On macOS or Linux with Homebrew, use the commands below. Windows and other platforms can download a binary from GitHub Releases, extract it, and add its folder to PATH. Restart your terminal after changing PATH."

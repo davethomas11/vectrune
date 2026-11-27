@@ -7,6 +7,9 @@ view:
                 h2 "%i18n.SiteMenu.showcase_title%"
                 p "%i18n.SiteMenu.showcase_description%"
             div .home-showcase-grid:
+                a .showcase-tile href="{i18n.Common.base_path}glowtide-aquarium" data-route-link=true click="navigate('glowtide-aquarium')":
+                    img src=/assets/glowtide-aquarium-cover.png width=640 height=400 alt="" decoding=async
+                    strong "%i18n.GlowtideAquarium.play%"
                 a .showcase-tile href="{i18n.Common.base_path}neon-circuit" data-route-link=true click="navigate('neon-circuit')":
                     img src=/assets/neon-circuit-cover.png width=640 height=400 alt="" decoding=async
                     strong "%i18n.NeonCircuit.play%"
@@ -16,12 +19,12 @@ view:
                 a .showcase-tile href="{i18n.Common.base_path}marble-run" data-route-link=true click="navigate('marble-run')":
                     img src=/assets/marble-run-cover.png width=640 height=400 alt="" decoding=async
                     strong "%i18n.MarbleRun.play%"
+        QuickstartSection
         SandboxSection code="{raw ../../../examples/beginner/app.rune}"
         section .card:
             h2 "%i18n.Developer.badge%"
             p "%i18n.Developer.start_intro%"
             a .secondary-cta href="{i18n.Common.base_path}developer" data-route-link=true click="navigate('developer')" "%i18n.Developer.start%"
-        QuickstartSection
         LanguageTourSection
         WalkthroughSection
         ExamplesSection

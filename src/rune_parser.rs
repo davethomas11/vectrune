@@ -233,6 +233,7 @@ fn extract_imports(content: &str, source_name: &str) -> Result<(Vec<String>, Str
                 });
             }
             imports.push(parse_import_path(trimmed, source_name)?);
+            stripped_lines.push(String::new());
             continue;
         }
 
@@ -355,9 +356,30 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
     let mut multiline_key: Option<String> = None;
     let mut multiline_buf: Vec<String> = Vec::new();
 
-    let mut lines = input.lines().map(|l| l.to_string()).peekable();
+    let lines_seen = std::cell::Cell::new(0usize);
+    let mut lines = input
+        .lines()
+        .map(|l| l.to_string())
+        .inspect(|_| lines_seen.set(lines_seen.get() + 1))
+        .peekable();
 
-    while let Some(raw) = lines.next() {
+    while let Some(mut raw) = lines.next() {
+        let line_number = lines_seen.get();
+        if multiline_key.is_none()
+            && current_section
+            .as_ref()
+            .is_some_and(|section| section.path.first().is_some_and(|p| p == "Logic"))
+            && series_stack.iter().any(|(indent, _)| {
+                raw.chars().take_while(|c| c.is_whitespace()).count() > *indent
+            })
+        {
+            raw = collect_logic_continuation(raw, &mut lines).map_err(|error| match error {
+                ParseError::General(message) => {
+                    ParseError::General(format!("line {line_number}: {message}"))
+                }
+                other => other,
+            })?;
+        }
         let line = raw.trim_end();
 
         if line.is_empty() {
@@ -968,6 +990,94 @@ pub(crate) fn expression_depth(source: &str) -> i32 {
     }).sum()
 }
 
+/// Join explicitly continued Logic statements before indentation is interpreted as blocks.
+pub(crate) fn collect_logic_continuation<I>(
+    mut line: String,
+    lines: &mut std::iter::Peekable<I>,
+) -> Result<String, ParseError>
+where
+    I: Iterator<Item = String>,
+{
+    let indent = line.chars().take_while(|c| c.is_whitespace()).count();
+    let trimmed = line.trim();
+    if trimmed.starts_with('#') {
+        return Ok(line);
+    }
+    let is_if = trimmed.starts_with("if ");
+    let tokens = expression_tokens(trimmed);
+    let is_assignment = tokens
+        .iter()
+        .any(|token| matches!(*token, "=" | "+=" | "-=" | "*=" | "/="));
+    if !is_if && !is_assignment {
+        return Ok(line);
+    }
+    let mut continued = false;
+    loop {
+        let tokens = expression_tokens(&line);
+        let last = tokens.last().copied().unwrap_or("");
+        let (questions, colons) = top_level_ternary_tokens(&tokens);
+        let pending_ternary = questions > colons;
+        let header_complete =
+            is_if && last == ":" && expression_depth(&line) == 0 && colons > questions;
+        if header_complete {
+            break;
+        }
+        let required = matches!(last, "=" | "+=" | "-=" | "*=" | "/=" | "||" | "&&" | "?")
+            || (last == ":" && questions > 0 && colons <= questions)
+            || (is_if && expression_depth(&line) > 0)
+            || (continued && expression_depth(&line) > 0);
+        let next = lines.peek();
+        let next_text = next.map(|s| s.trim()).unwrap_or("");
+        let starts_operator = next_text.starts_with("||")
+            || next_text.starts_with("&&")
+            || (next_text.starts_with('?') && !next_text.starts_with("??"))
+            || (pending_ternary && next_text.starts_with(':'));
+        if continued && pending_ternary && !required && !starts_operator {
+            return Err(ParseError::General(format!(
+                "Expected an indented `:` continuation after `{}`",
+                line.trim()
+            )));
+        }
+        if !required && !starts_operator {
+            break;
+        }
+        let valid = next.is_some_and(|next| {
+            !next.trim().is_empty()
+                && !next.trim_start().starts_with('#')
+                && next.chars().take_while(|c| c.is_whitespace()).count() > indent
+        });
+        if !valid {
+            if required || starts_operator {
+                return Err(ParseError::General(format!(
+                    "Expected an indented continuation after `{}`",
+                    line.trim()
+                )));
+            }
+            break;
+        }
+        line.push(' ');
+        line.push_str(lines.next().unwrap().trim());
+        continued = true;
+    }
+    Ok(line)
+}
+
+fn top_level_ternary_tokens(tokens: &[&str]) -> (usize, usize) {
+    let mut depth = 0i32;
+    let mut questions = 0usize;
+    let mut colons = 0usize;
+    for token in tokens {
+        match *token {
+            "(" | "[" | "{" => depth += 1,
+            ")" | "]" | "}" => depth -= 1,
+            "?" if depth == 0 => questions += 1,
+            ":" if depth == 0 => colons += 1,
+            _ => {}
+        }
+    }
+    (questions, colons)
+}
+
 fn is_object_assignment_line(line: &str) -> bool {
     line.find('=')
         .map(|eq_idx| looks_like_object_literal_start(&line[eq_idx + 1..]))
@@ -988,4 +1098,3 @@ fn is_valid_map_block_key(key: &str) -> bool {
     // Any of these characters suggest it's a function call with arguments, not a map block
     !key.contains(' ') && !key.contains('/') && !key.contains('(')
 }
-

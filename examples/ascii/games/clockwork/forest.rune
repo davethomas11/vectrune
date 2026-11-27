@@ -87,8 +87,23 @@ state:
     walk_cycle = 0
     invulnerable = 0
     collected = 0
-    platforms = [{"x": 0, "y": 28, "w": 30}, {"x": 33, "y": 25, "w": 20}, {"x": 55, "y": 22, "w": 20}, {"x": 78, "y": 28, "w": 35}, {"x": 95, "y": 21, "w": 20}, {"x": 123, "y": 25, "w": 20}, {"x": 148, "y": 28, "w": 35}, {"x": 170, "y": 22, "w": 20}, {"x": 195, "y": 26, "w": 20}, {"x": 218, "y": 28, "w": 35}]
-    seeds = [{"x": 39, "y": 20, "taken": false}, {"x": 98, "y": 16, "taken": false}, {"x": 174, "y": 17, "taken": false}]
+    platforms = [
+        {"x": 0, "y": 28, "w": 30},
+        {"x": 33, "y": 25, "w": 20},
+        {"x": 55, "y": 22, "w": 20},
+        {"x": 78, "y": 28, "w": 35},
+        {"x": 95, "y": 21, "w": 20},
+        {"x": 123, "y": 25, "w": 20},
+        {"x": 148, "y": 28, "w": 35},
+        {"x": 170, "y": 22, "w": 20},
+        {"x": 195, "y": 26, "w": 20},
+        {"x": 218, "y": 28, "w": 35}
+    ]
+    seeds = [
+        {"x": 39, "y": 20, "taken": false},
+        {"x": 98, "y": 16, "taken": false},
+        {"x": 174, "y": 17, "taken": false}
+    ]
     ghosts = [{"x": 108, "y": 20}, {"x": 204, "y": 2}]
     notice = "The forest's clock has stopped. Bring three clockseeds to its heart."
     canvas = []
@@ -248,44 +263,185 @@ action tick:
     camera = max(0, min(133, player.x - 42))
     call paint
 action paint:
-    canvas = [{"type": "sprite", "name": "moon", "x": 94 - camera * 0.08, "y": 2, "color": "yellow"}]
+    canvas =
+        [{"type": "sprite", "name": "moon", "x": 94 - camera * 0.08, "y": 2, "color": "yellow"}]
     for i in range(0, 12):
         canvas.push({"type": "sprite", "name": "tree", "x": i * 25 - camera * 0.35, "y": 6, "color": "gray"})
     for ledge in platforms:
         if ledge.x - camera < 120 and ledge.x + ledge.w - camera > -20:
-            canvas.push({"type": "sprite", "name": "gear", "x": ledge.x - camera, "y": ledge.y, "color": "blue"})
+            canvas.push(
+                {
+                    "type": "sprite",
+                    "name": "gear",
+                    "x": ledge.x - camera,
+                    "y": ledge.y,
+                    "color": "blue"
+                }
+            )
     for x in [0, 15, 78, 93, 98, 148, 163, 168, 218, 233, 238]:
         canvas.push({"type": "sprite", "name": "floor", "x": x - camera, "y": 28, "color": "cyan"})
-    canvas.push({"type": "sprite", "name": "gate", "x": 230 - camera, "y": 16, "color": collected == 3 ? "yellow" : "magenta"})
+    canvas.push(
+        {
+            "type": "sprite",
+            "name": "gate",
+            "x": 230 - camera,
+            "y": 16,
+            "color": collected == 3 ? "yellow": "magenta"
+        }
+    )
     for seed in seeds:
         if not seed.taken:
-            canvas.push({"type": "sprite", "name": "seed", "x": seed.x - camera, "y": seed.y, "color": "yellow"})
+            canvas.push(
+                {
+                    "type": "sprite",
+                    "name": "seed",
+                    "x": seed.x - camera,
+                    "y": seed.y,
+                    "color": "yellow"
+                }
+            )
     for ghost in ghosts:
-        canvas.push({"type": "sprite", "name": "ghost", "x": ghost.x - camera, "y": ghost.y + sin(ticks * 0.08) * 2, "color": "magenta"})
+        canvas.push(
+            {
+                "type": "sprite",
+                "name": "ghost",
+                "x": ghost.x - camera,
+                "y": ghost.y + sin(ticks * 0.08) * 2,
+                "color": "magenta"
+            }
+        )
     if invulnerable == 0 or ticks % 4 < 2:
         courier_name = player.grounded ? "courier" : "courier_jump"
         courier_frame = player.grounded ? floor(walk_cycle) % 8 : (player.vy < 0 ? 0 : 1)
-        canvas.push({"type": "sprite", "name": courier_name, "frame": courier_frame, "x": player.x - camera, "y": player.y, "color": "white"})
+        canvas.push(
+            {
+                "type": "sprite",
+                "name": courier_name,
+                "frame": courier_frame,
+                "x": player.x - camera,
+                "y": player.y,
+                "color": "white"
+            }
+        )
     for i in range(0, 5):
-        canvas.push({"type": "sprite", "name": "mist", "x": (i * 32 + ticks * 0.1) % 160 - 32, "y": 29, "color": "gray"})
+        canvas.push(
+            {
+                "type": "sprite",
+                "name": "mist",
+                "x": (i * 32 + ticks * 0.1) % 160 - 32,
+                "y": 29,
+                "color": "gray"
+            }
+        )
     for object in canvas:
         object.x *= 4 / 3
         object.y *= 4 / 3
     for row in [0, 45, 46]:
-        canvas.push({"type": "text", "x": 0, "y": row, "text": "                                                                                                                                                                "})
-    canvas.push({"type": "text", "x": 1, "y": 0, "text": "THE THIRTEENTH BELL   |   CLOCKSEEDS " + collected + "/3   |   MUSIC " + (melody ? "ON" : "OFF"), "color": "cyan"})
+        canvas.push(
+            {
+                "type": "text",
+                "x": 0,
+                "y": row,
+                "text": "                                                                                                                                                                "
+            }
+        )
+    canvas.push(
+        {
+            "type": "text",
+            "x": 1,
+            "y": 0,
+            "text": "THE THIRTEENTH BELL   |   CLOCKSEEDS " + collected + "/3   |   MUSIC " + (melody ? "ON": "OFF"),
+            "color": "cyan"
+        }
+    )
     canvas.push({"type": "text", "x": 1, "y": 45, "text": notice, "color": "yellow"})
-    canvas.push({"type": "text", "x": 1, "y": 46, "text": "A/D or arrows: move  Space: jump  Down/S: brake  P: pause  M: music  R: restart  Q: quit", "color": "cyan"})
+    canvas.push(
+        {
+            "type": "text",
+            "x": 1,
+            "y": 46,
+            "text": "A/D or arrows: move  Space: jump  Down/S: brake  P: pause  M: music  R: restart  Q: quit",
+            "color": "cyan"
+        }
+    )
     if status == "title":
-        canvas.push({"type": "box", "x": 49, "y": 16, "width": 61, "height": 11, "fill": true, "color": "blue"})
-        canvas.push({"type": "text", "x": 56, "y": 18, "text": "T H E   T H I R T E E N T H   B E L L", "color": "yellow"})
-        canvas.push({"type": "text", "x": 53, "y": 21, "text": "You are Wick, the forest's last little lamplighter.", "color": "white"})
-        canvas.push({"type": "text", "x": 53, "y": 22, "text": "Climb the gears. Gather three seeds. Wake its heart.", "color": "white"})
-        canvas.push({"type": "text", "x": 63, "y": 24, "text": "ENTER TO LIGHT YOUR LANTERN", "color": "cyan"})
+        canvas.push(
+            {
+                "type": "box",
+                "x": 49,
+                "y": 16,
+                "width": 61,
+                "height": 11,
+                "fill": true,
+                "color": "blue"
+            }
+        )
+        canvas.push(
+            {
+                "type": "text",
+                "x": 56,
+                "y": 18,
+                "text": "T H E   T H I R T E E N T H   B E L L",
+                "color": "yellow"
+            }
+        )
+        canvas.push(
+            {
+                "type": "text",
+                "x": 53,
+                "y": 21,
+                "text": "You are Wick, the forest's last little lamplighter.",
+                "color": "white"
+            }
+        )
+        canvas.push(
+            {
+                "type": "text",
+                "x": 53,
+                "y": 22,
+                "text": "Climb the gears. Gather three seeds. Wake its heart.",
+                "color": "white"
+            }
+        )
+        canvas.push(
+            {
+                "type": "text",
+                "x": 63,
+                "y": 24,
+                "text": "ENTER TO LIGHT YOUR LANTERN",
+                "color": "cyan"
+            }
+        )
     if status == "paused":
-        canvas.push({"type": "text", "x": 67, "y": 19, "text": "THE FOREST HOLDS ITS BREATH", "color": "yellow"})
+        canvas.push(
+            {
+                "type": "text",
+                "x": 67,
+                "y": 19,
+                "text": "THE FOREST HOLDS ITS BREATH",
+                "color": "yellow"
+            }
+        )
     if status == "won":
-        canvas.push({"type": "box", "x": 52, "y": 16, "width": 56, "height": 10, "fill": true, "color": "blue"})
+        canvas.push(
+            {
+                "type": "box",
+                "x": 52,
+                "y": 16,
+                "width": 56,
+                "height": 10,
+                "fill": true,
+                "color": "blue"
+            }
+        )
         canvas.push({"type": "text", "x": 61, "y": 18, "text": "THE FOREST TICKS AGAIN", "color": "yellow"})
-        canvas.push({"type": "text", "x": 56, "y": 21, "text": "Thank you, Wick. Tomorrow belongs to everyone.", "color": "white"})
+        canvas.push(
+            {
+                "type": "text",
+                "x": 56,
+                "y": 21,
+                "text": "Thank you, Wick. Tomorrow belongs to everyone.",
+                "color": "white"
+            }
+        )
         canvas.push({"type": "text", "x": 66, "y": 23, "text": "R: ONE MORE MIDNIGHT", "color": "cyan"})

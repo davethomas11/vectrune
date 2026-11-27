@@ -57,6 +57,14 @@ describe('interpolate', () => {
     expect(interpolate('%i18n.greeting% {name}', buildScope({ name: 'Dave' }))).toBe('Hello Dave');
   });
 
+  it('resolves hyphenated translation keys without treating them as subtraction', () => {
+    const scope = buildScope({ i18n: { Common: { 'app-title': 'Vectrune Quick Start', app: 9 }, Nav: { home: 'Home' } }, title: 2 });
+    expect(interpolate('%i18n.Common.app-title%', scope)).toBe('Vectrune Quick Start');
+    expect(interpolate('{i18n.Common.app-title}', scope)).toBe('Vectrune Quick Start');
+    expect(interpolate('{i18n.Common.app - title}', scope)).toBe('7');
+    expect(interpolate('%i18n.Nav.home%', scope)).toBe('Home');
+  });
+
   it('decodes escapes', () => {
     expect(interpolate('Line 1\\nLine 2', buildScope({}))).toBe('Line 1\nLine 2');
     expect(interpolate('\\{escaped\\}', buildScope({}))).toBe('{escaped}');

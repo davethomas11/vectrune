@@ -21,6 +21,13 @@ builtins:
   - name: respond
     category: http
     summary: Return an HTTP-style response from a step sequence.
+    behavior:
+      placeholder_expansion: true
+      expansion_syntax: "{path} or {pretty path}"
+      notes:
+        - Message text resolves context paths; unknown placeholders remain unchanged.
+        - "Escape literal braces with \\{ and \\}; inserted values are not interpolated again."
+        - A direct context variable response keeps its existing JSON serialization.
     writes_context: []
     sources:
       - src/builtins/builtin/respond.rs

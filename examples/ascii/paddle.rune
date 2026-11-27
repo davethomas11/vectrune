@@ -48,21 +48,35 @@ action tick:
             ball.y = 3
             ball.dy = abs(ball.dy)
         if ball.y >= 18 and ball.dy > 0:
-            if ball.x >= paddle and ball.x <= paddle + 8:
+            if ball.x < paddle or ball.x >= paddle + 9:
+                status = "gameover"
+            if ball.x >= paddle and ball.x < paddle + 9:
                 ball.y = 18
                 ball.dy = -min(0.85, ball.dy + 0.025)
                 ball.dx = (ball.x - paddle - 4) * 0.18
                 score += 10
-            else:
-                status = "gameover"
     call paint
 action paint:
     canvas = [
         {"type": "box", "x": 0, "y": 1, "width": 64, "height": 20, "color": "blue"},
         {"type": "text", "x": 2, "y": 0, "text": "NEON RALLY   |   SCORE " + score, "color": "cyan"},
-        {"type": "line", "x": paddle, "y": 19, "x2": paddle + 8, "y2": 19, "glyph": "=", "color": "magenta"},
+        {
+            "type": "line",
+            "x": paddle,
+            "y": 19,
+            "x2": paddle + 8,
+            "y2": 19,
+            "glyph": "=",
+            "color": "magenta"
+        },
         {"type": "text", "x": ball.x, "y": ball.y, "text": "O", "color": "yellow"},
-        {"type": "text", "x": 2, "y": 21, "text": "Arrows/A/D: move  Space: pause  R: restart  Q: quit", "color": "cyan"}
+        {
+            "type": "text",
+            "x": 2,
+            "y": 21,
+            "text": "Arrows/A/D: move  Space: pause  R: restart  Q: quit",
+            "color": "cyan"
+        }
     ]
     if status == "paused":
         canvas.push({"type": "text", "x": 26, "y": 10, "text": "PAUSED", "color": "yellow"})
