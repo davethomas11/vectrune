@@ -4,6 +4,9 @@ logic = dog_walker_cabinet
 style = dog_walker_cabinet
 view:
     main .cabinet:
+        p .rotate-to-play:
+            span aria-hidden=true "↻"
+            span "Rotate your phone to play in landscape."
         section .machine:
             div .toolbar:
                 div .settings:
@@ -25,18 +28,21 @@ view:
                     h2 "Paused"
                     button data-pixel-pause=true "Resume"
                     button data-pixel-restart=true "Return to title"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
                 div .launch data-pixel-hidden=title_hidden:
                     button .primary data-pixel-start=true "Start walk"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
                     span .best data-pixel-text=best_label "Best 0"
                 div .launch data-pixel-hidden=launch_hidden hidden=true:
                     button .primary data-pixel-action="advance" "Walk again"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
         details .guide:
             summary "How to play"
             p "You walk forward automatically. Use the arrows or WASD to steer. Up speeds up and Down lets you backtrack."
             p "Tap Space at a hydrant or lamppost for a 10-point pee or on a lawn patch for a 40-point poop. Angry neighbors chase lawn visits. Dash with X or Shift. Getting caught costs one heart and 25 points."
             p "Steer around garbage trucks. If a courier distracts your dog, steer away or dash. If the leash snaps, run after your dog and press Space when you're close enough to clip it back on."
             p "At the park, steer into the lane with the lit ring and press Space to throw. Every completed fetch scores. Hit the lit ring for a bonus, then keep the streak going for all three throws."
-            p "On a controller, use the left stick, the bottom face button for Dog, and the left face button to dash. Touchscreen play has a stick and buttons."
+            p "On a controller, use the left stick, the bottom face button for Dog, and the left face button to dash. Touchscreen play has a stick and buttons; use pause to exit fullscreen."
 
 @Logic/dog_walker_cabinet
 state:
@@ -101,6 +107,12 @@ rules:
     .game-surface:
         position = relative
         background = #182948
+    .rotate-to-play:
+        display = none
+    .fullscreen-exit:
+        display = none
+    .game-surface:fullscreen .fullscreen-exit, .game-surface.rune-pixel3d-expanded .fullscreen-exit:
+        display = inline-block
     canvas:
         display = block
         position = relative
@@ -152,3 +164,13 @@ rules:
         font-weight = 700
     [hidden]:
         display = none !important
+responsive:
+    (pointer: coarse) and (orientation: portrait):
+        html[data-game-rotation] body:not(.rune-embedded-game) .rotate-to-play:
+            display = flex
+            align-items = center
+            gap = 8px
+            color = #daeffa
+            font-size = 13px
+        .rotate-to-play span:first-child:
+            font-size = 24px

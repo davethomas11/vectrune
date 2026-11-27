@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 with preview(Path(args.site_dir)) as base, sync_playwright() as pw:
     browser = pw.chromium.launch()
-    for game in ["neon-circuit", "marble-run"]:
+    for game in ["neon-circuit", "marble-run", "dog-walker"]:
         for embedded in [True, False]:
             context = browser.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
             context.add_init_script(
@@ -28,11 +28,12 @@ with preview(Path(args.site_dir)) as base, sync_playwright() as pw:
             frame.wait_for_function("window.__RunePixel3D?.app.state")
             if not embedded:
                 expect(page.locator(".rotate-to-play")).to_be_visible()
-            expect(frame.locator(".toolbar-settings")).not_to_have_attribute("open", "")
             expect(frame.locator(".toolbar [data-pixel-fullscreen]")).to_be_visible()
-            frame.locator(".toolbar-settings summary").click()
-            expect(frame.locator(".toolbar-settings")).to_have_attribute("open", "")
-            frame.locator(".toolbar-settings summary").click()
+            if game != "dog-walker":
+                expect(frame.locator(".toolbar-settings")).not_to_have_attribute("open", "")
+                frame.locator(".toolbar-settings summary").click()
+                expect(frame.locator(".toolbar-settings")).to_have_attribute("open", "")
+                frame.locator(".toolbar-settings summary").click()
             if embedded:
                 page.locator(".rotate-to-play").scroll_into_view_if_needed()
             else:
@@ -41,12 +42,13 @@ with preview(Path(args.site_dir)) as base, sync_playwright() as pw:
             frame.wait_for_function('document.querySelector(".rune-pixel3d-expanded")')
             if embedded:
                 expect(element).to_have_class("example-preview iframe-fullscreen")
-            title = frame.locator(".mobile-title-menu" if game == "neon-circuit" else ".title-actions")
+            title = frame.locator({"neon-circuit": ".mobile-title-menu", "marble-run": ".title-actions", "dog-walker": ".launch:visible"}[game])
             title.get_by_role("button", name="Exit fullscreen").tap()
             frame.wait_for_function('!document.querySelector(".rune-pixel3d-expanded")')
-            expect(frame.locator(".toolbar-settings summary")).to_be_visible()
-            frame.locator(".toolbar-settings summary").click()
-            expect(frame.locator(".toolbar-settings")).to_have_attribute("open", "")
+            if game != "dog-walker":
+                expect(frame.locator(".toolbar-settings summary")).to_be_visible()
+                frame.locator(".toolbar-settings summary").click()
+                expect(frame.locator(".toolbar-settings")).to_have_attribute("open", "")
             page.wait_for_timeout(200)
             assert not frame.locator(".rune-pixel3d-expanded").count()
             page.set_viewport_size({"width": 390, "height": 844})
@@ -101,7 +103,7 @@ with preview(Path(args.site_dir)) as base, sync_playwright() as pw:
             cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
             expect(prompt).not_to_be_attached()
             frame.wait_for_function('document.querySelector(".rune-pixel3d-expanded")')
-            title = frame.locator(".mobile-title-menu" if game == "neon-circuit" else ".title-actions")
+            title = frame.locator({"neon-circuit": ".mobile-title-menu", "marble-run": ".title-actions", "dog-walker": ".launch:visible"}[game])
             title.get_by_role("button", name="Exit fullscreen").tap()
             frame.wait_for_function('!document.querySelector(".rune-pixel3d-expanded")')
             page.set_viewport_size({"width": 390, "height": 844})

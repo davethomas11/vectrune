@@ -19,6 +19,7 @@ view:
             p data-pixel-text=ui_resources "Your resources"
         div .game-surface:
             canvas data-rune-pixel-3d=true tabindex=0 aria-label="Rune Crypt. C chooses class at camp, Enter begins. WASD move, mouse or arrows look, Space sword, Q rune, Shift dodge, E interact, C cycle reward or exit route, R train at camp."
+            button .fullscreen-exit .fullscreen-exit-hud data-pixel-hidden=camp_locked data-pixel-fullscreen=true "Exit fullscreen"
             div .pause-menu data-pixel-paused=true hidden=true role=group aria-label="Pause menu":
                 h2 "PAUSED"
                 p data-pixel-text=ui.objective "Depth status"
@@ -28,6 +29,7 @@ view:
                 div .pause-actions:
                     button data-pixel-pause=true "Resume / P"
                     button data-pixel-restart=true "Return to title / T"
+                    button .fullscreen-exit data-pixel-fullscreen=true "Exit fullscreen"
                 p "Returning to title ends this run. Saved shards and training are kept."
         p data-pixel-status=true role=status aria-live=polite "Enter the crypt."
         p .summary data-pixel-text=ui_summary "Your adventurer"
@@ -98,6 +100,18 @@ rules:
         border = 2px solid #786b75
         position = relative
         margin-top = 12px
+    .fullscreen-exit:
+        display = none
+    .game-surface:fullscreen .fullscreen-exit, .game-surface.rune-pixel3d-expanded .fullscreen-exit:
+        display = inline-block
+    .fullscreen-exit-hud:
+        position = absolute
+        top = max(8px, env(safe-area-inset-top))
+        left = max(8px, env(safe-area-inset-left))
+        z-index = 9
+        min-height = 44px
+    .fullscreen-exit-hud[hidden]:
+        display = none !important
     .game-info:
         background = #172133
         padding = 4px 12px

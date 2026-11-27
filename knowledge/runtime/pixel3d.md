@@ -343,7 +343,7 @@ retains its analog touch stick and adds an in-game touch pause button; its
 level selector has scrollable course cards. These are game source changes,
 not new engine or CLI APIs.
 
-On the teaching site, rotating a visible Neon Circuit or Marble Run preview
+On the teaching site, rotating a visible Neon Circuit, Marble Run or Dog Walker preview
 or site-exported standalone game from portrait to landscape expands the game
 to the available browser area. On iPhone, a swipe prompt precedes expansion
 to give Safari an opportunity to collapse its toolbar; Play now skips the
@@ -355,6 +355,14 @@ This rotation behavior applies to the site exports, not all compiled games.
 All game exports on the teaching site disable accidental text selection and
 long-press callouts on game buttons; text inputs and the site's source viewer
 remain selectable. This is site-export styling, not a Rune runtime default.
+
+Dog Walker and Skybound 2 provide a touch pause control during play and an
+Exit fullscreen option in the pause menu. Dog Walker also offers an exit from
+its title and result screens; Skybound 2's atlas offers an exit so the
+destination controls below the game remain accessible. Rune Crypt provides a
+fullscreen exit outside gameplay and in its pause menu.
+Glowtide Aquarium's in-canvas menu contains its fullscreen toggle, keeping
+the tank's touch controls unobstructed.
 
 [Neon Circuit](../../examples/games/neon_circuit/neon_circuit.rune) starts as
 a side-scrolling action platformer. Each sector has its own entrance and

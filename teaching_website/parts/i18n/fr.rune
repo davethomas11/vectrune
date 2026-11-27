@@ -27,6 +27,7 @@ DogWalker {
     description = "Promenez votre chien dans le quartier à l’heure bleue. Marquez des points près des lampadaires et sur les pelouses, semez les voisins en colère et jouez à la balle au parc."
     play = "Jouer à Dog Walker"
     standalone = "Ouvrir Dog Walker dans un autre onglet"
+    rotate = "Tournez votre téléphone pour jouer en paysage."
 }
 NeonCircuit {
     title = "Neon Circuit"

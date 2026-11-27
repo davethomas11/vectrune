@@ -46,7 +46,8 @@ touch = {
         {"id":"jump","input":"jump","label":"FLY","offset":[12,16],"size":64},
         {"id":"run","input":"run","label":"RUN","offset":[88,16],"size":48},
         {"id":"orbit_left","input":"orbit_left","label":"CAM <","offset":[72,92],"size":48},
-        {"id":"orbit_right","input":"orbit_right","label":"CAM >","offset":[12,92],"size":48}
+        {"id":"orbit_right","input":"orbit_right","label":"CAM >","offset":[12,92],"size":48},
+        {"id":"pause","command":"host.pause","label":"II","aria_label":"Pause game","anchor":"top-right","offset":[12,12],"size":44}
     ],
     "joystick": {"size":84,"x":"move_x","y":"move_y"},
     "visible": "touch_ready"
