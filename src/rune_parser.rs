@@ -701,9 +701,9 @@ pub fn parse_rune_with_source(input: &str, source_file: Option<String>) -> Resul
                 }
 
                 // Handle multiline array literal [ ... ]
-                if value_raw.trim_start().starts_with('[') && !value_raw.trim_end().ends_with(']') {
+                if value_raw.trim_start().starts_with('[') && expression_depth(&value_raw) > 0 {
                     let mut assignment = value_raw;
-                    while !assignment.trim_end().ends_with(']') {
+                    while expression_depth(&assignment) > 0 {
                         if let Some(next_line) = lines.next() {
                             assignment.push_str("\n");
                             assignment.push_str(next_line.trim_end());

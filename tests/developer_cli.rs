@@ -437,7 +437,7 @@ fn formatting_wraps_nested_objects_at_configurable_width() {
     assert_eq!(fs::read_to_string(&entry).unwrap(), source);
     json(cli().arg("fmt").arg(&entry).args(["--line-width", "48", "--json"]), true);
     let formatted = fs::read_to_string(&entry).unwrap();
-    assert!(formatted.contains("touch = {\r\n    \"buttons\": [\r\n"), "{formatted}");
+    assert!(formatted.contains("touch = {\r\n    \"joystick\": {\r\n"), "{formatted}");
     assert!(formatted.lines().all(|line| line.chars().count() <= 48), "{formatted}");
     assert!(!formatted.replace("\r\n", "").contains('\n'));
     json(cli().arg("fmt").arg(&entry).args(["--line-width", "48", "--check", "--json"]), true);
@@ -445,7 +445,7 @@ fn formatting_wraps_nested_objects_at_configurable_width() {
     json(cli().arg("fmt").arg(&entry).args(["--line-width", "200", "--json"]), true);
     let wider = fs::read_to_string(&entry).unwrap();
     assert!(wider.lines().all(|line| line.chars().count() <= 200), "{wider}");
-    assert!(wider.contains("touch = {\"buttons\""), "{wider}");
+    assert!(wider.contains("touch = {\"joystick\""), "{wider}");
     assert_ne!(wider, formatted);
     json(cli().arg("fmt").arg(&entry).args(["--line-width", "200", "--check", "--json"]), true);
     cli().arg("fmt").arg(&entry).args(["--line-width", "0"]).assert().failure();

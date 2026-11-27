@@ -208,6 +208,9 @@ Current behavior:
 `--line-width <characters>` defaults to 100 and accepts integers of at least 20.
 Long top-level JSON object assignments are expanded into four-space
 indented fields, recursively wrapping nested objects and arrays to fit the target.
+Top-level arrays that contain objects or arrays (for example `@TV` `modes = [...]`)
+wrap one element per line too, including when written across several lines; arrays
+of scalars stay inline. Object keys keep their source order.
 Logic objects, arrays and calls containing collections also wrap, including
 dynamic values such as HUD meters and enemy definitions. Balanced logic
 expressions continue across lines; quoted brackets do not affect continuation.

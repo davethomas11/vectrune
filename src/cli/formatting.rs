@@ -51,7 +51,7 @@ pub fn format_source(source: &str, line_width: usize) -> String {
                     output.push_str(trimmed[..index].trim());
                     output.push_str(" = ");
                     let mut value = trimmed[index + 1..].trim().to_string();
-                    if value.starts_with('{') {
+                    if value.starts_with('{') || value.starts_with('[') {
                         while serde_json::from_str::<serde_json::Value>(&value)
                             .is_err_and(|error| error.is_eof())
                         {
@@ -66,18 +66,17 @@ pub fn format_source(source: &str, line_width: usize) -> String {
                     }
                     let prefix_width = trimmed[..index].trim().chars().count() + 3;
                     if value.contains('\n') || prefix_width + value.chars().count() > line_width {
-                        if let Ok(value @ serde_json::Value::Object(_)) =
-                            serde_json::from_str::<serde_json::Value>(&value)
-                        {
-                            output.push_str(&format_literal(
-                                &value,
-                                0,
-                                prefix_width,
-                                line_width,
-                                newline,
-                            ));
-                        } else {
-                            output.push_str(&value);
+                        match serde_json::from_str::<Literal>(&value) {
+                            Ok(literal) if literal.is_wrappable() => {
+                                output.push_str(&format_literal(
+                                    &literal,
+                                    0,
+                                    prefix_width,
+                                    line_width,
+                                    newline,
+                                ));
+                            }
+                            _ => output.push_str(&value),
                         }
                     } else {
                         output.push_str(&value);
@@ -278,7 +277,21 @@ fn normalize_logic_layout(doc: &mut crate::rune_ast::RuneDocument) {
             _ => {}
         }
     }
+    // Key-value arrays are stored as source text; compare their JSON, not their whitespace.
+    fn canonical_array(value: &mut crate::rune_ast::Value) {
+        if let crate::rune_ast::Value::String(text) = value {
+            if text.trim_start().starts_with('[') {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(text) {
+                    *text = json.to_string();
+                }
+            }
+        }
+    }
     for section in &mut doc.sections {
+        section.kv.values_mut().for_each(canonical_array);
+        for record in &mut section.records {
+            record.kv.values_mut().for_each(canonical_array);
+        }
         if section.path.first().is_some_and(|part| part == "Logic") {
             for items in section.series.values_mut() {
                 items.iter_mut().for_each(normalize);
@@ -287,19 +300,109 @@ fn normalize_logic_layout(doc: &mut crate::rune_ast::RuneDocument) {
     }
 }
 
+/// JSON that remembers key order, so formatting never reorders a document's fields.
+enum Literal {
+    Object(Vec<(String, Literal)>),
+    Array(Vec<Literal>),
+    Scalar(serde_json::Value),
+}
+
+impl Literal {
+    /// Objects always wrap; arrays wrap only when they hold objects or arrays,
+    /// so long lists of plain values stay on one line.
+    fn is_wrappable(&self) -> bool {
+        match self {
+            Literal::Object(_) => true,
+            Literal::Array(items) => items
+                .iter()
+                .any(|item| matches!(item, Literal::Object(_) | Literal::Array(_))),
+            Literal::Scalar(_) => false,
+        }
+    }
+
+    fn compact(&self) -> String {
+        match self {
+            Literal::Object(fields) => format!(
+                "{{{}}}",
+                fields
+                    .iter()
+                    .map(|(key, value)| format!(
+                        "{}:{}",
+                        serde_json::to_string(key).unwrap(),
+                        value.compact()
+                    ))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+            Literal::Array(items) => format!(
+                "[{}]",
+                items.iter().map(Literal::compact).collect::<Vec<_>>().join(",")
+            ),
+            Literal::Scalar(value) => serde_json::to_string(value).expect("JSON values are serializable"),
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Literal {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Literal;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a JSON value")
+            }
+            fn visit_bool<E>(self, value: bool) -> Result<Literal, E> {
+                Ok(Literal::Scalar(value.into()))
+            }
+            fn visit_i64<E>(self, value: i64) -> Result<Literal, E> {
+                Ok(Literal::Scalar(value.into()))
+            }
+            fn visit_u64<E>(self, value: u64) -> Result<Literal, E> {
+                Ok(Literal::Scalar(value.into()))
+            }
+            fn visit_f64<E: serde::de::Error>(self, value: f64) -> Result<Literal, E> {
+                serde_json::Number::from_f64(value)
+                    .map(|number| Literal::Scalar(number.into()))
+                    .ok_or_else(|| E::custom("number is not finite"))
+            }
+            fn visit_str<E>(self, value: &str) -> Result<Literal, E> {
+                Ok(Literal::Scalar(value.into()))
+            }
+            fn visit_unit<E>(self) -> Result<Literal, E> {
+                Ok(Literal::Scalar(serde_json::Value::Null))
+            }
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(self, mut seq: A) -> Result<Literal, A::Error> {
+                let mut items = Vec::new();
+                while let Some(item) = seq.next_element()? {
+                    items.push(item);
+                }
+                Ok(Literal::Array(items))
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Literal, A::Error> {
+                let mut fields = Vec::new();
+                while let Some(entry) = map.next_entry()? {
+                    fields.push(entry);
+                }
+                Ok(Literal::Object(fields))
+            }
+        }
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
 fn format_literal(
-    value: &serde_json::Value,
+    value: &Literal,
     indent: usize,
     prefix_width: usize,
     line_width: usize,
     newline: &str,
 ) -> String {
-    let compact = serde_json::to_string(value).expect("JSON values are serializable");
+    let compact = value.compact();
     if prefix_width + compact.chars().count() + 1 <= line_width {
         return compact;
     }
     let (open, close, entries): (_, _, Vec<_>) = match value {
-        serde_json::Value::Object(fields) => (
+        Literal::Object(fields) => (
             '{',
             '}',
             fields
@@ -307,12 +410,12 @@ fn format_literal(
                 .map(|(key, value)| (format!("{}: ", serde_json::to_string(key).unwrap()), value))
                 .collect(),
         ),
-        serde_json::Value::Array(items) => (
+        Literal::Array(items) => (
             '[',
             ']',
             items.iter().map(|value| (String::new(), value)).collect(),
         ),
-        _ => return compact,
+        Literal::Scalar(_) => return compact,
     };
     if entries.is_empty() {
         return compact;
@@ -406,6 +509,28 @@ mod tests {
         ));
         assert_eq!(formatted.split("@Raw").nth(1), source.split("@Raw").nth(1));
         assert_eq!(format_source(&formatted, 20), formatted);
+    }
+
+    #[test]
+    fn arrays_of_objects_wrap_in_order_and_scalar_lists_stay_inline() {
+        let source = concat!(
+            "@TV/game\n",
+            "modes = [{\"id\":\"tank\",\"label\":\"TANK\",\"bounds\":{\"origin\":[1,2]}},{\"id\":\"friends\"}]\n",
+            "names = [\"alpha\",\"beta\",\"gamma\",\"delta\",\"epsilon\",\"zeta\",\"eta\",\"theta\"]\n",
+        );
+        let formatted = format_source(source, 40);
+        assert!(formatted.starts_with(
+            "@TV/game\nmodes = [\n    {\n        \"id\": \"tank\",\n        \"label\": \"TANK\","
+        ));
+        assert!(formatted.contains("    },\n    {\"id\":\"friends\"}\n]\n"));
+        assert!(formatted.contains("names = [\"alpha\",\"beta\""));
+        assert_eq!(format_source(&formatted, 40), formatted);
+        let parse = |text: &str| crate::rune_parser::parse_rune(text).unwrap();
+        let section = |text: &str| parse(text).sections[0].kv["modes"].to_json();
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(section(source).as_str().unwrap()).unwrap(),
+            serde_json::from_str::<serde_json::Value>(section(&formatted).as_str().unwrap()).unwrap()
+        );
     }
 }
 
