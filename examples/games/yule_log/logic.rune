@@ -1,0 +1,968 @@
+@Logic/yule
+state:
+    status = "playing"
+    ticks = 0
+    settings = {"scene": 0, "track": 0, "auto_scene": true}
+    scene_ticks = 0
+    music_started = false
+    world = null
+    camera = {"x": 0, "y": 0, "z": 2.4, "angle": 0, "pitch": 0}
+    scenery = []
+    molding_glow = []
+    train = []
+    flames = []
+    sparks = []
+    snow = []
+    players = []
+    limbs = []
+    twinkles = []
+    reveal = []
+    reveal_ticks = 0
+    departure_ticks = 0
+    winter_details = []
+    snowman_head = []
+    pets = []
+    santa = []
+    story = []
+    workshop = []
+    workshop_arms = []
+    workshop_gifts = []
+    workshop_flames = []
+    workshop_visitors = []
+    santa_extras = []
+    hay_flecks = []
+    workshop_ticks = 0
+    creek = []
+    creek_arms = []
+    creek_balls = []
+    creek_splashes = []
+    creek_snow = []
+    creek_owl = []
+    creek_ice = []
+    creek_rider = []
+    creek_ticks = 0
+    beach = []
+    beach_dancers = []
+    beach_ticks = 0
+    lights = []
+    scene_label = ""
+    auto_scene_label = ""
+    track_label = ""
+    track_names = [
+        "Jingle Bells",
+        "Winter Glow",
+        "Silent Night",
+        "Deck the Halls",
+        "O Christmas Tree"
+    ]
+    track_ids = ["yule_bells", "yule_winter", "yule_silent_night", "yule_deck", "yule_tree"]
+    ui = {
+        "style": "floating",
+        "reticle": false,
+        "meters": [],
+        "objective": "",
+        "detail": "",
+        "prompt": "",
+        "notice": "",
+        "panel": null,
+        "buttons": [
+            {
+                "icon": "flower",
+                "label": "Change scene",
+                "anchor": "top-right",
+                "action": "switch_scene",
+                "size": 30
+            },
+            {
+                "icon": "menu",
+                "label": "Next music",
+                "anchor": "top-right",
+                "offset": 38,
+                "action": "next_track",
+                "size": 30
+            },
+            {
+                "icon": "sound",
+                "label": "Mute sound",
+                "anchor": "top-right",
+                "offset": 76,
+                "action": "host.mute",
+                "size": 30
+            },
+            {
+                "icon": "critter",
+                "label": "Auto scenes",
+                "anchor": "top-right",
+                "offset": 114,
+                "action": "toggle_auto_scene",
+                "size": 30
+            },
+            {
+                "icon": "feed",
+                "label": "Santa Holiday",
+                "anchor": "top-right",
+                "offset": 152,
+                "action": "santa_holiday",
+                "size": 30
+            }
+        ]
+    }
+
+action initialize:
+    world = voxel_world(40, 40, 12, ["yule/ground"], {"renderDistance": 40})
+    settings.scene = clamp(floor(settings.scene),0,4)
+    settings.track = clamp(floor(settings.track),0,4)
+    if settings.auto_scene==null:
+        settings.auto_scene = true
+    scenery = [
+        {"x": 10, "y": 0, "z": 0, "model": "yule/room"},
+        {"x": 9.4, "y": -5, "z": 6.5, "model": "yule/wall-molding"},
+        {"x": 9.4, "y": 5, "z": 6.5, "model": "yule/wall-molding"},
+        {"x": 9.3, "y": -5, "z": 3, "model": "yule/window"},
+        {"x": 9.3, "y": 5, "z": 3, "model": "yule/window"},
+        {"x": 9.2, "y": 0, "z": 4.9, "model": "yule/wreath"},
+        {"x": 6, "y": 0, "z": 0, "model": "yule/floor"},
+        {"x": 7, "y": 0, "z": 0.01, "model": "yule/firelight"},
+        {"x": 3.2, "y": 3.3, "z": 0, "angle": 8, "model": "yule/armchair"},
+        {"x": 5.2, "y": 2.8, "z": 0, "model": "yule/side-table"},
+        {"x": 5.2, "y": 2.8, "z": 1.3, "model": "yule/mug"},
+        {"x": 8, "y": 2.9, "z": 0, "angle": 18, "model": "yule/woodpile"},
+        {"x": 7.05, "y": -5, "z": 0, "model": "yule/tree"},
+        {"x": 7.05, "y": -5, "z": 3.2, "model": "yule/tree-crown"},
+        {"x": 7.85, "y": -5, "z": 0, "scale": 0.6, "model": "yule/present"},
+        {"x": 8.5, "y": 4.1, "z": 0, "angle": 12, "model": "yule/present"},
+        {"x": 8, "y": 0, "z": 0, "scale": 0.8, "model": "yule/hearth"},
+        {"x": 7.9, "y": 0, "z": 0.9, "model": "yule/logs"},
+        {"x": 7.4, "y": 0, "z": 2.45, "model": "yule/stockings"},
+        {"x": 8, "y": 30, "z": 0, "model": "yule/snowman"},
+        {"x": 7.65, "y": 30, "z": 0.5, "model": "yule/snowman-details"},
+        {"x": 8, "y": 30, "z": 0, "model": "yule/snowground"},
+        {"x": 16, "y": 30, "z": 0, "model": "yule/snowground"},
+        {"x": 12, "y": 25, "z": 0, "model": "yule/pine"},
+        {"x": 13, "y": 35.8, "z": 0, "model": "yule/pine"},
+        {"x": 15, "y": 30, "z": 0, "model": "yule/winter-sky"},
+        {"x": 13, "y": 33.2, "z": 0, "model": "yule/cabin"},
+        {"x": 12.5, "y": 26.4, "z": 0, "model": "yule/hill"},
+        {"x": 9, "y": 31.5, "z": 0.02, "model": "yule/footprints"}
+    ]
+    molding_glow = [
+        {"x": 9.13, "y": -5, "z": 7, "model": "yule/molding-glow1"},
+        {"x": 9.13, "y": 5, "z": 7, "model": "yule/molding-glow1"}
+    ]
+    snowman_head = [
+        {"x": 8, "y": 30.08, "z": 2.2, "model": "yule/snowman-head"},
+        {"x": 8, "y": 30.08, "z": 2.52, "model": "yule/hat"},
+        {"x": 7.66, "y": 30.18, "z": 2.2, "model": "yule/face"}
+    ]
+    pets = [
+        {"x": 2.65, "y": 3.3, "z": 1.12, "model": "yule/sleeping-dachshund"},
+        {"x": 2.57, "y": 3.05, "z": 1.18, "model": "yule/dachshund-head"},
+        {"x": 4.4, "y": 1, "z": 0.1, "model": "yule/cat"},
+        {"x": 4.4, "y": 1.55, "z": 0.23, "model": "yule/yarn"},
+        {"x": 2.65, "y": 3.3, "z": 1.3, "model": "yule/dachshund-tail", "visible": false}
+    ]
+    story = [
+        {"x": 7.4, "y": 1, "z": 2.45, "model": "yule/stocking"},
+        {"x": 7.1, "y": 1.8, "z": 2.7, "model": "yule/fairy", "visible": false},
+        {"x": 6.9, "y": 1.3, "z": 2, "model": "yule/fairy-sparkle", "visible": false}
+    ]
+    workshop = [
+        {"x": 10, "y": -30, "z": 0, "model": "yule/workshop-wall"},
+        {"x": 6, "y": -30, "z": 0, "model": "yule/floor"},
+        {"x": 9.3, "y": -36, "z": 3, "model": "yule/window"},
+        {"x": 9.3, "y": -24, "z": 3, "model": "yule/window"},
+        {"x": 9.2, "y": -30, "z": 4.9, "model": "yule/wreath"},
+        {"x": 9, "y": -30, "z": 1.1, "model": "yule/workshop-shelf"},
+        {"x": 6.4, "y": -30, "z": 0, "model": "yule/workbench"},
+        {"x": 7.2, "y": -31.7, "z": 0.5, "model": "yule/workshop-elf"},
+        {"x": 7.2, "y": -28.3, "z": 0.5, "model": "yule/workshop-elf"},
+        {"x": 5.9, "y": -34.4, "z": 0, "model": "yule/present", "scale": 1.1},
+        {"x": 6.5, "y": -25.6, "z": 0, "model": "yule/present", "scale": 0.9},
+        {"x": 6.4, "y": -30, "z": 1.3, "model": "yule/ribbon-roll"},
+        {"x": 10, "y": -30, "z": 7.5, "model": "yule/workshop-roof"},
+        {"x": 6.05, "y": -32.4, "z": 1.3, "model": "yule/workshop-candle"},
+        {"x": 6.05, "y": -27.6, "z": 1.3, "model": "yule/workshop-candle"},
+        {"x": 4.7, "y": -27.8, "z": 0, "model": "yule/hay"}
+    ]
+    workshop_arms = [
+        {"x": 7, "y": -32.1, "z": 1.55, "model": "yule/workshop-arm"},
+        {"x": 7, "y": -31.3, "z": 1.55, "model": "yule/workshop-arm"},
+        {"x": 7, "y": -28.7, "z": 1.55, "model": "yule/workshop-arm"},
+        {"x": 7, "y": -27.9, "z": 1.55, "model": "yule/workshop-arm"}
+    ]
+    workshop_gifts = [
+        {"x": 6.1, "y": -31.7, "z": 1.3, "model": "yule/wrapping-box"},
+        {"x": 6.1, "y": -28.3, "z": 1.3, "model": "yule/wrapping-box"}
+    ]
+    workshop_flames = [
+        {"x": 6.05, "y": -32.4, "z": 1.8, "model": "yule/candle-flame"},
+        {"x": 6.05, "y": -27.6, "z": 1.8, "model": "yule/candle-flame"}
+    ]
+    workshop_visitors = [
+        {"x": 4.6, "y": -40, "z": 0, "model": "yule/workshop-santa", "visible": false},
+        {"x": 4.6, "y": -40, "z": 0, "model": "yule/workshop-santa-leg", "visible": false},
+        {"x": 4.6, "y": -40, "z": 0, "model": "yule/workshop-santa-leg", "visible": false},
+        {"x": 4.7, "y": -20, "z": 0, "model": "yule/rudolph-body", "visible": false},
+        {"x": 4.7, "y": -20, "z": 1.5, "model": "yule/rudolph-head", "visible": false},
+        {"x": 4.7, "y": -20, "z": 0, "model": "yule/rudolph-leg", "visible": false},
+        {"x": 4.7, "y": -20, "z": 0, "model": "yule/rudolph-leg", "visible": false},
+        {"x": 4.7, "y": -20, "z": 0, "model": "yule/rudolph-leg", "visible": false},
+        {"x": 4.7, "y": -20, "z": 0, "model": "yule/rudolph-leg", "visible": false}
+    ]
+    santa_extras = [
+        {"x": 4.1, "y": -40, "z": 1.15, "model": "yule/santa-belly", "visible": false},
+        {"x": 4.2, "y": -31.7, "z": 3.75, "model": "yule/laugh-bubble", "visible": false},
+        {"x": 4.2, "y": -32.5, "z": 3.75, "model": "yule/laugh-ho", "visible": false},
+        {"x": 4.2, "y": -31.7, "z": 3.75, "model": "yule/laugh-ho", "visible": false},
+        {"x": 4.2, "y": -30.9, "z": 3.75, "model": "yule/laugh-ho", "visible": false}
+    ]
+    hay_flecks = [
+        {"x": 4.45, "y": -27, "z": 0.5, "model": "yule/hay-fleck", "visible": false},
+        {"x": 4.45, "y": -27, "z": 0.5, "model": "yule/hay-fleck", "visible": false},
+        {"x": 4.45, "y": -27, "z": 0.5, "model": "yule/hay-fleck", "visible": false},
+        {"x": 4.45, "y": -27, "z": 0.5, "model": "yule/hay-fleck", "visible": false}
+    ]
+    creek = [
+        {"x": 8, "y": 65, "z": 0, "model": "yule/creek-banks"},
+        {"x": 16, "y": 65, "z": 0, "model": "yule/creek-banks"},
+        {"x": 16, "y": 65, "z": 0, "model": "yule/winter-sky"},
+        {"x": 13.5, "y": 62.4, "z": 6, "scale": 1.8, "model": "yule/moon"},
+        {"x": 10.5, "y": 65, "z": 0, "model": "yule/creek-bridge"},
+        {"x": 12.5, "y": 59.4, "z": 0, "scale": 1.7, "model": "yule/pine"},
+        {"x": 13, "y": 61.2, "z": 0, "scale": 1.5, "model": "yule/pine"},
+        {"x": 13.5, "y": 68.2, "z": 0, "scale": 1.5, "model": "yule/pine"},
+        {"x": 13, "y": 71, "z": 0, "scale": 1.7, "model": "yule/pine"},
+        {"x": 11.8, "y": 69.5, "z": 0, "model": "yule/owl-branch"},
+        {"x": 7.3, "y": 61.8, "z": 0, "model": "yule/snowman"},
+        {"x": 7.3, "y": 61.8, "z": 2.2, "model": "yule/snowman-head"},
+        {"x": 7.3, "y": 61.8, "z": 2.52, "model": "yule/hat"},
+        {"x": 6.96, "y": 61.8, "z": 2.2, "model": "yule/face"},
+        {"x": 7.3, "y": 61.8, "z": 1.77, "angle": 300, "model": "yule/creek-scarf-red"},
+        {"x": 7.3, "y": 68.2, "z": 0, "model": "yule/snowman"},
+        {"x": 7.3, "y": 68.2, "z": 2.2, "model": "yule/snowman-head"},
+        {"x": 7.3, "y": 68.2, "z": 2.52, "model": "yule/creek-knit-hat"},
+        {"x": 6.96, "y": 68.2, "z": 2.2, "model": "yule/face"},
+        {"x": 7.3, "y": 68.2, "z": 1.77, "angle": 60, "model": "yule/creek-scarf-blue"}
+    ]
+    creek_arms = [
+        {"x": 7, "y": 62.2, "z": 1.55, "model": "yule/snow-throw-arm"},
+        {"x": 7, "y": 67.8, "z": 1.55, "angle": 180, "model": "yule/snow-throw-arm"}
+    ]
+    creek_balls = [
+        {"x": 7, "y": 62.6, "z": 1.8, "model": "yule/snowball", "visible": false},
+        {"x": 7, "y": 67.4, "z": 1.8, "model": "yule/snowball", "visible": false}
+    ]
+    creek_owl = [
+        {"x": 11.8, "y": 68.4, "z": 3.2, "model": "yule/owl", "visible": false},
+        {"x": 11.8, "y": 68.4, "z": 3.8, "model": "yule/owl-wing", "visible": false}
+    ]
+    creek_ice = [
+        {"x": 15, "y": 65, "z": 0.02, "model": "yule/ice-floe", "visible": false},
+        {"x": 15, "y": 65, "z": 0.02, "model": "yule/ice-floe", "visible": false},
+        {"x": 15, "y": 65, "z": 0.02, "model": "yule/ice-floe", "visible": false}
+    ]
+    creek_rider = [
+        {"x": 15, "y": 65, "z": 0.42, "model": "yule/creek-elf", "scale": 0.68, "visible": false}
+    ]
+    beach = [
+        {"x": 16, "y": -65, "z": 0, "model": "yule/beach-backdrop"},
+        {"x": 7, "y": -65, "z": 0, "model": "yule/beach-sand"},
+        {"x": 15, "y": -69, "z": 7.5, "model": "yule/beach-sun"},
+        {"x": 10, "y": -70.3, "z": 0, "model": "yule/palm"},
+        {"x": 11, "y": -59.9, "z": 0, "angle": 180, "model": "yule/palm"},
+        {"x": 9, "y": -67, "z": 0, "model": "yule/beach-umbrella"}
+    ]
+    beach_dancers = [
+        {"x": 7, "y": -65, "z": 0, "model": "yule/beach-santa"},
+        {"x": 7, "y": -65.3, "z": 0, "model": "yule/beach-santa-leg"},
+        {"x": 7, "y": -64.7, "z": 0, "model": "yule/beach-santa-leg"},
+        {"x": 7, "y": -65.6, "z": 1.65, "model": "yule/beach-santa-arm"},
+        {"x": 7, "y": -64.4, "z": 1.65, "model": "yule/beach-santa-arm"},
+        {"x": 7, "y": -63.7, "z": 1.8, "model": "yule/banana"},
+        {"x": 7.8, "y": -68.1, "z": 0, "model": "yule/beach-monkey"},
+        {"x": 8, "y": -61.9, "z": 0, "model": "yule/beach-monkey"},
+        {"x": 7.5, "y": -61.2, "z": 0, "model": "yule/beach-ball"}
+    ]
+    for i in range(0,8):
+        creek_splashes.push({"x": 7, "y": 65, "z": 2, "model": "yule/snowflake", "scale": 3, "visible": false})
+    for i in range(0,45):
+        creek_snow.push(
+            {
+                "x": 3 + (i % 6) * 1.5,
+                "y": 59 + (i * 37 % 120) / 10,
+                "z": (i * 31 % 65) / 10,
+                "model": "yule/snowflake",
+                "scale": i < 15 ? 1.5: 0.8,
+                "visible": false
+            }
+        )
+    for i in range(0,8):
+        story.push(
+            {
+                "x": 7.1,
+                "y": 1.8,
+                "z": 3,
+                "model": "yule/fairy-sparkle",
+                "scale": 0.25,
+                "visible": false
+            }
+        )
+    santa = [
+        {"x": 14.5, "y": 23, "z": 5.2, "model": "yule/santa", "visible": false},
+        {"x": 10.1, "y": -8, "z": 4.4, "scale": 0.4, "model": "yule/santa", "visible": false}
+    ]
+    winter_details = [
+        {"x": 7.15, "y": 30.1, "z": 1.2, "model": "yule/scarf-tail"},
+        {"x": 12, "y": 25.8, "z": 1.6, "scale": 0.65, "model": "yule/sledder"},
+        {"x": 12, "y": 26.8, "z": 1.4, "scale": 0.65, "model": "yule/sledder"},
+        {"x": 13.35, "y": 34.1, "z": 3.3, "model": "yule/smoke"}
+    ]
+    twinkles = [
+        {"x": 6.1, "y": -5.45, "z": 1.15, "model": "yule/twinkle"},
+        {"x": 6.17, "y": -4.75, "z": 1.7, "model": "yule/twinkle"},
+        {"x": 6.33, "y": -5.15, "z": 2.28, "model": "yule/twinkle"}
+    ]
+    reveal = [{"x": 13, "y": 33.6, "z": 5, "model": "yule/moon", "scale": 0.01, "visible": false}]
+    train = [
+        {"x": 9.05, "y": -5, "z": 0, "angle": 90, "scale": 0.7, "model": "yule/engine"},
+        {"x": 8.95, "y": -5.62, "z": 0, "angle": 72, "scale": 0.7, "model": "yule/carriage"},
+        {"x": 8.67, "y": -6.18, "z": 0, "angle": 54, "scale": 0.7, "model": "yule/carriage"}
+    ]
+    flames = [
+        {"x": 7.35, "y": -0.92, "z": 0.92, "model": "yule/flame"},
+        {"x": 7.3, "y": -0.52, "z": 0.88, "model": "yule/flame"},
+        {"x": 7.35, "y": -0.08, "z": 0.92, "model": "yule/flame"},
+        {"x": 7.3, "y": 0.36, "z": 0.88, "model": "yule/flame"},
+        {"x": 7.35, "y": 0.8, "z": 0.92, "model": "yule/flame"}
+    ]
+    sparks = []
+    for i in range(0,15):
+        sparks.push(
+            {
+                "x": 7.05,
+                "y": -1.4 + (i * 19 % 28) / 10,
+                "z": 1.2 + (i * 11 % 18) / 10,
+                "model": "yule/spark"
+            }
+        )
+    players = [
+        {"x": 10.2, "y": 27.1, "z": 0, "angle": 90, "model": "yule/child"},
+        {"x": 9.8, "y": 26.1, "z": 0, "angle": 90, "model": "yule/outdoor-dog"},
+        {"x": 10, "y": 26, "z": 0.16, "model": "yule/ball"}
+    ]
+    limbs = []
+    for i in range(0,2):
+        limbs.push({"x": 10, "y": 27, "z": 0, "model": "yule/leg"})
+    for i in range(0,2):
+        limbs.push({"x": 10, "y": 27, "z": 0, "model": "yule/dog-leg"})
+    limbs.push({"x": 10, "y": 27, "z": 0.7, "model": "yule/dog-tail"})
+    snow = []
+    for i in range(0,120):
+        snow.push(
+            {
+                "x": i < 12 ? 2.5 + (i % 3) * 0.25: (i < 52 ? 5 + (i % 5) * 0.6: 9.5 + (i % 6) * 0.5),
+                "y": 25 + (i * 37 % 100) / 10,
+                "z": (i * 31 % 65) / 10,
+                "scale": i < 12 ? 2: (i < 52 ? 1.3: 0.7),
+                "model": "yule/snowflake"
+            }
+        )
+    lights = [
+        {"x": 7.1, "y": 0, "z": 1.1, "color": "#ff7020", "radius": 5.2, "intensity": 0.9},
+        {"x": 6.15, "y": -5.1, "z": 1.25, "color": "#ffb94b", "radius": 1.3, "intensity": 0.28},
+        {"x": 6.35, "y": -4.85, "z": 2.25, "color": "#ffd98a", "radius": 1.15, "intensity": 0.22},
+        {"x": 12.5, "y": 33.2, "z": 0.8, "color": "#ff9a37", "radius": 2.6, "intensity": 0.42},
+        {"x": 6, "y": -30, "z": 3.8, "color": "#ffbd72", "radius": 5.5, "intensity": 0.42},
+        {"x": 6.05, "y": -32.4, "z": 1.95, "color": "#ffad50", "radius": 2.2, "intensity": 0.25},
+        {"x": 6.05, "y": -27.6, "z": 1.95, "color": "#ffad50", "radius": 2.2, "intensity": 0.25},
+        {"x": 4.7, "y": -20, "z": 1.7, "color": "#ff3038", "radius": 1.6, "intensity": 0}
+    ]
+    call update_settings
+    call play_track
+
+action start:
+    status = "playing"
+
+action update_settings:
+    camera.x = settings.scene==1 ? 0 : (settings.scene==3 || settings.scene==4 ? -2 : -5.8)
+    camera.y = settings.scene == 0
+        ? 0
+        : (settings.scene == 1 ? 30: (settings.scene == 2 ? -30: (settings.scene == 3 ? 65: -65)))
+    for i in range(0,snow.length):
+        snow[i].visible = settings.scene==1
+    for i in range(0,workshop.length):
+        workshop[i].visible = settings.scene==2
+    for i in range(0,workshop_arms.length):
+        workshop_arms[i].visible = settings.scene==2
+    for i in range(0,workshop_gifts.length):
+        workshop_gifts[i].visible = settings.scene==2
+    for i in range(0,workshop_flames.length):
+        workshop_flames[i].visible = settings.scene==2
+    for i in range(0,creek.length):
+        creek[i].visible = settings.scene==3
+    for i in range(0,creek_arms.length):
+        creek_arms[i].visible = settings.scene==3
+    for i in range(0,creek_snow.length):
+        creek_snow[i].visible = settings.scene==3
+    for i in range(0,beach.length):
+        beach[i].visible = settings.scene==4
+    for i in range(0,beach_dancers.length):
+        beach_dancers[i].visible = settings.scene==4
+    if settings.scene!=3:
+        for i in range(0,creek_balls.length):
+            creek_balls[i].visible = false
+        for i in range(0,creek_owl.length):
+            creek_owl[i].visible = false
+        for i in range(0,creek_splashes.length):
+            creek_splashes[i].visible = false
+        for i in range(0,creek_ice.length):
+            creek_ice[i].visible = false
+        creek_rider[0].visible = false
+    if settings.scene!=2:
+        lights[7].intensity = 0
+        for i in range(0,workshop_visitors.length):
+            workshop_visitors[i].visible = false
+        for i in range(0,santa_extras.length):
+            santa_extras[i].visible = false
+        for i in range(0,hay_flecks.length):
+            hay_flecks[i].visible = false
+    if settings.scene==3 || settings.scene==4:
+        for i in range(0,7):
+            lights[i].intensity = 0
+        lights[7].x = 7
+        lights[7].y = settings.scene==3 ? 65 : -65
+        lights[7].z = 6
+        lights[7].color = settings.scene==3 ? "#94c7ff" : "#ffe5aa"
+        lights[7].radius = 10
+        lights[7].intensity = settings.scene==3 ? 0.65 : 0.45
+    if settings.scene!=3 && settings.scene!=4:
+        lights[3].intensity = 0.42
+        lights[4].intensity = 0.42
+        lights[5].intensity = 0.25
+        lights[6].intensity = 0.25
+    if settings.scene==2:
+        lights[7].color = "#ff3038"
+        lights[7].radius = 1.6
+    scene_label = settings.scene == 0
+        ? "Fireplace"
+        : (settings.scene == 1 ? "Snowman": (settings.scene == 2 ? "Workshop": (settings.scene == 3 ? "Snowball Fight": "Santa Holiday")))
+    auto_scene_label = settings.auto_scene ? "Auto scenes: on" : "Auto scenes: off"
+    ui.buttons[3].label = auto_scene_label
+    ui.buttons[3].selected = settings.auto_scene
+    track_label = settings.scene==4 ? "Santa's Beach Party" : track_names[settings.track]
+    ui.objective = scene_label
+    ui.detail = track_label
+
+action play_track:
+    music_started = false
+    music.stop
+    local track = settings.scene==4 ? "yule_beach" : track_ids[settings.track]
+    music.play track
+
+action switch_scene:
+    scene_ticks = 0
+    local previous_scene = settings.scene
+    if previous_scene==1:
+        if departure_ticks==0:
+            departure_ticks = 12
+    if previous_scene==0:
+        settings.scene = 1
+        reveal_ticks = 150
+        call update_settings
+    if previous_scene==2 || previous_scene==3 || previous_scene==4:
+        settings.scene = previous_scene==2 ? 3 : 0
+        reveal_ticks = 150
+        call update_settings
+        if previous_scene==4:
+            call play_track
+        if previous_scene==3 || previous_scene==4:
+            call update_classic
+
+action santa_holiday:
+    if settings.scene!=4:
+        departure_ticks = 0
+        scene_ticks = 0
+        settings.scene = 4
+        reveal_ticks = 150
+        call update_settings
+        call play_track
+
+action toggle_auto_scene:
+    settings.auto_scene = !settings.auto_scene
+    scene_ticks = 0
+    call update_settings
+
+action next_track:
+    settings.track = (settings.track+1)%5
+    call update_settings
+    call play_track
+
+action tick(input, audio):
+    ticks += 1
+    if settings.auto_scene && settings.scene!=4 && departure_ticks==0:
+        scene_ticks += 1
+        if scene_ticks>=9000:
+            call switch_scene
+    local molding_level = clamp(floor((sin(ticks*0.18)+1)*1.5),0,2)
+    molding_glow[0].model = "yule/molding-glow"+molding_level
+    molding_glow[1].model = molding_glow[0].model
+    if audio.track==track_ids[settings.track] && audio.playing:
+        music_started = true
+    if settings.scene!=4 && music_started && !audio.playing:
+        call next_track
+    if departure_ticks>0:
+        departure_ticks -= 1
+        snowman_head[0].y = departure_ticks<9 ? 30.03 : 30.08
+        snowman_head[1].y = snowman_head[0].y
+        snowman_head[2].y = departure_ticks<9 ? 30.08 : 30.18
+        if departure_ticks==0:
+            settings.scene = 2
+            reveal_ticks = 150
+            snowman_head[0].y = 30.08
+            snowman_head[1].y = 30.08
+            snowman_head[2].y = 30.18
+            call update_settings
+    reveal_ticks = max(0,reveal_ticks-1)
+    if settings.scene==4:
+        beach_ticks += 1
+        local sway = sin(beach_ticks*5)
+        local bounce = max(0,sin(beach_ticks*10))*0.16
+        beach_dancers[0].y = -65+sway*0.28
+        beach_dancers[0].z = bounce
+        beach_dancers[0].angle = sway*12
+        for i in range(0,2):
+            local step = sin(beach_ticks*10+i*180)
+            beach_dancers[i+1].y = beach_dancers[0].y+(i==0 ? -0.3 : 0.3)+step*0.16
+            beach_dancers[i+1].z = max(0,step)*0.14
+            beach_dancers[i+3].y = beach_dancers[0].y+(i==0 ? -0.6 : 0.6)
+            beach_dancers[i+3].z = 1.65+bounce+step*0.24
+            beach_dancers[i+3].angle = i==0 ? 180+sway*25 : -sway*25
+        beach_dancers[5].y = beach_dancers[4].y+0.65
+        beach_dancers[5].z = beach_dancers[4].z+0.12
+        beach_dancers[5].angle = sway*20
+        for i in range(0,2):
+            local hop = max(0,sin(beach_ticks*8+i*120))
+            beach_dancers[i+6].z = hop*0.25
+            beach_dancers[i+6].angle = sin(beach_ticks*4+i*120)*18
+        beach_dancers[8].y = -61.2+sin(beach_ticks*3)*0.45
+        beach_dancers[8].z = max(0,sin(beach_ticks*6))*0.3
+        beach_dancers[8].angle = beach_ticks*4
+    if settings.scene==3:
+        creek_ticks += 1
+        for i in range(0,creek_ice.length):
+            local float_time = (creek_ticks+i*300)%900
+            local float_scale = max(0.01,min(1,min(float_time/60,(900-float_time)/60)))
+            creek_ice[i].visible = true
+            creek_ice[i].x = 15-float_time*14.5/900
+            creek_ice[i].y = 65+sin(float_time*0.7+i*90)*0.1
+            creek_ice[i].z = 0.02+sin(float_time*1.5+i*80)*0.02
+            creek_ice[i].scale = float_scale
+            creek_ice[i].angle = sin(float_time*0.8+i*70)*4
+        local rider_cycle = floor((creek_ticks+300)/900)%4
+        creek_rider[0].visible = rider_cycle==1
+        creek_rider[0].x = creek_ice[1].x
+        creek_rider[0].y = creek_ice[1].y
+        creek_rider[0].z = creek_ice[1].z+creek_ice[1].scale*0.4
+        creek_rider[0].scale = creek_ice[1].scale*0.68
+        creek_rider[0].angle = sin(creek_ticks*1.3)*8
+        for i in range(0,2):
+            local throw = (creek_ticks+i*120)%240
+            local direction = i==0 ? 1 : -1
+            local progress = (throw-40)/55
+            local windup = throw<40 ? sin(throw*180/40) : 0
+            local follow = throw>=40 && throw<65 ? sin((throw-40)*180/25) : 0
+            creek_arms[i].angle =
+                (i == 0 ? 0: 180) - direction * windup * 25 + direction * follow * 18
+            creek_arms[i].z = 1.55+windup*0.25+follow*0.16
+            creek_balls[i].visible = throw>=25 && throw<95
+            creek_balls[i].y = throw < 40
+                ? (i == 0 ? 62.8: 67.2)
+                : (i == 0 ? 62.8: 67.2) + direction * progress * 4.4
+            creek_balls[i].z = throw < 40
+                ? 1.65 + windup * 0.25
+                : 1.65 * (1 - progress) + 0.25 * progress + sin(progress * 180) * 1.6
+            local impact = throw-95
+            for j in range(0,4):
+                local splash = i*4+j
+                creek_splashes[splash].visible = impact>=0 && impact<18
+                creek_splashes[splash].y = (i==0 ? 67.2 : 62.8)+(j-1.5)*impact*0.025
+                creek_splashes[splash].z =
+                    0.25 + impact * 0.045 - (j % 2) * impact * 0.02 - impact * impact * 0.002
+                creek_splashes[splash].x = 6.9+(j%2)*0.15
+            local incoming = (creek_ticks+(i==0 ? 120 : 0))%240
+            local duck = incoming>=60 && incoming<120 ? sin((incoming-60)*180/60)*0.5 : 0
+            local base_y = i==0 ? 61.8 : 68.2
+            local face_angle = i==0 ? 300 : 60
+            creek[11+i*5].z = 2.2-duck
+            creek[12+i*5].z = 2.52-duck
+            creek[12+i*5].angle = face_angle
+            creek[13+i*5].x = 7.3-cos(face_angle)*0.34
+            creek[13+i*5].y = base_y-sin(face_angle)*0.34
+            creek[13+i*5].z = 2.2-duck
+            creek[13+i*5].angle = face_angle
+            creek[14+i*5].z = 1.77-duck*0.35
+        local owl_time = creek_ticks%2700
+        local owl_here = owl_time>=450 && owl_time<1050
+        local owl_flying = owl_time<540 || owl_time>=960
+        creek_owl[0].visible = owl_here
+        creek_owl[0].y = owl_time < 540
+            ? 74 - (owl_time - 450) * 5.6 / 90
+            : (owl_time < 960 ? 68.4: 68.4 + (owl_time - 960) * 5.6 / 90)
+        creek_owl[0].z = owl_flying ? 3.2+sin(owl_time*12)*0.15 : 3.2
+        creek_owl[1].visible = owl_here && owl_flying
+        creek_owl[1].y = creek_owl[0].y
+        creek_owl[1].z = creek_owl[0].z+0.5+sin(owl_time*24)*0.15
+        for i in range((creek_ticks%5)*9,(creek_ticks%5)*9+9):
+            creek_snow[i].z -= 0.075
+            creek_snow[i].y = 59+(i*37%120)/10+sin(creek_ticks*0.6+i*29)*0.15
+            if creek_snow[i].z<0:
+                creek_snow[i].z = 6.5
+    if settings.scene==2:
+        workshop_ticks += 1
+        local visit = workshop_ticks%5400
+        local santa_here = visit>=450 && visit<1090
+        local santa_walk = visit<600 || (visit>=750 && visit<1090)
+        local santa_y = visit < 600
+            ? -40 + (visit - 450) * 6.7 / 150
+            : (visit < 750 ? -33.3: -33.3 + (visit - 750) * 13.3 / 340)
+        workshop_visitors[0].visible = santa_here
+        workshop_visitors[0].y = santa_y
+        local santa_laugh = visit>=615 && visit<735
+        if visit==625 || visit==645 || visit==665:
+            sound.play "yule_ho"
+        local santa_bob = santa_laugh ? max(0,sin((visit-615)*27))*0.12 : 0
+        local santa_angle = santa_walk ? 270 : 0
+        workshop_visitors[0].angle = santa_angle
+        workshop_visitors[0].z = santa_walk ? max(0,sin(visit*15))*0.06 : santa_bob*0.4
+        for i in range(0,2):
+            local stride = santa_walk ? sin(visit*15+i*180) : 0
+            workshop_visitors[i+1].visible = santa_here
+            workshop_visitors[i+1].x = 4.6+(santa_walk ? (i==0 ? -0.2 : 0.2) : 0)
+            workshop_visitors[i + 1].y =
+                santa_y + (santa_walk ? stride * 0.22: (i == 0 ? -0.25: 0.25))
+            workshop_visitors[i+1].z = max(0,stride)*0.08
+            workshop_visitors[i+1].angle = santa_angle
+        santa_extras[0].visible = santa_here
+        santa_extras[0].x = santa_walk ? 4.6 : 4.1-santa_bob*0.5
+        santa_extras[0].y = santa_y+(santa_walk ? 0.5 : 0)
+        santa_extras[0].z = 1.15+workshop_visitors[0].z+santa_bob
+        santa_extras[0].angle = santa_angle
+        santa_extras[1].visible = santa_laugh
+        santa_extras[1].z = 3.75+santa_bob
+        for i in range(0,3):
+            santa_extras[i+2].visible = santa_laugh && visit>=625+i*20
+            santa_extras[i+2].z = santa_extras[1].z
+        local rudolph_here = visit>=1800 && visit<2450
+        local rudolph_eating = visit>=1950 && visit<2300
+        local rudolph_y = visit < 1950
+            ? -20 - (visit - 1800) * 6 / 150
+            : (visit < 2300 ? -26: -26 + (visit - 2300) * 6 / 150)
+        local rudolph_direction = visit<2300 ? 1 : -1
+        workshop_visitors[3].visible = rudolph_here
+        workshop_visitors[3].y = rudolph_y
+        workshop_visitors[3].angle = rudolph_direction==1 ? 0 : 180
+        workshop_visitors[4].visible = rudolph_here
+        workshop_visitors[4].y = rudolph_y-rudolph_direction*(rudolph_eating ? 1.05 : 0.85)
+        workshop_visitors[4].z = rudolph_eating ? 0.8+sin(visit*12)*0.1 : 1.5
+        workshop_visitors[4].angle = workshop_visitors[3].angle
+        lights[7].x = workshop_visitors[4].x
+        lights[7].y = workshop_visitors[4].y-rudolph_direction*0.75
+        lights[7].z = workshop_visitors[4].z+0.2
+        lights[7].intensity = rudolph_here ? 0.65+sin(ticks*3)*0.08 : 0
+        for i in range(0,4):
+            local step = rudolph_eating ? 0 : sin(visit*16+(i%2)*180+floor(i/2)*180)
+            workshop_visitors[i+5].visible = rudolph_here
+            workshop_visitors[i+5].x = 4.7+(i%2==0 ? -0.27 : 0.27)
+            workshop_visitors[i+5].y = rudolph_y+(i<2 ? -0.55 : 0.55)+step*0.1
+            workshop_visitors[i+5].z = max(0,step)*0.06
+            local fleck_age = (visit+i*7)%28
+            hay_flecks[i].visible = rudolph_eating && fleck_age<16
+            hay_flecks[i].x = 4.4-i*0.03
+            hay_flecks[i].y = -27.1+(i-1.5)*0.13+fleck_age*0.012
+            hay_flecks[i].z = 0.72+fleck_age*0.035-fleck_age*fleck_age*0.0015
+            hay_flecks[i].angle = fleck_age*9+i*45
+        for i in range(0,workshop_flames.length):
+            local flicker = sin(ticks*13+i*83)*0.5+sin(ticks*21+i*37)*0.5
+            workshop_flames[i].scale = 0.85+flicker*0.15
+            lights[i+5].intensity = 0.25+flicker*0.05
+        for i in range(0,workshop_arms.length):
+            local wave = sin(ticks*6+i*110)
+            workshop_arms[i].y = (i<2 ? -31.7 : -28.3)+(i%2==0 ? -0.4 : 0.4)+wave*0.18
+            workshop_arms[i].z = 1.85+max(0,wave)*0.22
+            workshop_arms[i].angle = wave*14
+        for i in range(0,workshop_gifts.length):
+            local wrapping = (ticks+i*120)%240
+            workshop_gifts[i].model = wrapping<140 ? "yule/wrapping-box" : "yule/present"
+            workshop_gifts[i].angle = wrapping<140 ? sin(wrapping*3)*8 : 0
+            workshop_gifts[i].scale = wrapping >= 225
+                ? max(0.1, (240 - wrapping) / 15)
+                : (wrapping < 15 ? max(0.1, wrapping / 15): 1)
+    reveal[0].visible = settings.scene==1 && reveal_ticks>0
+    reveal[0].scale = reveal_ticks > 0
+        ? max(0.01, min(1, min((150 - reveal_ticks) / 35, reveal_ticks / 35)))
+        : 0.01
+    if settings.scene!=3 && settings.scene!=4:
+        call update_classic
+
+action update_classic:
+    for i in range(0,train.length):
+        local angle = ticks*0.9-i*18
+        train[i].x = 7.05+cos(angle)*2
+        train[i].y = -5+sin(angle)*2
+        train[i].angle = angle+90
+    for i in range(0,flames.length):
+        flames[i].scale = 0.6 + (sin(ticks*6+i*83)+1)*0.2
+        flames[i].y = -0.92+i*0.43+sin(ticks*4+i*70)*0.07
+    for i in range(0,sparks.length):
+        sparks[i].z = 1.08+(ticks*(reveal_ticks>0 && settings.scene==0 ? 0.055 : 0.02)+i*0.15)%1.36
+        sparks[i].y = -1.04+(i*19%21)/10+sin(ticks*3+i*37)*0.1
+    if settings.scene==1:
+        local snow_group = ticks%3
+        for i in range(snow_group*40,snow_group*40+40):
+            snow[i].z -= (i<12 ? 0.008 : (i<52 ? 0.014 : 0.02))*3*(reveal_ticks>0 ? 2 : 1)
+            snow[i].y = 25+(i*37%100)/10+sin(ticks*(i<12 ? 0.35 : 0.6)+i*29)*(i<12 ? 0.35 : 0.16)
+            if snow[i].z<0:
+                snow[i].z = 6.5
+    players[0].y = 27.1+sin(ticks*0.7)*0.8
+    players[1].y = 26.5+sin(ticks*0.7-35)*0.8
+    players[2].y = 26.1+sin(ticks*0.7-65)*0.8
+    players[2].z = 0.16+max(0,sin(ticks*3))*0.18
+    for i in range(0,2):
+        local phase = i==0 ? 0 : -35
+        local direction = cos(ticks*0.7+phase)>=0 ? 1 : -1
+        players[i].angle = direction>0 ? 90 : 270
+        players[i].z = max(0,sin(ticks*(i==0 ? 7 : 11)+phase))*0.04
+        for j in range(0,2):
+            local leg_index = i*2+j
+            local stride = sin(ticks*(i==0 ? 7 : 11)+phase+j*180)
+            limbs[leg_index].x = players[i].x+(j==0 ? -0.12 : 0.12)
+            limbs[leg_index].y = players[i].y+(i==1 ? -direction*0.43 : 0)+stride*0.08
+            limbs[leg_index].z = players[i].z+max(0,stride)*0.06
+            limbs[leg_index].angle = players[i].angle
+        if i==1:
+            limbs[4].x = players[i].x
+            limbs[4].y = players[i].y-direction*0.52
+            limbs[4].z = 0.7
+            limbs[4].angle = players[i].angle+sin(ticks*14)*30
+    winter_details[0].angle = sin(ticks*0.7)*7
+    for i in range(0,2):
+        local glide = (ticks+i*210)%420
+        winter_details[i+1].y = 25+glide/420*3.2
+        winter_details[i+1].z = 1.7-floor((winter_details[i+1].y-23.2)/0.8)*0.1
+        winter_details[i+1].visible = glide>20 && glide<400
+    local puff = ticks%900
+    winter_details[3].z = 3.3+(puff%120)/120*0.8
+    winter_details[3].y = 34.1+(puff%120)/120*0.25
+    winter_details[3].scale = puff<90 ? 2.4 : 0.7+(puff%120)/120*0.6
+    local flyby = ticks%5400
+    santa[0].visible = flyby>=1800 && flyby<2040
+    santa[0].y = 23+(flyby-1800)/240*14
+    santa[0].z = 5.2+sin((flyby-1800)*0.75)*0.12
+    santa[1].visible = flyby>=1800 && flyby<2220
+    santa[1].y = -8+(flyby-1800)/420*16
+    pets[1].z = 1.18+(ticks%1200<100 ? sin((ticks%1200)*1.8)*0.16 : 0)
+    local cat_cycle = ticks%1800
+    local story_time = ticks%7200-3600
+    local chase = story_time>=0 && story_time<1800
+    local playing = cat_cycle<300 || cat_cycle>=1184
+    local bat = cat_cycle >= 1184
+        ? (cat_cycle - 1184) % 120
+        : (cat_cycle >= 240 && cat_cycle < 300 ? 100: cat_cycle % 120)
+    local roll = bat < 12
+        ? 0
+        : (bat < 42 ? (1 - cos((bat - 12) * 6)) / 2: (bat < 85 ? (1 + cos((bat - 42) * 180 / 43)) / 2: 0))
+    pets[3].y = playing && (!chase || story_time>=1518) ? 1.55+roll*0.4 : 1.55
+    pets[2].model = playing && bat<15 ? "yule/cat-bat" : "yule/cat"
+    pets[2].angle = cat_cycle>=592 && cat_cycle<1020 ? -90 : 0
+    if playing || (cat_cycle>=1172 && cat_cycle<1184):
+        pets[2].x = 4.4
+        pets[2].y = 1+roll*0.25
+        pets[2].z = 0.1
+    if (cat_cycle>=312 && cat_cycle<450) || (cat_cycle>=1098 && cat_cycle<1160):
+        pets[2].x = 5.1
+        pets[2].y = 2.35
+        pets[2].z = 1.3
+    if (cat_cycle>=468 && cat_cycle<580) || (cat_cycle>=1032 && cat_cycle<1080):
+        pets[2].x = 7.65
+        pets[2].y = 2.1
+        pets[2].z = 3.52
+    if cat_cycle>=592 && cat_cycle<1020:
+        pets[2].x = 8.9
+        pets[2].y = 4.6
+        pets[2].z = 2.8
+    local jumping = false
+    local progress = 0
+    local from = [4.4, 1, 0.1]
+    local to = [5.1, 2.35, 1.3]
+    if cat_cycle>=300 && cat_cycle<312:
+        jumping = true
+        progress = (cat_cycle-300)/12
+    if cat_cycle>=450 && cat_cycle<468:
+        jumping = true
+        progress = (cat_cycle-450)/18
+        from = [5.1, 2.35, 1.3]
+        to = [7.65, 2.1, 3.52]
+    if cat_cycle>=580 && cat_cycle<592:
+        jumping = true
+        progress = (cat_cycle-580)/12
+        from = [7.65, 2.1, 3.52]
+        to = [8.9, 4.6, 2.8]
+    if cat_cycle>=1020 && cat_cycle<1032:
+        jumping = true
+        progress = (cat_cycle-1020)/12
+        from = [8.9, 4.6, 2.8]
+        to = [7.65, 2.1, 3.52]
+    if cat_cycle>=1080 && cat_cycle<1098:
+        jumping = true
+        progress = (cat_cycle-1080)/18
+        from = [7.65, 2.1, 3.52]
+        to = [5.1, 2.35, 1.3]
+    if cat_cycle>=1160 && cat_cycle<1172:
+        jumping = true
+        progress = (cat_cycle-1160)/12
+        from = [5.1, 2.35, 1.3]
+        to = [4.4, 1, 0.1]
+    if jumping:
+        pets[2].model = "yule/cat-leap"
+        pets[2].angle = to[1]<from[1] ? 180 : 0
+        pets[2].x = from[0]+(to[0]-from[0])*progress
+        pets[2].y = from[1]+(to[1]-from[1])*progress
+        pets[2].z = from[2]+(to[2]-from[2])*progress+sin(progress*180)*0.65
+    local dog_active = chase && story_time>=48 && story_time<680
+    pets[0].model = dog_active ? "yule/dachshund-running" : "yule/sleeping-dachshund"
+    pets[0].x = 2.65
+    pets[0].y = 3.3
+    pets[0].z = 1.12
+    pets[0].angle = 0
+    pets[1].visible = !dog_active
+    pets[4].visible = dog_active
+    if chase:
+        pets[2].model = "yule/cat"
+        pets[2].x = 4.4
+        pets[2].y = 1
+        pets[2].z = 0.1
+        pets[2].angle = 0
+        if story_time<115:
+            local p = clamp((story_time-25)/90,0,1)
+            pets[2].x = 4.4+2*p
+            pets[2].y = 1-2.2*p
+            pets[2].angle = -138
+        if story_time>=115 && story_time<355:
+            local a = 90-(story_time-115)*1.5
+            pets[2].x = 6.4+cos(a)*2.4
+            pets[2].y = -5+sin(a)*3.8
+            pets[2].angle = atan2(-2.4*sin(a),-3.8*cos(a))
+            pets[2].model = sin(story_time*18)>0 ? "yule/cat-leap" : "yule/cat"
+            pets[2].z = 0.1+max(0,sin(story_time*18))*0.12
+        if story_time>=355 && story_time<373:
+            local p = (story_time-355)/18
+            pets[2].model = "yule/cat-leap"
+            pets[2].x = 6.4+1.25*p
+            pets[2].y = -1.2+3.3*p
+            pets[2].angle = -21
+            pets[2].z = 0.1+3.42*p+sin(p*180)*0.65
+        if story_time>=373 && story_time<1500:
+            pets[2].x = 7.65
+            pets[2].y = 2.1
+            pets[2].z = 3.52
+        if story_time>=1500 && story_time<1518:
+            local p = (story_time-1500)/18
+            pets[2].model = "yule/cat-leap"
+            pets[2].x = 7.65-3.25*p
+            pets[2].y = 2.1-1.1*p
+            pets[2].angle = 107
+            pets[2].z = 3.52-3.42*p+sin(p*180)*0.65
+    if dog_active:
+        pets[0].model = sin(story_time * 24) > 0
+            ? "yule/dachshund-running"
+            : "yule/dachshund-running-alt"
+        if story_time<70:
+            pets[0].z = 1.12
+            pets[0].angle = 135*(story_time-48)/22
+        if story_time>=70 && story_time<100:
+            local p = (story_time-70)/30
+            pets[0].model = "yule/dachshund-leap"
+            pets[0].x = 2.65-0.95*p
+            pets[0].y = 3.3-0.9*p
+            pets[0].z = 1.12*(1-p)+sin(p*180)*0.55
+            pets[0].angle = 135
+        if story_time>=100 && story_time<110:
+            pets[0].x = 1.7
+            pets[0].y = 2.4
+            pets[0].z = 0
+            pets[0].angle = 135+98*(story_time-100)/10
+        if story_time>=110 && story_time<170:
+            local p = (story_time-110)/60
+            pets[0].x = 1.7+4.7*p
+            pets[0].y = 2.4-3.6*p
+            pets[0].z = max(0,sin(story_time*24))*0.08
+            pets[0].angle = -127
+        if story_time>=170 && story_time<410:
+            local a = 90-(story_time-170)*1.5
+            pets[0].x = 6.4+cos(a)*2.4
+            pets[0].y = -5+sin(a)*3.8
+            pets[0].z = max(0,sin(story_time*24))*0.08
+            pets[0].angle = atan2(-2.4*sin(a),-3.8*cos(a))
+        if story_time>=410 && story_time<550:
+            pets[0].x = 6.4-2*clamp((story_time-425)/40,0,1)
+            pets[0].y = -1.2
+            pets[0].z = 0
+            pets[0].angle = story_time < 425
+                ? -90 - 180 * (story_time - 410) / 15
+                : (story_time < 465 ? 90: (story_time < 480 ? 90 - 135 * (story_time - 465) / 15: -45))
+            if story_time>=540:
+                pets[0].angle = -45+79*(story_time-540)/10
+        if story_time>=550 && story_time<625:
+            local p = (story_time-550)/75
+            pets[0].x = 4.4-2.7*p
+            pets[0].y = -1.2+3.6*p
+            pets[0].z = max(0,sin(story_time*24))*0.08
+            pets[0].angle = 34
+        if story_time>=625 && story_time<655:
+            local p = (story_time-625)/30
+            pets[0].model = "yule/dachshund-leap"
+            pets[0].x = 1.7+0.95*p
+            pets[0].y = 2.4+0.9*p
+            pets[0].z = 1.12*p+sin(p*180)*0.55
+            pets[0].angle = -47
+        if story_time>=655:
+            pets[0].z = 1.12
+            pets[0].angle = -47*(680-story_time)/25
+        pets[4].x = pets[0].x
+        pets[4].y = pets[0].y
+        pets[4].z = pets[0].z+0.35
+        pets[4].angle = pets[0].angle+sin(story_time*20)*35
+    story[0].z = 2.45
+    story[0].x = 7.4
+    story[0].y = 1
+    story[0].angle = 0
+    if chase && story_time>=410 && story_time<910:
+        local fall = clamp((story_time-410)/40,0,1)
+        local lift = clamp((story_time-820)/90,0,1)
+        story[0].z = 2.45-2.35*fall+2.35*lift
+        story[0].x = 7.4-0.7*fall*(1-lift)
+        story[0].y = 1+1.3*fall*(1-lift)
+        story[0].angle = 65*fall*(1-lift)
+    story[1].visible = chase && story_time>=700 && story_time<1000
+    story[1].z = 2.65+sin(story_time*4)*0.12
+    story[1].dissolve = chase ? clamp((story_time-960)/40,0,1) : 0
+    story[2].visible = chase && story_time>=820 && story_time<910
+    story[2].x = story[0].x-0.4
+    story[2].y = story[0].y+0.3
+    story[2].z = story[0].z+0.5
+    story[2].angle = story_time*8
+    for i in range(0,8):
+        story[i+3].visible = chase && story_time>=960+i*3 && story_time<1030+i*3
+        if story[i+3].visible:
+            local p = clamp((story_time-960-i*3)/70,0,1)
+            local a = i*45+story_time*2
+            story[i+3].x = 7.1-0.2-p*0.45
+            story[i+3].y = 1.8+cos(a)*p*0.8
+            story[i+3].z = 3.05+sin(a)*p*0.65+p*0.45
+            story[i+3].scale = 0.15+sin(p*180)*0.3
+            story[i+3].angle = a
+    for i in range(0,twinkles.length):
+        twinkles[i].visible = (ticks+i*97)%330 < 24
+    lights[0].intensity = clamp(0.79+sin(ticks*3.1)*0.06+sin(ticks*7.7+36)*0.035+sin(ticks*0.43)*0.025,0,1)
+    lights[1].intensity = 0.22+(sin(ticks*0.55)+1)*0.04
+    lights[2].intensity = 0.19+(sin(ticks*0.37+120)+1)*0.035

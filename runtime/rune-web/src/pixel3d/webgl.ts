@@ -103,7 +103,7 @@ void main() {
 `;
 const skyFragment = `
 uniform vec2 viewport, heading, tilt;
-uniform float fov, drift;
+uniform float fov, drift, cloudWave, cloudGlow, skyTime;
 uniform uint seed;
 uniform vec3 horizon, zenith, cloud, below;
 out vec4 painted;
@@ -136,7 +136,11 @@ void main() {
   } else {
     float h = min(1.0, rz * 2.0);
     color = mix(horizon, zenith, floor(h * 16.0) / 16.0);
-    color = mix(color, cloud, density(vec2(u + drift, h * 12.0), seed, 63) * min(1.0, h * 5.0));
+    float wave = cloudWave * sin(atan(dir.y, dir.x) * 3.0 + skyTime * 0.35);
+    float d = density(vec2(u + drift, h * 12.0 + wave), seed, 63);
+    float fade = min(1.0, h * 5.0);
+    color = mix(color, cloud, d * fade);
+    color = mix(color, vec3(1.0), cloudGlow * d * d * fade * 0.5);
   }
   painted = vec4(finishColor(color), 1);
 }
@@ -269,7 +273,7 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
   };
 
   try {
-    const skyProgram = program(skyVertex, skyFragment, ['viewport', 'heading', 'tilt', 'fov', 'drift', 'seed', 'horizon', 'zenith', 'cloud', 'below']);
+    const skyProgram = program(skyVertex, skyFragment, ['viewport', 'heading', 'tilt', 'fov', 'drift', 'cloudWave', 'cloudGlow', 'skyTime', 'seed', 'horizon', 'zenith', 'cloud', 'below']);
     const modelProgram = program(modelVertex, modelFragment, ['eye', 'heading', 'tilt', 'fov', 'height']);
     let silhouetteProgram: ReturnType<typeof program> | undefined;
     function bindSilhouetteTarget() {
@@ -425,6 +429,9 @@ export function createWebGlRenderer(canvas: HTMLCanvasElement, models: Record<st
       const s = setup(skyProgram);
       gl.uniform2f(s.viewport, canvas.width, canvas.height);
       gl.uniform1f(s.drift, time * sky.speed);
+      gl.uniform1f(s.cloudWave, sky.cloud_wave ?? 0);
+      gl.uniform1f(s.cloudGlow, sky.cloud_glow ?? 0);
+      gl.uniform1f(s.skyTime, time);
       gl.uniform1ui(s.seed, sky.seed);
       gl.uniform3f(s.horizon, ...rgb(sky.horizon));
       gl.uniform3f(s.zenith, ...rgb(sky.zenith));

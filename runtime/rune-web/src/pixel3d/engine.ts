@@ -399,7 +399,8 @@ export class Pixel3DEngine {
     this.invalidateFrame();
 
     withContext(this.context, () => withEntityQueries(() => {
-      this.app.invokeAction('tick', [input]);
+      const music = this.audioState;
+      this.app.invokeAction('tick', [input, { track: music.track, playing: music.isPlaying }]);
       this.app.computeDerived();
     }));
     this.ticks++;

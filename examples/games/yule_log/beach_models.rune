@@ -1,0 +1,138 @@
+@Palette/beach
+colors = {
+    "s": "#ffe0a0",
+    "a": "#efc77f",
+    "b": "#63c9e8",
+    "c": "#a5eaff",
+    "d": "#168cbd",
+    "e": "#5fd7d0",
+    "w": "#fff8e9",
+    "y": "#ffd13e",
+    "g": "#298d4b",
+    "h": "#3fb45b",
+    "t": "#8f603d",
+    "p": "#edba9a",
+    "r": "#d43d42",
+    "k": "#382927",
+    "m": "#a66d40",
+    "n": "#edc299"
+}
+
+@Model/yule/beach-backdrop
+palette = beach
+unit = 0.5
+emissive = "bcde"
+blocks:
+    {"from":[0,-20,0],"size":[1,20,20],"color":"b"}
+    {"from":[0,0,0],"size":[1,20,20],"color":"b"}
+    {"from":[0,-20,20],"size":[1,20,12],"color":"b"}
+    {"from":[0,0,20],"size":[1,20,12],"color":"b"}
+    {"from":[-1,-20,0],"size":[1,20,4],"color":"d"}
+    {"from":[-1,0,0],"size":[1,20,4],"color":"d"}
+    {"from":[-2,-20,3],"size":[1,20,1],"color":"e"}
+    {"from":[-2,0,3],"size":[1,20,1],"color":"e"}
+    {"from":[-2,-20,12],"size":[1,5,1],"color":"c"}
+    {"from":[-2,10,14],"size":[1,6,1],"color":"c"}
+
+@Model/yule/beach-sand
+palette = beach
+unit = 0.5
+blocks:
+    {"from":[-16,-20,-1],"size":[32,20,1],"color":"s"}
+    {"from":[-16,0,-1],"size":[32,20,1],"color":"s"}
+    {"from":[5,-20,0],"size":[11,20,1],"color":"a"}
+    {"from":[5,0,0],"size":[11,20,1],"color":"a"}
+
+@Model/yule/beach-sun
+palette = beach
+unit = 1
+emissive = "y"
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.7,"color":"y"}
+
+@Model/yule/palm
+palette = beach
+unit = 0.15
+blocks:
+    {"from":[-2,-2,0],"size":[4,4,12],"color":"t"}
+    {"from":[-1,-2,12],"size":[4,4,12],"color":"t"}
+    {"from":[0,-2,24],"size":[4,4,6],"color":"t"}
+    {"from":[-1,-6,28],"size":[6,12,2],"color":"g"}
+    {"from":[0,-12,26],"size":[4,7,2],"color":"h"}
+    {"from":[0,5,26],"size":[4,7,2],"color":"h"}
+    {"from":[-10,-3,27],"size":[9,7,2],"color":"g"}
+    {"from":[4,-3,27],"size":[9,7,2],"color":"h"}
+    {"from":[-1,-15,25],"size":[3,4,2],"color":"g"}
+    {"from":[-1,11,25],"size":[3,4,2],"color":"g"}
+
+@Model/yule/beach-santa
+palette = beach
+unit = 0.1
+blocks:
+    {"from":[-5,-6,8],"size":[10,12,10],"color":"p"}
+    {"from":[-7,-4,9],"size":[3,8,7],"color":"p"}
+    {"from":[-5,-6,5],"size":[10,12,5],"color":"w"}
+    {"from":[-6,-6,8],"size":[1,12,1],"color":"r"}
+    {"from":[-3,-3,18],"size":[6,6,6],"color":"p"}
+    {"from":[-5,-3,17],"size":[2,6,4],"color":"w"}
+    {"from":[-5,-2,21],"size":[1,1,1],"color":"k"}
+    {"from":[-5,1,21],"size":[1,1,1],"color":"k"}
+    {"from":[-4,-4,24],"size":[8,8,2],"color":"w"}
+    {"from":[-3,-3,26],"size":[6,6,3],"color":"r"}
+    {"from":[-2,-2,29],"size":[4,4,3],"color":"r"}
+    {"from":[-1,-1,32],"size":[2,2,2],"color":"w"}
+
+@Model/yule/beach-santa-leg
+palette = beach
+unit = 0.1
+blocks:
+    {"from":[-2,-2,0],"size":[4,4,5],"color":"p"}
+    {"from":[-4,-2,0],"size":[3,4,2],"color":"p"}
+
+@Model/yule/beach-santa-arm
+palette = beach
+unit = 0.1
+blocks:
+    {"from":[-2,-1,-1],"size":[4,7,3],"color":"p"}
+    {"from":[-2,5,-1],"size":[4,3,3],"color":"p"}
+
+@Model/yule/banana
+palette = beach
+unit = 0.1
+blocks:
+    {"from":[-2,-1,0],"size":[4,2,5],"color":"y"}
+    {"from":[-2,0,4],"size":[4,2,3],"color":"y"}
+    {"from":[-1,1,6],"size":[2,1,1],"color":"t"}
+
+@Model/yule/beach-monkey
+palette = beach
+unit = 0.1
+blocks:
+    {"from":[-3,-4,0],"size":[6,8,7],"color":"m"}
+    {"from":[-4,-3,5],"size":[7,6,6],"color":"m"}
+    {"from":[-5,-3,6],"size":[2,6,4],"color":"n"}
+    {"from":[-6,-2,8],"size":[1,1,1],"color":"k"}
+    {"from":[-6,1,8],"size":[1,1,1],"color":"k"}
+    {"from":[-3,-6,7],"size":[4,2,3],"color":"m"}
+    {"from":[-3,4,7],"size":[4,2,3],"color":"m"}
+    {"from":[0,3,0],"size":[2,6,2],"color":"m"}
+    {"from":[0,8,0],"size":[2,2,5],"color":"m"}
+
+@Model/yule/beach-ball
+palette = beach
+unit = 0.1
+blocks:
+    {"from":[-3,-3,0],"size":[6,6,6],"color":"w"}
+    {"from":[-4,-3,1],"size":[1,3,4],"color":"r"}
+    {"from":[-4,0,1],"size":[1,3,4],"color":"b"}
+    {"from":[-3,-3,6],"size":[6,3,1],"color":"y"}
+
+@Model/yule/beach-umbrella
+palette = beach
+unit = 0.1
+blocks:
+    {"from":[-1,-1,0],"size":[2,2,26],"color":"t"}
+    {"from":[-5,-10,25],"size":[10,10,2],"color":"r"}
+    {"from":[-5,0,25],"size":[10,10,2],"color":"w"}
+    {"from":[-4,-7,27],"size":[8,7,2],"color":"w"}
+    {"from":[-4,0,27],"size":[8,7,2],"color":"r"}

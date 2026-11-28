@@ -533,13 +533,6 @@ impl Mixer {
         } else {
             0.0
         };
-        if sample.abs() > 1e-7 {
-            self.bridge.stats.nonzero.fetch_add(1, Ordering::Relaxed);
-        }
-        self.bridge
-            .stats
-            .peak
-            .fetch_max(sample.abs().to_bits(), Ordering::Relaxed);
         (sample, sends.map(|sample: f64| if sample.is_finite() { sample.clamp(-1.0, 1.0) as f32 } else { 0.0 }))
     }
     pub fn publish_clock(&self) {

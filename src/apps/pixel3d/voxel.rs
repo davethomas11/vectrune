@@ -438,6 +438,8 @@ pub fn render_dense_with_sky(
     if let Some(sky) = sky {
         ensure!(
             sky.speed.is_finite()
+                && (0.0..=1.0).contains(&sky.cloud_wave)
+                && (0.0..=1.0).contains(&sky.cloud_glow)
                 && (time * sky.speed).is_finite()
                 && (time * sky.speed).abs() <= 1e12,
             "Invalid sky speed or time"

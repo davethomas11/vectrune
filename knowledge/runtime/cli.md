@@ -57,6 +57,9 @@ relative paths resolve against the file, and command-line flags override it.
 Without `team` the only keychain signing team is used; without `device` the
 only paired Apple TV is used. Generated output lives in `build/tvos`
 (`project/`, `derived/`, and a cached `runtime/` that is built once).
+If the native runtime source changes, refresh the cache with
+`vectrune tvos build-runtime --source native/tvos/runtime -o build/tvos/runtime`
+before deploying again.
 
 - `bundle GAME [-o DIR]` writes only the Xcode project (host, `game.js` from the
   compiled game, asset catalog, runtime libraries) without building it.
@@ -65,6 +68,8 @@ only paired Apple TV is used. Generated output lives in `build/tvos`
   `tvos.toml` or a placeholder tile.
 - `stats` and `logs` relaunch the app attached to the console. The host logs
   `Rune stats: fps=… sim_ms=… native_ms=… memory_mb=…` every three seconds.
+  `Rune detail` also reports ticks per frame and scheduler, simulation-step,
+  scene-transfer and HUD timings; `Rune audio` reports output and dropped commands.
 - Saves live in the app's `Library/Caches/RuneSaves`, which tvOS may purge under
   storage pressure; they are flushed whenever the app leaves the foreground.
   `reset-saves` launches with `RUNE_TV_RESET_SAVES=1`.
@@ -79,6 +84,12 @@ paired Apple TV). `build-runtime --source DIR -o DIR` builds the device and
 simulator runtime libraries. See the
 [Apple TV discovery](../../documents/feature/apple_tv/discovery.md); declare TV
 navigation with the [`@TV` profile](pixel3d.md).
+
+Native TV music uses the selected song's reverb, delay and chorus settings.
+Omitted parameters use defaults; omitted effects remain off. The TV effects are
+native approximations, not identical to Web Audio: effect tails are cleared on
+track changes, and some browser parameters and crossfade behavior are not
+implemented. Unsupported native effect ranges are reported as errors.
 
 ## ASCII Animator (v0.3.12)
 

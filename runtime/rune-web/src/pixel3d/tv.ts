@@ -4,6 +4,10 @@ import type { Pixel3DEngine } from './engine';
 export type TvCommand = 'up' | 'down' | 'left' | 'right' | 'select' | 'back';
 export interface TvProfile {
   initial_focus?: string;
+  master_volume?: number;
+  audio_gain?: number;
+  volume_control?: boolean;
+  resolution?: [number, number];
   wrap: boolean;
   summary: Array<{ path: string; label: string }>;
   modes: TvMode[];
@@ -17,7 +21,8 @@ type TvMode = {
   | { kind: 'cycle'; groups: string[]; targets: string }
 );
 type Region = { x: number; y: number; w: number; h: number };
-type Entry = { id: string; label: string; region: Region; action?: string; mode?: TvMode };
+type VolumeMode = { kind: 'volume'; id: 'volume'; label: 'VOLUME' };
+type Entry = { id: string; label: string; region: Region; action?: string; mode?: TvMode | VolumeMode };
 
 function stateValue(state: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((value, key) =>
@@ -27,7 +32,8 @@ function stateValue(state: unknown, path: string): unknown {
 export function createTvNavigation(game: Pixel3DEngine) {
   const profile: TvProfile = game.config.tv ?? { wrap: true, summary: [], modes: [] };
   let focused = profile.initial_focus ?? '';
-  let active: TvMode | undefined;
+  let active: TvMode | VolumeMode | undefined;
+  let volume = profile.master_volume ?? profile.audio_gain ?? 1;
   let selected = 0;
   const size = () => ({ width: game.raycaster.width, height: game.raycaster.height });
   const modal = () => {
@@ -50,7 +56,8 @@ export function createTvNavigation(game: Pixel3DEngine) {
         ? [{ id: `button:${index}:${button.action}`, label: button.label, action: button.action, region }]
         : [];
     });
-    const modes = profile.modes.filter(mode => mode.kind !== 'cycle' || count(mode) > 0);
+    const modes: (TvMode | VolumeMode)[] = profile.modes.filter(mode => mode.kind !== 'cycle' || count(mode) > 0);
+    if (profile.volume_control) modes.push({ kind: 'volume', id: 'volume', label: 'VOLUME' });
     const buttonWidth = Math.min(100, Math.floor((width - 30) / Math.max(1, modes.length)) - 10);
     const start = Math.floor((width - modes.length * buttonWidth - Math.max(0, modes.length - 1) * 10) / 2);
     return [...entries, ...modes.map((mode, index) => ({
@@ -114,7 +121,10 @@ export function createTvNavigation(game: Pixel3DEngine) {
           return true;
         }
         if (command === 'select') { game.activate(active.action, [selected]); return true; }
-      } else if (command === 'left' || command === 'right') {
+      } else if (active.kind === 'volume' && (command === 'left' || command === 'right')) {
+        volume = Math.max(0, Math.min(4, Math.round((volume + (command === 'left' ? -0.25 : 0.25)) * 100) / 100));
+        return true;
+      } else if (active.kind === 'action' && (command === 'left' || command === 'right')) {
         game.activate(active.action, [command === 'left' ? -1 : 1]); return true;
       }
       return false;
@@ -186,7 +196,7 @@ export function createTvNavigation(game: Pixel3DEngine) {
         const point = ray.projectPoint(camera, target as { x: number; y: number; z: number });
         if (point && point.x >= 0 && point.x < width && point.y >= 0 && point.y < height)
           ring({ x: Math.round(point.x)-19, y: Math.round(point.y)-19, w: 38, h: 38 });
-      } else if (active.bounds) {
+      } else if (active.kind === 'action' && active.bounds) {
         const { origin, extent, scale: scalePath } = active.bounds;
         const scale = scalePath ? stateValue(game.app.state, scalePath) : 1;
         if (typeof scale !== 'number' || !Number.isFinite(scale) || scale < 0)
@@ -203,13 +213,15 @@ export function createTvNavigation(game: Pixel3DEngine) {
           if (right-left > 20 && bottom-top > 20) ring({x:left,y:top,w:right-left,h:bottom-top});
         }
       }
-      const text = active.kind === 'cycle' ? 'LEFT RIGHT: CYCLE  OK: SELECT  BACK: HUD' : 'LEFT RIGHT: MOVE  BACK: HUD';
+      const text = active.kind === 'cycle' ? 'LEFT RIGHT: CYCLE  OK: SELECT  BACK: HUD' :
+        active.kind === 'volume' ? 'LEFT RIGHT: ADJUST  BACK: HUD' : 'LEFT RIGHT: MOVE  BACK: HUD';
       const w = Math.min(width-12, Math.max(100, text.length*8+20));
       const x = Math.floor((width-w)/2);
       roundedRect(ray, x, height-46, w, 36, 6, 0x0d2233);
-      ray.text(active.label.toUpperCase().slice(0, Math.floor((w-20)/8)), x+10, height-41, 0xc3ffe8, 2);
+      const title = active.kind === 'volume' ? `VOLUME ${Math.round(volume * 100)}%` : active.label.toUpperCase();
+      ray.text(title.slice(0, Math.floor((w-20)/8)), x+10, height-41, 0xc3ffe8, 2);
       ray.text(text.slice(0, Math.floor((w-20)/8)), x+10, height-25, 0xa2bdc7, 2);
     }
   }
-  return { input, overlay, compactHud: profile.summary.length > 0 };
+  return { input, overlay, volume: () => volume, compactHud: profile.summary.length > 0 };
 }

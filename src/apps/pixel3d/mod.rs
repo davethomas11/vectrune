@@ -455,7 +455,7 @@ pub fn parse_map_full(
         ensure!(!map_section.kv.contains_key("ceiling"), "Map sky and ceiling are mutually exclusive");
         let value = json_value(value);
         let obj = value.as_object().context("Map sky must be an object")?;
-        ensure!(obj.keys().all(|k| ["seed", "zenith", "horizon", "cloud", "speed", "below"].contains(&k.as_str())), "Unknown Map sky property");
+        ensure!(obj.keys().all(|k| ["seed", "zenith", "horizon", "cloud", "speed", "below", "cloud_wave", "cloud_glow"].contains(&k.as_str())), "Unknown Map sky property");
         let seed = obj.get("seed").and_then(Json::as_f64).context("Map sky needs an unsigned integer seed")?;
         ensure!(seed.is_finite() && seed.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(&seed), "Map sky seed must be an unsigned 32-bit integer");
         let seed = seed as u32;
@@ -466,6 +466,13 @@ pub fn parse_map_full(
         let speed = obj.get("speed").map(|v| v.as_f64().context("Sky speed must be numeric")).transpose()?.unwrap_or(0.25);
         ensure!(speed.is_finite() && (0.0..=10.0).contains(&speed), "Sky speed must be between 0 and 10");
         let mut sky = json!({"seed":seed,"zenith":sky_color("zenith")?,"horizon":sky_color("horizon")?,"cloud":sky_color("cloud")?,"speed":speed});
+        for key in ["cloud_wave", "cloud_glow"] {
+            if let Some(value) = obj.get(key) {
+                let amount = value.as_f64().context(format!("Sky {key} must be numeric"))?;
+                ensure!(amount.is_finite() && (0.0..=1.0).contains(&amount), "Sky {key} must be between 0 and 1");
+                sky[key] = json!(amount);
+            }
+        }
         if obj.contains_key("below") {
             ensure!(!map_section.kv.contains_key("floor"), "Map sky below replaces the floor");
             sky["below"] = json!(sky_color("below")?);

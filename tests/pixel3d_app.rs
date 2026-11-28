@@ -286,6 +286,14 @@ fn map_surfaces_reject_unknown_textures_and_invalid_sky() {
     assert!(parse(&source.replace("ceiling = wall", &format!("ceiling = wall\n{sky}"))).is_err());
     assert!(parse(&source.replace("ceiling = wall", &sky.replace("0.35", "-1"))).is_err());
     assert!(parse(&source.replace("ceiling = wall", &sky.replace("731", "1.5"))).is_err());
+    let animated = sky.replace("\"speed\":0.35", "\"speed\":0.35,\"cloud_wave\":0.8,\"cloud_glow\":0.45");
+    let config = parse(&source.replace("ceiling = wall", &animated)).unwrap();
+    assert_eq!(config["sky"]["cloud_wave"], 0.8);
+    assert_eq!(config["sky"]["cloud_glow"], 0.45);
+    for bad in ["-0.1", "1.1", "\"bright\""] {
+        assert!(parse(&source.replace("ceiling = wall", &animated.replace("0.8", bad))).is_err());
+        assert!(parse(&source.replace("ceiling = wall", &animated.replace("0.45", bad))).is_err());
+    }
 }
 
 #[test]
@@ -689,7 +697,7 @@ fn native_rasterizer_renders_scene() {
     assert_eq!(rasterizer.buffer[10 * width + 160], 0xff8899aa);
     assert!(rasterizer.buffer.iter().all(|p| p >> 24 == 255));
     rasterizer.map.sky = Some(pixel3d::raster::Sky {
-        seed: 731, zenith: 0xff552c20, horizon: 0xff838bbd, cloud: 0xffcfbdc0, speed: 0.35, below: None,
+        seed: 731, zenith: 0xff552c20, horizon: 0xff838bbd, cloud: 0xffcfbdc0, speed: 0.35, below: None, cloud_wave: 0.0, cloud_glow: 0.0,
     });
     rasterizer.render(&surface_state, &mut frame);
     let sky_frame = frame.clone();
@@ -702,6 +710,13 @@ fn native_rasterizer_renders_scene() {
     assert_eq!(pixel3d::raster::sky_pixel(sky, 0.0, 0.0, 0.0), sky.horizon);
     assert_eq!(pixel3d::raster::sky_pixel(sky, -std::f64::consts::PI, 0.7, 3.0), pixel3d::raster::sky_pixel(sky, std::f64::consts::PI, 0.7, 3.0));
     assert_eq!([0.0, 0.3, 0.7, 1.5].map(|a| pixel3d::raster::sky_pixel(sky, a, 0.7, 3.0)), [0xff634951, 0xff786067, 0xff80686e, 0xff634951]);
+    let aurora = pixel3d::raster::Sky { speed: 0.0, cloud_wave: 0.8, cloud_glow: 0.45, ..sky.clone() };
+    assert_eq!([0.0, 0.3, 0.7, 1.5].map(|a| pixel3d::raster::sky_pixel(&aurora, a, 0.7, 3.0)),
+        [0xffbaa7ac, 0xff978187, 0xff634951, 0xff634951]);
+    assert_eq!(pixel3d::raster::sky_pixel(&aurora, -std::f64::consts::PI, 0.7, 3.0),
+        pixel3d::raster::sky_pixel(&aurora, std::f64::consts::PI, 0.7, 3.0));
+    assert_ne!(pixel3d::raster::sky_pixel(&aurora, 0.0, 0.7, 3.0),
+        pixel3d::raster::sky_pixel(&aurora, 0.0, 0.7, 10.0));
     rasterizer.set_map(flat_map);
 
     // Native presentation uses the same per-tile animated texture indices as web.
@@ -861,9 +876,30 @@ fn tv_profile_compiles_from_declaration_and_rejects_invalid_references() {
     let script = compile("__tv_valid.rune", &source).unwrap();
     assert!(script.contains("\"initial_focus\":\"toggle_menu\""));
     assert!(script.contains("\"id\":\"friends\""));
+    let hidden = compile("__tv_hidden.rune", &source.replace(
+        "initial_focus = toggle_menu", "initial_focus = toggle_menu\nhide_after = 6")).unwrap();
+    assert!(hidden.contains("\"hide_after\":6"));
+    let louder = compile("__tv_louder.rune", &source.replace(
+        "initial_focus = toggle_menu", "initial_focus = toggle_menu\naudio_gain = 3")).unwrap();
+    assert!(louder.contains("\"audio_gain\":3"));
+    let volume = compile("__tv_volume.rune", &source.replace(
+        "initial_focus = toggle_menu", "initial_focus = toggle_menu\nmaster_volume = 3\nvolume_control = true")).unwrap();
+    assert!(volume.contains("\"master_volume\":3"));
+    assert!(volume.contains("\"volume_control\":true"));
+    let wide = compile("__tv_wide.rune", &source.replace(
+        "initial_focus = toggle_menu", "initial_focus = toggle_menu\nresolution = [720,405]")).unwrap();
+    assert!(wide.contains("\"resolution\":[720,405]"));
 
     for (n, (from, to, message)) in [
         ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nbogus = 1", "Unknown @TV/aquarium field"),
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nhide_after = 0", "TV hide_after"),
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nresolution = [1920,1080]", "TV resolution"),
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nresolution = [720,400]", "TV resolution"),
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nresolution = \"wide\"", "TV resolution"),
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\naudio_gain = 5", "TV audio_gain"),
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nmaster_volume = 5", "TV master_volume"),
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nvolume_control = 2", "TV volume_control"),
+        ("initial_focus = toggle_menu", "initial_focus = toggle_menu\nmaster_volume = 1\naudio_gain = 1", "cannot both"),
         ("\"action\": \"orbit_view\"", "\"action\": \"missing_action\"", "unknown action"),
         ("\"path\":\"progress.pearls\"", "\"path\":\"nope.pearls\"", "unknown state"),
     ].into_iter().enumerate() {

@@ -59,6 +59,22 @@
   ],
   "entries": [
     {
+      "id": "pixel3d-tick-audio",
+      "category": "games",
+      "name": "Pixel-3D tick audio state",
+      "signature": "action tick(input, audio)",
+      "summary": "Read the current music track and playback state from the optional second tick argument.",
+      "runtime": "Pixel-3D browser, desktop and Apple TV",
+      "sources": ["runtime/rune-web/src/pixel3d/engine.ts", "runtime/rune-web/src/audio_sync.ts", "examples/games/yule_log/logic.rune", "tests/browser/yule_log.py"],
+      "returns": "audio.track is the active track name or null; audio.playing is true while the track is playing or paused.",
+      "errors": "Browser autoplay does not start music before a user gesture.",
+      "example": "action tick(input, audio):\n    if audio.playing:\n        current_track = audio.track",
+      "parameters": [],
+      "aliases": [],
+      "notes": ["A non-looping song reports no active track after its final beat.", "Pause prevents Pixel-3D ticks until the game resumes."],
+      "fields": []
+    },
+    {
       "id": "tvos-xcode-tooling",
       "category": "cli",
       "name": "Apple TV Xcode tooling",
@@ -135,7 +151,7 @@
       "example": "@Scene/aquarium\ntv = aquarium\n\n@TV/aquarium\ninitial_focus = toggle_menu\nsummary = [{\"path\":\"progress.pearls\",\"label\":\"PEARLS\"}]\nmodes = [{\"id\":\"friends\",\"label\":\"FRIENDS\",\"kind\":\"cycle\",\"action\":\"inspect_resident\",\"groups\":[\"fish\"],\"targets\":\"residents\"}]",
       "parameters": [],
       "aliases": [],
-      "notes": ["Fields: initial_focus (HUD action name), wrap (default true), summary, modes. A mode is kind action (left/right call the action with -1/+1, optional bounds {origin, extent, scale} highlight) or kind cycle (groups are state arrays of objects with x, y, z; targets names the array that selecting indexes; select calls the action with the index).", "Without @TV the HUD buttons are still remote-navigable; the profile only adds the summary and modes. Browser and desktop hosts ignore it."],
+      "notes": ["Fields: initial_focus (HUD action name), wrap (default true), resolution ([640,400] default or [720,405]), hide_after (optional 1–60 seconds), master_volume (TV mix multiplier 0–4, default 1), volume_control (default false), summary, modes. audio_gain is an alias for master_volume; do not specify both.", "When volume_control is true, select Volume on the TV HUD and use left/right to adjust 0.25 per step, then Back. Changes last for the running session and do not alter mute.", "When hide_after is set, the first remote press reveals the initially hidden TV HUD without activating a control; it hides again after the idle timeout.", "Master volume applies to the native TV output after effects; high values may clip. Browser and desktop hosts ignore it.", "A mode is kind action (left/right call the action with -1/+1, optional bounds {origin, extent, scale} highlight) or kind cycle (groups are state arrays of objects with x, y, z; targets names the array that selecting indexes; select calls the action with the index). Without @TV the HUD buttons are still remote-navigable."],
       "fields": []
     },
     {
@@ -3751,7 +3767,7 @@
           "name": "sky",
           "type": "object",
           "default": "—",
-          "description": "Seeded sky panorama configuration."
+          "description": "Seeded sky panorama; optional cloud_wave and cloud_glow range from 0 to 1."
         },
         {
           "name": "spawn",

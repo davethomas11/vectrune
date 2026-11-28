@@ -1,0 +1,78 @@
+#!RUNE
+import "models.rune"
+import "beach_models.rune"
+import "music.rune"
+import "logic.rune"
+import "shell.rune"
+
+@App
+name = Yule Log
+type = pixel-3d
+runtime = hybrid
+scene = yule
+resolution = [640,400]
+tick_rate = 30
+port = 3037
+shell = yule_cabinet
+
+@Perspective/yule
+fov = 58
+
+@Scene/yule
+logic = yule
+map = winter
+world = world
+camera = camera
+perspective = yule
+things = ["scenery","molding_glow","train","flames","sparks","snow","players","limbs","twinkles","reveal","winter_details","snowman_head","pets","santa","story","workshop","workshop_arms","workshop_gifts","workshop_flames","workshop_visitors","santa_extras","hay_flecks","creek","creek_arms","creek_balls","creek_splashes","creek_snow","creek_owl",
+"creek_ice",
+"creek_rider",
+"beach",
+"beach_dancers"]
+lights = lights
+controls = yule
+ui = ui
+tv = yule
+persistence = {"key":"yule-log-v1","state":"settings"}
+click_to_start = false
+mouse_look = false
+
+@TV/yule
+resolution = [720,405]
+initial_focus = switch_scene
+hide_after = 6
+master_volume = 3
+volume_control = true
+summary = [
+    {"path":"scene_label","label":"SCENE"},
+    {"path":"track_label","label":"MUSIC"},
+    {"path":"auto_scene_label","label":"ROTATION"}
+]
+
+@Map/winter
+sky = {
+    "seed": 73,
+    "zenith": "#061e1b",
+    "horizon": "#255a42",
+    "below": "#112c2b",
+    "cloud": "#44785e",
+    "speed": 0.08,
+    "cloud_wave": 0.8,
+    "cloud_glow": 0.45
+}
+legend = {".":{}}
+grid:
+    "..."
+    "..."
+    "..."
+
+@Controls/yule
+commands:
+    KeyS -> switch_scene
+    KeyT -> next_track
+    KeyF -> host.fullscreen
+    KeyM -> host.mute
+gamepad:
+    Button0 -> {"command":"switch_scene"}
+    Button2 -> {"command":"next_track"}
+    Button3 -> {"command":"host.fullscreen"}

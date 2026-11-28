@@ -50,6 +50,10 @@ pub struct Sky {
     pub speed: f64,
     #[serde(default)]
     pub below: Option<u32>,
+    #[serde(default)]
+    pub cloud_wave: f64,
+    #[serde(default)]
+    pub cloud_glow: f64,
 }
 
 fn sky_noise(x: i64, y: i64, seed: u32) -> f64 {
@@ -96,9 +100,15 @@ pub fn sky_pixel(sky: &Sky, longitude: f64, altitude: f64, time: f64) -> u32 {
     if altitude <= 0.0 {
         return 0xff000000 | sky.horizon;
     }
-    let density = cloud_density(((u + drift) % 64.0 + 64.0) % 64.0, altitude * 12.0, sky.seed, 63);
+    let wave = if sky.cloud_wave == 0.0 { 0.0 } else {
+        sky.cloud_wave * (longitude * 3.0 + time * 0.35).sin()
+    };
+    let density = cloud_density(((u + drift) % 64.0 + 64.0) % 64.0, altitude * 12.0 + wave, sky.seed, 63);
     let band = (altitude * 16.0).floor() / 16.0;
-    mix_color(mix_color(sky.horizon, sky.zenith, band), sky.cloud, density * (altitude * 5.0).min(1.0))
+    let base = mix_color(mix_color(sky.horizon, sky.zenith, band), sky.cloud, density * (altitude * 5.0).min(1.0));
+    if sky.cloud_glow == 0.0 { base } else {
+        mix_color(base, 0xffffffff, sky.cloud_glow * density * density * (altitude * 5.0).min(1.0) * 0.5)
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

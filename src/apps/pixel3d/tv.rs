@@ -59,12 +59,33 @@ pub fn compile(doc: &RuneDocument, scene: &Section, logic: &LogicDefinition) -> 
     let section = sections[0];
     ensure!(section.series.is_empty() && section.records.is_empty(), "@TV/{tv} accepts only key-value fields");
     for key in section.kv.keys() {
-        ensure!(["initial_focus", "wrap", "summary", "modes"].contains(&key.as_str()),
+        ensure!(["initial_focus", "wrap", "summary", "modes", "hide_after", "audio_gain", "master_volume", "volume_control", "resolution"].contains(&key.as_str()),
             "Unknown @TV/{tv} field: {key}");
     }
     let mut profile = json!({"wrap": true, "summary": [], "modes": []});
     for (key, v) in &section.kv { profile[key] = value(v); }
+    if let Some(resolution) = profile.get("resolution") {
+        ensure!(*resolution == json!([640, 400]) || *resolution == json!([720, 405]),
+            "TV resolution must be [640,400] or [720,405]");
+    }
     ensure!(profile["wrap"].is_boolean(), "TV wrap must be boolean");
+    if let Some(timeout) = profile.get("hide_after") {
+        ensure!(timeout.as_f64().is_some_and(|seconds| (1.0..=60.0).contains(&seconds)),
+            "TV hide_after must be 1–60 seconds");
+    }
+    if let Some(gain) = profile.get("audio_gain") {
+        ensure!(gain.as_f64().is_some_and(|gain| (0.0..=4.0).contains(&gain)),
+            "TV audio_gain must be 0–4");
+    }
+    if let Some(volume) = profile.get("master_volume") {
+        ensure!(volume.as_f64().is_some_and(|value| (0.0..=4.0).contains(&value)),
+            "TV master_volume must be 0–4");
+    }
+    ensure!(!(profile.get("audio_gain").is_some() && profile.get("master_volume").is_some()),
+        "TV audio_gain and master_volume cannot both be set");
+    if let Some(control) = profile.get("volume_control") {
+        ensure!(control.is_boolean(), "TV volume_control must be boolean");
+    }
     if let Some(initial) = profile.get("initial_focus") {
         name(initial, "TV initial_focus")?;
     }
@@ -83,6 +104,8 @@ pub fn compile(doc: &RuneDocument, scene: &Section, logic: &LogicDefinition) -> 
         let mode = mode.as_object().context("TV mode must be an object")?;
         fields(mode, &["id", "label", "kind", "action", "groups", "targets", "bounds"], "TV mode")?;
         let id = name(mode.get("id").unwrap_or(&Json::Null), "TV mode id")?;
+        ensure!(id != "volume" || profile["volume_control"] != true,
+            "TV mode id volume is reserved when volume_control is enabled");
         ensure!(ids.insert(id), "Duplicate TV mode id");
         label(mode.get("label").unwrap_or(&Json::Null), "TV mode label")?;
         let action = name(mode.get("action").unwrap_or(&Json::Null), "TV mode action")?;

@@ -1,0 +1,1087 @@
+@Palette/yule
+colors = {
+    "k": "#171419",
+    "d": "#35252a",
+    "b": "#674138",
+    "s": "#a47b6a",
+    "w": "#efe8da",
+    "n": "#c8dce2",
+    "i": "#8ca9ba",
+    "r": "#9d2835",
+    "g": "#254d3a",
+    "o": "#ef6a25",
+    "y": "#ffba43",
+    "h": "#ffe6a0",
+    "c": "#25232b",
+    "a": "#506c79",
+    "p": "#dfba86",
+    "v": "#b14e54",
+    "A": "#214c3b",
+    "B": "#2a6047",
+    "C": "#347353",
+    "D": "#142b42",
+    "E": "#eac993",
+    "F": "#84594b",
+    "G": "#4c6a4e",
+    "H": "#273546",
+    "I": "#7897a4",
+    "J": "#453334",
+    "K": "#704632",
+    "L": "#98572f",
+    "M": "#101d35",
+    "N": "#1a2e48",
+    "O": "#304a67",
+    "P": "#779ab2",
+    "Q": "#b2d0dc",
+    "R": "#475570",
+    "U": "#d99b48",
+    "V": "#bf6570",
+    "W": "#c5b889",
+    "S": "#595040",
+    "T": "#48513e",
+    "X": "#38503d",
+    "Y": "#2b4d3b",
+    "Z": "#42634d",
+    "q": "#3b5947",
+    "j": "#334e3f",
+    "e": "#ff343e",
+    "f": "#ffada0"
+}
+
+@Texture/yule/ground
+palette = yule
+size = [8,8]
+pixels:
+    {"runs":"n*8","repeat":8}
+
+@Model/yule/workshop-wall
+palette = yule
+unit = 0.5
+blocks:
+    {"from":[0,-20,0],"size":[1,6,16],"color":"F"}
+    {"from":[0,-14,0],"size":[1,4,6],"color":"F"}
+    {"from":[0,-14,11],"size":[1,4,5],"color":"F"}
+    {"from":[0,-10,0],"size":[1,20,16],"color":"F"}
+    {"from":[0,10,0],"size":[1,4,6],"color":"F"}
+    {"from":[0,10,11],"size":[1,4,5],"color":"F"}
+    {"from":[0,14,0],"size":[1,6,16],"color":"F"}
+    {"from":[-1,-20,0],"size":[1,20,1],"color":"d"}
+    {"from":[-1,0,0],"size":[1,20,1],"color":"d"}
+    {"from":[-1,-20,12],"size":[1,20,1],"color":"b"}
+    {"from":[-1,0,12],"size":[1,20,1],"color":"b"}
+    {"from":[-1,-17,0],"size":[1,1,16],"color":"b"}
+    {"from":[-1,-7,0],"size":[1,1,16],"color":"b"}
+    {"from":[-1,7,0],"size":[1,1,16],"color":"b"}
+    {"from":[-1,17,0],"size":[1,1,16],"color":"b"}
+
+@Model/yule/workshop-roof
+palette = yule
+unit = 0.5
+blocks:
+    {"from":[-2,-20,0],"size":[3,20,1],"color":"d"}
+    {"from":[-2,0,0],"size":[3,20,1],"color":"d"}
+    {"from":[-2,-17,1],"size":[3,17,1],"color":"b"}
+    {"from":[-2,0,1],"size":[3,17,1],"color":"b"}
+    {"from":[-2,-13,2],"size":[3,13,1],"color":"F"}
+    {"from":[-2,0,2],"size":[3,13,1],"color":"F"}
+    {"from":[-2,-8,3],"size":[3,16,1],"color":"s"}
+
+@Model/yule/workshop-candle
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-2,-2,0],"size":[4,4,1],"color":"b"}
+    {"from":[-1,-1,1],"size":[2,2,4],"color":"w"}
+
+@Model/yule/candle-flame
+palette = yule
+unit = 0.1
+emissive = "yh"
+blocks:
+    {"from":[-1,-1,0],"size":[2,2,2],"color":"y"}
+    {"from":[0,0,2],"size":[1,1,2],"color":"h"}
+
+@Model/yule/workshop-santa
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-5,7],"size":[8,10,10],"color":"r"}
+    {"from":[-5,-5,7],"size":[1,10,2],"color":"w"}
+    {"from":[-5,-5,11],"size":[1,10,2],"color":"k"}
+    {"from":[-6,-1,11],"size":[1,2,2],"color":"y"}
+    {"from":[-3,-3,17],"size":[6,6,6],"color":"p"}
+    {"from":[-5,-3,15],"size":[2,6,5],"color":"w"}
+    {"from":[-6,-2,17],"size":[1,4,2],"color":"w"}
+    {"from":[-4,-2,20],"size":[1,1,1],"color":"k"}
+    {"from":[-4,1,20],"size":[1,1,1],"color":"k"}
+    {"from":[-4,-4,23],"size":[8,8,2],"color":"w"}
+    {"from":[-3,-3,25],"size":[6,6,3],"color":"r"}
+    {"from":[-2,-2,28],"size":[4,4,3],"color":"r"}
+    {"from":[-1,-1,31],"size":[2,2,1],"color":"w"}
+    {"from":[-3,-7,8],"size":[6,2,8],"color":"r"}
+    {"from":[-3,5,8],"size":[6,2,8],"color":"r"}
+
+@Model/yule/workshop-santa-leg
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-2,-2,1],"size":[4,4,6],"color":"r"}
+    {"from":[-3,-2,0],"size":[5,4,2],"color":"k"}
+
+@Model/yule/santa-belly
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-4,-3],"size":[4,8,6],"color":"r"}
+    {"from":[-4,-4,-1],"size":[1,8,2],"color":"k"}
+    {"from":[-5,-1,-1],"size":[1,2,2],"color":"y"}
+
+@Model/yule/laugh-bubble
+palette = yule
+unit = 0.1
+emissive = "w"
+blocks:
+    {"from":[0,-13,1],"size":[1,26,8],"color":"w"}
+    {"from":[0,-11,0],"size":[1,22,1],"color":"w"}
+    {"from":[0,-11,9],"size":[1,22,1],"color":"w"}
+    {"from":[0,-10,-2],"size":[1,3,2],"color":"w"}
+    {"from":[0,-12,-3],"size":[1,2,1],"color":"w"}
+
+@Model/yule/laugh-ho
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-1,-3,3],"size":[1,1,4],"color":"r"}
+    {"from":[-1,-1,3],"size":[1,1,4],"color":"r"}
+    {"from":[-1,-2,4],"size":[1,1,1],"color":"r"}
+    {"from":[-1,1,3],"size":[1,1,4],"color":"r"}
+    {"from":[-1,3,3],"size":[1,1,4],"color":"r"}
+    {"from":[-1,2,3],"size":[1,1,1],"color":"r"}
+    {"from":[-1,2,6],"size":[1,1,1],"color":"r"}
+
+@Model/yule/hay-fleck
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[0,0,0],"size":[1,2,1],"color":"y"}
+
+@Model/yule/creek-banks
+palette = yule
+unit = 0.5
+blocks:
+    {"from":[-8,-20,-1],"size":[24,17,1],"color":"Q"}
+    {"from":[-8,3,-1],"size":[24,17,1],"color":"Q"}
+    {"from":[-8,-3,-1],"size":[24,6,1],"color":"O"}
+    {"from":[-8,-3,0],"size":[24,1,1],"color":"P"}
+    {"from":[-8,2,0],"size":[24,1,1],"color":"P"}
+
+@Model/yule/creek-bridge
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-7,-23,4],"size":[14,4,5],"color":"b"}
+    {"from":[-7,-19,8],"size":[14,4,5],"color":"b"}
+    {"from":[-7,-15,12],"size":[14,4,5],"color":"b"}
+    {"from":[-7,-11,16],"size":[14,4,5],"color":"b"}
+    {"from":[-7,-7,20],"size":[14,14,3],"color":"b"}
+    {"from":[-7,7,16],"size":[14,4,5],"color":"b"}
+    {"from":[-7,11,12],"size":[14,4,5],"color":"b"}
+    {"from":[-7,15,8],"size":[14,4,5],"color":"b"}
+    {"from":[-7,19,4],"size":[14,4,5],"color":"b"}
+    {"from":[-8,-23,9],"size":[2,4,2],"color":"n"}
+    {"from":[-8,-19,13],"size":[2,4,2],"color":"n"}
+    {"from":[-8,-15,17],"size":[2,4,2],"color":"n"}
+    {"from":[-8,-11,21],"size":[2,4,2],"color":"n"}
+    {"from":[-8,-7,23],"size":[2,14,2],"color":"n"}
+    {"from":[-8,7,21],"size":[2,4,2],"color":"n"}
+    {"from":[-8,11,17],"size":[2,4,2],"color":"n"}
+    {"from":[-8,15,13],"size":[2,4,2],"color":"n"}
+    {"from":[-8,19,9],"size":[2,4,2],"color":"n"}
+    {"from":[-8,-22,4],"size":[2,2,5],"color":"b"}
+    {"from":[-8,20,4],"size":[2,2,5],"color":"b"}
+
+@Model/yule/ice-floe
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-6,-4,0],"size":[12,8,1],"color":"I"}
+    {"from":[-5,-5,1],"size":[10,10,1],"color":"P"}
+    {"from":[-4,-4,2],"size":[8,8,1],"color":"n"}
+    {"from":[-2,-3,3],"size":[5,5,1],"color":"w"}
+
+@Model/yule/creek-elf
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-3,0],"size":[6,6,3],"color":"g"}
+    {"from":[-7,-3,0],"size":[4,2,2],"color":"b"}
+    {"from":[-7,1,0],"size":[4,2,2],"color":"b"}
+    {"from":[-3,-3,3],"size":[6,6,5],"color":"C"}
+    {"from":[-4,-3,8],"size":[6,6,4],"color":"p"}
+    {"from":[-5,-2,10],"size":[1,1,1],"color":"k"}
+    {"from":[-5,1,10],"size":[1,1,1],"color":"k"}
+    {"from":[-4,-4,12],"size":[8,8,2],"color":"w"}
+    {"from":[-3,-3,14],"size":[6,6,3],"color":"g"}
+    {"from":[-2,-2,17],"size":[4,4,2],"color":"g"}
+    {"from":[-1,-1,19],"size":[2,2,2],"color":"y"}
+    {"from":[-2,-5,4],"size":[4,2,2],"color":"C"}
+    {"from":[-2,3,4],"size":[4,2,2],"color":"C"}
+
+@Model/yule/snowball
+palette = yule
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.16,"color":"w"}
+
+@Model/yule/snow-throw-arm
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-1,0,0],"size":[2,6,2],"color":"b"}
+    {"from":[-2,5,0],"size":[4,2,2],"color":"w"}
+
+@Model/yule/creek-scarf-red
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-4,0],"size":[8,8,2],"color":"r"}
+    {"from":[-5,1,-5],"size":[2,3,5],"color":"r"}
+
+@Model/yule/creek-scarf-blue
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-4,0],"size":[8,8,2],"color":"O"}
+    {"from":[-5,-3,-5],"size":[2,3,5],"color":"O"}
+
+@Model/yule/creek-knit-hat
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-4,0],"size":[8,8,2],"color":"O"}
+    {"from":[-3,-3,2],"size":[6,6,4],"color":"P"}
+    {"from":[-2,-2,6],"size":[4,4,2],"color":"O"}
+    {"from":[-1,-1,8],"size":[2,2,2],"color":"w"}
+
+@Model/yule/owl-branch
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-2,0],"size":[6,4,32],"color":"b"}
+    {"from":[-2,-2,32],"size":[4,4,8],"color":"b"}
+    {"from":[-2,-16,28],"size":[4,16,3],"color":"F"}
+    {"from":[-3,-15,31],"size":[6,15,1],"color":"n"}
+
+@Model/yule/owl
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-3,0],"size":[6,6,8],"color":"F"}
+    {"from":[-4,-3,5],"size":[1,6,4],"color":"E"}
+    {"from":[-5,-2,7],"size":[1,1,1],"color":"k"}
+    {"from":[-5,1,7],"size":[1,1,1],"color":"k"}
+    {"from":[-5,0,5],"size":[2,1,2],"color":"y"}
+    {"from":[-3,-3,8],"size":[3,2,2],"color":"b"}
+    {"from":[-3,1,8],"size":[3,2,2],"color":"b"}
+    {"from":[-2,-3,-1],"size":[2,2,1],"color":"y"}
+    {"from":[-2,1,-1],"size":[2,2,1],"color":"y"}
+
+@Model/yule/owl-wing
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-1,-5,0],"size":[2,10,2],"color":"F"}
+    {"from":[-1,-7,0],"size":[2,3,1],"color":"b"}
+    {"from":[-1,4,0],"size":[2,3,1],"color":"b"}
+
+@Model/yule/hay
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-5,-7,0],"size":[10,14,2],"color":"b"}
+    {"from":[-4,-6,2],"size":[8,12,2],"color":"U"}
+    {"from":[-3,-5,4],"size":[6,10,1],"color":"y"}
+    {"from":[-1,-7,4],"size":[1,14,1],"color":"E"}
+
+@Model/yule/rudolph-body
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-8,7],"size":[8,16,8],"color":"L"}
+    {"from":[-3,7,10],"size":[6,4,4],"color":"b"}
+    {"from":[-3,-10,11],"size":[6,5,7],"color":"L"}
+    {"from":[-3,-2,7],"size":[6,7,1],"color":"E"}
+
+@Model/yule/rudolph-head
+palette = yule
+unit = 0.1
+emissive = "ef"
+blocks:
+    {"from":[-3,-4,0],"size":[6,7,7],"color":"L"}
+    {"from":[-2,-7,0],"size":[4,4,3],"color":"E"}
+    {"from":[-2,-8,1],"size":[4,2,2],"color":"e"}
+    {"from":[-3,-8,2],"size":[1,1,1],"color":"f"}
+    {"from":[-4,-2,4],"size":[1,1,1],"color":"k"}
+    {"from":[3,-2,4],"size":[1,1,1],"color":"k"}
+    {"from":[-5,0,5],"size":[2,3,2],"color":"b"}
+    {"from":[3,0,5],"size":[2,3,2],"color":"b"}
+    {"from":[-4,1,7],"size":[1,1,5],"color":"E"}
+    {"from":[3,1,7],"size":[1,1,5],"color":"E"}
+    {"from":[-5,-1,9],"size":[2,3,1],"color":"E"}
+    {"from":[3,-1,9],"size":[2,3,1],"color":"E"}
+
+@Model/yule/rudolph-leg
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-1,-1,1],"size":[2,2,7],"color":"L"}
+    {"from":[-1,-1,0],"size":[2,2,2],"color":"k"}
+
+@Model/yule/workbench
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-7,-25,11],"size":[14,25,2],"color":"s"}
+    {"from":[-7,0,11],"size":[14,25,2],"color":"s"}
+    {"from":[-6,-24,0],"size":[3,3,11],"color":"b"}
+    {"from":[3,-24,0],"size":[3,3,11],"color":"b"}
+    {"from":[-6,21,0],"size":[3,3,11],"color":"b"}
+    {"from":[3,21,0],"size":[3,3,11],"color":"b"}
+    {"from":[-8,-25,10],"size":[2,25,2],"color":"d"}
+    {"from":[-8,0,10],"size":[2,25,2],"color":"d"}
+
+@Model/yule/workshop-shelf
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-20,0],"size":[6,2,30],"color":"b"}
+    {"from":[-3,18,0],"size":[6,2,30],"color":"b"}
+    {"from":[-4,-20,8],"size":[8,32,2],"color":"s"}
+    {"from":[-4,12,8],"size":[8,8,2],"color":"s"}
+    {"from":[-4,-20,20],"size":[8,32,2],"color":"s"}
+    {"from":[-4,12,20],"size":[8,8,2],"color":"s"}
+    {"from":[-5,-16,10],"size":[6,6,8],"color":"r"}
+    {"from":[-5,-14,10],"size":[7,2,8],"color":"y"}
+    {"from":[-5,6,10],"size":[6,8,6],"color":"a"}
+    {"from":[-5,9,10],"size":[7,2,6],"color":"h"}
+    {"from":[-5,-8,22],"size":[6,7,6],"color":"g"}
+    {"from":[-5,-6,22],"size":[7,2,6],"color":"y"}
+    {"from":[-5,8,22],"size":[6,6,6],"color":"v"}
+
+@Model/yule/workshop-elf
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-4,0],"size":[3,3,6],"color":"d"}
+    {"from":[-3,1,0],"size":[3,3,6],"color":"d"}
+    {"from":[-4,-5,6],"size":[7,10,9],"color":"g"}
+    {"from":[-5,-5,7],"size":[2,10,2],"color":"d"}
+    {"from":[-6,-1,7],"size":[1,2,2],"color":"y"}
+    {"from":[-3,-3,15],"size":[6,6,6],"color":"p"}
+    {"from":[-4,-3,20],"size":[7,6,2],"color":"w"}
+    {"from":[-3,-3,22],"size":[6,6,3],"color":"r"}
+    {"from":[-2,-2,25],"size":[4,4,3],"color":"r"}
+    {"from":[-1,-1,28],"size":[2,2,2],"color":"h"}
+    {"from":[-4,-2,17],"size":[1,1,1],"color":"k"}
+    {"from":[-4,1,17],"size":[1,1,1],"color":"k"}
+
+@Model/yule/workshop-arm
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-5,-1,-1],"size":[6,2,2],"color":"g"}
+    {"from":[-7,-1,-1],"size":[2,2,2],"color":"p"}
+
+@Model/yule/wrapping-box
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-4,0],"size":[8,8,6],"color":"E"}
+    {"from":[-4,-4,6],"size":[8,8,1],"color":"w"}
+
+@Model/yule/ribbon-roll
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-3,0],"size":[6,6,3],"color":"r"}
+    {"from":[-2,-2,3],"size":[4,4,1],"color":"y"}
+
+@Palette/yule-dog
+colors = {"d":"#e2d6b4","p":"#9b7656","s":"#52677d","w":"#f1f7ee","k":"#111d34"}
+
+@Model/yule/outdoor-dog
+palette = yule-dog
+unit = 0.055
+blocks:
+    {"from":[5,-4,0],"size":[3,3,7],"color":"w"}
+    {"from":[4,1,0],"size":[3,3,7],"color":"d"}
+    {"from":[-11,-4,6],"size":[20,8,9],"color":"d"}
+    {"from":[7,-4,11],"size":[9,8,8],"color":"w"}
+    {"from":[13,-3,11],"size":[5,6,4],"color":"w"}
+    {"from":[18,-2,13],"size":[2,4,2],"color":"k"}
+    {"from":[7,-5,13],"size":[4,2,6],"color":"p"}
+    {"from":[7,3,13],"size":[4,2,6],"color":"p"}
+    {"from":[13,-4,16],"size":[1,1,1],"color":"k"}
+    {"from":[13,4,16],"size":[1,1,1],"color":"k"}
+    {"from":[6,-4,8],"size":[3,9,3],"color":"s"}
+
+@Model/yule/dog-tail
+palette = yule-dog
+unit = 0.025
+blocks:
+    {"from":[-16,-3,0],"size":[17,6,6],"color":"d"}
+    {"from":[-20,-3,4],"size":[7,6,6],"color":"w"}
+
+@Model/yule/hearth
+palette = yule
+unit = 0.2
+blocks:
+    {"from":[6,-16,0],"size":[2,32,28],"color":"d"}
+    {"from":[0,-15,0],"size":[3,30,2],"color":"s"}
+    {"from":[0,-14,2],"size":[3,4,16],"color":"b"}
+    {"from":[0,10,2],"size":[3,4,16],"color":"b"}
+    {"from":[0,-14,18],"size":[3,28,2],"color":"b"}
+    {"from":[-2,-16,20],"size":[5,32,2],"color":"s"}
+    {"from":[3,-10,2],"size":[1,20,16],"color":"k"}
+    {"from":[-2,-9,3],"size":[4,18,2],"color":"d"}
+    {"from":[-3,-8,4],"size":[4,16,2],"color":"b"}
+    {"from":[-3,-6,5],"size":[4,12,2],"color":"d"}
+    {"from":[-1,-12,22],"size":[2,24,1],"color":"g"}
+    {"from":[-2,-11,23],"size":[2,2,2],"color":"r"}
+    {"from":[-2,9,23],"size":[2,2,2],"color":"r"}
+
+@Model/yule/flame
+palette = yule
+unit = 0.1
+emissive = "oyh"
+blocks:
+    {"from":[0,-4,0],"size":[2,8,3],"color":"o"}
+    {"from":[0,-3,3],"size":[2,7,3],"color":"o"}
+    {"from":[0,-2,6],"size":[2,5,3],"color":"o"}
+    {"from":[0,-1,9],"size":[2,3,3],"color":"o"}
+    {"from":[0,0,12],"size":[2,1,3],"color":"o"}
+    {"from":[-1,-2,0],"size":[1,4,4],"color":"y"}
+    {"from":[-1,-1,4],"size":[1,3,4],"color":"y"}
+    {"from":[-2,-1,0],"size":[1,2,3],"color":"h"}
+
+@Model/yule/spark
+palette = yule
+unit = 0.1
+emissive = "y"
+blocks:
+    {"from":[0,0,0],"size":[1,1,1],"color":"y"}
+
+@Model/yule/room
+palette = yule
+unit = 0.5
+blocks:
+    {"from":[-1,-20,0],"size":[1,8,16],"color":"b"}
+    {"from":[-1,-12,0],"size":[1,4,6],"color":"b"}
+    {"from":[-1,-12,11],"size":[1,4,5],"color":"b"}
+    {"from":[-1,-8,0],"size":[1,16,16],"color":"b"}
+    {"from":[-1,8,0],"size":[1,4,6],"color":"b"}
+    {"from":[-1,8,11],"size":[1,4,5],"color":"b"}
+    {"from":[-1,12,0],"size":[1,8,16],"color":"b"}
+    {"from":[-1,-20,0],"size":[1,20,1],"color":"d"}
+    {"from":[-1,0,0],"size":[1,20,1],"color":"d"}
+    {"from":[-1,-20,13],"size":[1,20,1],"color":"g"}
+    {"from":[-1,0,13],"size":[1,20,1],"color":"g"}
+    {"from":[-2,-15,13],"size":[1,1,1],"color":"r"}
+    {"from":[-2,-12,13],"size":[1,1,1],"color":"y"}
+    {"from":[-2,11,13],"size":[1,1,1],"color":"r"}
+    {"from":[-2,14,13],"size":[1,1,1],"color":"y"}
+
+@Model/yule/wall-molding
+palette = yule
+unit = 0.25
+blocks:
+    {"from":[0,-20,2],"size":[1,20,1],"color":"S"}
+    {"from":[0,0,2],"size":[1,20,1],"color":"S"}
+    {"from":[0,-20,3],"size":[1,20,1],"color":"T"}
+    {"from":[0,0,3],"size":[1,20,1],"color":"T"}
+    {"from":[0,-20,4],"size":[1,20,1],"color":"X"}
+    {"from":[0,0,4],"size":[1,20,1],"color":"X"}
+    {"from":[0,-20,5],"size":[1,20,1],"color":"Y"}
+    {"from":[0,0,5],"size":[1,20,1],"color":"Y"}
+    {"from":[-1,-20,0],"size":[2,20,1],"color":"d"}
+    {"from":[-1,0,0],"size":[2,20,1],"color":"d"}
+    {"from":[-1,-20,1],"size":[2,20,1],"color":"b"}
+    {"from":[-1,0,1],"size":[2,20,1],"color":"b"}
+
+@Model/yule/molding-glow0
+palette = yule
+unit = 0.25
+emissive = "j"
+blocks:
+    {"from":[0,-20,0],"size":[1,20,1],"color":"j"}
+    {"from":[0,0,0],"size":[1,20,1],"color":"j"}
+
+@Model/yule/molding-glow1
+palette = yule
+unit = 0.25
+emissive = "q"
+blocks:
+    {"from":[0,-20,0],"size":[1,20,1],"color":"q"}
+    {"from":[0,0,0],"size":[1,20,1],"color":"q"}
+
+@Model/yule/molding-glow2
+palette = yule
+unit = 0.25
+emissive = "Z"
+blocks:
+    {"from":[0,-20,0],"size":[1,20,1],"color":"Z"}
+    {"from":[0,0,0],"size":[1,20,1],"color":"Z"}
+
+@Model/yule/window
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[9,-10,0],"size":[1,20,24],"color":"D"}
+    {"from":[-1,-10,0],"size":[1,20,2],"color":"w"}
+    {"from":[-1,-10,22],"size":[1,20,2],"color":"w"}
+    {"from":[-1,-10,0],"size":[1,2,24],"color":"w"}
+    {"from":[-1,8,0],"size":[1,2,24],"color":"w"}
+    {"from":[-2,-1,2],"size":[1,2,20],"color":"s"}
+    {"from":[-2,-8,11],"size":[1,16,2],"color":"s"}
+    {"from":[-3,-12,-2],"size":[3,24,2],"color":"s"}
+    {"from":[-1,-8,3],"size":[1,16,2],"color":"I"}
+    {"from":[-1,-6,5],"size":[1,3,4],"color":"H"}
+    {"from":[-1,4,4],"size":[1,3,5],"color":"H"}
+    {"from":[-1,-6,17],"size":[1,1,1],"color":"w"}
+    {"from":[-1,5,19],"size":[1,1,1],"color":"w"}
+    {"from":[-1,2,15],"size":[1,1,1],"color":"w"}
+
+@Model/yule/wreath
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[0,-6,4],"size":[2,12,3],"color":"g"}
+    {"from":[0,-6,15],"size":[2,12,3],"color":"g"}
+    {"from":[0,-8,7],"size":[2,4,8],"color":"g"}
+    {"from":[0,4,7],"size":[2,4,8],"color":"g"}
+    {"from":[-1,-2,3],"size":[2,4,3],"color":"r"}
+    {"from":[-1,-4,1],"size":[2,3,3],"color":"r"}
+    {"from":[-1,1,1],"size":[2,3,3],"color":"r"}
+
+@Model/yule/logs
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-12,0],"size":[6,24,3],"color":"b"}
+    {"from":[-4,-9,3],"size":[6,18,3],"color":"F"}
+    {"from":[-5,-8,4],"size":[1,3,2],"color":"s"}
+    {"from":[-5,3,4],"size":[1,3,2],"color":"s"}
+    {"from":[-5,-3,1],"size":[1,4,1],"color":"d"}
+
+@Model/yule/tree
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-3,0],"size":[6,6,7],"color":"b"}
+    {"from":[-8,-10,6],"size":[16,20,7],"color":"g"}
+    {"from":[-9,-9,8],"size":[1,18,2],"color":"G"}
+    {"from":[-7,-7,13],"size":[14,14,7],"color":"g"}
+    {"from":[-5,-5,20],"size":[10,10,7],"color":"g"}
+    {"from":[-3,-3,27],"size":[6,6,5],"color":"g"}
+    {"from":[-9,-6,9],"size":[2,2,2],"color":"V"}
+    {"from":[-9,3,11],"size":[2,2,2],"color":"U"}
+    {"from":[-8,-3,17],"size":[2,2,2],"color":"W"}
+    {"from":[-6,1,23],"size":[2,2,2],"color":"V"}
+    {"from":[-9,-7,7],"size":[1,2,2],"color":"W"}
+    {"from":[-9,6,9],"size":[1,2,2],"color":"U"}
+    {"from":[-8,3,15],"size":[1,2,2],"color":"V"}
+    {"from":[-6,-3,21],"size":[1,2,2],"color":"U"}
+    {"from":[-4,-2,28],"size":[1,2,2],"color":"W"}
+    {"from":[-4,1,30],"size":[1,2,2],"color":"V"}
+
+@Model/yule/tree-crown
+palette = yule
+unit = 0.1
+emissive = "y"
+blocks:
+    {"from":[-3,-3,0],"size":[6,6,6],"color":"g"}
+    {"from":[-2,-2,6],"size":[4,4,4],"color":"g"}
+    {"from":[-4,-2,1],"size":[1,2,2],"color":"U"}
+    {"from":[-3,1,5],"size":[1,2,2],"color":"W"}
+    {"from":[-2,-1,9],"size":[4,2,5],"color":"y"}
+    {"from":[-2,-3,10],"size":[4,6,2],"color":"y"}
+
+@Model/yule/floor
+palette = yule
+unit = 0.5
+blocks:
+    {"from":[-16,-20,-1],"size":[32,20,1],"color":"d"}
+    {"from":[-16,0,-1],"size":[32,20,1],"color":"d"}
+
+@Model/yule/firelight
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-18,-20,0],"size":[28,32,1],"color":"J"}
+    {"from":[-18,12,0],"size":[28,8,1],"color":"J"}
+    {"from":[-13,-15,1],"size":[22,30,1],"color":"K"}
+    {"from":[-7,-11,2],"size":[15,22,1],"color":"L"}
+
+@Model/yule/armchair
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-8,-10,0],"size":[16,20,4],"color":"c"}
+    {"from":[-9,-10,4],"size":[18,20,7],"color":"H"}
+    {"from":[4,-10,11],"size":[5,20,14],"color":"H"}
+    {"from":[-9,-10,10],"size":[17,4,6],"color":"a"}
+    {"from":[-9,6,10],"size":[17,4,6],"color":"a"}
+    {"from":[0,-6,11],"size":[4,12,9],"color":"a"}
+    {"from":[-9,-10,2],"size":[2,20,2],"color":"b"}
+
+@Model/yule/side-table
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-7,-7,11],"size":[14,14,2],"color":"F"}
+    {"from":[-6,-6,0],"size":[2,2,11],"color":"b"}
+    {"from":[4,-6,0],"size":[2,2,11],"color":"b"}
+    {"from":[-6,4,0],"size":[2,2,11],"color":"b"}
+    {"from":[4,4,0],"size":[2,2,11],"color":"b"}
+
+@Model/yule/mug
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-3,-3,0],"size":[6,6,7],"color":"r"}
+    {"from":[-2,-2,7],"size":[4,4,1],"color":"d"}
+    {"from":[-2,3,2],"size":[4,2,4],"color":"w"}
+
+@Model/yule/sleeping-dachshund
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-4,-6,0],"size":[8,12,4],"color":"b"}
+    {"from":[-5,-3,1],"size":[10,7,4],"color":"F"}
+    {"from":[-5,3,1],"size":[7,3,3],"color":"b"}
+    {"from":[-6,-6,1],"size":[3,4,3],"color":"d"}
+
+@Model/yule/dachshund-head
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-3,-3,0],"size":[6,6,5],"color":"F"}
+    {"from":[-5,-2,0],"size":[3,4,3],"color":"b"}
+    {"from":[-2,-4,-1],"size":[4,2,5],"color":"d"}
+    {"from":[-5,-1,2],"size":[1,2,1],"color":"k"}
+
+@Model/yule/dachshund-running
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-3,-8,4],"size":[6,14,6],"color":"F"}
+    {"from":[-3,5,6],"size":[6,6,6],"color":"F"}
+    {"from":[-2,10,6],"size":[4,4,3],"color":"b"}
+    {"from":[-4,5,4],"size":[2,4,6],"color":"d"}
+    {"from":[-4,9,9],"size":[1,1,1],"color":"k"}
+    {"from":[-3,-6,0],"size":[3,3,5],"color":"b"}
+    {"from":[0,4,0],"size":[3,3,5],"color":"b"}
+
+@Model/yule/dachshund-running-alt
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-3,-8,4],"size":[6,14,6],"color":"F"}
+    {"from":[-3,5,6],"size":[6,6,6],"color":"F"}
+    {"from":[-2,10,6],"size":[4,4,3],"color":"b"}
+    {"from":[-4,5,4],"size":[2,4,6],"color":"d"}
+    {"from":[-4,9,9],"size":[1,1,1],"color":"k"}
+    {"from":[0,-6,0],"size":[3,3,5],"color":"b"}
+    {"from":[-3,4,0],"size":[3,3,5],"color":"b"}
+
+@Model/yule/dachshund-leap
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-3,-8,4],"size":[6,14,6],"color":"F"}
+    {"from":[-3,5,6],"size":[6,6,6],"color":"F"}
+    {"from":[-2,10,6],"size":[4,4,3],"color":"b"}
+    {"from":[-4,5,4],"size":[2,4,6],"color":"d"}
+    {"from":[-4,9,9],"size":[1,1,1],"color":"k"}
+    {"from":[-3,-12,1],"size":[6,6,3],"color":"b"}
+    {"from":[-3,9,2],"size":[6,6,3],"color":"b"}
+
+@Model/yule/dachshund-tail
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-1,-7,0],"size":[2,8,2],"color":"F"}
+    {"from":[-1,-9,2],"size":[2,3,3],"color":"b"}
+
+@Model/yule/fairy
+palette = yule
+unit = 0.05
+emissive = "hw"
+blocks:
+    {"from":[-1,-5,4],"size":[1,4,7],"color":"w"}
+    {"from":[-1,1,4],"size":[1,4,7],"color":"w"}
+    {"from":[-2,-2,2],"size":[4,4,6],"color":"g"}
+    {"from":[-2,-2,8],"size":[4,4,4],"color":"p"}
+    {"from":[-3,-3,12],"size":[6,6,2],"color":"r"}
+    {"from":[-2,-2,14],"size":[4,4,3],"color":"r"}
+    {"from":[-3,2,5],"size":[2,5,2],"color":"p"}
+    {"from":[-4,6,5],"size":[2,2,2],"color":"h"}
+
+@Model/yule/fairy-sparkle
+palette = yule
+unit = 0.1
+emissive = "h"
+blocks:
+    {"from":[0,-3,-1],"size":[1,6,2],"color":"h"}
+    {"from":[0,-1,-3],"size":[1,2,6],"color":"h"}
+
+@Model/yule/cat
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-3,-6,3],"size":[6,10,6],"color":"s"}
+    {"from":[-3,3,5],"size":[6,5,5],"color":"s"}
+    {"from":[-3,4,10],"size":[2,2,2],"color":"d"}
+    {"from":[1,4,10],"size":[2,2,2],"color":"d"}
+    {"from":[-4,5,7],"size":[1,1,1],"color":"k"}
+    {"from":[-4,-5,0],"size":[3,3,4],"color":"d"}
+    {"from":[-4,2,0],"size":[3,3,4],"color":"d"}
+    {"from":[0,-6,6],"size":[2,3,2],"color":"d"}
+    {"from":[0,-8,7],"size":[2,2,4],"color":"d"}
+
+@Model/yule/cat-leap
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-3,-7,4],"size":[6,14,5],"color":"s"}
+    {"from":[-3,6,6],"size":[6,5,5],"color":"s"}
+    {"from":[-3,7,11],"size":[2,2,2],"color":"d"}
+    {"from":[1,7,11],"size":[2,2,2],"color":"d"}
+    {"from":[-4,8,8],"size":[1,1,1],"color":"k"}
+    {"from":[-3,7,3],"size":[2,6,2],"color":"d"}
+    {"from":[1,7,3],"size":[2,6,2],"color":"d"}
+    {"from":[-3,-11,2],"size":[2,5,2],"color":"d"}
+    {"from":[1,-11,2],"size":[2,5,2],"color":"d"}
+    {"from":[0,-10,7],"size":[2,4,2],"color":"d"}
+
+@Model/yule/cat-bat
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-3,-6,2],"size":[6,10,5],"color":"s"}
+    {"from":[-3,3,4],"size":[6,5,5],"color":"s"}
+    {"from":[-3,4,9],"size":[2,2,2],"color":"d"}
+    {"from":[1,4,9],"size":[2,2,2],"color":"d"}
+    {"from":[-4,5,6],"size":[1,1,1],"color":"k"}
+    {"from":[-4,-5,0],"size":[3,3,3],"color":"d"}
+    {"from":[-4,2,0],"size":[3,7,2],"color":"d"}
+    {"from":[0,-8,5],"size":[2,3,3],"color":"d"}
+
+@Model/yule/yarn
+palette = yule
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.12,"color":"v"}
+
+@Model/yule/santa
+palette = yule
+unit = 0.1
+emissive = "r"
+blocks:
+    {"from":[0,-12,0],"size":[2,9,2],"color":"r"}
+    {"from":[0,-11,2],"size":[2,5,3],"color":"r"}
+    {"from":[0,-9,5],"size":[2,3,2],"color":"w"}
+    {"from":[0,-8,7],"size":[2,2,2],"color":"r"}
+    {"from":[0,-3,1],"size":[1,6,1],"color":"s"}
+    {"from":[0,3,1],"size":[2,5,2],"color":"b"}
+    {"from":[0,7,3],"size":[2,2,3],"color":"b"}
+    {"from":[0,8,6],"size":[2,1,2],"color":"s"}
+    {"from":[0,3,-2],"size":[1,1,3],"color":"b"}
+    {"from":[0,6,-2],"size":[1,1,3],"color":"b"}
+
+@Model/yule/woodpile
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-5,-8,0],"size":[10,16,3],"color":"b"}
+    {"from":[-4,-6,3],"size":[8,12,3],"color":"F"}
+    {"from":[-3,-4,6],"size":[6,8,3],"color":"b"}
+    {"from":[-6,-7,1],"size":[1,3,2],"color":"s"}
+    {"from":[-5,2,4],"size":[1,3,2],"color":"s"}
+
+@Model/yule/twinkle
+palette = yule
+unit = 0.1
+emissive = "h"
+blocks:
+    {"from":[0,0,0],"size":[1,2,2],"color":"h"}
+
+@Model/yule/moon
+palette = yule
+unit = 1
+emissive = "n"
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.48,"color":"n"}
+
+@Model/yule/stockings
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[0,-14,0],"size":[2,4,8],"color":"r"}
+    {"from":[-2,-14,0],"size":[4,4,2],"color":"w"}
+    {"from":[0,-14,7],"size":[3,4,2],"color":"w"}
+
+@Model/yule/stocking
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[0,0,0],"size":[2,4,8],"color":"r"}
+    {"from":[-2,0,0],"size":[4,4,2],"color":"w"}
+    {"from":[0,0,7],"size":[3,4,2],"color":"w"}
+
+@Model/yule/engine
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-9,-5,2],"size":[18,10,5],"color":"r"}
+    {"from":[-3,-4,7],"size":[11,8,7],"color":"g"}
+    {"from":[-9,-5,7],"size":[6,10,11],"color":"r"}
+    {"from":[-10,-3,11],"size":[1,6,4],"color":"i"}
+    {"from":[-9,-6,11],"size":[4,1,4],"color":"i"}
+    {"from":[-9,5,11],"size":[4,1,4],"color":"i"}
+    {"from":[-10,-6,18],"size":[8,12,2],"color":"k"}
+    {"from":[3,-2,14],"size":[3,4,5],"color":"k"}
+    {"from":[7,-2,8],"size":[3,4,3],"color":"y"}
+    {"from":[-7,-6,0],"size":[4,2,4],"color":"k"}
+    {"from":[4,-6,0],"size":[4,2,4],"color":"k"}
+    {"from":[-7,4,0],"size":[4,2,4],"color":"k"}
+    {"from":[4,4,0],"size":[4,2,4],"color":"k"}
+    {"from":[-6,-7,1],"size":[2,1,2],"color":"y"}
+    {"from":[5,-7,1],"size":[2,1,2],"color":"y"}
+    {"from":[-6,6,1],"size":[2,1,2],"color":"y"}
+    {"from":[5,6,1],"size":[2,1,2],"color":"y"}
+
+@Model/yule/carriage
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-7,-5,2],"size":[14,10,7],"color":"g"}
+    {"from":[-6,-4,9],"size":[12,8,2],"color":"r"}
+    {"from":[-4,-3,11],"size":[8,6,5],"color":"y"}
+    {"from":[-1,-4,11],"size":[2,8,5],"color":"r"}
+    {"from":[-5,-1,11],"size":[10,2,5],"color":"r"}
+    {"from":[-6,-6,0],"size":[4,2,4],"color":"k"}
+    {"from":[3,-6,0],"size":[4,2,4],"color":"k"}
+    {"from":[-6,4,0],"size":[4,2,4],"color":"k"}
+    {"from":[3,4,0],"size":[4,2,4],"color":"k"}
+
+@Model/yule/child
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-4,-5,8],"size":[8,10,11],"color":"r"}
+    {"from":[-5,-5,13],"size":[10,10,2],"color":"y"}
+    {"from":[-3,-8,10],"size":[6,3,7],"color":"r"}
+    {"from":[-3,5,10],"size":[6,3,7],"color":"r"}
+    {"from":[-3,-4,19],"size":[6,8,7],"color":"p"}
+    {"from":[-4,-2,22],"size":[1,1,1],"color":"k"}
+    {"from":[-4,1,22],"size":[1,1,1],"color":"k"}
+    {"from":[-4,-5,26],"size":[8,10,3],"color":"g"}
+    {"from":[-2,-3,29],"size":[4,6,2],"color":"g"}
+
+@Model/yule/child-blue
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-4,-5,8],"size":[8,10,11],"color":"a"}
+    {"from":[-5,-5,13],"size":[10,10,2],"color":"w"}
+    {"from":[-3,-8,10],"size":[6,3,7],"color":"a"}
+    {"from":[-3,5,10],"size":[6,3,7],"color":"a"}
+    {"from":[-3,-4,19],"size":[6,8,7],"color":"p"}
+    {"from":[-4,-2,22],"size":[1,1,1],"color":"k"}
+    {"from":[-4,1,22],"size":[1,1,1],"color":"k"}
+    {"from":[-4,-5,26],"size":[8,10,3],"color":"v"}
+    {"from":[-2,-3,29],"size":[4,6,2],"color":"v"}
+
+@Model/yule/leg
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-2,-2,1],"size":[4,4,8],"color":"a"}
+    {"from":[-3,-2,0],"size":[6,4,2],"color":"c"}
+
+@Model/yule/dog-leg
+palette = yule
+unit = 0.05
+blocks:
+    {"from":[-2,-2,0],"size":[4,4,7],"color":"p"}
+    {"from":[-3,-2,0],"size":[5,4,2],"color":"w"}
+
+@Model/yule/ball
+palette = yule
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.16,"color":"r"}
+
+@Model/yule/present
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-4,0],"size":[8,8,6],"color":"r"}
+    {"from":[-5,-1,0],"size":[10,2,7],"color":"y"}
+    {"from":[-1,-5,0],"size":[2,10,7],"color":"y"}
+
+@Model/yule/snowman
+palette = yule
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0.65],"radius":0.65,"color":"n"}
+    {"type":"sphere","center":[0,0,1.55],"radius":0.48,"color":"w"}
+
+@Model/yule/snowman-head
+palette = yule
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.36,"color":"w"}
+
+@Model/yule/hat
+palette = yule
+unit = 0.1
+blocks:
+   {"from":[-4,-5,0],"size":[8,10,1],"color":"c"}
+   {"from":[-3,-3,1],"size":[6,6,5],"color":"c"}
+   {"from":[-3,-3,2],"size":[6,6,1],"color":"r"}
+   {"from":[-3,-3,6],"size":[6,6,1],"color":"n"}
+
+@Model/yule/face
+palette = yule
+unit = 0.1
+blocks:
+   {"from":[0,-2,1],"size":[1,1,1],"color":"c"}
+   {"from":[0,1,1],"size":[1,1,1],"color":"c"}
+   {"from":[-3,0,-1],"size":[3,2,2],"color":"o"}
+   {"from":[0,-2,-2],"size":[1,1,1],"color":"c"}
+   {"from":[0,-1,-3],"size":[1,1,1],"color":"c"}
+   {"from":[0,1,-2],"size":[1,1,1],"color":"c"}
+
+@Model/yule/snowman-details
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-4,13],"size":[2,8,2],"color":"r"}
+    {"from":[-7,-1,7],"size":[2,2,2],"color":"c"}
+    {"from":[-6,-1,3],"size":[2,2,2],"color":"c"}
+    {"from":[0,-11,11],"size":[2,8,2],"color":"b"}
+    {"from":[0,3,13],"size":[2,8,2],"color":"b"}
+    {"from":[0,-12,10],"size":[2,2,4],"color":"b"}
+    {"from":[0,10,14],"size":[2,2,5],"color":"b"}
+    {"from":[-1,-5,15],"size":[3,3,1],"color":"n"}
+    {"from":[-1,3,15],"size":[3,3,1],"color":"n"}
+
+@Model/yule/scarf-tail
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[0,0,0],"size":[2,2,7],"color":"r"}
+
+@Model/yule/footprints
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-15,-9,0],"size":[3,2,1],"color":"P"}
+    {"from":[-11,-5,0],"size":[3,2,1],"color":"P"}
+    {"from":[-7,-8,0],"size":[3,2,1],"color":"P"}
+
+@Model/yule/snowground
+palette = yule
+unit = 0.5
+blocks:
+   {"from":[-8,-20,-1],"size":[16,20,1],"color":"Q"}
+   {"from":[-8,0,-1],"size":[16,20,1],"color":"Q"}
+
+@Model/yule/winter-sky
+palette = yule
+unit = 0.5
+emissive = "MNO"
+blocks:
+    {"from":[0,-20,0],"size":[1,20,32],"color":"M"}
+    {"from":[0,0,0],"size":[1,20,32],"color":"M"}
+    {"from":[-1,-20,1],"size":[1,20,3],"color":"N"}
+    {"from":[-1,0,1],"size":[1,20,3],"color":"N"}
+
+@Model/yule/cabin
+palette = yule
+unit = 0.1
+emissive = "oyh"
+blocks:
+    {"from":[0,-16,0],"size":[12,32,20],"color":"H"}
+    {"from":[-1,-16,20],"size":[14,32,3],"color":"N"}
+    {"from":[-1,-13,23],"size":[14,26,3],"color":"N"}
+    {"from":[-1,-9,26],"size":[14,18,3],"color":"N"}
+    {"from":[-1,-5,29],"size":[14,10,2],"color":"N"}
+    {"from":[-2,-16,23],"size":[1,32,1],"color":"Q"}
+    {"from":[-2,-13,26],"size":[1,26,1],"color":"P"}
+    {"from":[3,7,26],"size":[4,4,6],"color":"H"}
+    {"from":[-1,-12,7],"size":[1,7,8],"color":"o"}
+    {"from":[-2,-11,8],"size":[1,5,6],"color":"y"}
+    {"from":[-1,5,7],"size":[1,7,8],"color":"o"}
+    {"from":[-2,6,8],"size":[1,5,6],"color":"y"}
+    {"from":[-3,-9,8],"size":[1,1,6],"color":"b"}
+    {"from":[-3,8,8],"size":[1,1,6],"color":"b"}
+    {"from":[-2,-2,0],"size":[2,4,11],"color":"d"}
+
+@Model/yule/hill
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-4,-32,0],"size":[8,8,16],"color":"P"}
+    {"from":[-4,-24,0],"size":[8,8,15],"color":"P"}
+    {"from":[-4,-16,0],"size":[8,8,14],"color":"P"}
+    {"from":[-4,-8,0],"size":[8,8,13],"color":"P"}
+    {"from":[-4,0,0],"size":[8,8,12],"color":"P"}
+    {"from":[-4,8,0],"size":[8,8,11],"color":"P"}
+    {"from":[-4,16,0],"size":[8,8,10],"color":"P"}
+    {"from":[-4,24,0],"size":[8,8,9],"color":"P"}
+    {"from":[-4,-32,16],"size":[8,8,1],"color":"Q"}
+    {"from":[-4,-24,15],"size":[8,8,1],"color":"Q"}
+    {"from":[-4,-16,14],"size":[8,8,1],"color":"Q"}
+    {"from":[-4,-8,13],"size":[8,8,1],"color":"Q"}
+    {"from":[-4,0,12],"size":[8,8,1],"color":"Q"}
+    {"from":[-4,8,11],"size":[8,8,1],"color":"Q"}
+    {"from":[-4,16,10],"size":[8,8,1],"color":"Q"}
+    {"from":[-4,24,9],"size":[8,8,1],"color":"Q"}
+
+@Model/yule/sledder
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-3,-6,0],"size":[6,12,1],"color":"b"}
+    {"from":[-3,-5,1],"size":[6,10,1],"color":"r"}
+    {"from":[-2,-2,2],"size":[4,5,5],"color":"a"}
+    {"from":[-2,-2,7],"size":[4,4,4],"color":"p"}
+    {"from":[-3,-3,11],"size":[6,6,2],"color":"r"}
+    {"from":[-2,3,2],"size":[4,3,2],"color":"c"}
+
+@Model/yule/smoke
+palette = yule
+unit = 1
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.12,"color":"R"}
+
+@Model/yule/snowflake
+palette = yule
+unit = 1
+emissive = "w"
+shapes:
+    {"type":"sphere","center":[0,0,0],"radius":0.025,"color":"w"}
+
+@Model/yule/pine
+palette = yule
+unit = 0.1
+blocks:
+    {"from":[-2,-2,0],"size":[4,4,12],"color":"b"}
+    {"from":[-8,-8,8],"size":[16,16,8],"color":"g"}
+    {"from":[-6,-6,16],"size":[12,12,8],"color":"g"}
+    {"from":[-4,-4,24],"size":[8,8,7],"color":"g"}
+    {"from":[-8,-8,16],"size":[16,16,1],"color":"n"}
+    {"from":[-6,-6,24],"size":[12,12,1],"color":"n"}

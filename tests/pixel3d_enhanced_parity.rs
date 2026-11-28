@@ -1292,6 +1292,8 @@ fn enhanced_scene_contract_validates_inputs_and_rebuilds_frames() {
         cloud: 0,
         speed: f64::NAN,
         below: None,
+        cloud_wave: 0.0,
+        cloud_glow: 0.0,
     };
     let invalid_sky = EnhancedVoxelScene {
         sky: Some(&bad_sky),

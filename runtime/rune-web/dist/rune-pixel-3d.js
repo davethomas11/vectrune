@@ -3512,9 +3512,12 @@ var __RunePixel3DRuntime = (() => {
       return mix(gradient, sky.cloud, (far * 0.18 + near * 0.42) * Math.min(1, depth * 7));
     }
     if (altitude <= 0) return (4278190080 | sky.horizon) >>> 0;
-    const density = cloudDensity(((u + drift) % 64 + 64) % 64, altitude * 12, sky.seed);
+    const wave = sky.cloud_wave ? sky.cloud_wave * Math.sin(longitude * 3 + time * 0.35) : 0;
+    const density = cloudDensity(((u + drift) % 64 + 64) % 64, altitude * 12 + wave, sky.seed);
     const band = Math.floor(altitude * 16) / 16;
-    return mix(mix(sky.horizon, sky.zenith, band), sky.cloud, density * Math.min(1, altitude * 5));
+    const fade = Math.min(1, altitude * 5);
+    const base = mix(mix(sky.horizon, sky.zenith, band), sky.cloud, density * fade);
+    return sky.cloud_glow ? mix(base, 4294967295, sky.cloud_glow * density * density * fade * 0.5) : base;
   }
 
   // src/pixel3d/chunks.ts
@@ -12928,7 +12931,8 @@ var __RunePixel3DRuntime = (() => {
       if (this.paused) return;
       this.invalidateFrame();
       withContext(this.context, () => withEntityQueries(() => {
-        this.app.invokeAction("tick", [input]);
+        const music = this.audioState;
+        this.app.invokeAction("tick", [input, { track: music.track, playing: music.isPlaying }]);
         this.app.computeDerived();
       }));
       this.ticks++;
@@ -13572,7 +13576,7 @@ void main() {
 `;
   var skyFragment = `
 uniform vec2 viewport, heading, tilt;
-uniform float fov, drift;
+uniform float fov, drift, cloudWave, cloudGlow, skyTime;
 uniform uint seed;
 uniform vec3 horizon, zenith, cloud, below;
 out vec4 painted;
@@ -13605,7 +13609,11 @@ void main() {
   } else {
     float h = min(1.0, rz * 2.0);
     color = mix(horizon, zenith, floor(h * 16.0) / 16.0);
-    color = mix(color, cloud, density(vec2(u + drift, h * 12.0), seed, 63) * min(1.0, h * 5.0));
+    float wave = cloudWave * sin(atan(dir.y, dir.x) * 3.0 + skyTime * 0.35);
+    float d = density(vec2(u + drift, h * 12.0 + wave), seed, 63);
+    float fade = min(1.0, h * 5.0);
+    color = mix(color, cloud, d * fade);
+    color = mix(color, vec3(1.0), cloudGlow * d * d * fade * 0.5);
   }
   painted = vec4(finishColor(color), 1);
 }
@@ -13819,7 +13827,7 @@ void main() {
         data[offset + 13] = overrideColor ? 1 : 0;
       };
       var bindSilhouetteTarget = bindSilhouetteTarget2, batchFor = batchFor2, queue = queue2;
-      const skyProgram = program(skyVertex, skyFragment, ["viewport", "heading", "tilt", "fov", "drift", "seed", "horizon", "zenith", "cloud", "below"]);
+      const skyProgram = program(skyVertex, skyFragment, ["viewport", "heading", "tilt", "fov", "drift", "cloudWave", "cloudGlow", "skyTime", "seed", "horizon", "zenith", "cloud", "below"]);
       const modelProgram = program(modelVertex, modelFragment, ["eye", "heading", "tilt", "fov", "height"]);
       let silhouetteProgram;
       const floatsPerInstance = 14;
@@ -13888,6 +13896,9 @@ void main() {
         const s = setup(skyProgram);
         gl.uniform2f(s.viewport, canvas.width, canvas.height);
         gl.uniform1f(s.drift, time * sky.speed);
+        gl.uniform1f(s.cloudWave, sky.cloud_wave ?? 0);
+        gl.uniform1f(s.cloudGlow, sky.cloud_glow ?? 0);
+        gl.uniform1f(s.skyTime, time);
         gl.uniform1ui(s.seed, sky.seed);
         gl.uniform3f(s.horizon, ...rgb(sky.horizon));
         gl.uniform3f(s.zenith, ...rgb(sky.zenith));
@@ -14294,6 +14305,7 @@ void main() {
     const profile = game.config.tv ?? { wrap: true, summary: [], modes: [] };
     let focused = profile.initial_focus ?? "";
     let active2;
+    let volume = profile.master_volume ?? profile.audio_gain ?? 1;
     let selected = 0;
     const size = () => ({ width: game.raycaster.width, height: game.raycaster.height });
     const modal = () => {
@@ -14314,6 +14326,7 @@ void main() {
         return region && button.action !== "host.fullscreen" ? [{ id: `button:${index2}:${button.action}`, label: button.label, action: button.action, region }] : [];
       });
       const modes = profile.modes.filter((mode) => mode.kind !== "cycle" || count(mode) > 0);
+      if (profile.volume_control) modes.push({ kind: "volume", id: "volume", label: "VOLUME" });
       const buttonWidth = Math.min(100, Math.floor((width - 30) / Math.max(1, modes.length)) - 10);
       const start = Math.floor((width - modes.length * buttonWidth - Math.max(0, modes.length - 1) * 10) / 2);
       return [...entries, ...modes.map((mode, index2) => ({
@@ -14396,7 +14409,10 @@ void main() {
             game.activate(active2.action, [selected]);
             return true;
           }
-        } else if (command === "left" || command === "right") {
+        } else if (active2.kind === "volume" && (command === "left" || command === "right")) {
+          volume = Math.max(0, Math.min(4, Math.round((volume + (command === "left" ? -0.25 : 0.25)) * 100) / 100));
+          return true;
+        } else if (active2.kind === "action" && (command === "left" || command === "right")) {
           game.activate(active2.action, [command === "left" ? -1 : 1]);
           return true;
         }
@@ -14477,7 +14493,7 @@ void main() {
           const point = ray.projectPoint(camera, target);
           if (point && point.x >= 0 && point.x < width && point.y >= 0 && point.y < height)
             ring({ x: Math.round(point.x) - 19, y: Math.round(point.y) - 19, w: 38, h: 38 });
-        } else if (active2.bounds) {
+        } else if (active2.kind === "action" && active2.bounds) {
           const { origin, extent, scale: scalePath } = active2.bounds;
           const scale = scalePath ? stateValue(game.app.state, scalePath) : 1;
           if (typeof scale !== "number" || !Number.isFinite(scale) || scale < 0)
@@ -14496,15 +14512,16 @@ void main() {
             if (right - left > 20 && bottom - top > 20) ring({ x: left, y: top, w: right - left, h: bottom - top });
           }
         }
-        const text = active2.kind === "cycle" ? "LEFT RIGHT: CYCLE  OK: SELECT  BACK: HUD" : "LEFT RIGHT: MOVE  BACK: HUD";
+        const text = active2.kind === "cycle" ? "LEFT RIGHT: CYCLE  OK: SELECT  BACK: HUD" : active2.kind === "volume" ? "LEFT RIGHT: ADJUST  BACK: HUD" : "LEFT RIGHT: MOVE  BACK: HUD";
         const w = Math.min(width - 12, Math.max(100, text.length * 8 + 20));
         const x = Math.floor((width - w) / 2);
         roundedRect(ray, x, height - 46, w, 36, 6, 860723);
-        ray.text(active2.label.toUpperCase().slice(0, Math.floor((w - 20) / 8)), x + 10, height - 41, 12845032, 2);
+        const title = active2.kind === "volume" ? `VOLUME ${Math.round(volume * 100)}%` : active2.label.toUpperCase();
+        ray.text(title.slice(0, Math.floor((w - 20) / 8)), x + 10, height - 41, 12845032, 2);
         ray.text(text.slice(0, Math.floor((w - 20) / 8)), x + 10, height - 25, 10665415, 2);
       }
     }
-    return { input, overlay: overlay2, compactHud: profile.summary.length > 0 };
+    return { input, overlay: overlay2, volume: () => volume, compactHud: profile.summary.length > 0 };
   }
 
   // src/pixel3d/index.ts

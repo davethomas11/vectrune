@@ -5,6 +5,8 @@ export interface Sky {
   cloud: number;
   speed: number;
   below?: number;
+  cloud_wave?: number;
+  cloud_glow?: number;
 }
 
 function noise(x: number, y: number, seed: number): number {
@@ -44,7 +46,10 @@ export function skyPixel(sky: Sky, longitude: number, altitude: number, time: nu
     return mix(gradient, sky.cloud, (far * .18 + near * .42) * Math.min(1, depth * 7));
   }
   if (altitude <= 0) return (0xff000000 | sky.horizon) >>> 0;
-  const density = cloudDensity(((u + drift) % 64 + 64) % 64, altitude * 12, sky.seed);
+  const wave = sky.cloud_wave ? sky.cloud_wave * Math.sin(longitude * 3 + time * .35) : 0;
+  const density = cloudDensity(((u + drift) % 64 + 64) % 64, altitude * 12 + wave, sky.seed);
   const band = Math.floor(altitude * 16) / 16;
-  return mix(mix(sky.horizon, sky.zenith, band), sky.cloud, density * Math.min(1, altitude * 5));
+  const fade = Math.min(1, altitude * 5);
+  const base = mix(mix(sky.horizon, sky.zenith, band), sky.cloud, density * fade);
+  return sky.cloud_glow ? mix(base, 0xffffffff, sky.cloud_glow * density * density * fade * .5) : base;
 }

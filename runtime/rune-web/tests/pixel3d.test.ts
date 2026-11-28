@@ -539,6 +539,13 @@ describe('pixel3d raycaster rendering', () => {
     const panorama = (seed: number) => Array.from({ length: 64 }, (_, x) => skyPixel({ ...sky, seed }, x / 10, 0.7, 3));
     expect(panorama(19)).not.toEqual(panorama(731));
     expect([0, 0.3, 0.7, 1.5].map(a => skyPixel(sky, a, 0.7, 3))).toEqual([0xff634951, 0xff786067, 0xff80686e, 0xff634951]);
+    const aurora = { ...sky, speed: 0, cloud_wave: .8, cloud_glow: .45 };
+    expect([0, .3, .7, 1.5].map(a => skyPixel(aurora, a, .7, 3)))
+      .toEqual([0xffbaa7ac, 0xff978187, 0xff634951, 0xff634951]);
+    const samples = (time: number) => Array.from({ length: 64 }, (_, x) => skyPixel(aurora, x / 10, .7, time));
+    expect(samples(0)).not.toEqual(samples(10));
+    expect(skyPixel(aurora, -Math.PI, .7, 3)).toBe(skyPixel(aurora, Math.PI, .7, 3));
+    expect(samples(0)).not.toEqual(Array.from({ length: 64 }, (_, x) => skyPixel({...aurora, cloud_glow: 0}, x / 10, .7, 0)));
     rc.setMap(config.map);
     expect(Array.from(rc.render(camera))).toEqual(Array.from(new Raycaster3D(config).render(camera)));
   });

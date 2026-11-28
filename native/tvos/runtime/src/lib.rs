@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::ffi::{c_char, CStr};
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use std::cell::UnsafeCell;
 mod native_audio;
@@ -12,14 +13,18 @@ mod storage;
 struct Audio {
     bridge: native_audio::Bridge,
     mixer: UnsafeCell<native_audio::Mixer>,
-    effects: UnsafeCell<Option<effects::Effects>>,
+    effects: UnsafeCell<effects::Bank>,
+    selected_effects: Arc<AtomicUsize>,
+    output_gain: Arc<AtomicU32>,
     muted: Arc<std::sync::atomic::AtomicBool>,
 }
 
 #[no_mangle]
 pub extern "C" fn rune_tv_audio_create() -> *mut std::ffi::c_void {
     let (mixer, bridge) = native_audio::Mixer::new(48000);
-    Box::into_raw(Box::new(Audio { bridge, mixer: UnsafeCell::new(mixer), effects: UnsafeCell::new(None),
+    Box::into_raw(Box::new(Audio { bridge, mixer: UnsafeCell::new(mixer), effects: UnsafeCell::new(effects::Bank::default()),
+        selected_effects: Arc::new(AtomicUsize::new(usize::MAX)),
+        output_gain: Arc::new(AtomicU32::new(1.0f32.to_bits())),
         muted: Arc::new(std::sync::atomic::AtomicBool::new(false)) })).cast()
 }
 
@@ -29,12 +34,17 @@ pub unsafe extern "C" fn rune_tv_audio_render(handle: *mut std::ffi::c_void, out
     if handle.is_null() || output.is_null() { return; }
     let mixer = &mut *(*handle.cast::<Audio>()).mixer.get();
     mixer.commands();
-    let effects = &mut *(*handle.cast::<Audio>()).effects.get();
+    let audio = &*handle.cast::<Audio>();
+    let effects = &mut *audio.effects.get();
+    effects.select(audio.selected_effects.load(Ordering::Acquire));
     let muted = (*handle.cast::<Audio>()).muted.load(std::sync::atomic::Ordering::Relaxed);
+    let gain = f32::from_bits(audio.output_gain.load(Ordering::Relaxed));
     for sample in std::slice::from_raw_parts_mut(output, frames) {
         let (dry, sends) = mixer.sample();
-        let mixed = effects.as_mut().map_or(dry, |fx| fx.sample(dry, sends));
-        *sample = if muted { 0.0 } else { mixed.clamp(-1.0, 1.0) };
+        let mixed = effects.sample(dry, sends);
+        *sample = if muted { 0.0 } else { (mixed * gain).clamp(-1.0, 1.0) };
+        if sample.abs() > 1e-7 { audio.bridge.stats.nonzero.fetch_add(1, Ordering::Relaxed); }
+        audio.bridge.stats.peak.fetch_max(sample.abs().to_bits(), Ordering::Relaxed);
     }
     mixer.publish_clock();
 }
@@ -116,12 +126,25 @@ impl Snapshot {
 
 #[repr(C)]
 #[derive(Default)]
-pub struct Timings { simulation_ms: f64, transfer_ms: f64, native_ms: f64, hud_ms: f64 }
+pub struct Timings { simulation_ms: f64, transfer_ms: f64, native_ms: f64, hud_ms: f64,
+    scheduler_ms: f64, step_ms: f64 }
 struct Probe {
     context: Context, _runtime: Runtime, deadline: Arc<Mutex<Instant>>,
-    assets: Assets, width: usize, height: usize, frames: usize, audio: bool,
+    assets: Assets, width: usize, height: usize, audio: bool,
     audio_muted: Option<Arc<std::sync::atomic::AtomicBool>>,
     audio_bridge: Option<native_audio::Bridge>,
+    music_effect_indices: HashMap<String, usize>,
+    selected_effects: Option<Arc<AtomicUsize>>,
+    output_gain: Option<Arc<AtomicU32>>,
+}
+
+fn sync_music_effects(ctx: &rquickjs::Ctx<'_>, indices: &HashMap<String, usize>,
+    selected: &AtomicUsize) -> Result<(), String> {
+    let track: Option<String> = ctx.eval("__RunePixel3D.audioState.track")
+        .map_err(|e| format!("Music effects selection: {}", CaughtError::from_error(ctx, e)))?;
+    let index = track.as_ref().and_then(|name| indices.get(name)).copied().unwrap_or(usize::MAX);
+    selected.store(index, Ordering::Release);
+    Ok(())
 }
 
 fn set_error(error: *mut u8, size: usize, text: &str) {
@@ -136,7 +159,13 @@ fn guard<T>(error: *mut u8, size: usize, f: impl FnOnce() -> Result<T, String>) 
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(Ok(value)) => Some(value),
         Ok(Err(text)) => { set_error(error, size, &text); None },
-        Err(_) => { set_error(error, size, "Rust runtime panicked"); None }
+        Err(panic) => {
+            let detail = panic.downcast_ref::<String>().map(String::as_str)
+                .or_else(|| panic.downcast_ref::<&str>().copied())
+                .unwrap_or("unknown panic");
+            set_error(error, size, &format!("Rust runtime panicked: {detail}"));
+            None
+        }
     }
 }
 fn ms(start: Instant) -> f64 { start.elapsed().as_secs_f64() * 1000.0 }
@@ -162,8 +191,12 @@ globalThis.__tvSnapshot = () => {
 };
 globalThis.__tvHud = () => {
     const g=__RunePixel3D;
+    if (!__RuneTVInput.visible()) {
+        g.raycaster.buffer.fill(0);
+        return g.raycaster.buffer;
+    }
     const hud=g.frameHud(__tvHudState);
-    if (hud.ui && g.raycaster.width===640 && g.raycaster.height===400)
+    if (hud.ui && __RuneTVInput.interactive)
         hud.ui={...hud.ui,detail:'',objective:''};
     g.raycaster.renderOverlay(hud);
     __RuneTVInput.overlay(__tvHudState.camera, __tvHudState.time);
@@ -186,7 +219,9 @@ pub unsafe extern "C" fn rune_tv_create(source: *const c_char, width: u32, heigh
     error: *mut u8, error_bytes: usize) -> *mut std::ffi::c_void {
     guard(error, error_bytes, || {
         if source.is_null() { return Err("Missing compiled Rune source".into()); }
-        if width == 0 || height == 0 || width > 640 || height > 400 || width * 400 != height * 640 {
+        let auto = width == 0 && height == 0;
+        if !auto && !(width == 720 && height == 405) &&
+            (width == 0 || height == 0 || width > 640 || height > 400 || width * 400 != height * 640) {
             return Err("Unsupported probe resolution".into());
         }
         let script = CStr::from_ptr(source).to_str().map_err(|e| e.to_string())?;
@@ -200,40 +235,77 @@ pub unsafe extern "C" fn rune_tv_create(source: *const c_char, width: u32, heigh
         if !audio.is_null() {
             (*audio.cast::<Audio>()).bridge.install(&context).map_err(|e| format!("Audio setup: {e:#}"))?;
         }
-        let assets = context.with(|ctx| -> Result<Assets, String> {
+        let mut music_effect_indices = HashMap::new();
+        let (assets, width, height) = context.with(|ctx| -> Result<(Assets, u32, u32), String> {
             storage::install(&ctx).map_err(|e| format!("Storage setup: {e}"))?;
             if !audio.is_null() {
                 ctx.eval::<(), _>("globalThis.__runeTvMusic=(music)=>{globalThis.__tvMusic=music;}")
                     .map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
             }
             ctx.eval::<(), _>(script).map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
-            if !audio.is_null() {
-                let json: String = ctx.eval("JSON.stringify(Object.values(globalThis.__tvMusic ?? {}).find(track => track && track.effects)?.effects ?? null)")
-                    .map_err(|e| format!("Music effects: {}", CaughtError::from_error(&ctx,e)))?;
-                let config: Option<effects::Settings> = serde_json::from_str(&json).map_err(|e| format!("Music effects configuration: {e}"))?;
-                if let Some(config) = config {
-                    *(*audio.cast::<Audio>()).effects.get() = Some(effects::Effects::new(config, 48000)?);
+            let (width, height) = if auto {
+                let dimensions: Vec<u32> = ctx.eval("__RunePixel3D.config.tv?.resolution ?? [640,400]")
+                    .map_err(|e| format!("TV resolution: {}", CaughtError::from_error(&ctx,e)))?;
+                match dimensions.as_slice() {
+                    [640, 400] => (640, 400),
+                    [720, 405] => (720, 405),
+                    _ => return Err("TV resolution must be [640,400] or [720,405]".into()),
                 }
+            } else { (width, height) };
+            if !audio.is_null() {
+                let gain: f64 = ctx.eval("__RunePixel3D.config.tv?.master_volume ?? __RunePixel3D.config.tv?.audio_gain ?? 1")
+                    .map_err(|e| format!("TV audio gain: {}", CaughtError::from_error(&ctx,e)))?;
+                if !gain.is_finite() || !(0.0..=4.0).contains(&gain) {
+                    return Err("TV master volume must be 0–4".into());
+                }
+                (*audio.cast::<Audio>()).output_gain.store((gain as f32).to_bits(), Ordering::Relaxed);
+                let json: String = ctx.eval("JSON.stringify(Object.fromEntries(Object.entries(globalThis.__tvMusic ?? {}).map(([name, track]) => [name.trim().toLowerCase(), track?.effects ?? null])))")
+                    .map_err(|e| format!("Music effects: {}", CaughtError::from_error(&ctx,e)))?;
+                let configs: HashMap<String, Option<effects::Settings>> = serde_json::from_str(&json)
+                    .map_err(|e| format!("Music effects configuration: {e}"))?;
+                let mut bank = effects::Bank::default();
+                for (name, config) in configs {
+                    if let Some(config) = config {
+                        let effect = effects::Effects::new(config, 48000)
+                            .map_err(|e| format!("Music effects for {name}: {e}"))?;
+                        music_effect_indices.insert(name, bank.push(effect));
+                    }
+                }
+                *(*audio.cast::<Audio>()).effects.get() = bank;
+                sync_music_effects(&ctx, &music_effect_indices, &(*audio.cast::<Audio>()).selected_effects)?;
             }
-            ctx.eval::<(), _>(format!("__RunePixel3D.resizeViewport({width},{height},{width}/640);__RunePixel3D.raycaster.setEnhancedLighting(true)"))
+            ctx.eval::<(), _>(format!("__RunePixel3D.resizeViewport({width},{height},{height}/400);__RunePixel3D.raycaster.setEnhancedLighting(true)"))
                 .map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
-            if width == 640 && height == 400 {
+            if (width, height) == (640, 400) || (width, height) == (720, 405) {
                 ctx.eval::<(), _>(include_str!("tv_input.js"))
                     .map_err(|e| format!("TV input setup: {}", CaughtError::from_error(&ctx,e)))?;
             } else {
-                ctx.eval::<(), _>("globalThis.__RuneTVInput={overlay:()=>{}}")
+                ctx.eval::<(), _>("globalThis.__RuneTVInput={interactive:false,overlay:()=>{},visible:()=>true}")
                     .map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
             }
             ctx.eval::<(), _>(INSTALL).map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
             let json: String = ctx.eval("JSON.stringify({models:__RunePixel3D.config.models,textures:__RunePixel3D.config.textures,sky:__RunePixel3D.config.map.sky})")
                 .map_err(|e| CaughtError::from_error(&ctx,e).to_string())?;
-            serde_json::from_str(&json).map_err(|e| format!("Invalid scene assets: {e}"))
+            let assets = serde_json::from_str(&json).map_err(|e| format!("Invalid scene assets: {e}"))?;
+            Ok((assets, width, height))
         })?;
         let audio_muted = if audio.is_null() { None } else { Some((*audio.cast::<Audio>()).muted.clone()) };
         let audio_bridge = if audio.is_null() { None } else { Some((*audio.cast::<Audio>()).bridge.clone()) };
+        let selected_effects = if audio.is_null() { None } else { Some((*audio.cast::<Audio>()).selected_effects.clone()) };
+        let output_gain = if audio.is_null() { None } else { Some((*audio.cast::<Audio>()).output_gain.clone()) };
         Ok(Box::into_raw(Box::new(Probe { context, _runtime: runtime, deadline, assets,
-            width: width as usize, height: height as usize, frames: 0, audio: !audio.is_null(), audio_muted, audio_bridge })).cast())
+            width: width as usize, height: height as usize, audio: !audio.is_null(), audio_muted, audio_bridge,
+            music_effect_indices, selected_effects, output_gain })).cast())
     }).unwrap_or(std::ptr::null_mut())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rune_tv_dimensions(handle: *mut std::ffi::c_void, width: *mut u32, height: *mut u32) -> i32 {
+    if handle.is_null() || width.is_null() || height.is_null() { return -1; }
+    let probe = &*handle.cast::<Probe>();
+    *width = probe.width as u32;
+    *height = probe.height as u32;
+    0
 }
 
 #[no_mangle]
@@ -246,13 +318,26 @@ pub unsafe extern "C" fn rune_tv_input(handle: *mut std::ffi::c_void, command: u
             _ => return Err("Unknown remote input".into()),
         };
         let probe = &mut *handle.cast::<Probe>();
-        if probe.width != 640 || probe.height != 400 { return Err("Remote input requires 640 x 400".into()); }
+        if !matches!((probe.width, probe.height), (640, 400) | (720, 405)) {
+            return Err("Remote input requires a full-size TV resolution".into());
+        }
         *probe.deadline.lock().map_err(|e|e.to_string())? = Instant::now()+Duration::from_secs(10);
         let (handled, muted) = probe.context.with(|ctx| -> Result<(bool,bool),String> {
             let handled = ctx.eval::<bool, _>(format!("__RuneTVInput.input('{command}')"))
                 .map_err(|e| format!("Remote input: {}", CaughtError::from_error(&ctx,e)))?;
             let muted = ctx.eval::<bool, _>("__RunePixel3D.muted")
                 .map_err(|e| format!("Remote mute: {}", CaughtError::from_error(&ctx,e)))?;
+            if let Some(output_gain) = &probe.output_gain {
+                let gain: f64 = ctx.eval("__RuneTVInput.volume()")
+                    .map_err(|e| format!("Remote volume: {}", CaughtError::from_error(&ctx,e)))?;
+                if !gain.is_finite() || !(0.0..=4.0).contains(&gain) {
+                    return Err("Remote volume must be 0–4".into());
+                }
+                output_gain.store((gain as f32).to_bits(), Ordering::Relaxed);
+            }
+            if let Some(selected) = &probe.selected_effects {
+                sync_music_effects(&ctx, &probe.music_effect_indices, selected)?;
+            }
             Ok((handled, muted))
         })?;
         if let Some(flag) = &probe.audio_muted { flag.store(muted, std::sync::atomic::Ordering::Relaxed); }
@@ -269,9 +354,6 @@ pub unsafe extern "C" fn rune_tv_input(handle: *mut std::ffi::c_void, command: u
 pub unsafe extern "C" fn rune_tv_frame(handle: *mut std::ffi::c_void, ticks: u32,
     pixels: *mut u8, pixel_bytes: usize, timings: *mut Timings, error: *mut u8, error_bytes: usize) -> i32 {
     guard(error, error_bytes, || {
-        static FIRST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
-        let log = FIRST.swap(false, std::sync::atomic::Ordering::Relaxed);
-        if log { eprintln!("Rune native probe: frame entered"); }
         if handle.is_null() || pixels.is_null() || timings.is_null() || ticks > 5 {
             return Err("Invalid frame arguments".into());
         }
@@ -284,13 +366,18 @@ pub unsafe extern "C" fn rune_tv_frame(handle: *mut std::ffi::c_void, ticks: u32
             if probe.audio {
                 ctx.eval::<(), _>("__RuneNativeAudio.pump()").map_err(|e| format!("audio scheduler: {}", CaughtError::from_error(&ctx,e)))?;
             }
+            stats.scheduler_ms=ms(start);
+            let step_start=Instant::now();
             for _ in 0..ticks {
                 ctx.eval::<(), _>("__RunePixel3D.step({})").map_err(|e| format!("simulation: {}", CaughtError::from_error(&ctx,e)))?;
+            }
+            stats.step_ms=ms(step_start);
+            if let Some(selected) = &probe.selected_effects {
+                sync_music_effects(&ctx, &probe.music_effect_indices, selected)?;
             }
             stats.simulation_ms=ms(start);
             let start=Instant::now();
             let json: String = ctx.eval("__tvSnapshot()").map_err(|e| format!("scene snapshot: {}", CaughtError::from_error(&ctx,e)))?;
-            if log { eprintln!("Rune native probe: snapshot ready"); }
             let snapshot: Snapshot = serde_json::from_str(&json).map_err(|e| format!("Invalid scene snapshot: {e}"))?;
             let cells = snapshot.dense_cells().map_err(|e| format!("Invalid scene terrain: {e}"))?;
             let textures: Vec<&Texture> = snapshot.materials.iter().map(|name|
@@ -303,7 +390,6 @@ pub unsafe extern "C" fn rune_tv_frame(handle: *mut std::ffi::c_void, ticks: u32
                     glass:asset.glass, contact_shadow:asset.contact_shadow })
             }).collect::<Result<_, String>>()?;
             stats.transfer_ms=ms(start);
-            if log { eprintln!("Rune native probe: scene decoded"); }
             let camera=VoxelCamera { x:snapshot.camera.x, y:snapshot.camera.y, z:snapshot.camera.z.unwrap_or(0.0),
                 angle:snapshot.camera.angle, pitch:snapshot.camera.pitch.unwrap_or(0.0) };
             let world=VoxelWorld { width:snapshot.width,height:snapshot.height,depth:snapshot.depth,
@@ -312,7 +398,6 @@ pub unsafe extern "C" fn rune_tv_frame(handle: *mut std::ffi::c_void, ticks: u32
                 time:snapshot.time,models:&models,lights:&snapshot.lights };
             let start=Instant::now();
             let frame=render_enhanced_voxel_scene(&scene,probe.width,probe.height).map_err(|e| format!("native render: {e:#}"))?;
-            if log { eprintln!("Rune native probe: native frame ready"); }
             stats.native_ms=ms(start);
             Ok(frame.color)
         })?;
@@ -323,18 +408,12 @@ pub unsafe extern "C" fn rune_tv_frame(handle: *mut std::ffi::c_void, ticks: u32
             if overlay.len()!=pixel_bytes { return Err("HUD size mismatch".into()); }
             let values: Vec<u32>=overlay.chunks_exact(4).map(|p|u32::from_ne_bytes([p[0],p[1],p[2],p[3]])).collect();
             pixel3d::overlay::composite_hud(&mut frame,&values,probe.width,probe.height).map_err(|e|format!("HUD composition: {e}"))?;
-            if log { eprintln!("Rune native probe: HUD ready"); }
             stats.hud_ms=ms(start);
             Ok(())
         })?;
         let output=std::slice::from_raw_parts_mut(pixels,pixel_bytes);
         for (dst, pixel) in output.chunks_exact_mut(4).zip(frame) { dst.copy_from_slice(&pixel.to_le_bytes()); }
         *timings=stats;
-        probe.frames += 1;
-        if probe.frames % 300 == 0 {
-            let usage = probe._runtime.memory_usage();
-            eprintln!("Rune native probe: frame {} QuickJS allocated {} bytes, used {} bytes", probe.frames, usage.malloc_size, usage.memory_used_size);
-        }
         Ok(())
     }).map_or(-1, |_| 0)
 }
@@ -350,7 +429,7 @@ pub unsafe extern "C" fn rune_tv_reference(handle: *mut std::ffi::c_void, pixels
         probe.context.with(|ctx| -> Result<(),String> {
             let frame: TypedArray<u32>=ctx.eval(r#"(()=>{
                 const g=__RunePixel3D, key=g.config.ui, old=key && g.app.state[key];
-                if(old && g.raycaster.width===640 && g.raycaster.height===400)
+                if(old && __RuneTVInput.interactive)
                     g.app.state[key]={...old,detail:'',objective:''};
                 try {
                     const frame=g.frame();
@@ -381,4 +460,140 @@ pub unsafe extern "C" fn rune_tv_flush_save(handle: *mut std::ffi::c_void, error
 #[no_mangle]
 pub unsafe extern "C" fn rune_tv_destroy(handle: *mut std::ffi::c_void) {
     if !handle.is_null() { drop(Box::from_raw(handle.cast::<Probe>())); }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remote_volume_reaches_audio_callback() {
+        let script = std::ffi::CString::new(r#"
+            globalThis.__RunePixel3D = {
+                config: { tv: { master_volume: 2, volume_control: true, resolution: [720,405] }, models: {}, textures: {}, map: { sky: null } },
+                audioState: { track: null }, muted: false,
+                raycaster: { setEnhancedLighting() {} }, resizeViewport() {}
+            };
+            globalThis.__RunePixel3DRuntime = {
+                createTvNavigation() {
+                    let gain = 2;
+                    return { input(command) { if (command === 'right') gain += 0.25; return true; },
+                        volume() { return gain; }, overlay() {} };
+                }
+            };
+        "#).unwrap();
+        let audio_handle = rune_tv_audio_create();
+        let mut error = [0u8; 1024];
+        for (requested, expected) in [((640, 400), (640, 400)), ((0, 0), (720, 405))] {
+            let probe = unsafe { rune_tv_create(script.as_ptr(), requested.0, requested.1, audio_handle,
+                error.as_mut_ptr(), error.len()) };
+            assert!(!probe.is_null(), "create: {}", String::from_utf8_lossy(&error));
+            let mut width = 0;
+            let mut height = 0;
+            assert_eq!(unsafe { rune_tv_dimensions(probe, &mut width, &mut height) }, 0);
+            assert_eq!((width, height), expected);
+            let audio = unsafe { &*audio_handle.cast::<Audio>() };
+            assert_eq!(f32::from_bits(audio.output_gain.load(Ordering::Relaxed)), 2.0);
+            assert_eq!(unsafe { rune_tv_input(probe, 3, error.as_mut_ptr(), error.len()) }, 0);
+            assert_eq!(f32::from_bits(audio.output_gain.load(Ordering::Relaxed)), 2.25);
+            unsafe { rune_tv_destroy(probe); }
+        }
+        unsafe { rune_tv_audio_destroy(audio_handle); }
+    }
+
+    #[test]
+    fn tv_output_gain_amplifies_pcm_and_preserves_mute_and_bounds() {
+        fn render(gain: f32, volume: f64, muted: bool) -> (Vec<f32>, AudioStats) {
+            let handle = rune_tv_audio_create();
+            let audio = unsafe { &*handle.cast::<Audio>() };
+            audio.output_gain.store(gain.to_bits(), Ordering::Relaxed);
+            audio.muted.store(muted, Ordering::Relaxed);
+            let tone: native_audio::Tone = serde_json::from_value(serde_json::json!({
+                "frequency": 440, "duration": 0.1, "volume": volume
+            })).unwrap();
+            audio.bridge.tone(&tone).unwrap();
+            let mut output = vec![0.0; 4800];
+            unsafe { rune_tv_audio_render(handle, output.as_mut_ptr(), output.len()); }
+            let mut stats = AudioStats { frames: 0, nonzero: 0, peak: 0.0, dropped: 0 };
+            unsafe { rune_tv_audio_stats(handle, &mut stats); rune_tv_audio_destroy(handle); }
+            (output, stats)
+        }
+        let (normal, normal_stats) = render(1.0, 0.05, false);
+        let (louder, loud_stats) = render(3.0, 0.05, false);
+        for (one, three) in normal.iter().zip(&louder) {
+            assert!((three - one * 3.0).abs() < 1e-6);
+        }
+        assert!(normal_stats.peak > 0.0);
+        assert!((loud_stats.peak - normal_stats.peak * 3.0).abs() < 1e-6);
+        let (bounded, _) = render(4.0, 0.5, false);
+        assert!(bounded.iter().all(|sample| sample.is_finite() && sample.abs() <= 1.0));
+        let (silent, stats) = render(3.0, 0.05, true);
+        assert!(silent.iter().all(|sample| *sample == 0.0));
+        assert_eq!(stats.nonzero, 0);
+        assert_eq!(stats.peak, 0.0);
+    }
+
+    #[test]
+    fn frames_keep_rendering_when_console_disconnects() {
+        use std::io::{Read, Write};
+        use std::process::{Command, Stdio};
+
+        if std::env::var_os("RUNE_TEST_DISCONNECTED_CONSOLE").is_none() {
+            let mut child = Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "tests::frames_keep_rendering_when_console_disconnects", "--nocapture"])
+                .env("RUNE_TEST_DISCONNECTED_CONSOLE", "1")
+                .stdin(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+            drop(child.stderr.take());
+            child.stdin.take().unwrap().write_all(b"x").unwrap();
+            assert!(child.wait().unwrap().success(), "rendering failed after console disconnect");
+            return;
+        }
+        std::io::stdin().read_exact(&mut [0]).unwrap();
+        let script = std::ffi::CString::new(r#"
+            globalThis.__RunePixel3D = {
+                config: { models: {}, textures: { ground: { width: 1, height: 1, pixels: [0] } }, map: { sky: null } },
+                raycaster: { config: { world: { width: 1, height: 1, depth: 1, cells: [0], materials: ['ground'] } },
+                    fov: 66, buffer: new Uint32Array(40), setEnhancedLighting() {},
+                    renderOverlay() { this.buffer.fill(0); } },
+                resizeViewport() {}, step() {},
+                renderState() { return { camera: { x: 0.5, y: 0.5, z: 0.5, angle: 0 },
+                    things: [], tethers: [], lights: [], time: 0 }; },
+                frameHud() { return {}; }
+            };
+        "#).unwrap();
+        let mut error = [0u8; 1024];
+        let handle = unsafe { rune_tv_create(script.as_ptr(), 8, 5, std::ptr::null_mut(),
+            error.as_mut_ptr(), error.len()) };
+        assert!(!handle.is_null(), "create: {}", String::from_utf8_lossy(&error));
+        let mut pixels = [0u8; 8 * 5 * 4];
+        let mut timings = Timings::default();
+        for _ in 0..305 {
+            let result = unsafe { rune_tv_frame(handle, 1, pixels.as_mut_ptr(), pixels.len(),
+                &mut timings, error.as_mut_ptr(), error.len()) };
+            assert_eq!(result, 0, "frame: {}", String::from_utf8_lossy(&error));
+        }
+        unsafe { rune_tv_destroy(handle); }
+    }
+
+    #[test]
+    fn music_selection_follows_active_track_and_disables_missing_effects() {
+        let runtime = Runtime::new().unwrap();
+        let context = Context::full(&runtime).unwrap();
+        let selected = AtomicUsize::new(usize::MAX);
+        let indices = HashMap::from([("first".to_string(), 0), ("second".to_string(), 1)]);
+        context.with(|ctx| {
+            ctx.eval::<(), _>("globalThis.__RunePixel3D={audioState:{track:'first'}}").unwrap();
+            sync_music_effects(&ctx, &indices, &selected).unwrap();
+            assert_eq!(selected.load(Ordering::Acquire), 0);
+            ctx.eval::<(), _>("__RunePixel3D.audioState.track='second'").unwrap();
+            sync_music_effects(&ctx, &indices, &selected).unwrap();
+            assert_eq!(selected.load(Ordering::Acquire), 1);
+            ctx.eval::<(), _>("__RunePixel3D.audioState.track='dry'").unwrap();
+            sync_music_effects(&ctx, &indices, &selected).unwrap();
+            assert_eq!(selected.load(Ordering::Acquire), usize::MAX);
+            ctx.eval::<(), _>("__RunePixel3D.audioState.track=null").unwrap();
+            sync_music_effects(&ctx, &indices, &selected).unwrap();
+            assert_eq!(selected.load(Ordering::Acquire), usize::MAX);
+        });
+    }
 }

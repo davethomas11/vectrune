@@ -1,0 +1,77 @@
+@Page/yule_cabinet
+title = Yule Log
+logic = yule_cabinet
+style = yule_cabinet
+view:
+    main .cabinet:
+        h1 "Yule Log"
+        p "A quiet winter scene. Switch views and choose a soundtrack."
+        div .toolbar:
+            button data-pixel-action=switch_scene data-pixel-text=scene_label "Fireplace"
+            button data-pixel-action=next_track data-pixel-text=track_label "Jingle Bells"
+            button data-pixel-action=toggle_auto_scene data-pixel-text=auto_scene_label "Auto scenes: on"
+            button data-pixel-action=santa_holiday "Santa Holiday"
+            button data-pixel-mute=true "Sound"
+            button data-pixel-fullscreen=true "Fullscreen"
+        div .game-surface:
+            canvas data-rune-pixel-3d=true tabindex=0 aria-label="A winter fireplace, snowy snowman, North Pole workshop, moonlit creek snowball fight, or Santa dancing on a sunny beach."
+            div .fullscreen-controls:
+                button data-pixel-action=switch_scene "Change scene"
+                button data-pixel-action=next_track "Change music"
+                button data-pixel-action=toggle_auto_scene data-pixel-text=auto_scene_label "Auto scenes: on"
+                button data-pixel-action=santa_holiday "Santa Holiday"
+                button data-pixel-mute=true "Sound"
+                button data-pixel-fullscreen=true "Exit fullscreen"
+        p "S changes scene, T changes track, M mutes and F toggles fullscreen."
+
+@Logic/yule_cabinet
+state:
+    name = "Yule Log"
+
+@Style/yule_cabinet
+rules:
+    *:
+        box-sizing = border-box
+    body:
+        margin = 0
+        background = #17141c
+        color = #f8ead8
+        font-family = system-ui, sans-serif
+    .cabinet:
+        max-width = 1000px
+        margin = auto
+        padding = 16px
+    .toolbar:
+        display = flex
+        flex-wrap = wrap
+        gap = 8px
+        margin-bottom = 8px
+    button:
+        font = inherit
+        color = #fff2dd
+        background = #593b3a
+        border = 1px solid #d5aa80
+        border-radius = 8px
+        min-height = 44px
+        padding = 8px 14px
+        cursor = pointer
+    .game-surface:
+        position = relative
+        background = #16151a
+    canvas:
+        display = block
+        width = 100%
+        height = auto
+        aspect-ratio = 8 / 5
+        image-rendering = pixelated
+        touch-action = none
+    .fullscreen-controls:
+        display = none
+        position = absolute
+        bottom = max(8px, env(safe-area-inset-bottom))
+        right = max(8px, env(safe-area-inset-right))
+        gap = 6px
+        flex-wrap = wrap
+        justify-content = end
+    .game-surface:fullscreen .fullscreen-controls, .game-surface.rune-pixel3d-expanded .fullscreen-controls:
+        display = flex

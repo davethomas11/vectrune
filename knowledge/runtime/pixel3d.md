@@ -48,18 +48,119 @@ interaction parity remain open; see the
 
 A scene may opt in to Apple TV remote behavior with `tv = name` and a matching
 `@TV/name` section (see `examples/games/idle_aquarium/idle_aquarium.rune`).
-Fields: `initial_focus` (a HUD action), `wrap`, `summary` (up to three
+Fields: `initial_focus` (a HUD action), `wrap`, `hide_after` (optional idle
+timeout in seconds, 1–60), `master_volume` (optional TV output multiplier, 0–4,
+default 1), `volume_control` (optional remote HUD control, default false), `summary` (up to three
 `{path, label}` state readouts) and `modes` (up to two). An `action` mode sends
 `-1`/`+1` to its action on left/right and may outline `bounds`; a `cycle` mode
 steps through objects with `x`, `y`, `z` from state arrays named in `groups`
 and calls its action with the chosen index. Actions and state paths are
 validated at compile time. The native TV runtime reads this profile, music
 effects and assets from the compiled game, so no game-specific code is needed.
+Optional `resolution = [720,405]` renders a 16:9 Apple TV framebuffer; the
+default is `[640,400]` (16:10). These are the two supported TV sizes. The
+setting does not change browser or desktop resolution; the larger framebuffer
+may reduce performance.
+When `hide_after` is set, the TV HUD starts hidden; the first remote press
+reveals it without activating a control, subsequent presses operate it, and
+it hides again after the specified idle time. Browser and desktop HUDs are
+unaffected.
+TV master volume applies to the complete native mix after effects and is bounded
+to the audio output range; higher settings can clip loud material. For example:
+
+```rune
+@TV/yule
+resolution = [720,405]
+master_volume = 3
+volume_control = true
+```
+
+Select **Volume** on the remote HUD, then use left/right to adjust in increments
+of 0.25 (25%); Back returns to the HUD. The adjustment lasts for the running
+session and does not change the separate mute setting. `audio_gain` remains
+an alias for the initial multiplier; do not specify both names. Browser and
+desktop audio are unaffected.
+
+Pixel-3D `tick(input, audio)` can optionally receive a second argument with
+`audio.track` (the active music name, or `null`) and `audio.playing` (whether
+playback has started). These fields reflect the shared audio clock; a browser's
+pending autoplay remains stopped until a user gesture. A non-looping song sets
+them to `null` and `false` after its final beat. For example, an idler can
+remember when a track started and advance its playlist only after playback finishes.
 
 The opt-in `@Scene world` in v0.3.6 adds solid voxel terrain, elevation, mining,
 seeded biome generation and cave geometry. See [Voxel worlds and Rune Miners](voxel-worlds.md)
 for APIs, authoring, gameplay and the current shared-JavaScript desktop renderer.
 The grid-map semantics below remain unchanged.
+
+## Yule Log prototype
+
+An early standalone [Yule Log prototype](../../examples/games/yule_log/yule_log.rune)
+uses the same Pixel 3D scene, synth music and browser fullscreen
+building blocks. It cycles from a decorated room with flickering model flames
+and sparks, to a snowy snowman scene with moving children and dogs, to a North
+Pole workshop where elves wrap gifts, to a moonlit snowball fight, then back
+to the room. Select **Santa Holiday** in the browser controls or Apple TV HUD
+to visit a separate sunny Bahamas beach party. Santa dances in his
+underwear with a banana while monkeys hop beside palm trees and a beach ball.
+An original looping, faster synth beach-party track plays in this scene; leaving
+it returns to the selected Christmas track. The workshop has
+a beveled roof and flickering candles; Santa periodically walks past the elves,
+pauses for a belly-bobbing laugh with an animated speech bubble and synthesized
+chuckle, and Rudolph visits the hay, scattering flecks as he eats, with a
+glowing red nose that lights his surroundings.
+Their visits advance while the workshop is shown. At the creek, two snowmen
+face each other in different hats and scarves, take turns winding up and
+throwing arcing snowballs across the water, and duck as the snowballs land
+beside a snowy bridge. Impacts scatter snow, and an owl occasionally flies to a
+branch. Ice floes drift down the creek beneath the arched bridge, occasionally
+carrying Buddy the elf. Cool moonlight illuminates the scene. The fight,
+snowfall, owl visit, and ice drift advance while it is shown. Creek snow updates
+in five batches at the same fall speed; the other scenes' animation poses
+catch up to the shared clock when leaving the creek.
+Scene choice is saved along with the selected track.
+Scenes rotate every five minutes by default. The auto-scenes control in the
+browser and Apple TV HUD turns rotation on or off; its setting is saved. Santa
+Holiday is excluded from rotation and stays on until a manual scene change.
+Manual scene changes and toggling rotation restart the five-minute interval.
+The room includes snowy windows, a wreath and a toy train circling a taller
+tree with a clear path around its base and present. A sky-tinted upper wall
+and wooden molding with a softly changing green highlight ease the transition
+to the northern lights. Two gently varying,
+small-radius lights illuminate its branches; the hearth remains the stronger
+light, flickering irregularly across the floor and nearby furniture. A small
+dachshund naps on the chair and occasionally lifts its head. A cat bats a
+rolling ball of yarn, then makes quick, visibly posed jumps via the table and
+mantel to watch the window. About every four minutes, the dog chases the cat
+outside the train's orbit; the cat escapes to the mantel and knocks down a
+stocking. The dog wags its tail and returns to the chair, and a tiny fairy
+appears to restore the stocking with magic before dissolving into drifting
+sparkles. The dog jumps down from and back up onto the chair; the pets face
+their direction of travel on a route inside the back wall and around the train.
+The cat's leaps are brief, arcing jumps. Softly varied tree lights reach
+the upper branches, alongside the brighter intermittent twinkles.
+Switching scenes briefly brings out a moon and stronger snowfall, or livelier
+sparks on returning to the fire. The snowman scene looks back toward a cabin
+with glowing windows, with layered drifting snow, a child and dog, and two
+sledders on a distant hill. A scarf stirs, chimney smoke occasionally puffs
+larger, and the snowman glances toward the camera just before the workshop
+appears. Santa and his sleigh occasionally fly past outside; indoors the sleigh
+crosses behind both window frames and the intervening wall. Glowing, gently
+moving sky clouds suggest northern lights without extra scene geometry.
+Snowflakes update in three batches outdoors and pause while either indoor scene
+is shown, reducing idle simulation work without changing their fall speeds.
+The in-scene HUD shows the scene and track, with controls for changing either
+and muting; the same controls are navigable with the Apple TV remote. The
+five synth tracks include an original winter theme and instrumental
+arrangements of Jingle Bells, Silent Night, Deck the Halls and O Christmas
+Tree. Each track plays through its arrangement before the next starts; the
+playlist wraps around. Browser audio starts after a user gesture. The Apple TV
+mix uses `master_volume = 3` to make the quiet arrangements easier to hear and
+offers the remote volume control. On Apple TV,
+the HUD is hidden until a remote press and hides after six seconds of inactivity.
+These effects use existing model instances and game logic, not a new fire or
+weather API.
+It is not yet a published showcase or a finished TV experience.
 
 ## Glowtide Aquarium
 
@@ -1365,9 +1466,18 @@ freezes when paused, and resets on a new run.
 
 `seed` must be an unsigned 32-bit integer. All three colors are required, opaque
 hex colors. `speed` is cloud-grid cells per second, defaults to `0.25`, and must
-be between `0` (static) and `10`. `sky` and an explicit `ceiling` are mutually
+be between `0` (no horizontal drift) and `10`. `sky` and an explicit `ceiling` are mutually
 exclusive. Skies are map-wide; per-tile open ceilings and variable-height rooms
 are not implemented.
+
+Optional `cloud_wave` and `cloud_glow` each range from `0` (the default) to `1`.
+`cloud_wave` slowly displaces the upper cloud pattern even when `speed` is zero;
+`cloud_glow` brightens dense upper clouds. Both use simulation time and are
+available in browser, desktop and Apple TV rendering. For example:
+
+```rune
+sky = {"seed":73,"zenith":"#061e1b","horizon":"#255a42","cloud":"#44785e","speed":0.08,"cloud_wave":0.8,"cloud_glow":0.45}
+```
 
 For a floating course, add an opaque `"below"` color to the sky object and
 omit `floor`. The sky then extends beneath the horizon with a second gradient
